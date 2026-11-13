@@ -31,6 +31,8 @@ queries:
   winning place holds both layouts, a definition whose front matter gives
   another name than its file's, a name the picker cannot tell, and a picker the
   command cannot reach are errors.
+- Backbone manifest: one that does not parse is one error at its path, and the
+  run goes on without what it registers (`_unparsed_manifest`).
 - Read-only lookups: show outgoing refs, reverse lookup, record-ID
   resolution, hook resolution by precedence.
 
@@ -76,6 +78,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import click
 from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 from project_kit import (
     agent_definitions,
@@ -91,6 +94,7 @@ from project_kit import (
 )
 from project_kit.backbone_schemas import ADDRESS_WORD_PATTERN
 from project_kit.line_breaks import universal_newlines
+from project_kit.manifest import read_backbone_manifest
 from project_kit.package_validate import POINT_SEPARATOR, ROLE_QUALIFIER
 from project_kit.validators import Finding, Outcome, Severity, counts_line, location_of
 
@@ -264,6 +268,13 @@ AGENT_CHOICE = "agent-choice"
 # nothing for it, so an error.
 AGENT_DEFINITION = "agent-definition"
 
+# A backbone manifest that does not parse: nothing it registers can be read, so the
+# checks that read it go without, and an error (`_unparsed_manifest`).
+UNPARSED_MANIFEST = "unparsed-manifest"
+
+#: The backbone manifest, from the root, where a finding about it is reported.
+MANIFEST = (Path(".pkit") / "manifest.yaml").as_posix()
+
 #: The kinds of finding that warn and never fail `pkit refs validate`.
 WARNING_KINDS = frozenset(
     {
@@ -390,10 +401,18 @@ def validate_corpus(target_root: Path) -> list[Issue]:
 def check_corpus(
     artifacts: list[Artifact], providers: list[Provider], target_root: Path
 ) -> list[Issue]:
-    """Every check over an already-loaded corpus, each finding tagged with its kind."""
+    """Every check over an already-loaded corpus, each finding tagged with its kind.
+
+    Where the backbone manifest does not parse, that is one finding at its path, and
+    the checks that read what it registers go without it: each agent's tool access is
+    read with no adapter's declaration, and the citations of rules and addresses, the
+    citations of operational rules and the overlay's categories are not checked.
+    """
+    unparsed = _unparsed_manifest(target_root)
+    manifest_parses = not unparsed
     picked, unreachable = _picked(artifacts, target_root)
     agents = agent_definitions.agents(picked) if picked is not None else {}
-    issues: list[Issue] = []
+    issues: list[Issue] = _kind(unparsed, UNPARSED_MANIFEST)
     issues.extend(_kind(_validate_bidirectional(artifacts, target_root), DRIFT))
     issues.extend(_kind(unreachable, AGENT_DEFINITION))
     if picked is not None:
@@ -403,22 +422,50 @@ def check_corpus(
     issues.extend(_kind(_validate_ownership(artifacts, target_root, agents), OWNERSHIP))
     issues.extend(_kind(_validate_hook_closure(artifacts, providers), HOOK_CLOSURE))
     issues.extend(_kind(_validate_same_tier_collisions(providers), COLLISION))
-    holds, access_issues = _tool_accesses(artifacts, target_root)
+    holds, access_issues = _tool_accesses(artifacts, target_root, manifest_parses=manifest_parses)
     issues.extend(_kind(access_issues, TOOL_ACCESS))
     issues.extend(_kind(_validate_definition_fields(artifacts, target_root), UNKNOWN_FIELD))
     issues.extend(_kind(_validate_storyboards(artifacts, target_root, holds, agents), STORYBOARD))
     issues.extend(_kind(_validate_capability_citations(artifacts, target_root), CITATION))
-    issues.extend(_kind(_validate_rule_citations(artifacts, target_root), CITATION))
-    issues.extend(_kind(_validate_address_citations(artifacts, target_root), CITATION))
+    if manifest_parses:
+        issues.extend(_kind(_validate_rule_citations(artifacts, target_root), CITATION))
+        issues.extend(_kind(_validate_address_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_point_citations(artifacts, target_root), POINT_CITATION))
-    issues.extend(_kind(_validate_operational_citations(target_root), OPERATIONAL_CITATION))
+    if manifest_parses:
+        issues.extend(_kind(_validate_operational_citations(target_root), OPERATIONAL_CITATION))
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
     issues.extend(_kind(_validate_reads_patterns(artifacts, target_root), READS_PATTERN))
     if picked is not None:
         issues.extend(_kind(_validate_unknown_overrides(target_root), UNKNOWN_OVERRIDE))
-    issues.extend(_kind(_validate_undeclared_categories(target_root), UNDECLARED_CATEGORY))
+    if manifest_parses:
+        issues.extend(_kind(_validate_undeclared_categories(target_root), UNDECLARED_CATEGORY))
     return issues
+
+
+def _unparsed_manifest(target_root: Path) -> list[Issue]:
+    """One finding at the backbone manifest where it does not parse, else none.
+
+    What it registers, the adapters and the capabilities installed, is read by the
+    checks of tool access, of the citations of rules, addresses and operational rules,
+    and of the overlay's categories, each through its own reader, which lets the
+    parser's error escape. So the run reads the manifest once first, and those checks
+    go without it (`check_corpus`) rather than end the run.
+    """
+    try:
+        read_backbone_manifest(target_root)
+    except YAMLError as exc:
+        cause = " ".join(str(exc).split())
+        return [
+            Issue(
+                location=MANIFEST,
+                diagnosis=f"{MANIFEST} does not parse ({cause}), so nothing it registers is "
+                "read: no agent is checked against what an adapter that deploys agents "
+                "refuses, and no citation of a rule, an address or an operational rule, nor "
+                "a category of the overlay, is checked.",
+            )
+        ]
+    return []
 
 
 def _kind(issues: list[Issue], kind: str) -> list[Issue]:
@@ -441,12 +488,12 @@ def outcome(target_root: Path) -> Outcome:
     model or effort the harness does not accept, an agent's `reads.patterns`
     entry that is neither a placeholder nor a path, a name whose winning place
     holds both layouts, a definition whose front matter gives another name than
-    its file's, a name the picker cannot tell, a picker the command cannot reach —
-    is an **error**. A citation of a point its record does not hold is a
-    **warning** too, read from prose as drift is, and so are an override the
-    deploy ignores, a key outside an agent definition's fields, a collision
-    between capabilities no choice settles and a choice that decides nothing,
-    since the agent deploys regardless. `pkit refs validate`,
+    its file's, a name the picker cannot tell, a picker the command cannot reach, a
+    backbone manifest that does not parse — is an **error**. A citation of a point
+    its record does not hold is a **warning** too, read from prose as drift is, and
+    so are an override the deploy ignores, a key outside an agent definition's
+    fields, a collision between capabilities no choice settles and a choice that
+    decides nothing, since the agent deploys regardless. `pkit refs validate`,
     the focused surface, keeps its stricter exit: it fails on any finding but those
     warnings.
     """
@@ -2521,7 +2568,7 @@ def _infer_target_root(path: Path) -> Path | None:
 
 
 def _tool_accesses(
-    artifacts: list[Artifact], target_root: Path
+    artifacts: list[Artifact], target_root: Path, *, manifest_parses: bool
 ) -> tuple[dict[Path, Callable[[str], bool]], list[Issue]]:
     """Whether each agent holds a tool, by its file, as the tree's reader answers it.
 
@@ -2532,14 +2579,15 @@ def _tool_accesses(
     such an adapter's own findings (`_adapter_declarations`, point 6). Where there
     is an agent to read and the command cannot reach the reader, they are one
     finding at the reader's path (point 5). The adapters are read only where there
-    is an agent to read, since it is the reader that reads their declarations. An
+    is an agent to read, since it is the reader that reads their declarations, and
+    only where *manifest_parses*, since the backbone manifest registers them. An
     agent whose access could not be read is left out of the answer, so no check
     reads it.
     """
     agents = [art for art in artifacts if art.kind == "agent"]
     if not agents:
         return {}, []
-    adapters = agent_tool_access.agent_adapters(target_root)
+    adapters = agent_tool_access.agent_adapters(target_root) if manifest_parses else []
     functions = ("tool_access", "holds", "Refused")
     if adapters:
         functions += ("read_declaration", "declaration_path", "harness_refusal", "BadDeclaration")
@@ -3525,13 +3573,12 @@ def _validate_agent_choices(picked: Any) -> list[Issue]:
     """Each collision between capabilities no choice settles, and each choice that
     decides nothing, at the backbone manifest where a choice is recorded
     (ADR-087 point 3, COR-017)."""
-    manifest = (Path(".pkit") / "manifest.yaml").as_posix()
     issues: list[Issue] = []
     for collision in picked.collisions:
         others = ", ".join(collision.capabilities)
         issues.append(
             Issue(
-                location=manifest,
+                location=MANIFEST,
                 diagnosis=(
                     f"agent {collision.name!r} is shipped by capabilities {others}, and no "
                     f"choice of the project's settles which is the agent: capability "
@@ -3543,7 +3590,7 @@ def _validate_agent_choices(picked: Any) -> list[Issue]:
     for idle in picked.idle_choices:
         issues.append(
             Issue(
-                location=manifest,
+                location=MANIFEST,
                 diagnosis=(
                     f"the project's choice of capability {idle.capability} for agent "
                     f"{idle.name!r} decides nothing: {idle.why} (COR-017). Record another "

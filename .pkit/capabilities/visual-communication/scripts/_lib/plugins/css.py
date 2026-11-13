@@ -26,7 +26,8 @@ root may leave out an axis at its default.
 
 1. `:root`, with every token at the combination of every default.
 2. For each value axis in the order of its name, and each of its modes in the order the
-   foundations declare them, the default included, `[data-<axis>="<mode>"]`:
+   foundations declare them, or the brand an axis of its own, the default included,
+   `[data-<axis>="<mode>"]`:
    - at a mode that is not the default, every token the axis changes in some combination,
      at that mode and every other axis at its default;
    - at the default, every token whose first axis that changes it, in the order of the

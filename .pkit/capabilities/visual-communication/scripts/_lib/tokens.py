@@ -1,6 +1,6 @@
 """Brands: their design tokens and Resolver document in the DTCG format 2025.10, the
-foundations' declarations of the shared roles, axes, colour families, shapes and pairs
-(DEC-004, DEC-036 point 1),
+foundations' declarations of the shared roles, axes, colour families, shapes, an order's
+roles and pairs (DEC-004, DEC-032 point 1, DEC-036 point 1),
 the own roles of the component libraries resolved with a brand (DEC-008), and the
 component tokens of their components (DEC-035).
 
@@ -8,20 +8,22 @@ component tokens of their components (DEC-035).
 its type, and a default that aliases an older role where it has one; each shared axis with
 its kind, its modes and its default; the colour families, each a mapping of its members to
 colour roles; the shapes a notation maps a concept to, each an outline by its name
-(`outlines`); and the pairs of colour roles that must contrast, at WCAG's levels. A shared
-role carries no value, so it is no DTCG token. A role of the type `picture` takes a picture
-file of the brand as its value; it carries no default, and no brand owes it a value
-(DEC-025 point 4).
+(`outlines`); an order's roles, where they declare them (`Order`): which colour role is the
+first end, which the last, which the text on every step and which the page's ground, the
+first three in no family, and no family named `order`; and the pairs of colour roles that
+must contrast, at WCAG's levels. A shared role carries no value, so it is no DTCG token. A
+role of the type `picture` takes a picture file of the brand as its value; it carries no
+default, and no brand owes it a value (DEC-025 point 4).
 
 **A component library's own roles** (`roles.yaml` of a library of kind `components` other
 than the foundations, `read_own_roles`) lie under a group of its name, none under the group
 of component tokens (DEC-004 point 7). Each has a type, and may carry a default: an alias
 to another of its own roles, or to a role of a library it builds on, the shared roles
 included, of the same type, never to a value or a component token (DEC-008 point 3). Its
-pairs each name one of its own roles. It declares no axes, no colour families, no shapes
-and no picture role, which the foundations' alone are. What is wrong in it never refuses it: it
-is kept as its findings, each naming its version, and a role or a pair that cannot be
-read is left out.
+pairs each name one of its own roles. It declares no axes, no colour families, no shapes,
+no order's roles and no picture role, which the foundations' alone are. What is wrong in it
+never refuses it: it is kept as its findings, each naming its version, and a role or a pair
+that cannot be read is left out.
 
 **A component token** (`read_component_tokens`) is declared in its component's own file,
 under `tokens`, by its name alone, as `{type, default}`: its path is
@@ -38,13 +40,14 @@ component (`layout`). The foundations ship components too, so theirs declare tok
 of each component library resolved with them, one version of each, under a lock or as a
 version is checked alone (DEC-008 point 1). It judges each library's defaults and pairs
 against the libraries it builds on there: a default that aliases a component token, a
-role of another type or of a library it does not build on, a default that leads nowhere
-or a loop of defaults, each fails; a pair that, its own roles replaced by their defaults,
-falls on no pair the foundations, the library or a library it builds on declares at a
-level as strict fails; a role whose chain of defaults does not end at a shared role is
-stated as a fact. A role's type reads from the scope with no brand. It holds each
-component library, one that declares neither an own role nor a component token among them,
-since a brand that names a library draws its tops too (DEC-009 point 3).
+role of an order (DEC-032 point 6), a role of another type or of a library it does not
+build on, a default that leads nowhere or a loop of defaults, each fails; a pair that, its
+own roles replaced by their defaults, falls on no pair the foundations, the library or a
+library it builds on declares at a level as strict fails; a role whose chain of defaults
+does not end at a shared role is stated as a fact. A role's type reads from the scope with
+no brand. It holds each component library, one that declares neither an own role nor a
+component token among them, since a brand that names a library draws its tops too (DEC-009
+point 3).
 
 **A brand** is one library version of kind `brand`. Its `library.yaml` names the DTCG
 version, its Resolver document, its open roles, and the brand it builds on as its base, if
@@ -61,9 +64,14 @@ format may add:
 - *The Resolver document* has `version`, `sets` and `modifiers`, and `resolutionOrder`
   naming each set and modifier once as `{"$ref": "#/sets/<n>"}` or
   `{"$ref": "#/modifiers/<n>"}`; later wins. A source is `{"$ref": "<token file>"}`, a
-  file of the brand's version folder. Each modifier is a shared axis the brand varies:
+  file of the brand's version folder. A modifier is a shared axis the brand varies:
   its contexts are the modes it gives, the axis's default among them, and its default the
-  axis's (DEC-004 point 1). A brand may leave out an axis it does not vary.
+  axis's (DEC-004 point 1). A brand may leave out an axis it does not vary. A modifier may
+  hold `$extensions`. One that names its kind in the capability's extension key,
+  `{"kind": "value"}` or `{"kind": "size"}`, is an axis of the brand's own (DEC-004 point
+  2): its contexts are its modes, two or more, its default one of them. Only a brand that
+  builds on no other declares one, and none takes a shared axis's name (`own-axis-name`),
+  so a new shared axis breaks such a brand (DEC-004 point 5).
 - *Fonts* lie in the capability's extension key, `pkit.visual-communication`, on a
   `fontFamily` token: `files` maps each family to its file in the brand's version folder,
   or to `{"hash": "sha256:<hex>"}` for a file in the location's `fonts/`; `measure` says
@@ -82,7 +90,10 @@ format may add:
   modifier varies it, with the modes that modifier gives. A brand built on another has
   its base's sizes. So a brand that gives no size keeps its combinations when the
   foundations declare a size axis, and a piece that names a size it lacks is refused,
-  the refusal naming the brand, and its base, that do not give it (`combinations_of`).
+  the refusal naming the brand, and its base, that do not give it (`combinations_of`);
+- *each axis of its own, whole,* in a brand with no base, and a brand built on it keeps
+  it. An `Axis` of a brand's own is `own`. A key, a combination and a name in code read it
+  as they read a shared one (DEC-004 point 3).
 
 **Resolution** merges the brand's sources in resolution order for a combination, over the
 roles' defaults, then resolves aliases. Every shared role but a picture role must resolve
@@ -141,8 +152,8 @@ its major is the one the entry names. In each combination:
   the tokens of the library that writes it, never a token its base keeps private, which
   fails. So a base may reshape its private tokens freely;
 - *the base's axes:* the brand varies values on its base's axes, by their names and modes,
-  its base's sizes among them. A modifier for another axis, a context for another mode, or
-  another default fails;
+  its base's sizes and its own axes among them. A modifier for another axis, one that
+  declares an axis of its own, a context for another mode, or another default fails;
 - *chains narrow:* the brand's open roles name only roles its base opens to it (format 1
   has no brand's own roles), so each link of a chain opens at most what the last opens.
   A base opens a role of a library only where it names that library, and a brand built on
@@ -153,7 +164,8 @@ a Brand, whose `findings` hold what is wrong but leaves it usable: an open role 
 not have, a value for a role its base does not open, a font file nothing holds, a picture
 file nothing holds or the capability does not read, a picture role given in some value
 combinations of a key and not in others or given files of two proportions there, a
-declared pair below its contrast, a
+declared pair below its contrast, an order's text between its two ends or a first end that
+stands out less from the page's ground than the last (DEC-032 point 2), a
 token under a library's name that gives none of its roles a value, a role of a library it
 names that it leaves with no value. Its `facts` hold what its version alone states: each
 shared picture role it gives no value (DEC-025 point 9). A library's own `roles.yaml` is
@@ -161,8 +173,8 @@ no brand's: its findings are the scope's (`Scope.findings`), each naming the lib
 version. Every finding of a brand names the brand's version as where it lies, so its level
 is read where it lies (DEC-002 point 7); a fault of the lock, a base it names at another
 major or not at all, names none, and always fails. A brand's findings hold its base's too,
-each naming the base's version; a pair or a font family is judged at the brand only where
-the brand's values change what the base gives.
+each naming the base's version; a pair, an order's ends or a font family is judged at the
+brand only where the brand's values change what the base gives.
 
 Knows nothing of the working folder, pieces, the list or the configuration.
 """
@@ -224,6 +236,12 @@ VALUE_AXIS_TYPES = ("color", PICTURE)
 #: The axes' kinds.
 AXIS_KINDS = ("value", "size")
 
+#: The key of the capability's extension point on a modifier that declares an axis of the
+#: brand's own, which gives the axis's kind (DEC-004 points 1 and 2).
+KIND = "kind"
+
+_MODIFIER_KEYS = ("contexts", "default", "description", "$extensions")
+
 #: The contrast each level of a pair must reach (WCAG 2.2: 1.4.3 and 1.4.11).
 LEVELS = {"text": 4.5, "large-text": 3.0, "marks": 3.0}
 
@@ -249,6 +267,11 @@ _DECLARATION_KEYS = ("type", "default")
 #: no role takes or a picture (DEC-035 points 2, 4 and 9).
 TOKEN_SHAPE = "component-token-shape"
 
+#: The key of the foundations' `roles.yaml` that declares an order's roles, a name no colour
+#: family takes, and the keys of its declaration, each naming a colour role (DEC-032 point 1).
+ORDER = "order"
+ORDER_KEYS = ("first", "last", "text", "ground")
+
 
 class TokenError(Exception):
     """Declarations or a brand that cannot be read or resolved; `findings` says why."""
@@ -271,12 +294,14 @@ class RoleWithoutValue(UnknownRole, UnvaluedRole):
 
 @dataclass(frozen=True)
 class Axis:
-    """A shared axis: its name, its kind (`value` or `size`), its modes and its default."""
+    """An axis: its name, its kind (`value` or `size`), its modes and its default; `own`,
+    whether it is a brand's own rather than shared (DEC-004 point 2)."""
 
     name: str
     kind: str
     modes: tuple[str, ...]
     default: str
+    own: bool = False
 
 
 @dataclass(frozen=True)
@@ -329,6 +354,24 @@ class Pair:
 
 
 @dataclass(frozen=True)
+class Order:
+    """An order's roles as the foundations declare them (DEC-032 point 1): `first`, the end
+    an order's first place takes; `last`, the end its last place takes; `text`, the text on
+    every step; and `ground`, the shared role of the page's ground, from which the first end
+    stands out at least as much as the last (DEC-004 point 8)."""
+
+    first: str
+    last: str
+    text: str
+    ground: str
+
+    @property
+    def roles(self) -> tuple[str, str, str]:
+        """The roles of an order, its two ends and its text. The ground is the page's."""
+        return (self.first, self.last, self.text)
+
+
+@dataclass(frozen=True)
 class GivenPicture:
     """The file a brand gives a picture role in one combination (DEC-025 point 4): its bare
     name, `name`, and the brand version whose `pictures/` holds it, the brand's own or a
@@ -351,9 +394,11 @@ class GivenPicture:
 @dataclass(frozen=True)
 class Declarations:
     """A library's declarations, its `roles.yaml`: the foundations' shared roles, axes,
-    colour families, shapes and pairs (DEC-004, DEC-036 point 1), or a component library's
-    own roles and pairs (DEC-008 point 8).
+    colour families, shapes, an order's roles and pairs (DEC-004, DEC-032 point 1, DEC-036
+    point 1), or a component library's own roles and pairs (DEC-008 point 8).
 
+    - `order`: an order's roles, where the foundations declare them; None in a version
+      that declares none, as every version before them, and in a library's own roles.
     - `label`: `<name>@<version>` of the library they lie in, and `file` the file as
       findings name it.
     - `own`: for a library other than the foundations, its name, the group its own roles
@@ -372,6 +417,7 @@ class Declarations:
     families: dict[str, dict[str, str]]
     pairs: tuple[Pair, ...]
     shapes: dict[str, Outline] = field(default_factory=dict)
+    order: Order | None = None
     label: str = ""
     file: str = ""
     own: str = ""
@@ -410,6 +456,7 @@ def read_declarations(path: Path, *, library: str = "", shown: str = "") -> Decl
     axes = _read_axes(data.get("axes", {}), problems)
     families = _read_families(data.get("families", {}), roles, problems)
     shapes = _read_shapes(data.get("shapes", {}), problems)
+    order = _read_order(data.get(ORDER), roles, families, problems)
     pairs = _read_pairs(data.get("pairs", []), roles, problems)
     if problems.found:
         raise TokenError(problems.found)
@@ -427,6 +474,7 @@ def read_declarations(path: Path, *, library: str = "", shown: str = "") -> Decl
         families=families,
         pairs=pairs,
         shapes=shapes,
+        order=order,
         label=library,
         file=file,
         findings=unclosed,
@@ -438,6 +486,7 @@ _FOUNDATIONS_ONLY = {
     "axes": "the shared axes",
     "families": "the colour families",
     "shapes": "the shapes",
+    ORDER: "an order's ends and its text",
 }
 
 
@@ -707,6 +756,13 @@ def _read_families(
                 "family-shape", f"the family `{name}` is not a name with its members", where
             )
             continue
+        if name == ORDER:
+            problems.add(
+                "family-shape",
+                f"the family `{name}` takes the name of an order's roles, which no family takes",
+                where,
+            )
+            continue
         for member, role in members.items():
             if not is_name(member) or roles.get(role) is None or roles[role].type != "color":
                 problems.add(
@@ -739,6 +795,54 @@ def _read_shapes(raw: Any, problems: _Problems) -> dict[str, Outline]:
             continue
         shapes[name] = outline
     return shapes
+
+
+def _read_order(
+    raw: Any,
+    roles: Mapping[str, Role],
+    families: Mapping[str, Mapping[str, str]],
+    problems: _Problems,
+) -> Order | None:
+    """An order's roles as `raw` declares them (DEC-032 point 1), or None where it declares
+    none: four different colour roles, `first`, `last`, `text` and `ground`, of which the
+    order's own three lie in no colour family."""
+    if raw is None:
+        return None
+    if not isinstance(raw, Mapping) or set(raw) != set(ORDER_KEYS):
+        keys = ", ".join(f"`{key}`" for key in ORDER_KEYS)
+        problems.add(
+            "order-shape", f"`{ORDER}` is not a mapping of {keys}, each to a colour role", ORDER
+        )
+        return None
+    named = tuple(raw[key] for key in ORDER_KEYS)
+    stray = [
+        key
+        for key, role in zip(ORDER_KEYS, named, strict=True)
+        if not isinstance(role, str) or role not in roles or roles[role].type != "color"
+    ]
+    for key in stray:
+        problems.add("order-shape", f"`{ORDER}.{key}` names no colour role", f"{ORDER}.{key}")
+    if stray:
+        return None
+    if len(set(named)) != len(named):
+        problems.add(
+            "order-shape",
+            f"`{ORDER}` names one role twice: an order's two ends, its text and the page's "
+            f"ground are four roles",
+            ORDER,
+        )
+        return None
+    order = Order(*named)
+    for family, members in families.items():
+        for member, role in members.items():
+            if role in order.roles:
+                problems.add(
+                    "order-shape",
+                    f"the member `{member}` of the family `{family}` is `{role}`, a role of an "
+                    f"order, which no family holds",
+                    f"families.{family}.{member}",
+                )
+    return order
 
 
 def _read_pairs(
@@ -860,6 +964,10 @@ class Scope:
         return self.foundations.shapes
 
     @property
+    def order(self) -> Order | None:
+        return self.foundations.order
+
+    @property
     def top_groups(self) -> tuple[str, ...]:
         return self.foundations.top_groups
 
@@ -934,8 +1042,10 @@ class Scope:
 
     def _check_defaults(self, name: str) -> None:
         """Each default of the library's own roles and of its components' tokens, against
-        the roles it may reach (DEC-008 point 3, DEC-035 point 4)."""
+        the roles it may reach (DEC-008 point 3, DEC-035 point 4). None aliases a role of
+        an order (DEC-032 point 6)."""
         reach = self.reach(name)
+        ordered = self.order.roles if self.order is not None else ()
         for path, role, file, where in self._declared(name):
             target = role.default
             if target is None:
@@ -946,6 +1056,15 @@ class Scope:
                     "role-default",
                     f"the default of `{path}` aliases `{target}`, a component token: a role "
                     f"defaults to a role, never to the token of one part",
+                    where,
+                    file=file,
+                )
+            elif target in ordered:
+                self._add(
+                    name,
+                    "role-default",
+                    f"the default of `{path}` aliases `{target}`, a role of an order: a brand "
+                    f"tunes an order's colours for its steps alone, so no default aliases one",
                     where,
                     file=file,
                 )
@@ -1210,8 +1329,9 @@ class Brand:
     - `name`, `version`, `label` (`<name>@<version>`): as its `library.yaml` gives them.
     - `scope`: the roles it is resolved against.
     - `axes`: the axes it has, each a key's axis: every shared value axis, whole, whether
-      it varies it or not, and each shared size axis it or its base gives, with the modes
-      given (DEC-021 point 2). They are the axes and modes it exports (DEC-004 point 5).
+      it varies it or not, each shared size axis it or its base gives, with the modes
+      given (DEC-021 point 2), and each axis of its own or its base's, whole (DEC-004 point
+      2). They are the axes and modes it exports (DEC-004 point 5).
     - `named`: the libraries of the scope it names among those it builds on, by the major
       their version fits, whose roles it reaches (DEC-008 point 4) and whose tops it draws
       (DEC-009 point 3).
@@ -1487,6 +1607,7 @@ class _BrandReader:
         self.fatal: list[Finding] = []
         self.kept: list[Finding] = []
         self.flat: dict[str, dict[str, _Token]] = {}
+        self.own: dict[str, Axis] = {}
 
     # findings
 
@@ -1587,6 +1708,7 @@ class _BrandReader:
         open_roles, opened = self._check_open(library.get("open", []), base)
         fonts = self._read_fonts(resolved, hidden, base)
         self._check_pairs(views, resolved, base)
+        self._check_order(resolved, base)
         valued = tuple(
             path
             for path in sorted(self.scope.roles)
@@ -1816,9 +1938,11 @@ class _BrandReader:
     def _read_modifiers(
         self, raw: Any, rel: str, base: Brand | None
     ) -> dict[str, dict[str, tuple[str, ...]]]:
-        """Each modifier, one of the shared axes, by the contexts of the modes it gives, the
-        axis's default among them (DEC-004 point 1); a brand built on another keeps its
-        base's axes, modes and defaults (DEC-004 point 6), and adds or changes none."""
+        """Each modifier by the contexts of the modes it gives (DEC-004 point 1): a shared
+        axis the brand varies, the axis's default among them, or, in a brand that builds on
+        no other, an axis of its own (`_read_own`), whose kind the capability's extension
+        point gives (DEC-004 point 2). A brand built on another keeps its base's axes, modes
+        and defaults (DEC-004 point 6), and adds or changes none."""
         if not isinstance(raw, Mapping):
             self._fail("resolver-shape", "`modifiers` is not an object", rel, "modifiers")
             return {}
@@ -1826,7 +1950,24 @@ class _BrandReader:
         modifiers = {}
         for name, spec in raw.items():
             where = f"modifiers.{name}"
+            if not isinstance(spec, Mapping) or set(spec) - set(_MODIFIER_KEYS):
+                self._fail(
+                    "resolver-shape",
+                    f"the modifier `{name}` holds more than `contexts`, `default`, "
+                    f"`description` and `$extensions`",
+                    rel,
+                    where,
+                )
+                continue
+            kind = self._own_kind(name, spec, rel, where)
+            if kind == "":
+                continue
             axis = axes.get(name)
+            if kind is not None:
+                axis = self._read_own(name, kind, spec, base, rel, where)
+                if axis is None:
+                    continue
+                self.own[name] = axis
             if axis is None and base is not None:
                 self._fail(
                     "base-axis",
@@ -1839,17 +1980,8 @@ class _BrandReader:
             if axis is None:
                 self._fail(
                     "brand-axis",
-                    f"the modifier `{name}` is no shared axis; format 1 reads no axis of a "
+                    f"the modifier `{name}` is no shared axis, and declares no axis of the "
                     f"brand's own (the shared axes: {', '.join(sorted(self.scope.axes))})",
-                    rel,
-                    where,
-                )
-                continue
-            if not isinstance(spec, Mapping) or set(spec) - {"contexts", "default", "description"}:
-                self._fail(
-                    "resolver-shape",
-                    f"the modifier `{name}` holds more than `contexts`, `default` and "
-                    f"`description`",
                     rel,
                     where,
                 )
@@ -1909,15 +2041,117 @@ class _BrandReader:
             }
         return modifiers
 
+    def _own_kind(self, name: str, spec: Mapping[str, Any], rel: str, where: str) -> str | None:
+        """The kind of the axis of the brand's own that the modifier `name` declares in the
+        capability's extension point, `{"kind": "value"}` or `{"kind": "size"}` (DEC-004
+        points 1 and 2); None where it declares none, as a modifier of a shared axis does,
+        and "" where its extension cannot be read, a finding."""
+        extensions = spec.get("$extensions", {})
+        if not isinstance(extensions, Mapping):
+            self._fail(
+                "resolver-shape",
+                f"`$extensions` of the modifier `{name}` is not an object",
+                rel,
+                f"{where}.$extensions",
+            )
+            return ""
+        if EXTENSION not in extensions:
+            return None
+        declared = extensions[EXTENSION]
+        if (
+            not isinstance(declared, Mapping)
+            or set(declared) != {KIND}
+            or declared[KIND] not in (AXIS_KINDS)
+        ):
+            self._fail(
+                "own-axis",
+                f"the modifier `{name}` declares an axis of the brand's own, and gives no kind of "
+                f"{', '.join(AXIS_KINDS)}: its `{EXTENSION}` holds `{KIND}` alone",
+                rel,
+                f"{where}.$extensions.{EXTENSION}",
+            )
+            return ""
+        return str(declared[KIND])
+
+    def _read_own(
+        self,
+        name: str,
+        kind: str,
+        spec: Mapping[str, Any],
+        base: Brand | None,
+        rel: str,
+        where: str,
+    ) -> Axis | None:
+        """The axis of the brand's own the modifier `name` declares, of `kind` (DEC-004 point
+        2): its modes are its contexts, in their order, two or more, and its default one of
+        them. A brand built on another adds none (point 6), and no axis of a brand's own
+        takes a shared axis's name, which a new shared axis may come to take (point 5).
+        None where it does not hold, a finding."""
+        if base is not None:
+            self._fail(
+                "base-axis",
+                f"the modifier `{name}` declares an axis of the brand's own, and a brand built "
+                f"on {base.label} adds no axis: it varies only its base's axes: "
+                f"{', '.join(sorted(base.axes))}",
+                rel,
+                f"{where}.$extensions",
+            )
+            return None
+        if name in self.scope.axes:
+            self._fail(
+                "own-axis-name",
+                f"the modifier `{name}` declares an axis of the brand's own by the name of a "
+                f"shared axis: rename the brand's axis, or leave out `{EXTENSION}` to vary the "
+                f"shared one",
+                rel,
+                f"{where}.$extensions",
+            )
+            return None
+        if not is_name(name):
+            self._fail(
+                "own-axis",
+                f"the axis `{name}` of the brand's own is not a name of lower-case words of "
+                f"letters and digits joined by hyphens",
+                rel,
+                where,
+            )
+            return None
+        contexts = spec.get("contexts")
+        if (
+            not isinstance(contexts, Mapping)
+            or len(contexts) < 2
+            or not all(is_name(mode) for mode in contexts)
+        ):
+            self._fail(
+                "own-axis",
+                f"the axis `{name}` of the brand's own must have one context for each of its "
+                f"modes, two or more, each a name of lower-case words",
+                rel,
+                f"{where}.contexts",
+            )
+            return None
+        default = spec.get("default")
+        if default not in contexts:
+            self._fail(
+                "own-axis",
+                f"the default of the axis `{name}` of the brand's own is not one of its modes: "
+                f"{', '.join(contexts)}",
+                rel,
+                f"{where}.default",
+            )
+            return None
+        return Axis(name=name, kind=kind, modes=tuple(contexts), default=str(default), own=True)
+
     def _axes(
         self, modifiers: Mapping[str, Mapping[str, tuple[str, ...]]], base: Brand | None
     ) -> dict[str, Axis]:
-        """The axes the brand has (DEC-021 point 2): its base's, where it builds on one;
-        else every shared value axis, whole, and each shared size axis a modifier varies,
-        with the modes that modifier gives, in the order the foundations declare them."""
+        """The axes the brand has (DEC-021 point 2, DEC-004 point 2): its base's, where it
+        builds on one; else every shared value axis, whole, and each shared size axis a
+        modifier varies, with the modes that modifier gives, in the order the foundations
+        declare them, then each axis of its own."""
         if base is not None:
             return dict(base.axes)
-        return {
+        shared = {
             name: axis
             if axis.kind == "value"
             else Axis(
@@ -1929,6 +2163,7 @@ class _BrandReader:
             for name, axis in self.scope.axes.items()
             if axis.kind == "value" or name in modifiers
         }
+        return {**shared, **self.own}
 
     def _read_sources(self, raw: Any, rel: str, where: str) -> tuple[str, ...]:
         if not isinstance(raw, list):
@@ -2174,7 +2409,7 @@ class _BrandReader:
                 continue
             contexts, mode = modifiers[name], combination[name]
             if mode not in contexts and base is None:
-                mode = self.scope.axes[name].default
+                mode = self.scope.axes[name].default  # an axis of its own gives every mode
             files.extend(contexts.get(mode, ()))
         return files
 
@@ -2958,6 +3193,94 @@ class _BrandReader:
                         pair.text,
                     )
 
+    def _check_order(
+        self,
+        resolved: Mapping[str, Mapping[str, _Resolved]],
+        base: Brand | None,
+    ) -> None:
+        """An order's ends in every combination, where the foundations declare them (DEC-004
+        point 8, DEC-032 point 2), at their defaults as at a brand's values: the order's
+        text lies on one side of both ends, and the first end contrasts with the page's
+        ground at least as much as the last. A combination where the four colours are as
+        the base gives them is the base's to report, and one whose ground is translucent is
+        not measured. The order's text on each end is a declared pair, which `_check_pairs`
+        measures."""
+        order = self.scope.foundations.order
+        if order is None:
+            return
+        named = (order.first, order.last, order.text, order.ground)
+        for key, values in resolved.items():
+            if any(path not in values for path in named):
+                continue
+            colours = [values[path].value for path in named]
+            below = base._resolved[key] if base is not None else {}
+            if all(path in below for path in named) and colours == [
+                below[path].value for path in named
+            ]:
+                continue
+            first, last, text, ground = colours
+            if ground["alpha"] < 1:
+                continue
+            self._check_text_side(order, key, (first, last), text, ground)
+            self._check_first_end(order, key, first, last, ground)
+
+    def _check_text_side(
+        self,
+        order: Order,
+        key: str,
+        ends: tuple[Mapping[str, Any], Mapping[str, Any]],
+        text: Mapping[str, Any],
+        ground: Mapping[str, Any],
+    ) -> None:
+        """The order's text lighter than both ends, or darker than both, by WCAG's relative
+        luminance, each end laid over the ground and the text over each end, as drawn. Else
+        a step between the ends may come as light as the text."""
+        sides: list[float] = []
+        for end in ends:
+            under = _laid_over(end, ground)
+            drawn = _laid_over(text, under)
+            sides.append(_luminance(drawn["components"]) - _luminance(under["components"]))
+        if all(side > 0 for side in sides) or all(side < 0 for side in sides):
+            return
+        said = " and ".join(
+            f"{_compared(side)} `{role}`"
+            for side, role in zip(sides, (order.first, order.last), strict=True)
+        )
+        self._keep(
+            "order-text-between",
+            f"`{order.text}` is {said} in the combination `{key}`, so a step between the ends "
+            f"may come as light as it: an order's text is lighter than both its ends, or darker "
+            f"than both",
+            "",
+            order.text,
+            fix=f"give `{order.text}` a colour lighter than both ends in `{key}`, or darker than "
+            f"both",
+        )
+
+    def _check_first_end(
+        self,
+        order: Order,
+        key: str,
+        first: Mapping[str, Any],
+        last: Mapping[str, Any],
+        ground: Mapping[str, Any],
+    ) -> None:
+        """The first end's contrast with the page's ground at least the last's, by WCAG's
+        ratio, each end laid over the ground. Equal ends pass."""
+        stands_first, stands_last = contrast_ratio(first, ground), contrast_ratio(last, ground)
+        if stands_first >= stands_last or math.isclose(stands_first, stands_last):
+            return
+        self._keep(
+            "order-first-weaker",
+            f"`{order.first}` has the contrast {stands_first:.2f} with `{order.ground}`, the "
+            f"page's ground, in the combination `{key}`, below the {stands_last:.2f} of "
+            f"`{order.last}`: an order's first end stands out at least as much as its last",
+            "",
+            order.first,
+            fix=f"swap the colours of the two ends in `{key}`, or move `{order.first}` further "
+            f"from `{order.ground}`",
+        )
+
 
 def _families(*maps: Mapping[str, Mapping[str, _Resolved]]) -> set[str]:
     """The font families the resolved values name, in any combination."""
@@ -3052,13 +3375,27 @@ def _unit(value: Any) -> bool:
 def contrast_ratio(text: Mapping[str, Any], under: Mapping[str, Any]) -> float:
     """The WCAG contrast of the colour `text` drawn on the opaque colour `under`, both in
     canonical form: a translucent text is laid over `under` first."""
-    alpha = text["alpha"]
-    drawn = [
-        t * alpha + u * (1 - alpha)
-        for t, u in zip(text["components"], under["components"], strict=True)
-    ]
+    drawn = _laid_over(text, under)["components"]
     lighter, darker = sorted((_luminance(drawn), _luminance(under["components"])), reverse=True)
     return (lighter + 0.05) / (darker + 0.05)
+
+
+def _laid_over(top: Mapping[str, Any], under: Mapping[str, Any]) -> dict[str, Any]:
+    """The colour `top` laid over the opaque colour `under`, both in canonical form, as the
+    opaque colour drawn, in canonical form."""
+    alpha = top["alpha"]
+    components = [
+        t * alpha + u * (1 - alpha)
+        for t, u in zip(top["components"], under["components"], strict=True)
+    ]
+    return {"colorSpace": "srgb", "components": components, "alpha": 1}
+
+
+def _compared(side: float) -> str:
+    """How a colour's relative luminance stands to another's, `side` their difference."""
+    if side > 0:
+        return "lighter than"
+    return "darker than" if side < 0 else "as light as"
 
 
 def _luminance(components: Iterable[float]) -> float:

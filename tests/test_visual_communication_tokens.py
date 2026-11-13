@@ -13,6 +13,7 @@ import json
 import shutil
 import subprocess
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,7 @@ import pytest
 from tests import visual_communication_logo as logos
 from tests.in_process import load
 from tests.visual_communication_project import (
+    COMPACT_SPACE,
     FOUNDATIONS,
     RELEASED_FOUNDATIONS,
     RELEASES,
@@ -28,8 +30,10 @@ from tests.visual_communication_project import (
     TEST_EDITION,
     TEST_PARTS,
     TEST_PICTURES,
+    WINTER_ACCENT,
     bound,
     copy_library,
+    giving_own_axis,
     project,
     write,
     write_piece,
@@ -393,9 +397,18 @@ def test_a_pair_below_its_contrast_fails_in_the_combination_it_lies_in(
     folder = brand_copy(tmp_path)
     edit_json(folder / DARK, setting("scheme|ink|$value", "{palette.night.800}"))
     found = tokens.read_brand(folder, foundations).findings
-    assert codes(found) == {"pair-contrast"}
-    # The neutral family paints its text with the primary text, so its pair falls with it.
-    assert sorted(finding.where for finding in found) == ["family.neutral.text", "text-primary"]
+    assert codes(found) == {"pair-contrast", "order-text-between"}
+    pairs = [finding for finding in found if finding.code == "pair-contrast"]
+    # The neutral family paints its text with the primary text, so its pair falls with it,
+    # and so does an order's text on each end, at their defaults the neutral family's
+    # colours (DEC-032 point 1). The order's own rule is judged there too
+    # (`test_an_order_at_its_defaults_is_judged_in_every_combination`).
+    assert sorted(finding.where for finding in pairs) == [
+        "family.neutral.text",
+        "family.order.text",
+        "family.order.text",
+        "text-primary",
+    ]
     for finding in found:
         assert finding.level == findings.FAILS
         assert "`colour-scheme.dark`" in finding.message
@@ -673,14 +686,27 @@ DEVICE = tokens.Axis("device", "size", ("desktop", "tablet", "phone", "projector
 RELEASED_NEUTRAL = RELEASES / "neutral" / "1.0.0"
 
 #: The shared roles the foundations being built add to their release 1.0.0, each with the role
-#: its default aliases (DEC-022 points 3 and 5, DEC-036 point 3, DEC-004 point 7).
+#: its default aliases (DEC-022 points 3 and 5, DEC-036 point 3, DEC-032 point 1, DEC-004
+#: point 7).
 SITE = tokens.Role("size.site", "dimension", "size.slide")
 LINE = tokens.Role("size.line", "dimension", "size.figure")
 MARKS = {
     path: tokens.Role(path, "dimension", "space.1")
     for path in ("space.sign-gap", "space.ground-room", "space.ground-corner")
 }
-ADDED = {"size.site": SITE, "size.line": LINE, **MARKS}
+ORDER_ROLES = {
+    "family.order.first": tokens.Role("family.order.first", "color", "family.neutral.fill"),
+    "family.order.last": tokens.Role("family.order.last", "color", "family.neutral.fill"),
+    "family.order.text": tokens.Role("family.order.text", "color", "family.neutral.text"),
+}
+ADDED = {"size.site": SITE, "size.line": LINE, **MARKS, **ORDER_ROLES}
+
+#: The pairs of an order's text with each of its ends, which the foundations being built add
+#: to their release 1.0.0 (DEC-032 point 2).
+ORDER_PAIRS = (
+    tokens.Pair("family.order.text", "family.order.first", "text"),
+    tokens.Pair("family.order.text", "family.order.last", "text"),
+)
 
 PHONE = "tokens/phone.tokens.json"
 
@@ -701,19 +727,21 @@ def test_the_foundations_being_built_add_the_size_axis_device_and_their_roles_al
     """`device`, with the modes `desktop`, `tablet`, `phone` and `projector`, a screen read
     from across a room, and the default `desktop` (DEC-021 point 1). `size.site`, a
     dimension whose default is `size.slide` (DEC-004 point 7), `size.line`, the length of
-    a line, whose default is `size.figure` (DEC-022 point 5), and the lengths of a run's
-    sign and ground, each of whose defaults is `space.1` (DEC-036 point 3). Every other
-    declaration is their release 1.0.0's."""
+    a line, whose default is `size.figure` (DEC-022 point 5), the lengths of a run's sign
+    and ground, each of whose defaults is `space.1` (DEC-036 point 3), and an order's roles
+    with their pairs (DEC-032 points 1 and 2). Every other declaration is their release
+    1.0.0's."""
     assert foundations.findings == ()
     assert foundations.axes["device"] == DEVICE
     assert {name: axis for name, axis in foundations.axes.items() if name != "device"} == (
         released.axes
     )
     assert not set(ADDED) & set(released.roles)
+    assert released.order is None
     assert (foundations.roles, foundations.families, foundations.pairs) == (
         {**released.roles, **ADDED},
         released.families,
-        released.pairs,
+        (*released.pairs, *ORDER_PAIRS),
     )
 
 
@@ -776,8 +804,8 @@ def test_a_brand_that_gives_no_size_reads_on_the_foundations_being_built_as_on_t
     release 1.0.0, and a piece cannot name `device` in either (DEC-021 point 2). It gains
     the roles the foundations add, each at the value of the role its default aliases: the
     site at its slide's width, a line at its figure's (DEC-022 points 3 and 5, DEC-004
-    point 7), and a run's sign's and ground's lengths at its smallest space (DEC-036 point
-    3)."""
+    point 7), a run's sign's and ground's lengths at its smallest space (DEC-036 point 3),
+    and an order's ends and text at its neutral family's fill and text (DEC-032 point 1)."""
     before = tokens.read_brand(folder, released)
     read = tokens.read_brand(folder, foundations)
     assert read.findings == before.findings
@@ -1948,3 +1976,512 @@ def test_a_phone_may_take_its_own_logo_and_each_size_is_judged_apart(
     assert finding.fix == (
         "give `picture.logo` a file in every combination of the value axes, or in none"
     )
+
+
+# --- a brand's own axes (DEC-004 points 2, 5 and 6) --------------------------------------------
+
+SEASON = tokens.Axis("season", "value", ("summer", "winter"), "summer", own=True)
+DENSITY = tokens.Axis("density", "size", ("roomy", "compact"), "roomy", own=True)
+
+
+def own_resolver(folder: Path) -> Path:
+    return next(folder.glob("*.resolver.json"))
+
+
+def test_a_brand_with_a_value_axis_of_its_own_varies_colours_on_it(
+    tmp_path: Path, foundations: Any, brand: Any
+) -> None:
+    read = tokens.read_brand(giving_own_axis(brand_copy(tmp_path)), foundations)
+    assert read.findings == ()
+    assert read.axes["season"] == SEASON
+    assert {n: a for n, a in read.axes.items() if n != "season"} == brand.axes
+    assert len(read.combinations()) == 2 * len(brand.combinations())
+    assert read.resolve("accent", {"season": "winter"}) == WINTER_ACCENT
+    for combination in brand.combinations():
+        assert read.resolve("accent", combination) == brand.resolve("accent", combination)
+
+
+def test_a_brand_with_a_size_axis_of_its_own_varies_sizes_on_it(
+    tmp_path: Path, foundations: Any, brand: Any
+) -> None:
+    read = tokens.read_brand(giving_own_axis(brand_copy(tmp_path), "density", "size"), foundations)
+    assert read.findings == ()
+    assert read.axes["density"] == DENSITY
+    assert read.resolve("space.3", {}) == WIDE
+    assert read.resolve("space.3", {"density": "compact", "colour-scheme": "dark"}) == (
+        COMPACT_SPACE
+    )
+
+
+def test_a_value_axis_of_a_brands_own_that_changes_a_size_fails(
+    tmp_path: Path, foundations: Any
+) -> None:
+    folder = brand_copy(tmp_path)
+    write(
+        folder / "tokens/tight.tokens.json",
+        json.dumps({"space": {"$type": "dimension", "3": {"$value": PX}}}),
+    )
+    giving_own_axis(
+        folder, contexts={"summer": [], "winter": [{"$ref": "tokens/tight.tokens.json"}]}
+    )
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations)
+    assert codes(raised.value.findings) == {"value-axis-changes-size"}
+
+
+def test_an_axis_of_a_brands_own_that_takes_a_shared_axiss_name_fails(
+    tmp_path: Path, foundations: Any
+) -> None:
+    folder = brand_copy(tmp_path)
+
+    def declaring(data: dict[str, Any]) -> None:
+        data["modifiers"]["contrast"]["$extensions"] = {
+            "pkit.visual-communication": {"kind": "value"}
+        }
+
+    edit_json(folder / RESOLVER, declaring)
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations)
+    (finding,) = raised.value.findings
+    assert finding.code == "own-axis-name"
+    assert finding.where == "modifiers.contrast.$extensions"
+    assert "by the name of a shared axis" in finding.message
+
+
+@pytest.mark.parametrize(
+    ("contexts", "default", "kind", "said"),
+    [
+        ({"summer": []}, None, "value", "two or more"),
+        ({"summer": [], "Winter": []}, None, "value", "two or more"),
+        ({"summer": [], "winter": []}, "spring", "value", "is not one of its modes"),
+        ({"summer": [], "winter": []}, None, "colour", "gives no kind of value, size"),
+    ],
+    ids=["one-mode", "mode-name", "default", "kind"],
+)
+def test_an_axis_of_a_brands_own_names_its_kind_and_two_modes_with_one_its_default(
+    tmp_path: Path,
+    foundations: Any,
+    contexts: dict[str, Any],
+    default: str | None,
+    kind: str,
+    said: str,
+) -> None:
+    folder = giving_own_axis(brand_copy(tmp_path), "season", kind, contexts, default)
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations)
+    (finding,) = raised.value.findings
+    assert finding.code == "own-axis"
+    assert said in finding.message
+
+
+def test_a_modifier_of_no_shared_axis_that_declares_no_kind_fails(
+    tmp_path: Path, foundations: Any
+) -> None:
+    folder = brand_copy(tmp_path)
+    edit_json(
+        folder / RESOLVER,
+        setting(
+            "modifiers|season", {"contexts": {"summer": [], "winter": []}, "default": "summer"}
+        ),
+    )
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations)
+    (finding,) = [f for f in raised.value.findings if f.code == "brand-axis"]
+    assert "declares no axis of the brand's own" in finding.message
+
+
+def test_a_brand_built_on_one_with_an_axis_of_its_own_keeps_it_and_varies_it_by_its_modes(
+    tmp_path: Path, foundations: Any
+) -> None:
+    base, folder = chain_copy(tmp_path)
+    giving_own_axis(base)
+    winter = {"accent": {"$type": "color", "$value": ORANGE}}
+    write(folder / "tokens/winter.tokens.json", json.dumps(winter))
+
+    def varying(data: dict[str, Any]) -> None:
+        data["modifiers"]["season"] = {
+            "contexts": {"summer": [], "winter": [{"$ref": "tokens/winter.tokens.json"}]},
+            "default": "summer",
+        }
+        data["resolutionOrder"].append({"$ref": "#/modifiers/season"})
+
+    edit_json(folder / "test-edition.resolver.json", varying)
+    read = tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    assert read.findings == ()
+    assert read.axes == read.base.axes
+    assert read.axes["season"] == SEASON
+    assert read.resolve("accent", {"season": "winter"}) == ORANGE
+
+
+def test_a_brand_built_on_another_declares_no_axis_of_its_own(
+    tmp_path: Path, foundations: Any
+) -> None:
+    base, folder = chain_copy(tmp_path)
+    giving_own_axis(base)
+    giving_own_axis(folder, "weather")
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    (finding,) = [f for f in raised.value.findings if f.code == "base-axis"]
+    assert "declares an axis of the brand's own" in finding.message
+    assert "test-brand@1.0.0 adds no axis" in finding.message
+
+    bare, again = chain_copy(tmp_path / "again")
+    giving_own_axis(bare)
+    giving_own_axis(again)
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(again, foundations, locked={"test-brand": bare})
+    assert codes(raised.value.findings) == {"base-axis"}
+
+
+def on_neutral(tmp_path: Path) -> Path:
+    """A brand built on the neutral brand's release 1.0.0, the brand a project starts from,
+    which gives no value of its own, since neutral opens none (DEC-004 point 6)."""
+    folder = tmp_path / "on-neutral" / "1.0.0"
+    library = bound(
+        "library",
+        name="on-neutral",
+        version="1.0.0",
+        kind="brand",
+        **{"needs-release": "0.3.0"},
+        **{
+            "builds-on": [
+                {"name": "foundations", "major": 1},
+                {"name": "neutral", "major": 1, "base": True},
+            ]
+        },
+        dtcg="2025.10",
+        resolver="on-neutral.resolver.json",
+        open=[],
+    )
+    write(folder / "library.yaml", yaml_text(library))
+    resolver = {"version": "2025.10", "sets": {}, "modifiers": {}, "resolutionOrder": []}
+    write(folder / "on-neutral.resolver.json", json.dumps(resolver))
+    return folder
+
+
+def test_a_brand_built_on_neutral_keeps_its_axes_and_adds_none(
+    tmp_path: Path, released: Any
+) -> None:
+    """Every brand a project builds on the neutral brand meets DEC-004 point 6 as any brand
+    built on another does."""
+    folder = on_neutral(tmp_path)
+    read = tokens.read_brand(folder, released, locked={"neutral": RELEASED_NEUTRAL})
+    assert read.findings == ()
+    assert read.axes == read.base.axes
+    assert not any(axis.own for axis in read.axes.values())
+
+    giving_own_axis(folder, contexts={"summer": [], "winter": []})
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, released, locked={"neutral": RELEASED_NEUTRAL})
+    (finding,) = raised.value.findings
+    assert finding.code == "base-axis"
+    assert "a brand built on neutral@1.0.0 adds no axis" in finding.message
+
+
+# --- an order's roles (DEC-032 points 1, 2 and 6, DEC-004 points 8 and 10) -----------------------
+
+#: An order's roles as the foundations being built declare them, the page's ground among them.
+ORDER = tokens.Order("family.order.first", "family.order.last", "family.order.text", "background")
+
+#: A middle grey, which holds 4.5 to 1 on black and on white alike.
+GREY = {"colorSpace": "srgb", "components": [0.46, 0.46, 0.46]}
+
+
+def ends(first: Any, last: Any, text: Any) -> dict[str, Any]:
+    """An order's group of a token file: its two ends and its text, each a value or an
+    alias."""
+    return {"first": {"$value": first}, "last": {"$value": last}, "text": {"$value": text}}
+
+
+#: Ends that hold in the test brand's light colour scheme: both darker than its white paper,
+#: the first the darker, under white text.
+LIGHT_ENDS = ends("{palette.blue.900}", "{palette.blue.600}", "{palette.white}")
+
+#: Ends that hold in its dark colour scheme: both lighter than its night, the first the
+#: lighter, under black text.
+DARK_ENDS = ends("{palette.blue.50}", "{palette.blue.400}", "{palette.black}")
+
+
+def giving_ends(folder: Path, light: dict[str, Any], dark: dict[str, Any] = DARK_ENDS) -> Path:
+    """The brand version at `folder`, giving an order's ends and text `light` in its token
+    file of the light colour scheme, and `dark` in its file of the dark one."""
+    edit_json(folder / BASE, lambda data: data["family"].update(order=light))
+    edit_json(
+        folder / DARK,
+        lambda data: data.setdefault("family", {"$type": "color"}).update(order=dark),
+    )
+    return folder
+
+
+def keys_of(read: Any, scheme: str) -> set[str]:
+    """The keys of the brand's combinations in the colour scheme `scheme`."""
+    return {
+        keys.key_of(combination, read.axes)
+        for combination in read.combinations()
+        if combination["colour-scheme"] == scheme
+    }
+
+
+def keys_named(found: Any) -> set[str]:
+    """The combinations the findings name, by their keys."""
+    return {finding.message.partition("combination `")[2].partition("`")[0] for finding in found}
+
+
+def lighter(colour: Any, than: Any) -> bool:
+    """Whether `colour` is lighter than `than` by WCAG's relative luminance: it contrasts
+    more with black."""
+    return tokens.contrast_ratio(colour, BLACK) > tokens.contrast_ratio(than, BLACK)
+
+
+def test_the_foundations_declare_an_orders_roles_apart_from_the_families(
+    foundations: Any, released: Any
+) -> None:
+    """Which role is each end, the text and the page's ground is declared as data. The
+    order's roles lie in the group of the families, so they add no top group, and form no
+    family (DEC-032 point 1). Its text is a pair with each end (point 2)."""
+    assert foundations.order == ORDER
+    assert tokens.Scope(foundations).order == ORDER
+    assert tokens.ORDER not in foundations.families
+    members = {role for family in foundations.families.values() for role in family.values()}
+    assert not members & set(ORDER.roles)
+    assert {path.split(".")[0] for path in ORDER.roles} == {"family"}
+    assert foundations.top_groups == released.top_groups
+    assert set(ORDER_PAIRS) <= set(foundations.pairs)
+    assert foundations.roles[ORDER.ground] == tokens.Role("background", "color")
+
+
+#: The neutral brand being built, which gives an order no value.
+NEUTRAL = FOUNDATIONS.parent / "neutral"
+
+
+@pytest.mark.parametrize(
+    "folder",
+    [TEST_BRAND, NEUTRAL, RELEASED_NEUTRAL],
+    ids=["test-brand", "neutral", "neutral-1.0.0"],
+)
+def test_a_brand_that_gives_an_order_no_value_draws_it_as_the_neutral_family(
+    folder: Path, foundations: Any
+) -> None:
+    """Both ends take the neutral family's fill, and the text its text, in every
+    combination, and the brand exports the three roles as every shared role (DEC-032 point
+    1). The order is judged at its defaults in every combination, as at a brand's values
+    (point 2): its ends are equal, so the first passes, and its text holds on them as the
+    neutral family's does on its fill, so nothing fails."""
+    read = tokens.read_brand(folder, foundations)
+    assert read.findings == ()
+    assert set(ORDER.roles) <= set(read.roles)
+    for combination in read.combinations():
+        fill = read.resolve("family.neutral.fill", combination)
+        assert read.resolve(ORDER.first, combination) == fill
+        assert read.resolve(ORDER.last, combination) == fill
+        assert read.resolve(ORDER.text, combination) == read.resolve(
+            "family.neutral.text", combination
+        )
+
+
+def test_an_order_at_its_defaults_is_judged_in_every_combination(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """At its defaults an order's text lies on one side of both ends unless it is as light
+    as the neutral family's fill, so it fails only where that family's own pair falls to 1
+    to 1 (DEC-032 points 1 and 2). The test brand's dark ink, as dark as its neutral fill,
+    brings it there, and the order's text fails its rule and both its pairs."""
+    folder = brand_copy(tmp_path)
+    edit_json(folder / DARK, setting("scheme|ink|$value", "{palette.night.800}"))
+    read = tokens.read_brand(folder, foundations)
+    ordered = [finding for finding in read.findings if finding.where == ORDER.text]
+    assert sorted(finding.code for finding in ordered) == [
+        "order-text-between",
+        "pair-contrast",
+        "pair-contrast",
+    ]
+    assert keys_named(ordered) == {"colour-scheme.dark"}
+    (between,) = (finding for finding in ordered if finding.code == "order-text-between")
+    assert "is as light as `family.order.first` and as light as `family.order.last`" in (
+        between.message
+    )
+
+
+def test_a_brand_whose_ends_hold_reads_with_no_findings_the_first_end_furthest_from_the_ground(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """Both ends darker than a light ground, the first the darker; both lighter than a dark
+    ground, the first the lighter (DEC-032 point 2)."""
+    read = tokens.read_brand(giving_ends(brand_copy(tmp_path), LIGHT_ENDS), foundations)
+    assert read.findings == ()
+    for combination in read.combinations():
+        first, last, ground = (
+            read.resolve(path, combination) for path in (ORDER.first, ORDER.last, ORDER.ground)
+        )
+        if combination["colour-scheme"] == "light":
+            assert lighter(ground, last) and lighter(last, first), combination
+        else:
+            assert lighter(first, last) and lighter(last, ground), combination
+
+
+def test_an_orders_text_between_its_ends_fails_in_the_combinations_it_lies_in(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """A middle grey holds 4.5 to 1 on a black end and on a white one, so both its pairs
+    pass, and a step between the ends would still meet it (DEC-032 point 2)."""
+    folder = giving_ends(brand_copy(tmp_path), ends("{palette.black}", "{palette.white}", GREY))
+    read = tokens.read_brand(folder, foundations)
+    assert codes(read.findings) == {"order-text-between"}
+    assert keys_named(read.findings) == keys_of(read, "light")
+    for finding in read.findings:
+        assert (finding.where, finding.level) == (ORDER.text, findings.FAILS)
+        assert finding.library == "test-brand@1.0.0"
+        assert "is lighter than `family.order.first` and darker than `family.order.last`" in (
+            finding.message
+        )
+        assert finding.fix.startswith("give `family.order.text` a colour lighter than both ends")
+
+
+def test_a_first_end_that_stands_out_less_than_the_last_fails(
+    tmp_path: Path, foundations: Any
+) -> None:
+    light = ends("{palette.blue.600}", "{palette.blue.900}", "{palette.white}")
+    read = tokens.read_brand(giving_ends(brand_copy(tmp_path), light), foundations)
+    assert codes(read.findings) == {"order-first-weaker"}
+    assert keys_named(read.findings) == keys_of(read, "light")
+    for finding in read.findings:
+        assert (finding.where, finding.level) == (ORDER.first, findings.FAILS)
+        assert "has the contrast 5.19 with `background`, the page's ground" in finding.message
+        assert "below the 13.10 of `family.order.last`" in finding.message
+
+
+def test_an_end_with_alpha_is_measured_over_the_ground(tmp_path: Path, foundations: Any) -> None:
+    """Black at a fifth, over white paper, stands out less than the last end, where black
+    alone would stand out most. The text's pair on it asks for attention, as on any
+    translucent fill."""
+    faint = {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.2}
+    light = ends(faint, "{palette.blue.600}", "{palette.white}")
+    read = tokens.read_brand(giving_ends(brand_copy(tmp_path), light), foundations)
+    assert codes(read.findings) == {"order-first-weaker", "pair-translucent"}
+    weaker = [f for f in read.findings if f.code == "order-first-weaker"]
+    assert keys_named(weaker) == keys_of(read, "light")
+
+
+def test_an_orders_text_below_its_level_on_an_end_fails_as_a_declared_pair(
+    tmp_path: Path, foundations: Any
+) -> None:
+    light = ends("{palette.blue.900}", "{palette.blue.400}", "{palette.white}")
+    read = tokens.read_brand(giving_ends(brand_copy(tmp_path), light), foundations)
+    assert codes(read.findings) == {"pair-contrast"}
+    assert keys_named(read.findings) == keys_of(read, "light")
+    for finding in read.findings:
+        assert finding.where == ORDER.text
+        assert "`family.order.text` on `family.order.last` has the contrast 3.10" in (
+            finding.message
+        )
+
+
+def test_an_orders_findings_where_the_base_gives_its_ends_are_the_bases(
+    tmp_path: Path, foundations: Any
+) -> None:
+    base, folder = chain_copy(tmp_path)
+    giving_ends(base, ends("{palette.blue.600}", "{palette.blue.900}", "{palette.white}"))
+    read = tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    assert codes(read.findings) == {"order-first-weaker"}
+    assert {f.library for f in read.findings} == {"test-brand@1.0.0"}
+    assert len(read.findings) == len(tokens.read_brand(base, foundations).findings)
+
+
+ORDER_TEXT = """\
+pkit_schema: visual-communication:roles
+schema_version: 1
+roles:
+  paper: {type: color}
+  gap: {type: dimension}
+  family.blue.fill: {type: color}
+  family.order.first: {type: color}
+  family.order.last: {type: color}
+  family.order.text: {type: color}
+families:
+  blue: {fill: family.blue.fill}
+order: {first: family.order.first, last: family.order.last, text: family.order.text, ground: paper}
+pairs: []
+"""
+
+
+def test_declarations_read_an_orders_roles(tmp_path: Path) -> None:
+    declared = tokens.read_declarations(write(tmp_path / "roles.yaml", ORDER_TEXT))
+    assert declared.order == tokens.Order(*ORDER.roles, "paper")
+    assert declared.order.roles == ORDER.roles
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "code", "where"),
+    [
+        ("order: {first", "order: {start", "order-shape", "order"),
+        (", ground: paper}", "}", "order-shape", "order"),
+        ("ground: paper}", "ground: gap}", "order-shape", "order.ground"),
+        ("first: family.order.first,", "first: family.order.none,", "order-shape", "order.first"),
+        ("ground: paper}", "ground: family.order.text}", "order-shape", "order"),
+        (
+            "blue: {fill: family.blue.fill}",
+            "blue: {fill: family.order.first}",
+            "order-shape",
+            "families.blue.fill",
+        ),
+        (
+            "blue: {fill: family.blue.fill}",
+            "order: {fill: family.blue.fill}",
+            "family-shape",
+            "families.order",
+        ),
+    ],
+    ids=[
+        "a-key-it-lacks",
+        "no-ground",
+        "a-ground-of-no-colour",
+        "an-end-no-role",
+        "one-role-twice",
+        "an-end-in-a-family",
+        "a-family-named-order",
+    ],
+)
+def test_an_orders_roles_the_capability_cannot_read_are_refused(
+    tmp_path: Path, old: str, new: str, code: str, where: str
+) -> None:
+    """Four different colour roles, the order's own three in no family, and no family named
+    `order` (DEC-032 point 1). A fault stops the brand, as a family's does."""
+    assert old in ORDER_TEXT
+    path = write(tmp_path / "roles.yaml", ORDER_TEXT.replace(old, new))
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_declarations(path, library="foundations@1.0.0", shown="roles.yaml")
+    assert (code, where) in {(f.code, f.where) for f in raised.value.findings}
+
+
+def test_a_librarys_roles_file_declares_no_order_and_is_read_still(tmp_path: Path) -> None:
+    """Only the foundations declare an order's ends (DEC-032 point 7)."""
+    roles = {"test-parts.a": {"type": "color", "default": "{text-primary}"}}
+    order = {"first": "test-parts.a", "last": "test-parts.a", "text": "text-primary"}
+    scope = own_roles(tmp_path, roles, order=order)
+    found = scope.findings_of("test-parts")
+    assert [(f.code, f.where) for f in found] == [("roles-declaration", "order")]
+    assert "only the foundations declare an order's ends and its text" in found[0].message
+    assert scope.order == ORDER
+
+
+def test_no_librarys_role_or_component_token_defaults_to_a_role_of_an_order(
+    tmp_path: Path,
+) -> None:
+    """A brand tunes an order's colours for its steps alone (DEC-032 point 6, DEC-008 point
+    3). The role and the token take no default."""
+    roles = {"test-parts.a": {"type": "color", "default": "{family.order.first}"}}
+    path = write(tmp_path / "roles.yaml", yaml_text(bound("roles", roles=roles, pairs=[])))
+    declared = tokens.read_own_roles(
+        path, name="test-parts", library="test-parts@1.0.0", builds_on=("foundations",)
+    )
+    token = "component.test-parts.card.ink"
+    held = tokens.ComponentToken(token, "color", "family.order.text", "card", "card.yaml")
+    scope = tokens.Scope(tokens.read_declarations(ROLES), [replace(declared, tokens={token: held})])
+    found = [f for f in scope.findings_of("test-parts") if f.code == "role-default"]
+    assert {(f.where, f.file) for f in found} == {
+        ("roles.test-parts.a", declared.file),
+        ("tokens.ink", "card.yaml"),
+    }
+    assert all("a role of an order" in f.message for f in found)
+    assert scope.default_of("test-parts.a") is None
+    assert scope.default_of(token) is None

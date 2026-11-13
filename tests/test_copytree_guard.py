@@ -66,6 +66,7 @@ HOLDS_NO_PYTHON = {
     "test_visual_communication_libraries.py": {"RELEASED_FOUNDATIONS", "built"},
     "test_visual_communication_look.py": {"PIECES"},
     "test_visual_communication_neutral.py": {"PIECES"},
+    "test_visual_communication_own_axes.py": {"TEST_BRAND"},
     "test_visual_communication_pipeline.py": {"TESTS"},
     "test_visual_communication_poster.py": {"POSTER"},
     "test_visual_communication_render.py": {"TESTS"},
