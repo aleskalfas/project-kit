@@ -20,7 +20,7 @@ pkit:
         - scripts/release_pr.py
         - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
-      record: [COR-010, COR-030, COR-041, "COR-054#2", PRJ-002, PRJ-004, PRJ-016, ADR-040, "ADR-059#3", "ADR-061#5", "ADR-061#8", "ADR-089#1", "ADR-089#2", "ADR-089#9", "ADR-092#2", "ADR-092#3", "ADR-092#5", "ADR-092#6", "ADR-092#8", "ADR-092#9", "ADR-092#10"]
+      record: [COR-010, COR-030, COR-041, "COR-054#2", PRJ-002, PRJ-004, PRJ-016, ADR-040, "ADR-061#5", "ADR-061#8", "ADR-089#1", "ADR-089#2", "ADR-089#9", "ADR-092#2", "ADR-092#3", "ADR-092#5", "ADR-092#6", "ADR-092#8", "ADR-092#9", "ADR-092#10"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/upgrade-flow.md#the-replay-a-missing-completion
@@ -809,33 +809,11 @@ the one a final release would make there, at release versions, so every check
 reads it as it reads a final release's. Only the writes add the suffix `rcN`
 (ADR-089 point 1).
 
-**Refused before anything is written,** where:
-
-- `HEAD` names no commit, as in a clone with none yet, since there is then
-  nothing to cut from.
-- the commit has not taken in the default branch's head, read from `origin`
-  with `git ls-remote`, or whether it has cannot be told, since only then does
-  the plan hold the default branch's versions and pending changesets beside
-  the branch's own (ADR-092 point 2).
-- the working tree differs from the commit, by a changed file or one git
-  neither tracks nor ignores, since the plan would then not be the commit's.
-- the release itself is refused, as `release plan` refuses one, such as for a
-  declaration it cannot write or a range that would exclude a dependency's
-  version (PRJ-002 D4), since a candidate writes the final release's plan
-  (ADR-089 point 1).
-- the release would move no backbone version, since a candidate is a backbone
-  tag (ADR-089 point 2).
-- the project is not the methodology's source repository, as the marker test
-  tells it (ADR-059 point 3).
-- a migration script would ship stranded, as a final release refuses it
-  ("The stranded-script refusal", below).
-- the remote's tags cannot be read, since the cut's number counts them.
-- with `--tag`, this clone already holds the candidate's tag, which `origin`
-  does not: an earlier cut here left it unpushed, and a candidate's tag is
-  never moved or deleted (PRJ-016 point 5).
-
-[The CLI reference's `release plan` and `release apply` rows](../cli/README.md#surface) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
-give each refusal's message, and the prompt and `--json` keys of a cut.
+**The refusals.** A cut refuses before it writes anything (ADR-089 point 2),
+and
+[the CLI reference's `release plan` and `release apply` rows](../cli/README.md#surface) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
+list each refusal with its message, and give the prompt and `--json` keys of a
+cut.
 
 **The number.** `N` is one past the highest number any release candidate's
 tag on `origin` carries, whatever its version, and 1 where there is none
@@ -866,9 +844,9 @@ form, so a candidate's tree builds (ADR-089 point 9).
 **Where it commits.** `apply --pre` commits the writes as `chore(release):
 v<candidate>` on no branch: it detaches HEAD first, so the branch stays where
 it was. `--tag` tags that commit `v<candidate>`, annotated, and only the tag
-then holds it. `--push` is refused with `--pre`, since the tag is pushed only
-once the wheel built from the commit is checked (ADR-089 point 9). `apply
---pre` prints no trailer line: a candidate has no pull request. By hand:
+then holds it. The tag is pushed alone, and only once the wheel built from the
+commit is checked (ADR-089 point 9). `apply --pre` prints no trailer line: a
+candidate has no pull request. By hand:
 
     pkit release apply --pre --tag            # at the branch's head: write, commit on no branch, tag
     uv build --wheel                          # from the candidate's commit; install it, check `pkit --version`
@@ -1267,9 +1245,8 @@ does not run. In order, it:
   surface change no changeset moves. It reads no label, so a branch whose pull
   request passes by `skip-changeset` is cut only once it carries a `none`
   changeset.
-- runs `pkit release apply --pre --tag --yes`, which refuses where the
-  branch's head has not taken in the default branch's head, and otherwise
-  commits the candidate on no branch and tags it (above).
+- runs `pkit release apply --pre --tag --yes`, which commits the candidate on
+  no branch and tags it, or refuses before it writes anything (above).
 - builds the wheel from the candidate's commit, installs it apart from the
   checkout, and checks that its `pkit --version` names the candidate. Where it
   does not, the run stops before the tag is pushed.
