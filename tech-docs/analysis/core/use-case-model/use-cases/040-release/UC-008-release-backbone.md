@@ -35,6 +35,7 @@ pkit:
         - src/project_kit/stranded_migrations.py
         - src/project_kit/release_candidate.py
         - src/project_kit/remote_refs.py
+        - .github/workflows/checks.yml
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
         - scripts/latest_tag.py
@@ -169,7 +170,7 @@ pkit:
 - **3c.** An open release pull request's body names no commit, or an older one, as the one the release was planned from. `release-pr.yml` closes it and deletes its branch, since it can no longer land. The path goes on at step 3, with a release planned from the default branch's head ([ADR-092 point 6](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#6-a-release-pr-lands-only-what-its-release-step-wrote-onto-the-commit-its-plan-read)).
 - **6a.** The new changelog entry would take the pull request's body past the 65,536 characters GitHub keeps. The body then holds each move and warning whole, and links `CHANGELOG.md` on the pushed branch instead of the entry (`scripts/release_pr.py`).
 - **7a.** The [project](../../../glossary.md#term-project--project) gave `release-pr.yml` no token of its own, so the release pull request starts no checks. The maintainer starts them by hand, and the path goes on at step 7. Where nobody starts them, the release pull request shows no check, and step 10 reads that as green.
-- **7b.** In the methodology's source repository, the release pull request's tree records a pre-release version. The [changeset guard](../../../glossary.md#term-changeset-guard--changeset-guard) fails, naming each such version ([ADR-089 point 3](../../../../../architecture/decisions/ADR-089-release-candidates.md#3-the-final-release-is-cut-from-the-last-candidates-source-commit-and-the-default-branch-holds-release-versions-alone)). Step 10 then refuses the release pull request, as in 10a or 10h.
+- **7b.** In the methodology's source repository, the merge GitHub makes of the release pull request, which the CI pipeline checks, records a pre-release version. The [changeset guard](../../../glossary.md#term-changeset-guard--changeset-guard) fails, naming each such version ([ADR-089 point 3](../../../../../architecture/decisions/ADR-089-release-candidates.md#3-the-final-release-is-cut-from-the-last-candidates-source-commit-and-the-default-branch-holds-release-versions-alone)). Step 10 then refuses the release pull request, as in 10a or 10h.
 - **9a.** The pull request is no release pull request. The system refuses it, saying that `pkit release merge` merges only release pull requests. Where the pull request's head branch is no `release/` branch, the refusal names `pkit pull-request land`, the backbone's own command for landing any other pull request. The use case ends.
 - **10a.** The release pull request has a conflict, or a check that is red or still running. The system refuses with the reason, and merges nothing. The path rejoins at step 8.
 - **10b.** Where merges into the default branch go through a queue, the system enqueues the release pull request at the head commit whose checks it read. The system then waits for the queue to merge the pull request. Where the wait ends with the release pull request still queued, the system exits 4 and deletes nothing. A later run deletes the head branch once the release pull request merges.

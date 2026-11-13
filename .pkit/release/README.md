@@ -14,6 +14,7 @@ pkit:
         - src/project_kit/remote_refs.py
         - pyproject.toml
         - .changie.yaml
+        - .github/workflows/checks.yml
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
         - scripts/latest_tag.py
@@ -923,13 +924,12 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   and lines a release changes, not which versions they record, so it can pass
   one. So, right after that check, in the repository the marker test
   finds (ADR-059 point 3), it reads the versions the PR's head records, as
-  `pkit release check` reads HEAD's (below), and refuses, nothing merged, exit
-  1, in a dry run too, where any is a pre-release, naming each. A release PR
-  is never a candidate's own commit, which no pull request carries. Elsewhere
-  it reads nothing, since candidates are cut only in project-kit's own source
-  (ADR-089 point 2).
+  `pkit release check` reads HEAD's (below), and refuses where any is a
+  pre-release. A release PR is never a candidate's own commit, which no pull
+  request carries. Elsewhere it reads nothing, since candidates are cut only
+  in project-kit's own source (ADR-089 point 2).
   [The CLI reference's `release merge` row](../cli/README.md#surface) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
-  gives its message.
+  gives the refusal and its message.
 - **Is first in the queue, or waits.** On a base with a merge queue it
   enqueues the release only where the queue holds no other PR ahead of it,
   since each would land first and the release would land on another commit
@@ -1456,8 +1456,7 @@ version, PEP 440's: the backbone's in `.pkit/VERSION`, or a component's in its
 `package.yaml`. A candidate's versions live only in its tag, on a commit no
 branch holds (ADR-089 point 1), so a tree bound for the default branch that
 records one took in a candidate's commit, by hand or by a mistaken run. The
-guard reads the tree, not the diff, and committed work only, and names each
-such version:
+guard reads the tree, not the diff, and committed work only.
 
 - **A candidate's own commit passes:** HEAD where the backbone records a
   candidate's version, `X.Y.ZrcN`, and the clone's tag `vX.Y.ZrcN` names
