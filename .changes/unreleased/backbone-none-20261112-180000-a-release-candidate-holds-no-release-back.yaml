@@ -13,7 +13,7 @@ body: >
   every project that releases through `pkit release`, a release refuses while
   a migration script sits in a folder its project already shipped, and the
   release commit names the commit its plan read. They partly supersede
-  PRJ-002 D3 and D5 and ADR-089's points 1, 2, 3, 5, 6, 8 and 9, and refine
+  PRJ-002 D3, D4 and D5 and ADR-089's points 1, 2, 3, 5, 6, 8 and 9, and refine
   PRJ-002, PRJ-004, ADR-049, ADR-063, ADR-065 and ADR-089. It is record text
   only, and nothing you run changes. The build for #2211 carries the real
   changesets.

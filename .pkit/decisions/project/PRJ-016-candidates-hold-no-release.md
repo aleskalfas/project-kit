@@ -25,7 +25,7 @@ The maintainer chose on 12 November 2026 ([#3075](https://github.com/aleskalfas/
 
 ### 1. Every final release is the ordinary release from the default branch's head
 
-The release step cuts each final release of project-kit as PRJ-002 D3 cuts any, from the default branch's head and the changesets pending there, and its tag names the content its release PR merged. Nothing refuses a release because candidates are out, and no release is cut from a candidate's commit.
+The release step cuts each final release of project-kit as PRJ-002 D3 cuts any, from the default branch's head and the changesets pending there, and its tag names what the release PR merged and nothing merged after it. Nothing refuses a release because candidates are out, and no release is cut from a candidate's commit.
 
 ### 2. What merges into the default branch ships with its next release
 
@@ -39,9 +39,9 @@ A candidate of project-kit is cut from the head of the branch that holds the cha
 
 A project moves onto a candidate only from a final release no newer than the last one the candidate's branch took in, or a candidate's `init` installs it there, and from a candidate it moves to no other release, candidate or final. Its tester leaves a candidate by leaving the testers' branch, a branch in the tester's own project, and from the final release the project stood at enters a later candidate, or upgrades; a project a candidate's `init` installed starts again from a final release's `init`. This binds every project that tests a candidate.
 
-### 5. The release step reuses no candidate number, whatever its version or branch
+### 5. No candidate number is reused, whatever its version or branch, and a candidate is withdrawn by a tag of its own
 
-project-kit's release step gives each candidate a number `N` that no earlier candidate took, so each pre-release version a candidate writes names one content. That holds for every cut the release workflow makes whose branch keeps that workflow and the `pkit` it runs as the default branch has them (ADR-092 point 10). A candidate's tag is never moved or deleted ([PRJ-004](PRJ-004-distribution-channel.md)), and a candidate is withdrawn by a `withdrawn/` tag, never by deleting its tag.
+project-kit's release step gives each candidate a number `N` that no earlier candidate took, so each pre-release version a candidate writes names one content. That holds for every cut the release workflow makes whose branch keeps that workflow and the `pkit` it runs as the default branch has them (ADR-092 point 10). A candidate's tag is never moved or deleted ([PRJ-004](PRJ-004-distribution-channel.md)). A candidate is withdrawn by a `withdrawn/` tag, never by deleting its tag, and a withdrawal's tag, like a candidate's, is never moved or deleted.
 
 ### What this overturns in PRJ-002, and what stands
 
