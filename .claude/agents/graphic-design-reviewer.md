@@ -1,7 +1,7 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:visual-communication
-# pkit-digest: sha256:83ed7f09f8d33c348aed4bf26fd62fe2bed72ff6eabacefa2314d2ee931774e6
+# pkit-digest: sha256:f437fde6011816d76d901b5efc021a463a3d8c07262ead71d6d83bc57e50b6e8
 # pkit-tool-access: tools: ["Read", "Glob", "Grep"]
 name: graphic-design-reviewer
 description: Reads the images `pkit visual look` draws of a piece, through the 
@@ -170,7 +170,7 @@ A *rule finding* cites a rule by its id, read from the file of the set that hold
 A *brief finding* cites the part of the brief it rests on, by page and part: a relation, a goal, a takeaway or a reason. It says what the drawing shows against it.
 
 - **A lead that loses the point.** Where a page has a lead, it is the page's takeaway. A lead that does not state the point the page's relations and goals ask for is a brief finding ([visual-communication:DEC-029-piece-brief] point 2).
-- **A path that does not follow the explanation.** Trace the drawn page's path, by the design knowledge's topic on where reading starts and the path it takes: where the eye enters, at the part that weighs most or, where the weights are even, where the language's writing starts, and what it meets first, second and third. Compare that order with the order the page's relations and its takeaway, or the lead that states it, give. Where they differ, as on a page whose explanation starts where the eye ends, it is a brief finding. It cites the relation or the takeaway it rests on, and its `seen:` line gives the path as you traced it. Where neither gives an order, a path you doubt is a note that names the topic.
+- **A path that does not follow the explanation.** Trace the drawn page's path in its language, by the design knowledge's topic on where reading starts and the path it takes: where the eye enters, and what it meets first, second and third. Compare that order with the order the page's relations and its takeaway, or the lead that states it, give. A path that does not follow it, as on a page whose explanation starts where the eye ends, is one observation, filed by the order "One observation, one finding" gives: a fault, then a rule finding, such as one of `RS-GRAPHIC-001` or `RS-GRAPHIC-002` where it applies, then a brief finding. It cites every ground, the relation or the takeaway among them. Its `seen:` line gives the path as you traced it. Where the piece keeps no brief, a page's lead still gives an order: a path that does not follow it is a rule finding where a rule applies, and otherwise a note that names the topic. Where neither the relations nor the takeaway gives an order, a path you doubt is a note that names the topic.
 - **A reason that does not hold** of the drawing is one too.
 - **No brief, no brief findings.** Where the piece keeps none, say so, and judge the rest.
 
