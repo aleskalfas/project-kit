@@ -27,6 +27,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from types import ModuleType
 
+from ruamel.yaml.error import YAMLError
+
 #: Where the agents area puts the reader, relative to the project root.
 READER = Path(".pkit") / "agents" / "tool_access.py"
 
@@ -101,12 +103,17 @@ def agent_adapters(target_root: Path) -> list[str]:
 
 
 def behind(target_root: Path) -> str:
-    """Which side is behind, the project's tree or this command, and its fix."""
+    """Which side is behind, the project's tree or this command, and its fix. A
+    backbone manifest that does not parse records no version here: the validator
+    reports it at its own path."""
     from project_kit import __version__
     from project_kit.manifest import read_backbone_manifest
     from project_kit.versioning import is_at_or_below, is_version
 
-    manifest = read_backbone_manifest(target_root)
+    try:
+        manifest = read_backbone_manifest(target_root)
+    except YAMLError:
+        manifest = None
     project = manifest.backbone_version if manifest is not None else ""
     if is_version(project) and is_version(__version__) and not is_at_or_below(project, __version__):
         return (
