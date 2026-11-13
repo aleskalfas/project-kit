@@ -44,6 +44,17 @@ MERGED = fake.oid("merged")
 OTHER = fake.oid("other")
 LATER = fake.oid("later")
 
+
+@pytest.fixture(autouse=True)
+def a_sound_release(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every release PR here lands what its release step wrote onto the commit
+    its plan read: the predicate `pkit release merge` applies at its request
+    reads git and the remote (`release.release_pr_problem`), which
+    `tests/test_release_landing.py` runs on real repositories, so a test here
+    that judges it says so."""
+    monkeypatch.setattr(release, "release_pr_problem", lambda pr, repo_root: None)
+
+
 # --- check-rollup summarisation --------------------------------------
 
 
@@ -678,6 +689,8 @@ def test_merge_release_pr_squash_merges_a_green_pr(monkeypatch: pytest.MonkeyPat
             "--squash",
             "--subject",
             "chore(release): v1.141.0",
+            "--body",
+            "",
             "--match-head-commit",
             HEAD,
         ]
@@ -1740,7 +1753,8 @@ def test_release_plans_then_lands_through_land_with_its_own_options(
 ) -> None:
     """The plan first — a dry run — then the landing, both pinned to the head
     release's gates read, with `--force` as `allow_dropped_head` and a bad
-    shape on a queued PR waited for with a warning."""
+    shape on a queued PR waited for with a warning, and an enqueue only
+    first in the queue (ADR-092 point 6)."""
     calls: list[tuple[bool, Any]] = []
     land = release.pull_request_landing.land
 
@@ -1754,7 +1768,7 @@ def test_release_plans_then_lands_through_land_with_its_own_options(
     report = _land(monkeypatch, _Host(queue=False), force=True, wait_seconds=60)
     assert report.exit_code == 0
     options = release.pull_request_landing.LandOptions(
-        seconds=60, allow_dropped_head=True, queued_bad_shape="warn"
+        seconds=60, allow_dropped_head=True, queued_bad_shape="warn", first_in_queue=True
     )
     assert calls == [(True, options), (False, options)]
 
@@ -2065,3 +2079,90 @@ def test_a_landing_after_a_gateless_plan_allows_no_request(
     asked.clear()
     _land(monkeypatch, _Host(queue=False))
     assert asked == [(True, False), (False, False)]
+
+
+# --- A release lands only what its step wrote, onto its plan's commit (#3101) ----
+
+
+def test_a_release_that_would_not_land_sound_is_refused_with_the_way_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """At its request, on every base: refused, nothing merged, nothing
+    deleted, naming the way on — and the predicate reads the release PR as
+    its gates read it."""
+    judged: list[tuple[str, str]] = []
+
+    def unsound(pr: release.ReleasePrState, repo_root: Path) -> str:
+        judged.append((pr.head_oid, pr.body))
+        return "its body carries no `Release-plan-commit:` line"
+
+    monkeypatch.setattr(release, "release_pr_problem", unsound)
+    for queue in (False, True):
+        host = _Host(queue=queue)
+        seen = _fake_run(monkeypatch)
+        with pytest.raises(click.ClickException) as exc:
+            _land(monkeypatch, host, body="The body.")
+        assert exc.value.message == (
+            "release PR #42 would not land what its release step wrote onto the commit its plan "
+            "read: its body carries no `Release-plan-commit:` line. Run the release again, so "
+            "that it is planned from the default branch's head, and never amend the release "
+            "commit. Nothing was merged."
+        )
+        assert host.merges() == [] and host.deletions == [] and seen == []
+    assert judged == [(HEAD, "The body."), (HEAD, "The body.")]
+
+
+def test_a_dry_run_reports_a_release_that_would_not_land_sound(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(release, "release_pr_problem", lambda pr, root: "the base moved")
+    host = _Host(queue=False)
+    with pytest.raises(click.ClickException) as exc:
+        _land(monkeypatch, host, dry_run=True)
+    assert "would not land what its release step wrote" in exc.value.message
+    assert host.merges() == []
+
+
+def test_a_release_pr_already_queued_is_waited_for_without_the_predicate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A PR the plan finds queued gets no request, so nothing is judged at
+    one: the queue's check judges its merge."""
+    monkeypatch.setattr(release, "release_pr_problem", lambda pr, root: pytest.fail("judged"))
+    _fake_run(monkeypatch)
+    queued = _release_pr()
+    queued.progress = [fake.at(1, "MERGEABLE"), fake.lands()]
+    assert _land(monkeypatch, queued).exit_code == 0
+
+
+def test_the_direct_merge_carries_the_body_the_landing_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The body as GitHub has it at the landing's reading, not as release's
+    view read it earlier (ADR-061 point 8)."""
+    host = _Host(queue=False, body="Body at the merge.\n\nRelease-plan-commit: x")
+    _fake_run(monkeypatch)
+    _land(monkeypatch, host, body="Body at the view.")
+    (merge,) = host.merges()
+    assert merge[merge.index("--body") + 1] == "Body at the merge.\n\nRelease-plan-commit: x"
+
+
+def test_a_release_pr_is_not_enqueued_behind_another_pull_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ahead = {
+        "configuration": {"mergeMethod": "SQUASH"},
+        "entries": {"nodes": [{"position": 1, "pullRequest": {"number": 7}}]},
+    }
+    host = _Host(queue=True, mergeQueue=ahead)
+    seen = _fake_run(monkeypatch)
+    with pytest.raises(click.ClickException) as exc:
+        _land(monkeypatch, host)
+    assert exc.value.message == (
+        "the merge queue for main holds #7 ahead of release PR #42, which would land first, so "
+        "the release would land on another commit than its plan read. Nothing was enqueued. "
+        "Once the queue ahead of it is empty, run `pkit release merge 42` again; where any of "
+        "them merged, run the release again, so that it is planned from the default branch's "
+        "head, and never amend the release commit."
+    )
+    assert host.merges() == [] and seen == []

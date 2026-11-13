@@ -1,12 +1,26 @@
 """The branch and the description of the release pull request (#2862).
 
 The release-pr workflow (`.github/workflows/release-pr.yml`) runs `pkit release
-plan --json`, and then this script for the branch it pushes the release to. On
-that branch it runs `pkit release apply --yes`, and this script again for the
-pull request's description, before it pushes:
+plan --json`, then this script for the open release pull requests it replaces,
+and for the branch it pushes the release to. On that branch it runs `pkit
+release apply --yes`, and this script again for the trailer line `apply`
+printed and for the pull request's description, before it pushes:
 
+    uv run python scripts/release_pr.py open --prs <open pull requests> --head <commit>
     uv run python scripts/release_pr.py branch --version <version> --run-id <run id>
-    uv run python scripts/release_pr.py body --plan <plan> --branch <branch> --repository-url <url>
+    uv run python scripts/release_pr.py trailer --apply-output <what apply printed>
+    uv run python scripts/release_pr.py body --plan <plan> --branch <branch> \\
+        --repository-url <url> --trailer <line>
+
+- **The open release pull requests** (ADR-092 point 6, the way on). A release
+  pull request whose body's trailer line names the default branch's head, the
+  commit this run plans from, is the one a person reviews, so the run opens no
+  second. Every other one, planned from an older head or naming none, is
+  stale: `pkit release merge` refuses it, so the workflow closes it, and
+  opens one planned from the new head.
+- **The trailer line** names the commit the release's plan read,
+  `Release-plan-commit: <commit>`, as `pkit release apply` printed it. The
+  workflow commits the release with it, and the description ends with it.
 
 - **The branch** is `release/v<version>`, after the backbone version the
   release computes. Where `origin` already has that branch, as a run that failed
@@ -26,9 +40,10 @@ pull request's description, before it pushes:
   (#2384). The bumps and the warnings are kept whole. A description too long
   even without the section is refused, before anything is pushed.
 
-It needs nothing but the standard library and `git`. Exit 0 with the branch's
-name or the description on standard output; 1, saying why, when `git` fails, the
-plan cannot be read, or the description is too long without the section.
+It needs the standard library, `git`, and the trailer's one reading, in
+`project_kit.release`. Exit 0 with what it names on standard output; 1, saying
+why, when `git` fails, a file cannot be read, `apply` printed no one trailer
+line, or the description is too long without the section.
 """
 
 from __future__ import annotations
@@ -40,6 +55,8 @@ import sys
 from collections.abc import Collection, Mapping
 from pathlib import Path
 from typing import Any
+
+from project_kit.release import plan_commit_line, plan_commits_named
 
 #: The most characters GitHub keeps in a pull request's description: it refuses a
 #: longer one with "Body is too long (maximum is 65536 characters)".
@@ -172,24 +189,76 @@ def changelog_pointer(whole: int, *, branch: str, repository_url: str | None) ->
 
 
 def pull_request_body(
-    plan: Mapping[str, Any], changelog: str, *, branch: str, repository_url: str | None
+    plan: Mapping[str, Any],
+    changelog: str,
+    *,
+    branch: str,
+    repository_url: str | None,
+    trailer: str,
 ) -> str:
     """The release pull request's description: the bumps, the warnings, and the
     changelog's new section where the whole fits `PULL_REQUEST_BODY_LIMIT`, or
-    the pointer to it on `branch` where it does not. Raises Refused where even
-    the description without the section does not fit."""
+    the pointer to it on `branch` where it does not; then the `trailer` line,
+    last. Raises Refused where even the description without the section does
+    not fit."""
     head = _head(plan)
+    tail = f"\n{trailer}\n"
     section = changelog_section(changelog)
-    whole = head + section
+    whole = head + section + tail
     if len(whole) <= PULL_REQUEST_BODY_LIMIT:
         return whole
-    short = head + changelog_pointer(len(whole), branch=branch, repository_url=repository_url)
+    pointer = changelog_pointer(len(whole), branch=branch, repository_url=repository_url)
+    short = head + pointer + tail
     if len(short) > PULL_REQUEST_BODY_LIMIT:
         raise Refused(
             f"the description is {len(short):,} characters without the changelog's section, "
             f"past the {PULL_REQUEST_BODY_LIMIT:,} GitHub keeps in a pull request's description"
         )
     return short
+
+
+# --- The trailer line, and the open release pull requests -------------------
+
+
+def trailer_printed(apply_output: str) -> str:
+    """The one trailer line `pkit release apply` printed in `apply_output`,
+    naming the commit the release's plan read. Raises Refused where it printed
+    none, or named more than one commit."""
+    named = plan_commits_named(apply_output)
+    if len(named) != 1:
+        raise Refused(
+            f"`pkit release apply` printed {len(named)} trailer lines naming the commit its "
+            "plan read, not one"
+        )
+    return plan_commit_line(named[0])
+
+
+def open_release_pull_requests(listed: object, head: str) -> tuple[list[int], list[int]]:
+    """The open release pull requests `gh pr list --json number,headRefName,body`
+    lists, split in two: those whose body names `head`, and only it, as the
+    commit their plan read — current — and every other one, stale, since its
+    plan read another commit of the default branch, or its body names none.
+    Raises Refused where the listing is not such a list."""
+    if not isinstance(listed, list):
+        raise Refused("the open pull requests are no JSON list")
+    current: list[int] = []
+    stale: list[int] = []
+    for each in listed:
+        if not isinstance(each, dict):
+            raise Refused("an open pull request is no JSON object")
+        number, branch, body = each.get("number"), each.get("headRefName"), each.get("body")
+        if not (isinstance(number, int) and isinstance(branch, str) and isinstance(body, str)):
+            raise Refused(f"an open pull request lacks its number, branch or body: {each!r}")
+        if branch.startswith(BRANCH_PREFIX):
+            (current if plan_commits_named(body) == [head] else stale).append(number)
+    return current, stale
+
+
+def _read_json(path: Path) -> object:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise Refused(f"{path} cannot be read ({exc})") from exc
 
 
 def _read_plan(path: Path) -> Mapping[str, Any]:
@@ -202,11 +271,11 @@ def _read_plan(path: Path) -> Mapping[str, Any]:
     return plan
 
 
-def _read_changelog(path: Path) -> str:
+def _read_text(path: Path, what: str) -> str:
     try:
         return path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
-        raise Refused(f"the changelog {path} cannot be read ({exc})") from exc
+        raise Refused(f"{what} {path} cannot be read ({exc})") from exc
 
 
 # --- The command -------------------------------------------------------------
@@ -232,16 +301,44 @@ def main(argv: list[str] | None = None) -> int:
         "--changelog", type=Path, default=Path(CHANGELOG), help=f"Default: {CHANGELOG}."
     )
     body.add_argument("--repository-url", help="The repository's web address, for the link.")
+    body.add_argument("--trailer", required=True, help="The trailer line, last in the body.")
+    trailer = commands.add_parser(
+        "trailer", help="Print the trailer line `pkit release apply` printed."
+    )
+    trailer.add_argument(
+        "--apply-output", required=True, type=Path, help="What `pkit release apply` printed."
+    )
+    opened = commands.add_parser(
+        "open",
+        help="Print the open release pull requests, as `current=` and `stale=` lines.",
+    )
+    opened.add_argument(
+        "--prs", required=True, type=Path, help="`gh pr list --json number,headRefName,body`."
+    )
+    opened.add_argument("--head", required=True, help="The commit this run plans from.")
     args = parser.parse_args(argv)
     try:
         if args.command == "branch":
             print(release_branch(args.version, args.run_id, remote_branches(Path.cwd())))
+        elif args.command == "trailer":
+            print(
+                trailer_printed(
+                    _read_text(args.apply_output, "the output of `pkit release apply`,")
+                )
+            )
+        elif args.command == "open":
+            current, stale = open_release_pull_requests(_read_json(args.prs), args.head)
+            print(f"current={' '.join(str(n) for n in current)}")
+            print(f"stale={' '.join(str(n) for n in stale)}")
         else:
+            if [plan_commit_line(c) for c in plan_commits_named(args.trailer)] != [args.trailer]:
+                raise Refused(f"{args.trailer!r} is not the trailer line alone")
             text = pull_request_body(
                 _read_plan(args.plan),
-                _read_changelog(args.changelog),
+                _read_text(args.changelog, "the changelog"),
                 branch=args.branch,
                 repository_url=args.repository_url,
+                trailer=args.trailer,
             )
             sys.stdout.write(text)
     except Refused as exc:
