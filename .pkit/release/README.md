@@ -1025,8 +1025,9 @@ fails: run the release again, so that it is planned from the default branch's
 head, and never amend the release commit. A merge with no release commit
 passes. It reads git alone: no fetch and no pull request.
 
-- **`--base REF`**: the group's base. By default `$PKIT_CHECK_BASE`, else the
-  default branch.
+- **`--base REF`**: the group's base.
+  [The CLI reference's release commands](../cli/README.md#release-plan--release-apply--release-merge--release-publish-notes--release-check--release-check-queue--release-lint) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
+  give its default.
 - **`--head REV`**: the group's head, by default `HEAD`.
 
 It binds only where a project's required check runs it on the queue's merge
