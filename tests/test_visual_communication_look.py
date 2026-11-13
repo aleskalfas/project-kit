@@ -877,6 +877,23 @@ def test_a_real_text_with_no_colour_is_a_loss_and_a_text_dropped_both_named(tmp_
     )
 
 
+def test_through_the_svg_renderer_the_report_says_that_cover_and_cut_were_not_read(
+    tmp_path: Path,
+) -> None:
+    """resvg's read reaches no cover and no cut, so an empty `dropped` never reads as clean
+    (DEC-037 point 1)."""
+    root = parts_project(tmp_path)
+    shown = run_look(root, "tags")
+    assert shown.returncode == 0, shown.stderr
+    report = report_of(root, "tags")
+    assert report["dropped"] == []
+    assert report[viewing.NOT_READ] == [viewing_browser.CUT, viewing_browser.COVERED]
+    assert (
+        "dropped: through the SVG renderer, no span is read as cut or covered, so a text another "
+        "part covers, or the page's edge cuts, is not named: read the images for it"
+    ) in shown.stdout.splitlines()
+
+
 def test_a_loss_the_piece_accepted_is_still_reported_and_so_is_the_text_it_drops(
     tmp_path: Path,
 ) -> None:
@@ -2046,7 +2063,12 @@ def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer
     label = "figure/body/label"
     read = viewing_browser.Read(
         words=(viewing_browser.Differs("figure", label, (("Ready",),), ((("Rea",),),)),),
-        dropped=(viewing_browser.Dropped("figure", label, "Ready", viewing_browser.NO_INK),),
+        dropped=(
+            viewing_browser.Dropped("figure", label, "Ready", viewing_browser.NO_INK),
+            viewing_browser.Dropped("figure", label, "Set", viewing_browser.OFF_THE_PAGE),
+            viewing_browser.Dropped("figure", label, "Go", viewing_browser.CUT, 0.36322869955),
+            viewing_browser.Dropped("figure", label, "Go", viewing_browser.COVERED, 0.004),
+        ),
         no_face=(viewing_browser.NoFace("figure", label, "Ready", "Held", "700"),),
         machine_fonts=(viewing_browser.MachineFont("figure", label, "Ready", ("Times",)),),
         refused=("https://example.invalid/a.png",),
@@ -2063,7 +2085,13 @@ def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer
         "element": label,
     }
     assert report["words"] == [{**place, "scene": [["Ready"]], "document": [[["Rea"]]]}]
-    assert report["dropped"] == [{**place, "text": "Ready", "why": "no ink"}]
+    assert report["dropped"] == [
+        {**place, "text": "Ready", "why": "no ink"},
+        {**place, "text": "Set", "why": "off the page"},
+        {**place, "text": "Go", "why": "cut", "share": 0.363},
+        {**place, "text": "Go", "why": "covered", "share": 0.004},
+    ]
+    assert viewing.NOT_READ not in report
     assert report["drawn-otherwise"] == [
         {**place, "text": "Ready", "why": "no face", "family": "Held", "weight": "700"},
         {**place, "text": "Ready", "why": "font of the machine", "fonts": ["Times"]},
@@ -2080,10 +2108,13 @@ def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer
     assert (loss["plugin"], loss["what"], loss["did"]) == ("html", label, "left-out")
     lines = shown.stdout.splitlines()
     assert any(each.startswith("words: figure (en, default): the text `") for each in lines)
-    assert (
-        "dropped: figure (en, default): a span of the text `figure/body/label` left no ink: 'Ready'"
-        in lines
-    )
+    span = "dropped: figure (en, default): a span of the text `figure/body/label`"
+    assert [each for each in lines if each.startswith(span)] == [
+        f"{span} left no ink: 'Ready'",
+        f"{span} lies off its page: 'Set'",
+        f"{span} is cut by its page's edge, past which 36% of its ink lies: 'Go'",
+        f"{span} is covered by a part over it, which hides under 1% of its ink: 'Go'",
+    ]
     assert any(each.endswith("a font of the machine: 'Ready'") for each in lines)
     assert any("has no face of Held at weight 700" in each for each in lines)
     assert "refused: en, default: a request for https://example.invalid/a.png" in lines
@@ -2708,19 +2739,19 @@ def test_the_svg_and_the_html_renderer_s_pages_are_cut_alike(tmp_path: Path) -> 
 
 def drawn_clips(program: Path) -> list[dict[str, Any]]:
     """The clips a stand-in browser drew the file's images by, in its first mode: those taken
-    after it opened the file, and before its first read for ink."""
+    after it opened the file, and before its reads of what the page shows of each span."""
     messages = logged(program)
     methods = [each.get("method") for each in messages]
     after = messages[len(methods) - 1 - methods[::-1].index("Page.navigate") :]
-    first_ground = next(
+    first_style = next(
         index
         for index, each in enumerate(after)
         if each.get("method") == "Runtime.evaluate"
-        and each["params"]["expression"].startswith(f"({viewing_browser.GROUND})")
+        and each["params"]["expression"].startswith(f"({viewing_browser.STYLE})")
     )
     return [
         each["params"]["clip"]
-        for each in after[:first_ground]
+        for each in after[:first_style]
         if each.get("method") == "Page.captureScreenshot"
     ]
 
@@ -2932,8 +2963,9 @@ def test_a_final_pieces_look_takes_the_stand_ins_and_says_so_after_the_report(
     shown = run_look(root, PIECE)
     assert shown.returncode == 0, shown.stderr
     assert taken == [pl.read_piece_file(root, "visual", PIECE).stand_ins]
-    *_, reported, said, report = shown.stdout.splitlines()
+    *_, reported, not_read, said, report = shown.stdout.splitlines()
     assert reported.startswith("on white: ")
+    assert not_read.startswith("dropped: through the SVG renderer, no span is read as ")
     assert said == (
         "look: a final piece has no next export, so a stand-in shows: `date` at `figure/body/date`"
     )
