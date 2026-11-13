@@ -1,0 +1,12 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The neutral brand's version being built, 1.1.0, gives the foundations' new
+  size `projector`, from a token file of its own: a slide keeps a desktop's
+  width, and its text grows half again, a body of 24 px, code at 22, and the
+  deck's lead at 30 and its title at 48. At every other size it gives the
+  deck's title and lead the shared types the deck drew them in before. It
+  reads on the foundations' version being built, 1.2.0, the first to declare
+  `projector`.

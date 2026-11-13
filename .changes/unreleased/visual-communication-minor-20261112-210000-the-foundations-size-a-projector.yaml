@@ -1,0 +1,16 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The foundations' version being built, 1.2.0, gives the size axis `device` a
+  fourth mode, `projector`, a screen read from across a room (DEC-021 point 1).
+  Its deck gains two tokens, `title` and `lead`, the types of a page's title and
+  of the line under it, so a brand can size them apart from the rest of a
+  deck's text; each defaults to the shared type the deck drew it in before. The
+  deck's lead stands a small space under its title rather than a medium one, so
+  the two read as the page's head, and a slide's visual reaches down to one
+  large space above its limit or its footer, or to the margin where the slide
+  has neither, where before it left two large spaces wherever the slide had no
+  limit. `pkit visual add foundations --being-built` takes it; `pkit visual add
+  foundations` still takes the release 1.1.0.

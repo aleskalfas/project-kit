@@ -107,7 +107,7 @@ def test_the_shipped_foundations_and_the_test_brand_read() -> None:
     foundations = libraries.read_library(FOUNDATIONS)
     assert (foundations.name, foundations.version, foundations.kind) == (
         "foundations",
-        V("1.1.0"),
+        V("1.2.0"),
         "components",
     )
     assert foundations.needs_release == (0, 1, 0)
