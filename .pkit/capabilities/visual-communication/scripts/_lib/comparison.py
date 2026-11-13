@@ -41,11 +41,13 @@ and the record that sets it), the segment, and whether the later number allows i
   (DEC-008 point 7, DEC-035 point 4);
 - *pairs:* every pair a library declares, whatever reads it (DEC-008 point 7);
 - *the foundations:* their shared roles and the top groups they lie in, axes and colour
-  families, whatever reads them (DEC-004 point 5);
+  families, whatever reads them (DEC-004 point 5). A new shared axis breaks, since a brand
+  may hold an axis of its own by its name;
 - *a brand:* the token paths it exports, a shared picture role among them only where it
-  gives it a value (DEC-025 point 4), its axes and modes, every shared value axis whole
-  and each size it gives (DEC-021 point 2), the component tokens it gives values among its
-  token paths, and the roles it opens to a brand built on it (DEC-004 point 5).
+  gives it a value (DEC-025 point 4), its axes and modes, every shared value axis whole,
+  each size it gives (DEC-021 point 2) and each axis of its own, the component tokens it
+  gives values among its token paths, and the roles it opens to a brand built on it
+  (DEC-004 point 5).
 
 **What a field's schema breaks.** A field changes what it means where what content gave it
 may no longer be taken: it no longer takes a type, a value or a count of items it took, a
@@ -949,7 +951,7 @@ def _shared(earlier: FullRead, later: FullRead, found: _Found) -> None:
             found.broken(at, "is new, with no default", "DEC-004 point 5")
         else:
             found.added(at, "is new, with a default", "DEC-004 point 5")
-    _axes("shared axis", declared_e.axes, declared_l.axes, found)
+    _axes("shared axis", declared_e.axes, declared_l.axes, found, new_breaks=True)
     for name, members in sorted(declared_e.families.items()):
         at = f"colour family `{name}`"
         if name not in declared_l.families:
@@ -973,13 +975,20 @@ def _shared(earlier: FullRead, later: FullRead, found: _Found) -> None:
 
 
 def _axes(
-    noun: str, earlier: Mapping[str, tokens.Axis], later: Mapping[str, tokens.Axis], found: _Found
+    noun: str,
+    earlier: Mapping[str, tokens.Axis],
+    later: Mapping[str, tokens.Axis],
+    found: _Found,
+    *,
+    new_breaks: bool = False,
 ) -> None:
     """Axes and their modes (DEC-004 point 5): an axis removed, of another kind or with
-    another default, and a mode removed, break; a new axis and a new mode are additions. A
-    new shared axis is one too, since format 1 lets no brand hold an axis of its own that
-    its name could meet. A brand's axes are those it has (`tokens.Brand.axes`), so a brand
-    that comes to give a size adds an axis, and one that ceases to removes it."""
+    another default, and a mode removed, break; a new mode is an addition. A new axis is an
+    addition too, but where `new_breaks` says it breaks: a new shared axis, whose name may
+    meet an axis a brand holds of its own, which then fails. A brand's axes are those it has
+    (`tokens.Brand.axes`), its own among them, so a brand that comes to give a size or adds
+    an axis of its own, with its default, adds an axis, and one that ceases to removes it. An
+    axis of its own renamed is one removed and one new."""
     for name, axis in sorted(earlier.items()):
         at = f"{noun} `{name}`"
         now = later.get(name)
@@ -998,7 +1007,14 @@ def _axes(
             )
         _named(at, "mode", axis.modes, now.modes, "DEC-004 point 5", "DEC-004 point 5", found)
     for name in sorted(set(later) - set(earlier)):
-        found.added(f"{noun} `{name}`", "is new", "DEC-004 point 5")
+        if new_breaks:
+            found.broken(
+                f"{noun} `{name}`",
+                "is new, a name a brand's own axis may hold, which then fails",
+                "DEC-004 point 5",
+            )
+        else:
+            found.added(f"{noun} `{name}`", "is new", "DEC-004 point 5")
 
 
 def _brand(earlier: FullRead, later: FullRead, found: _Found) -> None:

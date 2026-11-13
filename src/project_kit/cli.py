@@ -129,6 +129,7 @@ if TYPE_CHECKING:
     )
     from project_kit.status import report_status
     from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
+    from project_kit.stranded_migrations import refuse_stranded_scripts
     from project_kit.sync import refuse_version_mismatch, run_sync
     from project_kit.upgrade import (
         capability_move,
@@ -193,6 +194,9 @@ else:
     transition_to_dropped = _OnFirstUse("project_kit.scratchpads", "transition_to_dropped")
     report_status = _OnFirstUse("project_kit.status", "report_status")
     stamp_new_storyboard = _OnFirstUse("project_kit.storyboards", "stamp_new_storyboard")
+    refuse_stranded_scripts = _OnFirstUse(
+        "project_kit.stranded_migrations", "refuse_stranded_scripts"
+    )
     refuse_version_mismatch = _OnFirstUse("project_kit.sync", "refuse_version_mismatch")
     run_sync = _OnFirstUse("project_kit.sync", "run_sync")
     capability_move = _OnFirstUse("project_kit.upgrade", "capability_move")
@@ -3086,11 +3090,13 @@ def release_plan(as_json: bool) -> None:
     """Preview the release computed from pending changesets (read-only).
 
     Refuses, as `apply` does, a release it would refuse: a declaration it cannot
-    write, or a range on a capability that would exclude the version the release
-    writes or carries for it (PRJ-002 D4)."""
+    write, a range on a capability that would exclude the version the release
+    writes or carries for it (PRJ-002 D4), or a migration script stranded in a
+    folder at or below its tier's fixed version (ADR-092 point 8)."""
     import json
 
     source_kit = _target_kit()
+    refuse_stranded_scripts(source_kit.parent)
     plan = compute_release(source_kit)
     if as_json:
         click.echo(json.dumps(release_summary(source_kit, plan), indent=2))
@@ -3148,7 +3154,9 @@ def release_apply(
     to admit the version this release writes for that capability, up to the next
     major; `--no-broaden` skips neither. A release that would leave a range on a
     capability excluding the version it writes or carries for it is refused
-    before anything is written, naming both (PRJ-002 D4). See
+    before anything is written, naming both (PRJ-002 D4). So is a release that
+    would ship a migration script stranded in a folder at or below its tier's
+    fixed version, naming a folder to move it to (ADR-092 point 8). See
     `.pkit/release/README.md`.
 
     With `--tag --push` the tag's push changes the hosting service, so the
@@ -3168,6 +3176,7 @@ def release_apply(
         if tag and push
         else None
     )
+    refuse_stranded_scripts(source_kit.parent)
     plan = compute_release(source_kit)
     _print_release_plan(plan)
     _warn_migration_mismatches(source_kit, plan)

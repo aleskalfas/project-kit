@@ -1,0 +1,22 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A brand that builds on no other may add axes of its own (#2983). Each is a
+  modifier of its Resolver document whose name no shared axis takes, with its
+  kind in the capability's extension point,
+  `"$extensions": {"pkit.visual-communication": {"kind": "value"}}` or
+  `"size"`, two modes or more and a default among them. A brand built on it
+  keeps the axis and adds none. A piece names its modes as it names any axis's,
+  a scene is drawn for each mode of a size axis of a brand's own, the HTML page
+  gives each mode of a value axis of its own a file of its own, and the CSS and
+  JSON code writers write it as a shared one. Adding an axis with a default
+  changes no key that existed. The check fails a modifier that declares an axis
+  without a kind or two modes (`own-axis`), an axis of a brand's own that takes
+  a shared axis's name (`own-axis-name`), and one a brand built on another
+  declares (`base-axis`). The release comparison reads a brand's own new axis
+  with a default as an addition, and one removed, renamed or with its default
+  changed as a break. A new shared axis of the foundations is now a break,
+  since its name may meet a brand's own. It breaks nothing an adopter holds: a
+  brand that declares no axis of its own reads as before.

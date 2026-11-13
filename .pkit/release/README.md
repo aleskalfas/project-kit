@@ -9,6 +9,7 @@ pkit:
         - src/project_kit/cli.py
         - src/project_kit/changesets.py
         - src/project_kit/versioning.py
+        - src/project_kit/stranded_migrations.py
         - .changie.yaml
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
@@ -16,10 +17,11 @@ pkit:
         - scripts/release_pr.py
         - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
-      record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040, "ADR-061#5", "ADR-061#8", "ADR-092#6"]
+      record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040, "ADR-061#5", "ADR-061#8", "ADR-092#6", "ADR-092#8"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/upgrade-flow.md#the-replay-a-missing-completion
+        - .pkit/lifecycle/migrations.md#which-version-a-migration-targets
       source: [common-changelog, keep-a-changelog]
 ---
 
@@ -1211,6 +1213,23 @@ coupling flagged on \#465). That holds for the backbone's dirs, against
 warning is **non-fatal** (surface is a human judgment) and rides along in the
 release PR body via the `--json` summary's `migration_warnings`, the
 backbone's first.
+
+### The stranded-script refusal (ADR-092 point 8)
+
+`pkit release plan` and `apply` refuse, before anything is written, a release
+that would ship a stranded migration script. Such a script sits in a folder at
+or below its tier's fixed version, and is new since the commit that fixed that
+version, so no project that took the version runs it. In project-kit a version
+is fixed at the first final release tag that carries the version the newest
+tag records, read from the remote's tags.
+
+So a run needs the remote's tags and the commits they name, which
+`release-pr.yml`'s full checkout gives it, and refuses without them. The
+refusal names a folder to move each script to, past the version `main`
+records, which `pkit migrations check-diff` accepts too.
+[The lifecycle reference, "Which version a migration targets"](../lifecycle/migrations.md#which-version-a-migration-targets)
+gives where each kind of project fixes a version, what the refusal skips, and
+the window a merge after a release leaves.
 
 ### Cutover — the old path still works
 
