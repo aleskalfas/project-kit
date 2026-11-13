@@ -20,7 +20,10 @@ pages:
           - visual.up
       - text: >-
           The levels are in order, the decisions on top and your code at the foot. The
-          decisions govern every level under them (COR-065). The order among the four
+          decisions govern every level under them (COR-065). The second level names the
+          working rules by what most of them do. A rule whose origin states its own
+          choice counts as a decision too (COR-065 point 1), which the talk leaves out
+          for simplicity. The order among the four
           lower levels, from the working rules down to your code, is the talk's framing,
           from the general to the specific, and no source states it. The order is told by
           place and by width, the top narrowest, and by no colour, since the levels name
