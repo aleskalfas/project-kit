@@ -1662,6 +1662,26 @@ def test_max_released_tag_skips_the_moving_latest_tag(peeled: bool) -> None:
     assert upgrade._max_released_tag(latest) is None
 
 
+@pytest.mark.parametrize(
+    "name",
+    [
+        pytest.param("withdrawn/v2.1.0", id="withdrawal"),
+        pytest.param("withdrawn/v2.1.0rc1", id="candidates-withdrawal"),
+        pytest.param("archive/refs/tags/v2.1.0", id="a-release-ref-at-its-tail"),
+    ],
+)
+@pytest.mark.parametrize("peeled", [False, True], ids=["lightweight", "annotated"])
+def test_max_released_tag_reads_the_full_reference_alone(name: str, peeled: bool) -> None:
+    """A tag counts only where its full reference is `refs/tags/v…`, never where its
+    tail reads as one, so a `withdrawn/` tag names no install (ADR-063 point 1 as
+    ADR-092 point 4 refines it)."""
+    folded = f"{'1' * 40}\trefs/tags/{name}\n"
+    if peeled:
+        folded += f"{'1' * 40}\trefs/tags/{name}^{{}}\n"
+    assert upgrade._max_released_tag(folded + _tag_output("1.0.0", "2.0.0")) == Version("2.0.0")
+    assert upgrade._max_released_tag(folded) is None
+
+
 def test_max_released_tag_is_none_when_only_pre_releases_are_tagged() -> None:
     """A tag list holding only pre-releases and dev releases has no release."""
     assert upgrade._max_released_tag(_tag_output("1.0.0rc1", "1.0.0b2", "1.0.0.dev1")) is None

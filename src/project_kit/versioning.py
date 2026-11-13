@@ -19,7 +19,8 @@ repository (`session_guard`, ADR-061 point 6); a tag made or removed only
 locally needs none.
 
 Rollback (`unbump_version`, `untag_version`) is the symmetric inverse:
-`untag` removes the local (and optionally remote) tag; `unbump`
+`untag` removes the local (and optionally remote) tag, never a release
+candidate's, which is never moved or deleted (ADR-092 point 4); `unbump`
 narrows back the broadened `requires_backbone` upper bounds and
 rewrites VERSION to the prior segment value. The pair only handles
 strict-semver versions — pre-release suffixes are refused with a
@@ -369,8 +370,10 @@ def untag_version(
     With `push=True`, also runs `git push origin :refs/tags/<tag>`
     to delete the remote tag; that needs `clearance`, the cross-repository
     guard's for the repository, checked before anything is deleted.
-    Refuses if the tag does not exist locally. Without `--push`, prints a
-    hint with the exact remote-delete command.
+    Refuses if the tag does not exist locally, and refuses a release
+    candidate's tag, `v<X.Y.Z>rc<N>`, which is never moved or deleted
+    (ADR-092 point 4). Without `--push`, prints a hint with the exact
+    remote-delete command.
 
     Returns the tag name (e.g., `v1.0.0`).
     """
@@ -381,13 +384,20 @@ def untag_version(
         raise click.ClickException(f"source kit has no VERSION file at {version_file}")
 
     version = version_file.read_text(encoding="utf-8").strip()
-    # Accept pre-release versions here — `v1.2.0rc1` is a legitimate
-    # tag form per the issue; the strict-semver gate is only on the
-    # unbump path (where decrementing a pre-release is ambiguous).
-    if not _PEP440_RE.match(version):
+    # An alpha or beta tag may go, as before; the strict-semver gate is only on
+    # the unbump path (where decrementing a pre-release is ambiguous).
+    parsed = _PEP440_RE.match(version)
+    if not parsed:
         raise click.ClickException(f"version {version!r} in {version_file} is not valid PEP 440")
 
     tag = f"v{version}"
+    if parsed.group(4) == "rc":
+        raise click.ClickException(
+            f"{tag} is a release candidate's tag, which is never moved or deleted, so it "
+            f"names one content (ADR-092 point 4). Withdraw the candidate instead: push "
+            f"the tag withdrawn/{tag} on its commit, and say so on its Release. Nothing "
+            "was deleted."
+        )
     source_repo = source_kit.parent
 
     if not _tag_exists_locally(source_repo, tag):

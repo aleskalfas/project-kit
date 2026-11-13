@@ -1,0 +1,13 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  `pkit version untag` refuses a release candidate's tag, `v<X.Y.Z>rc<N>`, and
+  deletes nothing, here or on `origin`: a candidate's tag is never moved or
+  deleted, and the refusal names the way to withdraw the candidate instead,
+  the tag `withdrawn/v<X.Y.Z>rc<N>` pushed on its commit (ADR-092 point 4). An
+  alpha or beta tag goes as before. `pkit upgrade`'s lookup of the latest
+  release reads only the tags whose full reference is `refs/tags/v…`, so a tag
+  under a folder, such as a withdrawal, names no install. The CLI reference
+  says so.

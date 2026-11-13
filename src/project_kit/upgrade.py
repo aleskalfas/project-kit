@@ -1411,6 +1411,9 @@ def refuse_under_routers_fallback(target_root: Path) -> None:
 # `pkit upgrade`. The check is best-effort; a timeout degrades to a warning.
 _LS_REMOTE_TIMEOUT_SECONDS = 5.0
 
+#: How `git ls-remote --tags` lists a release tag's full reference: `refs/tags/v<X.Y.Z>`.
+_RELEASE_TAG_REF_PREFIX = "refs/tags/v"
+
 
 #: Guard env var: set on the re-exec'd child after a self-update, so the child
 #: never attempts a second self-update (defence against a re-exec loop, on top of
@@ -1695,10 +1698,13 @@ def _max_released_tag(ls_remote_output: str) -> Version | None:
 
     Each line is `<sha>\trefs/tags/<tag>`. Annotated tags also emit a
     dereferenced `<tag>^{}` peel line; the `^{}` suffix is stripped so both
-    resolve to the same version. Only a `v` followed by a release version
-    counts, tested as the release step tests a floor
-    (`versioning.is_release_version`): `major.minor.patch`, no part padded by
-    a leading zero. Every pre-release and dev release is skipped (`v2.0.0rc1`,
+    resolve to the same version. Only a tag whose full reference is
+    `refs/tags/v` followed by a release version counts, tested as the release
+    step tests a floor (`versioning.is_release_version`): `major.minor.patch`,
+    no part padded by a leading zero. The whole reference is matched, never its
+    tail, so a tag under a folder, such as a candidate's withdrawal
+    `withdrawn/v2.0.0rc1`, names no install (ADR-063 point 1 as ADR-092 point 4
+    refines it). Every pre-release and dev release is skipped (`v2.0.0rc1`,
     `v2.0.0.dev1`), even one above the latest release, as is any other tag (a
     non-release tag, a malformed ref). So what the tool step installs and a
     pinned raise writes is a release `pkit pin` accepts. Returns None when no
@@ -1706,10 +1712,12 @@ def _max_released_tag(ls_remote_output: str) -> Version | None:
     """
     versions: list[Version] = []
     for line in ls_remote_output.splitlines():
-        ref = line.rpartition("refs/tags/")[2].strip()
-        ref = ref.removesuffix("^{}")
-        if ref.startswith("v") and is_release_version(ref[1:]):
-            versions.append(Version(ref[1:]))
+        ref = line.partition("\t")[2].strip().removesuffix("^{}")
+        if not ref.startswith(_RELEASE_TAG_REF_PREFIX):
+            continue
+        version = ref.removeprefix(_RELEASE_TAG_REF_PREFIX)
+        if is_release_version(version):
+            versions.append(Version(version))
     return max(versions) if versions else None
 
 

@@ -3023,6 +3023,10 @@ def version_tag(push: bool, allow_foreign_repo: bool) -> None:
 def version_untag(push: bool, allow_foreign_repo: bool) -> None:
     """Remove the `v<version>` tag matching .pkit/VERSION (local; --push for remote).
 
+    Refuses a release candidate's tag, `v<X.Y.Z>rc<N>`, which is never moved or
+    deleted: a candidate is withdrawn by the tag `withdrawn/v<X.Y.Z>rc<N>` on its
+    commit instead (ADR-092 point 4).
+
     With `--push` the cross-repository guard runs first, before either tag is
     deleted, as for `version tag --push`.
     """
