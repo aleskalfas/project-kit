@@ -30,7 +30,9 @@ Four responsibilities:
    (`migration_target`), and the check (`released_targets`) fails a script a
    change lands at or below it. Both read the released version through
    `recorded_version`, from a tree: the stamp from the default branch, as an
-   allocator (COR-054 point 3), the check from its base's tip.
+   allocator (COR-054 point 3), the check from its base's tip. The release's
+   guard (`stranded_migrations`) makes the check's judgement against the commit
+   that fixed a tier's version.
 
 4. **Each number once in a folder** — the runner runs a folder's scripts in
    the order of their names, so their numbers order them only while each is
@@ -649,6 +651,15 @@ def check_diff_coverage(
     return CoverageReport(
         triggers=tuple(triggers), migrations=tuple(migrations), landed=tuple(landed)
     )
+
+
+def script_tier(path: str) -> tuple[Tier, str | None] | None:
+    """The tier and component of `path`, from the project root, where it is a migration
+    script in an `X.Y.0` folder, as `released_targets` judges one; `None` for any other
+    path."""
+    if not _is_migration_path(path) or not _VERSION_DIR_RE.match(PurePosixPath(path).parent.name):
+        return None
+    return _migration_path_tier(path), _migration_path_component(path)
 
 
 @dataclass(frozen=True)
