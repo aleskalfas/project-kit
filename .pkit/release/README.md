@@ -520,7 +520,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 | Command | Writes? | What |
 |---|---|---|
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). Refuses a release `apply` would refuse. |
-| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → widen declared upper bounds on capabilities → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Prints, last, the trailer line naming the commit its plan read, for the release commit and the PR's body (below). Tagging is a separate step (below); `--tag`/`--push` opt in. |
+| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → widen declared upper bounds on capabilities → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Prints, last, the trailer line naming the commit its plan read, for the release commit and the PR's body (below). Tagging is a separate step after the merge (below), and `--tag` is refused before anything is written. |
 | `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR that lands only what `apply` wrote and the answer files it adds, onto the commit its plan read, as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
 | `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section, or short notes pointing to it when it is longer than a Release keeps (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes, and which of the two forms they take, without calling `gh`. Runs the cross-repository guard first; `--allow-foreign-repo` confirms publishing in another repository than the session's anchor's. |
 | `pkit release check` | no | The CI guard (below). |
@@ -752,9 +752,28 @@ release commit, which does not exist yet when `apply` runs. The sequence:
     # release-tag.yml cuts v<new-backbone> on the push to main — or, fully manual:
     pkit version tag --push            # on main: cut v<new-backbone> (PRJ-004)
 
-`apply --tag` is an opt-in shortcut for when HEAD is *already* the release
-commit (e.g. re-running on `main` after merge). A component-only release (no
-backbone move) cuts no tag — PRJ-004 tags the backbone `.pkit/VERSION`.
+**The tag names the commit the release PR landed** (ADR-092 point 6). `pkit
+version tag` tags the newest commit at or before HEAD on `main`'s first-parent
+history that changed `.pkit/VERSION`, and names the tag by the version that
+commit records. So a push that carries more than the release, or a run after a
+later merge, still tags the release's own commit, and `release-tag.yml` and a
+run by hand tag the same one. `main` here is the default branch as `pkit
+repository base` resolves it: `origin/main` where `origin` holds it. It
+refuses, tagging nothing, where:
+
+- HEAD is off that history, as on a branch or on a commit `origin` lacks. Check
+  out `main`'s head, fetched, and run it again.
+- That commit records no final release version, `major.minor.patch`. A
+  candidate's tag stays on the commit its cut made.
+- The tag exists locally, or, with `--push`, on `origin`.
+- The clone is shallow, and its history stops at the commit it found, so an
+  older one may have changed `.pkit/VERSION`. Fetch the whole history (`git
+  fetch --unshallow`).
+
+`apply --tag` is refused before anything is written, naming `pkit version tag`
+after the merge: the release commit does not exist yet when `apply` runs. A
+component-only release (no backbone move) cuts no tag — PRJ-004 tags the
+backbone `.pkit/VERSION`.
 
 ### The trailer line (ADR-092 point 6)
 
@@ -1075,8 +1094,8 @@ publishes it as the body of a GitHub Release for tag `v<version>`.
   terminal and refuses without one, publishing nothing, unless
   `--allow-foreign-repo` confirms it; in a pipeline, with no anchor, it needs no
   flag. `--dry-run` never asks. So does `pkit version tag --push` — and
-  `version untag --push`, and `release apply --tag --push` — before the tag
-  is made or pushed; a tag made only locally runs no guard.
+  `version untag --push` — before the tag is made or pushed; a tag made only
+  locally runs no guard.
 
 It slots into the sequence after the tag is cut:
 
@@ -1133,7 +1152,8 @@ automation only proposes and, post-merge, tags.
 Detection is **VERSION-driven, not message-driven** (a release PR may land as a
 merge, squash, or rebase, so the head commit's message is unreliable): if the
 tag matching `.pkit/VERSION` does not yet exist, it cuts it via `pkit version
-tag --push`, then — **only when it just cut a tag** — publishes the notes-only
+tag --push`, on the commit the release PR landed (above), then — **only when it
+just cut a tag** — publishes the notes-only
 GitHub Release for that version via `pkit release publish-notes` (body = the
 `CHANGELOG.md` section, or its short notes when it is too long; **no
 artifact**, per the guard above). Naturally
@@ -1236,9 +1256,10 @@ the window a merge after a release leaves.
 ### Cutover — the old path still works
 
 This is the **introduce** step of introduce → migrate → retire. `pkit version
-bump <segment>` (and its `tag` / `unbump` / `--pre` siblings) is unchanged and
-fully functional; the release step *adds* the declare-then-apply path beside
-it. Both broaden `requires_backbone` today (broadening is idempotent), so the
+bump <segment>` (and its `unbump` / `--pre` siblings) is unchanged and fully
+functional; the release step *adds* the declare-then-apply path beside it.
+`version tag` tags a final release only, on the commit its release PR landed
+(above). Both broaden `requires_backbone` today (broadening is idempotent), so the
 two coexist safely; only the release step raises a declared floor, since only
 it reads changesets. Retiring in-branch bumping — once the release path is
 trusted — is a downstream change.
