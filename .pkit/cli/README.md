@@ -196,7 +196,7 @@ sh .pkit/cli/install-pkit.sh
 - **The check, and when it succeeds.** Whether it installed or found a pkit installed, it runs the `pkit` the `PATH` finds, from the project's root, asked for its version. That `pkit`'s router routes the run as it routes any command, and fetches the pin where it would. The script exits 0 only where the run reports the project's version: that version installed, or another version whose router runs the pin.
 - **Its verdict holds in its own environment:** its `PATH`, the routing variables it inherits, such as `PKIT_NO_ROUTE`, and the project it sits in. A later step whose environment differs, such as a pipeline's next step, may find another `pkit` or none. Success names the version the project's commands run, not a whole state: sync's guard still stops them over an unfinished upgrade or raise, and names the remedy.
 - **It refuses, or fails, before the check,** and installs nothing:
-  - a pin that is no bare release version `MAJOR.MINOR.PATCH`, such as `v1.2.3`, which the router would never match: mend it with `pkit pin <version>`
+  - a pin that is no bare release version `MAJOR.MINOR.PATCH`, such as `v1.2.3`, which the router would never match: mend it with `pkit pin <version>`. A release candidate's pin, such as `2.0.0rc1`, is refused too, though the router runs it, since the script installs only a release ([ADR-090](../../tech-docs/architecture/decisions/ADR-090-self-fetch-over-https.md) point 4).
   - nothing pinned, and a manifest that records no version: choose a version and install it as this section says
   - no `uv` on the `PATH`
   - an install that fails, such as where a sandbox keeps writes out of uv's folders
