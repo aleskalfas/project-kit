@@ -433,7 +433,7 @@ A top component declares `layouts`, by name. Each layout has a *drawing*, the pa
 - **`preferred`:** the height of a page in that layout, `preferred: {height: <formula>}`, by a formula on its drawing's parts (DEC-022 point 3). A layout says it where the top asks for no height, and may say it where the top asks for one, by a formula or through its [physical size](#a-physical-size). It never says a width.
 - **`parts`:** the layout's drawing, which draws one page. Every layout has one. It takes the page's slots, the top's other fields and the words of the top's options, as the content gives them to the top, and the states, colour and values the top declares (DEC-009 point 5). Its `:width` and `:height` are the page's size. A part that shows a slot is named after the slot, as the deck's are, so what the slot places keeps one trace id under every drawing ([A brand's drawing](#a-brands-drawing)).
 
-The deck's field of pages, its tokens, and its slide trimmed to two of its slots, their descriptions left out:
+The deck's field of pages, its tokens, and its slide trimmed to two of its slots, their descriptions left out ([The foundations](files.md#the-foundations)):
 
 ```yaml
 fields:
