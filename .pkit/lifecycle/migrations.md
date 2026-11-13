@@ -11,7 +11,7 @@ pkit:
         - src/project_kit/upgrade.py
         - src/project_kit/default_branch.py
         - src/project_kit/stranded_migrations.py
-      record: [COR-010, COR-059, "COR-048#5", "COR-050#12", "COR-050#14", "COR-054#3", "ADR-065#14", "ADR-059#3", "ADR-092#8"]
+      record: [COR-010, COR-059, "COR-048#5", "COR-050#12", "COR-050#14", "COR-054#3", "ADR-065#4", "ADR-065#14", "ADR-059#3", "ADR-089#5", "ADR-092#8"]
       artefact:
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
@@ -89,6 +89,9 @@ Each number is used once in a folder. The runner runs a folder's scripts in the 
 
 A migration's folder names the version it carries a project to, never one already released. The runner runs a folder only past the version a project records ([COR-010](../decisions/core/COR-010-resource-lifecycle.md)). So a folder at or below a released minor never runs for a project already there, and nothing else reports it.
 
+- **The window.** A transition runs each folder above the recorded version in PEP 440 order, and at or below its target by minor. Both are read as public versions, the pre-release kept and a local segment dropped.
+  - **A release candidate** sorts below its final release. So a move to `0.55.0rc1` runs the folder `0.55.0/`, which its final release ships too.
+  - **A release version** opens the window at the next minor. So a project at `0.55.3` never runs `0.55.0/` again.
 - **The stamp.** `pkit new migration` without `--version` takes the highest of these:
   - the next minor past the version the default branch records for the tier:
     - `.pkit/VERSION` <!-- unanchored: names the file the step reads or writes, not its content --> for the backbone
@@ -101,7 +104,7 @@ A migration's folder names the version it carries a project to, never one alread
   - **What it skips:**
     - a script the project receives by sync
     - one the tip already holds, at its path or under another name in its folder with the same content, as a rename leaves it
-- **What neither predicts.** Neither reads pending changesets for a major: the release computes the version, by the project's version-bump policy. A folder that names a minor below the release still runs inside the transition across it, since the runner's window is a range of minors.
+- **What neither predicts.** Neither reads pending changesets for a major: the release computes the version, by the project's version-bump policy. A folder that names a minor below the release still runs inside the transition across it. The window holds every folder up to the target's minor.
 - **The release's guard.** `pkit release plan` and `apply` refuse, before anything is written, to ship a stranded script. A stranded script sits in a folder at or below its tier's fixed version, and is new since the commit that fixed it. A tier's fixed version is its newest version whose scripts everyone who takes it has received. So a script added later to that folder, or below it, runs for none of them.
   - **Where a version is fixed** follows from how the project's versions reach those who take them. The marker test tells the two kinds of project apart ([`manifest.md`, "The methodology's literals"](manifest.md#the-methodologys-literals)).
     - In the methodology's source repository, those who take a version take it through the tag that carries it. The fixed version is the one the tier records at the newest final release tag, `v<X.Y.Z>`, read from the remote's tags. Its commit is the first final release tag that carries it. A candidate's tag, a `withdrawn/` tag and `latest` count for none.

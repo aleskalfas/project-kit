@@ -2752,6 +2752,49 @@ def test_a_record_of_the_bundled_version_written_another_way_is_current(
     assert "Already at backbone v" in capsys.readouterr().out
 
 
+@pytest.mark.parametrize(
+    ("recorded", "bundled", "moves", "ahead"),
+    [
+        pytest.param("0.55.0rc1", "0.55.0", True, False, id="a-candidate-to-its-final-release"),
+        pytest.param("0.55.0rc1", "0.55.0rc2", True, False, id="a-candidate-to-the-next"),
+        pytest.param("0.55.0", "0.55.0rc1", True, True, id="a-release-to-its-own-candidate"),
+        pytest.param("0.55.0rc1", "0.55.0rc1", False, False, id="the-same-candidate"),
+        pytest.param("0.6.0+x", "0.6.0", False, False, id="a-local-segment-reads-dropped"),
+    ],
+)
+def test_a_recorded_version_is_compared_as_a_public_version(
+    recorded: str, bundled: str, moves: bool, ahead: bool
+) -> None:
+    """The pre-release is kept and a local segment dropped (ADR-089 point 5), so a
+    candidate's record moves to its final release, and a release's record is ahead
+    of its own candidate, which step 1 refuses (ADR-065 point 7)."""
+    move = upgrade.capability_move("evidence", recorded, bundled)
+    assert (move is not None) is moves
+    assert move is None or move.ahead is ahead
+    assert upgrade.as_recorded_version(recorded) == str(Version(Version(recorded).public))
+
+
+def test_a_capability_recorded_at_its_candidate_moves_to_the_final_release(
+    installed_target: Path,
+) -> None:
+    """A component recorded at the candidate of the version its bundle ships is no
+    longer read as at it, so the transition moves it (ADR-089 point 5)."""
+    source = install.find_source_kit()
+    bundled = manifest.read_component_package(source / "capabilities" / "evidence" / "package.yaml")
+    assert bundled is not None
+    candidate = f"{bundled[0]}rc1"
+    _stage_installed_capability(installed_target, "evidence", version=candidate)
+    state = manifest.read_backbone_manifest(installed_target)
+    assert state is not None
+
+    moves = upgrade.component_moves(installed_target, source, state)
+
+    assert [(m.name, m.recorded, m.bundled, m.ahead) for m in moves] == [
+        ("evidence", candidate, bundled[0], False)
+    ]
+    assert not upgrade.is_current(installed_target, source, state, _this_pkit())
+
+
 def test_an_adapter_registered_after_the_copy_is_rendered_into_the_ignore_file(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

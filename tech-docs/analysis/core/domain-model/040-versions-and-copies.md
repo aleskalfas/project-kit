@@ -32,7 +32,10 @@ pkit:
         - ADR-065#1
         - ADR-065#2
         - ADR-065#3
+        - ADR-065#4
         - ADR-065#6
+        - ADR-089#4
+        - ADR-089#5
         - PRJ-004
       artefact:
         - TERM-manifest
@@ -222,6 +225,7 @@ stateDiagram-v2
 - No operation but a version transition moves it, and sync moves none (COR-059 points 2 and 3).
 - A project is at a version only when its target and its completion both name it (COR-059 point 6).
 - No copying of the [methodology](../glossary.md#term-methodology--methodology)'s content writes or removes it (COR-059 point 1).
+- It is compared with the version a release ships as a public version, its pre-release kept and a local segment dropped. So a release candidate's version sorts below its final release's ([ADR-089 point 5](../../../architecture/decisions/ADR-089-release-candidates.md#5-a-candidate-runs-its-final-releases-migration-folders-and-has-not-finished-them)).
 
 ## Migration
 
@@ -244,6 +248,7 @@ A migration is a script that carries a project's state across a version of the [
 **Always true:**
 
 - Only a version transition runs a migration (COR-059 point 3).
+- A version transition runs each folder above the [recorded version](../glossary.md#term-recorded-version--recorded-version) and at or below its target by minor. So a move to a [release](../glossary.md#term-release--release) candidate runs its final release's folder ([ADR-065 point 4](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#4-a-transition-runs-in-cor-010s-order-with-seed-paths-after-the-migrations), [ADR-089 point 5](../../../architecture/decisions/ADR-089-release-candidates.md#5-a-candidate-runs-its-final-releases-migration-folders-and-has-not-finished-them)).
 - Run again on a state it already carried, it changes nothing (COR-010).
 - A backbone migration acts only on a positive sign that it is needed, and never deletes by a path's name or position alone (COR-010).
 - What it writes stays within what the records owning that content allow (COR-059 point 3).
@@ -333,6 +338,7 @@ A dependency gate is a check made before an install or a version transition writ
 - A dependency that moves outside a dependent's range warns, naming each dependent. It goes on only under an explicit `--force`, never as a hard block (COR-030).
 - A dependency that leaves a dependent's mandatory connection unmet warns in the same way (ADR-065 point 6).
 - `--force` on `pkit upgrade` overrides those warnings, and nothing else (ADR-065 point 6).
+- A range is read with its pre-releases admitted, so it admits a [release](../glossary.md#term-release--release) candidate within its bounds ([ADR-089 point 4](../../../architecture/decisions/ADR-089-release-candidates.md#4-every-range-is-read-with-its-pre-releases-admitted)).
 
 ## Propagation
 

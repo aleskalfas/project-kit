@@ -1,0 +1,15 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  Every version range now admits a release candidate within its bounds,
+  `requires_backbone` and `requires_capabilities` alike, your own components'
+  ranges among them. So `>=0.5.0,<1.0.0` admits `0.6.0rc1`, while `>=2.0.0`
+  and `<2.0.0` both still refuse `2.0.0rc1`. The range reader names its
+  pre-releases itself, so the reading no longer depends on the `packaging`
+  release installed (ADR-089 point 4). An upgrade compares each recorded
+  version with the version it brings as a public version, the pre-release kept
+  and a local segment dropped. So a component recorded at `0.55.0rc1` moves to
+  `0.55.0`, and a move to a candidate runs its final release's migration folder
+  (ADR-089 point 5). The lookup of the latest release still picks no candidate.

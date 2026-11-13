@@ -24,7 +24,7 @@ pkit:
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - hatch_build.py
         - tests/test_area_name_clash.py
-      record: [COR-001, COR-010, COR-011, COR-015, COR-017, COR-030, COR-031, COR-041, "COR-053#6", "COR-059#5", "COR-059#6", "COR-059#7", "COR-059#8", "COR-059#9", "COR-062#11", "COR-070#3", ADR-033, ADR-039, ADR-049, ADR-059, ADR-064, ADR-065, ADR-076]
+      record: [COR-001, COR-010, COR-011, COR-015, COR-017, COR-030, COR-031, COR-041, "COR-053#6", "COR-059#5", "COR-059#6", "COR-059#7", "COR-059#8", "COR-059#9", "COR-062#11", "COR-070#3", ADR-033, ADR-039, ADR-049, ADR-059, ADR-064, ADR-065, ADR-076, "ADR-089#4", "ADR-089#5"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/manifest.md#where-a-capabilitys-manifest-lives
@@ -75,7 +75,7 @@ The upgrade command transitions an adopter project to a target backbone version.
    - an adapter the copy placed that the registry lacks is registered, and recorded at the version it ships
    - `.pkit/.gitignore` <!-- unanchored: names the file the step reads or writes, not its content --> is rendered, so a migration reads the render of the target's declarations
    - the upgrade says what the copy newly binds of each loaded set it delivered ("What a step newly binds", below)
-4. **Backbone migrations** run in order ([`migrations.md`, "Three scopes (per tier)"](migrations.md#three-scopes-per-tier)): manifest-schema → structural → resource-scoped. They run across minor-version boundaries from the recorded completion, `completed_version`, to the target. With no completion recorded, every backbone migration up to the target runs (the replay, below).
+4. **Backbone migrations** run in order ([`migrations.md`, "Three scopes (per tier)"](migrations.md#three-scopes-per-tier)): manifest-schema → structural → resource-scoped. They run each folder in the window from the recorded completion, `completed_version`, to the target ("The migration window", below). With no completion recorded, every backbone migration up to the target runs (the replay, below).
 5. **Adapter migrations** run for each adapter, from the version its manifest records, in version order with the same scope ordering within each `<major>.<minor>.0/` directory. Their scripts are read from the running pkit's bundle, as a capability's are. Each registered adapter is then recorded at the version the target ships. One with no manifest runs no migration ([`manifest.md`, "An adapter's manifest"](manifest.md#an-adapters-manifest)).
 6. **Capability migrations** run for each copied capability, dependencies first by their `requires_capabilities` (COR-030), each from the version it records. Each capability is then restamped at the version it ships. One with no readable version runs none and is recorded at that version.
 7. **Seed paths.** Each one that is missing is created, never over one that exists ("Seed paths", below). They follow the migrations, so a migration that moves a project's file to a seed path finds no fresh seed there.
@@ -102,6 +102,12 @@ Every write of the upgrade is made before the first question starts. So a questi
 - every registered adapter and shipped capability records the version the target ships, each capability under its `project/`
 
 Otherwise upgrade runs, to finish what is not, even at the same backbone version.
+
+**The migration window.** Steps 4 to 6 each run the folders above a lower bound and at or below the target by minor. The lower bound is the completion for the backbone, and the version its manifest records for each component. It is read in PEP 440 order, where a release candidate sorts below its final release.
+
+- **A move to a candidate,** such as `0.55.0rc1`, runs the folder of its final release, `0.55.0/`.
+- **For a release version,** the window holds the minors above the one recorded.
+- **Public versions:** every comparison of a recorded version with the version the target ships, the early return's among them, reads both as public versions. The pre-release is kept and a local segment dropped, so `0.55.0rc1` to `0.55.0` is a move, and `0.6.0+x` reads as `0.6.0`.
 
 **The report and the dry run** name the target, each component's move, and the replay where no completion is recorded. They list each component's migrations, each collision the upgrade asks about, and each question it would ask. `--dry-run` asks nothing and writes nothing.
 
@@ -191,6 +197,7 @@ The gates run as `pkit capabilities upgrade` runs them (COR-030, COR-053 point 6
 - **A moving dependency** warns when its new version falls outside the range a capability that does not move declares for it, naming each such dependent. So does one that leaves such a capability's mandatory connection unmet. The upgrade proceeds only under `pkit upgrade --force`, so neither is a hard block.
 - **`--force` overrides those two warnings and nothing else.** It overrides no guard, no compatibility refusal, no refusal of a component bundled older, no collision, and no clash of area names.
 - **Not the upgrade's to judge:** a pair in which neither side moves, and a mandatory connection of a capability that does not move, already unmet before the upgrade.
+- **How a range is read:** with its pre-releases admitted, by every check of a range, compatibility resolution and validation among them. So a range admits a release candidate within its bounds, and `>=2.0.0` and `<2.0.0` both refuse `2.0.0rc1`.
 
 ## What the settings merge widens
 
@@ -237,7 +244,7 @@ With no `completed_version`, the project's backbone migration history is unknown
 
 ## Sync's guard: no path down, and no migration passed over
 
-One guard keeps a pkit at another version than the project's from writing its release over the project's (COR-059 point 9). It reads the backbone manifest's two recorded states and the pin (`.pkit/version-pin`), and compares them with the running pkit's version.
+One guard keeps a pkit at another version than the project's from writing its release over the project's (COR-059 point 9). It reads the backbone manifest's two recorded states and the pin (`.pkit/version-pin`), and compares them with the running pkit's version. It compares public versions, as the migration window does ("The steps of a transition", above).
 
 The content a sync writes, and the target of a backbone upgrade, is the running pkit's own version. A release's content is tied to its code. That version can be another than the project's:
 

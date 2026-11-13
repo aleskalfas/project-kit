@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -11,14 +12,17 @@ from pathlib import Path
 import click
 import pytest
 from click.testing import CliRunner
+from packaging.version import Version
 
-from project_kit import __version__
+from project_kit import __version__, sync, upgrade
 from project_kit import migrations as migrations_mod
 from project_kit.cli import main as pkit_main
+from project_kit.install import find_source_kit
 from project_kit.migrations import (
     execute_migration_scripts,
     parse_version_tuple,
     pending_migration_scripts,
+    public_version,
     report_pending_migrations,
 )
 
@@ -87,6 +91,140 @@ def test_pending_scripts_ignores_non_versioned_dirs(tmp_path: Path) -> None:
     scripts = pending_migration_scripts(root, None, "0.1.0")
     assert len(scripts) == 1
     assert scripts[0].parent.name == "0.1.0"
+
+
+# --- the window around a release candidate (ADR-065 point 4, ADR-089 point 5) ---
+
+
+@pytest.mark.parametrize(
+    ("lower", "target", "folders"),
+    [
+        pytest.param("0.54.2", "0.55.0rc1", ["0.55.0"], id="a-candidate-runs-its-final-folder"),
+        pytest.param("0.55.0rc1", "0.55.0", ["0.55.0"], id="from-a-candidate-the-folder-again"),
+        pytest.param("0.55.0rc1", "0.55.0rc2", ["0.55.0"], id="between-candidates-again"),
+        pytest.param("0.55.0rc1", "0.56.0", ["0.55.0", "0.56.0"], id="whole-and-past-it"),
+        pytest.param("0.55.0", "0.55.0", [], id="at-the-final-release-nothing"),
+        pytest.param("0.54.0+x", "0.55.0", ["0.55.0"], id="a-local-segment-reads-dropped"),
+        pytest.param("v0.54.0", "0.55.0", ["0.55.0"], id="a-leading-v"),
+    ],
+)
+def test_the_window_reads_its_lower_bound_in_pep_440_order(
+    tmp_path: Path, lower: str, target: str, folders: list[str]
+) -> None:
+    """Each folder above the lower bound in PEP 440 order, and at or below the
+    target by minor: a candidate's lower bound sits below its final release's
+    folder, which runs again whole, every script it holds."""
+    root = tmp_path / "migrations"
+    for folder in ("0.54.0", "0.55.0", "0.56.0", "0.57.0"):
+        _stage_script(root, folder, "001-a.sh", "#!/usr/bin/env bash\nexit 0\n")
+    _stage_script(root, "0.55.0", "002-added-since.sh", "#!/usr/bin/env bash\nexit 0\n")
+
+    scripts = pending_migration_scripts(root, lower, target)
+
+    assert sorted({s.parent.name for s in scripts}) == folders
+    if "0.55.0" in folders:
+        assert [s.name for s in scripts if s.parent.name == "0.55.0"] == [
+            "001-a.sh",
+            "002-added-since.sh",
+        ]
+
+
+@pytest.mark.parametrize("bound", ["", "not a version"])
+def test_a_bound_that_is_no_version_refuses(tmp_path: Path, bound: str) -> None:
+    root = tmp_path / "migrations"
+    _stage_script(root, "0.1.0", "001-a.sh", "#!/usr/bin/env bash\nexit 0\n")
+    with pytest.raises(click.ClickException, match="is not a version"):
+        pending_migration_scripts(root, bound, "0.1.0")
+    with pytest.raises(click.ClickException, match="is not a version"):
+        pending_migration_scripts(root, "0.1.0", bound)
+
+
+def test_public_version_keeps_the_pre_release_and_drops_a_local_segment() -> None:
+    assert public_version("0.55.0rc1") == Version("0.55.0rc1")
+    assert public_version("0.55.0-rc.1") == Version("0.55.0rc1")
+    assert public_version("0.6.0+x") == Version("0.6.0")
+    assert public_version("v0.6.0") == Version("0.6.0")
+    assert public_version("not a version") is None
+    assert public_version(None) is None
+
+
+# --- every shipped folder, read as before for every release version (ADR-089 point 5) ---
+
+
+def _shipped_migration_roots() -> list[Path]:
+    """Each migrations folder the methodology ships: the backbone's, and each
+    adapter's and capability's."""
+    kit = find_source_kit()
+    roots = [kit / "migrations" / "backbone"]
+    roots += sorted(kit.glob("adapters/*/migrations"))
+    roots += sorted(kit.glob("capabilities/*/migrations"))
+    return [root for root in roots if root.is_dir()]
+
+
+def _release_versions_around(root: Path) -> list[str]:
+    """The release versions a window over *root* can turn on: each folder's own
+    version and a patch of it, the minor below it and the one above it, and
+    `0.0.0`."""
+    versions = {"0.0.0"}
+    for folder in root.iterdir():
+        if not folder.is_dir() or not re.fullmatch(r"\d+\.\d+\.0", folder.name):
+            continue
+        major, minor, _ = parse_version_tuple(folder.name)
+        versions |= {f"{major}.{minor}.0", f"{major}.{minor}.1", f"{major}.{minor + 1}.0"}
+        if minor > 0:
+            versions.add(f"{major}.{minor - 1}.0")
+    return sorted(versions, key=parse_version_tuple)
+
+
+def _window_by_minors(root: Path, lower: str | None, target: str) -> list[Path]:
+    """The window as a reading that drops the pre-release gives it: each folder
+    whose minor lies above the lower bound's minor and at or below the target's."""
+    floor = (-1, -1) if lower is None else parse_version_tuple(lower)[:2]
+    ceiling = parse_version_tuple(target)[:2]
+    folders = sorted(
+        (f for f in root.iterdir() if f.is_dir() and re.fullmatch(r"\d+\.\d+\.0", f.name)),
+        key=lambda f: parse_version_tuple(f.name),
+    )
+    return [
+        script
+        for folder in folders
+        if floor < parse_version_tuple(folder.name)[:2] <= ceiling
+        for script in sorted(folder.glob("[0-9]*.sh"))
+    ]
+
+
+def test_every_shipped_folder_runs_in_the_same_window_for_every_release_version() -> None:
+    """For release versions, the window in PEP 440 order is the range of minors
+    it always was, over every folder the methodology ships."""
+    roots = _shipped_migration_roots()
+    assert roots, "no shipped migrations folder found"
+    for root in roots:
+        versions = _release_versions_around(root)
+        for target in versions:
+            assert pending_migration_scripts(root, None, target) == _window_by_minors(
+                root, None, target
+            ), (root, None, target)
+            for lower in versions:
+                assert pending_migration_scripts(root, lower, target) == _window_by_minors(
+                    root, lower, target
+                ), (root, lower, target)
+
+
+def test_every_comparison_of_a_recorded_version_reads_as_before_for_release_versions() -> None:
+    """For release versions, comparing public versions gives what comparing
+    `major.minor.patch` gave: upgrade's move and sameness, and sync's order."""
+    versions = sorted(
+        {v for root in _shipped_migration_roots() for v in _release_versions_around(root)},
+        key=parse_version_tuple,
+    )
+    for recorded in versions:
+        for bundled in versions:
+            before = parse_version_tuple(recorded), parse_version_tuple(bundled)
+            pair = (recorded, bundled)
+            assert upgrade._same_version(recorded, bundled) is (before[0] == before[1]), pair
+            assert upgrade._moves_up(recorded, bundled) is (before[0] < before[1]), pair
+            assert sync._same_version(recorded, bundled) is (before[0] == before[1]), pair
+            assert sync._is_older(recorded, bundled) is (before[0] < before[1]), pair
 
 
 def test_execute_scripts_runs_each_with_root_env_var(tmp_path: Path) -> None:
