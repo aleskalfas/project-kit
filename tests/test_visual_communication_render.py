@@ -29,6 +29,7 @@ from tests.test_visual_communication_pipeline import (
     PIECE_FOLDER,
     ROW,
     TESTS,
+    device_project,
     drawing_project,
     exported_up_to,
     filled,
@@ -694,6 +695,31 @@ def test_a_draft_drawn_in_a_mode_only_newer_foundations_hold_moves_its_lock_to_t
     piece on a phone they are held back, and under one that places it at no key they
     are not."""
     root = projector_project(tmp_path, devices)
+
+    shown = run(root, PIECE)
+
+    assert shown.returncode == 0, shown.stderr
+    assert locked(root) == {**lab_lock(blocks, "1.0.0"), "foundations": "1.1.0"}
+    held = [line for line in shown.stdout.splitlines() if "held back" in line]
+    lost = f"{AT_LOCK} the render held back {BLOCKS}@1.1.0: under it, {'; '.join(LOST)}"
+    assert held == ([] if blocks == "1.1.0" else [lost])
+
+
+@pytest.mark.parametrize(
+    ("devices", "on_a_phone", "blocks"),
+    [
+        pytest.param(["phone"], True, "1.1.0", id="a-phone"),
+        pytest.param(["desktop", "phone"], False, "1.0.0", id="a-desktop-beside"),
+    ],
+)
+def test_a_draft_drawn_on_an_axis_only_newer_foundations_hold_moves_its_lock_to_them(
+    tmp_path: Path, devices: list[str], on_a_phone: bool, blocks: str
+) -> None:
+    """The lock's foundations declare no `device`, so the lock places the piece at
+    `default`, the desktop's key under the newer foundations. The blocks 1.1.0 lose the
+    net's ends on a phone alone, or on every device: they are held back only where they
+    lose them at that key, for a piece drawn on the desktop."""
+    root = device_project(tmp_path, devices, on_a_phone=on_a_phone)
 
     shown = run(root, PIECE)
 

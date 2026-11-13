@@ -1349,17 +1349,23 @@ class Fit:
     - an end of a tie the lock draws is not found: its item is drawn other than once below
       the tie's pattern or off the tie's page, or the tie is not drawn (DEC-011 point 4).
       Every library whose component the placing read or looked for is implicated, and the
-      foundations where they lack a mode the piece names.
+      foundations where they cannot spell a key the lock places the piece at.
+
+    A key the lock places the piece at is read over the combination's size axes, each axis
+    it leaves out at its default (DEC-004 point 3). Where they lack a mode or an axis it
+    names, each end the lock finds there is lost. Where they spell it as a combination the
+    piece does not name, it is not compared: the lock's foundations lack a size axis theirs
+    declare, and the lock places the piece at no mode it names on that axis.
 
     So what the lock already shows holds nothing back: a clash under the lock, an end it
     does not find, and what a library it does not name yet brings. Nor does a mode the
-    lock's foundations lack, such as one only newer foundations declare: the lock places
-    the piece at no key of it, so nothing there is lost. A misfit at every key
-    the lock places the piece at reads as it is; one at some keys is said at each, ending
-    with the key it holds at. Each component file, each produced picture's record and each
-    version of the foundations' declarations is read once, across every combination judged.
-    The placing under the lock, which each combination is compared with, is made at the
-    first judgement."""
+    lock's foundations lack, or an axis, such as one only newer foundations declare: the
+    lock places the piece at no key of it, so nothing there is lost. A misfit at every key
+    compared reads as it is; one at some keys is said at each, ending with the key it holds
+    at. Each component file, each produced picture's record and each version of the
+    foundations' declarations is read once, across every combination judged. The placing
+    under the lock, which each combination is compared with, is made at the first
+    judgement."""
 
     def __init__(self, piece: Piece, held: Held) -> None:
         self.piece = piece
@@ -1376,14 +1382,18 @@ class Fit:
         if not under_lock.items and not under_lock.drawn:
             return []
         now = self._place(versions)
-        by_size: dict[str, dict[str, Misfit]] = {size: {} for size in under_lock.sizes}
+        lacked = [size for size in under_lock.sizes if not now.spells(size)]
+        compared = [size for size in under_lock.sizes if size in now.sizes or size in lacked]
+        asked = now.asked | {FOUNDATIONS} if lacked else now.asked
+        by_size: dict[str, dict[str, Misfit]] = {size: {} for size in compared}
         for at, (said, implicates) in now.clashes.items():
             language, size, item, _ = at
             if (language, size, item) in under_lock.items and at not in under_lock.clashes:
                 by_size[size].setdefault(said, Misfit("clash", said, implicates))
         for _, size, tie, end in sorted(under_lock.drawn - now.found):
-            said = f"the end `{end}` of the tie `{tie}` would not be found"
-            by_size[size].setdefault(said, Misfit("end", said, now.asked))
+            if size in by_size:
+                said = f"the end `{end}` of the tie `{tie}` would not be found"
+                by_size[size].setdefault(said, Misfit("end", said, asked))
         misfits: dict[str, Misfit] = {}
         for size, found in by_size.items():
             for said, misfit in found.items():
@@ -1413,9 +1423,9 @@ class Fit:
         key = frozenset(library.label for library in versions.values())
         if key not in self._placed:
             env = _FitEnv(self, versions)
-            placed = _Placed()
             sized = self._size_axes(versions)
-            asked: set[str] = {FOUNDATIONS} if self._lacks_a_mode(sized) else set()
+            placed = _Placed(sized)
+            asked: set[str] = set()
             for combination in self._size_combinations(sized):
                 size = keys.key_of(combination, sized)
                 placed.sizes.append(size)
@@ -1451,8 +1461,9 @@ class Fit:
         hold, in key order. A mode they lack is left out, such as one only a newer version
         of the foundations declares, and where the piece names none they hold on an axis
         there is no combination: under them it is drawn at no key it names (DEC-003 point
-        8). The one of their defaults alone where it names an axis with no mode, or a mode
-        twice, which the piece's own read refuses."""
+        8). An axis it names that is not among them, a value axis or one they lack, takes no
+        part in a key. The one of their defaults alone where it names an axis with no mode,
+        or a mode twice, which the piece's own read refuses."""
         named: dict[str, list[str]] = {}
         for axis, modes in self.piece.modes.items():
             if axis in sized:
@@ -1465,25 +1476,18 @@ class Fit:
         except keys.BadKey:
             return [{}]
 
-    def _lacks_a_mode(self, sized: Mapping[str, tokens.Axis]) -> bool:
-        """Whether the size axes `sized` lack a mode the piece names on one of them."""
-        return any(
-            mode not in sized[axis].modes
-            for axis, modes in self.piece.modes.items()
-            if axis in sized
-            for mode in modes
-        )
-
 
 @dataclass
 class _Placed:
     """What placing the piece under one combination of versions shows, in every language
-    and at each key over the size axes, `sizes`, in key order: each item placed, by its
-    language, its key and its key path; each key an item carries that both its component
-    and its list declare, in words, with the libraries it implicates; the ends of each tie
-    drawn; every end found, a left-out tie's included where its item lies on the tie's
-    page; and the library of each component read or looked for, at any key."""
+    and at each key over its foundations' size axes, `axes`, in key order, `sizes`: each
+    item placed, by its language, its key and its key path; each key an item carries that
+    both its component and its list declare, in words, with the libraries it implicates;
+    the ends of each tie drawn; every end found, a left-out tie's included where its item
+    lies on the tie's page; and the library of each component read or looked for, at any
+    key."""
 
+    axes: Mapping[str, tokens.Axis]
     sizes: list[str] = field(default_factory=list)
     items: set[tuple[str, str, str]] = field(default_factory=set)
     clashes: dict[tuple[str, str, str, str], tuple[str, frozenset[str]]] = field(
@@ -1492,6 +1496,16 @@ class _Placed:
     drawn: set[tuple[str, str, str, str]] = field(default_factory=set)
     found: set[tuple[str, str, str, str]] = field(default_factory=set)
     asked: frozenset[str] = frozenset()
+
+    def spells(self, size: str) -> bool:
+        """Whether its foundations' size axes hold every axis and mode the key `size`
+        names. A key spelled over fewer axes is held, each axis it leaves out at its
+        default (DEC-004 point 3)."""
+        try:
+            keys.parse_key(size, self.axes)
+        except keys.BadKey:
+            return False
+        return True
 
     def add(self, language: str, size: str, top: layout.Instance) -> None:
         for each in [top, *top.below()]:
