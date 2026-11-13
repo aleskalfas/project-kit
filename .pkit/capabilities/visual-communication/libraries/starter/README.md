@@ -187,11 +187,11 @@ The web parts draw the pages of a site (visual-communication DEC-022 point 4). E
 | `section` | Says one thing, beside a picture where it has one | the facts fall into rows and columns: `table` |
 | `sections` | Lays sections down a page, in their order | the page says one thing: `section` |
 | `form` | Takes a reader's answer | the reader answers nothing: `section` or `table` |
-| `table` | Shows facts in rows and columns | each fact needs a sentence of its own: `section` |
+| `table` | Shows facts in rows and columns, on a page or, with no inset of its own, on a slide | each fact needs a sentence of its own: `section`; on a slide, the items share no columns of facts: `list` |
 
 Each web part fits every size the brand gives: a desktop, a tablet, a phone and a projector. Its widths come from the width it gets, never from a number of its own. Where a size leaves it too little room, it changes its shape at that size. A row whose items ask for more than it gets is reported at that size (visual-communication DEC-022 point 5).
 
-- **Their inset.** A part placed in a page's header, main part or footer is as wide as the page. `header`, `section`, `form` and `table` each set their own inset, so a tinted part's fill reaches the page's edge. The inset is `starter.margin` on a desktop and a tablet, and `starter.inset` on a phone. `navigation` keeps the same inset at either side alone, since a header places it. `sections` sets none, since each section sets its own.
+- **Their inset.** A part placed in a page's header, main part or footer is as wide as the page. `header`, `section`, `form` and `table` each set their own inset, so a tinted part's fill reaches the page's edge. A table whose `inset` is `none` sets none, as on a slide ([`table`](#table)). The inset is `starter.margin` on a desktop and a tablet, and `starter.inset` on a phone. `navigation` keeps the same inset at either side alone, since a header places it. `sections` sets none, since each section sets its own.
 - **The length of a line.** The text of a section, the head and the fields of a form, and a table's head run no longer than `size.line`, which the capability's `files.md` describes under *The foundations*.
 - **At rest.** A part is drawn as a page stands before anyone uses it. A form is never sent and a link never followed, and no part shows a hover, a focus or a press (visual-communication DEC-022 point 6).
 
@@ -243,7 +243,7 @@ Each web part fits every size the brand gives: a desktop, a tablet, a phone and 
 - **Form:** a head, then its rows, one under another, each across the table's width. Each row's cells share its width, and their text breaks to the cell's width, so a row is as tall as its tallest cell. A row more makes the table taller.
 - **Source:** the GOV.UK Design System's table, and the U.S. Web Design System's table.
 - **Fields:** `head`, optional.
-- **Options:** none.
+- **Options:** `inset`, its words `own` and `none`. With `own`, the default, the table sets its own inset, as [*Their inset*](#the-web-parts-by-their-job-on-a-page) says. With `none`, it sets none, so its head and its rows reach the edges of the width it gets. On a slide, whose layout keeps the margin, its first column then starts on the slide's margin.
 - **Lists:** `rows`, each drawn by the `row`, unless the component field `row` names another.
 - **Its columns.** A row cannot read the table's columns, so each row gives its cells the same spans, and the columns line up. A table keeps its columns on a phone, so a word in a narrow column must fit a phone's width.
 
