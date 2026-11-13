@@ -73,6 +73,7 @@ pkit:
         - .pkit/capabilities/visual-communication/releases/foundations/releases.yaml
         - .pkit/capabilities/visual-communication/releases/neutral/releases.yaml
         - .pkit/capabilities/visual-communication/releases/*/1.0.0/**
+        - .pkit/capabilities/visual-communication/releases/foundations/1.1.0/**
         - tests/visual_communication_project.py
         - tests/test_visual_communication_pipeline.py
         - tests/test_visual_communication_layout.py
@@ -750,7 +751,7 @@ Every change to a version the capability ships reaches a project that brings it 
 
 ### The foundations
 
-The capability ships the foundations' released version 1.0.0 at `.pkit/capabilities/visual-communication/releases/foundations/1.0.0/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). It is of kind `components`, needs release 0.3.0 and builds on nothing. Their version being built stays where it was, at `libraries/foundations/`. It carries 1.1.0, since it adds the size axis `device` ([Axes and modes](#axes-and-modes)), the top `site`, the roles `size.site` and `size.line`, the roles of a run's sign and ground, and the shapes. These are additions, which need a minor ([What a release compares](#what-a-release-compares)). It is not released yet, so only `pkit visual add foundations --being-built` takes it. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the released version whole to `libraries/foundations/1.0.0/`. It lists it with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
+The capability ships the foundations' released versions 1.0.0 and 1.1.0, each at `.pkit/capabilities/visual-communication/releases/foundations/<version>/` ([The libraries the capability ships](#the-libraries-the-capability-ships)). Each is of kind `components` and builds on nothing. Release 1.0.0 needs release 0.3.0, and release 1.1.0 needs release 0.4.0. Release 1.1.0 adds the size axis `device` ([Axes and modes](#axes-and-modes)), the top `site`, the roles `size.site` and `size.line`, the roles of a run's sign and ground, and the shapes. These are additions, which need a minor ([What a release compares](#what-a-release-compares)). Their version being built stays where it was, at `libraries/foundations/`, and carries 1.1.0, the number it was released under. A piece reads them from the library folder alone, so `pkit visual add foundations` copies the newest released version, 1.1.0, whole to `libraries/foundations/1.1.0/`, and `pkit visual add foundations@1.0.0` copies release 1.0.0 to `libraries/foundations/1.0.0/`. It lists each with `source: {kind: shipped}`, `released: true` and the hash the library's record keeps ([What the location holds](#what-the-location-holds)). The foundations hold:
 
 - `library.yaml`;
 - `roles.yaml`, the shared roles, axes, colour families, shapes and contrast pairs that every library shares (DEC-004 points 2, 7 and 8, DEC-036 point 1);
@@ -1016,7 +1017,7 @@ A brand's findings hold its base's too, each naming the base's version. A declar
 
 ### Axes and modes
 
-An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* is one value on one axis, such as `dark` (DEC-004 point 2). The foundations declare the shared axes. Their release 1.0.0 declares two value axes: `colour-scheme`, with `light` and `dark`, and `contrast`, with `standard` and `high`. Their version being built, 1.1.0, adds the size axis `device`, with `desktop`, `tablet` and `phone`, and the default `desktop` (DEC-021 point 1).
+An *axis* is one way a brand's values vary, such as the colour scheme. A *mode* is one value on one axis, such as `dark` (DEC-004 point 2). The foundations declare the shared axes. Their release 1.0.0 declares two value axes: `colour-scheme`, with `light` and `dark`, and `contrast`, with `standard` and `high`. Their release 1.1.0 adds the size axis `device`, with `desktop`, `tablet` and `phone`, and the default `desktop` (DEC-021 point 1).
 
 - **A brand varies an axis** through a modifier of its Resolver document, in the modes it gives. It may leave out an axis it does not vary. It adds no axis of its own and no mode, and changes no default.
 - **A value axis** changes only colours and pictures. A mode of a value axis that changes another value fails.
