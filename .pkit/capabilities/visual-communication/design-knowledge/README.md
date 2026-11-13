@@ -8,6 +8,7 @@ It teaches how to design and how to judge, and nothing in it fails a piece. A re
 
 - [The message first](message.md): read it when you decide or judge what a piece or a page says, in what order, and whether the piece explains or only shows.
 - [A form that says what the content says](form.md): read it when you choose or judge the form a content takes, and the visual variables that carry its order, its quantities, its kinds and its links.
+- [Where reading starts, and the path it takes](reading-path.md): read it when you decide or judge where the eye enters a page and the path it takes, and whether that path and the content's order follow the order the page's point is explained in, in each language of the piece.
 - [Hierarchy, grouping and alignment](hierarchy.md): read it when you decide or judge what a reader sees first, what reads as one group, and what lines up.
 - [Type, grid and space](type-grid-space.md): read it when you set or judge text, the grid a page is built on, and the space between its parts.
 - [Colour for meaning and for contrast](colour.md): read it when colour tells things apart or ranks them, or when a text or a line has to stand out from what lies under it.
