@@ -16,6 +16,7 @@ pkit:
         - src/project_kit/agent_confinement.py
         - src/project_kit/harness_support.py
         - src/project_kit/install.py
+        - src/project_kit/candidates.py
         - src/project_kit/capabilities.py
         - src/project_kit/capability_plans.py
         - src/project_kit/sync.py
@@ -90,7 +91,7 @@ pkit:
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - .pkit/adapters/claude-code/deploy-agents.sh
         - .pkit/capabilities/visual-communication/scripts/look.py
-      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, "COR-066#2", "COR-066#3", "COR-066#4", COR-068, COR-069, COR-070, COR-073, PRJ-001, PRJ-002, PRJ-003, PRJ-004, PRJ-015, "ADR-009#7", ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, "ADR-060#1", "ADR-060#2", "ADR-060#3", "ADR-060#4", "ADR-060#5", "ADR-060#10", ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-075, ADR-076, ADR-077, ADR-080, "ADR-081#1", "ADR-081#2", "ADR-081#3", "ADR-081#4", "ADR-081#5", "ADR-081#6", "ADR-081#7", "ADR-081#8", ADR-083, ADR-088, ADR-090, "ADR-092#8", "COR-013#8", COR-017, COR-031, COR-041, ADR-087, "ADR-092#6"]
+      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, "COR-066#2", "COR-066#3", "COR-066#4", COR-068, COR-069, COR-070, COR-073, PRJ-001, PRJ-002, PRJ-003, PRJ-004, PRJ-015, "ADR-009#7", ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, "ADR-060#1", "ADR-060#2", "ADR-060#3", "ADR-060#4", "ADR-060#5", "ADR-060#10", ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-075, ADR-076, ADR-077, ADR-080, "ADR-081#1", "ADR-081#2", "ADR-081#3", "ADR-081#4", "ADR-081#5", "ADR-081#6", "ADR-081#7", "ADR-081#8", ADR-083, ADR-088, ADR-090, "ADR-092#8", "COR-013#8", COR-017, COR-031, COR-041, ADR-087, "ADR-092#6", "ADR-089#6", "ADR-089#7", "ADR-089#8"]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/agents/README.md#a-capabilitys-write-categories
