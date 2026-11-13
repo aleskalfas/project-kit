@@ -71,6 +71,31 @@ def agent_is_shipped_by(repo_root: Path, capability: str, name: str) -> bool:
     return (agents / f"{name}.md").is_file() or (agents / name / f"{name}.md").is_file()
 
 
+def agent_is_shipped(repo_root: Path, name: str) -> bool:
+    """True when some place of the methodology ships agent `name` under
+    `repo_root`: the project's agents folder, core's, or a capability's
+    `agents/` folder holds it as `<name>.md` or `<name>/<name>.md`. These are
+    the places and layouts the agents area's picker reads, and it skips a name
+    or a capability's folder that starts with a dot (ADR-087 point 2). An
+    agent runner passes such an agent's definition itself, picked in that
+    tree, so a harness loads no deployed copy of it."""
+    if not name or name.startswith(".") or "/" in name or "\\" in name:
+        return False
+    pkit = repo_root / ".pkit"
+    folders = [pkit / "agents" / "project", repo_root.joinpath(*CORE_AGENTS_SUBDIR)]
+    capabilities = pkit / "capabilities"
+    if capabilities.is_dir():
+        folders.extend(
+            entry / "agents"
+            for entry in sorted(capabilities.iterdir())
+            if entry.is_dir() and not entry.name.startswith(".")
+        )
+    return any(
+        (folder / f"{name}.md").is_file() or (folder / name / f"{name}.md").is_file()
+        for folder in folders
+    )
+
+
 @dataclass(frozen=True)
 class Definition:
     """What a deployed agent's front matter declares: the tools the harness
