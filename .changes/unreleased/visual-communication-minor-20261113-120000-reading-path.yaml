@@ -4,17 +4,22 @@ custom:
   category: Added
 body: >
   The design knowledge gains a topic, "Where reading starts, and the path it
-  takes" (#3089): what gives a part weight, where the eye enters a page whose
-  weights are even and one where a part dominates, how the path runs along the
-  direction of writing and along arrows, the cues that show an explanation's
-  order, how a layout is mirrored for a language written from right to left,
-  and the content's order for a reader who does not see the page, each idea
-  with its source. `graphic-designer` names each page's order of explanation
-  with its structure, proposes one from the page's lead or takeaway where the
-  brief gives none, and writes it into the brief as a relation once you confirm
-  it. It places where the page's path starts with the form, before it ranks
-  what is seen first. `graphic-design-reviewer` traces each drawn page's path,
-  and reports a path that does not follow the order its relations and its lead
-  or takeaway give, as a rule finding, a brief finding or a note by what it
-  rests on. The skill `visual-author` says too that whoever designs may
-  propose that order.
+  takes" (#3089): what gives a part weight, where the eye enters a page
+  without other cues and one where a part dominates, how the path runs along
+  the direction of writing and along arrows, the cues that show an
+  explanation's order, how a layout is mirrored for a language written from
+  right to left, and the content's order for a reader who does not see the
+  page, each idea with its source. `graphic-designer` names each page's order
+  of explanation with its structure, proposes one from the page's lead or
+  takeaway where the brief gives none, and writes it into the brief as a
+  relation once you confirm it. It places where the page's path starts with
+  the form, before it ranks what is seen first: at the part the explanation
+  starts with or, where what matters most on the page is another part, at
+  that part, to keep `RS-GRAPHIC-001`, with the path leading from it to where
+  the explanation starts (#3094). `graphic-design-reviewer` traces each drawn
+  page's path, and reports a path that does not follow the order its
+  relations and its lead or takeaway give, as a rule finding, a brief finding
+  or a note by what it rests on. Where what matters most is not where the
+  explanation starts, it reports a page that shows the explanation's start
+  first as a rule finding on `RS-GRAPHIC-001`. The skill `visual-author` says
+  too that whoever designs may propose that order.
