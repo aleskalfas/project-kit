@@ -22,7 +22,7 @@ slides:
         - {id: work, label: Your code and documents}
       down: [{text: "↓ Carried out. ", style: strong}, "Each layer carries out the decisions above it. The reasons stay in one place, where an agent reads them before it changes anything."]
       up: [{text: "↑ Checked. ", style: strong}, "If a layer and a decision disagree, the layer is checked first, so decisions never drift to match the code. Only you change a decision."]
-    footer: pkit wrote this order down as a decision of its own, COR-065.
+    footer: pkit wrote down as a decision of its own, COR-065, that an accepted decision governs and the rest carries it out.
 
   - id: install
     layout: slide
