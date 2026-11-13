@@ -47,6 +47,7 @@ pkit:
         - COR-004
         - ADR-034#1
         - ADR-061#6
+        - ADR-061#8
         - ADR-092#6
         - ADR-092#8
       artefact:
