@@ -189,7 +189,7 @@ The web parts draw the pages of a site (visual-communication DEC-022 point 4). E
 | `form` | Takes a reader's answer | the reader answers nothing: `section` or `table` |
 | `table` | Shows facts in rows and columns | each fact needs a sentence of its own: `section` |
 
-Each web part fits every size the brand gives: a desktop, a tablet and a phone. Its widths come from the width it gets, never from a number of its own. Where a size leaves it too little room, it changes its shape at that size. A row whose items ask for more than it gets is reported at that size (visual-communication DEC-022 point 5).
+Each web part fits every size the brand gives: a desktop, a tablet, a phone and a projector. Its widths come from the width it gets, never from a number of its own. Where a size leaves it too little room, it changes its shape at that size. A row whose items ask for more than it gets is reported at that size (visual-communication DEC-022 point 5).
 
 - **Their inset.** A part placed in a page's header, main part or footer is as wide as the page. `header`, `section`, `form` and `table` each set their own inset, so a tinted part's fill reaches the page's edge. The inset is `starter.margin` on a desktop and a tablet, and `starter.inset` on a phone. `navigation` keeps the same inset at either side alone, since a header places it. `sections` sets none, since each section sets its own.
 - **The length of a line.** The text of a section, the head and the fields of a form, and a table's head run no longer than `size.line`, which the capability's `files.md` describes under *The foundations*.
