@@ -382,6 +382,41 @@ ADDED_ROLES = {
     "space.ground-corner": "space.1",
 }
 
+#: The tokens the deck of the foundations being built declares, each by the shared type its
+#: default aliases, the type their release 1.0.0 draws its part in (DEC-035 point 4).
+DECK_TOKENS = {
+    "component.foundations.deck.title": "type.heading",
+    "component.foundations.deck.lead": "type.body",
+}
+
+#: Where the deck of the foundations being built places its parts other than their release
+#: 1.0.0: each line of its file, with the line the release holds in its place. Its lead
+#: stands a small space under its title, not a medium one, and its visual reaches down to
+#: one large space above its limit or its footer only where each is drawn, where the
+#: release leaves two above its footer on a slide with no limit.
+DECK_PLACES = {
+    'y: "=title.bottom + @space.2"': 'y: "=title.bottom + @space.3"',
+    'height: "=limit.y - min(limit.height, @space.1) / @space.1 * @space.4 - visual.y"': (
+        'height: "=limit.y - @space.4 - visual.y"'
+    ),
+    'y: "=footer.y - min(footer.height, @space.1) / @space.1 * @space.4 - limit.height"': (
+        'y: "=footer.y - @space.4 - limit.height"'
+    ),
+}
+
+
+def with_the_releases_deck_places(root: Path) -> None:
+    """The copy of the foundations being built in the location at `root`, its deck placing
+    its parts where their release 1.0.0 places them (`DECK_PLACES`): so a comparison with
+    that release finds whatever else the version being built changes."""
+    built = taken("foundations", being_built=True).version
+    path = version_folder(root, "foundations", built) / "components" / "deck.yaml"
+    text = path.read_text(encoding="utf-8")
+    for line, released in DECK_PLACES.items():
+        assert text.count(line) == 1, line
+        text = text.replace(line, released)
+    path.write_text(text, encoding="utf-8")
+
 
 def names_a_size(folder: Path) -> bool:
     """Whether the reference piece in `folder` is drawn at the sizes of the axis `device`, as
@@ -399,31 +434,36 @@ ON_THE_RELEASE = [name for name in sorted(COMPONENTS) if on_the_starter_release(
 
 def as_released(values: Mapping[str, Any], given: Collection[str] = ()) -> dict[str, Any]:
     """A piece's document of values drawn on the foundations being built, as on their release
-    1.0.0: without the roles they add. Each takes the value of the role its default aliases
-    where the brand gives it none, as the test brand 1.0.0 gives none (DEC-004 point 7);
-    `given` names those the brand gives a value of its own."""
-    for added, aliased in ADDED_ROLES.items():
-        if added not in given:
-            assert values["tokens"][added] == values["tokens"][aliased], added
-    tokens = {path: token for path, token in values["tokens"].items() if path not in ADDED_ROLES}
+    1.0.0: without the roles they add and their deck's tokens. Each takes the value of the
+    role its default aliases where the brand gives it none, as the test brand 1.0.0 gives
+    none (DEC-004 point 7, DEC-035 point 4); `given` names those the brand gives a value of
+    its own."""
+    added = {**ADDED_ROLES, **DECK_TOKENS}
+    for path, aliased in added.items():
+        if path not in given:
+            assert values["tokens"][path] == values["tokens"][aliased], path
+    tokens = {path: token for path, token in values["tokens"].items() if path not in added}
     return {**values, "tokens": tokens}
 
 
 def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_release(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The foundations being built add the size axis `device` and the roles `size.site`,
-    `size.line` and those of a run's sign and ground to their release 1.0.0, and the test
-    brand 1.0.0 gives no size (DEC-021 points 2 and 9, DEC-022 point 3, DEC-036 point 3).
-    So each reference piece of a component the starter's release holds, drawn with that
-    release, draws on them as on their release, byte for byte: each preview, but for the
-    foundations' version they name, and its values, but for the roles they add. The
-    starter being built reads roles their release does not declare, and its web parts name
-    the sizes, which that release does not declare either."""
+    """The foundations being built add the size axis `device`, the roles `size.site`,
+    `size.line` and those of a run's sign and ground, and their deck's tokens to their
+    release 1.0.0, and the test brand 1.0.0 gives no size (DEC-021 points 2 and 9, DEC-022
+    point 3, DEC-035 point 4, DEC-036 point 3). Their deck places its lead and its visual
+    otherwise, which the comparison takes back (`DECK_PLACES`). So each reference piece of
+    a component the starter's release holds, drawn with that release, draws on them as on
+    their release, byte for byte: each preview, but for the foundations' version they name,
+    and its values, but for the roles and the tokens they add. The starter being built
+    reads roles their release does not declare, and its web parts name the sizes, which
+    that release does not declare either."""
     importable(monkeypatch, svg)
     root = reference_location(project(tmp_path))
     hold_shipped(root, "foundations", version="1.0.0")
     hold_shipped(root, "starter", being_built=False)
+    with_the_releases_deck_places(root)
     drawn = on_each_foundations(root)
     released, built = drawn.values()
     assert sorted(built) == ON_THE_RELEASE

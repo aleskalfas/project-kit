@@ -9,5 +9,5 @@ schema_version: 1
 name: foundations
 version: 1.1.0
 kind: components
-needs-release: 0.1.0
+needs-release: 0.4.0
 builds-on: []

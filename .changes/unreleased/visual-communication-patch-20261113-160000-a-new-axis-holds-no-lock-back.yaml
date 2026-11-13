@@ -1,0 +1,16 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A draft's render no longer holds back newer foundations that add an axis the
+  piece is drawn on (#3100), such as `device` for a piece drawn on a phone and
+  locked to foundations that declare no such axis. The lock's search placed the
+  piece at the default key under the older foundations and at the phone's under
+  the newer, so every tie's end looked lost. It now reads each key the lock
+  places the piece at over the newer foundations' size axes, the added axis at
+  its default, and compares the piece there only where it names that default. A
+  loss on an axis both versions declare is still found. Foundations under which
+  a key the lock places the piece at names a mode or an axis they lack still
+  lose each end the lock finds there, and the fault names the foundations, now
+  only then rather than wherever they lack a mode the piece names.

@@ -1,0 +1,122 @@
+{
+  "$description": "The dark colour scheme: what each scheme paints with, redefined.",
+  "scheme": {
+    "$description": "The dark scheme: the light scheme's greys read from the other end, a near-black page and near-white text, and each hue a lighter step, so every pair the light scheme keeps legible stays legible.",
+    "$type": "color",
+    "paper": {
+      "$value": "{palette.grey.900}"
+    },
+    "raised": {
+      "$value": "{palette.grey.800}"
+    },
+    "ink": {
+      "$value": "{palette.grey.50}"
+    },
+    "ink-soft": {
+      "$value": "{palette.grey.400}"
+    },
+    "rule": {
+      "$value": "{palette.grey.700}"
+    },
+    "accent": {
+      "$value": "{palette.blue.400}"
+    },
+    "strong-ink": {
+      "$value": "{palette.white}"
+    },
+    "strong-ink-soft": {
+      "$value": "{palette.grey.200}"
+    },
+    "strong-paper": {
+      "$value": "{palette.black}"
+    },
+    "strong-accent": {
+      "$value": "{palette.blue.100}"
+    },
+    "blue": {
+      "fill": {
+        "$value": "{palette.blue.900}"
+      },
+      "line": {
+        "$value": "{palette.blue.400}"
+      },
+      "text": {
+        "$value": "{palette.blue.100}"
+      },
+      "strong-line": {
+        "$value": "{palette.blue.100}"
+      },
+      "strong-text": {
+        "$value": "{palette.blue.50}"
+      }
+    },
+    "green": {
+      "fill": {
+        "$value": "{palette.green.900}"
+      },
+      "line": {
+        "$value": "{palette.green.400}"
+      },
+      "text": {
+        "$value": "{palette.green.100}"
+      },
+      "strong-line": {
+        "$value": "{palette.green.100}"
+      },
+      "strong-text": {
+        "$value": "{palette.green.50}"
+      }
+    },
+    "orange": {
+      "fill": {
+        "$value": "{palette.orange.900}"
+      },
+      "line": {
+        "$value": "{palette.orange.400}"
+      },
+      "text": {
+        "$value": "{palette.orange.100}"
+      },
+      "strong-line": {
+        "$value": "{palette.orange.100}"
+      },
+      "strong-text": {
+        "$value": "{palette.orange.50}"
+      }
+    },
+    "purple": {
+      "fill": {
+        "$value": "{palette.purple.900}"
+      },
+      "line": {
+        "$value": "{palette.purple.400}"
+      },
+      "text": {
+        "$value": "{palette.purple.100}"
+      },
+      "strong-line": {
+        "$value": "{palette.purple.100}"
+      },
+      "strong-text": {
+        "$value": "{palette.purple.50}"
+      }
+    },
+    "red": {
+      "fill": {
+        "$value": "{palette.red.900}"
+      },
+      "line": {
+        "$value": "{palette.red.400}"
+      },
+      "text": {
+        "$value": "{palette.red.100}"
+      },
+      "strong-line": {
+        "$value": "{palette.red.100}"
+      },
+      "strong-text": {
+        "$value": "{palette.red.50}"
+      }
+    }
+  }
+}

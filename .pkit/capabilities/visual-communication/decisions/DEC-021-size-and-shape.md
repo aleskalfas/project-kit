@@ -6,7 +6,7 @@ date: 2026-11-06
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** a person designs one page, and the engine lays it out at each size they choose: desktop, tablet or phone. The foundations declare those three as one axis, and a brand says how wide each is. A component reads the size by a marked name, in a switch. So a row can become a column, and a part can hide. A size a component does not name draws as the default does, so a new size breaks no released component. A brand with no size stays as it is, and a piece cannot ask it for one. A page that reflows live in a browser stays out.
+**In plain terms:** a person designs one page, and the engine lays it out at each size they choose: desktop, tablet, phone or projector. The foundations declare those four as one axis, and a brand says how wide each is. A component reads the size by a marked name, in a switch. So a row can become a column, and a part can hide. A size a component does not name draws as the default does, so a new size breaks no released component. A brand with no size stays as it is, and a piece cannot ask it for one. A page that reflows live in a browser stays out.
 
 ## Context
 
@@ -31,10 +31,10 @@ Three things stand in the way:
 
 ### 1. The foundations declare one size axis
 
-- **The axis.** `device`, with the modes `desktop`, `tablet` and `phone`, and the default `desktop`.
+- **The axis.** `device`, with the modes `desktop`, `tablet`, `phone` and `projector`, and the default `desktop`.
 - **A person chooses among its modes,** where a piece names its modes (DEC-005 point 6).
 - **A width is a brand's value.** A piece names none, since a size would then have two owners.
-- **Three sizes for now.** A brand adds no mode to a shared axis, so a fourth size is a new mode of the foundations.
+- **Four sizes for now.** A brand adds no mode to a shared axis, so another size is a new mode of the foundations.
 
 ### 2. A brand has only the sizes it or its base gives
 
@@ -104,7 +104,7 @@ A component reads the size the piece is drawn at, whatever room its placer gives
 
 **Why a size axis and a value axis differ here.** A value mode moves nothing, so a brand that does not give one still draws the same page. Format 1 accepts such a piece, so it may not be refused (DEC-003 point 3). A size moves everything: at the default's values, a component would show a phone's shape at a desktop's width. No piece names a size axis yet, so a brand's size axes can narrow and refuse nothing. No brand then pays for a choice it never made.
 
-**Why a piece chooses among three modes.** The cost is that another width needs a brand of one's own. A fourth size needs a release of the foundations, and of each brand that gives it. Letting a brand add a mode later refuses nothing, so it can wait.
+**Why a piece chooses among the foundations' modes.** The cost is that another width needs a brand of one's own. A new size needs a release of the foundations, and of each brand that gives it. Letting a brand add a mode later refuses nothing, so it can wait.
 
 **Why fail first.** A hidden end and a size a brand lacks both fail. Turning a failure into a fact later refuses nothing, and the reverse would. So two parts that do not hold apart fail too, while that check can still be added.
 
