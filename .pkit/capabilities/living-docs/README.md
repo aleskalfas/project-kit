@@ -231,7 +231,7 @@ Of such a page:
 
 **Contributes to `pkit::work-tracking:fixers`**, which says which agent fixes the artefacts of each type, in a work-tracking capability such as project-management ([project-management:DEC-056-drift-fixers]). Its static value names the `living-docs` agent as the fixer of the page type, `living-docs:page` (DEC-001 point 5).
 
-- **Only where granted.** The agent starts on its own only where the project grants it, as [project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare) says. A work-tracking capability that starts granted fixers then starts it on the pages the default branch left stale. It brings the person what the agent proposes ([the page on the agent, "As the fixer of pages"](agent.md#as-the-fixer-of-pages)).
+- **Only where granted.** The agent starts only where the project grants it, as [project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare) says. A work-tracking capability that starts granted fixers then starts it on the pages the default branch left stale. It brings the person what the agent proposes ([the page on the agent, "As the fixer of pages"](agent.md#as-the-fixer-of-pages)).
 - **Keyed by type.** Only pages of the type `living-docs:page` are the agent's there. A page in a project place that lies outside the roots and gives no type, or one whose type is tied, is not started on. Giving the place the page type ([the page on pages, "Types"](pages.md#types)) brings its pages in.
 - **Inert** when no work-tracking capability is installed.
 

@@ -136,9 +136,9 @@ The hook resolves the subject for every PreToolUse call, in this order:
 
 **Implication:** in a session with a configured default agent, the operator's `!`-typed command is also bound to that agent's grants.
 
-**A session started with `--agent`:** the runs of project-management's `review-pr` name their agent on the command line, through the agent runner ([the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner)). That sets the session's agent without changing `.claude/settings.json` <!-- unanchored: named as the file rule 2 reads, and the statement rests on the anchored hook -->, the file rule 2 reads. So the hook may judge such a run as the project's default agent, or as `operator`, rather than as the agent it names. No grant for one agent counts in those runs until the adapter's probe shows which subject the hook judges ([the adapter's README, "The probe"](../adapters/claude-code/README.md#the-probe-probe-confined-runpy)).
+**A session started with `--agent`:** project-management's `review-pr`, and [an unconfined run of `fix-drift`](../capabilities/project-management/README.md#the-rules-of-a-fixers-run), name their agent on the command line, through the agent runner ([the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner)). That sets the session's agent without changing `.claude/settings.json` <!-- unanchored: named as the file rule 2 reads, and the statement rests on the anchored hook -->, the file rule 2 reads. So the hook may judge such a run as the project's default agent, or as `operator`, rather than as the agent it names. No grant for one agent counts in those runs until the adapter's probe shows which subject the hook judges ([the adapter's README, "The probe"](../adapters/claude-code/README.md#the-probe-probe-confined-runpy)).
 
-**A confined run,** such as a fixer's, loads no project settings. So the hook is not registered there at all ("The rules of an agent run" below).
+**A confined run,** which [a fixer's run](../capabilities/project-management/README.md#the-rules-of-a-fixers-run) nobody watches takes where the harness holds it, loads no project settings. So the hook is not registered there at all ("The rules of an agent run" below).
 
 ## Compound commands (segment splitting + leading-`cd` strip)
 
@@ -443,7 +443,7 @@ The scaffold's guidance captures two footguns:
 
 ## The rules of an agent run
 
-A command that starts agents with nobody watching may confine each run to rules of its own. The capability that ships the command declares them, and the privileges they name, in `.pkit/capabilities/<cap>/permissions/runs.yaml`, beside its grants fragment. The file keys them by the command whose runs they bind, and its shape is `.pkit/schemas/permission-runs.schema.json`. project-management's `fix-drift` is one such command ([its README, "The rules of a fixer's run"](../capabilities/project-management/README.md#the-rules-of-a-fixers-run)).
+A command that starts agents nobody can answer during their runs may confine each run to rules of its own. The capability that ships the command declares them, and the privileges they name, in `.pkit/capabilities/<cap>/permissions/runs.yaml`, beside its grants fragment. The file keys them by the command whose runs they bind, and its shape is `.pkit/schemas/permission-runs.schema.json`. project-management's `fix-drift` is one such command ([its README, "The rules of a fixer's run"](../capabilities/project-management/README.md#the-rules-of-a-fixers-run)).
 
 **In the model, a run's rules are denies,** for every subject, `all`. One rule denies every call that none of the privileges the run needs recognizes. The run's other rules are a floor of denies. A deny prevails over every allow, the shared baseline's included, so a run may do only what the first deny leaves open, whatever else allows.
 

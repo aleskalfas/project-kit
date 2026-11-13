@@ -466,7 +466,7 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 ## The designer
 
-`graphic-designer` turns a piece's brief into a piece ([visual-communication:DEC-030-design-agents] point 2). It names the content's structure before it chooses a form, takes type, colour and space from the brand's roles, and writes the reason for each choice into the brief. It writes the piece's own file, its content in every language, its brief and its local components. It also builds the project's own libraries, in a version not yet released. It renders, checks and looks only through the commands, as the skill `visual-author` walks them ([Drawing a piece](#drawing-a-piece)). The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+`graphic-designer` turns a piece's brief into a piece ([visual-communication:DEC-030-design-agents] point 2). It names the content's structure, and the order each page explains in, before it chooses a form. It settles where a page's path starts before it ranks what is seen first, takes type, colour and space from the brand's roles, and writes the reason for each choice into the brief. It writes the piece's own file, its content in every language, its brief and its local components. It also builds the project's own libraries, in a version not yet released. It renders, checks and looks only through the commands, as the skill `visual-author` walks them ([Drawing a piece](#drawing-a-piece)). The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
 
 **Its grant.** It writes within the location, which the overlay category `visual-communication.work` grants it ([visual-communication:DEC-030-design-agents] point 5):
 
@@ -479,7 +479,7 @@ Where its grant names no location yet, it asks you where the visual work goes, w
 
 To use it:
 
-1. **Ask it for a piece,** saying what it must say, to whom, and where it is shown. It writes the brief's goals and relations from what you say, and shows them to you before it designs against them.
+1. **Ask it for a piece,** saying what it must say, to whom, and where it is shown. It writes the brief's goals and relations from what you say, and shows them to you before it designs against them. Where they give no order in which a page explains, it proposes one from the page's lead or takeaway, and writes it into the brief once you confirm it.
 2. **Let it build.** Where no library draws the design, it extends the project's own library, makes a component for the piece alone, or stops and says what is missing ([visual-communication:DEC-030-design-agents] point 4). It never changes what the piece says to fit what a library draws.
 3. **Read what it hands back.** Before it stops, [the reviewer](#the-reviewer) reads every page in every language, mode and size. Where the designer can start agents, it dispatches the reviewer itself. Otherwise it asks you to, and says the piece is not reviewed. It mends what it judges right, then tells you what it changed and why, with the reviewer's report as written.
 
@@ -505,6 +505,8 @@ Each finding names the page, the element's trace id where the element was drawn 
 - **A rule finding,** which cites a rule by its id. Today it only informs, since no rule binds on a piece's files yet.
 - **A brief finding,** which cites the part of the piece's brief that the drawing does not show.
 - **A note,** anything else worth a look. A note of taste names the practice it draws on, from the design knowledge. A note never fails.
+
+One observation makes one finding, of the first kind in this list that applies, and it cites each ground it rests on. A page whose path, traced from where the eye enters, does not follow the order its relations and its lead or takeaway give is such an observation. It may break a rule as well as the brief. Where the piece keeps no brief, it is a rule finding where a rule applies, and otherwise a note.
 
 Its findings are advice. They join no validation and hold no merge.
 

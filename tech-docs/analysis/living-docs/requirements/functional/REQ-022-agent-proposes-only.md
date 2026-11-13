@@ -3,9 +3,9 @@ id: REQ-022
 title: The living-docs agent proposes each edit, and applies none
 status: active
 statement: The living-docs agent changes no tracked file and runs no command that writes an answer, so each edit it drafts waits for a person.
-measure: Every file the agent writes lies in the agent workspace, or in the workspace the brief of a run nobody watches names. Its one other write is a reader-review posted as a pull-request comment, where the person asks for one and names the pull request.
-applies-to: "The living-docs agent in each of its intents: a fix, a reader-review, an onboarding plan, and a run a command starts with nobody watching."
-obligation: v1:sha256:ee6f2b6cbdf7a067965d7eeb78e17bc49ddf292a68a89588ab157f8cc8edddd6
+measure: Every file the agent writes lies in the agent workspace, or in the workspace the brief of a run a command starts names. Its one other write is a reader-review posted as a pull-request comment, where the person asks for one and names the pull request.
+applies-to: "The living-docs agent in each of its intents: a fix, a reader-review, an onboarding plan, and a run a command starts."
+obligation: v1:sha256:eff3622e466716adcc571dc871f66afb20c92552c6de282b34ace12e2cfb575a
 actors:
   - core:ACT-developer
   - core:ACT-adopter
