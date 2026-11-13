@@ -87,6 +87,7 @@ pkit:
         - visual-communication:DEC-025#6
         - visual-communication:DEC-025#7
         - visual-communication:DEC-031#2
+        - visual-communication:DEC-032#6
         - visual-communication:DEC-034#1
         - visual-communication:DEC-034#2
         - visual-communication:DEC-034#3
@@ -270,7 +271,7 @@ parts:
 ```
 
 - **`tokens`** maps each token's name to `{type, default}`. The name is one segment of the name shape ([Shapes](files.md#shapes)), and the component's file gives the rest of its path, `component.<library>.<component>.<name>`. The card's tokens above are `component.ui.card.fill` and `component.ui.card.gap`.
-- **Its type** is any type a role takes but `picture`. **Its default** is always given, and aliases a role of that type: an own role of the component's library, or a role of a library it builds on, the shared roles included. It never aliases a component token, the component's own included.
+- **Its type** is any type a role takes but `picture`. **Its default** is always given, and aliases a role of that type: an own role of the component's library, or a role of a library it builds on, the shared roles included. It never aliases a component token, the component's own included, nor a role of an order, which a brand tunes for an order's steps alone (DEC-032 point 6; [The foundations](files.md#the-foundations)).
 - **A token names what it styles, not a part.** Several of the component's parts may read one token, such as a box's edge and a divider line that a brand restyles as one.
 - **Its own parts read it by its full path,** wherever they read a role. A paint names it, as in `fill: component.ui.card.fill`. So does a text's style, and a formula reads it as `@component.ui.card.gap` ([References](#references)). No other component reads it, and nothing a piece writes names one. A part that reads a token its own component does not declare, in a paint, a text's style or a formula, is reported as `component-token-undeclared`, and the engine keeps what the part reads, the formula included (*checks*).
 - **Its value** is a brand's, where the brand names the library and gives it one, and else its default's, as for a library's own role ([`roles.yaml`](files.md#rolesyaml)).
@@ -889,6 +890,6 @@ Each drawn property names its source in `sources`:
 - **Across runs.** The engine finds where a paragraph may break in its whole text, whichever runs hold it, and measures each part of a line in its own run's role. So a word whose letters lie in two runs stays one word.
 - **A run's sign** is a square as wide as the run's font size, centred on its letters, with the gap `space.sign-gap` gives after it. It lies before the run's first character that is no space or line feed, on that character's line, and the engine measures it within the line with that character, so no line breaks between the two (DEC-036 point 3). Runs next to each other in one paragraph that name one concept and draw its sign draw one sign, before the first.
 - **A run's ground** lies behind each piece of the run on each line it spans, its sign included, and leaves out the spaces at the run's two ends. Where it starts and where it ends, it takes the room `space.ground-room` gives within the line, and corners of the radius `space.ground-corner` gives. Where a line breaks it, it is square. Runs next to each other in one paragraph that take one ground take it once, with room at its two ends alone.
-- **The language's rules** are read by the primary subtag of the scene's language. In Czech, `cs`, a one-letter word never ends a line: it moves to the next line with the word after it, whichever runs hold them. Other languages follow Unicode's rules alone.
+- **The language's rules** are read by the primary subtag of the scene's language. In Czech, `cs`, a one-letter word and a short preposition never end a line: each moves to the next line with the word after it, whichever runs hold them. The short prepositions are před, nad, pod, přes, za, na, do, od and ve, in any case, each a whole word followed by a space. Other languages follow Unicode's rules alone.
 - **A word wider than its line** may break after a `/` in it. A word still wider stays whole, and the text overflows: it holds `overflow: true`, and the check reports it.
 - **Never shrunk.** The engine never makes text smaller to fit, and never hyphenates.

@@ -1,10 +1,11 @@
 # A library's declarations, `roles.yaml` (visual-communication DEC-004 points 2, 7, 8
 # and 10): its roles, each with its type, and a default that aliases an older role; in
 # the foundations also the shared axes, the colour families, the shapes a notation maps a
-# concept to (visual-communication DEC-036 point 1) and the pairs of colour roles that
-# must contrast. A role carries no value: a brand gives it one. A role of the type
-# `picture`, which only the foundations declare, carries no default, and no brand owes it
-# a value (visual-communication DEC-025 point 4).
+# concept to (visual-communication DEC-036 point 1), an order's roles (visual-communication
+# DEC-032 point 1) and the pairs of colour roles that must contrast. A role carries no
+# value: a brand gives it one. A role of the type `picture`, which only the foundations
+# declare, carries no default, and no brand owes it a value (visual-communication DEC-025
+# point 4).
 #
 # The body below is the reference instance.
 
@@ -21,6 +22,12 @@ roles:
   text-muted:
     type: color
     default: '{text-primary}'
+  family.order.first:
+    type: color
+  family.order.last:
+    type: color
+  family.order.text:
+    type: color
   space.1:
     type: dimension
   picture.logo:
@@ -38,6 +45,11 @@ shapes:
     d: M 3 3 H 21 V 21 H 3 Z
     fill-rule: nonzero
     square: 24
+order:
+  first: family.order.first
+  last: family.order.last
+  text: family.order.text
+  ground: background
 pairs:
   - text: text-primary
     under: background

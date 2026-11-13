@@ -1622,6 +1622,65 @@ def test_a_reader_that_reads_no_declaration_is_an_error_where_an_adapter_deploys
     assert "has no read_declaration, which this command calls" in found[0].diagnosis
 
 
+# --- a backbone manifest that does not parse (#3008) ------------------------------------------
+
+
+def _unparsed_manifest(root: Path) -> None:
+    """An adapter that deploys agents registered, then the manifest broken, and an agent
+    whose tool access the reader refuses, holding a key outside a definition's fields and
+    citing a rule and an address, each of which a check reads the manifest for."""
+    _adapters(root, ("claude-code", "deploy"))
+    (root / ".pkit" / "manifest.yaml").write_text("components: [\n", encoding="utf-8")
+    _write_agent(
+        root,
+        "project",
+        "a",
+        "---\nname: a\ndescription: x\ntools: [Read]\nwithheld: [Workflow]\ncolor: blue\n---\n"
+        "# A\nFollows RS-OPS-001 through [project-management::tracker].\n",
+    )
+
+
+def test_a_manifest_that_does_not_parse_is_one_error_and_the_checks_go_on(
+    kit_target: Path,
+) -> None:
+    _unparsed_manifest(kit_target)
+
+    found = refs.validate_corpus(kit_target)
+
+    at_manifest = [i for i in found if i.location == ".pkit/manifest.yaml"]
+    assert [i.kind for i in at_manifest] == [refs.UNPARSED_MANIFEST]
+    assert at_manifest[0].diagnosis.startswith(".pkit/manifest.yaml does not parse (")
+    assert "so nothing it registers is read" in at_manifest[0].diagnosis
+    assert {i.kind for i in found} == {refs.UNPARSED_MANIFEST, refs.TOOL_ACCESS, refs.UNKNOWN_FIELD}
+    access = [i for i in found if i.kind == refs.TOOL_ACCESS]
+    assert "its tool access is refused: it names both `tools` and `withheld`" in (
+        access[0].diagnosis
+    )
+    outcome = refs.outcome(kit_target)
+    assert any(
+        f.severity.value == "error" and "does not parse" in f.message for f in outcome.findings
+    )
+
+
+@pytest.mark.parametrize("module", ["tool_access.py", "definition_source.py"])
+def test_a_manifest_that_does_not_parse_leaves_an_unreachable_module_reported(
+    kit_target: Path, module: str
+) -> None:
+    """Telling which side is behind reads the manifest's version, which one that does not
+    parse records none of."""
+    _unparsed_manifest(kit_target)
+    (kit_target / ".pkit" / "agents" / module).unlink()
+
+    found = refs.validate_corpus(kit_target)
+
+    assert [i.kind for i in found if i.location == ".pkit/manifest.yaml"] == [
+        refs.UNPARSED_MANIFEST
+    ]
+    unreachable = [i for i in found if i.location == f".pkit/agents/{module}"]
+    assert len(unreachable) == 1
+    assert "the project's backbone (not recorded)" in unreachable[0].diagnosis
+
+
 def _make_storyboarded_agent(
     root: Path, name: str, sb_filename: str = "storyboard.md"
 ) -> tuple[Path, Path]:
