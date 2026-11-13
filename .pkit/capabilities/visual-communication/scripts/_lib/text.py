@@ -36,6 +36,7 @@ DEC-005 point 4, DEC-004 point 9, DEC-012 point 4).
 from __future__ import annotations
 
 import bisect
+import functools
 import hashlib
 import re
 from collections.abc import Callable, Mapping, Sequence
@@ -54,17 +55,56 @@ BREAK_MARGIN = 0.02
 #: How the engine measures every text in the default font profile.
 MEASURED = "file"
 
-#: The rule that keeps a one-letter word off a line's end: it moves to the next line
-#: with the word after it.
-ONE_LETTER_WORD = "one-letter-word"
+
+@dataclass(frozen=True)
+class LanguageRules:
+    """A language's line-breaking rules beyond Unicode's. Each keeps a word off a line's
+    end, so that it moves to the next line with the word after it: a one-letter word, where
+    `one_letter_word` holds, and each of `short_prepositions`, in any case."""
+
+    one_letter_word: bool = False
+    short_prepositions: frozenset[str] = frozenset()
+
+    def kept_together(self, paragraph: str) -> set[int]:
+        """The break opportunities in `paragraph` these rules forbid: each after a word they
+        keep off a line's end and the spaces after it."""
+        found: set[int] = set()
+        if self.one_letter_word:
+            found.update(match.end() for match in _ONE_LETTER.finditer(paragraph))
+        if self.short_prepositions:
+            found.update(
+                match.end() for match in _words(self.short_prepositions).finditer(paragraph)
+            )
+        return found
+
 
 #: Each language's line-breaking rules beyond Unicode's, by its primary language subtag.
 #: A new language's rules arrive with a release of the capability (DEC-005 point 4).
-LANGUAGE_RULES: Mapping[str, frozenset[str]] = {
-    "cs": frozenset({ONE_LETTER_WORD}),
+LANGUAGE_RULES: Mapping[str, LanguageRules] = {
+    "cs": LanguageRules(
+        one_letter_word=True,
+        short_prepositions=frozenset({"před", "nad", "pod", "přes", "za", "na", "do", "od", "ve"}),
+    ),
 }
 
+#: A language with no rules of its own follows Unicode's alone.
+_NO_RULES = LanguageRules()
+
 _ONE_LETTER = re.compile(r"(?<!\w)[^\W\d_] +")
+
+
+@functools.cache
+def _words(words: frozenset[str]) -> re.Pattern[str]:
+    """A pattern that finds each of `words`, whole and in any case, with the spaces after
+    it."""
+    alternatives = "|".join(re.escape(word) for word in sorted(words, key=len, reverse=True))
+    return re.compile(rf"(?<!\w)(?:{alternatives}) +", re.IGNORECASE)
+
+
+def rules_of(language: str) -> LanguageRules:
+    """The line-breaking rules of `language`, a language tag, by its primary subtag."""
+    return LANGUAGE_RULES.get(language.split("-")[0].lower(), _NO_RULES)
+
 
 #: The characters a run's sign and ground pass over at the run's ends (DEC-036 point 3).
 BLANK = " \n"
@@ -352,9 +392,8 @@ def _units(paragraph: str, language: str) -> list[str]:
     """The paragraph cut at each break opportunity Unicode's rules and the language's
     allow; each unit keeps its trailing spaces."""
     ends = [end for end in line_break_boundaries(paragraph) if 0 < end < len(paragraph)]
-    if ONE_LETTER_WORD in LANGUAGE_RULES.get(language.split("-")[0].lower(), frozenset()):
-        bound = {match.end() for match in _ONE_LETTER.finditer(paragraph)}
-        ends = [end for end in ends if end not in bound]
+    kept = rules_of(language).kept_together(paragraph)
+    ends = [end for end in ends if end not in kept]
     units, start = [], 0
     for end in [*ends, len(paragraph)]:
         units.append(paragraph[start:end])
