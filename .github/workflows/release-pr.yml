@@ -7,12 +7,41 @@ name: release-pr
 #
 # Started by hand only (workflow_dispatch): a release is cut when the
 # maintainer starts it. A no-op when nothing moves a version.
+#
+# Started with the input "pre-release", the run cuts a release candidate from
+# the head of the branch it is started on instead (ADR-092 point 2), in the job
+# `pre-release`: it opens no pull request and merges nothing. Started without
+# it, the run is the ordinary release run, job `release-pr`, which refuses on
+# any branch but the default branch (ADR-092 point 5).
+#
+# Either run starts in the job `start`, which first refuses an ordinary run off
+# the default branch, then finishes the notes an earlier run left unpublished: a
+# tag on origin, of a release or a candidate, with no GitHub Release. A tag
+# below the oldest one with a Release predates the notes and is passed by.
+# Where that fails, it says so and goes on (ADR-089 point 9; ADR-092 point 5).
+#
+# The run's checks are an interlock against a mistake, not a defence: a run on
+# a branch runs that branch's workflow and the pkit it runs (ADR-092 point 10).
+# Neither job forces a push or deletes a tag.
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      pre-release:
+        description: >-
+          Cut a release candidate from the head of the branch this run starts
+          on, which has taken in the default branch's head (ADR-092 point 2).
+        type: boolean
+        default: false
 
-# Minimal scope: push the release branch (contents) and open the PR
-# (pull-requests). No merge permission — a human merges the PR.
+# One group keeps two runs apart, whichever job each runs (ADR-089 point 9).
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+# Minimal scope: push the release branch or the candidate's tag, and publish
+# notes (contents), and open the PR (pull-requests). No merge permission — a
+# human merges the PR.
 permissions:
   contents: write
   pull-requests: write
@@ -28,7 +57,69 @@ env:
   GH_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
 
 jobs:
+  # Every run starts here. Without the input it refuses on any branch but the
+  # default branch, before anything else. Then it finishes the notes an earlier
+  # run left unpublished, whichever job that run ran.
+  start:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history and tags, so every tag's notes can be read)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT || github.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project (clean resolve)
+        run: uv sync
+
+      # Without the input, the run is the ordinary release run, and a final
+      # release is planned from the default branch's head alone (ADR-092 points
+      # 1 and 5). The default branch is the one the project declares (COR-054).
+      - name: Refuse on any branch but the default branch
+        if: ${{ !inputs.pre-release }}
+        run: |
+          set -euo pipefail
+          default="$(uv run pkit repository base --json | jq -r '.default_branch.name')"
+          if [ "${GITHUB_REF}" != "refs/heads/${default}" ]; then
+            echo "::error::Started without the input pre-release on ${GITHUB_REF}: the ordinary release run is started on ${default} alone (ADR-092 point 5). Start it there, or start it here with pre-release to cut a candidate."
+            exit 1
+          fi
+
+      # A tag on origin with no GitHub Release lacks its notes: a run that pushed
+      # it stopped before publishing them. Finish them first, oldest first; where
+      # one fails, say so and go on (ADR-092 point 5). A final release's notes
+      # are read from the changelog here, a candidate's at its tag.
+      - name: Finish the notes an earlier run left unpublished
+        run: |
+          set -uo pipefail
+          tags="${RUNNER_TEMP}/tags.txt"
+          releases="${RUNNER_TEMP}/releases.txt"
+          if ! git ls-remote --tags origin > "${tags}" \
+             || ! gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" --jq '.[].tag_name' > "${releases}"; then
+            echo "::warning::The tags and Releases on origin could not be read, so notes an earlier run left unpublished stay so. This run goes on."
+            exit 0
+          fi
+          if ! versions="$(uv run python scripts/release_pr.py unpublished --tags "${tags}" --releases "${releases}")"; then
+            echo "::warning::The tags without notes could not be found. This run goes on."
+            exit 0
+          fi
+          for version in ${versions}; do
+            if ! uv run pkit release publish-notes "${version}"; then
+              echo "::warning::The notes of v${version} could not be published. This run goes on, and the next run tries again."
+            fi
+          done
+
   release-pr:
+    needs: start
+    if: ${{ !inputs.pre-release }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (full history so the release computes from main's state)
@@ -155,3 +246,84 @@ jobs:
           git push --set-upstream origin "${branch}"
 
           gh pr create --base main --head "${branch}" --title "${title}" --body-file "${body}"
+
+  # The pre-release run (ADR-092 point 2; ADR-089 point 9): a candidate cut from
+  # the head of the branch it is started on, which `pkit release apply --pre`
+  # refuses where that head has not taken in the default branch's head. It
+  # commits the candidate on no branch and tags it there; the tag is pushed
+  # alone, and only once the wheel built from its commit is checked. It reads no
+  # label, so a branch whose pull request passes by `skip-changeset` is cut only
+  # once it carries a `none` changeset.
+  pre-release:
+    needs: start
+    if: ${{ inputs.pre-release }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history and tags, so the cut reads the default branch's head)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT || github.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project (clean resolve)
+        run: uv sync
+
+      # No candidate carries a surface change no changeset moves (ADR-092 point 2).
+      - name: Check the branch's changesets against the default branch
+        run: |
+          set -euo pipefail
+          default="$(uv run pkit repository base --json | jq -r '.default_branch.name')"
+          uv run pkit release check --base "${default}"
+
+      # Plans from this commit, refusing where the default branch's head on origin
+      # is not in its history; numbers the cut across every candidate tag on
+      # origin; records its base; commits on no branch and tags that commit.
+      - name: Cut the candidate
+        id: cut
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          uv run pkit release apply --pre --tag --yes
+          echo "version=$(cat .pkit/VERSION)" >> "$GITHUB_OUTPUT"
+
+      # From the candidate's commit, before its tag fixes its content for good: the
+      # wheel builds, and the pkit it installs names the candidate's version. Run
+      # outside the checkout, so the pkit is the wheel's and routes nowhere.
+      - name: Build the wheel and check its version
+        env:
+          VERSION: ${{ steps.cut.outputs.version }}
+        run: |
+          set -euo pipefail
+          dist="${RUNNER_TEMP}/dist"
+          venv="${RUNNER_TEMP}/wheel-check"
+          uv build --wheel --out-dir "${dist}"
+          uv venv "${venv}"
+          uv pip install --python "${venv}/bin/python" "${dist}"/*.whl
+          said="$(cd "${RUNNER_TEMP}" && PKIT_NO_ROUTE=1 "${venv}/bin/pkit" --version)"
+          if [ "${said}" != "pkit, version ${VERSION}" ]; then
+            echo "::error::The wheel built from the candidate's commit says '${said}', not 'pkit, version ${VERSION}'. The tag is not pushed."
+            exit 1
+          fi
+
+      # The tag alone, never forced: git refuses a push that would move a tag
+      # origin holds (ADR-092 point 10).
+      - name: Push the candidate's tag
+        env:
+          VERSION: ${{ steps.cut.outputs.version }}
+        run: git push origin "refs/tags/v${VERSION}"
+
+      # A pre-release Release, its notes read at the tag. Where this fails, the
+      # next run finishes them.
+      - name: Publish the candidate's notes
+        env:
+          VERSION: ${{ steps.cut.outputs.version }}
+        run: uv run pkit release publish-notes "${VERSION}"
