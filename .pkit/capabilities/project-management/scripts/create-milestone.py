@@ -16,6 +16,7 @@ first line per DEC-016, posts to GitHub via `gh api`.
 
 Per [project-management:DEC-016-time-bound-containers]:
   - Category declaration is mandatory before any Milestone is filed.
+    `add-milestone-category` declares one, and the refusal names it.
   - Filing outside declared categories is a hard-reject.
   - The category's title_format must include `{n}` + `{name}` placeholders.
   - Each instance carries an explicit `Close trigger:` first body line.
@@ -61,7 +62,15 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 import contextlib
 
-from _lib import bootstrap_gate, consent, milestone, pools, session_guard, title_rules
+from _lib import (
+    bootstrap_gate,
+    consent,
+    milestone,
+    milestone_categories,
+    pools,
+    session_guard,
+    title_rules,
+)
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -71,7 +80,7 @@ from _lib.membership import (
 )
 from _lib.milestone import title_format_regex
 
-VALID_CLOSE_TRIGGERS = ("date-based", "content-based", "either")
+VALID_CLOSE_TRIGGERS = milestone_categories.CLOSE_TRIGGERS
 
 
 def main() -> int:
@@ -179,7 +188,8 @@ def main() -> int:
             "Per [project-management:DEC-016-time-bound-containers], "
             "at least one milestone_categories: entry is required "
             "before any Milestone is filed. Declare a category first, "
-            "then re-run.",
+            "then re-run:\n"
+            f"  {milestone_categories.declare_line(args.category)}",
             file=sys.stderr,
         )
         return 2
@@ -188,7 +198,9 @@ def main() -> int:
         declared = ", ".join(sorted(categories.keys()))
         print(
             f"error: category {args.category!r} is not declared in "
-            f"milestone_categories:. Declared categories: {declared}.",
+            f"milestone_categories:. Declared categories: {declared}. "
+            "To declare it, run:\n"
+            f"  {milestone_categories.declare_line(args.category)}",
             file=sys.stderr,
         )
         return 2
@@ -212,12 +224,11 @@ def main() -> int:
         )
         return 2
 
-    if "{n}" not in title_format or "{name}" not in title_format:
-        print(
-            f"error: title_format {title_format!r} must contain both "
-            "{n} (number) and {name} (semantic) placeholders.",
-            file=sys.stderr,
-        )
+    # add-milestone-category declares a category by the same check, so each
+    # category it declares can be filed in.
+    problem = milestone_categories.title_format_problem(title_format)
+    if problem is not None:
+        print(f"error: milestone_categories.{args.category}: {problem}", file=sys.stderr)
         return 2
 
     close_trigger = args.close_trigger or cat.get("close_trigger_default")
@@ -237,16 +248,9 @@ def main() -> int:
         if n is None:
             return 3  # gh failure already printed
 
-    # Compose the title + body.
-    try:
-        title = title_format.format(n=n, name=args.name)
-    except KeyError as exc:
-        print(
-            f"error: title_format references undeclared placeholder {exc}. "
-            "Only {n} and {name} are supported.",
-            file=sys.stderr,
-        )
-        return 2
+    # Compose the title + body. The title format's check above admits only the
+    # {n} and {name} placeholders.
+    title = title_format.format(n=n, name=args.name)
 
     # titles.yaml's `milestone` checks (#803): shown before the plan; a blocking
     # one refuses before any gh call.
