@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: a6d0ffe6cd8cbeafde21b20b042104d1f8f0d525ec1aece2431996e64f0c80c5
+  value: 014aea866805b5e64500b7618f102da64213fb6a9672844124d3ee9af3d2fdaf
   inputs:
     - file: content.cs.yaml
       sha256: 151dbbc838ad85baf0f8703cafe19def90ec17fc6641c7f79ebdffe2cf01cdf9
@@ -67,31 +67,31 @@ key:
     - library: neutral
       version: 1.1.0
       path: tokens/base.tokens.json
-      sha256: d9fc7dd03131b4b884a719889402b55ac50163801ab41b8c75e0651040604aab
+      sha256: 40b1ecb3fc5a06fb06f3cf1d618783080da30176fd5ab98a2997f778b3c98e14
     - library: neutral
       version: 1.1.0
       path: tokens/dark.tokens.json
-      sha256: 288184af74169ab9fc00dc25c1b61ecdbc01c5a3b7029a2fccff180c89e45996
+      sha256: 7ba7bded81a68fe52436d84a7c3b14cc0a47c803c4c7de632acc9663fd682f86
     - library: neutral
       version: 1.1.0
       path: tokens/high-contrast.tokens.json
-      sha256: babc4ab4183caa0266b9811c1a69583d70f15f25ddd0c2d1bfbb894f52983799
+      sha256: 796c538b649a5b0dbfbc90a177a1422c8dc03fc379cbac7cd5b4cb38a15b014d
     - library: neutral
       version: 1.1.0
       path: tokens/palette.tokens.json
-      sha256: 1c7c09942b89937709875c44cfc3b088706bfb69817843a8149b7492d921b782
+      sha256: 2fe92db15d1a1dec76ffbd5e9802db556fe39e6e80d4f1358f7b06c8109fe627
     - library: neutral
       version: 1.1.0
       path: tokens/phone.tokens.json
-      sha256: 4078142648a9122a40d6d94484e072b80e2785d3520f6cfed122e3263aa81417
+      sha256: c80c9d3095df0d6eb4a20095860fa292fb94c7e611c12466e29e524ea0da068b
     - library: neutral
       version: 1.1.0
       path: tokens/projector.tokens.json
-      sha256: 0b1a08589259140b9596eb3b3ac36a028e449d122c51b5855c8c210e8151fb37
+      sha256: 9efdf88b4b8d3974ae4cde70e4b277b853a3a93e881349b7c8eb5dc95c2e77ee
     - library: neutral
       version: 1.1.0
       path: tokens/tablet.tokens.json
-      sha256: 655b8f44e09a51750d5cca02dbc0639b3eced7925c7ca1e87f6d7d3a0ae6496f
+      sha256: b364b75494770b5bf79728f4226ccad1f57c8e37306daba4336ed1726a2e5c99
     - library: pkit
       version: 1.0.0
       path: library.yaml
@@ -103,7 +103,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: c57cccf750eed71c62ea773a0f739ef9b8df8478b406622b354ec1a39f17436e
+      sha256: 7d00c8dbd1d58fdd71f3f2a0e215a6c2c1f053af1dad6e2d6e4b8df2c9d94bff
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -127,7 +127,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/connector.yaml
-      sha256: 0612b6c71bbbb2fc6cd0e023a8a60539b25c02be31d8dcc063208b73d97dcc35
+      sha256: abdc1b7f912a7eff607ea48d0d3d7b89010fd91db07ad2192068e677cb4c9a5d
     - library: starter
       version: 1.1.0
       path: components/field.yaml
@@ -203,7 +203,7 @@ key:
     - library: starter
       version: 1.1.0
       path: roles.yaml
-      sha256: 23ca8760b401f5649dc9a0da9ba42b6769a65a6c652534cb9c0799fab8e08405
+      sha256: 6f583607c22621ff8a30c63813d92968e3afc4890aa49021f02929ac751a5623
 findings:
   - code: component-experimental
     level: fact
