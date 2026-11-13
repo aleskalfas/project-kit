@@ -1496,7 +1496,9 @@ def add_projector(root: Path) -> None:
     the axis `device`: a copy of it whose axis adds the mode `projector`, listed unreleased.
     The test brand gives the projector the desktop's tokens."""
     folder = root / "visual/libraries/foundations"
-    shutil.copytree(folder / "1.0.0", folder / "1.1.0")
+    shutil.copytree(
+        folder / "1.0.0", folder / "1.1.0", ignore=shutil.ignore_patterns("__pycache__")
+    )
     for name, old, new in (
         ("roles.yaml", DEVICE, PROJECTOR),
         ("library.yaml", "version: 1.0.0", "version: 1.1.0"),
