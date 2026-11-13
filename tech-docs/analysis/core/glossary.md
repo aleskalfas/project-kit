@@ -1379,6 +1379,7 @@ TERM-release-step:
           - PRJ-002#D3
           - PRJ-002#D4
           - PRJ-004
+          - ADR-092#2
 TERM-release-tag:
   name: release tag
   noun-forms: [release tags]
@@ -1391,6 +1392,7 @@ TERM-release-tag:
           - src/project_kit/versioning.py
         record:
           - PRJ-004
+          - ADR-089#9
 TERM-report:
   name: report
   other-senses: [whole-repository report]
@@ -3150,6 +3152,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **Release:** the set of [versions](#term-version--version) a release step makes when it moves the [backbone](#term-backbone--backbone). A release step that moves only [components](#term-component--component) makes none of its own ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 - **Changeset:** what a branch writes instead of a version number, declaring its [change](#term-change--change) for the release step ([PRJ-002 D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
 - **Release pull request:** the [pull request](#term-pull-request--pull-request) that carries one release step's writes onto the [default branch](#term-default-branch--default-branch) ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
+- **Release candidate:** what `pkit release apply --pre` writes from the release step's plan, at the commit it runs on. It writes each version the plan raises with the suffix `rcN`, and consumes no [changeset](#term-changeset--changeset) ([ADR-092 point 2](../../architecture/decisions/ADR-092-final-release-from-head.md#2-a-candidate-is-cut-from-a-commit-that-has-the-default-branchs-head-in-its-history)). Its writes reach no branch, only the candidate's tag.
 
 ## TERM-release-tag — release tag
 
@@ -3162,6 +3165,7 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 - **Release:** the set of [versions](#term-version--version) a release tag names by its [backbone](#term-backbone--backbone) version.
 - **A release step that moves only components:** gets no release tag ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 - **The `latest` tag:** a tag that points at the highest release tag. The `uv tool install` command the [system](#term-system--system) prints names it.
+- **A release candidate's tag:** a tag such as `v3.0.0rc1`, on a commit no branch holds, is no release tag. The release workflow pushes it alone, and only once the wheel built from its commit names the candidate's version ([ADR-089 point 9](../../architecture/decisions/ADR-089-release-candidates.md#9-a-candidate-is-cut-by-the-release-workflows-pre-release-run-and-notes-past-the-hosts-caps-are-linked)).
 - **GitHub release:** the page the hosting service shows for a release tag. Its notes are the version's changelog section (PRJ-004).
 
 ## TERM-report — report
