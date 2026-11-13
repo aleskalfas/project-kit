@@ -9,6 +9,11 @@ about: >-
   and footer. Every page is as wide as the brand's site at the size it is drawn at, and as
   tall as its content.
 
+# Content writes each name of the site's fields, its layout and its slot, so none is renamed
+# after a release (DEC-010 point 7). `header`, `main` and `footer` are the names HTML gives
+# those parts of a page. `pages` holds a site's pages, as `slides` holds a deck's. `standard`
+# names the plain form of a page, and gives `page`, which names a page of any piece, a page
+# alone and a command, no fourth meaning.
 fields:
   type: object
   required: [pages]
@@ -41,8 +46,9 @@ preferred:
 # The forms a page takes. Each layout declares the slots a page in it fills, its page's
 # height, and holds the site's own drawing of it, the layout's default. The drawing lays
 # the header, the main part and the footer one under another, each the page's whole width,
-# on the page's background: each part sets its own inset, so a colour it paints reaches
-# the page's edge. Each part that places a slot or a field is named after it.
+# on the page's background: each part sets its own inset, so a colour it paints, a header's
+# or a section's, reaches the page's edge, where a margin in the site would cut it. Each
+# part that places a slot or a field is named after it.
 layouts:
   standard:
     slots:

@@ -17,7 +17,8 @@ its own:
   through `_picture` too.
 - **The font faces:** `_font_faces`, which writes those of a page. A text records what it
   draws in each, whichever writes them.
-- **A span's placing:** `_span_place`. Where the engine's widths start a span stays here.
+- **A span's placing:** `_span_place`, handed where the engine's widths start each span
+  (`placed`). Here it places a span only on a line that holds a sign or a ground.
 - **A text as a whole:** `_text`, for a renderer that writes no SVG text. It reads a text
   through `_text_lines`, which keeps its baselines, the run of each span, and what each face
   draws, whichever writes them.
@@ -44,10 +45,23 @@ says what it draws.
   `<text>` takes the font and the paint of the text's first run; each span of a run that
   looks otherwise is a `<tspan>` with its own (DEC-012). A text of one run is drawn as
   format 1 drew it.
+- **A run's sign and ground** (DEC-036 point 3). On a line that holds either, each span
+  starts where the engine's widths place it, after the room the engine gave a ground's
+  start and a sign (`placed`). Before the text, so behind it, each piece of a ground is a
+  `<path>` in its role, its corners rounded where the ground starts and ends and square
+  where a line breaks it (`ground_path`), and each sign is a `<path>` of its outline,
+  moved to its square, filled by its rule in its run's paint. They name their text as
+  `data-ground` and `data-sign`. A line of neither is drawn as before.
 - **A line** whose route turns, a tie's connector, is a `<polyline>` through its points,
-  and names the elements its ends meet (`data-start`, `data-end`). An arrowhead is a
-  marker the page defines once for each colour a line draws one in. A line that holds
-  neither its ends nor its points is refused, and left out.
+  or a `<path>` whose turns are arcs where it holds a radius, `rx` (`course_path`), and
+  names the elements its ends meet (`data-start`, `data-end`). An arrowhead is a marker
+  the page defines once for each colour a line draws one in, placed by its base, where the
+  line stops (`course`). A line that holds neither its ends nor its points is refused, and
+  left out. The PDF renderer draws a line's course from `course` too, so the two agree.
+- **A path**, such as a concept's sign, is a `<path>` of the outline the engine mapped into
+  its frame, `d` as the scene holds it, filled by its rule, `fill-rule`, written only where
+  it is `evenodd`, since SVG's default is the other. Its stroke lies on its outline, as
+  SVG strokes a path. A path that holds no outline is refused, and left out.
 - **A picture** is embedded whole, as the picture its image shows in the combination drawn
   (`seam.Shown`), whatever its source: PNG data for a PNG and JPEG data for a JPEG, its bytes
   as they are, so a colour profile it carries stays with it (DEC-025 points 5 and 7). An
@@ -65,8 +79,11 @@ from __future__ import annotations
 
 import base64
 import io
+import itertools
 import logging
-from collections.abc import Callable, Mapping
+import math
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -88,6 +105,26 @@ NORMAL = 400
 
 #: How much of a width lies before the place an anchor holds it at.
 ANCHORED = {"middle": 0.5, "end": 1.0}
+
+#: Where the control points of a quarter circle lie, drawn as one cubic Bézier curve, as a
+#: share of its radius.
+KAPPA = 0.5522847498307936
+
+#: How long an arrowhead is, from its base to its tip, in widths of its line's stroke, and
+#: how wide its base is.
+HEAD = 5.0
+
+#: The scene's own resolution, 1/100 px: the least length a line keeps of a leg its
+#: arrowhead is longer than, so the head still points along the leg, and the least radius
+#: a turn is drawn round at.
+LEAST = 0.01
+
+#: A turn whose direction changes by less than this, in radians, or by more than half a
+#: turn less this, is drawn as no arc: it goes straight on, or back on itself.
+STRAIGHT = 1e-9
+
+#: A point of a line, across and down.
+Point = tuple[float, float]
 
 #: The spans of a line, each with the run it is part of.
 Spans = list[tuple[Mapping[str, Any], Mapping[str, Any]]]
@@ -182,6 +219,284 @@ def unshown(element: Mapping[str, Any], key: str, piece: Any) -> str:
             f"names why"
         )
     return f"the brand gives {shows(element)} no file in `{key}`"
+
+
+@dataclass(frozen=True)
+class GroundPiece:
+    """A piece of a run's ground on one line (DEC-036 point 3): its left and its right, its
+    top below the line's top and its height, the radius of its corners, the role it paints,
+    and whether the ground starts and ends in it, where its corners are rounded."""
+
+    left: float
+    right: float
+    top: float
+    height: float
+    rx: float
+    role: str | None
+    starts: bool
+    ends: bool
+
+
+@dataclass(frozen=True)
+class Placed:
+    """A line's spans placed as the engine measured them, from where the line starts
+    (DEC-036 point 3): where each span's text starts; each sign the line draws, with the
+    left of its square, its span and its run; and each piece of a ground."""
+
+    starts: tuple[float, ...]
+    signs: tuple[tuple[float, Mapping[str, Any], Mapping[str, Any]], ...]
+    grounds: tuple[GroundPiece, ...]
+
+
+def marked(line: Mapping[str, Any]) -> bool:
+    """Whether a line's spans hold a sign or a ground (DEC-036 point 3)."""
+    return any("sign" in span or "ground" in span for span in line.get("spans", []))
+
+
+def room(span: Mapping[str, Any]) -> float:
+    """How far a span's sign and ground move the pen beside its text: its ground's room
+    before it and after it, and its sign and the sign's gap (DEC-036 point 3)."""
+    ground, sign = span.get("ground") or {}, span.get("sign")
+    extra = float(ground.get("start", 0)) + float(ground.get("end", 0))
+    return extra + (float(sign["size"]) + float(sign["gap"]) if sign is not None else 0.0)
+
+
+def placed(spans: Spans, pen: float, widths: Sequence[float] | None = None) -> Placed:
+    """The spans of a line placed from `pen`: each span's ground's room before it, its sign
+    and the sign's gap, its text, as wide as `widths` gives, else as the span's own width,
+    and its ground's room after it (DEC-036 point 3). A ground's piece runs from the room
+    before its first span to the room after its last, and a new piece starts where the
+    ground starts again, or where the next span takes another or none."""
+    starts: list[float] = []
+    signs: list[tuple[float, Mapping[str, Any], Mapping[str, Any]]] = []
+    grounds: list[GroundPiece] = []
+    piece: tuple[float, Mapping[str, Any], str | None, bool] | None = None
+    for place, (span, run) in enumerate(spans):
+        ground = span.get("ground")
+        role = run.get("ground")
+        if piece is not None and (ground is None or "start" in ground or role != piece[2]):
+            grounds.append(_piece(piece, pen, ends=False))
+            piece = None
+        if ground is not None and piece is None:
+            piece = (pen, ground, role, "start" in ground)
+        if ground is not None:
+            pen += float(ground.get("start", 0))
+        sign = span.get("sign")
+        if sign is not None:
+            signs.append((pen, span, run))
+            pen += float(sign["size"]) + float(sign["gap"])
+        starts.append(pen)
+        pen += float(widths[place] if widths is not None else span["width"])
+        if ground is not None:
+            pen += float(ground.get("end", 0))
+        if piece is not None and ground is not None and "end" in ground:
+            grounds.append(_piece(piece, pen, ends=True))
+            piece = None
+    if piece is not None:
+        grounds.append(_piece(piece, pen, ends=False))
+    return Placed(tuple(starts), tuple(signs), tuple(grounds))
+
+
+def _piece(
+    piece: tuple[float, Mapping[str, Any], str | None, bool], right: float, *, ends: bool
+) -> GroundPiece:
+    left, ground, role, starts = piece
+    return GroundPiece(
+        left,
+        right,
+        float(ground["top"]),
+        float(ground["height"]),
+        float(ground.get("rx", 0)),
+        role,
+        starts,
+        ends,
+    )
+
+
+def ground_path(piece: GroundPiece, top: float) -> str:
+    """A ground's piece as SVG path data, on a line whose top lies at `top`: a rectangle
+    whose corners are rounded by its radius, at most half its height or its width, where
+    the ground starts and where it ends, and square where a line breaks it. Its moves,
+    lines, cubic curves and closes are absolute, as an outline the engine maps is."""
+    left, right = piece.left, piece.right
+    upper, lower = top + piece.top, top + piece.top + piece.height
+    radius = max(min(piece.rx, piece.height / 2, (right - left) / 2), 0.0)
+    before = radius if piece.starts else 0.0
+    after = radius if piece.ends else 0.0
+    words = ["M", number(left + before), number(upper), "L", number(right - after), number(upper)]
+    if after:
+        k = after * KAPPA
+        words += ["C", number(right - after + k), number(upper), number(right)]
+        words += [number(upper + after - k), number(right), number(upper + after)]
+    words += ["L", number(right), number(lower - after)]
+    if after:
+        k = after * KAPPA
+        words += ["C", number(right), number(lower - after + k), number(right - after + k)]
+        words += [number(lower), number(right - after), number(lower)]
+    words += ["L", number(left + before), number(lower)]
+    if before:
+        k = before * KAPPA
+        words += ["C", number(left + before - k), number(lower), number(left)]
+        words += [number(lower - before + k), number(left), number(lower - before)]
+    words += ["L", number(left), number(upper + before)]
+    if before:
+        k = before * KAPPA
+        words += ["C", number(left), number(upper + before - k), number(left + before - k)]
+        words += [number(upper), number(left + before), number(upper)]
+    return " ".join([*words, "Z"])
+
+
+@dataclass(frozen=True)
+class Arc:
+    """A turn of a line drawn round: an arc of `radius` from where it leaves the leg before
+    the turn, `start`, to where it meets the leg after it, `end`, `clockwise` on the page or
+    not, and the two control points of the cubic Bézier curve that draws it."""
+
+    start: Point
+    end: Point
+    radius: float
+    clockwise: bool
+    controls: tuple[Point, Point]
+
+
+@dataclass(frozen=True)
+class Head:
+    """An arrowhead as a line's course places it: its base, where the line stops, and the
+    way its tip lies from there, a unit vector away from the line."""
+
+    base: Point
+    towards: Point
+
+
+@dataclass(frozen=True)
+class Course:
+    """A line as it is drawn: its points, each end that carries an arrowhead moved back to
+    the head's base; the arc of each turn drawn round, by the place of its point; and the
+    arrowhead at each end that carries one."""
+
+    points: tuple[Point, ...]
+    arcs: Mapping[int, Arc]
+    heads: Mapping[str, Head]
+
+
+def heads(element: Mapping[str, Any]) -> dict[str, float]:
+    """How long the arrowhead at each end of a line that carries one is: `HEAD` widths of
+    its stroke, which is 1 px wide where the line gives none, as SVG strokes it."""
+    width = float(element.get("stroke-width", 1))
+    return {which: HEAD * width for which in ENDS if element.get(f"marker-{which}") == "arrow"}
+
+
+def route(element: Mapping[str, Any]) -> list[Point]:
+    """The points a line runs through: a connector's `points` where its route turns, else
+    its two ends."""
+    points = element.get("points")
+    if points:
+        return [(float(p["x"]), float(p["y"])) for p in points]
+    x1, y1, x2, y2 = (float(element[end]) for end in ENDS_OF_LINE)
+    return [(x1, y1), (x2, y2)]
+
+
+def course(through: Sequence[Point], radius: float, heads: Mapping[str, float]) -> Course:
+    """How a line through the points `through` is drawn, its turns round at `radius` and an
+    arrowhead `heads` gives the length of at each end that carries one.
+
+    - **An end that carries an arrowhead** stops at the head's base, as far back along its
+      leg as the head is long, so the head's tip lies at the end. A leg the head is longer
+      than keeps `LEAST` of its length, so the head still points along it, and its tip
+      lies past the end. Two heads on a line of one leg share it.
+    - **A turn** is an arc of `radius` that leaves its two legs where they meet it. Its arc
+      takes at most half of the shorter of the two, so two turns on one leg never meet. A
+      leg that ends in an arrowhead counts to the head's base. A radius of 0 or less draws
+      every turn sharp, and so does a turn that goes straight on or back on itself.
+
+    A point that repeats the one before it is no turn. A line of no length draws as it
+    stands, and its heads point across, to the right at its end and to the left at its
+    start."""
+    points = [through[0]]
+    for point in through[1:]:
+        if point != points[-1]:
+            points.append(point)
+    if len(points) == 1:
+        across = {"start": (-1.0, 0.0), "end": (1.0, 0.0)}
+        placed = {which: Head(points[0], across[which]) for which in heads}
+        return Course((points[0], points[0]), {}, placed)
+    units, lengths = _legs(points)
+    shared = len(lengths) == 1 and len(heads) == 2
+    # Each end that carries a head, by the place of its point and the way the head points.
+    ends = {"start": (0, (-units[0][0], -units[0][1])), "end": (-1, units[-1])}
+    placed = {}
+    for which, length in heads.items():
+        at, away = ends[which]
+        room = lengths[at] / 2 if shared else lengths[at]
+        points[at] = _along(points[at], away, -min(length, max(room - LEAST, 0.0)))
+        placed[which] = Head(points[at], away)
+    _, drawn = _legs(points)
+    arcs = {}
+    for place in range(1, len(lengths)):
+        legs = drawn[place - 1 : place + 1]
+        arc = _arc(points[place], units[place - 1], units[place], radius, legs)
+        if arc is not None:
+            arcs[place] = arc
+    return Course(tuple(points), arcs, placed)
+
+
+def _along(point: Point, way: Point, by: float) -> Point:
+    """The point `by` along `way`, a unit vector, from `point`; back where `by` is below 0."""
+    return point[0] + by * way[0], point[1] + by * way[1]
+
+
+def _legs(points: Sequence[Point]) -> tuple[list[Point], list[float]]:
+    """The way each leg between `points` runs, a unit vector, and its length."""
+    units, lengths = [], []
+    for (x0, y0), (x1, y1) in itertools.pairwise(points):
+        length = math.hypot(x1 - x0, y1 - y0)
+        units.append(((x1 - x0) / length, (y1 - y0) / length) if length else (0.0, 0.0))
+        lengths.append(length)
+    return units, lengths
+
+
+def _arc(
+    corner: Point, before: Point, after: Point, radius: float, legs: Sequence[float]
+) -> Arc | None:
+    """The arc of the turn at `corner`, from the leg that runs `before` to the one that runs
+    `after`, each as long as `legs` gives: of `radius`, or less where that would take more
+    than half the shorter leg. None where it is drawn sharp, and where it would be less
+    than `LEAST`."""
+    cross = before[0] * after[1] - before[1] * after[0]
+    turned = math.atan2(abs(cross), before[0] * after[0] + before[1] * after[1])
+    if radius <= 0 or turned < STRAIGHT or turned > math.pi - STRAIGHT:
+        return None
+    # How far from the corner an arc leaves each leg, for each px of its radius: 1 at a
+    # right angle.
+    reach = math.tan(turned / 2)
+    leaves = min(radius * reach, min(legs) / 2)
+    fitted = leaves / reach
+    if fitted < LEAST:
+        return None
+    start, end = _along(corner, before, -leaves), _along(corner, after, leaves)
+    # A cubic Bézier curve's control points for an arc of this turn, as `KAPPA` is for a
+    # quarter of a circle.
+    pull = 4 / 3 * math.tan(turned / 4) * fitted
+    controls = (_along(start, before, pull), _along(end, after, -pull))
+    return Arc(start, end, fitted, cross > 0, controls)
+
+
+def course_path(drawn: Course) -> str:
+    """A course that turns round as SVG path data: absolute moves, lines and arcs, each turn
+    drawn round an arc of its radius (`A`), and each other turn a corner."""
+    at = [number(drawn.points[0][0]), number(drawn.points[0][1])]
+    words = ["M", *at]
+    for place, point in enumerate(drawn.points[1:], start=1):
+        arc = drawn.arcs.get(place)
+        towards = [number(each) for each in (arc.start if arc is not None else point)]
+        if towards != at:  # no line to where the path already stands
+            words += ["L", *towards]
+        if arc is not None:
+            radius, sweep = number(arc.radius), "1" if arc.clockwise else "0"
+            towards = [number(each) for each in arc.end]
+            words += ["A", radius, radius, "0", "0", sweep, *towards]
+        at = towards
+    return " ".join(words)
 
 
 def find(elements: list[Mapping[str, Any]], trace: str) -> Mapping[str, Any] | None:
@@ -349,11 +664,32 @@ class Canvas:
         )
         return f"<ellipse {attributes}/>"
 
+    def _path(self, element: Mapping[str, Any]) -> str:
+        """A path, such as a concept's sign (DEC-036 point 1): the outline the engine mapped
+        into its frame, filled by its rule. A path that holds no outline is refused, as an
+        element the renderer does not draw is."""
+        outline = element.get("d")
+        if not isinstance(outline, str) or not outline:
+            self._lose(element["id"], seam.REFUSED, "the path holds no outline, `d`")
+            return ""
+        rule = element.get("fill-rule")
+        attributes = attribute_text(
+            [
+                ("data-id", element["id"]),
+                ("d", outline),
+                ("fill-rule", rule if rule == "evenodd" else None),
+                *self._paint(element, "fill"),
+                *self._stroke(element),
+            ]
+        )
+        return f"<path {attributes}/>"
+
     def _line(self, element: Mapping[str, Any]) -> str:
         """A line, or a tie's connector: a `<polyline>` through its points where its route
-        turns, which names the elements its ends meet (`data-start`, `data-end`). An
-        arrowhead is a marker in the line's stroke colour. A line that holds neither its
-        ends nor its points is refused, as an element the renderer does not draw is."""
+        turns, or a `<path>` where it turns round, which names the elements its ends meet
+        (`data-start`, `data-end`). An arrowhead is a marker in the line's stroke colour,
+        and the line stops at its base (`course`). A line that holds neither its ends nor
+        its points is refused, as an element the renderer does not draw is."""
         points = element.get("points")
         if not points and any(end not in element for end in ENDS_OF_LINE):
             self._lose(
@@ -364,11 +700,18 @@ class Canvas:
             return ""
         attached = element.get("attached") or {}
         stroke = self._stroke(element)
-        shape = (
-            [("points", " ".join(f"{number(p['x'])},{number(p['y'])}" for p in points))]
-            if points
-            else [(end, number(element[end])) for end in ENDS_OF_LINE]
-        )
+        drawn = course(route(element), float(element.get("rx", 0)), heads(element))
+        if drawn.arcs:
+            kind, shape = "path", [("d", course_path(drawn))]
+        elif points:
+            kind = "polyline"
+            shape = [("points", " ".join(f"{number(x)},{number(y)}" for x, y in drawn.points))]
+        else:
+            (x1, y1), (x2, y2) = drawn.points
+            kind, shape = (
+                "line",
+                list(zip(ENDS_OF_LINE, map(number, (x1, y1, x2, y2)), strict=True)),
+            )
         attributes = attribute_text(
             [
                 ("data-id", element["id"]),
@@ -379,7 +722,7 @@ class Canvas:
                 *self._markers(element, stroke),
             ]
         )
-        return f"<polyline {attributes}/>" if points else f"<line {attributes}/>"
+        return f"<{kind} {attributes}/>"
 
     def _markers(
         self, element: Mapping[str, Any], stroke: list[tuple[str, Any]]
@@ -406,16 +749,24 @@ class Canvas:
         at = x + before * width
         paragraphs = element.get("paragraphs") or [[{}]]
         first = paragraphs[0][0] if paragraphs[0] else {}
-        lines = []
+        lines, marks = [], []
         for baseline, line, spans in self._text_lines(element, float(element["y"])):
-            pen = at - before * float(line["width"])
+            where = placed(spans, at - before * float(line["width"]))
+            if marked(line):
+                marks.append(self._marks(element, baseline - float(line["baseline"]), where))
             drawn = []
-            for span, run in spans:
+            for (span, run), pen in zip(spans, where.starts, strict=True):
                 shown = escape(span["text"], quote=False)
                 look = [*self._span_place(line, pen), *self._look(element, run, first)]
                 drawn.append(f"<tspan {attribute_text(look)}>{shown}</tspan>" if look else shown)
-                pen += float(span["width"])
-            place = [("x", number(at)), ("y", number(baseline))]
+            # On a line that holds a sign or a ground each span is placed at its own start,
+            # anchored there.
+            restart = marked(line) and anchor != "start"
+            place = [
+                ("x", number(at)),
+                ("y", number(baseline)),
+                ("text-anchor", "start" if restart else None),
+            ]
             lines.append(f"<tspan {attribute_text(place)}>{''.join(drawn)}</tspan>")
         weight = first.get("font-weight")
         attributes = attribute_text(
@@ -429,7 +780,40 @@ class Canvas:
                 *self._paint({"id": element["id"], "fill": first.get("fill")}, "fill"),
             ]
         )
-        return f"<text {attributes}>{''.join(lines)}</text>"
+        return f"{''.join(marks)}<text {attributes}>{''.join(lines)}</text>"
+
+    def _marks(self, element: Mapping[str, Any], top: float, where: Placed) -> str:
+        """The grounds and the signs of a line whose top lies at `top`, drawn before its
+        text, so behind it (DEC-036 point 3). A ground's piece is a path in its role; a sign
+        is its outline, moved to its square's place and filled by its rule in its run's
+        paint. Each names its text's trace id, as `data-ground` and `data-sign`."""
+        drawn = []
+        for piece in where.grounds:
+            if piece.role is None:
+                continue
+            attributes = attribute_text(
+                [
+                    ("data-ground", element["id"]),
+                    ("d", ground_path(piece, top)),
+                    *self._paint({"id": element["id"], "fill": piece.role}, "fill"),
+                ]
+            )
+            drawn.append(f"<path {attributes}/>")
+        for left, span, run in where.signs:
+            sign = span["sign"]
+            moved = f"translate({number(left)},{number(top + float(sign['top']))})"
+            rule = sign.get("fill-rule")
+            attributes = attribute_text(
+                [
+                    ("data-sign", element["id"]),
+                    ("d", sign["d"]),
+                    ("transform", moved),
+                    ("fill-rule", rule if rule == "evenodd" else None),
+                    *self._paint({"id": element["id"], "fill": run.get("fill")}, "fill"),
+                ]
+            )
+            drawn.append(f"<path {attributes}/>")
+        return "".join(drawn)
 
     def _text_lines(
         self, element: Mapping[str, Any], top: float
@@ -454,8 +838,10 @@ class Canvas:
 
     def _span_place(self, line: Mapping[str, Any], pen: float) -> list[tuple[str, Any]]:
         """The attributes that place a span of `line`, which the engine's widths start at
-        `pen`. None here: a span follows the one before it."""
-        return []
+        `pen`. On a line that holds a sign or a ground, the span starts there, so the room the
+        engine gave them lies before it, and its line anchors it at its start (DEC-036 point
+        3). None on any other line: a span follows the one before it."""
+        return [("x", number(pen))] if marked(line) else []
 
     def _face(self, face: Mapping[str, Any], run: Mapping[str, Any]) -> tuple[str, int]:
         """The `@font-face` a run draws a font in: its family, at the run's weight."""
@@ -517,24 +903,25 @@ class Canvas:
 
     def _arrow_markers(self) -> str:
         """The arrowhead markers the page draws, in the order of their ids: a triangle as
-        long as five strokes are wide, its tip at the line's end, pointing away from the
-        line."""
+        long as five strokes are wide (`HEAD`), its base where the line stops, pointing away
+        from the line."""
         return "".join(
             self._marker(marker, which, [("fill", colour), ("fill-opacity", alpha)])
             for marker, (which, colour, alpha) in sorted(self._arrows.items())
         )
 
     def _marker(self, marker: str, which: str, paint: list[tuple[str, Any]]) -> str:
-        """The arrowhead marker `marker` at the end `which`, its triangle painted by `paint`."""
-        tip, shape = ("10", "M0,0L10,5L0,10z") if which == "end" else ("0", "M10,0L0,5L10,10z")
+        """The arrowhead marker `marker` at the end `which`, its triangle painted by `paint`.
+        It is placed by its base, at the point where the line stops."""
+        base, shape = ("0", "M0,0L10,5L0,10z") if which == "end" else ("10", "M10,0L0,5L10,10z")
         attributes = attribute_text(
             [
                 ("id", marker),
                 ("viewBox", "0 0 10 10"),
-                ("refX", tip),
+                ("refX", base),
                 ("refY", "5"),
-                ("markerWidth", "5"),
-                ("markerHeight", "5"),
+                ("markerWidth", number(HEAD)),
+                ("markerHeight", number(HEAD)),
                 ("orient", "auto"),
             ]
         )

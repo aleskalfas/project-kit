@@ -11,13 +11,21 @@ those build on (`libraries.newest_of_majors`).
 - **Its files.** Each file of the capability's format in the version, against its binding
   and its schema (`file_findings`). The core's data validation reads no file under
   `.pkit/`, so a version the capability ships meets its schemas here alone.
-- **Read by the engine.** The foundations' declarations and the version's own roles, the
-  scope of the versions it is read with (`tokens.read_scope`). Each of its components, the
-  file of each under `components/`, through the environment of a library checked alone,
-  which no piece or brand stands behind (`pipeline.LibraryEnv`), a switch or a `when` by a
-  size against the size axes of the foundations it is read with. A brand over its base,
+- **Read by the engine.** The foundations' declarations and the version's own roles and
+  its components' tokens, the scope of the versions it is read with (`tokens.read_scope`).
+  Each of its components, the file of each under `components/`, through the environment
+  of a library checked alone, which no piece or brand stands behind
+  (`pipeline.LibraryEnv`), a switch or a `when` by a size against the size axes of the
+  foundations it is read with, and each token it declares that its file reads nowhere
+  (`layout.unread_token_findings`, DEC-035 point 9). A component of a library that is no
+  brand that declares `draws` (`layout.held_drawing_finding`), a brand's drawing read as
+  one, a drawing of a top a brand holds (`pipeline.held_top_findings`), and a top's own
+  drawing of a layout that shows a field by no part named after it
+  (`layout.own_drawing_findings`, DEC-034 points 1, 4, 5 and 10). A brand's components are
+  read as a component library's are, and the brand over its base,
   its tokens and its fonts opened as the engine opens them, with the facts its version
-  states (`tokens.Brand.facts`). A notation against the
+  states (`tokens.Brand.facts`) and what it shows of the forms it draws
+  (`pipeline.brand_findings`, DEC-009 point 9). A notation against the
   foundations' colour families. Each picture file the version holds in `pictures/`, read
   as the engine reads it (`pictures.Folder.read`, DEC-025 point 9), whether or not anything
   names it, and each name an image of its components gives by `file`, found there as the
@@ -54,7 +62,7 @@ class FullRead:
     - `versions`: the versions it was read with, by name, itself included.
     - `scope`: the roles of those versions (`tokens.Scope`); None where it could not be
       read.
-    - `components`: each component of a component library, by its name, as the engine
+    - `components`: each component of a component library or a brand, by its name, as the engine
       reads it (`layout.Component`); `data`, the mapping its file holds; `unread`, each
       component whose file the engine cannot read.
     - `brand`: a brand, read over its base; None for another kind, or where it could not
@@ -153,11 +161,11 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
     brand = None
     shown = f"{library.folder.relative_to(held.root).as_posix()}/"
     reader = pictures.Folder(library.folder, shown, label, label)
-    if library.kind == "components":
-        env = pl.LibraryEnv(chosen, scope)
-        # A switch or a `when` by a size reads the foundations' size axes; nothing is placed,
-        # so no mode is read (DEC-021 point 7).
-        ctx = layout.Context(env, "", sizes=layout.Sizes(pl.size_axes(scope.axes)))
+    env = pl.LibraryEnv(chosen, scope)
+    # A switch or a `when` by a size reads the foundations' size axes; nothing is placed, so
+    # no mode is read (DEC-021 point 7).
+    ctx = layout.Context(env, "", sizes=layout.Sizes(pl.size_axes(scope.axes)))
+    if library.kind in ("components", "brand"):
         for path in held.files(name, version):
             if path.parent != library.folder / pl.COMPONENTS or path.suffix != ".yaml":
                 continue
@@ -168,19 +176,34 @@ def _engine(held: libraries.Held, name: str, version: libraries.Version) -> Full
                 continue
             components[path.stem] = component
             data[path.stem] = env.component(use)
-        found.extend(ctx.findings)
+            file = path.relative_to(held.root).as_posix()
+            found.extend(layout.unread_token_findings(component, file=file, library=label))
+            # Only a brand's component draws a layout, and none a top a brand holds (DEC-034
+            # points 1 and 4).
+            if component.draws is not None and library.kind != "brand":
+                found.append(layout.held_drawing_finding(use, file=file, library=label))
+            else:
+                found.extend(pl.held_top_findings(component, env, file=file, library=label))
+            if component.top:
+                found.extend(layout.own_drawing_findings(component, file=file, library=label))
         found.extend(_named_findings(reader, components, shown))
-    elif library.kind == "brand":
+    if library.kind == "brand":
         fonts = held.root / held.location / pl.FONTS
         try:
             brand = tokens.read_brand(
                 library.folder, scope, fonts=fonts, root=held.root, locked=folders
             )
             found.extend((*brand.findings, *brand.facts))
+            # The forms it draws, over its base, as its check alone judges them (DEC-009
+            # point 9), before the engine's findings, of which they may take one back.
+            found.extend(pl.brand_findings(brand, ctx, env, shown=shown))
         except tokens.TokenError as exc:
             found.extend(exc.findings)
-    elif library.kind == "notation":
-        notation = notations.read_notation(library.folder, scope.families, root=held.root)
+    found.extend(ctx.findings)
+    if library.kind == "notation":
+        notation = notations.read_notation(
+            library.folder, scope.families, shapes=scope.shapes, root=held.root
+        )
         found.extend(notation.findings)
     found.extend(_picture_findings(held, library, reader))
     return FullRead(

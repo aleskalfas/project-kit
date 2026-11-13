@@ -1,7 +1,7 @@
 """The HTML renderer: a scene drawn as one page file for each language and each key over the
 size axes, holding the modes a reader's signal names, each page real HTML text over SVG
-shapes (visual-communication DEC-020 points 1 to 4, DEC-023, DEC-031 points 1 to 4, DEC-005
-points 4, 5, 9 and 10).
+shapes (visual-communication DEC-020 points 1 to 4, DEC-023, DEC-031 points 1 to 4, DEC-026
+points 1 to 6, DEC-005 points 4, 5, 9 and 10).
 
 - **What it draws** is its declaration (`html_declaration.py`): every primitive the SVG
   renderer draws. It draws only what it declares, so the losses the capability reads from
@@ -43,14 +43,23 @@ points 4, 5, 9 and 10).
   font's metrics place nothing. Each span follows the one before it, at the browser's own
   widths. A line's own font size and every line height are 0, so only the strut holds the
   line up.
+- **A run's sign and ground** (DEC-036 points 3 and 4) lie in the run's span, so they keep
+  to it at the browser's widths (DEC-020 point 2). The ground is the span's background in
+  its role, with the room the engine gave it as padding where the ground starts and ends,
+  and its corners rounded there. Its height is the browser's, the span's font's ascent and
+  descent. The sign is an inline `svg` before the span's text, as wide as the run's font
+  size, raised as the engine placed it, with the gap as its margin, its outline in the
+  run's paint. A reader's tools pass over it. The strut rises as high as a sign does.
+  Under forced colours a sign takes the rules a shape's fill takes, and the browser forces
+  the ground as it forces any background.
 - **Lengths** on a page are shares of its width (`cqw`), so a page scales with no script.
   A share is written to more places than a length of px is, since 1/100 of it is over
   1/10 px on a wide page.
 - **The file** holds all it needs: each face once, subset to every character the file draws
   in it, each arrowhead once for its role, and every picture. It asks for nothing. Its
   head declares its encoding, its language and its viewport. Its pages follow each other
-  down the document with the gap the declaration names, and it sets no colour value
-  around them.
+  down the document, and in print down the sheets, with the gap the declaration names, and
+  it sets no colour value around them.
 - **Fixed pages** (DEC-031 points 1 to 4). Where the scene's root says its pages are fixed
   pages, as a deck's slides are, the file shows each inside a keyline, on a backdrop that
   fills the window around and between them, as the declaration's `pages.fixed` names them.
@@ -61,9 +70,19 @@ points 4, 5, 9 and 10).
   ground. The backdrop shows at the gutter on every side, which narrows with the window, and
   a page shrinks with the room the gutter leaves it. Under more contrast the keyline takes
   the text colour, and under forced colours the backdrop and each page take the reader's
-  background colour, and the keyline their text colour. Each rule is for a screen alone, so
-  a print holds none of them. Only the sheet gains these rules, and no element changes. A
-  file of other pages holds none of them.
+  background colour, and the keyline their text colour. These rules are for a screen alone.
+  In print the keyline is the page's border instead, in the same colours, and the page's
+  window is the sheet's area less the keyline on each side. Only the sheet gains these
+  rules, and no element changes. A file of other pages holds none of them.
+- **Print** (DEC-026 points 1 to 5). Every file asks the browser to keep each page whole on
+  one sheet, so a page that does not fit the rest of a sheet moves to the next, and one
+  taller than a sheet runs on. Each page lies on the browser's ground, and the file asks the
+  browser to print it in its own colours, never adjusted for paper. The document around
+  the pages takes no such rule, so the sheet around them prints as the reader's setting for
+  backgrounds says. The sheet's area is the window, so a page shrinks with it as with a
+  narrow window. The file holds no page rule, and no rule on where a page that runs on
+  breaks, so the reader picks the sheet and the browser the break. The screen's rules hold
+  nothing of print, and these nothing of the screen.
 - **The text of the file** is HTML and well-formed XML alike. Whatever a brand or a piece
   names is escaped, so it can neither end the style element nor start another element.
 
@@ -138,6 +157,18 @@ SHEET = "".join(
     )
 )
 
+#: CSS's value of `print-color-adjust` that prints colours as they are, never adjusted for
+#: paper. The prefixed property is the one an older Chrome or Safari reads.
+EXACT = "-webkit-print-color-adjust:exact;print-color-adjust:exact"
+
+#: The rules every page file holds for print, after the rules above (DEC-026 points 1 and 5):
+#: each page kept whole on one sheet where it fits, on the browser's ground, and printed in
+#: its own colours. The property that keeps them passes to what the page holds, and the
+#: document around the pages takes none of it.
+PRINT_SHEET = (
+    f"@media print{{[{MARKS['page']}]{{break-inside:avoid;background:{GROUND_COLOUR};{EXACT}}}}}"
+)
+
 
 def mixed(share: float) -> str:
     """`share` percent of the browser's text colour mixed into its ground colour, in sRGB."""
@@ -146,27 +177,37 @@ def mixed(share: float) -> str:
 
 def fixed_sheet(fixed: Mapping[str, Any]) -> str:
     """The rules a file of fixed pages holds, as `fixed`, the declaration's `pages.fixed`,
-    names them (DEC-031 points 1 to 4), each for a screen alone. The backdrop is the
+    names them (DEC-031 points 1 to 4, DEC-026 point 3). On screen the backdrop is the
     document's background, and the gutter the body's padding. Each page lies on the browser's
-    ground inside its keyline, an outline. A browser that cannot mix colours keeps the plain
-    colour written before each mix."""
+    ground inside its keyline, an outline. In print the keyline is the page's border, in the
+    same colours, and the page is at most the sheet's area less the keyline on each side. A
+    browser that cannot mix colours keeps the plain colour written before each mix."""
     page = f"[{MARKS['page']}]"
     keyline, backdrop, gutter = fixed["keyline"], fixed["backdrop"], fixed["gutter"]
+    width, colour = number(keyline["width"]), mixed(keyline["share"])
     plain = "".join(
         (
             f"html{{background:{GROUND_COLOUR};background:{mixed(backdrop['share'])}}}",
             f"body{{padding:min({number(gutter['width'])}px,{number(gutter['window-share'])}vw)}}",
             f"{page}{{background:{GROUND_COLOUR};"
-            f"outline:{number(keyline['width'])}px solid {TEXT_COLOUR};"
-            f"outline-color:{mixed(keyline['share'])}}}",
+            f"outline:{width}px solid {TEXT_COLOUR};"
+            f"outline-color:{colour}}}",
         )
     )
     more = f"{page}{{outline-color:{TEXT_COLOUR}}}"
     forced = f"html,{page}{{background:{GROUND_COLOUR}}}{page}{{outline-color:{TEXT_COLOUR}}}"
+    printed = (
+        f"{page}{{border:{width}px solid {TEXT_COLOUR};border-color:{colour};"
+        f"max-width:calc(100% - {number(2 * float(keyline['width']))}px)}}"
+    )
+    printed_more = f"{page}{{border-color:{TEXT_COLOUR}}}"
     return (
         f"@media screen{{{plain}}}"
         f"@media screen and (prefers-contrast:more){{{more}}}"
         f"@media screen and (forced-colors:active){{{forced}}}"
+        f"@media print{{{printed}}}"
+        f"@media print and (prefers-contrast:more){{{printed_more}}}"
+        f"@media print and (forced-colors:active){{{printed_more}}}"
     )
 
 
@@ -232,12 +273,15 @@ def _moved(drawn: str, x: float, y: float) -> str:
     return f'<g transform="translate({number(x)},{number(y)})">{drawn}</g>'
 
 
-def _strut(spans: Spans) -> int:
+def _strut(line: Mapping[str, Any], spans: Spans) -> int:
     """The height of a line's strut, in whole px of the page: the largest font size among
     its runs, rounded up. A run's line height is 0, so it rises half of what its ascent
-    passes its descent by, well within its font size."""
+    passes its descent by, well within its font size. Where a sign rises higher above the
+    baseline, the strut rises as high, so the sign moves no line (DEC-036 point 3)."""
     largest = max((float(run.get("font-size", 0)) for _, run in spans), default=0.0)
-    return max(math.ceil(largest), 1)
+    signs = [span["sign"] for span, _ in spans if "sign" in span]
+    rise = max((float(line["baseline"]) - float(sign["top"]) for sign in signs), default=0.0)
+    return max(math.ceil(largest), math.ceil(rise), 1)
 
 
 def _value(colour: Mapping[str, Any] | None) -> str:
@@ -281,9 +325,11 @@ class PageFile(Canvas):
         self.keys = dict(keys)
         self.colours_of = colours
         self.pictures_of = pictures
-        # The roles the file paints, and those a shape fills, by their names.
+        # The roles the file paints, those a shape fills, and those a run's sign fills, by
+        # their names.
         self._painted: set[str] = set()
         self._filled: set[str] = set()
+        self._signed: set[str] = set()
         self._parted = {key: self._parting(key) for key in self.keys}
 
     def _parting(self, key: str) -> dict[str, str]:
@@ -385,7 +431,8 @@ class PageFile(Canvas):
             '<meta charset="utf-8"/>\n'
             f'<meta name="viewport" content="{VIEWPORT}"/>\n'
             f"<title>{title}</title>\n"
-            f"<style>{self._font_faces()}{self._modes()}{SHEET}{fixed}{self._forced()}</style>\n"
+            f"<style>{self._font_faces()}{self._modes()}{SHEET}{PRINT_SHEET}{fixed}"
+            f"{self._forced()}</style>\n"
             "</head>\n"
             f"<body>{self._arrowheads()}{pages}</body>\n"
             "</html>\n"
@@ -436,13 +483,16 @@ class PageFile(Canvas):
     def _forced(self) -> str:
         """What the file gives its shapes under forced colours, as the declaration names it:
         each line, stroke and arrowhead the reader's text colour, and each fill opaque in every
-        key the reader's background colour, with an edge where it has no stroke of its own."""
+        key the reader's background colour, with an edge where it has no stroke of its own.
+        A run's sign takes what a shape's fill takes (DEC-036 point 4)."""
         forced = self.declaration["forced-colours"]
         layer, lines = f"[{MARKS['layer']}]", forced["lines"]
         rules = [f"{layer} [stroke]{{stroke:{lines}}}", f"marker path{{fill:{lines}}}"]
+        filled = [(layer, role) for role in sorted(self._filled)]
+        filled += [(f"[{MARKS['sign']}]", role) for role in sorted(self._signed)]
         opaque = [
-            f'{layer} [fill="var({name_of(role)})"]'
-            for role in sorted(self._filled)
+            f'{within} [fill="var({name_of(role)})"]'
+            for within, role in filled
             if all(_opaque(self.colours_of[key].get(role)) for key in self.keys)
         ]
         if opaque:
@@ -518,7 +568,7 @@ class PageFile(Canvas):
         """A line whose baseline lies `baseline` below its text's top. A browser starts a
         line too wide for its box at the box's start, whatever its alignment, so the box of
         such a line grows to hold it, and the anchor keeps the place the engine gave it."""
-        strut = _strut(spans)
+        strut = _strut(line, spans)
         width = float(element["width"])
         over = max(float(line["width"]) - width, 0.0)
         before = ANCHORED.get(element.get("text-anchor", "start"), 0.0)
@@ -531,15 +581,20 @@ class PageFile(Canvas):
             ]
         )
         opening = attribute_text([(MARKS["strut"], ""), ("style", f"height:{self._share(strut)}")])
-        drawn = "".join(self._span(element, span, run) for span, run in spans)
+        drawn = "".join(self._span(element, line, span, run) for span, run in spans)
         head = attribute_text([(MARKS["line"], ""), ("style", style)])
         return f"<div {head}><span {opening}></span>{drawn}</div>"
 
     def _span(
-        self, element: Mapping[str, Any], span: Mapping[str, Any], run: Mapping[str, Any]
+        self,
+        element: Mapping[str, Any],
+        line: Mapping[str, Any],
+        span: Mapping[str, Any],
+        run: Mapping[str, Any],
     ) -> str:
         """The part of a run on one line, each span written whole, in its run's font, size
-        and paint. It takes no place of its own."""
+        and paint, with the sign before its text and the ground behind it where it has them
+        (DEC-036 point 3). It takes no place of its own."""
         weight = run.get("font-weight")
         style = _style(
             [
@@ -547,10 +602,78 @@ class PageFile(Canvas):
                 ("font-size", self._share(run.get("font-size", 0))),
                 ("font-weight", weight if weight not in (None, NORMAL) else None),
                 ("color", self._colour(element, run)),
+                *self._ground(element, span, run),
             ]
         )
+        sign = self._sign(element, line, span, run) if "sign" in span else ""
         head = attribute_text([(MARKS["span"], ""), ("style", style)])
-        return f"<span {head}>{escape(span['text'], quote=False)}</span>"
+        return f"<span {head}>{sign}{escape(span['text'], quote=False)}</span>"
+
+    def _ground(
+        self, element: Mapping[str, Any], span: Mapping[str, Any], run: Mapping[str, Any]
+    ) -> list[tuple[str, Any]]:
+        """The ground behind a span, as its background in the run's ground's role, with the
+        room the engine gave the ground before the span where it starts there, and after it
+        where it ends there, and its corners rounded at those ends alone. Nothing where the
+        span has no ground. Its height is the browser's, its font's ascent and descent."""
+        ground = span.get("ground")
+        if ground is None:
+            return []
+        role = self._role(element["id"], "ground", run.get("ground"))
+        rounded = self._share(ground["rx"]) if float(ground.get("rx", 0)) else None
+        before = rounded if "start" in ground else None
+        after = rounded if "end" in ground else None
+        corners = [before or "0", after or "0", after or "0", before or "0"]
+        return [
+            ("background", f"var({name_of(role)})" if role is not None else None),
+            ("padding-left", self._share(ground["start"]) if "start" in ground else None),
+            ("padding-right", self._share(ground["end"]) if "end" in ground else None),
+            ("border-radius", " ".join(corners) if before or after else None),
+        ]
+
+    def _sign(
+        self,
+        element: Mapping[str, Any],
+        line: Mapping[str, Any],
+        span: Mapping[str, Any],
+        run: Mapping[str, Any],
+    ) -> str:
+        """A run's sign before its span's text: an inline `svg` of its square, as wide as
+        the run's font size, its foot raised above the baseline as the engine placed it, with
+        the gap after it, and its outline filled by its rule in the run's paint. It is hidden
+        from a reader's tools, since a sign takes no place in the reading order (DEC-036
+        points 3 and 5)."""
+        sign = span["sign"]
+        size = float(sign["size"])
+        rise = float(line["baseline"]) - float(sign["top"]) - size
+        role = self._role(element["id"], "fill", run.get("fill"))
+        if role is not None:
+            self._signed.add(role)
+        rule = sign.get("fill-rule")
+        path = attribute_text(
+            [
+                ("d", sign["d"]),
+                ("fill-rule", rule if rule == "evenodd" else None),
+                ("fill", f"var({name_of(role)})" if role is not None else "none"),
+            ]
+        )
+        style = _style(
+            [
+                ("width", self._share(size)),
+                ("height", self._share(size)),
+                ("vertical-align", self._share(rise)),
+                ("margin-right", self._share(sign["gap"])),
+            ]
+        )
+        head = attribute_text(
+            [
+                (MARKS["sign"], ""),
+                ("viewBox", f"0 0 {number(size)} {number(size)}"),
+                ("aria-hidden", "true"),
+                ("style", style),
+            ]
+        )
+        return f"<svg {head}><path {path}/></svg>"
 
     def _colour(self, element: Mapping[str, Any], run: Mapping[str, Any]) -> str:
         """The CSS colour of a run: its fill's custom property. A run with no paint is

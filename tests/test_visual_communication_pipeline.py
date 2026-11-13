@@ -553,10 +553,11 @@ PHONE_WIDE = "Supercalifragilisticexpialidocious"
 EVERY_WIDE = PHONE_WIDE * 3
 
 
-def add_device(root: Path, phone: Mapping[str, Any] = NARROW) -> None:
-    """The size axis `device` on the foundations the project holds, which the test brand
-    varies: its mode `phone` gives the tokens of `phone`, from a token file of its own."""
-    roles = root / "visual/libraries/foundations/1.0.0/roles.yaml"
+def add_device(root: Path, phone: Mapping[str, Any] = NARROW, foundations: str = "1.0.0") -> None:
+    """The size axis `device` on the foundations the project holds at `foundations`, which
+    the test brand varies: its mode `phone` gives the tokens of `phone`, from a token file
+    of its own."""
+    roles = root / f"visual/libraries/foundations/{foundations}/roles.yaml"
     text = roles.read_text(encoding="utf-8")
     roles.write_text(text.replace("axes:\n", f"axes:\n  {DEVICE}\n", 1), encoding="utf-8")
     brand = root / "visual/libraries/test-brand/1.0.0"
@@ -941,6 +942,51 @@ def test_a_node_takes_its_concept_s_family_else_its_list_s_and_its_state_changes
     }
 
 
+def test_a_node_shows_the_sign_of_the_concept_whose_colour_it_takes(tmp_path: Path) -> None:
+    """A node's sign part draws the sign of the concept whose family it takes: the person's
+    icon, which the test notation holds, and the store's shape, which the foundations
+    declare, beside the family its state gives (DEC-036 points 1 and 2). The API takes the
+    pattern's family, and the queue its state's, so neither draws one. Each node is 226 px
+    wide, so its sign's frame lies 202 px from its left, 16 px a side."""
+    root = system_project(tmp_path)
+    folder = root / "visual" / "pieces" / "system"
+    sign = {"fill": ":colour.line"}
+    corner = {"x": "=:width - 3 * @space.2", "y": "=@space.2", "width": "=2 * @space.2"}
+    parts = {**NODE["parts"], "sign": {"sign": sign, **corner, "height": "=2 * @space.2"}}
+    write(folder / "components" / "node.yaml", yaml_text({**NODE, "parts": parts}))
+    square = {"d": "M 3 3 H 21 V 21 H 3 Z", "fill-rule": "nonzero", "square": 24}
+    roles = root / "visual" / "libraries" / "foundations" / "1.0.0" / "roles.yaml"
+    write(roles, yaml_text({**reading.read_yaml(roles), "shapes": {"square": square}}))
+    notation = root / "visual" / "libraries" / "test-notation" / "1.0.0" / "notation.yaml"
+    concepts = reading.read_yaml(notation)["concepts"]
+    concepts["store"] = {"colour": "green", "shape": "square"}
+    write(notation, yaml_text(bound("notation", concepts=concepts)))
+    piece = pl.read_piece(root, "visual", "system")
+    project = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+
+    [(_, result)] = project.scenes(facts=project.piece.stand_ins)
+
+    assert result.findings == []
+    drawn = {}
+    for node in NODES:
+        found = result.scene.find(f"figure/body/items[{node['id']}]/sign")
+        if found is not None:
+            assert found.type == "path"
+            drawn[node["id"]] = (
+                found.properties["d"].split(" C ")[0],
+                found.properties["fill"],
+                found.sources["d"],
+            )
+    assert drawn == {
+        "user": ("M 210 9.33", "family.purple.line", "content:body.items[user].concept"),
+        "store": (
+            "M 204 10 L 216 10 L 216 22 L 204 22 Z",
+            "family.red.line",
+            "content:body.items[store].concept",
+        ),
+    }
+
+
 # --- the findings record's key and the YAML a command writes ------------------------------------
 
 
@@ -1016,7 +1062,9 @@ def tags_project(root: Path) -> Any:
 
 def test_a_project_reads_the_own_roles_of_each_library_it_locks(tmp_path: Path) -> None:
     project = tags_project(parts_project(tmp_path))
-    assert set(project.scope.libraries) == {"test-parts"}
+    # The foundations lie among them for their components' tokens (DEC-035 point 1).
+    assert set(project.scope.libraries) == {"foundations", "test-parts"}
+    assert project.scope.libraries["foundations"].roles == {}
     assert project.foundations is project.scope.foundations
     assert project.brand.scope is project.scope
     assert [finding.code for finding in project.scope.findings] == ["role-brand-only"]
@@ -1029,10 +1077,13 @@ def test_a_part_reading_a_librarys_roles_draws_them_at_their_defaults(tmp_path: 
     box = result.scene.find("figure/body/box")
     label = result.scene.find("figure/body/label")
     assert box is not None and label is not None
-    assert box.properties["fill"] == "test-parts.paper"
+    assert box.properties["fill"] == "component.test-parts.tag.fill"
     [[run]] = label.properties["paragraphs"]  # a text's paint lies in its runs
     assert run["fill"] == "test-parts.note"
     assert project.env.role("test-parts.gap") == project.env.role("space.2")
+    # The tag's own token takes its default, the library's paper (DEC-035 point 4).
+    token = project.env.role("component.test-parts.tag.fill")
+    assert token == project.env.role("test-parts.paper") == project.env.role("background")
 
 
 def test_the_values_document_holds_each_role_of_a_locked_library_at_its_default(
@@ -1214,12 +1265,14 @@ def lab_lock(blocks: str | None, patterns: str) -> dict[str, str]:
     return lock if blocks is None else {**lock, BLOCKS: blocks}
 
 
-def judged(root: Path, blocks: str, patterns: str, fit: Any = None) -> list[Any]:
-    """What the fit of the piece finds in the combination of its lock's foundations and
-    brand with the versions given."""
+def judged(
+    root: Path, blocks: str, patterns: str, fit: Any = None, foundations: str = "1.0.0"
+) -> list[Any]:
+    """What the fit of the piece finds in the combination of the test brand and the
+    versions given, the foundations at 1.0.0 unless `foundations` says otherwise."""
     held = pl.Held(root, "visual")
     fit = fit or pl.fit(piece_of(root), held)
-    versions = lab_lock(blocks, patterns)
+    versions = {**lab_lock(blocks, patterns), "foundations": foundations}
     return fit({name: held.library(name, V(text)) for name, text in versions.items()})
 
 
@@ -1432,6 +1485,165 @@ def test_the_lock_search_reads_the_foundations_declarations_once_for_each_versio
             judged(root, blocks, patterns, fit)
 
     assert read == [root / "visual/libraries/foundations/1.0.0/roles.yaml"]
+
+
+#: The axis `device` as the newer foundations the projector tests hold declare it: the two
+#: modes `DEVICE` gives, and the projector beside.
+PROJECTOR = "device: {kind: size, modes: [desktop, phone, projector], default: desktop}"
+
+
+def add_newer_foundations(root: Path) -> None:
+    """The foundations 1.1.0 beside the 1.0.0 the project holds: a copy of it, listed
+    unreleased."""
+    folder = root / "visual/libraries/foundations"
+    shutil.copytree(
+        folder / "1.0.0", folder / "1.1.0", ignore=shutil.ignore_patterns("__pycache__")
+    )
+    path = folder / "1.1.0" / "library.yaml"
+    text = path.read_text(encoding="utf-8")
+    path.write_text(text.replace("version: 1.0.0", "version: 1.1.0", 1), encoding="utf-8")
+    listed = reading.read_yaml(root / "visual/libraries/libraries.yaml")["libraries"]
+    listed["foundations"]["versions"]["1.1.0"] = {"released": False}
+    write_list(root, listed)
+
+
+def add_projector(root: Path) -> None:
+    """The foundations 1.1.0 beside the 1.0.0 the project holds, once `add_device` gave it
+    the axis `device`: a copy of it whose axis adds the mode `projector`, listed unreleased.
+    The test brand gives the projector the desktop's tokens."""
+    add_newer_foundations(root)
+    path = root / "visual/libraries/foundations/1.1.0/roles.yaml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(DEVICE, PROJECTOR, 1), encoding="utf-8"
+    )
+    resolver = root / "visual/libraries/test-brand/1.0.0/test-brand.resolver.json"
+    data = json.loads(resolver.read_text(encoding="utf-8"))
+    data["modifiers"]["device"]["contexts"]["projector"] = []
+    resolver.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def net_on_devices(tmp_path: Path, devices: list[str], foundations: str) -> Path:
+    """The net under a lock of the foundations at `foundations`, drawn on `devices`, in a
+    project that holds the foundations 1.0.0, which declares no size axis, and the blocks
+    1.0.0 and 1.1.0, whose frame at 1.1.0 draws the net's cards."""
+    lock = {**lab_lock("1.0.0", "1.0.0"), "foundations": foundations}
+    blocks = {"1.0.0": False, "1.1.0": True}
+    return lab_project(
+        tmp_path, NET, lock, blocks, {"1.0.0": {"frame": True}}, modes={"device": devices}
+    )
+
+
+def projector_project(tmp_path: Path, devices: list[str], foundations: str = "1.0.0") -> Path:
+    """The net under a lock of the foundations at `foundations`, drawn on `devices`, in a
+    project that holds the foundations 1.0.0 and 1.1.0, only the latter declaring the mode
+    `projector`, and the blocks 1.0.0 and 1.1.0, whose frame at 1.1.0 draws the net's cards
+    on a phone alone."""
+    root = net_on_devices(tmp_path, devices, foundations)
+    add_device(root)
+    add_projector(root)
+    frame_on_a_phone(root, "1.1.0")
+    return root
+
+
+def device_project(
+    tmp_path: Path, devices: list[str], foundations: str = "1.0.0", on_a_phone: bool = True
+) -> Path:
+    """The net under a lock of the foundations at `foundations`, drawn on `devices`, in a
+    project that holds the foundations 1.0.0 and 1.1.0, only the latter declaring the axis
+    `device`, and the blocks 1.0.0 and 1.1.0, whose frame at 1.1.0 draws the net's cards on
+    a phone alone where `on_a_phone`, and on every device otherwise."""
+    root = net_on_devices(tmp_path, devices, foundations)
+    add_newer_foundations(root)
+    add_device(root, foundations="1.1.0")
+    if on_a_phone:
+        frame_on_a_phone(root, "1.1.0")
+    return root
+
+
+def test_a_mode_only_the_newer_foundations_hold_loses_nothing_under_the_older(
+    tmp_path: Path,
+) -> None:
+    """Under the lock, the piece is placed at each key it names that the lock's foundations
+    hold, and at no other: only there is what the newer versions place compared."""
+    alone = projector_project(tmp_path / "alone", ["projector"])
+    beside = projector_project(tmp_path / "beside", ["phone", "projector"])
+
+    assert judged(alone, "1.1.0", "1.0.0", foundations="1.1.0") == []
+    assert judged(beside, "1.0.0", "1.0.0", foundations="1.1.0") == []
+    assert [(misfit.rule, misfit.said) for misfit in judged(beside, "1.1.0", "1.0.0")] == [
+        ("end", "the end `from` of the tie `body.links[ab]` would not be found"),
+        ("end", "the end `to` of the tie `body.links[ab]` would not be found"),
+    ]
+
+
+def test_foundations_that_lack_a_mode_the_lock_places_the_piece_in_lose_its_ends_there(
+    tmp_path: Path,
+) -> None:
+    root = projector_project(tmp_path, ["projector"], foundations="1.1.0")
+
+    found = judged(root, "1.0.0", "1.0.0")
+
+    assert [(misfit.rule, misfit.said) for misfit in found] == [
+        ("end", "the end `from` of the tie `body.links[ab]` would not be found"),
+        ("end", "the end `to` of the tie `body.links[ab]` would not be found"),
+    ]
+    assert all(misfit.implicates == {"foundations"} for misfit in found)
+
+
+#: What the fit finds under the blocks 1.1.0 where they lose the net's ends at each key
+#: compared.
+ENDS_LOST = [
+    ("end", "the end `from` of the tie `body.links[ab]` would not be found"),
+    ("end", "the end `to` of the tie `body.links[ab]` would not be found"),
+]
+
+
+@pytest.mark.parametrize("devices", [["phone"], ["desktop", "phone"]])
+def test_an_axis_only_the_newer_foundations_hold_loses_nothing_under_the_older(
+    tmp_path: Path, devices: list[str]
+) -> None:
+    """Under the lock, whose foundations declare no `device`, the piece is placed at
+    `default`, which the newer foundations spell as the desktop (DEC-004 point 3). So the
+    blocks 1.1.0, which lose the net's ends on a phone, lose nothing at a key the lock
+    places the piece at."""
+    root = device_project(tmp_path, devices)
+
+    assert judged(root, "1.0.0", "1.0.0", foundations="1.1.0") == []
+    assert judged(root, "1.1.0", "1.0.0", foundations="1.1.0") == []
+
+
+def test_a_loss_on_an_axis_both_foundations_hold_is_still_found(tmp_path: Path) -> None:
+    """The foundations 1.0.0 and 1.1.0 both declare `device`, so the piece the lock places
+    on a phone is compared there under the newer foundations, and the blocks 1.1.0 lose
+    the net's ends there."""
+    root = projector_project(tmp_path, ["phone"])
+
+    assert judged(root, "1.0.0", "1.0.0", foundations="1.1.0") == []
+    found = judged(root, "1.1.0", "1.0.0", foundations="1.1.0")
+    assert [(misfit.rule, misfit.said) for misfit in found] == ENDS_LOST
+
+
+def test_under_foundations_that_lack_an_axis_a_loss_at_its_default_is_still_found(
+    tmp_path: Path,
+) -> None:
+    """The key the lock places the piece at stays the same once the newer foundations add
+    `device`, as its default: there the piece is compared."""
+    root = device_project(tmp_path, ["desktop", "phone"], on_a_phone=False)
+
+    found = judged(root, "1.1.0", "1.0.0", foundations="1.1.0")
+
+    assert [(misfit.rule, misfit.said) for misfit in found] == ENDS_LOST
+
+
+def test_foundations_that_lack_an_axis_the_lock_places_the_piece_on_lose_its_ends_there(
+    tmp_path: Path,
+) -> None:
+    root = device_project(tmp_path, ["phone"], foundations="1.1.0")
+
+    found = judged(root, "1.0.0", "1.0.0")
+
+    assert [(misfit.rule, misfit.said) for misfit in found] == ENDS_LOST
+    assert all("foundations" in misfit.implicates for misfit in found)
 
 
 # --- a side of a before-and-after (DEC-003 point 8, DEC-013 point 5) ----------------------------

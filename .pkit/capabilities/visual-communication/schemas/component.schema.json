@@ -2,12 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "component.schema.json",
   "title": "A component — visual-communication capability",
-  "description": "Formal shape of a component of a library (DEC-001 points 4 and 6, DEC-005 points 1 to 3): its status and what it is about, the fields of content it takes, its options, states, colour, values, the size it prefers, its parts, the fields of each list it repeats over, the parts it exposes, whether it takes ends, and the layouts of a top component, which may be its pages' forms. `fields` is a fixed subset of JSON Schema 2020-12. Each part is exactly one kind, with the keys that kind takes; a value is a formula or a switch on an option of words, or on a size axis a piece can name, by its marked name. What crosses keys, such as a formula's references and dimensions, a switch naming every word of its option, or a field a part names, or a list's fields naming a list a part of its own repeats over, the engine checks when it reads the component. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of a component of a library (DEC-001 points 4 and 6, DEC-005 points 1 to 3): its status and what it is about, the fields of content it takes, its options, states, colour, values, the size it prefers, its parts, the fields of each list it repeats over, the parts it exposes, whether it takes ends, its component tokens, the layouts of a top component, which may be its pages' forms, the physical size a top's pages print at, and, on a brand's component, the top and the layout it draws. `fields` is a fixed subset of JSON Schema 2020-12. Each part is exactly one kind, with the keys that kind takes; a value is a formula or a switch on an option of words, or on a size axis a piece can name, by its marked name, or, in a drawing of a layout, on whether its instance is a page, by `:as`. What crosses keys, such as a formula's references and dimensions, a switch naming every word of its option, or a field a part names, or a list's fields naming a list a part of its own repeats over, the engine checks when it reads the component. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
     "schema_version",
-    "status",
     "about"
   ],
   "additionalProperties": false,
@@ -22,7 +21,7 @@
       "const": 1
     },
     "status": {
-      "description": "What its library promises of it (DEC-003 point 7).",
+      "description": "What its library promises of it (DEC-003 point 7). Every component carries one, but a drawing, which carries none (DEC-034 point 8).",
       "enum": [
         "experimental",
         "stable",
@@ -132,6 +131,55 @@
       "description": "Whether it takes ends (DEC-011 point 1): drawn as a tie, its pattern gives it two, which its formulas read as `{start}` and `{end}`, and a line with `connect` joins.",
       "const": true
     },
+    "tokens": {
+      "description": "Its component tokens, by name (DEC-004 point 7, DEC-035 points 1, 2 and 4): each a role at `component.<library>.<component>.<name>` that a brand naming the library may give a value, with its type, any a role takes but `picture`, and its default, always given, an alias to a role, which it takes wherever no brand gives it a value. Only the component reads them, by their full paths; a piece's own component declares none.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "type",
+          "default"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "color",
+              "dimension",
+              "fontFamily",
+              "fontWeight",
+              "number",
+              "typography"
+            ]
+          },
+          "default": {
+            "$ref": "defs.schema.json#/$defs/alias"
+          }
+        }
+      }
+    },
+    "physical-size": {
+      "description": "The trim size a top's pages print at, in millimetres (DEC-034 point 3): on a page alone, or a top whose layouts are its pages' forms, and no other component. No formula reads it. The top asks for its height through it, so its `preferred` says no height: the engine sets the height from the width it asks for and the size's proportion.",
+      "type": "object",
+      "required": [
+        "width",
+        "height"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
     "layouts": {
       "description": "A top component's layouts, by name: one, whose slots name the top's fields; or, where the layouts are the forms its pages take, one or more, each drawing a page with its own parts.",
       "type": "object",
@@ -154,7 +202,80 @@
           }
         }
       ]
+    },
+    "draws": {
+      "description": "On a brand's component, the top it draws, by `<library>/<component>`, and the one of its layouts it draws, which makes it a drawing (DEC-009 point 2, DEC-034 point 1). A drawing declares nothing the content gives: it takes the top's fields, the layout's slots and lists, the top's options, states and colour, so its file holds none of `fields`, `options`, `states`, `colour`, `lists`, `layouts` and `ends`. Nothing names a drawing, so it carries no `status` (DEC-034 point 8).",
+      "type": "object",
+      "required": [
+        "top",
+        "layout"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "top": {
+          "$ref": "defs.schema.json#/$defs/use"
+        },
+        "layout": {
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      }
     }
+  },
+  "if": {
+    "required": [
+      "draws"
+    ]
+  },
+  "then": {
+    "not": {
+      "anyOf": [
+        {
+          "required": [
+            "fields"
+          ]
+        },
+        {
+          "required": [
+            "options"
+          ]
+        },
+        {
+          "required": [
+            "states"
+          ]
+        },
+        {
+          "required": [
+            "colour"
+          ]
+        },
+        {
+          "required": [
+            "lists"
+          ]
+        },
+        {
+          "required": [
+            "layouts"
+          ]
+        },
+        {
+          "required": [
+            "ends"
+          ]
+        },
+        {
+          "required": [
+            "status"
+          ]
+        }
+      ]
+    }
+  },
+  "else": {
+    "required": [
+      "status"
+    ]
   },
   "$defs": {
     "field-schema": {
@@ -300,7 +421,7 @@
       "pattern": "^="
     },
     "chooser": {
-      "description": "What a switch chooses by: an option of words, a field of runs where a text's style or fill switches, or a size axis a piece can name by its marked name, `:<axis>`, which the switch names the default mode of (DEC-021 point 3).",
+      "description": "What a switch chooses by: an option of words, a field of runs where a text's style, fill, sign or ground switches, or a size axis a piece can name by its marked name, `:<axis>`, which the switch names the default mode of (DEC-021 point 3); or, in a drawing of a layout, `:as`, whose values are `page`, the default, and `part` (DEC-034 point 7).",
       "anyOf": [
         {
           "$ref": "defs.schema.json#/$defs/name"
@@ -311,7 +432,7 @@
       ]
     },
     "size-name": {
-      "description": "A size axis by its marked name, `:<axis>`, such as `:device` (DEC-021 point 3).",
+      "description": "A marked name: a size axis, `:<axis>`, such as `:device` (DEC-021 point 3), or `:as`, which a drawing of a layout alone reads (DEC-034 point 7).",
       "type": "string",
       "pattern": "^:[a-z][a-z0-9]*(-[a-z0-9]+)*$"
     },
@@ -362,7 +483,7 @@
       ]
     },
     "paint-switch": {
-      "description": "A switch of paints: `by` names an option of words, or, for a text's `fill`, the field of runs the text shows, whose paint each run then takes by its style (DEC-012 point 2); a word's paint may be null.",
+      "description": "A switch of paints: `by` names an option of words, or, for a text's `fill` or `ground`, the field of runs the text shows, whose paint each run then takes by its style (DEC-012 point 2, DEC-036 point 3); a word's paint may be null.",
       "type": "object",
       "required": [
         "by"
@@ -386,6 +507,37 @@
             "type": "null"
           }
         ]
+      }
+    },
+    "yes-or-no": {
+      "description": "`true` or `false`; or a switch of them on an option of words, or, for a text's `sign`, on the field of runs the text shows, whose each run then takes the one its style chooses (DEC-036 point 3).",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/yes-or-no-switch"
+        }
+      ]
+    },
+    "yes-or-no-switch": {
+      "description": "A switch of `true` and `false` on an option of words, or on the field of runs a text shows.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words, or the field of runs, the value switches on, or the size axis, by its marked name.",
+          "$ref": "#/$defs/chooser"
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/yes-or-no"
       }
     },
     "role-value": {
@@ -661,7 +813,7 @@
       }
     },
     "when": {
-      "description": "When a part is drawn: while a field of the content is filled, while an option of words takes one of the words named, or by a size: a switch on a size axis whose each branch says `true`, `false`, or one of the other two (DEC-021 point 3).",
+      "description": "When a part is drawn: while a field of the content is filled, while an option of words takes one of the words named, or by a marked name: a switch on a size axis, or, in a drawing of a layout, on `:as`, whose each branch says `true`, `false`, or one of the other two (DEC-021 point 3, DEC-034 point 7).",
       "anyOf": [
         {
           "$ref": "defs.schema.json#/$defs/name"
@@ -695,7 +847,7 @@
       ]
     },
     "when-switch": {
-      "description": "A `when` by a size: `by` names a size axis by its marked name, and each other key a mode of it, the axis's default among them, which takes each mode it leaves out. Each branch says yes, no, a field, or an option's words, never a switch.",
+      "description": "A `when` by a marked name: `by` names a size axis by its marked name, and each other key a mode of it, the axis's default among them, which takes each mode it leaves out; or `by` names `:as`, and each other key `page`, the default, or `part`. Each branch says yes, no, a field, or an option's words, never a switch.",
       "type": "object",
       "required": [
         "by"
@@ -706,7 +858,7 @@
       },
       "properties": {
         "by": {
-          "description": "The size axis the part is drawn by.",
+          "description": "The size axis the part is drawn by, or `:as`.",
           "$ref": "#/$defs/size-name"
         }
       },
@@ -1059,7 +1211,7 @@
       }
     },
     "text": {
-      "description": "A text's properties: the field or the fact of its export it shows, one of the two, its typography role, and SVG's names. Where the field it shows is a field of runs, its `style` and `fill` may switch on the field's run styles, and each run takes the role and paint its style chooses.",
+      "description": "A text's properties: the field or the fact of its export it shows, one of the two, its typography role, and SVG's names. Where the field it shows is a field of runs, its `style` and `fill` may switch on the field's run styles, and each run takes the role and paint its style chooses. Such a text alone may take `sign` and `ground`, which may switch on the run styles too (DEC-036 point 3).",
       "type": "object",
       "required": [
         "style"
@@ -1099,6 +1251,14 @@
         },
         "text-anchor": {
           "$ref": "#/$defs/text-anchor-value"
+        },
+        "sign": {
+          "description": "Whether a run that names a concept with a sign draws it before its first character that is no space or line feed, in the run's paint (DEC-036 point 3). Only a text that shows a field of runs takes it.",
+          "$ref": "#/$defs/yes-or-no"
+        },
+        "ground": {
+          "description": "The paint drawn behind a run, its sign included, or none where a switch's branch is null (DEC-036 point 3). Only a text that shows a field of runs takes it.",
+          "$ref": "#/$defs/paint"
         }
       }
     },
@@ -1114,6 +1274,10 @@
           "$ref": "#/$defs/paint"
         },
         "stroke-width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "rx": {
+          "description": "The radius a connector's turns are drawn round at; with none, or 0, they are sharp. Only a line that connects its component's ends takes it.",
           "$ref": "#/$defs/number-value"
         },
         "marker-start": {
@@ -1168,6 +1332,22 @@
           ]
         }
       ]
+    },
+    "sign": {
+      "description": "A sign's properties, by SVG's names: it is painted as a box is (DEC-036 point 2).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fill": {
+          "$ref": "#/$defs/paint"
+        },
+        "stroke": {
+          "$ref": "#/$defs/paint"
+        },
+        "stroke-width": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
     },
     "operator": {
       "description": "How a list's items are arranged along a row or a column, by CSS flexible layout's names.",
@@ -1315,6 +1495,16 @@
             "required": [
               "connect"
             ]
+          },
+          "properties": {
+            "line": {
+              "description": "A line of its own ends turns nowhere, so it takes no radius of a connector's turns.",
+              "not": {
+                "required": [
+                  "rx"
+                ]
+              }
+            }
           }
         },
         {
@@ -1359,6 +1549,36 @@
       "properties": {
         "image": {
           "$ref": "#/$defs/image"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "x": {
+          "$ref": "#/$defs/number-value"
+        },
+        "y": {
+          "$ref": "#/$defs/number-value"
+        },
+        "width": {
+          "$ref": "#/$defs/number-value"
+        },
+        "height": {
+          "$ref": "#/$defs/number-value"
+        }
+      }
+    },
+    "sign-part": {
+      "description": "A sign: the sign of the concept whose colour family its instance takes, fitted into its frame by its square, and not drawn, at zero size, where there is none (DEC-036 point 2).",
+      "type": "object",
+      "required": [
+        "sign",
+        "width",
+        "height"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sign": {
+          "$ref": "#/$defs/sign"
         },
         "when": {
           "$ref": "#/$defs/when"
@@ -1505,7 +1725,7 @@
       }
     },
     "part": {
-      "description": "A part: exactly one of a primitive (`box ellipse text line image`) or a placing (`use slot repeat`), with its place, its size and `when`.",
+      "description": "A part: exactly one of a primitive (`box ellipse text line image sign`) or a placing (`use slot repeat`), with its place, its size and `when`.",
       "type": "object",
       "oneOf": [
         {
@@ -1531,6 +1751,11 @@
         {
           "required": [
             "image"
+          ]
+        },
+        {
+          "required": [
+            "sign"
           ]
         },
         {
@@ -1598,6 +1823,16 @@
           },
           "then": {
             "$ref": "#/$defs/image-part"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "sign"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/sign-part"
           }
         },
         {

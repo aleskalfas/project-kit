@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: core
+# pkit-digest: sha256:fae47075c22a5eacadb205dc18d35bb3a1c109f5edc20ced790ef7d6228eb48d
+# pkit-tool-access: tools: ["Read", "Glob", "Grep", "Bash", "Write"]
 name: convention-compliance-reviewer
 description: Review diffs against universal project-kit conventions — 
   conventional-commits format, the no-shared-files invariant, branch-naming, 

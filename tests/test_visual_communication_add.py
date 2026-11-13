@@ -45,6 +45,7 @@ from tests.visual_communication_project import (
     CAPABILITY,
     CONFIG,
     FOUNDATIONS,
+    RECORDED_DEFAULT,
     RELEASED_FOUNDATIONS,
     TEST_BRAND,
     TEST_PARTS,
@@ -77,10 +78,7 @@ script, libraries, reading, copies, shipped, before_after, exports, pl, svg, css
 
 LIST = "visual/libraries/libraries.yaml"
 COPY = "visual/libraries/foundations/1.0.0"
-LOCATION = (
-    f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
-    f"to move the work, move the folder and change the `location:` line there"
-)
+LOCATION = RECORDED_DEFAULT
 #: The foundations, as the list names them once the command copied them from a capability
 #: that releases none.
 LISTED = {"source": {"kind": "shipped"}, "versions": {"1.0.0": {"released": False}}}
@@ -222,7 +220,10 @@ def test_an_empty_list_takes_the_library_in_its_flow(
 
 
 @pytest.mark.parametrize("held", ["changed", "empty"])
-def test_a_folder_the_list_does_not_name_is_never_overwritten(tmp_path: Path, held: str) -> None:
+def test_a_folder_the_list_does_not_name_is_never_overwritten(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, held: str
+) -> None:
+    capability(tmp_path, monkeypatch)
     root = project(tmp_path)
     if held == "changed":
         folder = copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
@@ -270,7 +271,10 @@ def test_a_library_the_list_names_from_another_source_is_refused(tmp_path: Path)
     assert tree(root) == before
 
 
-def test_a_list_that_cannot_take_the_version_as_text_is_refused(tmp_path: Path) -> None:
+def test_a_list_that_cannot_take_the_version_as_text_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    capability(tmp_path, monkeypatch)
     root = project(tmp_path)
     write(
         root / LIST,
@@ -348,6 +352,7 @@ def test_a_library_the_capability_does_not_ship_is_refused_naming_the_ones_it_sh
 def test_a_write_that_fails_leaves_no_copy_no_list_and_no_location(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, file: str, failed: str
 ) -> None:
+    capability(tmp_path, monkeypatch)
     root = project(tmp_path)
     with monkeypatch.context() as patch:
         failing(patch, write={file})

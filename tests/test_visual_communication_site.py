@@ -29,7 +29,6 @@ from tests.in_process import load, run_main
 from tests.visual_communication_project import (
     CAPABILITY,
     FIXTURES,
-    FOUNDATIONS,
     TEST_BRAND,
     bound,
     copy_library,
@@ -37,6 +36,7 @@ from tests.visual_communication_project import (
     importable,
     locked_at,
     project,
+    version_folder,
     write,
     write_list,
     write_piece,
@@ -111,9 +111,9 @@ SHARED = {"header": {"use": "lab/band"}, "footer": {"use": "lab/band"}}
 
 def test_the_site_holds_its_pages_a_header_a_footer_and_the_layout_standard() -> None:
     """Its field `pages` holds its pages, and `header` and `footer` are optional. Its one
-    layout, `standard`, has one slot, `main`. It asks for its width alone (DEC-022 points 1
-    to 3). The foundations being built pass the check alone with it, which the shipped
-    libraries' tests read."""
+    layout, `standard`, has one slot, `main` (`files.md`, *The foundations*). It asks for
+    its width alone (DEC-022 points 1 and 3). The foundations being built pass the check
+    alone with it, which the shipped libraries' tests read."""
     fields = SITE["fields"]
     assert fields["required"] == ["pages"]
     assert fields["properties"]["pages"]["x-pkit-pages"] is True
@@ -128,7 +128,7 @@ def test_the_site_holds_its_pages_a_header_a_footer_and_the_layout_standard() ->
 def test_a_page_lays_its_header_main_part_and_footer_one_under_another_each_its_whole_width() -> (
     None
 ):
-    """On the page's background, each part as tall as it asks (DEC-022 point 2)."""
+    """On the page's background, each part as tall as it asks (`files.md`, *The foundations*)."""
     result = drawn_site({**SHARED, "pages": [page("home", "lab/tall")]})
     assert codes(result) == []
     assert frame(result, "site/pages[home]") == (0, 0, WIDTH, 32 + 320 + 32)
@@ -334,7 +334,7 @@ def test_the_header_and_footer_lie_on_every_page_in_a_layout_from_edge_to_edge(
     location: Path,
 ) -> None:
     """The header's card sets its own inset, so its box reaches the page's edges; the
-    notice, drawn by its own component, holds neither (DEC-022 point 2)."""
+    notice, drawn by its own component, holds neither (`files.md`, *The foundations*)."""
     for key, scene in scenes_of(project_of(location, "portal")).items():
         width = scene.children[0].properties["width"]
         for id_ in ("home", "guide"):
@@ -358,25 +358,31 @@ def resolver(folder: Path) -> dict[str, Any]:
 
 @pytest.mark.parametrize(
     "folder,widths",
-    [(NEUTRAL, (1280, 768, 390)), (SIZED_BRAND, (1440, 768, 320))],
+    [
+        (NEUTRAL, {"desktop": 1280, "tablet": 768, "phone": 390, "projector": 1280}),
+        (SIZED_BRAND, {"desktop": 1440, "tablet": 768, "phone": 320}),
+    ],
     ids=["neutral", "test-brand"],
 )
-def test_each_brand_gives_three_sizes_each_from_its_own_file_with_its_sites_width(
-    folder: Path, widths: tuple[int, int, int]
+def test_each_brand_gives_its_sizes_each_from_its_own_file_with_its_sites_width(
+    tmp_path: Path, folder: Path, widths: dict[str, int]
 ) -> None:
-    """Each mode of `device` but the default takes a token file of its own, and each gives
-    `size.site`: so the two brands prove a part at six widths (DEC-022 point 5)."""
+    """Each mode of `device` but the default takes a token file of its own. Each brand
+    gives `size.site` on a tablet and a phone, so the two prove a part at six widths
+    (DEC-022 point 5), and the neutral brand keeps a desktop's on a projector, where a
+    slide keeps its width. The foundations being built are read from a folder that names
+    their version, as a lock does, so a brand names them by their major (DEC-008 point 4)."""
     contexts = resolver(folder)["modifiers"]["device"]["contexts"]
-    assert contexts["desktop"] == []
-    assert contexts["tablet"] == [{"$ref": "tokens/tablet.tokens.json"}]
-    assert contexts["phone"] == [{"$ref": "tokens/phone.tokens.json"}]
-    brand = tokens.read_brand(folder, tokens.read_scope({"foundations": FOUNDATIONS}))
+    assert contexts == {
+        mode: [{"$ref": f"tokens/{mode}.tokens.json"}] if mode != "desktop" else []
+        for mode in widths
+    }
+    root = project(tmp_path)
+    foundations = version_folder(root, "foundations", hold_shipped(root, "foundations").version)
+    brand = tokens.read_brand(folder, tokens.read_scope({"foundations": foundations}))
     assert brand.findings == ()
-    assert brand.axes["device"].modes == ("desktop", "tablet", "phone")
-    found = tuple(
-        brand.resolve("size.site", {"device": mode})["value"]
-        for mode in ("desktop", "tablet", "phone")
-    )
+    assert brand.axes["device"].modes == tuple(widths)
+    found = {mode: brand.resolve("size.site", {"device": mode})["value"] for mode in widths}
     assert found == widths
 
 
@@ -384,7 +390,7 @@ def test_a_brand_that_gives_size_site_no_value_draws_a_site_as_wide_as_its_slide
     tmp_path: Path,
 ) -> None:
     """The test brand 1.0.0 gives no size and no `size.site`, which takes `size.slide`
-    (DEC-004 point 7, DEC-022 point 3)."""
+    (DEC-004 point 7)."""
     root = project(tmp_path)
     copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
     write_list(
@@ -606,10 +612,12 @@ def renders(drawn: Any) -> Iterator[tuple[str, str, Any]]:
 
 
 def as_released_location(root: Path) -> Path:
-    """The starter's reference location, with the foundations' release 1.0.0, the test brand
-    that gives sizes, and a figure, each piece locked at the versions being built."""
+    """The starter's reference location, with the foundations' release 1.0.0 and the
+    starter's newest release, the test brand that gives sizes, and a figure, each piece
+    locked at the versions being built."""
     starter.reference_location(root)
-    hold_shipped(root, "foundations", being_built=False)
+    hold_shipped(root, "foundations", version="1.0.0")
+    hold_shipped(root, "starter", being_built=False)
     built = {name: hold_shipped(root, name).version for name in ("foundations", "starter")}
     write_piece(
         root,
@@ -624,15 +632,28 @@ def as_released_location(root: Path) -> Path:
 def test_the_deck_and_the_figure_draw_as_before_in_every_renderer(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """On the foundations being built as on their release 1.0.0, and under the test brand
-    that gives sizes as under its version that gives none, a piece that names no size draws
+    """Under the test brand that gives sizes as under its version that gives none, and on
+    the foundations being built as on their release 1.0.0, a piece that names no size draws
     byte for byte the same, in each renderer (DEC-022 point 3, DEC-021 point 2): the deck of
     the card's reference piece, in two languages and four combinations, and a figure. The
-    starter's and the neutral brand's tests draw every reference piece so in SVG."""
+    deck being built places its lead and its visual otherwise, which the comparison of the
+    foundations takes back (`starter.DECK_PLACES`). The starter being built reads the
+    foundations' gap after a sign, which their release lacks, so the two foundations draw
+    the starter's newest release. The starter's and the neutral brand's tests draw every
+    reference piece so in SVG."""
     importable(monkeypatch, svg, pdf, html)
     root = as_released_location(project(tmp_path))
-    for name in ("card", "figure"):
+    names = ("card", "figure")
+    for name in names:
         drawn = list(renders(project_of(root, name)))
         assert drawn, name
-        assert list(renders(project_of(root, name, foundations="1.0.0"))) == drawn, name
         assert list(renders(project_of(root, name, **{"test-brand": "1.1.0"}))) == drawn, name
+    starter.with_the_releases_deck_places(root)
+    release = starter.STARTER_RELEASE.version
+    for name in names:
+        on_release = list(renders(project_of(root, name, starter=release)))
+        assert on_release, name
+        assert (
+            list(renders(project_of(root, name, foundations="1.0.0", starter=release)))
+            == on_release
+        ), name

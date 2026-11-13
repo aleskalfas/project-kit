@@ -6,171 +6,143 @@ slides:
   - id: fits
     layout: slide
     title: Jak je pkit poskládaný
-    lead: Skládá se z pěti vrstev, od vašich rozhodnutí až po váš kód. Každá vrstva provádí to, co určují vrstvy nad ní.
+    lead: Skládá se z pěti vrstev, od vašich rozhodnutí až po váš kód. Každá vrstva provádí rozhodnutí nad sebou.
     visual:
-      use: starter/layers
-      level: {use: starter/card, fill: tint}
-      note: {use: starter/card, bar: left}
+      # Pořadí perexu běží pyramidou dolů: rozhodnutí nahoře, každá vrstva pod nimi provádí
+      # rozhodnutí nad sebou, až po váš kód. Přednáška přidává, odkud rozhodnutí
+      # přicházejí, čímž stránka začíná vlevo nahoře, a co běží zpátky nahoru.
+      use: piece/pyramid
+      start: [{text: "Kde vznikají nápady. ", style: strong}, "V rozhovoru. A když nápad potřebuje víc času, v poznámce ve scratchpadu."]
       levels:
-        - id: decisions
-          concept: pkit/decision
-          text: [{text: "Rozhodnutí. ", style: strong}, "Co jste schválili a proč."]
-        - id: rules
-          concept: pkit/rule
-          text: [{text: "Pracovní pravidla · schémata · procesy. ", style: strong}, "Co přesně má dělat každá session i nástroj."]
-        - id: skills
-          concept: pkit/skill
-          text: [{text: "Skilly · agenti · oprávnění. ", style: strong}, "Jak agenti jednají, v jaké roli a s jakými právy."]
-        - id: commands
-          concept: pkit/core
-          text: [{text: "Příkazy a kontroly pkitu. ", style: strong}, "Provádějí, co jste rozhodli, a kontrolují každou změnu."]
-        - id: work
-          concept: pkit/yours
-          text: [{text: "Váš kód a dokumenty. ", style: strong}, "Samotná práce, navázaná na to, na čem závisí."]
-      notes:
-        - id: ideas
-          text: [{text: "Kde vznikají nápady. ", style: strong}, "V rozhovoru. A když nápad potřebuje víc času, v poznámce ve scratchpadu."]
-        - id: carried-out
-          text: [{text: "↓ Provádění. ", style: strong}, "Každá vrstva provádí rozhodnutí nad sebou. Důvody zůstávají na jednom místě. Agent si je tam přečte dřív, než cokoli změní."]
-        - id: checked
-          text: [{text: "↑ Kontrola. ", style: strong}, "Když vrstva nesedí s rozhodnutím, nejdřív se prověří vrstva. Rozhodnutí se tak nikdy nepřizpůsobí kódu. Změnit ho můžete jen vy."]
-      ties:
-        - {id: ideas-decisions, from: {item: "notes[ideas]"}, to: {item: "levels[decisions]"}}
-    footer: pkit zapsal toto pořadí jako své vlastní rozhodnutí, COR-065.
+        - {id: decisions, label: Rozhodnutí}
+        - {id: rules, label: "Pracovní pravidla · schémata · procesy"}
+        - {id: skills, label: "Skilly · agenti · oprávnění"}
+        - {id: commands, label: Příkazy a kontroly pkitu}
+        - {id: work, label: Váš kód a dokumenty}
+      down: [{text: "↓ Provádění. ", style: strong}, "Každá vrstva provádí rozhodnutí nad sebou. Důvody zůstávají na jednom místě. Agent si je tam přečte dřív, než cokoli změní."]
+      up: [{text: "↑ Kontrola. ", style: strong}, "Když vrstva nesedí s rozhodnutím, nejdřív se prověří vrstva. Rozhodnutí se tak nikdy nepřizpůsobí kódu. Změnit ho může jen člověk, nikdy váš AI nástroj."]
+    footer: pkit si jako vlastní rozhodnutí, COR-065, zapsal, že přijaté rozhodnutí řídí a zbytek ho provádí.
 
   - id: install
     layout: slide
     title: Instalace pkitu
     lead: Nástroj nainstalujete jednou, pak pkit přidáte do každého projektu jedním příkazem. Upgrade mění jen soubory pkitu.
     visual:
+      # Pořadí perexu běží shora dolů: nástroj nainstalovaný jednou, pak pkit přidaný do
+      # každého projektu, pak co po něm zůstane, soubory pkitu vedle vašich. Oba příkazy
+      # proto stojí první, přes celou stránku, každý s komentářem, kdy se spouští, a strom
+      # projektu pod nimi. Legenda stojí vedle horního okraje stromu, kam oko odchází z jeho
+      # prvního řádku, a odbočka poslední, jako něco vedle hlavní myšlenky.
       use: starter/panels
       panels:
-        - use: starter/panels
-          panels:
-            - use: starter/code
-              text: [
-                {text: "# jednou, na vašem počítači\n", style: comment},
-                {text: "$ ", style: prompt}, {text: "uv tool install \\\n", style: command},
-                {text: "    git+ssh://git@github.com/aleskalfas/project-kit.git@latest\n", style: command},
-                {text: "$ ", style: prompt}, {text: "pkit --version\n", style: command},
-                {text: "# v každém projektu\n", style: comment},
-                {text: "$ ", style: prompt}, {text: "cd your-project\n", style: command},
-                {text: "$ ", style: prompt}, {text: "pkit init", style: command}]
-          under:
-            use: starter/aside
-            head: Nechcete mít pkit v repozitáři?
-            command: $ pkit visibility private
-            text: pkit zůstane jen ve vašem klonu a git ho díky souboru exclude ignoruje. Nic z něj se necommitne, a agent ho přesto používá celý.
         - use: starter/code
-          # Skutečný strom nového projektu, zkrácený na to, co se na slajd vejde. Dokud
-          # nepřijde legenda (project-kit#2576), poslední řádek říká, co která barva značí,
-          # i se značkou vedle ní. Každý soubor pkitu začíná ●, každý váš ○, takže se ty dva
-          # liší i bez barev, ve vynucených barvách nebo bez barevného vidění. Značka leží
-          # tady, v obsahu, protože notace dává konceptu jen barvu a kód ze starteru mu
-          # žádnou značku nekreslí (project-kit#2843).
           text: [
-            {text: "$ ", style: prompt}, {text: "tree", style: command}, " -a -L 2 your-project\n",
-            "your-project/\n",
-            "├── .pkit/", {text: "                      # metodika\n", style: comment},
-            "│   ├── agents/ ", {text: "● core/", concept: pkit/core}, " ", {text: "○ project/\n", concept: pkit/yours},
-            "│   ├── decisions/ ", {text: "● core/", concept: pkit/core}, " ", {text: "○ project/\n", concept: pkit/yours},
-            "│   ├── permissions/ ", {text: "○ project/", concept: pkit/yours}, {text: " # co agenti smějí\n", style: comment},
-            "│   ├── rules/ ", {text: "● core.md", concept: pkit/core}, " ", {text: "○ project.md\n", concept: pkit/yours},
-            "│   ├── ", {text: "● schemas/", concept: pkit/core}, {text: "              # co čtou nástroje\n", style: comment},
-            "│   ├── ", {text: "○ scratchpad/", concept: pkit/yours}, {text: "           # vaše nedotažené nápady\n", style: comment},
-            "│   ├── skills/ ", {text: "● core/", concept: pkit/core}, " ", {text: "○ project/\n", concept: pkit/yours},
-            "│   ├── ", {text: "● …", concept: pkit/core}, {text: "                     # a další části pkitu\n", style: comment},
-            "│   └── ", {text: "● manifest.yaml", concept: pkit/core}, {text: "         # co je nainstalováno\n", style: comment},
-            "├── .claude/", {text: "                    # vaše nastavení Claude Code\n", style: comment},
-            "│   └── settings.json", {text: "           # ", style: comment}, {text: "○ vaše", concept: pkit/yours}, {text: ", ", style: comment}, {text: "● pkit", concept: pkit/core}, {text: " přidá svoje\n", style: comment},
-            "├── ", {text: "○ CLAUDE.md", concept: pkit/yours}, {text: "                 # načte pravidla\n", style: comment},
-            "└── ", {text: "○ src/", concept: pkit/yours}, {text: "                      # váš kód, pkit na něj nesahá\n", style: comment},
-            {text: "# ", style: comment}, {text: "● soubory pkitu", concept: pkit/core}, {text: ", každý upgrade je nahradí · ", style: comment}, {text: "○ vaše soubory", concept: pkit/yours}]
+            {text: "$ ", style: prompt}, {text: "uv tool install git+https://github.com/aleskalfas/project-kit.git@latest", style: command}, {text: "  # jednou\n", style: comment},
+            {text: "$ ", style: prompt}, {text: "pkit init", style: command}, {text: "  # v každém projektu", style: comment}]
+      under:
+        use: starter/panels
+        panels:
+          - use: starter/code
+            # Skutečný strom nového projektu, zkrácený na to, co se na slajd vejde: dvě složky
+            # pkitu rozdělené na část pkitu a vaši, řádek s dalšími částmi pkitu a dva vaše
+            # soubory. Každý soubor pkitu začíná znakem svého konceptu, plným kruhem, a každý
+            # váš prstencem, takže se ty dva liší i bez barev, ve vynucených barvách nebo bez
+            # barevného vidění. Legenda říká, co který znak značí.
+            text: [
+              "your-project/\n",
+              "├── .pkit/", {text: "       # metodika\n", style: comment},
+              "│   ├── decisions/ ", {text: "core/", concept: pkit/core}, " ", {text: "project/\n", concept: pkit/yours},
+              "│   ├── rules/ ", {text: "core.md", concept: pkit/core}, " ", {text: "project.md\n", concept: pkit/yours},
+              "│   └── ", {text: "…", concept: pkit/core}, {text: "      # a další části pkitu\n", style: comment},
+              "├── ", {text: "CLAUDE.md", concept: pkit/yours}, {text: "  # načte pravidla\n", style: comment},
+              "└── ", {text: "src/", concept: pkit/yours}, {text: "       # váš kód, nedotčený", style: comment}]
+          - use: starter/panels
+            panels:
+              - use: starter/legend
+                entries:
+                  - {id: core, concept: pkit/core, label: "soubory pkitu, upgrade je nahradí"}
+                  - {id: yours, concept: pkit/yours, label: vaše soubory}
+            under:
+              use: starter/aside
+              head: Nechcete mít pkit v repozitáři?
+              command: $ pkit visibility private
+              text: Zůstane ve vašem klonu a agent ho používá celý.
     footer: pkit status ukáže, co pkit v projektu nastavil. Volitelné části, kterým pkit říká capabilities, přijdou později.
 
   - id: permissions
     layout: slide
     title: Odkud se berou oprávnění
-    lead: Z pravidel, která projekt zapíše jako data. AI nástroj je uplatní při každém volání, i když na ně agent zapomene.
+    lead: Oprávnění pocházejí z pravidel, která projekt zapíše jako data. AI nástroj je uplatní při každém volání, i když na ně agent zapomene.
     visual:
-      use: starter/groups
-      groups:
+      # Pořadí perexu běží napříč: co projekt zapíše jako data, co z toho dostane AI
+      # nástroj a co pak potká volání. Každý řádek je jedno ze tří míst, odkud agent
+      # dostává svá omezení, a čte se v tomto pořadí. Záhlaví sloupců kroky čísluje, takže
+      # pořadí platí i bez šipek, v obou jazycích.
+      use: piece/matrix
+      rows:
+        - id: steps
+          cells:
+            - {id: kind}
+            - {id: data, head: "1  Zapsáno jako data"}
+            - {id: tool, head: "2  AI nástroj dostane"}
+            - {id: call, head: "3  Volání narazí na"}
         - id: guardrails
-          head: Pojistky
-          tag: pro vás i každého agenta
-          items:
-            - {id: data, text: [{text: "Zapsáno jako data: ", style: strong}, "rm -r, sudo a force-push, zakázané všem"]}
-            - {id: tool, text: [{text: "AI nástroj dostane: ", style: strong}, "zákaz v nastavení"]}
-            - {id: call, text: [{text: "Výsledek volání: ", style: strong}, "odmítnuto v každém režimu"]}
+          cells:
+            - {id: kind, head: Pojistky}
+            - {id: data, text: "rm -r, sudo a force-push, zakázané všem"}
+            - {id: tool, text: zákaz v nastavení}
+            - {id: call, text: odmítnutí v každém režimu}
         - id: own-tools
-          head: Vlastní nástroje agenta
-          tag: v souboru agenta
-          items:
-            - {id: data, text: [{text: "Zapsáno jako data: ", style: strong}, "critic: Read, Glob, Grep, WebFetch"]}
-            - {id: tool, text: [{text: "AI nástroj dostane: ", style: strong}, "seznam nástrojů"]}
-            - {id: call, text: [{text: "Výsledek volání: ", style: strong}, "žádný příkaz, žádný zápis"]}
+          cells:
+            - {id: kind, head: Vlastní nástroje agenta}
+            - {id: data, text: "soubor criticu: Read, Glob, Grep, WebFetch"}
+            - {id: tool, text: seznam nástrojů agenta}
+            - {id: call, text: "žádný příkaz, žádný zápis"}
         - id: one-agent
-          head: Pravidlo agenta
-          tag: z project-management
-          items:
-            - {id: data, text: [{text: "Zapsáno jako data: ", style: strong}, "project-manager: žádné změny přímým gh"]}
-            - {id: tool, text: [{text: "AI nástroj dostane: ", style: strong}, "hook před voláním"]}
-            - {id: call, text: [{text: "Výsledek volání: ", style: strong}, "odmítnuto, použije příkazy pkitu"]}
+          cells:
+            - {id: kind, head: Pravidlo jednoho agenta}
+            - {id: data, text: "project-manager: žádné změny přímým gh"}
+            - {id: tool, text: hook před každým voláním}
+            - {id: call, text: "odmítnutí, použije příkazy pkitu"}
     limit: Zákaz zastaví jen ty podoby příkazu, které pkit pozná. Příkaz schovaný za jiným může proklouznout.
-    footer: "V project-kitu: agent project-manager nesmí nic měnit přímým příkazem gh. Používá příkazy pkitu, které issue nejdřív ověří."
+    footer: "V project-kitu: agent project-manager používá příkazy pkitu, které issue nejdřív ověří."
 
   - id: connect
     layout: slide
-    title: Jak capabilities spolupracují
-    lead: Capability nikdy nejmenuje jinou capability, jen roli. Když něco potřebuje, otevře slot. Vyplní ho kterákoli jiná.
+    title: Jak capability spolupracují
+    lead: "Capability se propojují přes role: která něco potřebuje, otevře slot, kterákoli jiná ho vyplní."
     visual:
-      use: starter/panels
-      panels:
-        - id: network
-          use: starter/network
-          span: wide
-          item: {use: starter/card, fill: tint}
-          tie: {use: starter/connector, concept: pkit/core}
-          left:
-            - {id: living-docs, concept: pkit/capability, head: living-docs, tag: "pkit::documentation", text: dokumenty na míru čtenáři}
-            - {id: software-analysis, concept: pkit/capability, head: software-analysis, tag: "pkit::analysis", text: co musí software umět}
-          right:
-            - id: slots
-              use: starter/groups
-              groups:
-                - id: project-management
-                  concept: pkit/capability
-                  head: project-management
-                  tag: plays pkit::work-tracking
-                  items:
-                    - {id: doc-check, text: "dokumenty, které změna upraví"}
-                    - {id: fixers, text: který agent opraví dokument}
-                    - {id: use-cases, text: případy užití k plánování}
-          ties:
-            - {id: docs-doc-check, from: {item: "left[living-docs]"}, to: {item: "right[slots].groups[project-management].items[doc-check]"}}
-            - {id: docs-fixers, from: {item: "left[living-docs]"}, to: {item: "right[slots].groups[project-management].items[fixers]"}}
-            - {id: analysis-fixers, from: {item: "left[software-analysis]"}, to: {item: "right[slots].groups[project-management].items[fixers]"}}
-            - {id: analysis-use-cases, from: {item: "left[software-analysis]"}, to: {item: "right[slots].groups[project-management].items[use-cases]"}}
-        - id: status
-          use: starter/code
-          head: Co vypíše pkit status
-          text: [
-            {text: "$ ", style: prompt}, {text: "pkit", style: command}, " status\n",
-            "  Connections\n",
-            "    roles   3 named: 3 active, 0 in conflict\n",
-            {text: "      pkit::analysis      → ", concept: pkit/core}, {text: "software-analysis\n", concept: pkit/capability},
-            {text: "      pkit::documentation → ", concept: pkit/core}, {text: "living-docs\n", concept: pkit/capability},
-            {text: "      pkit::work-tracking → ", concept: pkit/core}, {text: "project-management\n", concept: pkit/capability},
-            "    points  6 defined: 2 unfilled\n",
-            {text: "    pkit::work-tracking:fixers\n", concept: pkit/core},
-            "      data v1 · project-management — filled\n",
-            "      bound  ", {text: "software-analysis", concept: pkit/capability}, " (contributes)\n",
-            "      bound  ", {text: "living-docs", concept: pkit/capability}, " (contributes)"]
-      under:
-        use: starter/list
-        items:
-          - {id: swap, text: Capability vyměníte za jinou ve stejné roli.}
-          - {id: only-what-you-need, text: "Instalujete jen to, co potřebujete."}
-          - {id: wiring, text: pkit validate zapojení zkontroluje.}
-    limit: Každou roli zatím hraje jen jedna capability. Výměna je tedy navržená, ale ještě nevyzkoušená.
-    footer: "V project-kitu: 3 role, každou hraje jedna capability. Ze 6 slotů jsou 4 vyplněné."
+      use: piece/wiring
+      opener:
+        - id: project-management
+          concept: pkit/capability
+          role: "role: sledování práce"
+          name: [{text: "capability: ", style: kind}, {text: project-management, style: name}]
+      opens: [{text: "pkit::work-tracking", style: code}, "\notevírá 3 sloty"]
+      slots:
+        - {id: doc-check, name: doc-check, text: které dokumenty změna musí upravit}
+        - {id: fixers, name: fixers, text: který agent opraví dokument, fill: tint, concept: pkit/proof}
+        - {id: use-cases, name: use-cases, text: případy užití k plánování}
+      fillers:
+        - id: living-docs
+          concept: pkit/capability
+          role: "role: údržba dokumentace"
+          name: [{text: "capability: ", style: kind}, {text: living-docs, style: name}]
+        - id: software-analysis
+          concept: pkit/capability
+          role: "role: analýza softwaru"
+          name: [{text: "capability: ", style: kind}, {text: software-analysis, style: name}]
+      tie: {use: starter/connector, route: corners, override: {line: text-secondary}}
+      ties:
+        - {id: living-docs-doc-check, from: {item: "fillers[living-docs]"}, to: {item: "slots[doc-check]"}}
+        - {id: living-docs-fixers, from: {item: "fillers[living-docs]"}, to: {item: "slots[fixers]"}}
+        - {id: software-analysis-fixers, from: {item: "fillers[software-analysis]"}, to: {item: "slots[fixers]"}}
+        - {id: software-analysis-use-cases, from: {item: "fillers[software-analysis]"}, to: {item: "slots[use-cases]"}}
+      evidence:
+        use: starter/code
+        text: [
+          {text: "pkit::work-tracking:fixers", concept: pkit/proof}, {text: "  # z pkit status\n", style: comment},
+          "    bound    software-analysis (contributes)\n",
+          "    bound    living-docs (contributes)"]
+      gains: [{text: "Co vám to dá\n", style: strong}, "Capability vyměníte v téže roli.\nInstalujete jen to, co potřebujete.\n", {text: "pkit validate", style: code}, " ověří zapojení."]
+    footer: "V project-kitu: každou ze 3 rolí zatím hraje jedna capability, výměna je tedy navržená, ne vyzkoušená."

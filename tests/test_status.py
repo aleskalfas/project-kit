@@ -13,10 +13,31 @@ from click.testing import CliRunner
 
 from project_kit import data_points as dp
 from project_kit import install
+from project_kit import status as status_module
 from project_kit.cli import main, status
+from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
+    ORIGIN_INCUBATED_IN_REPO,
+    ORIGIN_KIT_SHIPPED,
+    ComponentRegistryEntry,
+    capability_manifest_rel,
+    read_backbone_manifest,
+    write_backbone_manifest,
+)
 from project_kit.status import _data_point_lines, _skill_owner
 from tests.adopter_repo import MakeAdopterRepo
 from tests.shipped_rule_sets import shipped_rules
+
+
+@pytest.fixture(autouse=True)
+def personal_skills(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Claude Code's personal skills folder as status reads it: the test's own, missing
+    until the test makes it, whatever personal skills the machine running the suite holds."""
+    folder = tmp_path_factory.mktemp("home") / ".claude" / "skills"
+    monkeypatch.setattr(status_module, "_personal_skills_folder", lambda: folder)
+    return folder
 
 
 @pytest.fixture
@@ -277,6 +298,110 @@ def test_a_skill_belongs_to_where_its_link_leads(link: str, owner: str | None) -
     assert _skill_owner(link) == owner
 
 
+# --- a personal skill that hides a deployed one (#3033) ----------------------------
+
+HIDDEN = "hidden skills"
+CORE_SKILL = ("decision-author", ".pkit/skills/core/decision-author.md")
+
+
+def _personal_skill(folder: Path, name: str) -> Path:
+    """A skill `name` in the personal skills `folder`: a folder holding a file status
+    never reads."""
+    skill = folder / name
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text(f"---\nname: {name}\n---\n", encoding="utf-8")
+    return skill
+
+
+def _hidden(*paths: Path) -> list[str]:
+    """The warning status gives of a deployed skill hidden at each of `paths`."""
+    head = (
+        f"⚠ {len(paths)} hidden by a personal skill of the same name, "
+        "which Claude Code runs instead:"
+    )
+    return [f"    {HIDDEN:<18} {head}", *(f"{ITEM}{path.name}, by {path}" for path in paths)]
+
+
+def _status_output() -> str:
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    return result.output
+
+
+def test_status_warns_of_a_deployed_skill_a_personal_skill_hides(
+    installed_target: Path, personal_skills: Path
+) -> None:
+    """A folder in the personal skills folder named as a deployed skill hides it: status
+    names the skill and the personal folder, beside the skills deployed, and says Claude
+    Code runs the personal one (#3033)."""
+    _deploy_skill(installed_target, *CORE_SKILL)
+    _deploy_skill(installed_target, "schema", ".pkit/skills/core/schema/schema.md")
+    hiding = _personal_skill(personal_skills, "decision-author")
+
+    lines = _deployed(_status_output())
+    assert lines[:3] == [
+        f"    {'skills':<18} 2 deployed from core:",
+        f"{ITEM}decision-author -> ../../../.pkit/skills/core/decision-author.md",
+        f"{ITEM}schema -> ../../../.pkit/skills/core/schema/schema.md",
+    ]
+    assert lines[3:5] == _hidden(hiding)
+    assert lines[5].startswith(f"    {'agents':<18} ")
+
+
+def test_status_says_nothing_of_a_personal_skill_the_project_does_not_deploy(
+    installed_target: Path, personal_skills: Path
+) -> None:
+    """A personal skill hides only a deployed skill of its name."""
+    _deploy_skill(installed_target, *CORE_SKILL)
+    _personal_skill(personal_skills, "my-notes")
+
+    assert HIDDEN not in _status_output()
+
+
+@pytest.mark.parametrize("linked", ["the skill's folder", "the personal skills folder"])
+def test_status_follows_a_link_in_the_personal_skills_folder(
+    installed_target: Path,
+    personal_skills: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    linked: str,
+) -> None:
+    """A link in place of a personal skill's folder, or of the personal skills folder itself,
+    is followed, and the warning names the folder where Claude Code looks."""
+    _deploy_skill(installed_target, *CORE_SKILL)
+    store = tmp_path_factory.mktemp("store")
+    stored = _personal_skill(store, "decision-author")
+    if linked == "the skill's folder":
+        personal_skills.mkdir(parents=True)
+        (personal_skills / "decision-author").symlink_to(stored, target_is_directory=True)
+    else:
+        personal_skills.parent.mkdir(parents=True)
+        personal_skills.symlink_to(store, target_is_directory=True)
+
+    lines = _deployed(_status_output())
+    assert lines[2:4] == _hidden(personal_skills / "decision-author")
+
+
+def test_status_says_nothing_where_the_machine_has_no_personal_skills_folder(
+    installed_target: Path, personal_skills: Path
+) -> None:
+    _deploy_skill(installed_target, *CORE_SKILL)
+    assert not personal_skills.exists()
+
+    assert HIDDEN not in _status_output()
+
+
+def test_a_personal_skills_folder_that_is_the_projects_own_hides_nothing(
+    installed_target: Path, personal_skills: Path
+) -> None:
+    """Where the project's root is the home folder, the personal skills folder is the
+    project's `.claude/skills/`, and each deployed skill is its own personal skill."""
+    _deploy_skill(installed_target, *CORE_SKILL)
+    personal_skills.parent.mkdir(parents=True)
+    personal_skills.symlink_to(installed_target / ".claude" / "skills", target_is_directory=True)
+
+    assert HIDDEN not in _status_output()
+
+
 def test_status_reports_agents_inventory(installed_target: Path) -> None:
     """After install with the agents area present, status reports core/project counts."""
     runner = CliRunner()
@@ -479,6 +604,60 @@ def test_status_shows_no_transition_line_in_the_methodology_source(
     result = CliRunner().invoke(status, [])
     assert result.exit_code == 0, result.output
     assert "Transition:" not in result.output
+
+
+# --- capabilities: the signs of a copy and of its source (COR-031, COR-041) ---------
+# The graphic designer's body tells whether a capability's folder is a copy or its
+# source by the `Source kit` line and the marks on the `installed` line.
+
+ORIGINS = {
+    "fetched": ORIGIN_EXTERNALLY_SOURCED,
+    "mine": ORIGIN_INCUBATED_IN_REPO,
+    "shipped": ORIGIN_KIT_SHIPPED,
+}
+INSTALLED = f"    {'installed':<18} fetched (externally-sourced), mine (incubated), shipped"
+
+
+def _register_capabilities(root: Path, origins: dict[str, str]) -> None:
+    """Register each capability at its origin, as the install registry records it.
+    The capabilities section reads no more than the registry."""
+    backbone = read_backbone_manifest(root)
+    assert backbone is not None
+    backbone.components.extend(
+        ComponentRegistryEntry(
+            kind="capability", name=name, manifest=capability_manifest_rel(name), origin=origin
+        )
+        for name, origin in origins.items()
+    )
+    write_backbone_manifest(root, backbone)
+
+
+def test_status_marks_each_installed_capability_by_its_origin(installed_target: Path) -> None:
+    """A kit-shipped capability goes unmarked and an incubated one is marked
+    `(incubated)`, as before; one pulled from another repository is marked
+    `(externally-sourced)`."""
+    _register_capabilities(installed_target, ORIGINS)
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert INSTALLED in _section(result.output, "Capabilities").splitlines()
+
+
+@pytest.mark.parametrize("source", [False, True], ids=["adopter", "methodology-source"])
+def test_status_names_the_source_kit_beside_the_marks(
+    installed_target: Path, monkeypatch: pytest.MonkeyPatch, source: bool
+) -> None:
+    """The `Source kit` line is the project root's own `.pkit/` only in the
+    methodology's source repository. A capability pulled from another repository is
+    marked there too, since it is a copy wherever it is registered (COR-041)."""
+    own = installed_target / ".pkit"
+    if source:
+        monkeypatch.setattr(status_module, "find_source_kit", lambda: own)
+    _register_capabilities(installed_target, ORIGINS)
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    lines = result.output.splitlines()
+    assert (f"  {'Source kit:':<22} {own}" in lines) is source
+    assert INSTALLED in _section(result.output, "Capabilities").splitlines()
 
 
 # --- rule sets (COR-051 point 7) ---------------------------------------------------

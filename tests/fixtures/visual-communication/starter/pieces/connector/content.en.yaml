@@ -31,6 +31,7 @@ slides:
         - id: ideas-decisions
           from: {item: "upper[ideas]"}
           to: {item: "upper[decisions]"}
+          concept: test-notation/person
         - id: work-decisions
           from: {item: "lower[work]"}
           to: {item: "upper[decisions]"}
@@ -72,3 +73,4 @@ slides:
           from: {item: "upper[review]"}
           to: {item: "lower[rules]"}
           arrow: none
+          concept: test-notation/person

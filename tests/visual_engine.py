@@ -1,16 +1,16 @@
 """The visual-communication engine in the test's own process, and the in-memory `Env` its
 tests read through (#2428).
 
-The engine reads every component, role, colour family, concept, font and produced picture
-through one protocol, `Env` (`_lib/env.py`). Its tests stand in for it with `FakeEnv`,
-never with the data layer's modules: components come from the test library's and the
-foundations' files (read with ruamel's safe loader) or from mappings a test writes, roles
-from a mapping of resolved DTCG values, colour families and concepts from mappings a test
-writes, the font from the test brand's committed Source Sans Pro, produced pictures from
-`PictureInfo`s, and picture files from the test pictures, each read by the capability's
-reader, by its holder and its bare name. A component a test needs broken is a mapping in
-memory, never a file: the repository's validation reads every bound YAML file under
-`tests/`.
+The engine reads every component, role, colour family, concept, concept's sign, font and
+produced picture through one protocol, `Env` (`_lib/env.py`). Its tests stand in for it
+with `FakeEnv`, never with the data layer's modules: components come from the test
+library's and the foundations' files (read with ruamel's safe loader) or from mappings a
+test writes, roles from a mapping of resolved DTCG values, colour families, concepts and
+concepts' signs from mappings a test writes, the font from the test brand's committed
+Source Sans Pro, produced pictures from `PictureInfo`s, and picture files from the test
+pictures, each read by the capability's reader, by its holder and its bare name. A
+component a test needs broken is a mapping in memory, never a file: the repository's
+validation reads every bound YAML file under `tests/`.
 """
 
 from __future__ import annotations
@@ -79,11 +79,15 @@ ROLES: dict[str, Any] = {
         "lineHeight": 1.2,
     },
 }
+# The deck's title and lead, to which the test brand gives no value, so each takes the
+# shared type its default aliases, the type the deck drew it in before (DEC-035 point 4).
+ROLES["component.foundations.deck.title"] = ROLES["type.heading"]
+ROLES["component.foundations.deck.lead"] = ROLES["type.body"]
 
 
 #: The roles the tests of runs set runs in, and their fonts. Each weight is a family of its
 #: own, as the test brand's heading is, so each run is measured and drawn from its own
-#: weight's file (DEC-012, Implications, "A weight's own file"): the body, and the heading
+#: weight's file (DEC-012 point 4, "A weight's own file"): the body, and the heading
 #: in the semibold family.
 RUN_ROLES: dict[str, Any] = {
     "type.body": ROLES["type.body"],
@@ -121,8 +125,9 @@ class FakeEnv:
     families are none unless `families` gives them, and its concepts none unless
     `concepts` gives them: each `<notation>/<concept>` mapped to its family, or to None for
     a concept its notation cannot read. A notation the piece names is one a concept of
-    `concepts` comes from. Its picture roles are none unless `logos` gives them: each role
-    mapped to the file the brand gives it, or to None for none."""
+    `concepts` comes from. A concept's sign is none unless `signs` gives it, each
+    `<notation>/<concept>` mapped to its outline. Its picture roles are none unless `logos`
+    gives them: each role mapped to the file the brand gives it, or to None for none."""
 
     def __init__(
         self,
@@ -134,6 +139,7 @@ class FakeEnv:
         concepts: Mapping[str, str | None] | None = None,
         files: Mapping[str, Path] | None = None,
         logos: Mapping[str, Path | None] | None = None,
+        signs: Mapping[str, Any] | None = None,
     ) -> None:
         self.components = {**COMPONENTS, **(components or {})}
         self.roles = {**ROLES, **(roles or {})}
@@ -144,6 +150,7 @@ class FakeEnv:
         # Each picture file, `<holder>/<bare name>`, and the file that holds its bytes.
         self.files = dict(files or {})
         self.logos = dict(logos or {})
+        self.signs = dict(signs or {})
         self.asked: list[str] = []
 
     def component(self, use: str) -> dict:
@@ -211,6 +218,11 @@ class FakeEnv:
             )
         raise env.UnknownConcept(name, f"the piece names no notation `{notation}`")
 
+    def sign(self, name: str) -> Any:
+        self.asked.append(f"sign {name}")
+        self.concept(name)  # raises as for an unknown concept
+        return self.signs.get(name)
+
     def library_version(self, library: str) -> str:
         return VERSIONS[library]
 
@@ -242,11 +254,13 @@ def draw(
     use: str = "lab/top",
     language: str = "en",
     facts: Any = None,
+    choice: Any = None,
     **environment: Any,
 ) -> Any:
     """The scene of a piece whose top is `use`, and its findings, its facts filled by `facts`
-    or by the stand-ins of a draft."""
+    or by the stand-ins of a draft, each layout drawn as `choice` says."""
     return scene.compute_scene(
+        choice=choice,
         piece="test-piece",
         top=use,
         content=dict(content or {}),

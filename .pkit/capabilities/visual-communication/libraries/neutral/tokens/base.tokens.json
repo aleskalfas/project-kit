@@ -120,26 +120,32 @@
     }
   },
   "background": {
+    "$description": "The ground of a page: white, so text and marks reach their strongest contrast on it, and a slide reads in a lit room.",
     "$type": "color",
     "$value": "{scheme.paper}"
   },
   "surface": {
+    "$description": "A quiet ground a step above the page, for a part that holds others, such as a card or a code block: its edge, not its shade, sets it apart, so it survives a projector that washes pale greys out.",
     "$type": "color",
     "$value": "{scheme.raised}"
   },
   "text-primary": {
+    "$description": "The text a reader reads first: a near-black, not black, at more than 15 to 1 on the page, so long text reads without glare (WCAG 2, 1.4.6).",
     "$type": "color",
     "$value": "{scheme.ink}"
   },
   "text-secondary": {
+    "$description": "Text that steps back, such as a lead, a caption or a comment: a mid grey that still holds 4.5 to 1 on the page and on the surface, so stepping back never costs legibility (WCAG 2, 1.4.3).",
     "$type": "color",
     "$value": "{scheme.ink-soft}"
   },
   "accent": {
+    "$description": "The one hue the brand marks with by itself, a deep blue: blue is the hue most readers take as calm and trustworthy, and at this depth it holds 4.5 to 1 as text.",
     "$type": "color",
     "$value": "{scheme.accent}"
   },
   "line": {
+    "$description": "The edge of a part and a rule between rows: a pale grey, faint by design, since a line that only groups should never vie with the text it groups.",
     "$type": "color",
     "$value": "{scheme.rule}"
   },
@@ -214,6 +220,7 @@
     }
   },
   "space": {
+    "$description": "Four steps that double, 4, 8, 16 and 32 px: few enough that every gap is one of them, so space inside a group stays visibly smaller than space between groups (Robin Williams, proximity; Josef Müller-Brockmann, a module that every distance repeats).",
     "$type": "dimension",
     "1": {
       "$value": {
@@ -241,6 +248,7 @@
     }
   },
   "size": {
+    "$description": "The widths a piece is laid out in: a figure, a slide, a site's page and a line of text, which stays under about 75 characters of the body.",
     "$type": "dimension",
     "figure": {
       "$description": "The width of a figure's page.",
@@ -272,6 +280,7 @@
     }
   },
   "stroke": {
+    "$description": "Two widths of line: a thin one for an edge, which only groups, and a thick one for a line drawn on its own, such as a connector, which a reader follows.",
     "$type": "dimension",
     "thin": {
       "$value": {
@@ -288,6 +297,7 @@
     }
   },
   "font": {
+    "$description": "Source Sans Pro, an open humanist sans: plain and even, legible at small sizes and from across a room, with a semibold weight for heads.",
     "$type": "fontFamily",
     "body": {
       "$value": [
@@ -335,6 +345,7 @@
     }
   },
   "type": {
+    "$description": "The types at a desktop: a body of 16 px, a head that differs from it by size and weight, a strong run the body's size in the semibold, and code a step under the body, since a monospace face sets wider. Few sizes, each clearly apart (Robert Bringhurst, a scale).",
     "$type": "typography",
     "body": {
       "$value": {
@@ -396,6 +407,20 @@
           "unit": "px"
         },
         "lineHeight": 1.5
+      }
+    }
+  },
+  "component": {
+    "$description": "The tokens of the components of the libraries the brand names: at a desktop, the deck's title and lead take the shared types it drew them in before.",
+    "foundations": {
+      "deck": {
+        "$type": "typography",
+        "title": {
+          "$value": "{type.heading}"
+        },
+        "lead": {
+          "$value": "{type.body}"
+        }
       }
     }
   }

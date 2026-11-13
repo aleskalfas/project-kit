@@ -1,0 +1,44 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+# A level of the stepped pyramid on the first page. An item's frame takes the width its
+# list gives every item, so the level narrows its box inside its frame by its place, and
+# exposes the box, so the pattern that places it can reach its edge.
+status: experimental
+about: >-
+  One level of a stepped pyramid: a solid box in its colour family's text, its name
+  centred in it in the family's fill. The last level is as wide as it is given, and each
+  level above it a step narrower, so the levels narrow to the top.
+
+fields:
+  type: object
+  required: [label]
+  properties:
+    label:
+      type: string
+      description: The level's name, on one line.
+
+colour: neutral
+
+exposes: [box]
+
+values:
+  # How much narrower each level is than the one under it: a tenth of the widest, half of
+  # it on each side.
+  step: "=:width / 10"
+  side: "=(:count - :index) * step / 2"
+
+parts:
+  box:
+    box: {fill: ":colour.text", rx: "=@space.1"}
+    x: "=side"
+    width: "=:width - 2 * side"
+    height: "=:height"
+  label:
+    text: {content: label, style: type.strong, fill: ":colour.fill", text-anchor: middle}
+    x: "=side + @space.3"
+    y: "=(:height - label.height) / 2"
+    width: "=:width - 2 * side - 2 * @space.3"
+
+preferred:
+  height: "=label.height + 2 * @space.3"

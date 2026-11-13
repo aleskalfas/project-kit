@@ -385,7 +385,7 @@ def test_a_point_outside_the_pixels_is_refused(tmp_path: Path) -> None:
             {"points": {}, "programs": {"blender": "4.2"}},
             "it called `blender`, which its declaration does not name under `programs`",
         ),
-        ({"points": {}, "frames": {}}, "returned `frames`, which seam 5 does not read"),
+        ({"points": {}, "frames": {}}, "returned `frames`, which seam 8 does not read"),
         ({"points": {}, "losses": {}}, "its `losses` is not a list"),
         (
             {"points": {}, "losses": [{"plugin": "square", "what": "line", "did": "lost"}]},
@@ -495,10 +495,15 @@ def marker(**changed: Any) -> dict[str, Any]:
             marker(inputs={"fill": "space.1"}),
             "takes a role of type `color`, and `space.1` is of type `dimension`",
         ),
+        (
+            marker(inputs={"fill": "component.test-parts.tag.fill"}),
+            "names `component.test-parts.tag.fill`, a component token, which only its component "
+            "reads",
+        ),
         (marker(inputs={}), "leaves out the input `fill` that the producer `square` requires"),
         (marker(pixels={"width": 64}), "has no `pixels` of a whole `width` and `height`"),
     ],
-    ids=["output", "producer", "input", "raw", "role", "type", "required", "pixels"],
+    ids=["output", "producer", "input", "raw", "role", "type", "token", "required", "pixels"],
 )
 def test_a_declaration_the_producer_cannot_take_is_refused(
     tmp_path: Path, produced: dict[str, Any], why: str

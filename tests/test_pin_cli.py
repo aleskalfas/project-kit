@@ -289,6 +289,74 @@ def test_pin_newer_version_aborts_without_advancing_pin_on_reconcile_failure(
     assert router.read_version_pin(tmp_path) == "1.0.0"  # unmoved
 
 
+def test_pin_newer_version_that_cannot_be_fetched_runs_nothing_and_keeps_the_pin(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The raise probes its target before it runs it: a target the probe cannot
+    fetch runs no upgrade, the pin stays as it was, and the message names the
+    fetch that failed (ADR-090 point 2, ADR-049 point 5)."""
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, "1.0.0")
+    router.pin_file_path(tmp_path).write_text("1.0.0\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    def _not_fetched(pin: str, *_a: object, **_k: object) -> int:
+        raise router.ReleaseNotFetched(pin)
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _not_fetched)
+
+    result = CliRunner().invoke(main, ["pin", "2.0.0"])
+
+    assert result.exit_code != 0
+    assert router.read_version_pin(tmp_path) == "1.0.0"  # unmoved
+    output = " ".join(result.output.split())
+    assert "pkit 2.0.0 could not be fetched" in output
+    assert "The pin was not advanced" in output
+    assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v2.0.0 project-kit --version`" in output
+
+
+def test_bypassed_pin_raises_a_project_pinned_below_through_this_releases_url(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`PKIT_NO_ROUTE=1 pkit pin <version>`, run by this release's tool with a
+    version at or after this release, raises a project pinned below it through
+    this release's URL: the probe and the run each fetch the target from the
+    repository's public HTTPS URL, the probe alone with git's terminal prompt
+    off, and the pin moves to the target (ADR-090, its Limits)."""
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, "1.0.0")
+    router.pin_file_path(tmp_path).write_text("1.0.0\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+    monkeypatch.delenv(router._LOOP_GUARD_ENV, raising=False)
+    monkeypatch.delenv("GIT_TERMINAL_PROMPT", raising=False)
+    target = router.running_version()
+
+    spawned: list[tuple[list[str], dict[str, str]]] = []
+    real_run = subprocess.run
+
+    def _fake_run(cmd, *args, **kwargs):
+        # Intercept only the `uvx …` spawns: the probe and the raise's run.
+        if list(cmd[:1]) != ["uvx"]:
+            return real_run(cmd, *args, **kwargs)
+        spawned.append((list(cmd), kwargs["env"]))
+        return subprocess.CompletedProcess(cmd, 0)
+
+    monkeypatch.setattr(router.subprocess, "run", _fake_run)
+
+    result = CliRunner().invoke(main, ["pin", target])
+
+    assert result.exit_code == 0, result.output
+    [(probe, probe_env), (run, run_env)] = spawned
+    source = f"git+https://github.com/aleskalfas/project-kit.git@v{target}"
+    assert probe == ["uvx", "--from", source, "project-kit", "--version"]
+    assert run[:4] == ["uvx", "--from", source, "project-kit"]
+    assert run[4] == "upgrade"
+    assert probe_env["GIT_TERMINAL_PROMPT"] == "0"
+    assert "GIT_TERMINAL_PROMPT" not in run_env
+    assert router.read_version_pin(tmp_path) == target
+
+
 def test_pin_older_version_is_refused_and_writes_nothing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

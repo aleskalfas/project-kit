@@ -88,6 +88,9 @@ from project_kit.migrations import (
 )
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
+    DISTRIBUTION_REMOTE_URL,
+    ReleaseNotFetched,
+    fetch_environment,
     is_route_bypassed,
     is_routed_child,
     is_source_checkout,
@@ -275,7 +278,9 @@ def run_upgrade(
     # copy replaces.
     from project_kit import capabilities as caps
 
-    plans = plan_capabilities(target_root, source_kit, caps.read_capability_records(target_root))
+    plans = plan_capabilities(
+        target_root, source_kit, caps.read_capability_records(target_root, release=source_kit)
+    )
     moves = component_moves(target_root, source_kit, manifest) if manifest is not None else []
     _report_component_moves(moves)
 
@@ -294,7 +299,7 @@ def run_upgrade(
     loaded_rules.refuse_index_clash(target_root, command="upgrade")
     _resolve_compatibility(components, target_root, source_kit, target_version)
     _check_capability_dep_conflicts_for_upgrade(target_root, plans, force=force)
-    answers = _settle_new_collisions(target_root, plans, dry_run=dry_run)
+    answers = _settle_new_collisions(target_root, plans, dry_run=dry_run, release=source_kit)
     plans = [answers.in_force(plan) for plan in plans]
     # Every shipped capability the bundle ships moves with the release.
     moving = [plan for plan in plans if plan.disposition in COPIES]
@@ -333,6 +338,7 @@ def run_upgrade(
         _move_root_manifests(target_root, plans, dry_run=False)
         _record_new_skips(target_root, moving, answers)
         caps.apply_overrides(target_root, answers.overridden, dry_run=False)
+        caps.record_agent_choices(target_root, answers.choices, dry_run=False)
         propagate(ctx, moving)
         register_adapters(target_root)
         reread = read_backbone_manifest(target_root)
@@ -496,7 +502,7 @@ def component_moves(
             source = caps.find_capability_in_source(source_kit, entry.name)
             if source is None:
                 continue
-            recorded = caps.read_capability_record(target_root, entry.name).version
+            recorded = caps.read_capability_version(target_root, entry.name)
             move = capability_move(entry.name, recorded, source.package.version)
             if move is not None:
                 moves.append(move)
@@ -560,7 +566,7 @@ def _capability_manifests_at_root(target_root: Path, manifest: BackboneManifest)
         for entry in manifest.components
         if entry.kind == "capability"
         and entry.origin == ORIGIN_KIT_SHIPPED
-        and caps.read_capability_record(target_root, entry.name).at_root
+        and caps.capability_root_manifest_path(target_root, entry.name).is_file()
     ]
 
 
@@ -695,12 +701,15 @@ class CollisionAnswers:
     """What a person chose for each new collision in step 1 (ADR-065 point 6).
 
     *skips* holds the artefacts each capability's copy leaves out, by
-    capability, and *overridden* the project's artefacts an override removes in
-    step 2, before the copy.
+    capability, *overridden* the project's artefacts an override removes in
+    step 2, before the copy, and *choices* the capability an override chose for
+    an agent's name another capability ships, which step 2 records in the
+    backbone manifest (COR-017, ADR-065 point 6).
     """
 
     skips: Mapping[str, tuple[tuple[str, str], ...]] = field(default_factory=lambda: {})
     overridden: tuple[Path, ...] = ()
+    choices: Mapping[str, str] = field(default_factory=lambda: {})
 
     def in_force(self, plan: CapabilityPlan) -> CapabilityPlan:
         """*plan* with the skips in force: those its record holds and those chosen."""
@@ -712,7 +721,11 @@ class CollisionAnswers:
 
 
 def _settle_new_collisions(
-    target_root: Path, plans: Sequence[CapabilityPlan], *, dry_run: bool
+    target_root: Path,
+    plans: Sequence[CapabilityPlan],
+    *,
+    dry_run: bool,
+    release: Path | None = None,
 ) -> CollisionAnswers:
     """The collision flow of a transition of the backbone (ADR-065 point 6, COR-017).
 
@@ -724,7 +737,10 @@ def _settle_new_collisions(
     asks override, skip or inspect for each. With nobody to answer it refuses,
     before anything is written, and names a terminal re-run or a rename. A dry
     run lists each collision and asks nothing. No capability is held back, so
-    the project stays at one release (COR-059 point 7).
+    the project stays at one release (COR-059 point 7). Which agents' definitions
+    count is the picker's, loaded from *release*, the release the transition
+    brings (ADR-087 point 2); an override of an agent another capability ships
+    records the project's choice of the capability for the name.
     """
     from project_kit import capabilities as caps
 
@@ -742,6 +758,7 @@ def _settle_new_collisions(
             plan.source,
             skipped=plan.record.skipped if plan.record is not None else (),
             released=released,
+            release=release,
         )
     ]
     if not found:
@@ -776,6 +793,7 @@ def _settle_new_collisions(
     click.echo()
     skips: dict[str, list[tuple[str, str]]] = {}
     overridden: list[Path] = []
+    choices: dict[str, str] = {}
     for name, finding in found:
         choice = caps.resolve_collision_interactive(target_root, finding, capability=name)
         artefact = (finding.artifact_kind, finding.artifact_name)
@@ -783,10 +801,12 @@ def _settle_new_collisions(
             skips.setdefault(name, []).append(artefact)
         else:
             overridden.extend(caps.project_artefact_paths(target_root, *artefact))
+            choices.update(caps.overridden_agent_choices([finding], {finding.artifact_name}, name))
     click.echo()
     return CollisionAnswers(
         skips={name: tuple(chosen) for name, chosen in skips.items()},
         overridden=tuple(overridden),
+        choices=choices,
     )
 
 
@@ -1156,9 +1176,21 @@ def reconcile_forward_via_target(
     *dry_run* and *force* are passed to the target's upgrade (ADR-065 point 9):
     a dry run lists what the target's upgrade would do, and `--force` overrides
     that upgrade's two dependency-gate warnings and nothing else (point 6).
+
+    The bypass probes the target before it runs it, with git's terminal prompt
+    off (ADR-090 point 2). A target that cannot be fetched runs nothing, and the
+    pin stays as it was (ADR-049 point 5).
     """
     argv = ["upgrade", *(["--dry-run"] if dry_run else []), *(["--force"] if force else [])]
-    returncode = run_bypassed(target, argv)
+    try:
+        returncode = run_bypassed(target, argv)
+    except ReleaseNotFetched:
+        raise click.ClickException(
+            f"pkit {target} could not be fetched (offline, a missing tag, a credential the "
+            f"server asked for, or uvx unavailable), so its upgrade did not run. The pin was "
+            f"not advanced; re-run where `uvx --from {DISTRIBUTION_GIT_URL}@v{target} "
+            "project-kit --version` resolves."
+        ) from None
     if returncode != 0:
         raise click.ClickException(
             f"reconciling content forward to {target} failed: the bootstrapped "
@@ -1281,7 +1313,7 @@ def _auto_advance_pinned(
     if latest is None:
         click.secho(
             "warning: could not check for the latest pkit release "
-            f"(`git ls-remote {DISTRIBUTION_GIT_URL}` failed — offline, missing "
+            f"(`git ls-remote {DISTRIBUTION_REMOTE_URL}` failed — offline, missing "
             "credentials, git unavailable, or timed out), so this upgrade hands over to "
             f"no newer release. The pin stays at {current_pin}; re-run when the release "
             "source is reachable to move past it.",
@@ -1438,7 +1470,7 @@ def _maybe_self_update_tool(*, self_update: bool, dry_run: bool) -> None:
         click.echo()
         click.secho(
             "warning: could not check for a newer pkit tool "
-            f"(`git ls-remote {DISTRIBUTION_GIT_URL}` failed — offline, missing "
+            f"(`git ls-remote {DISTRIBUTION_REMOTE_URL}` failed — offline, missing "
             "credentials, git unavailable, or timed out). Continuing; your "
             "installed tool may be behind.",
             err=True,
@@ -1527,11 +1559,12 @@ def _self_update_tool(latest: Version) -> bool:
     """Run `uv tool install --force <dist>@v<latest>` to update the global binary.
     Returns True on success; False on any failure (caller degrades to instruct).
     A global-binary mutation the sandbox may gate — a decline surfaces as non-zero
-    and degrades, never bricks."""
+    and degrades, never bricks. git's terminal prompt is off, so a server that asks
+    for a credential fails the install rather than wait (ADR-090 point 2)."""
     click.echo(f"Updating the pkit tool to v{latest} …")
     cmd = ["uv", "tool", "install", "--force", f"{DISTRIBUTION_GIT_URL}@v{latest}"]
     try:
-        proc = subprocess.run(cmd, check=False)
+        proc = subprocess.run(cmd, check=False, env=fetch_environment(os.environ))
     except OSError:
         return False
     return proc.returncode == 0
@@ -1636,15 +1669,18 @@ def _latest_released_version() -> Version | None:
     Best-effort per ADR-063 point 1: returns None on *any* failure — `git` missing
     (`OSError`), the source unreachable (non-zero exit), a bounded-timeout expiry,
     or output with no release tag (`_max_released_tag`). The caller degrades loudly. Uses
-    the same compiled distribution URL the router pins against (`router`), so tool
-    detection and route-2 pinning share one source of truth.
+    the same compiled distribution URL the router pins against (`router`), in git's
+    spelling, so tool detection and route-2 pinning share one source of truth. git's
+    terminal prompt is off, so a server that asks for a credential fails the lookup
+    at once (ADR-090 point 2).
     """
     try:
         completed = subprocess.run(
-            ["git", "ls-remote", "--tags", DISTRIBUTION_GIT_URL],
+            ["git", "ls-remote", "--tags", DISTRIBUTION_REMOTE_URL],
             capture_output=True,
             text=True,
             timeout=_LS_REMOTE_TIMEOUT_SECONDS,
+            env=fetch_environment(os.environ),
         )
     except (OSError, subprocess.SubprocessError):
         # OSError: git not on PATH. SubprocessError covers TimeoutExpired et al.

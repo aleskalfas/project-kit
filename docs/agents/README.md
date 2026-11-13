@@ -15,7 +15,7 @@ pkit:
         - src/project_kit/agents_overlay.py
         - src/project_kit/refs.py
         - src/project_kit/storyboards.py
-      record: [COR-006, COR-007, COR-013, COR-016, COR-024, COR-026, COR-047, COR-057, "project-management:DEC-029"]
+      record: [COR-006, COR-007, COR-013, COR-016, COR-024, COR-026, COR-047, COR-057, "project-management:DEC-029", ADR-085]
       artefact:
         - ACT-developer
         - ACT-ai-agent
@@ -27,6 +27,7 @@ pkit:
         - REQ-021
         - .pkit/agents/README.md#layout
         - .pkit/agents/README.md#frontmatter-schema
+        - .pkit/agents/README.md#tool-access
         - .pkit/agents/README.md#body-conventions
         - .pkit/agents/README.md#the-reference-graph
         - .pkit/agents/README.md#adopter-overlay
@@ -149,7 +150,7 @@ A definition is written once, in `.pkit/`, and deployed into the place where the
 ```mermaid
 flowchart TD
   accTitle: How a definition reaches a session
-  accDescr: The core's definitions, each installed capability's and your own are the sources. pkit init and pkit sync run the adapter's deploy, which picks one source for each name, fills each placeholder of its front matter from your overlay, and writes the copy into .claude/agents. A definition whose required category the overlay leaves unset is skipped. A session dispatches an agent by its definition's name, and Claude Code loads the deployed copy, with only the tools it names.
+  accDescr: The core's definitions, each installed capability's and your own are the sources. pkit init and pkit sync run the adapter's deploy, which picks one source for each name, fills each placeholder of its front matter from your overlay, and writes the copy into .claude/agents. A definition whose required category the overlay leaves unset is skipped. A session dispatches an agent by its definition's name, and Claude Code loads the deployed copy, with the tools the definition's tool access gives the agent.
   core["core definitions, .pkit/agents/core/"] --> deploy
   cap["a capability's definitions, its agents/ folder"] --> deploy
   own["your definitions, .pkit/agents/project/"] --> deploy
@@ -162,11 +163,15 @@ flowchart TD
 
 - **The sources.** The core's definitions are in `.pkit/agents/core/`, and an installed capability's are in its `agents/` folder. Each sync refreshes both. Yours are in `.pkit/agents/project/`, which no sync writes ([the reference, "Layout"](../../.pkit/agents/README.md#layout)).
 - **The core's six** are the four reviewers, the architect and the `process-author`. The `process-author` writes the checks behind a process definition, and owns nothing until you name its paths.
-- **One definition for each name.** Where two sources ship one name, the deploy takes yours, then a capability's, then the core's ([the reference, "Deploy mechanics"](../../.pkit/agents/README.md#deploy-mechanics)).
+- **One definition for each name.** Where two sources ship one name, the deploy takes yours, then a capability's, then the core's. Where yours keeps out a shipped one, each sync names both files on a `suspended` line ([the reference, "Deploy mechanics"](../../.pkit/agents/README.md#deploy-mechanics)).
 - **The overlay,** `.pkit/agents/project/overlay.yaml`, names your paths for each category, such as `adr-records`. A definition's front matter names the category as `<adr-records>`, and the deploy writes the paths in its place. `pkit init` writes the overlay with a value for each category the core's definitions name ([the reference, "Adopter overlay"](../../.pkit/agents/README.md#adopter-overlay)).
 - **The deployed copy,** `.claude/agents/<name>.md`, is what Claude Code loads. Each sync writes it again from its source, so you edit the source, never the copy. A file of yours there stays: the deploy leaves a file it did not write, and reports it skipped ([the reference, "Deploy mechanics"](../../.pkit/agents/README.md#deploy-mechanics)).
 - **Skipped.** A definition whose required category the overlay leaves unset is skipped, and the others deploy. A copy an earlier deploy wrote stays as it was. `pkit agents` lists each definition as deployable or skipped ([the reference, `pkit agents`](../../.pkit/agents/README.md#pkit-agents)).
-- **The session** dispatches an agent by its definition's name, such as "Use the critic agent on `docs/plan.md`". Claude Code gives the agent only the tools its `tools:` list names ([the reference, "Frontmatter schema"](../../.pkit/agents/README.md#frontmatter-schema)).
+- **Refused for its tool access.** A definition that names both `tools` and `withheld`, or withholds a tool Claude Code cannot withhold, is skipped too, and the deploy says why. The definition's earlier copy is removed, since that copy may give tools the definition no longer gives. Mend the definition and run `pkit sync` again ([the reference, "Tool access"](../../.pkit/agents/README.md#tool-access)).
+- **The session** dispatches an agent by its definition's name, such as "Use the critic agent on `docs/plan.md`". The definition's tool access decides which tools Claude Code gives the agent ([the reference, "Tool access"](../../.pkit/agents/README.md#tool-access)):
+  - **With `tools:`,** the agent holds only the tools that list names.
+  - **With `withheld:`,** the agent holds every tool the session would give it, but those that list names. That rests on `helper-withheld-tools`, a requirement on Claude Code that nobody has measured yet.
+  - **With neither,** the agent holds the tools the session gives a helper.
 - **What the agent may run.** Where the permission model is turned on, the model decides each of the agent's calls under the grants you give that agent ([the permissions guide](../permissions/README.md#deny-something-to-one-agent)).
 
 ## Get a delegated agent's result back whole
@@ -181,7 +186,7 @@ Below, `grep` keeps the line of the report on whole results:
 
 ```console
 $ pkit harness report | grep delegated-result-complete
-  indeterminate  delegated-result-complete  at-cost  its truth is visible only to an agent inside a session of the harness (in-session); this pass reads only files, so nothing was read to confirm the declared grade · cost: Holds for every helper while the harness's experimental agent-teams feature is off. While it is on, it holds only for a helper dispatched without a name: a named helper's result arrives cut at 4064 characters, the rest reachable only through a messaging tool the delegating agent may not hold. The methodology dispatches its helpers without a name (project-management DEC-029).
+  indeterminate  delegated-result-complete     at-cost  its truth is visible only to an agent inside a session of the harness (in-session); this pass reads only files, so nothing was read to confirm the declared grade · cost: Holds for every helper while the harness's experimental agent-teams feature is off. While it is on, it holds only for a helper dispatched without a name: a named helper's result arrives cut at 4064 characters, the rest reachable only through a messaging tool the delegating agent may not hold. The methodology dispatches its helpers without a name (project-management DEC-029).
 ```
 
 > [!WARNING]
@@ -250,6 +255,8 @@ Turn recurring work into a definition of your own, and design its dialogue as a 
    - which paths it owns
 6. **Write your paths as they are.** The body keeps whatever it names. Name a path by a category, such as `<release-notes>`, only where another project or several agents share the definition's paths. Then name the category's paths in the overlay, and have the body send the agent there, as the architect's does.
 7. **Set its tools.** The stamp grants `Read`, `Glob`, `Grep` and `Bash`, and Claude Code gives the agent only those its `tools:` list names. Keep only the tools the role needs, and `Read` where it has a storyboard.
+   - **Every tool but a few:** name those few in `withheld:`, in place of `tools:` and never beside it.
+   - **An agent that must lack a tool,** such as a reviewer that must change no file, is granted its tools. A withheld list gives every tool it does not name, one a later release of Claude Code adds among them.
 8. **Deploy and check it.** Run `pkit sync`, then `pkit refs validate`.
 
 Below, you stamp an agent that welcomes new contributors, with its storyboard. A line you add to its body then cites a file its front matter does not declare:

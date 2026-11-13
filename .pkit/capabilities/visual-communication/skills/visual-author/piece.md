@@ -1,6 +1,6 @@
 # Starting a piece
 
-A piece is a folder under the location's `pieces/`. It holds `piece.yaml`, which says what the piece is, and a content file for each language, which says what it shows ([A piece](../../files.md#a-piece)). It may keep a brief too, which says what the piece must show and why its design is as it is ([The brief](../../files.md#the-brief)). You bring its libraries first, write its files by hand, and let the first render write the lock.
+A piece is a folder under the location's `pieces/`. It holds `piece.yaml`, which says what the piece is, and a content file for each language, which says what it shows ([A piece](../../files.md#a-piece)). It may keep a brief too, which says what the piece must show and why its design is as it is ([The brief](../../files.md#the-brief)). You bring its libraries first, stamp its files with `pkit visual new`, fill them, and let the first render write the lock.
 
 ## 1. Bring the libraries
 
@@ -28,7 +28,7 @@ A copy is the project's file, and you never edit it ([What the location holds](.
 
 Name the piece first. Its name takes the name shape, such as `first-talk`, and its folder is `pieces/<piece>/` ([Shapes](../../files.md#shapes)).
 
-Then choose each field of `piece.yaml`:
+Then choose each field of `piece.yaml`. Each is a flag of `pkit visual new` in step 3:
 
 | Field | How to choose |
 |---|---|
@@ -45,11 +45,29 @@ Then choose each field of `piece.yaml`:
 
 **A web page** is a site of one page, and a portal is a site of several. Its content holds its pages under `pages`, each naming the layout `standard` and filling its slot `main`. The site's `header` and `footer` are optional. Each is written once, and every page takes it. Each page is as wide as its size, and as tall as its content. The site and the axis `device` come with the foundations' version 1.1.0 ([The foundations](../../files.md#the-foundations)).
 
-Write no `lock`: the first render writes it. Write no `pinned` either, since a pinned draft with no lock is refused.
+The command writes `state: draft`, and no `lock`: the first render writes it. Add no `pinned` either, since a pinned draft with no lock is refused.
 
-## 3. Write `piece.yaml`
+## 3. Stamp the piece
 
-Write `pieces/<piece>/piece.yaml`. Its first two fields are the binding, which every file of the capability's format carries ([The binding](../../files.md#the-binding)). For the piece `first-talk`:
+`pkit visual new <piece>` writes the piece's folder, `pieces/<piece>/`, from your choices. For the piece `first-talk`:
+
+```
+pkit visual new first-talk --top foundations/deck --brand neutral --language en --audience "New members of the team, who have not seen the project yet." --shown "On a screen, at the team's weekly meeting." --explains --export pdf --mode colour-scheme=light,dark
+```
+
+| Field | Flag |
+|---|---|
+| `top`, `brand` | `--top <library>/<component>`, `--brand <library>` |
+| `notations` | `--notation <library>`, once for each |
+| `languages` | `--language <language>`, once for each, the source language first |
+| `audience`, `shown` | `--audience <text>`, `--shown <text>` |
+| `explains` | `--explains` for `true`. Leave it out for `false`. |
+| `exports` | `--export <format>`, once for each. Leave it out for `[]`. |
+| `modes` | `--mode <axis>=<mode>,<mode>`, once for each axis |
+
+It writes three kinds of file, and never writes over one ([A piece](../../files.md#a-piece)):
+
+- **`piece.yaml`,** opening with the binding that every file of the capability's format carries ([The binding](../../files.md#the-binding)). For `first-talk`:
 
 ```yaml
 pkit_schema: visual-communication:piece
@@ -57,8 +75,8 @@ schema_version: 1
 top: foundations/deck
 brand: neutral
 languages: [en]
-audience: New members of the team, who have not seen the project yet.
-shown: On a screen, at the team's weekly meeting.
+audience: "New members of the team, who have not seen the project yet."
+shown: "On a screen, at the team's weekly meeting."
 explains: true
 exports: [pdf]
 state: draft
@@ -66,12 +84,24 @@ modes:
   colour-scheme: [light, dark]
 ```
 
-## 4. Write the brief
+- **A content file for each language,** holding each field of the top it can leave empty, empty; a field of another type, such as a number, is left out. A deck's or a site's pages are one page, in the top's first layout, with each of its slots empty. You fill it in step 5.
+- **`brief.yaml`,** holding its binding and nothing else. You fill it in step 4.
+
+It refuses, and writes nothing, where:
+
+| It says | Do |
+|---|---|
+| The name is taken | Name the piece another. |
+| A name is not a piece's name | Name it with the name shape, such as `first-talk`. |
+| The location holds no version of a library | Run `pkit visual add <library>`, or name a library the location holds. |
+| A file would not hold its schema | Mend the flag it names. |
+
+## 4. Fill the brief
 
 The brief, `pieces/<piece>/brief.yaml`, is written for whoever makes or reviews the piece, and no reader sees it ([The brief](../../files.md#the-brief)). It keeps what the content does not: what each picture must make visible, and why the design is as it is. So a reviewer can fail a page that loses the point, and a later designer can change one choice without breaking another.
 
-- **When to keep one.** Keep one for a piece that explains, or whose pictures carry an order, a flow or a grouping a reader must see. A quick figure needs none. Nothing that draws or checks a piece needs one.
-- **The intent first, from whoever asks.** Before you design, write the `goals` and the `relations` from what whoever asked for the piece says, and show them to that person. A relation says in words what a picture must make visible between its parts, such as levels that each rest on the one below. A goal says what the audience must be able to do after the piece.
+- **When to fill it.** Fill it for a piece that explains, or whose pictures carry an order, a flow or a grouping a reader must see. A quick figure needs none: leave the brief as stamped, or remove it. Nothing that draws or checks a piece needs one.
+- **The intent first, from whoever asks.** Before you design, write the `goals` and the `relations` from what whoever asked for the piece says, and show them to that person. A relation says in words what a picture must make visible between its parts, such as levels that each rest on the one below. A goal says what the audience must be able to do after the piece. Where the relations give no order in which a page explains, you may propose one from the page's lead or its takeaway, and write it as a relation once whoever asked confirms it.
 - **A part for each page.** `piece` holds what concerns the whole piece, and `pages` a part for each page, keyed by the page's id in the content. A page's part names a page the content holds. Until you start a page in step 5, write its intent under `piece`, and move it under `pages` once the page has its id. A figure keeps all of its brief under `piece`.
 - **A takeaway only where the page has no lead.** Where the page's content states its point, such as a slide's `lead`, that is its takeaway, and the brief does not repeat it. A cover often has none.
 - **The reasons as you design.** Write each reason as you make the choice it explains, in step 5 and in the build loop. List them in the order the choices are made: `structure`, `form`, `hierarchy`, `type`, `colour`, `space`. Each names the principle it rests on, by its name and its source. A reason with no principle is taste, which nobody can judge.
@@ -108,11 +138,11 @@ pages:
 
 The slide `parts` states its point in its `lead`, so its part holds no takeaway.
 
-No command writes the brief, and nothing that draws the piece reads it. The check fails a page or a key path it names that the content does not hold: an id you renamed in the content leaves it naming what is gone ([The brief](../../checks.md#the-brief)).
+No command changes what the brief says, and nothing that draws the piece reads it. The check fails a page or a key path it names that the content does not hold: an id you renamed in the content leaves it naming what is gone ([The brief](../../checks.md#the-brief)).
 
-## 5. Write the content
+## 5. Fill the content
 
-Write `pieces/<piece>/content.<language>.yaml` for each language. The content says what the piece shows, and names no position, size, colour or font ([Content files](../../files.md#content-files)).
+Fill `pieces/<piece>/content.<language>.yaml` for each language. The command wrote each with the top's fields, empty. The content says what the piece shows, and names no position, size, colour or font ([Content files](../../files.md#content-files)).
 
 - **What it may hold.** Open the top's file in the location, under `libraries/foundations/<version>/components/`. A figure takes the fields `body` and `caption`. A deck takes `slides`, and a site takes `pages`. Each slide or page names a `layout`, whose `slots` are what it may fill, or the component that draws it, with `use`.
 - **What draws a visual.** A mapping with `use` places a component. Choose a pattern by the question the visual answers, never by its look ([The patterns, by the question they answer](../../libraries/starter/README.md#the-patterns-by-the-question-they-answer)). Its page says which fields and options it takes.
@@ -148,7 +178,7 @@ slides:
           text: How the piece looks.
 ```
 
-The same list as a figure, with `top: foundations/figure` and `exports: [svg]` in `piece.yaml`:
+The same list as a figure, stamped with `--top foundations/figure` and `--export svg`:
 
 ```yaml
 pkit_schema: visual-communication:content

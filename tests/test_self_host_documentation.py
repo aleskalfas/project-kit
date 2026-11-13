@@ -88,6 +88,10 @@ NOT_PLACES: dict[str, str] = {
     ".pkit/capabilities/visual-communication/libraries/README.md": (
         "maintainer-facing: the rule a change to a shipped library's version declares"
     ),
+    ".pkit/capabilities/visual-communication/design-knowledge/README.md": (
+        "the design agents' reading: the index of the field's published practice, "
+        "which describes no part of the system"
+    ),
 }
 
 # The released versions of the libraries visual-communication ships, each a copy of the

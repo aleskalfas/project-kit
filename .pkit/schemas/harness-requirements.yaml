@@ -53,10 +53,11 @@ requirements:
     observation_point: out-of-session
     evidence: >-
       A design dependency (COR-047 point 9): project-management DEC-056 point
-      5 starts each granted fixer with nobody watching, held to what
-      proposing needs, and ADR-066 point 13 words what it requires of the
-      harness. The drift command, `pkit pm fix-drift`, is the first command
-      that depends on it.
+      5 holds a fixer's confined run to what proposing needs, and ADR-066
+      point 13 words what it requires of the harness. The drift command,
+      `pkit pm fix-drift`, depends on it once it starts a confined run, the
+      form every fixer's run takes, watched or not, where it is built and
+      the harness holds it (DEC-069 point 2).
   unattended-working-run:
     title: A process can start an agent unattended that edits and builds in a folder the process names
     behaviour: >-
@@ -90,3 +91,32 @@ requirements:
       person starts and not in some helpers it starts for another agent, or in
       a run started without the project's settings, and a session that loads
       none is bound by none of the rules, with nothing to say so.
+  session-agent-withheld-tools:
+    title: A session's agent withheld named tools has none of them and keeps the rest
+    behaviour: >-
+      An agent whose definition names tools it is withheld, run as a whole
+      session's agent, has none of those tools in the session. It keeps
+      every other tool the session holds, the tools of each server the
+      session connects included.
+    observation_point: out-of-session
+    evidence: >-
+      A design dependency (COR-047 point 9): project-management DEC-068 runs
+      its project manager as a whole session's agent, through the project's
+      default-agent switch, with every tool the session gives it less a list
+      it is withheld. COR-013 point 7 and ADR-085 word what it requires of the
+      harness. A withheld tool the harness still offered would give back what
+      the definition took away, with no sign. It is seen in the report a
+      session gives at its start.
+  helper-withheld-tools:
+    title: A helper withheld named tools has none of them
+    behaviour: >-
+      An agent whose definition names tools it is withheld, run as a helper
+      another agent delegates to, has none of those tools.
+    observation_point: in-session
+    evidence: >-
+      A design dependency (COR-047 point 9): the project manager whose
+      definition withholds tools (project-management DEC-068) also runs as a
+      helper where another session dispatches it (project-management DEC-029,
+      "Invocation pattern"), and ADR-085 words what it requires of the
+      harness. A helper's tools are visible only inside the session that
+      dispatches it.

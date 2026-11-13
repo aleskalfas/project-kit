@@ -17,7 +17,8 @@ reads through an `Env` (`env.py`). This module builds the real one from a projec
   the foundations' declarations and the own roles of each component library the lock
   names (DEC-008 point 1), and the brand read against it, over its base at the version
   the lock names when it builds on one (DEC-004 point 6), the notations the piece names
-  (DEC-004 point 10), the combinations the piece names, and the `Env` over them. It
+  (DEC-004 point 10), the combinations the piece names, the `Env` over them, and the
+  drawings that draw under the brand along its chain (`brand_drawings`, DEC-009 point 4). It
   computes one scene for each language and each key over the size axes the piece names
   (DEC-005 point 6), each reading the brand's roles at its key (`ProjectEnv.at`), and draws
   each combination from the scene of its key (`drawn`). A format that holds modes takes the
@@ -58,10 +59,12 @@ from _lib import copies, keys, layout, notations, pictures, records, tokens, val
 from _lib.copies import DRAFT
 from _lib.env import MissingFont, PictureInfo, UnknownConcept, UnreadableComponent
 from _lib.files import FileError, read_bound, refuse_links, without_binding
+from _lib.findings import ATTENTION, FACT, FAILS, Finding
 from _lib.fingerprint import COPY_PLACE
-from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, Misfit, Version
+from _lib.libraries import FOLDER, FOUNDATIONS, Held, Library, LibraryError, Misfit, Version
 from _lib.location import files as listed_files
 from _lib.names import PIECE, is_language, is_name, split_use
+from _lib.outlines import Outline
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml, sha256
 from _lib.scene import SceneResult, compute_scene
@@ -93,6 +96,21 @@ class Refused(Exception):
 def content_file(language: str) -> str:
     """The name of a piece's content file in `language`."""
     return f"content.{language}.yaml"
+
+
+def new_piece_folder(root: Path, location: str, name: str) -> Path:
+    """The folder of a new piece `name` in `location`. Raises Refused where `name` is not a
+    piece's name, or anything lies there already, so a new piece never writes over a file."""
+    if not is_name(name):
+        raise Refused(f"`{name}` is not a piece's name: lower-case words joined by hyphens")
+    rel = f"{location}/{PIECES}/{name}"
+    target = root / rel
+    if target.exists() or target.is_symlink():
+        raise Refused(
+            f"{rel} lies in the location already, so the name `{name}` is taken: name the new "
+            f"piece another"
+        )
+    return target
 
 
 def produce_command(piece: str, output: str) -> str:
@@ -418,7 +436,10 @@ class Project:
         )
         self.notations = {
             name: notations.read_notation(
-                self.version_folder(name), self.foundations.families, root=self.root
+                self.version_folder(name),
+                self.foundations.families,
+                shapes=self.foundations.shapes,
+                root=self.root,
             )
             for name in piece.notations
         }
@@ -435,10 +456,22 @@ class Project:
         self.size_keys = sorted(set(self._size_keys.values()), key=keys.key_order)
         self._values: dict[str, Any] | None = None
         self.env = ProjectEnv(self)
+        drawn = brand_drawings(self.brand)
+        self.drawings = drawn.drawings
+        self.kept = drawn.kept
+        self._choice: layout.Choice | None = None
 
     def label(self, library: str) -> str:
         """`<library>@<version>` of a locked library."""
         return f"{library}@{self.lock[library]}"
+
+    def kind(self, library: str) -> str | None:
+        """The kind of the version of `library` the lock names; None where it names none, or
+        the version's `library.yaml` cannot be read, which the lock's findings report."""
+        try:
+            return self.held.library(library, Version.parse(self.lock[library])).kind
+        except (KeyError, LibraryError):
+            return None
 
     def version_folder(self, library: str) -> Path:
         """The folder of the version of `library` the lock names. Raises Refused when the
@@ -469,6 +502,36 @@ class Project:
         the scene that serves it. Raises KeyError for a key the piece does not name."""
         return self._size_keys[key]
 
+    def choice(self) -> layout.Choice:
+        """Which drawing draws each instance of a layout in every scene of the piece,
+        worked out once (DEC-034 point 6). A brand's drawing draws an instance only where it
+        fits it in each language the piece holds and at every key over the size axes it
+        names, so the piece is placed in each, as the search for a lock places it. Each
+        instance a drawing does not fit somewhere is left to its top's own drawing in all
+        of them, naming the first language and key where it did not fit, and the piece is
+        placed again until no other instance is left so. A brand that draws no layout
+        leaves every top to its own drawing, and places nothing more. Raises `MissingFont`
+        as a scene does."""
+        if self._choice is not None:
+            return self._choice
+        refused: dict[str, str] = {}
+        choice = layout.Choice()
+        while self.drawings:
+            choice = layout.Choice(self.drawings, dict(refused))
+            for language in self.piece.languages:
+                for size in self.size_keys:
+                    sizes = sizes_at(self.scope.axes, size)
+                    ctx = layout.Context(
+                        self.env.at(size), language, self.piece.stand_ins, sizes, choice
+                    )
+                    layout.place_top(ctx, self.piece.top, self.piece.contents[language])
+                    for trace, why in ctx.misfits.items():
+                        refused.setdefault(trace, f"{why}, in `{language}` at `{size}`")
+            if len(refused) == len(choice.refused):
+                break
+        self._choice = choice
+        return choice
+
     def scenes(
         self,
         languages: Sequence[str] | None = None,
@@ -487,6 +550,7 @@ class Project:
         Raises `env.MissingFont` (and so `text.MissingGlyph`) before anything is laid out."""
         served = None if keys is None else {self.size_key(key) for key in keys}
         sizes = [size for size in self.size_keys if served is None or size in served]
+        choice = self.choice()
         return [
             (
                 language,
@@ -501,12 +565,108 @@ class Project:
                     env=self.env.at(size),
                     facts=facts,
                     sizes=sizes_at(self.scope.axes, size),
+                    choice=choice,
                 ),
             )
             for language in self.piece.languages
             if languages is None or language in languages
             for size in sizes
         ]
+
+
+def chain_of(brand: tokens.Brand) -> list[tokens.Brand]:
+    """The brand, then each brand it builds on as its base, the root last (DEC-004 point 6)."""
+    chain: list[tokens.Brand] = []
+    link: tokens.Brand | None = brand
+    while link is not None:
+        chain.append(link)
+        link = link.base
+    return chain
+
+
+@dataclass(frozen=True)
+class Kept:
+    """A brand's drawing that draws nothing, since a brand nearer the root of its chain
+    serves its top (DEC-009 point 4): the top, and the label of the brand that serves it."""
+
+    top: str
+    by: str
+
+
+@dataclass(frozen=True)
+class Drawings:
+    """What draws along a brand's chain (DEC-009 points 2 to 4, DEC-034 point 4): each
+    drawing that draws, by its use under the top and the layout its `draws` names, and each
+    a brand nearer the root keeps from drawing, by its use (`Kept`)."""
+
+    drawings: dict[tuple[str, str], str] = field(default_factory=dict)
+    kept: dict[str, Kept] = field(default_factory=dict)
+
+
+def brand_drawings(brand: tokens.Brand) -> Drawings:
+    """The drawings of the brand and of each brand it builds on as its base, as they draw
+    under it (DEC-009 points 2 to 4, DEC-034 points 1 and 4).
+
+    Along the chain, the brand nearest the root that serves a top keeps its form. A brand
+    serves a top where it holds a drawing of one of its layouts, or holds the top itself,
+    whose own drawing draws each of its layouts. So each brand's drawings draw only the tops
+    no brand nearer the root serves, and a drawing of any other top draws nothing, which the
+    piece states (`Drawings.kept`). A drawing draws only where its `draws` names a top whose
+    library its own brand names (DEC-009 point 3). A brand names component libraries alone
+    (`tokens.Brand.named`), so a top a brand holds is drawn by its own drawing alone, and a
+    drawing of it is the check's to fail (DEC-034 point 4). Where a brand holds two drawings of
+    one layout, neither draws, and the top's own drawing does. A file that cannot be read
+    draws nothing, and the check of its brand reports it."""
+    drawn = Drawings()
+    serving: dict[str, str] = {}
+    for link in reversed(chain_of(brand)):
+        own, held = _served(link)
+        for (top, layout_name), uses in sorted(own.items()):
+            if top in serving:
+                drawn.kept.update({use: Kept(top, serving[top]) for use in uses})
+            elif len(uses) == 1:
+                drawn.drawings[top, layout_name] = uses[0]
+        for top in [*(top for top, _ in own), *held]:
+            serving.setdefault(top, link.label)
+    return drawn
+
+
+def _served(brand: tokens.Brand) -> tuple[dict[tuple[str, str], list[str]], list[str]]:
+    """What the brand's own version holds of the tops it serves: each drawing, by its use
+    under the top and the layout its `draws` names, of a top whose library the brand names
+    (DEC-009 point 3); and each top it holds, by its use (DEC-034 point 4)."""
+    declared, held = _declared(brand)
+    drawings: dict[tuple[str, str], list[str]] = {}
+    for use, (top, drawn) in declared.items():
+        if top.split("/")[0] in brand.named:
+            drawings.setdefault((top, drawn), []).append(use)
+    return drawings, held
+
+
+def _declared(brand: tokens.Brand) -> tuple[dict[str, tuple[str, str]], list[str]]:
+    """What the brand's own version declares of the tops it draws, each component by its
+    use, in the order of its file's name: each drawing whose `draws` names a top and a
+    layout, with them; and each top it holds (DEC-034 points 1 and 4). A file that cannot
+    be read declares nothing."""
+    drawings: dict[str, tuple[str, str]] = {}
+    held: list[str] = []
+    for path in sorted((brand.folder / COMPONENTS).glob("*.yaml")):
+        data, _ = read_component(path)
+        use = f"{brand.name}/{path.stem}"
+        draws = data.get(layout.DRAWS) if data is not None else None
+        top = draws.get("top") if isinstance(draws, Mapping) else None
+        drawn = draws.get("layout") if isinstance(draws, Mapping) else None
+        if isinstance(top, str) and isinstance(drawn, str):
+            drawings[use] = (top, drawn)
+        elif _is_top(data):
+            held.append(use)
+    return drawings, held
+
+
+def _is_top(data: Mapping[str, Any] | None) -> bool:
+    """Whether the component of the data `data` is a top: it declares `layouts` and draws no
+    layout (DEC-034 point 4). None, the data of no component, is no top."""
+    return data is not None and data.get(layout.DRAWS) is None and layout.LAYOUTS in data
 
 
 def size_key_of(combination: Mapping[str, str], axes: Mapping[str, tokens.Axis]) -> str:
@@ -772,6 +932,26 @@ class ProjectEnv:
         return dict(self._project.foundations.families[name])
 
     def concept(self, name: str) -> str | None:
+        notation, concept = self._notation(name)
+        try:
+            return notation.family(concept)
+        except KeyError:
+            raise UnknownConcept(
+                name, f"the notation {notation.label} holds no concept `{concept}`"
+            ) from None
+
+    def sign(self, name: str) -> Outline | None:
+        notation, concept = self._notation(name)
+        try:
+            return notation.sign(concept)
+        except KeyError:
+            raise UnknownConcept(
+                name, f"the notation {notation.label} holds no concept `{concept}`"
+            ) from None
+
+    def _notation(self, name: str) -> tuple[notations.Notation, str]:
+        """The notation of the concept `name` and the concept's name within it. Raises
+        UnknownConcept where the piece names no such notation."""
         named, _, concept = name.partition("/")
         notation = self._project.notations.get(named)
         if notation is None:
@@ -780,12 +960,7 @@ class ProjectEnv:
                 f"the concept `{name}` comes from `{named}`, a notation the piece does not name "
                 f"under `notations`",
             )
-        try:
-            return notation.family(concept)
-        except KeyError:
-            raise UnknownConcept(
-                name, f"the notation {notation.label} holds no concept `{concept}`"
-            ) from None
+        return notation, concept
 
     def library_version(self, library: str) -> str:
         return self._project.lock[library]
@@ -825,6 +1000,12 @@ class LibraryEnv:
         self._components: dict[str, dict[str, Any] | None] = {}
         self._unreadable: dict[str, str] = {}
         self._folders: dict[str, pictures.Folder] = {}
+
+    def brand_of(self, use: str) -> str | None:
+        """The label of the brand, among the versions the library is checked with, that
+        holds the component `use`; None where its library is none of them, or no brand."""
+        version = self._versions.get(use.partition("/")[0])
+        return version.label if version is not None and version.kind == "brand" else None
 
     def component(self, use: str) -> dict:
         if use not in self._components:
@@ -897,8 +1078,209 @@ class LibraryEnv:
     def concept(self, name: str) -> str | None:
         raise UnknownConcept(name, "no piece names a notation where a library is checked alone")
 
+    def sign(self, name: str) -> Outline | None:
+        self.concept(name)  # raises, as for every concept here
+        return None
+
     def library_version(self, library: str) -> str:
         return str(self._versions[library].version)
+
+
+def held_top_findings(
+    component: layout.Component | None, env: LibraryEnv, *, file: str, library: str
+) -> list[Finding]:
+    """The finding on `component`, a drawing in its file `file` of the version `library`,
+    whose top a brand among the versions `env` reads holds (DEC-034 points 4 and 10,
+    `layout.held_top_drawing_finding`); none on any other component. A drawing that names a
+    component of a brand that is no top, or that the brand does not hold, gets none: it
+    draws no layout of a top, which `drawing-shape` says."""
+    if component is None or component.draws is None:
+        return []
+    top = component.draws[0]
+    holder = env.brand_of(top)
+    if holder is None:
+        return []
+    try:
+        if not _is_top(env.component(top)):
+            return []
+    except KeyError:
+        return []
+    return [
+        layout.held_top_drawing_finding(
+            component.use, component.draws, holder, file=file, library=library
+        )
+    ]
+
+
+def brand_findings(
+    brand: tokens.Brand, ctx: layout.Context, env: LibraryEnv, *, shown: str
+) -> list[Finding]:
+    """What the brand's version, checked alone over its base, shows of the forms it draws
+    (DEC-009 points 2, 3, 4 and 9, DEC-034 points 4, 8 and 10), each drawing read through
+    `ctx`, a context of the engine over `env`. Each lies in the version, whose folder,
+    relative to the project root, is `shown`.
+
+    - **Fails:** a drawing of a top whose library the brand does not name, and that is no
+      brand's among the versions read (`drawing-unnamed`). Where no version read holds the
+      top, it takes the place of the engine's finding that the drawing draws no layout of a
+      top. And each of two drawings or more of one layout (`drawing-twice`).
+    - **Asks the brand's owner for attention, never failing:** a drawing of a top that a
+      brand nearer the root of its chain serves, to remove it (`drawing-base-serves`); and
+      each thing a drawing that draws does not take of what its top declares
+      (`drawing-lacks`, `layout.Component.untaken`).
+    - **States a fact:** each top the brand serves, with the layouts it leaves to the top's
+      own drawing (`brand-serves`): a top whose library it names, of which it holds a
+      drawing, where no brand nearer the root serves it; and a top it holds, whose own
+      drawing draws each of its layouts.
+
+    A drawing that fails as one that draws nothing, of a top a brand holds
+    (`held_top_findings`), of no layout of a top, unnamed or twice, takes none of the
+    others. A file that cannot be read is the engine's to report."""
+    label, who = brand.label, f"the owner of `{brand.name}`"
+    declared, held = _declared(brand)
+    kept = brand_drawings(brand).kept
+    found: list[Finding] = []
+    nothing: set[str] = set()
+    drawings: dict[str, layout.Component] = {}
+
+    def at(use: str, code: str, level: str, message: str, where: str, fix: str) -> Finding:
+        file = f"{shown}{COMPONENTS}/{use.partition('/')[2]}.yaml"
+        return Finding(
+            code,
+            level,
+            f"{use}: {message}",
+            file=file,
+            where=where,
+            fix=fix,
+            library=label,
+            who="" if level == FAILS else who,
+        )
+
+    for use, (top, drawn) in declared.items():
+        drawing = ctx.component(use)
+        if drawing is None or held_top_findings(drawing, env, file="", library=label):
+            nothing.add(use)
+            continue
+        drawings[use] = drawing
+        library = top.partition("/")[0]
+        if library not in brand.named and env.brand_of(top) is None:
+            nothing.add(use)
+            ctx.take_back(layout.DRAWING_SHAPE, layout.DRAWS, use)
+            found.append(
+                at(
+                    use,
+                    layout.DRAWING_UNNAMED,
+                    FAILS,
+                    f"draws `{drawn}` of `{top}`, and {label} does not name `{library}` among "
+                    "the libraries it builds on: a brand draws a layout only of a top whose "
+                    "library it names, so the drawing draws nothing",
+                    layout.DRAWS,
+                    f"name `{library}` by its major under `builds-on`, or take the drawing "
+                    "out, in a version of its own",
+                )
+            )
+        elif any(
+            (code, where) == (layout.DRAWING_SHAPE, layout.DRAWS)
+            for code, where, _ in drawing.issues
+        ):
+            nothing.add(use)
+    by_layout: dict[tuple[str, str], list[str]] = {}
+    for use, key in declared.items():
+        if use not in nothing:
+            by_layout.setdefault(key, []).append(use)
+    for (top, drawn), uses in by_layout.items():
+        for use in uses if len(uses) > 1 else ():
+            others = ", ".join(f"`{other}`" for other in uses if other != use)
+            found.append(
+                at(
+                    use,
+                    layout.DRAWING_TWICE,
+                    FAILS,
+                    f"draws `{drawn}` of `{top}`, and so does {others}: a brand holds one "
+                    "drawing of a layout, so none of them draws, and the top's own drawing does",
+                    layout.DRAWS,
+                    "take each drawing of the layout but one out, in a version of its own",
+                )
+            )
+            nothing.add(use)
+    for use, (top, drawn) in declared.items():
+        if use in nothing:
+            continue
+        if use in kept:
+            found.append(
+                at(
+                    use,
+                    layout.DRAWING_BASE_SERVES,
+                    ATTENTION,
+                    f"draws `{drawn}` of `{top}`, which {kept[use].by}, a brand {label} builds "
+                    "on, serves: the brand nearest the root that serves a top keeps its form, "
+                    "so the drawing draws nothing",
+                    layout.DRAWS,
+                    "take the drawing out, in a version of its own",
+                )
+            )
+            continue
+        for where, what in drawings[use].untaken():
+            found.append(
+                at(
+                    use,
+                    layout.DRAWING_LACKS,
+                    ATTENTION,
+                    f"does not take {what}, of what `{top}` gives `{drawn}`: the top's own "
+                    "drawing draws each instance that gives it",
+                    where,
+                    "take it in the drawing, in a version of its own, or leave such an "
+                    "instance to the top's own drawing",
+                )
+            )
+    return [*found, *_serves(brand, ctx, declared, held, kept, nothing, shown=shown)]
+
+
+def _serves(
+    brand: tokens.Brand,
+    ctx: layout.Context,
+    declared: Mapping[str, tuple[str, str]],
+    held: Sequence[str],
+    kept: Mapping[str, Kept],
+    nothing: set[str],
+    *,
+    shown: str,
+) -> list[Finding]:
+    """The fact the brand's version states of each top it serves (`brand_findings`): the
+    layouts it draws, by a drawing that draws, and those it leaves to the top's own
+    drawing, in the order the top declares them."""
+    drawn: dict[str, set[str]] = {}
+    for use, (top, name) in declared.items():
+        if top.partition("/")[0] not in brand.named or use in kept:
+            continue
+        component = ctx.component(top)
+        if component is None or not component.top or component.draws is not None:
+            continue
+        layouts = drawn.setdefault(top, set())
+        if use not in nothing:
+            layouts.add(name)
+    found = []
+    for top in sorted({*drawn, *held}):
+        said = f"{brand.label} serves `{top}`"
+        if top in held:
+            said += ", a top it holds, and the top's own drawing draws each of its layouts"
+        else:
+            component = ctx.component(top)
+            layouts = component.data.get(layout.LAYOUTS) if component is not None else None
+            names = [str(name) for name in (layouts if isinstance(layouts, Mapping) else {})]
+            own = ", ".join(f"`{name}`" for name in names if name in drawn[top])
+            left = ", ".join(f"`{name}`" for name in names if name not in drawn[top])
+            if not left:
+                said += f": it draws each of its layouts, {own}"
+            else:
+                said += f": it draws {own or 'none of its layouts'}, and leaves {left} to the "
+                said += "top's own drawing"
+        found.append(
+            Finding(
+                layout.BRAND_SERVES, FACT, said, file=f"{shown}library.yaml", library=brand.label
+            )
+        )
+    return found
 
 
 class _Missing(Exception):
@@ -956,25 +1338,35 @@ def fit(piece: Piece, held: Held) -> Fit | None:
 class Fit:
     """The judgement a draft's render gives the search for its lock (`libraries.Judge`):
     whether a whole combination of versions fits the piece as its lock does (DEC-003 point
-    8). It places the piece under the combination, in every language and at each key over
-    the size axes the piece names that the combination's foundations declare, as the
-    engine finds a tie's ends (`layout.place_top`), and computes no scene. Versions do not
-    fit where, under them, at a key (DEC-021 point 7):
+    8). It places the piece under the combination, in every language and at each key of
+    the modes the piece names on the size axes that the combination's foundations declare,
+    those they lack left out (`_size_combinations`), as the engine finds a tie's ends
+    (`layout.place_top`), and computes no scene. Versions do not fit where, under them, at a
+    key the lock places the piece at (DEC-021 point 7):
 
     - an item the lock places carries a key that both its component and its list declare,
       where it does not under the lock (DEC-010 point 2). The libraries of the item's
       component, and of each component above it, are implicated.
     - an end of a tie the lock draws is not found: its item is drawn other than once below
       the tie's pattern or off the tie's page, or the tie is not drawn (DEC-011 point 4).
-      Every library whose component the placing read or looked for is implicated.
+      Every library whose component the placing read or looked for is implicated, and the
+      foundations where they cannot spell a key the lock places the piece at.
+
+    A key the lock places the piece at is read over the combination's size axes, each axis
+    it leaves out at its default (DEC-004 point 3). Where they lack a mode or an axis it
+    names, each end the lock finds there is lost. Where they spell it as a combination the
+    piece does not name, it is not compared: the lock's foundations lack a size axis theirs
+    declare, and the lock places the piece at no mode it names on that axis.
 
     So what the lock already shows holds nothing back: a clash under the lock, an end it
-    does not find, and what a library it does not name yet brings. A misfit at every key
-    the lock places the piece at reads as it is; one at some keys is said at each, ending
-    with the key it holds at. Each component file, each produced picture's record and each
-    version of the foundations' declarations is read once, across every combination judged.
-    The placing under the lock, which each combination is compared with, is made at the
-    first judgement."""
+    does not find, and what a library it does not name yet brings. Nor does a mode the
+    lock's foundations lack, or an axis, such as one only newer foundations declare: the
+    lock places the piece at no key of it, so nothing there is lost. A misfit at every key
+    compared reads as it is; one at some keys is said at each, ending with the key it holds
+    at. Each component file, each produced picture's record and each version of the
+    foundations' declarations is read once, across every combination judged. The placing
+    under the lock, which each combination is compared with, is made at the first
+    judgement."""
 
     def __init__(self, piece: Piece, held: Held) -> None:
         self.piece = piece
@@ -991,14 +1383,18 @@ class Fit:
         if not under_lock.items and not under_lock.drawn:
             return []
         now = self._place(versions)
-        by_size: dict[str, dict[str, Misfit]] = {size: {} for size in under_lock.sizes}
+        lacked = [size for size in under_lock.sizes if not now.spells(size)]
+        compared = [size for size in under_lock.sizes if size in now.sizes or size in lacked]
+        asked = now.asked | {FOUNDATIONS} if lacked else now.asked
+        by_size: dict[str, dict[str, Misfit]] = {size: {} for size in compared}
         for at, (said, implicates) in now.clashes.items():
             language, size, item, _ = at
             if (language, size, item) in under_lock.items and at not in under_lock.clashes:
                 by_size[size].setdefault(said, Misfit("clash", said, implicates))
         for _, size, tie, end in sorted(under_lock.drawn - now.found):
-            said = f"the end `{end}` of the tie `{tie}` would not be found"
-            by_size[size].setdefault(said, Misfit("end", said, now.asked))
+            if size in by_size:
+                said = f"the end `{end}` of the tie `{tie}` would not be found"
+                by_size[size].setdefault(said, Misfit("end", said, asked))
         misfits: dict[str, Misfit] = {}
         for size, found in by_size.items():
             for said, misfit in found.items():
@@ -1028,9 +1424,9 @@ class Fit:
         key = frozenset(library.label for library in versions.values())
         if key not in self._placed:
             env = _FitEnv(self, versions)
-            placed = _Placed()
-            asked: set[str] = set()
             sized = self._size_axes(versions)
+            placed = _Placed(sized)
+            asked: set[str] = set()
             for combination in self._size_combinations(sized):
                 size = keys.key_of(combination, sized)
                 placed.sizes.append(size)
@@ -1062,10 +1458,20 @@ class Fit:
         return self.declared[path]
 
     def _size_combinations(self, sized: Mapping[str, tokens.Axis]) -> list[dict[str, str]]:
-        """Each combination of the modes the piece names on the size axes `sized`, in key
-        order; the one of their defaults alone where it names a mode they lack, which the
-        piece's own read refuses."""
-        named = {axis: modes for axis, modes in self.piece.modes.items() if axis in sized}
+        """Each combination of the modes the piece names on the size axes `sized` that they
+        hold, in key order. A mode they lack is left out, such as one only a newer version
+        of the foundations declares, and where the piece names none they hold on an axis
+        there is no combination: under them it is drawn at no key it names (DEC-003 point
+        8). An axis it names that is not among them, a value axis or one they lack, takes no
+        part in a key. The one of their defaults alone where it names an axis with no mode,
+        or a mode twice, which the piece's own read refuses."""
+        named: dict[str, list[str]] = {}
+        for axis, modes in self.piece.modes.items():
+            if axis in sized:
+                held = [mode for mode in modes if mode in sized[axis].modes]
+                if modes and not held:
+                    return []
+                named[axis] = held
         try:
             return keys.combinations(named, sized)
         except keys.BadKey:
@@ -1075,12 +1481,14 @@ class Fit:
 @dataclass
 class _Placed:
     """What placing the piece under one combination of versions shows, in every language
-    and at each key over the size axes, `sizes`, in key order: each item placed, by its
-    language, its key and its key path; each key an item carries that both its component
-    and its list declare, in words, with the libraries it implicates; the ends of each tie
-    drawn; every end found, a left-out tie's included where its item lies on the tie's
-    page; and the library of each component read or looked for, at any key."""
+    and at each key over its foundations' size axes, `axes`, in key order, `sizes`: each
+    item placed, by its language, its key and its key path; each key an item carries that
+    both its component and its list declare, in words, with the libraries it implicates;
+    the ends of each tie drawn; every end found, a left-out tie's included where its item
+    lies on the tie's page; and the library of each component read or looked for, at any
+    key."""
 
+    axes: Mapping[str, tokens.Axis]
     sizes: list[str] = field(default_factory=list)
     items: set[tuple[str, str, str]] = field(default_factory=set)
     clashes: dict[tuple[str, str, str, str], tuple[str, frozenset[str]]] = field(
@@ -1089,6 +1497,16 @@ class _Placed:
     drawn: set[tuple[str, str, str, str]] = field(default_factory=set)
     found: set[tuple[str, str, str, str]] = field(default_factory=set)
     asked: frozenset[str] = frozenset()
+
+    def spells(self, size: str) -> bool:
+        """Whether its foundations' size axes hold every axis and mode the key `size`
+        names. A key spelled over fewer axes is held, each axis it leaves out at its
+        default (DEC-004 point 3)."""
+        try:
+            keys.parse_key(size, self.axes)
+        except keys.BadKey:
+            return False
+        return True
 
     def add(self, language: str, size: str, top: layout.Instance) -> None:
         for each in [top, *top.below()]:
@@ -1205,6 +1623,10 @@ class _FitEnv:
 
     def concept(self, name: str) -> str | None:
         raise UnknownConcept(name, "no notation stands behind the fit of versions")
+
+    def sign(self, name: str) -> Outline | None:
+        self.concept(name)  # raises, as for every concept here
+        return None
 
     def library_version(self, library: str) -> str:
         return str(self._versions[library].version)

@@ -4,9 +4,11 @@ title: A web page is a page of a site, as wide as its size and as tall as its co
 status: accepted
 date: 2026-11-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
+retired-points:
+  "2": []
 ---
 
-**In plain terms:** a person designs a web page, or a portal of several, as one piece whose top is `site`, a top of the foundations. Its pages share one header and one footer. Each page is as wide as the size it is drawn at, and as tall as its content. A single web page is a site of one page, so a page joins a portal by being added to it. The parts made for a web page, such as a header or a form, join the starter, and each fits every size at the widths a brand gives it. A form is drawn, never sent. A part may show a state by its colour, such as a field in error, but shows no hover or focus. The viewing step cuts a page too tall for one image into strips, whichever renderer drew it.
+**In plain terms:** a person designs a web page, or a portal of several, as one piece whose top is `site`, a top of the foundations. Each page is as wide as the size it is drawn at, and as tall as its content. A single web page is a site of one page, so a page joins a portal by being added to it. The parts made for a web page, such as a header or a form, join the starter, and each fits every size at the widths a brand gives it. A form is drawn, never sent. A part may show a state by its colour, such as a field in error, but shows no hover or focus. The viewing step cuts a page too tall for one image into strips, whichever renderer drew it.
 
 ## Context
 
@@ -36,23 +38,16 @@ Four terms:
 - **A drawn design.** Nothing in it reflows in a browser, nothing is sent, and no link joins one page to another.
 - **Never inside another page.** A site's pages are pages, so a site placed in a slide's slot is a page inside a page, which fails ([visual-communication:DEC-005-engine-and-plugins] point 5).
 
-### 2. Its pages share a header and a footer, and each fills its main part
+### 2. Retired
 
-- **Its pages** lie in the top's field `pages`, and each names its layout (DEC-010 point 5).
-- **Two more fields of the top.** `header` and `footer`, each optional, and each the component the content places there. Every page's drawing takes them (DEC-010 point 5). So each is written once in each language, under one lock.
-- **Its first layout,** `standard`, has one slot, `main`, which every page fills with the component the content places.
-- **Fields and a slot, not parts of its own.** Each takes any component: the starter's, a brand's own part or a local one. So the top needs no library beneath it.
-- **A page drawn by its own component** takes none of the top's fields (DEC-010 point 5), so it draws no shared header or footer.
-- **Edge to edge.** The drawing places the header, the main part and the footer one under another, each the page's whole width, on the page's background. Each part sets its own inset, so its colour can reach the page's edge and its content keeps from it. A component that sets no inset touches the edge.
-- **More layouts later.** A layout the top adds later, such as a page with no header, breaks nothing ([visual-communication:DEC-009-layout-defaults] point 7).
+Its content is in no other point.
 
 ### 3. A page gets its width from its size, and may ask for its own height
 
 - **The site's width.** The site asks for the width of a shared role, `size.site`, the width of a site's pages. A brand gives it at each size it gives ([visual-communication:DEC-021-size-and-shape] point 2), so a page's width follows the size.
-- **A default for the role.** It aliases `size.slide`, as a shared role the foundations add after their first version does ([visual-communication:DEC-004-brands-and-notations] point 7). So no released brand owes it a value, and a brand with no size draws a page as wide as its slide.
 - **A width that does not follow.** Where a piece is drawn at a size other than the axis's default, and its top's width there is its width at the default, the check asks for attention (point 8). Otherwise the shape would follow the size, and the width would not.
-- **A page's height.** A layout may say the height of its page, under `preferred`, by a formula on its drawing's parts. It says no width, since a page always gets the top's. A page drawn by its own component asks what that component asks.
-- **What a page gets.** In a top whose layouts are its pages' forms, a page gets the top's width. It gets the top's height where the top asks for one, and else the height it asks for (DEC-005 point 3). A page that asks for more than the top's height gets less than it asks, and is reported as any such element is (DEC-005 point 14).
+- **A page's height.** A layout may say the height of its page, under `preferred`, by a formula on its drawing's parts. It says no width, since a page always gets the top's. A brand's drawing of a layout writes its page's height in its own file, as the layout does (refinement per [visual-communication:DEC-034-brand-drawings] point 2). A page drawn by its own component asks what that component asks.
+- **What a page gets.** In a top whose layouts are its pages' forms, a page gets the top's width. It gets the top's height where the top asks for one, and else the height it asks for (DEC-005 point 3). A top with a physical size asks for a height through it (refinement per [visual-communication:DEC-034-brand-drawings] point 3). A page that asks for more than the top's height gets less than it asks, and is reported as any such element is (DEC-005 point 14).
 - **The site asks for its width alone.** So each of its pages is as tall as its lowest part, as the figure is. A layout of a top that asks for no height says its page's height, or fails.
 - **The top's own frame.** A top that asks for no height is as wide as the width it asks for, and as tall as its tallest page. Its component sets both, as a component sets the size it asks for. Nothing reads that frame, since the top draws nothing and is no page.
 - **From the top down.** A page that takes its own height places nothing from that height, since the height reads its parts. A part placed from the page's foot makes a loop, which is refused (DEC-005 point 3).
@@ -122,13 +117,9 @@ A page alone, such as the figure, can be placed in a slide, and a site cannot. S
 
 **Why `site`.** `page` already names a page of any piece, a page alone and a command, so a top called `page` or `web-page` would add a fourth meaning. A top named for one kind of site, such as `portal`, would misname a single page.
 
-**Why these names.** Content writes each name of the top's interface, so renaming one after a release breaks every site (DEC-010 point 7). The names are chosen once, here. `header`, `main` and `footer` are the names HTML gives those parts of a page. `pages` holds a site's pages, as `slides` holds a deck's. `standard` names the plain form of a page, and gives `page` no fourth meaning.
-
 **Why a page's height, and only where its top asks none.** A web page is as long as what it holds, and a page that takes the top's height hides text past its foot. A deck's pages share one size by design, and keep it. A page asks for a height and gets one, as every element does (DEC-005 point 3), so a missing height on the top means what it means elsewhere. A layout that says its height under a top that asks one has its overflow reported. So a deck's layouts may come to report the overflow Context names. The height lies beside each layout's drawing, since only that drawing knows its lowest part. Nothing format 1 accepted declares a layout's height, and a top whose layouts are its pages' forms with no height was refused, so nothing format 1 accepted is refused ([visual-communication:DEC-003-change-over-time] point 3).
 
-**Why a role, with a default and a finding.** A width is a brand's value ([visual-communication:DEC-021-size-and-shape] point 1), so the top reads a role. A desktop page fills a screen, as a slide does, so `size.slide` is the fairest stand-in. A role with no default would break every brand once the foundations are released (DEC-004 point 5). A brand may still give the sizes and forget the widths, so its phone's shape would draw at a desktop's width. The finding reads the outcome, a top's width that does not change with the size, so it names no component, as the engine names none (DEC-001 point 4). It asks rather than fails, since a piece may mean one width at every size.
-
-**Why slots edge to edge.** A header's colour, or a section's, often runs to the page's edge. A margin in the top would cut it, and a part that wants a margin sets its own.
+**Why a role, and a finding.** A width is a brand's value ([visual-communication:DEC-021-size-and-shape] point 1), so the top reads a role. A brand may give the sizes and forget the widths, so its phone's shape would draw at a desktop's width. The finding reads the outcome, a top's width that does not change with the size, so it names no component, as the engine names none (DEC-001 point 4). It asks rather than fails, since a piece may mean one width at every size.
 
 **Why the starter.** The records hold a generic form in the starter, styled by a brand's values (DEC-007 point 4), and both reject libraries split by kind of work (DEC-001 and DEC-007, Alternatives considered). That split costs most in the parts a page and a slide both draw, such as a card, a button or a table. A header, a navigation or a form serves a web page first. Even so, a fix to it reaches every brand only from the one library, and the starter's bar suits it. A long German word breaks a button as it breaks a card.
 
@@ -153,7 +144,6 @@ A page alone, such as the figure, can be placed in a slide, and a site cannot. S
 - **A library of web parts of its own,** released apart as each shipped library is ([visual-communication:DEC-013-shipped-library-releases] point 1). Rejected, for the reasons above. It would set generic forms apart, against DEC-007 point 4.
 - **A web part's job from the classifications of visuals.** Rejected. They hold no part of a page.
 - **Sections laid down a page by an option of the starter's list.** Rejected. The list would do two jobs.
-- **A margin in the top.** Rejected. It would cut a colour that runs to the page's edge.
 - **A hover painted by another family.** Rejected. A hover changes a shade, not a hue.
 - **A finding for every frame past its page's edge.** Put off. It would cover a brand's and a local part too, and no need has shown yet.
 - **A limit on a page's height, named in a skill.** Rejected. It refuses the pages version 1 is for.
@@ -181,12 +171,12 @@ A page alone, such as the figure, can be placed in a slide, and a site cannot. S
   - DEC-007 point 1, since the top is the foundations', and a web part is a pattern or a block.
   - DEC-007 point 4, since a web part is a generic form.
   - DEC-007's Implications, "This record adds no check to validation", since the test of frames is a test of the capability's own.
-  - DEC-004 point 7, since the new role carries a default.
+  - [visual-communication:DEC-004-brands-and-notations] point 7, since the new role carries a default.
   - DEC-005 point 3, since a page asks for a height and gets one, and the top's frame is its component's.
   - DEC-005 point 5, since a site's pages are pages.
   - DEC-005 point 14, since a page that gets less than it asks is judged as any element is.
   - DEC-008 point 2, since a role that caps a line ends at a shared role, or a new shared role takes a default.
-  - DEC-009 points 1, 6 and 7, since an instance of a site's layout is one page, and a new layout breaks nothing.
+  - [visual-communication:DEC-009-layout-defaults] points 1, 6 and 7, since an instance of a site's layout is one page, and a new layout breaks nothing.
   - DEC-009's Implications, its open question of a drawing's physical size, since a height in the scene's px is no physical size.
   - DEC-010 points 5 and 7, since a site's pages name their layout, and the site is a new top.
   - DEC-011 point 4, since a field of the top is drawn once on each page, so an end inside it is found once on the tie's page.
@@ -199,7 +189,7 @@ A page alone, such as the figure, can be placed in a slide, and a site cannot. S
   - **A deck's layouts saying their heights,** so its text past a page's foot is reported. That is a change of the foundations' deck of its own.
   - **A page's own mark in the shared navigation,** such as the link to the page a reader is on. A family can paint it, but a page would have to give the shared header a word naming its link, and nothing passes a page's word to a field of the top.
   - **A site shown inside a slide,** which point 1 refuses. A slide shows a picture of the page instead, given as a picture file, which does not follow the site ([visual-communication:DEC-025-picture-files], Implications).
-  - **A brand's drawing of a site's layout** says its page's height in its own file. How waits for the change that lets a brand declare its drawings (DEC-009 point 8).
+  - **A brand's drawing of a site's layout** says its page's height in its own file. How is decided by [visual-communication:DEC-034-brand-drawings] point 2.
   - **A logo in a header that follows the brand** is the brand's value of the picture role `picture.logo`, which the shared header shows ([visual-communication:DEC-025-picture-files] point 4).
   - **A page shorter than a screen,** and where a screen's first view ends.
   - **A brand's or a local part past a page's edge,** which only the reviewer sees until a finding covers it.

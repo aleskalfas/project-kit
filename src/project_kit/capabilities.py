@@ -46,10 +46,11 @@ import click
 from packaging.version import InvalidVersion, Version
 from ruamel.yaml import YAML
 
-from project_kit import treecopy
-from project_kit.agents import agent_locations, carries_deploy_mark
+from project_kit import agent_definitions, treecopy
+from project_kit.agents import carries_deploy_mark
 from project_kit.changesets import BACKBONE
 from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
     ComponentKind,
@@ -337,6 +338,21 @@ CapabilityOrigin = str  # "kit-shipped" | "incubated-in-repo"
 KIT_SHIPPED: CapabilityOrigin = ORIGIN_KIT_SHIPPED
 INCUBATED_IN_REPO: CapabilityOrigin = ORIGIN_INCUBATED_IN_REPO
 
+# The mark `pkit status` and `pkit capabilities list` give an installed capability
+# whose origin is not the default, so that a reader tells from them alone whether
+# its folder is the project's own source (incubated, COR-031) or a copy pulled from
+# another repository (externally sourced, COR-041).
+_ORIGIN_MARKS: dict[str, str] = {
+    ORIGIN_INCUBATED_IN_REPO: "incubated",
+    ORIGIN_EXTERNALLY_SOURCED: "externally-sourced",
+}
+
+
+def origin_mark(origin: str) -> str | None:
+    """The mark of an installed capability of *origin*, or None for a kit-shipped one,
+    which `pkit status` leaves unmarked."""
+    return _ORIGIN_MARKS.get(origin)
+
 
 @dataclass(frozen=True)
 class ResolvedCapability:
@@ -483,8 +499,8 @@ def installed_capability_origins(target_root: Path) -> dict[str, str]:
 
     Reads origin from lifecycle-owned install-state (the backbone manifest's
     component registry), where an absent origin reads as ``kit-shipped``.
-    Lets `list` / status mark each installed capability as kit-shipped or
-    incubated-in-repo without the caller re-deriving the default.
+    Lets `list` / status mark each installed capability by its origin
+    (`origin_mark`) without the caller re-deriving the default.
     """
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
@@ -538,51 +554,62 @@ class CapabilityRecord:
     at_root: bool = False
 
 
-def read_capability_record(target_root: Path, name: str) -> CapabilityRecord:
+def read_capability_record(
+    target_root: Path, name: str, *, release: Path | None = None
+) -> CapabilityRecord:
     """Read what the project records for capability *name* (ADR-065 point 2).
 
     The one reader behind the version and the skips: the capability downgrade
-    check, the dependency gates and a refresh read through it. The manifest
-    read is the root one where it exists, then the one under ``project/``. A
-    manifest that does not parse reads as recording nothing, and the version
-    then falls back to the installed ``package.yaml``, the version of record
-    for an incubated capability, which has no manifest (COR-031 D2). A
-    refresh's restamp then writes a new manifest (`_stamp_component_manifest`).
+    check, the dependency gates and a refresh read through it. The version is
+    `read_capability_version`'s. The skips are the lifecycle's reader's,
+    `.pkit/lifecycle/capability_records.py` (ADR-087 point 1), loaded from
+    *release*, the `.pkit/` tree of the release a transition brings, where
+    given, else from the project's tree; a manifest that does not read records
+    no skip there, and a refresh's restamp then writes a new manifest
+    (`_stamp_component_manifest`), which project-kit#2958 takes up.
     """
     manifest = recorded_capability_manifest(target_root, name)
-    raw = _load_mapping(manifest) if manifest is not None else None
-    version: str | None = None
-    skipped: tuple[tuple[str, str], ...] = ()
-    if raw is not None:
-        component = raw.get("component")
-        if isinstance(component, dict):
-            recorded = cast("dict[str, Any]", component).get("version")
-            if isinstance(recorded, str):
-                version = recorded
-        state = raw.get("backend_state")
-        if isinstance(state, dict):
-            skipped = _parse_skipped(cast("dict[str, Any]", state).get(SKIPPED_KEY))
-    if version is None:
-        package_path = target_root / ".pkit" / "capabilities" / name / "package.yaml"
-        package = _read_package_yaml(package_path) if package_path.is_file() else None
-        if package is not None:
-            version = package.version
     return CapabilityRecord(
         name=name,
-        version=version,
-        skipped=skipped,
+        version=read_capability_version(target_root, name),
+        skipped=agent_definitions.skips(target_root, name, release=release),
         at_root=manifest is not None
         and manifest == capability_root_manifest_path(target_root, name),
     )
 
 
-def read_capability_records(target_root: Path) -> dict[str, CapabilityRecord]:
-    """The record of every registered capability, by name (``read_capability_record``)."""
+def read_capability_version(target_root: Path, name: str) -> str | None:
+    """The version the project records for capability *name* (ADR-065 point 2).
+
+    The manifest read is the root one where it exists, then the one under
+    ``project/``. A manifest that does not parse records no version, and the
+    version then falls back to the installed ``package.yaml``, the version of
+    record for an incubated capability, which has no manifest (COR-031 D2).
+    None where neither gives one.
+    """
+    manifest = recorded_capability_manifest(target_root, name)
+    raw = _load_mapping(manifest) if manifest is not None else None
+    if raw is not None:
+        component = raw.get("component")
+        if isinstance(component, dict):
+            recorded = cast("dict[str, Any]", component).get("version")
+            if isinstance(recorded, str):
+                return recorded
+    package_path = target_root / ".pkit" / "capabilities" / name / "package.yaml"
+    package = _read_package_yaml(package_path) if package_path.is_file() else None
+    return package.version if package is not None else None
+
+
+def read_capability_records(
+    target_root: Path, *, release: Path | None = None
+) -> dict[str, CapabilityRecord]:
+    """The record of every registered capability, by name (``read_capability_record``),
+    its skips read by the lifecycle's reader loaded from *release* where given."""
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         return {}
     return {
-        entry.name: read_capability_record(target_root, entry.name)
+        entry.name: read_capability_record(target_root, entry.name, release=release)
         for entry in backbone.components
         if entry.kind == "capability"
     }
@@ -964,12 +991,24 @@ class CollisionFinding:
     artifact_name: str  # the colliding name
     source_path: Path  # the capability's file
     target_path: Path  # the existing file the new one would collide with
+    # For an agent: each counting definition of the name that is neither the
+    # project's nor the capability's own, as (who ships it, its file): `core`, or
+    # another installed capability's name, in the picker's order (ADR-087).
+    others: tuple[tuple[str, Path], ...] = ()
+
+    @property
+    def chosen_over(self) -> tuple[str, ...]:
+        """The other capabilities an override of this agent's name records the
+        project's choice over (COR-017)."""
+        return tuple(owner for owner, _ in self.others if owner != "core")
 
 
 def detect_collisions(
     target_root: Path,
     capability_source: CapabilitySource,
     exclude: str | None = None,
+    *,
+    release: Path | None = None,
 ) -> list[CollisionFinding]:
     """Find naming collisions between a capability's artifacts and already-installed content.
 
@@ -977,21 +1016,80 @@ def detect_collisions(
     (`artefact_names`, COR-015). Capability decisions are namespaced
     by the capability's directory name, so they cannot collide.
 
-    `exclude` is threaded to `_collect_existing_artifact_names` to skip a
-    capability's own installed tree in the existing-names walk (see #225);
-    existing callers default to None and are unaffected.
+    An agent collides with each definition of its name that counts, the
+    project's, another installed capability's or core's, as the picker answers
+    it, loaded from *release*, the release the command brings (ADR-087 point
+    2); a definition in a capability folder the registry does not record does
+    not count. A skill collides with each folder that ships its name, by its
+    own walk until project-kit#2956 decides the skills' rules.
+
+    `exclude` names a capability whose own definitions never collide: for
+    skills it is threaded to `_collect_existing_artifact_names` to skip its
+    installed tree (see #225), and for agents its place is left out.
     """
     findings: list[CollisionFinding] = []
     for kind, area in _ARTEFACT_AREAS.items():
         shipped = artefact_names(capability_source.path / area)
         if not shipped:
             continue
-        existing = _collect_existing_artifact_names(target_root, area, exclude=exclude)
+        if kind == "agent":
+            own = exclude if exclude is not None else capability_source.name
+            existing = _agent_definitions_beside(target_root, own, release=release)
+            for name, source_path in shipped.items():
+                found = existing.get(name)
+                if found is not None:
+                    findings.append(CollisionFinding(kind, name, source_path, *found))
+            continue
+        existing_skills = _collect_existing_artifact_names(target_root, area, exclude=exclude)
         for name, source_path in shipped.items():
-            target_path = existing.get(name)
+            target_path = existing_skills.get(name)
             if target_path is not None:
                 findings.append(CollisionFinding(kind, name, source_path, target_path))
     return findings
+
+
+def _agent_definitions_beside(
+    target_root: Path,
+    own: str,
+    *,
+    release: Path | None,
+    left_out: Collection[str] = (),
+    with_core: bool = True,
+) -> dict[str, tuple[Path, tuple[tuple[str, Path], ...]]]:
+    """Each agent's name a definition that counts ships beside capability *own*'s,
+    with the file a collision names and the definitions an override leaves.
+
+    Read from the picker's answer (ADR-087), loaded from *release* where given.
+    A definition counts as the picker says: the project's and core's always, an
+    installed capability's while the project has not skipped it. Left out:
+    *own*'s place, each capability in *left_out*, and core's unless *with_core*.
+    The file named is the project's where it ships the name, else the agent's
+    where it is among them, else the first of them.
+    """
+    picked = agent_definitions.answer(target_root, release=release)
+    found: dict[str, tuple[Path, tuple[tuple[str, Path], ...]]] = {}
+    for name, pick in picked.picks.items():
+        beside = [
+            definition
+            for definition in pick.definitions
+            if definition.counts
+            and (owner := agent_definitions.place_owner(definition.place)) != own
+            and owner not in left_out
+            and (with_core or owner != "core")
+        ]
+        if not beside:
+            continue
+        named = next(
+            (d for d in beside if d.place == "project"),
+            pick.agent if pick.agent in beside else beside[0],
+        )
+        others = tuple(
+            (agent_definitions.place_owner(d.place), d.files[0])
+            for d in beside
+            if d.place != "project"
+        )
+        found[name] = (named.files[0], others)
+    return found
 
 
 # The area folder under `.pkit/` that holds artefacts of each kind a collision
@@ -1103,12 +1201,20 @@ def resolve_collision_interactive(
     Before each prompt it names what `override` would do: each path of the
     project's own artefact of that name it removes, which the caller removes
     (`apply_overrides`), and each artefact core or another capability ships,
-    which it leaves. `override` is refused, and the prompt asked again, while
-    git could not give the project's artefact back as it stands.
+    which it leaves. For an agent another installed capability ships, it says
+    that override records the project's choice of *capability* for the name,
+    which the caller records (`record_agent_choices`), and that core's
+    definition yields to a capability's (COR-013 point 8, COR-017). `override`
+    is refused, and the prompt asked again, while git could not give the
+    project's artefact back as it stands.
     """
     kind, name = finding.artifact_kind, finding.artifact_name
     replaced = project_artefact_paths(target_root, kind, name)
-    left = shipped_artefact_paths(target_root, kind, name, capability=capability)
+    left = (
+        ()
+        if kind == "agent"
+        else shipped_artefact_paths(target_root, kind, name, capability=capability)
+    )
     while True:
         click.echo(
             f"  - {kind} '{name}' collides with existing "
@@ -1129,6 +1235,18 @@ def resolve_collision_interactive(
                 f"    override leaves {path.relative_to(target_root)}: it is not the "
                 "project's, and the deploy's name precedence picks which one deploys"
             )
+        for owner, path in finding.others:
+            if owner == "core":
+                click.echo(
+                    f"    override leaves {path.relative_to(target_root)}: core's definition "
+                    "yields to a capability's (COR-013 point 8)"
+                )
+            else:
+                click.echo(
+                    f"    override leaves {path.relative_to(target_root)} and records the "
+                    f"project's choice of capability {capability} for agent {name} over "
+                    f"capability {owner}'s (COR-017)"
+                )
         choice = click.prompt(
             "    [override / skip / inspect]",
             type=click.Choice(["override", "skip", "inspect"]),
@@ -1166,6 +1284,35 @@ def apply_overrides(target_root: Path, paths: Sequence[Path], *, dry_run: bool) 
     verb = "would remove" if dry_run else "removed"
     for path in paths:
         click.echo(f"  {verb:<12} {path.relative_to(target_root)} (override; git keeps it)")
+
+
+def overridden_agent_choices(
+    findings: Iterable[CollisionFinding], overridden: Collection[str], capability: str
+) -> dict[str, str]:
+    """The choices an override records: for each agent's name among *overridden*
+    that another installed capability ships, *capability* (COR-017)."""
+    return {
+        finding.artifact_name: capability
+        for finding in findings
+        if finding.artifact_kind == "agent"
+        and finding.artifact_name in overridden
+        and finding.chosen_over
+    }
+
+
+def record_agent_choices(target_root: Path, choices: Mapping[str, str], *, dry_run: bool) -> None:
+    """Record each choice an override made of a capability for an agent's name, in
+    the backbone manifest, naming each (COR-017, ADR-087 point 1)."""
+    from project_kit.manifest import record_agent_choice
+
+    verb = "would record" if dry_run else "recorded"
+    for agent, capability in sorted(choices.items()):
+        if not dry_run:
+            record_agent_choice(target_root, agent, capability)
+        click.echo(
+            f"  {verb:<12} the project's choice of capability {capability!r} for agent "
+            f"{agent!r} (override)"
+        )
 
 
 def show_unified_diff(existing: Path, incoming: Path) -> None:
@@ -1351,28 +1498,14 @@ def read_prior_skipped_artifacts(
 ) -> tuple[tuple[str, str], ...]:
     """The skips the project chose for a capability, from its manifest's `backend_state.skipped`.
 
-    Read where they are written (``_stamp_component_manifest``), by
-    ``read_capability_record``. Returns an empty tuple when no manifest exists
-    or it's malformed — the worst case is the next refresh copies the
+    Read where they are written (``_stamp_component_manifest``), by the
+    lifecycle's reader (``agent_definitions.skips``, ADR-087 point 1), loaded
+    from the project's tree. Returns an empty tuple when no manifest exists or
+    it's malformed — the worst case is the next refresh copies the
     previously-skipped file, which the adopter can re-skip on the next install
     with the interactive resolver if needed.
     """
-    return read_capability_record(target_root, capability_name).skipped
-
-
-def _parse_skipped(raw: object) -> tuple[tuple[str, str], ...]:
-    """`backend_state.skipped` as `(kind, name)` pairs; a malformed item is left out."""
-    if not isinstance(raw, list):
-        return ()
-    out: list[tuple[str, str]] = []
-    for item in cast("list[object]", raw):
-        if isinstance(item, dict):
-            entry = cast("dict[str, object]", item)
-            kind = entry.get("kind")
-            name = entry.get("name")
-            if isinstance(kind, str) and isinstance(name, str):
-                out.append((kind, name))
-    return tuple(out)
+    return agent_definitions.skips(target_root, capability_name)
 
 
 def _load_mapping(path: Path) -> dict[str, Any] | None:
@@ -1520,6 +1653,7 @@ def detect_new_collisions(
     *,
     skipped: Iterable[tuple[str, str]] = (),
     released: Collection[str] = (),
+    release: Path | None = None,
 ) -> list[CollisionFinding]:
     """The new collisions a capability's target version brings (ADR-065 point 6, COR-017).
 
@@ -1536,6 +1670,11 @@ def detect_new_collisions(
     (`shipped_capability_names`), since a clash between two artefacts one
     release ships is the release's to prevent, and a collision with
     externally-sourced content, which surfaces as COR-041 sets. Read-only.
+
+    For agents, which definitions count is the picker's, loaded from *release*,
+    the release the transition brings (ADR-087 point 2): a capability folder
+    the registry does not record, and a definition the project skipped, ship
+    nothing to collide with.
     """
     own = capability_source.name
     installed = target_root / ".pkit" / "capabilities" / own
@@ -1547,6 +1686,26 @@ def detect_new_collisions(
         if not shipped:
             continue
         held = artefact_names(installed / area)
+        if kind == "agent":
+            outside = {
+                name
+                for name, origin in origins.items()
+                if origin not in (KIT_SHIPPED, INCUBATED_IN_REPO)
+            }
+            agents = _agent_definitions_beside(
+                target_root,
+                own,
+                release=release,
+                left_out={*released, *outside},
+                with_core=False,
+            )
+            for artefact, source_path in shipped.items():
+                if artefact in held or (kind, artefact) in already_chosen:
+                    continue
+                found = agents.get(artefact)
+                if found is not None:
+                    findings.append(CollisionFinding(kind, artefact, source_path, *found))
+            continue
         existing = _artefacts_outside_the_release(
             target_root, area, own=own, released=released, origins=origins
         )
@@ -1588,6 +1747,8 @@ def _artefacts_outside_the_release(
 def detect_incubated_collisions(
     target_root: Path,
     capability_source: CapabilitySource,
+    *,
+    release: Path | None = None,
 ) -> list[CollisionFinding]:
     """Detect collisions for an incubated (in-repo) register: skip self-collisions.
 
@@ -1606,7 +1767,7 @@ def detect_incubated_collisions(
     own_dir = target_root / ".pkit" / "capabilities" / capability_source.name
     findings: list[CollisionFinding] = []
     for finding in detect_collisions(
-        target_root, capability_source, exclude=capability_source.name
+        target_root, capability_source, exclude=capability_source.name, release=release
     ):
         # `exclude` above is the primary guard; this post-hoc filter is a
         # harmless belt-and-suspenders against any future self-collision path.
@@ -1625,6 +1786,7 @@ def refresh_capability(
     dry_run: bool = False,
     record: CapabilityRecord | None = None,
     overridden: Sequence[Path] = (),
+    chosen: Mapping[str, str] | None = None,
 ) -> Path:
     """Move an installed capability to its source version: a transition of one capability.
 
@@ -1640,10 +1802,13 @@ def refresh_capability(
     2. **The manifest** still at the capability's root moves under its
        ``project/`` (`move_capability_manifest`), where the copy cannot prune
        it. Where *skipped_artifacts* differ from the skips it records, they are
-       recorded there before the copy (`record_skips`), and each artefact in
-       *overridden* is removed (`apply_overrides`). So each answer holds when
-       a migration stops the refresh: the next one does not ask again, and the
-       name it then finds in the installed copy is no longer a collision.
+       recorded there before the copy (`record_skips`), each artefact in
+       *overridden* is removed (`apply_overrides`), and each choice in
+       *chosen*, of a capability for an agent's name an override made against
+       another capability's, is recorded in the backbone manifest
+       (`record_agent_choices`). So each answer holds when a migration stops
+       the refresh: the next one does not ask again, and the name it then
+       finds in the installed copy is no longer a collision.
     3. **The copy** replaces the kit-owned part of the installed subtree with
        the source's, leaving out *skipped_artifacts*. It creates no seed path,
        so it stubs no ``project/``. Then `.pkit/.gitignore` is rendered, so a
@@ -1672,7 +1837,11 @@ def refresh_capability(
     _refuse_copy_onto_itself(capability_source.path, dest)
 
     if record is None:
-        record = read_capability_record(target_root, name)
+        # The source capability lies at `<release>/capabilities/<name>`, so its
+        # release's tree is two levels up (ADR-087 point 2).
+        record = read_capability_record(
+            target_root, name, release=capability_source.path.parents[1]
+        )
     move = (
         f"the manifest of capability {name!r}: "
         f"{capability_root_manifest_path(target_root, name).relative_to(target_root)} -> "
@@ -1685,6 +1854,7 @@ def refresh_capability(
         if record.at_root:
             click.echo(f"  would move {move}")
         apply_overrides(target_root, overridden, dry_run=True)
+        record_agent_choices(target_root, chosen or {}, dry_run=True)
         migrate_copied_capability(target_root, capability_source, in_force, dry_run=True)
         return dest
 
@@ -1696,6 +1866,7 @@ def refresh_capability(
         version = record.version or capability_source.package.version
         record_skips(target_root, name, in_force.skipped, version=version)
     apply_overrides(target_root, overridden, dry_run=False)
+    record_agent_choices(target_root, chosen or {}, dry_run=False)
 
     _copy_capability_tree(capability_source.path, dest, in_force.skipped, stub_project=False)
     from project_kit import visibility
@@ -1800,7 +1971,7 @@ def _read_installed_capability_version(target_root: Path, name: str) -> str | No
     that as "no migrations to run" / "version unreadable" rather than
     failing.
     """
-    return read_capability_record(target_root, name).version
+    return read_capability_version(target_root, name)
 
 
 def _pending_migration_scripts(
@@ -1909,9 +2080,15 @@ def uninstall_capability(
     - **incubated-in-repo** — the subtree is the adopter's only copy of
       authored work; *unregister in place* and leave the files on disk
       (the destroy-adopter-work hazard COR-031 exists to prevent). Its
-      deployed skills and agents are removed through each installed
-      adapter's undeploy primitive (``install.undeploy_capability_from_adapters``),
-      since a deploy re-run cannot see a surviving subtree as gone.
+      deployed skills are removed through each installed adapter's undeploy
+      primitive (``install.undeploy_capability_from_adapters``), since a
+      skills deploy re-run cannot see a surviving subtree as gone. Its
+      agents are removed by the deploy the caller re-runs: once the
+      capability is unregistered, none of its definitions counts (ADR-087
+      point 4).
+
+    The same write that unregisters the capability drops the project's
+    choices of it (COR-017).
 
     ``purge=True`` is the explicit opt-in that deletes an incubated
     capability's files anyway (the caller must confirm first, honouring the
@@ -1960,11 +2137,12 @@ def uninstall_capability(
         # drops the harness entries on the caller's deploy re-run.
     else:
         # Kept in place (incubated, or the source): the subtree survives, so a
-        # deploy re-run, keyed on whether the source file exists, would not drop
-        # the capability's harness entries. Each adapter's undeploy primitive
+        # skills deploy re-run, keyed on whether the source file exists, would
+        # not drop the capability's skills. Each adapter's undeploy primitive
         # does (COR-031 D4: uninstall drops them though the files stay). It runs
         # before the unregister, so a failing adapter leaves the capability
-        # registered and the uninstall re-runnable.
+        # registered and the uninstall re-runnable. Agents are the deploy's,
+        # which the caller re-runs after the unregister (ADR-087 point 4).
         from project_kit import install
 
         ctx = install.InstallContext(target_root=target_root, source_kit=source_kit, dry_run=False)
@@ -1980,7 +2158,9 @@ def uninstall_capability(
     )
 
 
-def find_references(target_root: Path, capability_name: str) -> list[tuple[Path, str]]:
+def find_references(
+    target_root: Path, capability_name: str, *, release: Path | None = None
+) -> list[tuple[Path, str]]:
     """Find references to the capability in the adopter's tree.
 
     Three kinds of references count:
@@ -1990,6 +2170,9 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
     - Inheritance: a project rule set that inherits one of the capability's
       method sets, read as data from its `inherits` (COR-017), however the
       list is written. The set the capability's install created is one.
+
+    *release* is the `.pkit/` tree of the release the command brings, which an
+    uninstall loads the picker from (ADR-087 point 2).
 
     Returns a list of (file_path, snippet) pairs describing each match.
     Scans the project tree but skips `.pkit/capabilities/<name>/` itself
@@ -2016,9 +2199,7 @@ def find_references(target_root: Path, capability_name: str) -> list[tuple[Path,
     citation_re = re.compile(rf"\[{re.escape(capability_name)}:[^\]]+\]")
     path_re = re.compile(rf"\.pkit/capabilities/{re.escape(capability_name)}/")
     self_path = (target_root / ".pkit" / "capabilities" / capability_name).resolve()
-    shipped_agents = frozenset(
-        name for _, folder in agent_locations(target_root) for name in artefact_names(folder)
-    )
+    shipped_agents = frozenset(agent_definitions.answer(target_root, release=release).picks)
 
     ignored_dirs = {".git", ".venv", "node_modules", "__pycache__", ".pytest_cache"}
 
@@ -2063,7 +2244,8 @@ def _is_deployed_agent_copy(target_root: Path, path: Path, shipped_agents: Colle
     agents, under the definition's name and with the deploy mark in its front
     matter (the agents README, "Deploy mechanics"). Which folder that is, is the
     adapter's knowledge (COR-013), so the copy is known by its name and its mark.
-    *shipped_agents* are the names the agents folders ship (`agent_locations`).
+    *shipped_agents* are the names some place ships, as the picker lists them
+    (ADR-087).
 
     A file under `.pkit/` is never such a copy, even with the mark: where the
     reference scan reads one, it is the project's own, such as a definition
@@ -2391,14 +2573,15 @@ def set_capability_origin(target_root: Path, name: str, origin: str) -> bool:
 
 
 def _unregister_from_backbone_manifest(target_root: Path, name: str) -> None:
-    """Remove the `kind: capability, name: X` entry from the backbone manifest."""
+    """Remove the `kind: capability, name: X` entry from the backbone manifest, and
+    the project's choices of the capability in the same write (COR-017)."""
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
         return
     backbone.components = [
         c for c in backbone.components if not (c.kind == "capability" and c.name == name)
     ]
-    write_backbone_manifest(target_root, backbone)
+    write_backbone_manifest(target_root, backbone, dropping_choices_of=name)
 
 
 def _stamp_component_manifest(

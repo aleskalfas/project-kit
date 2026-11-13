@@ -11,7 +11,7 @@ pkit:
         - src/project_kit/refs.py
         - src/project_kit/install.py
         - src/project_kit/capabilities.py
-      record: [COR-001, COR-003, COR-005, COR-006, COR-013, COR-015, COR-017, COR-020, "COR-066#1"]
+      record: [COR-001, COR-003, COR-005, COR-006, COR-013, COR-015, COR-017, COR-020, "COR-066#1", COR-074]
       artefact:
         - RS-OPS-001
         - RS-OPS-003
@@ -103,7 +103,7 @@ What the body cites is checked against the front matter, in both directions (COR
 - **A path:** text in backticks that holds a `/`, and the target of a link that is no web address. A link that starts with `#` or `./`, or that leads to a decision record, needs no declaration. Nor does a path in a capability's skill that, read from the skill's folder or from the capability's, stays inside `.pkit/capabilities/<capability>/`. So of such a skill's paths, the check reads only those that start with `.pkit/` or climb out with `..`.
 - **A record:** an id of the form `COR-`, `PRJ-` or `ADR-` and its number, in backticks or in prose. A capability's decision is cited as `[<capability>:DEC-NNN]`, and validation checks that it resolves, with no declaration.
 - **A hook:** a word with one or two dots, such as `topic.operation`, in backticks or in prose. So a domain name or a dotted key in prose reads as a hook, and warns. Put it in a code fence, or reword it: declared under `needs`, it fails, since nothing answers it.
-- **Not counted:** text in a code fence, an HTML comment or a strikethrough, and a path that holds `<`, `>`, `...`, `{`, `}` or `*`.
+- **Not counted:** text in a code fence, an HTML comment or a strikethrough, and a path that holds `<`, `>`, `...`, `{`, `}` or `*`. Nor is a placeholder that is a dotted word alone, such as `<drawing.work>`, which names a capability's overlay category, not a hook.
 - **The checks.** `pkit validate` warns where the body cites a record, a file or a hook that the front matter does not declare. It also warns where the front matter declares a record, a file or a hook that the body never cites. A record under `gates` counts as declared. `pkit refs validate` gives the same findings, and fails on them ([the CLI reference, `validate`](../cli/README.md#validate)).
 - **A declared file the body cites another way.** A path in the body cites it where the path leads to that file, such as a relative link. A decision record's file is cited by the record's id. A declared file counts, too, where its text stands anywhere in the body, as a bare name such as `CONTRIBUTING.md` does. The front matter is never searched for it.
 - **What has gone.** `pkit refs rot` lists a skill that cites a superseded record, a dropped scratchpad note or a missing file ([the CLI reference, "Surface"](../cli/README.md#surface)).
@@ -156,13 +156,13 @@ A skill runs from where its harness reads skills, never from `.pkit/`. The adapt
 - **Where Claude Code reads it:** `.claude/skills/<name>/SKILL.md`, a link to the skill's file. A folder-form skill has a link to each of its other files beside it ([the Claude Code adapter's README, `deploy-skills.sh`](../adapters/claude-code/README.md#deploy-skillssh)).
 - **Which skills:** the project's, core's, and those of each capability the manifest registers. Where two ship one name, the project's is deployed first, then core's is, then a capability's is, the first by name ([the same section](../adapters/claude-code/README.md#deploy-skillssh)).
 - **Suspension.** Skills are suspendable ([COR-003](../decisions/core/COR-003-artifact-mechanisms.md)). A project skill that takes the name of core's skill, or of a capability's, replaces it in the harness by the order above. Updates of the replaced skill then reach no session. No project file disables a skill without replacing it.
-- **What warns of a suspension:** only a capability's questions below. Otherwise the deploy prints the link it makes, and `pkit status` lists the skill as the project's.
+- **What names a suspension:** each run of the deploy, for as long as the suspension holds ([COR-074](../decisions/core/COR-074-suspensions-named.md)). It names the shipped skill's file, and the project's file that takes its name ([the adapter's README, `deploy-skills.sh`](../adapters/claude-code/README.md#deploy-skillssh)). It is a report, not a warning, and validation reports no suspension.
 - **A capability's upgrade** asks a person about each skill new in its version whose name the project already uses ([the lifecycle reference, "A new collision"](../lifecycle/upgrade-flow.md#a-new-collision)). A skill its installed copy holds, or one the project skipped, is not new. The answers are override, skip or inspect. With nobody to answer, it refuses.
 - **A capability's install** asks the same about each of its skills whose name is already in use ([the lifecycle reference, "Install pre-flight checks"](../lifecycle/component-registry.md#install-pre-flight-checks)). It reads both forms of a skill, the capability's and those installed. A project skill that takes the name of a skill the capability already holds is asked about by neither.
 - **Edit the source, never the deployed link** (core rule 12). An edit to the source needs no new deploy, since the link leads to it.
 - **A new or removed skill** reaches the harness at the next `pkit sync`. The sync removes the deploy's own links to a skill that has gone ([the adapter's README](../adapters/claude-code/README.md#deploy-skillssh)).
-- **A file the deploy did not make,** such as a hand-kept `.claude/skills/<name>/SKILL.md`, is left alone ([the adapter's README](../adapters/claude-code/README.md#deploy-skillssh)). No skill of that name is deployed over it, and the deploy reports it skipped.
-- **Claude Code's own skills:** a personal skill of the same name, in `~/.claude/skills/`, wins over the project's (Claude Code's skills documentation).
+- **A file the deploy did not make,** such as a hand-kept `.claude/skills/<name>/SKILL.md`, is left alone ([the adapter's README](../adapters/claude-code/README.md#deploy-skillssh)). No skill of that name is deployed over it, and the deploy reports it skipped. It keeps out each shipped skill of its name, which the deploy names as it names a suspension.
+- **Claude Code's own skills:** a personal skill of the same name, in `~/.claude/skills/`, wins over the project's (Claude Code's skills documentation). `pkit status` warns of each deployed skill a personal skill hides, and names the personal skill's folder ([the CLI reference, `status`](../cli/README.md#status)).
 - <a id="today"></a>**What is deployed:** `pkit status` lists each deployed skill under where it was deployed from. It lists the project's own files in the harness's folder apart ([the CLI reference, `status`](../cli/README.md#status)).
 - **A folder with no `<name>/<name>.md`** is skipped by the deploy, which names it, and the other skills deploy ([the adapter's README](../adapters/claude-code/README.md#deploy-skillssh)).
 

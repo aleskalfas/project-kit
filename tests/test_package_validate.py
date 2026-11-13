@@ -1855,3 +1855,118 @@ def test_an_adapter_declaring_a_project_rule_set_is_refused(
     raw["component"] = {"kind": "adapter", "name": "demo", "version": "0.1.0"}
     errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
     assert "only a capability's install creates one" in errors["/project_rule_set"]
+
+
+# --- the write categories a capability declares (ADR-088 point 1) ---------------
+
+
+def _shipping_designer(component_dir: Path, owns: str = "<demo.work>") -> None:
+    """The capability ships `designer`, owning *owns*, and `reviewer`, owning nothing."""
+    (component_dir / "agents").mkdir(exist_ok=True)
+    (component_dir / "agents" / "designer.md").write_text(
+        f"---\nname: designer\nowns: [{owns}]\n---\n\n# Designer\n", encoding="utf-8"
+    )
+    (component_dir / "agents" / "reviewer").mkdir(exist_ok=True)
+    (component_dir / "agents" / "reviewer" / "reviewer.md").write_text(
+        "---\nname: reviewer\nowns: []\n---\n\n# Reviewer\n", encoding="utf-8"
+    )
+
+
+def _declaring_writes(component_dir: Path, **entry: Any) -> dict[str, Any]:
+    """A package declaring `demo.work`, owned by `designer`, answered by `create page`."""
+    _shipping_designer(component_dir)
+    raw = _package()
+    raw["commands"]["create"]["page"]["query-contract"] = True
+    block: dict[str, Any] = {"owner": "designer", "default-query": "create page"}
+    block.update(entry)
+    raw["write_categories"] = {"demo.work": block}
+    return raw
+
+
+def test_declared_write_categories_validate_clean(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    assert _validate(_declaring_writes(component_dir), schema, component_dir) == []
+    raw = _declaring_writes(component_dir)
+    del raw["write_categories"]["demo.work"]["default-query"]  # no default is allowed
+    assert _validate(raw, schema, component_dir) == []
+
+
+@pytest.mark.parametrize(
+    ("name", "says"),
+    [("work", "is not named `demo.<word>`"), ("other.work", "is not named `demo.<word>`")],
+    ids=["no-dot", "another-capability"],
+)
+def test_a_write_category_named_outside_its_capability_is_refused(
+    schema: dict[str, Any], component_dir: Path, name: str, says: str
+) -> None:
+    raw = _declaring_writes(component_dir)
+    raw["write_categories"] = {name: raw["write_categories"]["demo.work"]}
+    for applied in (schema, None):  # the schema-less tree is held to it too
+        errors = _messages(_validate(raw, applied, component_dir), pv.Severity.ERROR)
+        assert says in errors[f"/write_categories/{name}"], errors
+
+
+@pytest.mark.parametrize(
+    ("entry", "path", "says"),
+    [
+        ({"owner": "painter"}, "/write_categories/demo.work/owner", "no agent the capability"),
+        ({"owner": "reviewer"}, "/write_categories/demo.work/owner", "does not name <demo.work>"),
+        ({"default-query": "missing"}, "/write_categories/demo.work/default-query", "missing"),
+        (
+            {"default-query": "publish"},
+            "/write_categories/demo.work/default-query",
+            "does not declare the query contract",
+        ),
+        ({"pages": "x"}, "/write_categories/demo.work/pages", "unknown key"),
+    ],
+    ids=["unknown-owner", "owner-without-the-placeholder", "no-leaf", "no-contract", "unknown"],
+)
+def test_a_write_category_is_held_to_what_the_capability_ships(
+    schema: dict[str, Any], component_dir: Path, entry: dict[str, Any], path: str, says: str
+) -> None:
+    errors = _messages(
+        _validate(_declaring_writes(component_dir, **entry), schema, component_dir),
+        pv.Severity.ERROR,
+    )
+    assert path in errors, errors
+    assert says in errors[path]
+
+
+def test_a_default_query_that_reads_beyond_the_working_tree_is_refused(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    raw = _declaring_writes(component_dir)
+    raw["commands"]["create"]["page"]["reads"] = ["settled"]
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert "declares `reads`" in errors["/write_categories/demo.work/default-query"]
+
+
+def test_a_second_agent_owning_a_declared_category_is_refused(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    raw = _declaring_writes(component_dir)
+    (component_dir / "agents" / "reviewer" / "reviewer.md").write_text(
+        "---\nname: reviewer\nowns: [<demo.work>]\n---\n", encoding="utf-8"
+    )
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert "agent 'reviewer' names <demo.work>" in errors["/write_categories/demo.work"]
+
+
+def test_a_write_category_without_an_owner_is_refused(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    raw = _declaring_writes(component_dir)
+    del raw["write_categories"]["demo.work"]["owner"]
+    assert "/write_categories/demo.work" in _messages(
+        _validate(raw, schema, component_dir), pv.Severity.ERROR
+    )
+
+
+def test_an_adapter_declaring_write_categories_is_refused(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    raw = _declaring_writes(component_dir)
+    raw["component"] = {"kind": "adapter", "name": "demo", "version": "0.1.0"}
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert "only a capability ships agents" in errors["/write_categories"]

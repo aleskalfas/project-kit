@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: core
+# pkit-digest: sha256:dff1b0ff109d049d5bc28fbb1a051a99d10db21dab0cda77061c4914a17c8a4b
+# pkit-tool-access: tools: ["Read", "Glob", "Grep", "WebFetch", "Edit"]
 name: architect
 description: Architectural custodian and escalation point. Reviews proposals 
   that touch the project's big-picture shape (cross-component changes, new 

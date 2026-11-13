@@ -35,9 +35,16 @@ def problems(data: Any) -> list[str]:
     return files.shape_problems(data, "component")
 
 
-def engine_issues(data: Any) -> list[tuple[str, str, str]]:
-    """What the engine finds in a component when it reads it."""
-    return engine.Component("lab/x", data, engine.Context(FakeEnv(), "en")).issues
+def engine_issues(data: Any, use: str = "lab/x") -> list[tuple[str, str, str]]:
+    """What the engine finds in a component when it reads it as `use`."""
+    return engine.Component(use, data, engine.Context(FakeEnv(), "en")).issues
+
+
+def use_of(path: Path) -> str:
+    """The use the component file at `path` is read as: a component of the foundations as
+    its own, since only the component that declares a token reads it (DEC-035 point 3),
+    and any other as `lab/x`."""
+    return f"foundations/{path.stem}" if path.parent.parent == FOUNDATIONS else "lab/x"
 
 
 def reference() -> dict[str, Any]:
@@ -135,7 +142,7 @@ def test_the_operators_take_the_engines_settings() -> None:
 def test_the_shipped_and_fixture_components_hold_the_schema_and_the_engine(path: Path) -> None:
     data = reading.read_yaml(path)
     assert problems(data) == []
-    assert engine_issues(data) == []
+    assert engine_issues(data, use_of(path)) == []
 
 
 @pytest.mark.parametrize(
@@ -246,6 +253,23 @@ def test_the_format_takes_a_switch_and_a_when_by_a_size(path: str, value: Any) -
     data = changed(path, value)
     assert problems(data) == []
     assert sized_issues(data) == []
+
+
+BY_AS: list[tuple[str, Any]] = [
+    ("parts.label.x", {"by": ":as", "page": "=pad", "part": "=@space.1"}),
+    ("parts.label.when", {"by": ":as", "page": True, "part": "tags"}),
+]
+
+
+@pytest.mark.parametrize(("path", "value"), BY_AS)
+def test_the_format_takes_a_switch_and_a_when_by_as_which_only_a_drawing_reads(
+    path: str, value: Any
+) -> None:
+    """The schema takes `:as` as it takes a size's marked name, and the engine reads it only
+    in a drawing of a layout, which this component is not (DEC-034 point 7)."""
+    data = changed(path, value)
+    assert problems(data) == []
+    assert [(code, where) for code, where, _ in engine_issues(data)] == [(engine.AS_SWITCH, path)]
 
 
 REFUSED_BY_SIZE: list[tuple[str, str, Any]] = [
@@ -547,6 +571,23 @@ def test_a_pattern_declares_a_list_of_ties_and_a_component_takes_ends() -> None:
     switched["options"] = {"shape": ["flat", "bent"]}
     assert problems(switched) == []
     assert engine_issues(switched) == []
+    rounded = arrow(line={"stroke": "line", "marker-end": "arrow", "rx": "=@space.2"})
+    assert problems(rounded) == []
+    assert engine_issues(rounded) == []
+
+
+def test_a_line_of_its_own_ends_takes_no_radius_of_a_connectors_turns() -> None:
+    """Only a connector turns, so the schema and the engine refuse `rx` on a line that gives
+    its own ends, and take the same line without it."""
+    own = dict.fromkeys(("x1", "y1", "x2", "y2"), "=@space.1")
+    standing = arrow(connect=..., line={"stroke": "line"}, **own)
+    assert problems(standing) == []
+    assert engine_issues(standing) == []
+    turning = arrow(connect=..., line={"stroke": "line", "rx": "=@space.2"}, **own)
+    assert problems(turning) != []
+    assert [(code, where) for code, where, _ in engine_issues(turning)] == [
+        ("component-shape", "parts.l.line.rx")
+    ]
 
 
 def test_a_list_of_ties_is_arranged_by_neither_operator_and_any_other_list_by_one() -> None:

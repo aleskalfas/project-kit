@@ -21,6 +21,7 @@ reads:
     - .pkit/adapters/claude-code/README.md
     - .pkit/schemas/harness-requirements.yaml
     - .pkit/schemas/harness-support.schema.json
+    - .pkit/schemas/tool-access.yaml
 ---
 
 # Authoring an adapter
@@ -96,9 +97,10 @@ Add the artifacts the harness needs. The lifecycle finds an adapter's scripts **
 - **Deploy primitives** — `merge-settings.sh`, `merge-claude-md.sh`, `deploy-skills.sh`, `deploy-agents.sh`, run in that order, with no arguments, at init, sync, upgrade and a capability's install, register, upgrade and uninstall. Each is optional: one the adapter does not ship is skipped silently, so write only those your harness needs.
   - `merge-settings.sh` combines a settings baseline and the project's additions into the harness's fixed-path file (per COR-002), typically from a `core/` + `project/` split inside a `settings/` directory (the universal area pattern applied internally).
   - `merge-claude-md.sh` makes the harness's instructions file load the methodology's rules. The lifecycle calls it by this name whatever that file is called in your harness.
-  - `deploy-skills.sh` and `deploy-agents.sh` put the skills and agents where the harness looks for them, and drop what they deployed from a source that is gone.
-- **Undeploy primitive** — `undeploy-capability.sh <capability-name>`, removing what the deploy scripts put in the harness for that one capability, recognised by their deploy mark. The lifecycle runs it when it unregisters a capability whose files stay. Unlike the deploy primitives, its absence is reported: the lifecycle names an adapter that ships none in a `warning` line, since its harness keeps the capability active. An adapter that deploys nothing per capability ships one that does nothing.
+  - `deploy-skills.sh` and `deploy-agents.sh` put the skills and agents where the harness looks for them, and drop what they deployed from a source that is gone. For each agent's name, `deploy-agents.sh` deploys the definition the agents area's picker says is the agent, keeps no order of its own, and drops each copy it deployed that is not the agent's (the agents README, "Name-collision precedence").
+- **Undeploy primitive** — `undeploy-capability.sh <capability-name>`, removing what the deploy scripts other than the agents' put in the harness for that one capability, recognised by their deploy mark. It removes no agent: the picker counts a capability's agents only while it is registered, so the agents' deploy after the unregister removes them. The lifecycle runs it when it unregisters a capability whose files stay. Unlike the deploy primitives, its absence is reported: the lifecycle names an adapter that ships none in a `warning` line, since its harness keeps the capability active. An adapter that deploys no skill per capability ships one that does nothing.
 - **What every script owes** — it is executable, with an interpreter line, since the lifecycle starts it from the project root; it is idempotent; and it exits non-zero only when it fails, which stops the lifecycle command with an error naming it.
+- **Its declaration of tool access** — where the adapter deploys agents, by `deploy-agents.sh` or an agent runner, write `tool-access.json`: the harness's keys for a grant and a withheld list, the forms a tool's name takes, its built-in tools, and the withheld entries it was measured to withhold. Start from `.pkit/schemas/tool-access.yaml`, which admits none, and admit an entry only once the harness was measured to withhold it and step 6 answers `session-agent-withheld-tools`. The deploy and the runner have the agents area's reader refuse by it, and `pkit validate` fails until it is there (the adapters README, "What an adapter declares as data").
 - **Hook configuration** — if the harness supports hooks.
 
 Skills, agents, and decisions live in their own harness-agnostic areas (per COR-006); the adapter only translates them at deploy time.
@@ -117,6 +119,7 @@ Walk the adapter against the COR-005 universal-element checklist:
 - *Does the adapter ship `undeploy-capability.sh`? Without it, a capability uninstalled with its files kept stays active in the harness, and the lifecycle warns.*
 - *Does the adapter respect COR-006's harness-agnostic discipline — core content lives at canonical paths, and the adapter only translates at deploy time?*
 - *Does every answer in `harness-support.yaml` rest on evidence, with its versions bounded to what was tested?*
+- *Where the adapter deploys agents, does `tool-access.json` declare its harness's terms, and admit only withheld entries the harness was measured to withhold?*
 
 If any check fails, revise.
 

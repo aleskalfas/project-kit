@@ -12,12 +12,25 @@ queries:
   paths, not placeholders) and cross-agent path overlaps are flagged.
 - Agent policy: every `model:` / `effort:` an agent's front matter declares,
   or the overlay sets for one, is a value the harness accepts (#1047).
+- Tool access: every agent's tool access is one the tree's reader,
+  `.pkit/agents/tool_access.py`, reads, and one every registered adapter that
+  deploys agents takes, by that adapter's declaration of tool access; such an
+  adapter with no readable declaration, or admitting a withheld entry its support
+  declaration does not answer as achievable, is reported, and so is a reader the
+  command cannot reach; a key outside an agent definition's fields is warned of
+  (ADR-086).
 - Pattern form: every `reads.patterns` entry of an agent is a `<category>`
   placeholder the deploy resolves, or a path; a bare category name is reported
   (#2481).
 - Unknown overrides: every entry under the overlay's `overrides:` names an agent
   some source ships, and a category its definition references; one the deploy
   ignores is warned of (#2468).
+- Agent definitions: from the picker's answer and the definitions alone, never
+  from deployed copies (ADR-087 point 3): a collision between capabilities no
+  choice settles, and a choice that decides nothing, are warned of; a name whose
+  winning place holds both layouts, a definition whose front matter gives
+  another name than its file's, a name the picker cannot tell, and a picker the
+  command cannot reach are errors.
 - Read-only lookups: show outgoing refs, reverse lookup, record-ID
   resolution, hook resolution by precedence.
 
@@ -51,11 +64,12 @@ from prose, so the warning never fails a command.
 from __future__ import annotations
 
 import fnmatch
+import functools
 import io
 import itertools
 import os
 import re
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any, Literal
@@ -64,12 +78,16 @@ import click
 from ruamel.yaml import YAML
 
 from project_kit import (
+    agent_definitions,
     agent_policy,
+    agent_tool_access,
     agents_overlay,
     connections,
+    harness_support,
     lifecycle_ownership,
     record_points,
     rule_sets,
+    write_categories,
 )
 from project_kit.backbone_schemas import ADDRESS_WORD_PATTERN
 from project_kit.line_breaks import universal_newlines
@@ -77,6 +95,8 @@ from project_kit.package_validate import POINT_SEPARATOR, ROLE_QUALIFIER
 from project_kit.validators import Finding, Outcome, Severity, counts_line, location_of
 
 if TYPE_CHECKING:
+    from types import ModuleType
+
     from project_kit.document_parts import Body
 
 Kind = Literal["agent", "skill"]
@@ -100,6 +120,31 @@ class Declared:
     # (sub-procedure markdown, script, template, reference doc).
     # Validated for existence; not bidirectional-checked against body refs.
     composes: frozenset[str] = field(default_factory=frozenset)
+
+
+#: The fields of an agent's definition (ADR-066 point 3; the agents README,
+#: "Frontmatter schema"): those of `Declared`, the shape agents and skills share
+#: (COR-013 point 2, COR-016), with `reads` holding its three lists, and an
+#: agent's name, description, tool access (COR-013 point 7), model and effort.
+#: The validator warns on any other key of an agent's definition (ADR-086 point
+#: 2), and the agent runner refuses one; a test holds the runner's set to this.
+DEFINITION_FIELDS = frozenset(
+    {
+        "name",
+        "description",
+        "tools",
+        "withheld",
+        "model",
+        "effort",
+        "reads",
+        "owns",
+        "needs",
+        "answers",
+        "gates",
+        "storyboards",
+        "composes",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -144,6 +189,12 @@ class Artifact:
     # The execution-policy keys the front matter sets (`model`, `effort` —
     # #1047), as written. Not references: carried for the value check only.
     policy: dict[str, Any] = field(default_factory=dict)
+    # Every top-level key of the front matter, as written: an agent's key outside
+    # `DEFINITION_FIELDS` is reported (ADR-086 point 2).
+    fields: tuple[str, ...] = ()
+    # The name the front matter gives, as written, or None where it gives none: an
+    # agent's that is not its file's name is reported (COR-013 point 8).
+    named: str | None = None
 
 
 @dataclass(frozen=True)
@@ -184,8 +235,46 @@ OPERATIONAL_CITATION = "operational-rule-citation"
 # (#2468). The agent deploys as if it were absent, so a warning.
 UNKNOWN_OVERRIDE = "unknown-override"
 
+# A dotted category of the overlay, at the top level or in an override, that no
+# installed capability declares (ADR-088 point 1), such as one an uninstall left.
+# Nothing deploys from it, so a warning, beside the unknown overrides.
+UNDECLARED_CATEGORY = "undeclared-category"
+
+# An agent's tool access the tree's reader refuses, or an adapter that deploys
+# agents refuses; such an adapter with no declaration of tool access the reader
+# reads, or one admitting a withheld entry its support declaration does not answer
+# as achievable; or a reader the command cannot reach where it has a definition to
+# read (ADR-086 points 2, 5 and 6): the deploy and the runner refuse the agent, or
+# would, so an error.
+TOOL_ACCESS = "tool-access"
+
+# A key of an agent's definition that is none of a definition's fields
+# (`DEFINITION_FIELDS`), such as a harness's own key. The deploy copies it through
+# and the agent deploys, so a warning (ADR-086 point 2).
+UNKNOWN_FIELD = "unknown-field"
+
+# A collision between capabilities over an agent's name that no choice of the
+# project's settles, or a choice that decides nothing (ADR-087 point 3): the first
+# capability by name wins, or the choice is idle, and an agent deploys, so a warning.
+AGENT_CHOICE = "agent-choice"
+
+# A name whose winning place holds both layouts, a definition whose front matter
+# gives another name than its file's, a name the picker cannot tell, or a picker the
+# command cannot reach (ADR-087 point 3): the deploy refuses the agent or changes
+# nothing for it, so an error.
+AGENT_DEFINITION = "agent-definition"
+
 #: The kinds of finding that warn and never fail `pkit refs validate`.
-WARNING_KINDS = frozenset({POINT_CITATION, OPERATIONAL_CITATION, UNKNOWN_OVERRIDE})
+WARNING_KINDS = frozenset(
+    {
+        POINT_CITATION,
+        OPERATIONAL_CITATION,
+        UNKNOWN_OVERRIDE,
+        UNDECLARED_CATEGORY,
+        UNKNOWN_FIELD,
+        AGENT_CHOICE,
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -290,8 +379,9 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 
 def validate_corpus(target_root: Path) -> list[Issue]:
     """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner +
-    storyboard + capability-, rule-, address- and point-citation + composes + agent-policy +
-    `reads.patterns` form + unknown-override checks."""
+    tool-access + definition-field + storyboard + capability-, rule-, address- and
+    point-citation + composes + agent-policy + `reads.patterns` form + unknown-override +
+    undeclared-category checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -301,12 +391,22 @@ def check_corpus(
     artifacts: list[Artifact], providers: list[Provider], target_root: Path
 ) -> list[Issue]:
     """Every check over an already-loaded corpus, each finding tagged with its kind."""
+    picked, unreachable = _picked(artifacts, target_root)
+    agents = agent_definitions.agents(picked) if picked is not None else {}
     issues: list[Issue] = []
     issues.extend(_kind(_validate_bidirectional(artifacts, target_root), DRIFT))
-    issues.extend(_kind(_validate_ownership(artifacts, target_root), OWNERSHIP))
+    issues.extend(_kind(unreachable, AGENT_DEFINITION))
+    if picked is not None:
+        issues.extend(_kind(_validate_agent_definitions(picked, target_root), AGENT_DEFINITION))
+        issues.extend(_kind(_validate_agent_choices(picked), AGENT_CHOICE))
+    issues.extend(_kind(_validate_agent_names(artifacts, target_root), AGENT_DEFINITION))
+    issues.extend(_kind(_validate_ownership(artifacts, target_root, agents), OWNERSHIP))
     issues.extend(_kind(_validate_hook_closure(artifacts, providers), HOOK_CLOSURE))
     issues.extend(_kind(_validate_same_tier_collisions(providers), COLLISION))
-    issues.extend(_kind(_validate_storyboards(artifacts, target_root), STORYBOARD))
+    holds, access_issues = _tool_accesses(artifacts, target_root)
+    issues.extend(_kind(access_issues, TOOL_ACCESS))
+    issues.extend(_kind(_validate_definition_fields(artifacts, target_root), UNKNOWN_FIELD))
+    issues.extend(_kind(_validate_storyboards(artifacts, target_root, holds, agents), STORYBOARD))
     issues.extend(_kind(_validate_capability_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_rule_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_address_citations(artifacts, target_root), CITATION))
@@ -315,7 +415,9 @@ def check_corpus(
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
     issues.extend(_kind(_validate_reads_patterns(artifacts, target_root), READS_PATTERN))
-    issues.extend(_kind(_validate_unknown_overrides(target_root), UNKNOWN_OVERRIDE))
+    if picked is not None:
+        issues.extend(_kind(_validate_unknown_overrides(target_root), UNKNOWN_OVERRIDE))
+    issues.extend(_kind(_validate_undeclared_categories(target_root), UNDECLARED_CATEGORY))
     return issues
 
 
@@ -331,14 +433,22 @@ def outcome(target_root: Path) -> Outcome:
     declare — is a **warning**: the artifact deploys and resolves regardless,
     and the body parser is a heuristic (a dotted configuration key reads as a
     hook). Every other finding — a path owned twice or by nobody, a hook no
-    provider answers, two providers at a hook's winning tier, a missing storyboard, a
+    provider answers, two providers at a hook's winning tier, an agent's tool access
+    the reader or an adapter that deploys agents refuses, such an adapter with no
+    readable declaration of tool access or one admitting a withheld entry it was not
+    measured to withhold, a reader the command cannot reach, a missing storyboard, a
     citation that does not resolve, a sub-procedure that does not exist, a
     model or effort the harness does not accept, an agent's `reads.patterns`
-    entry that is neither a placeholder nor a path — is an **error**. A citation of
-    a point its record does not hold is a **warning** too, read from prose as
-    drift is, and so is an override the deploy ignores, since the agent deploys as
-    if it were absent. `pkit refs validate`, the focused surface, keeps its
-    stricter exit: it fails on any finding but those last two.
+    entry that is neither a placeholder nor a path, a name whose winning place
+    holds both layouts, a definition whose front matter gives another name than
+    its file's, a name the picker cannot tell, a picker the command cannot reach —
+    is an **error**. A citation of a point its record does not hold is a
+    **warning** too, read from prose as drift is, and so are an override the
+    deploy ignores, a key outside an agent definition's fields, a collision
+    between capabilities no choice settles and a choice that decides nothing,
+    since the agent deploys regardless. `pkit refs validate`,
+    the focused surface, keeps its stricter exit: it fails on any finding but those
+    warnings.
     """
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
@@ -1839,6 +1949,11 @@ def extract_body_refs(body: str) -> BodyRefs:
         start = match.start()
         if start > 0 and stripped[start - 1] in ("/", ".", "$"):
             continue
+        # A capability's category is named with a dot (COR-073 point 1), so its
+        # placeholder, `<visual-communication.work>`, holds a hook-shaped name.
+        # It names an overlay category, not a hook.
+        if stripped[start - 1 : start] == "<" and stripped[match.end() : match.end() + 1] == ">":
+            continue
         hooks.add(token)
 
     return BodyRefs(
@@ -1952,6 +2067,8 @@ def _load_one(
         body_refs=body_refs,
         capability=capability,
         policy={key: fm[key] for key in agent_policy.POLICY_KEYS if fm.get(key) is not None},
+        fields=tuple(str(key) for key in fm),
+        named=str(fm["name"]) if fm.get("name") is not None else None,
     )
 
 
@@ -2282,27 +2399,18 @@ def resolved_owns(
     )
     owned: dict[str, str | None] = {}
     for entry in entries:
-        path = _normalize_owned_path(entry.value)
+        path = write_categories.normalised(entry.value)
         if not path:
             continue
         owned.setdefault(path, entry.category)
     return owned
 
 
-def _normalize_owned_path(path: str) -> str:
-    """Comparison form of an owned path: no leading `./`, no trailing `/`."""
-    normalized = path.strip()
-    while normalized.startswith("./"):
-        normalized = normalized[2:]
-    return normalized.rstrip("/")
-
-
-def _paths_overlap(left: str, right: str) -> bool:
-    """True when the two paths are equal or one contains the other."""
-    return left == right or left.startswith(right + "/") or right.startswith(left + "/")
-
-
-def _validate_ownership(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+def _validate_ownership(
+    artifacts: list[Artifact],
+    target_root: Path,
+    agents: Mapping[str, tuple[str, Path]],
+) -> list[Issue]:
     """Exactly-one-owner over agents' *resolved* `owns:` paths (per COR-013 rule 5).
 
     COR-013's overlay rule fixes that the consistency check operates on resolved
@@ -2322,21 +2430,21 @@ def _validate_ownership(artifacts: list[Artifact], target_root: Path) -> list[Is
       deploy primitive already surfaces that loudly by skipping the agent
       (`pkit agents` reports it); failing here as well would punish an
       upgraded-not-yet-remediated install twice for one gap.
-    - **Only the agent that actually deploys counts as an owner.** Name-collision
-      precedence (project > capability > core) means a shadowed same-name source
-      is never deployed, so it is not a second owner of its paths.
+    - **Only the agent counts as an owner.** At most one definition of a name is
+      the agent, the one the picker names in *agents* (ADR-087), so a shadowed
+      same-name definition, one that does not count and a refused one are never
+      deployed, and none is a second owner of its paths.
     """
     overlay = agents_overlay.load_overlay_values(target_root)
-    winners = agents_overlay.discover_kit_agents(target_root)
 
     owned_by_agent: dict[str, dict[str, str | None]] = {}
     locations: dict[str, str] = {}
     for art in artifacts:
         if art.kind != "agent" or not art.declared.owns:
             continue
-        winner = winners.get(art.name)
-        if winner is not None and winner[1].resolve() != art.path.resolve():
-            continue  # shadowed by name-collision precedence — never deployed
+        winner = agents.get(art.name)
+        if winner is None or winner[1].resolve() != art.path.resolve():
+            continue  # not the agent of its name: never deployed
         owned = resolved_owns(art, overlay)
         if not owned:
             continue
@@ -2347,7 +2455,7 @@ def _validate_ownership(artifacts: list[Artifact], target_root: Path) -> list[Is
     for first, second in itertools.combinations(sorted(owned_by_agent), 2):
         for first_path, first_category in sorted(owned_by_agent[first].items()):
             for second_path, second_category in sorted(owned_by_agent[second].items()):
-                if not _paths_overlap(first_path, second_path):
+                if not write_categories.overlap(first_path, second_path):
                     continue
                 issues.append(
                     Issue(
@@ -2412,13 +2520,167 @@ def _infer_target_root(path: Path) -> Path | None:
     return None
 
 
-def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+def _tool_accesses(
+    artifacts: list[Artifact], target_root: Path
+) -> tuple[dict[Path, Callable[[str], bool]], list[Issue]]:
+    """Whether each agent holds a tool, by its file, as the tree's reader answers it.
+
+    The reader, `.pkit/agents/tool_access.py`, reads each definition's tool access
+    from its text (ADR-086 point 2), and makes an adapter's refusals against the
+    adapter's declaration of tool access (point 4). Its findings come back beside:
+    a definition it refuses, or that an adapter which deploys agents refuses, and
+    such an adapter's own findings (`_adapter_declarations`, point 6). Where there
+    is an agent to read and the command cannot reach the reader, they are one
+    finding at the reader's path (point 5). The adapters are read only where there
+    is an agent to read, since it is the reader that reads their declarations. An
+    agent whose access could not be read is left out of the answer, so no check
+    reads it.
+    """
+    agents = [art for art in artifacts if art.kind == "agent"]
+    if not agents:
+        return {}, []
+    adapters = agent_tool_access.agent_adapters(target_root)
+    functions = ("tool_access", "holds", "Refused")
+    if adapters:
+        functions += ("read_declaration", "declaration_path", "harness_refusal", "BadDeclaration")
+    try:
+        reader = agent_tool_access.load_reader(target_root, functions)
+    except agent_tool_access.Unreachable as exc:
+        return {}, [Issue(location=agent_tool_access.READER.as_posix(), diagnosis=f"{exc}.")]
+    declarations, issues = _adapter_declarations(reader, adapters, target_root)
+    holds: dict[Path, Callable[[str], bool]] = {}
+    for art in agents:
+        try:
+            access = reader.tool_access(art.path.read_text(encoding="utf-8"))
+        except reader.Refused as exc:
+            issues.append(
+                Issue(
+                    location=_location(art, target_root),
+                    diagnosis=f"its tool access is refused: {exc}. The deploy and the agent "
+                    "runner refuse the agent until it is mended (COR-013 point 7).",
+                )
+            )
+            continue
+        holds[art.path] = functools.partial(reader.holds, access)
+        for adapter, declaration in declarations:
+            problem = reader.harness_refusal(access, art.fields, declaration)
+            if problem is None:
+                continue
+            issues.append(
+                Issue(
+                    location=_location(art, target_root),
+                    diagnosis=f"the {adapter} adapter refuses its tool access, since "
+                    f"{declaration.harness} cannot enforce or translate it: {problem}. Its "
+                    "deploy and agent runner refuse the agent until it is mended (ADR-086 "
+                    "point 6).",
+                )
+            )
+    return holds, issues
+
+
+def _adapter_declarations(
+    reader: ModuleType, adapters: list[str], target_root: Path
+) -> tuple[list[tuple[str, Any]], list[Issue]]:
+    """The declaration of tool access of each adapter in *adapters*, which deploy
+    agents, as the reader reads it, beside a finding for each such adapter that
+    declares none, whose declaration cannot be read, or that admits a withheld entry
+    while its support declaration does not answer a session's agent withheld tools
+    as achievable for some version (ADR-085 point 3, ADR-086 point 6)."""
+    declarations: list[tuple[str, Any]] = []
+    issues: list[Issue] = []
+    for adapter in adapters:
+        folder = target_root / ".pkit" / "adapters" / adapter
+        location = Path(reader.declaration_path(folder)).relative_to(target_root).as_posix()
+        try:
+            declaration = reader.read_declaration(folder)
+        except reader.BadDeclaration as exc:
+            issues.append(
+                Issue(
+                    location=location,
+                    diagnosis=f"the {adapter} adapter deploys agents, and its declaration of tool "
+                    f"access cannot be read: {exc}. So no agent is checked against what its "
+                    "deploy and agent runner refuse (ADR-086 point 6).",
+                )
+            )
+            continue
+        if declaration is None:
+            issues.append(
+                Issue(
+                    location=location,
+                    diagnosis=f"the {adapter} adapter deploys agents and declares no tool access, "
+                    "so no agent is checked against what its deploy and agent runner refuse "
+                    "(ADR-086 point 6). An adapter the methodology ships gets its declaration "
+                    "from `pkit sync`. An adapter of the project's own declares its harness's "
+                    'terms here (the adapters README, "What an adapter declares as data").',
+                )
+            )
+            continue
+        declarations.append((adapter, declaration))
+        if declaration.withheld_admits:
+            unmeasured = _unmeasured_admission(target_root, adapter)
+            if unmeasured is not None:
+                issues.append(Issue(location=f"{location}/withheld_admits", diagnosis=unmeasured))
+    return declarations, issues
+
+
+def _unmeasured_admission(target_root: Path, adapter: str) -> str | None:
+    """Why *adapter* may not admit a withheld entry: its support declaration does not
+    answer a session's agent withheld tools as achievable for some version, or
+    cannot be read. None where it answers it so."""
+    requirement = agent_tool_access.SESSION_AGENT_WITHHELD
+    try:
+        if harness_support.answers_achievable(target_root, adapter, requirement):
+            return None
+        why = (
+            f"its support declaration does not answer `{requirement}` as achievable for any version"
+        )
+    except harness_support.SupportError as exc:
+        why = f"its support declaration cannot be read ({exc})"
+    return (
+        f"the {adapter} adapter's declaration of tool access admits a withheld entry, while "
+        f"{why}. A withheld entry its harness was not measured to withhold fails open "
+        "(ADR-085 point 3, ADR-086 point 6): admit none, or answer the requirement from a "
+        "measurement."
+    )
+
+
+def _validate_definition_fields(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Each key of an agent's definition that is none of a definition's fields (ADR-086
+    point 2), such as a harness's own key."""
+    issues: list[Issue] = []
+    for art in artifacts:
+        if art.kind != "agent":
+            continue
+        for key in art.fields:
+            if key in DEFINITION_FIELDS:
+                continue
+            issues.append(
+                Issue(
+                    location=_location(art, target_root),
+                    diagnosis=f"holds `{key}`, which is none of an agent definition's fields "
+                    '(the agents README, "Frontmatter schema"). The deploy copies it through '
+                    "unread, a confined run refuses it, and no check reads it as the agent's "
+                    "tool access.",
+                )
+            )
+    return issues
+
+
+def _validate_storyboards(
+    artifacts: list[Artifact],
+    target_root: Path,
+    holds: Mapping[Path, Callable[[str], bool]],
+    agents: Mapping[str, tuple[str, Path]],
+) -> list[Issue]:
     """Validate the storyboard relationship per COR-016 (two-sided).
 
     Consumer side (today: agents):
     - Each declared storyboard path exists on disk.
     - The consumer body cites the path (load-bearing reference).
-    - `Read` is in `tools` so the runtime can load the file.
+    - The agent's tool access gives it `Read`, so the runtime can load the file:
+      its grant names `Read`, or it names no grant and does not withhold `Read`
+      (ADR-085 point 2). *holds* answers it, from the tree's reader; an agent
+      whose access could not be read is reported by the tool-access check.
 
     Storyboard side (frontmatter `consumers:`), for every storyboard in an
     agent folder — the agents area's or a capability's:
@@ -2441,14 +2703,15 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
             continue
         loc = _location(art, target_root)
         file_text = art.path.read_text(encoding="utf-8")
-        fm, body = _split_frontmatter(file_text)
-        tools = fm.get("tools") or []
-        if isinstance(tools, list) and "Read" not in tools:
+        _, body = _split_frontmatter(file_text)
+        holds_tool = holds.get(art.path)
+        if holds_tool is not None and not holds_tool("Read"):
             issues.append(
                 Issue(
                     location=loc,
-                    diagnosis="declares storyboards but `Read` is not in `tools`. "
-                    "The runtime needs Read to load storyboards at session start.",
+                    diagnosis="declares storyboards but its tool access does not give it "
+                    "`Read`: its grant leaves `Read` out, or its withheld list names it. The "
+                    "runtime needs Read to load storyboards at session start.",
                 )
             )
         for sb_path in sorted(art.declared.storyboards):
@@ -2524,7 +2787,7 @@ def _validate_storyboards(artifacts: list[Artifact], target_root: Path) -> list[
                     )
                 )
                 continue
-            consumer = _find_agent(artifacts, name, ns)
+            consumer = _find_agent(artifacts, name, ns, agents)
             if consumer is None:
                 issues.append(
                     Issue(
@@ -2622,23 +2885,40 @@ def _walk_storyboard_files(target_root: Path) -> list[Path]:
 
 
 def _find_agent(
-    artifacts: list[Artifact], name: str | None, namespace: str | None
+    artifacts: list[Artifact],
+    name: str | None,
+    namespace: str | None,
+    agents: Mapping[str, tuple[str, Path]],
 ) -> Artifact | None:
     """The agent a storyboard's `consumers:` entry names.
 
     `namespace` is `core` or `project` for an agent in the agents area, or the
     capability's name for a capability's agent — capability agents load with
-    `namespace="core"`, so their capability is what identifies them.
+    `namespace="core"`, so their capability is what identifies them. An entry
+    naming no namespace names the agent of its name, the definition the picker
+    names in *agents* (ADR-087).
     """
     if not name:
         return None
+    if namespace is None:
+        winner = agents.get(name)
+        if winner is None:
+            return None
+        return next(
+            (
+                art
+                for art in artifacts
+                if art.kind == "agent" and art.path.resolve() == winner[1].resolve()
+            ),
+            None,
+        )
     for art in artifacts:
         if art.kind != "agent":
             continue
         if art.name != name:
             continue
         where = art.capability if art.capability is not None else art.namespace
-        if namespace is not None and where != namespace:
+        if where != namespace:
             continue
         return art
     return None
@@ -3200,6 +3480,105 @@ def _validate_agent_policy(artifacts: list[Artifact], target_root: Path) -> list
     return issues
 
 
+def _picked(artifacts: list[Artifact], target_root: Path) -> tuple[Any | None, list[Issue]]:
+    """The picker's answer for the tree, or None and the error that it cannot be
+    reached, at the picker's own path (ADR-087 point 5).
+
+    Asked only where some place ships an agent, as the reader of tool access is
+    loaded only where it has a definition to read: a tree with none has no name
+    to pick, and None stands for its empty answer.
+    """
+    if not any(art.kind == "agent" for art in artifacts):
+        return None, []
+    try:
+        return agent_definitions.answer(target_root), []
+    except agent_definitions.Unreachable as exc:
+        location = (Path(".pkit") / agent_definitions.PICKER).as_posix()
+        return None, [Issue(location=location, diagnosis=f"{exc.message}.")]
+
+
+def _validate_agent_definitions(picked: Any, target_root: Path) -> list[Issue]:
+    """Each name whose agent has no one text, from the picker's answer alone
+    (ADR-087 point 3).
+
+    A name whose winning place holds both layouts is refused by the deploy and
+    the runner, and no other definition stands in. A name the picker cannot tell
+    is one the deploy changes nothing for, until the record it names is mended.
+    Each is reported at the first of the name's definitions.
+    """
+    issues: list[Issue] = []
+    for name, pick in sorted(picked.picks.items()):
+        why = pick.refused or pick.untold
+        if why is None:
+            continue
+        first = pick.definitions[0].files[0]
+        issues.append(
+            Issue(
+                location=_relative(first, target_root),
+                diagnosis=f"agent {name!r}: {why}.",
+            )
+        )
+    return issues
+
+
+def _validate_agent_choices(picked: Any) -> list[Issue]:
+    """Each collision between capabilities no choice settles, and each choice that
+    decides nothing, at the backbone manifest where a choice is recorded
+    (ADR-087 point 3, COR-017)."""
+    manifest = (Path(".pkit") / "manifest.yaml").as_posix()
+    issues: list[Issue] = []
+    for collision in picked.collisions:
+        others = ", ".join(collision.capabilities)
+        issues.append(
+            Issue(
+                location=manifest,
+                diagnosis=(
+                    f"agent {collision.name!r} is shipped by capabilities {others}, and no "
+                    f"choice of the project's settles which is the agent: capability "
+                    f"{collision.winner}'s is, the first by name (COR-017). Record a choice "
+                    f"with `pkit agents choose {collision.name} <capability>`."
+                ),
+            )
+        )
+    for idle in picked.idle_choices:
+        issues.append(
+            Issue(
+                location=manifest,
+                diagnosis=(
+                    f"the project's choice of capability {idle.capability} for agent "
+                    f"{idle.name!r} decides nothing: {idle.why} (COR-017). Record another "
+                    f"with `pkit agents choose`, or remove the entry under `agent_choices`."
+                ),
+            )
+        )
+    return issues
+
+
+def _validate_agent_names(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Each agent's definition whose front matter gives another name than its
+    file's: the deploy and the runner refuse it (COR-013 point 8)."""
+    return [
+        Issue(
+            location=_relative(art.path, target_root),
+            diagnosis=(
+                f"its front matter names the agent {art.named!r}, not {art.name!r}, the name "
+                f"of its file (COR-013 point 8): write `name: {art.name}`, or rename the file "
+                "to the name it gives."
+            ),
+        )
+        for art in artifacts
+        if art.kind == "agent" and art.named is not None and art.named != art.name
+    ]
+
+
+def _relative(path: Path, target_root: Path) -> str:
+    """*path* relative to *target_root* where it lies there, else as it is."""
+    try:
+        return path.relative_to(target_root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def _validate_unknown_overrides(target_root: Path) -> list[Issue]:
     """Each entry under the overlay's `overrides:` that the deploy ignores, at
     `overlay.yaml` and naming its key (#2468).
@@ -3216,6 +3595,21 @@ def _validate_unknown_overrides(target_root: Path) -> list[Issue]:
             f"Correct the name, or remove the entry.",
         )
         for unknown in agents_overlay.unknown_overrides(target_root)
+    ]
+
+
+def _validate_undeclared_categories(target_root: Path) -> list[Issue]:
+    """Each dotted category of the overlay no installed capability declares, at
+    `overlay.yaml` and naming its key (ADR-088 point 1). A dotted name is a
+    capability's alone, so nothing deploys from it: a warning."""
+    return [
+        Issue(
+            location=str(agents_overlay.OVERLAY_PATH),
+            diagnosis=f"`{found.key}` names <{found.category}>, a capability's category that no "
+            "installed capability declares. Remove it, or install the capability that declares "
+            "it.",
+        )
+        for found in agents_overlay.undeclared_capability_categories(target_root)
     ]
 
 

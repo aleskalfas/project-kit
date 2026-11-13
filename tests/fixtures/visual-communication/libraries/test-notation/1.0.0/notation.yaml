@@ -2,8 +2,14 @@ pkit_schema: visual-communication:notation
 schema_version: 1
 
 # Each concept maps to a colour family the foundations declare, never to a value, so each
-# brand colours it its own way.
+# brand colours it its own way. A person holds its icon, an outline, as its sign beside its
+# colour.
 concepts:
-  person: {colour: purple}
+  person:
+    colour: purple
+    icon:
+      d: M 12 2 A 5 5 0 1 1 12 12 A 5 5 0 1 1 12 2 Z M 3 22 C 3 17 7 14 12 14 C 17 14 21 17 21 22 Z
+      fill-rule: nonzero
+      square: 24
   service: {colour: blue}
   store: {colour: green}

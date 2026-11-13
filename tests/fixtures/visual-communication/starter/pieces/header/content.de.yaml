@@ -30,3 +30,11 @@ pages:
     main:
       use: starter/header
       title: Die Regeln eines Projekts und die Werkzeuge, die sie durchsetzen
+
+  - id: sign
+    layout: standard
+    main:
+      use: starter/header
+      fill: tint
+      concept: test-notation/person
+      title: Notizen einer Benutzerin

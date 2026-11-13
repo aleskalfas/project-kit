@@ -6,7 +6,9 @@ about: >-
   Something to know beside the main point: a box with rounded corners on its colour
   family's fill, a bar along its left side in the family's line, that holds a head, a
   command and a text, one under another, each where the content gives it. The command
-  stands in a code block. It is as wide as it is given, and as tall as what it holds.
+  stands in a code block. Where its concept has a sign, the sign stands at the end of its
+  head's row, or of its first row where it has no head. It is as wide as it is given, and
+  as tall as what it holds.
 
 fields:
   type: object
@@ -30,6 +32,15 @@ values:
   # it is.
   left: "=@starter.bar + @starter.inset"
   inner: "=:width - left - @starter.inset"
+  # The head's row holds the head and, at its end, the sign, with a gap between them where
+  # the sign is drawn. Where the aside has no head, the sign ends the row of what comes
+  # first, which leaves room for it. `over` is how far the sign reaches below the head: its
+  # whole height where there is no head, nothing where the head is as tall. `beside` is
+  # the room what stands below the head leaves it: the sign's side, since a sign is
+  # square, and the gap between them.
+  heading: "=max(head.height, sign.height)"
+  over: "=heading - head.height"
+  beside: "=over + min(over, @space.2)"
 
 parts:
   box:
@@ -42,6 +53,16 @@ parts:
     box: {fill: ":colour.line", rx: "=@starter.corner"}
     width: "=@starter.bar"
     height: "=:height"
+  # The concept's sign, at the end of the head's row, or of the first row of what the
+  # aside holds where it has no head, as a card draws its own, in the family's text. An
+  # aside whose family comes from no concept with a sign draws none, and the sign then has
+  # no size.
+  sign:
+    sign: {fill: ":colour.text"}
+    x: "=:width - @starter.inset - sign.width"
+    y: "=@starter.inset + (heading - sign.height) / 2"
+    width: "=@starter.sign"
+    height: "=@starter.sign"
   # The head and the text are the family's text on the family's fill, a pair the
   # foundations declare. Each keeps a gap from what stands above it only where both are
   # drawn: a part not drawn has no height.
@@ -53,15 +74,15 @@ parts:
       fill: ":colour.text"
     x: "=left"
     y: "=@starter.inset"
-    width: "=inner"
+    width: "=inner - sign.width - min(sign.width, @space.2)"
   # The command is passed on as text, so the code block shows it as one plain run.
   command:
     when: command
     use: starter/code
     fields: {text: command}
     x: "=left"
-    y: "=head.bottom + min(head.height, command.height, @space.2)"
-    width: "=inner"
+    y: "=@starter.inset + head.height + min(head.height, command.height, @space.2)"
+    width: "=inner - beside"
   text:
     when: text
     text:
@@ -70,7 +91,7 @@ parts:
       fill: ":colour.text"
     x: "=left"
     y: "=command.bottom + min(max(head.height, command.height), text.height, @space.2)"
-    width: "=inner"
+    width: "=inner - beside"
 
 preferred:
-  height: "=text.bottom + @starter.inset"
+  height: "=max(text.bottom, sign.bottom) + @starter.inset"

@@ -1,6 +1,0 @@
-component: living-docs
-kind: none
-body: >
-  DEC-002 point 2 says what renders an image a page shows answers for whether
-  it is fresh, and a shared way to configure renderers waits for a project
-  that runs two (#2700). It refines a record only: no check or command moves.

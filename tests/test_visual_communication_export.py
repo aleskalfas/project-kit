@@ -50,6 +50,7 @@ from tests.test_visual_communication_pipeline import (
 from tests.test_visual_communication_render import newer_tests
 from tests.visual_communication_project import (
     CONFIG,
+    RECORDED_DEFAULT,
     SCHEMAS,
     bound,
     importable,
@@ -131,8 +132,7 @@ def test_each_run_takes_the_next_number_and_records_it(tmp_path: Path) -> None:
     shown = run(root, PIECE)
     assert shown.returncode == 0, shown.stderr
     assert shown.stdout.splitlines() == [
-        f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
-        f"to move the work, move the folder and change the `location:` line there",
+        RECORDED_DEFAULT,
         f"export: {FOLDER}/flow.v1.en.default.svg",
         f"export: {FOLDER}/flow.v1.en.colour-scheme.dark.svg",
         f"export: version 1 recorded in {RECORD}",
@@ -156,7 +156,7 @@ def test_each_run_takes_the_next_number_and_records_it(tmp_path: Path) -> None:
     recorded = second["recorded"]
     assert (recorded["state"], recorded["renderers"], recorded["used-stale"]) == (
         "draft",
-        {"svg": "1.1.0"},
+        {"svg": "1.4.0"},
         [],
     )
     assert "time: '" in (root / RECORD).read_text(encoding="utf-8")
@@ -1064,7 +1064,7 @@ def test_a_deck_exported_as_pdf_makes_one_file_for_each_language_its_pages_in_or
     assert version["files"] == {
         name: reading.sha256((root / FOLDER / name).read_bytes()) for name in PDF_FILES
     }
-    assert version["recorded"]["renderers"] == {"pdf": "1.2.0"}
+    assert version["recorded"]["renderers"] == {"pdf": "1.6.0"}
 
 
 def test_a_pdf_draws_each_combination_in_its_own_colours(tmp_path: Path) -> None:
@@ -1091,7 +1091,7 @@ def test_svg_and_pdf_are_exported_under_one_number(tmp_path: Path) -> None:
     ]
     assert exported(root) == sorted([*svgs, *PDF_FILES])
     [version] = reading.read_yaml(root / RECORD)["versions"]
-    assert version["recorded"]["renderers"] == {"pdf": "1.2.0", "svg": "1.1.0"}
+    assert version["recorded"]["renderers"] == {"pdf": "1.6.0", "svg": "1.4.0"}
 
 
 def test_the_same_scene_gives_the_same_pdf_under_each_number(tmp_path: Path) -> None:
@@ -1213,7 +1213,7 @@ def test_html_and_pdf_are_exported_under_one_number(tmp_path: Path) -> None:
     assert files.shape_problems(record, "exports") == []
     [version] = record["versions"]
     assert sorted(version["files"]) == exported(root)
-    assert version["recorded"]["renderers"] == {"html": html.VERSION, "pdf": "1.2.0"}
+    assert version["recorded"]["renderers"] == {"html": html.VERSION, "pdf": "1.6.0"}
 
 
 @pytest.mark.parametrize(

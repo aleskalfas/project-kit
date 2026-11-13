@@ -41,11 +41,18 @@ roles:
   size.figure: {type: dimension}
   size.slide: {type: dimension}
   # The width of a site's pages: a brand that gives it no value draws a site as wide as its
-  # slide (DEC-022 point 3).
+  # slide, since a desktop page fills a screen as a slide does (DEC-004 point 7).
   size.site: {type: dimension, default: '{size.slide}'}
   # The length of a line of text, at most, which a web part caps its text at: a brand that
   # gives it no value caps a line at its figure's width (DEC-008 point 2).
   size.line: {type: dimension, default: '{size.figure}'}
+  # The lengths of a run's sign and ground (DEC-036 point 3): the gap between a sign and
+  # the run's first character, the room a ground leaves at each end of its span, and the
+  # radius of a ground's corners where it starts and ends. A brand that gives them no value
+  # takes its smallest space for each.
+  space.sign-gap: {type: dimension, default: '{space.1}'}
+  space.ground-room: {type: dimension, default: '{space.1}'}
+  space.ground-corner: {type: dimension, default: '{space.1}'}
   font.body: {type: fontFamily}
   font.heading: {type: fontFamily}
   type.body: {type: typography}
@@ -57,11 +64,12 @@ roles:
 # The shared axes (DEC-004 point 2). The colour scheme and the contrast change colours
 # alone, so every mode of either is drawn from one scene. The device is a size: each of
 # its modes has a scene of its own, and a brand has it only where it gives it, with the
-# modes it gives (DEC-021 points 1 and 2).
+# modes it gives (DEC-021 points 1 and 2). A projector is a screen read from across a
+# room, a fourth size of the foundations (DEC-021 point 1).
 axes:
   colour-scheme: {kind: value, modes: [light, dark], default: light}
   contrast: {kind: value, modes: [standard, high], default: standard}
-  device: {kind: size, modes: [desktop, tablet, phone], default: desktop}
+  device: {kind: size, modes: [desktop, tablet, phone, projector], default: desktop}
 
 # The colour families a notation maps its concepts to (DEC-004 point 10), and a component
 # paints with as `:colour.<member>`: each paints one thing, its line, its fill and the
@@ -74,6 +82,36 @@ families:
   orange: {fill: family.orange.fill, line: family.orange.line, text: family.orange.text}
   purple: {fill: family.purple.fill, line: family.purple.line, text: family.purple.text}
   red: {fill: family.red.fill, line: family.red.line, text: family.red.text}
+
+# The shapes a notation maps a concept to, by name, as the concept's sign where the
+# notation holds no icon for it (DEC-036 point 1). Each is one outline: its path in SVG's
+# path data, the rule that fills it and the side of the square its numbers lie within. A
+# shape holds no value, so every brand draws it alike, and only its paint follows the brand.
+shapes:
+  circle:
+    d: M 2 12 C 2 6.48 6.48 2 12 2 C 17.52 2 22 6.48 22 12 C 22 17.52 17.52 22 12 22 C 6.48 22 2 17.52 2 12 Z
+    fill-rule: nonzero
+    square: 24
+  square:
+    d: M 3 3 H 21 V 21 H 3 Z
+    fill-rule: nonzero
+    square: 24
+  triangle:
+    d: M 12 2.5 L 22 20.5 H 2 Z
+    fill-rule: nonzero
+    square: 24
+  diamond:
+    d: M 12 1.5 L 22.5 12 L 12 22.5 L 1.5 12 Z
+    fill-rule: nonzero
+    square: 24
+  hexagon:
+    d: M 7 3 H 17 L 22 12 L 17 21 H 7 L 2 12 Z
+    fill-rule: nonzero
+    square: 24
+  star:
+    d: M 12 2.25 L 14.5 9.31 L 22 9.51 L 16.04 14.06 L 18.17 21.24 L 12 17 L 5.83 21.24 L 7.96 14.06 L 2 9.51 L 9.5 9.31 Z
+    fill-rule: nonzero
+    square: 24
 
 # The pairs of shared colour roles that must contrast in every combination (DEC-004
 # point 8), at WCAG's levels: `text` 4.5, `large-text` and `marks` 3. Each family's text

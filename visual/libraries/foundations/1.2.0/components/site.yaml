@@ -1,0 +1,78 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  A web page, or a portal of several: one page for each of its pages, a site of one page
+  being a single web page. Each page takes one of the site's layouts and fills its slots,
+  or names the component that draws it. Every page in a layout takes the site's header
+  and footer. Every page is as wide as the brand's site at the size it is drawn at, and as
+  tall as its content.
+
+# Content writes each name of the site's fields, its layout and its slot, so none is renamed
+# after a release (DEC-010 point 7). `header`, `main` and `footer` are the names HTML gives
+# those parts of a page. `pages` holds a site's pages, as `slides` holds a deck's. `standard`
+# names the plain form of a page, and gives `page`, which names a page of any piece, a page
+# alone and a command, no fourth meaning.
+fields:
+  type: object
+  required: [pages]
+  properties:
+    # The field that holds the pages. It lies in no layout: each page takes one.
+    pages:
+      type: array
+      minItems: 1
+      items: {type: object}
+      description: >-
+        The site's pages, in order. Each names its layout with `layout`, or the component
+        that draws it with `use`.
+      x-pkit-pages: true
+    # The site's other fields, which every page drawn in a layout takes: so each is
+    # written once in each language.
+    header:
+      type: object
+      description: >-
+        What stands at the head of every page, such as whose site it is and the way round
+        it, as the component the content places in it.
+    footer:
+      type: object
+      description: What stands at the foot of every page, as the component the content places in it.
+
+# Every page is as wide as the site asks to be. The site asks for no height, so each page
+# is as tall as its layout says, and the site as tall as its tallest page.
+preferred:
+  width: "=@size.site"
+
+# The forms a page takes. Each layout declares the slots a page in it fills, its page's
+# height, and holds the site's own drawing of it, the layout's default. The drawing lays
+# the header, the main part and the footer one under another, each the page's whole width,
+# on the page's background: each part sets its own inset, so a colour it paints, a header's
+# or a section's, reaches the page's edge, where a margin in the site would cut it. Each
+# part that places a slot or a field is named after it.
+layouts:
+  standard:
+    slots:
+      main:
+        type: object
+        description: What the page holds, as the component the content places in it.
+    required: [main]
+    # The page is as tall as its lowest part.
+    preferred:
+      height: "=footer.bottom"
+    parts:
+      background:
+        box: {fill: background}
+        width: "=:width"
+        height: "=:height"
+      # Without a header, its height is zero, and the main part starts at the page's top.
+      header:
+        slot: header
+        width: "=:width"
+      main:
+        slot: main
+        y: "=header.bottom"
+        width: "=:width"
+      footer:
+        slot: footer
+        y: "=main.bottom"
+        width: "=:width"

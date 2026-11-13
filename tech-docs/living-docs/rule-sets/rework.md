@@ -1,6 +1,6 @@
 ---
 rule-set: REWORK
-version: 3.10.0
+version: 3.12.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
   paths:
@@ -42,12 +42,15 @@ scope:
     - .pkit/process/engine.md
     - .pkit/process/connections.md
     - docs/process/README.md
+    - .pkit/adapters/README.md
+    - docs/adapters/README.md
     # The lifecycle README joins once #1862 settles what the passages it keeps
     # word for word state: until then the scope leaves it out (COR-060 point 2).
     - .pkit/lifecycle/manifest.md
     - .pkit/lifecycle/component-registry.md
     - .pkit/lifecycle/migrations.md
     - .pkit/lifecycle/upgrade-flow.md
+    - docs/010-nobody-at-the-terminal.md
   types: [living-docs:page]
 rules:
   RS-REWORK-001:
@@ -160,7 +163,7 @@ On a page a capability or an adapter ships, link a backbone page only through it
   - A decision record is no page, and RS-REWORK-003 says which a page may cite. A link to another capability's or adapter's page is outside this rule.
   - The rule does not reach a backbone page, nor a guide in `docs/`, whose links to the references all read one version.
 - **Breaks the rule:** a capability's README on no branch links `../../cli/020-friction.md`, a page the backbone may number anew or move in a later version.
-- **Keeps the rule:** the living-docs README links the schemas reference as `../../schemas/README.md#rule-set-files`, a section of the schemas area's README.
+- **Keeps the rule:** living-docs' page on spaces, `spaces.md`, links the schemas reference as `../../schemas/README.md#rule-set-files`, a section of the schemas area's README.
 
 ## RS-REWORK-005 — A long page opens with a generated contents list
 

@@ -8,6 +8,9 @@ inline metadata, exactly as it does for adopters.
 
 from __future__ import annotations
 
+import ast
+import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -17,7 +20,11 @@ import pytest
 SOURCE_REPO = Path(__file__).resolve().parents[1]
 DEPLOY_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "deploy-agents.sh"
 RESOLVE_SCRIPT = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "_resolve_agent.py"
+TOOL_ACCESS_DECLARATION = SOURCE_REPO / ".pkit" / "adapters" / "claude-code" / "tool-access.json"
 OWNERSHIP_MODULE = SOURCE_REPO / ".pkit" / "lifecycle" / "ownership.py"
+TOOL_ACCESS_READER = SOURCE_REPO / ".pkit" / "agents" / "tool_access.py"
+PICKER = SOURCE_REPO / ".pkit" / "agents" / "definition_source.py"
+RECORDS_READER = SOURCE_REPO / ".pkit" / "lifecycle" / "capability_records.py"
 
 # The one write-carrying overlay category shipped today (ADR-051). Read from the
 # real module rather than restated, so a rename can't leave these tests
@@ -30,8 +37,11 @@ def mock_kit(tmp_path: Path) -> Path:
     """Stage a minimal kit layout under tmp_path with the adapter scripts copied in.
 
     Includes the propagated `.pkit/lifecycle/ownership.py` the resolver imports
-    for its write-authority check (ADR-051) — a synced adopter tree always has
-    it, so staging it is what makes this fixture a faithful stand-in.
+    for its write-authority check (ADR-051), the agents area's reader of tool
+    access with the adapter's declaration of it (ADR-086), and the agents area's
+    picker with the lifecycle's reader of capability records (ADR-087) — a synced
+    adopter tree always has them, so staging them is what makes this fixture a
+    faithful stand-in.
 
     Returns the project root (the directory containing `.pkit/`).
     """
@@ -39,15 +49,19 @@ def mock_kit(tmp_path: Path) -> Path:
     adapter_dir.mkdir(parents=True)
     shutil.copy2(DEPLOY_SCRIPT, adapter_dir / "deploy-agents.sh")
     shutil.copy2(RESOLVE_SCRIPT, adapter_dir / "_resolve_agent.py")
+    shutil.copy2(TOOL_ACCESS_DECLARATION, adapter_dir / "tool-access.json")
     (adapter_dir / "deploy-agents.sh").chmod(0o755)
     (adapter_dir / "_resolve_agent.py").chmod(0o755)
 
     lifecycle_dir = tmp_path / ".pkit" / "lifecycle"
     lifecycle_dir.mkdir(parents=True)
     shutil.copy2(OWNERSHIP_MODULE, lifecycle_dir / "ownership.py")
+    shutil.copy2(RECORDS_READER, lifecycle_dir / "capability_records.py")
 
     (tmp_path / ".pkit" / "agents" / "core").mkdir(parents=True)
     (tmp_path / ".pkit" / "agents" / "project").mkdir(parents=True)
+    shutil.copy2(TOOL_ACCESS_READER, tmp_path / ".pkit" / "agents" / "tool_access.py")
+    shutil.copy2(PICKER, tmp_path / ".pkit" / "agents" / "definition_source.py")
 
     return tmp_path
 
@@ -161,14 +175,32 @@ def test_deploy_project_wins_over_core_collision(mock_kit: Path) -> None:
 # --- name-collision precedence: project > capability > core (the agents README) ---
 
 
-def _write_capability_agent(root: Path, capability: str, name: str, where: str) -> Path:
-    """A flat agent in `capability` (with its package.yaml), described as coming from `where`."""
+def _register(root: Path, capability: str) -> None:
+    """Record `capability` in the component registry, so its definitions count (COR-017)."""
+    manifest = root / ".pkit" / "manifest.yaml"
+    text = (
+        manifest.read_text(encoding="utf-8")
+        if manifest.is_file()
+        else "schema_version: 1\nbackbone_version: 1.0.0\ncomponents:\n"
+    )
+    entry = f"  - kind: capability\n    name: {capability}\n"
+    if entry not in text:
+        manifest.write_text(text + entry, encoding="utf-8")
+
+
+def _write_capability_agent(
+    root: Path, capability: str, name: str, where: str, *, registered: bool = True
+) -> Path:
+    """A flat agent in `capability` (with its package.yaml), described as coming from
+    `where`. The capability is recorded in the registry unless *registered* is False."""
     cap_dir = root / ".pkit" / "capabilities" / capability
     (cap_dir / "agents").mkdir(parents=True, exist_ok=True)
     (cap_dir / "package.yaml").write_text(
         f"component:\n  kind: capability\n  name: {capability}\n  version: 0.1.0\n",
         encoding="utf-8",
     )
+    if registered:
+        _register(root, capability)
     source = cap_dir / "agents" / f"{name}.md"
     source.write_text(
         f"---\nname: {name}\ndescription: From {where}.\n---\n\n# {name}\n", encoding="utf-8"
@@ -218,11 +250,188 @@ def test_deploy_takes_the_first_capability_by_name_between_two(mock_kit: Path) -
     assert _deployed_description(mock_kit, "twin") == "From a-cap."
 
 
+# --- suspensions: a project agent of a shipped agent's name (COR-074) ---------
+
+
+def _suspended_lines(output: str) -> list[str]:
+    return [line.strip() for line in output.splitlines() if line.startswith("  suspended ")]
+
+
+def test_a_project_agent_of_a_core_agent_s_name_is_named_with_both_files(mock_kit: Path) -> None:
+    """The project's agent deploys in core's place, and every run names both files."""
+    _write_area_agent(mock_kit, "core", "critic")
+    _write_area_agent(mock_kit, "project", "critic")
+
+    first = _run_deploy(mock_kit)
+    again = _run_deploy(mock_kit)
+
+    assert first.returncode == 0, first.stderr
+    assert _deployed_description(mock_kit, "critic") == "From project."
+    expected = [
+        "suspended  .pkit/agents/core/critic/critic.md"
+        " (replaced by .pkit/agents/project/critic/critic.md)"
+    ]
+    assert _suspended_lines(first.stdout) == expected
+    assert "1 shipped agent(s) suspended" in first.stdout
+    assert "exists     .claude/agents/critic.md" in again.stdout
+    assert _suspended_lines(again.stdout) == expected
+
+
+def test_a_project_agent_of_a_name_no_shipped_agent_has_is_no_suspension(mock_kit: Path) -> None:
+    _write_area_agent(mock_kit, "core", "critic")
+    _write_area_agent(mock_kit, "project", "release-reviewer")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "suspended" not in result.stdout
+
+
+def test_each_shipped_agent_a_project_agent_replaces_is_named(mock_kit: Path) -> None:
+    _write_area_agent(mock_kit, "core", "shared")
+    _write_capability_agent(mock_kit, "my-cap", "shared", "my-cap")
+    _write_area_agent(mock_kit, "project", "shared")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/capabilities/my-cap/agents/shared.md"
+        " (replaced by .pkit/agents/project/shared/shared.md)",
+        "suspended  .pkit/agents/core/shared/shared.md"
+        " (replaced by .pkit/agents/project/shared/shared.md)",
+    ]
+
+
+def test_an_unmarked_file_at_a_core_agent_s_place_is_named_as_replacing_it(
+    mock_kit: Path,
+) -> None:
+    """A file without the deploy's mark keeps core's agent out, as when a release
+    adds core's agent under a name the project keeps by hand."""
+    _write_area_agent(mock_kit, "core", "critic")
+    own = mock_kit / ".claude" / "agents" / "critic.md"
+    own.parent.mkdir(parents=True)
+    own.write_text("---\nname: critic\ndescription: Kept by hand.\n---\n", encoding="utf-8")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "Kept by hand." in own.read_text(encoding="utf-8")
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/agents/core/critic/critic.md"
+        " (replaced by .claude/agents/critic.md, a file the deploy did not make)"
+    ]
+
+
+def test_a_project_agent_the_deploy_skips_still_suspends_the_shipped_one(
+    mock_kit: Path,
+) -> None:
+    """The project's agent takes the name even on a run that skips it for a gap
+    in the overlay, so core's is named as left out."""
+    _write_area_agent(mock_kit, "core", "critic")
+    _write_agent(
+        mock_kit,
+        "project",
+        "critic",
+        "---\nname: critic\ndescription: From project.\nowns:\n  - <undefined-category>\n"
+        "---\n\n# Critic\n",
+    )
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "skipped" in result.stdout
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/agents/core/critic/critic.md"
+        " (replaced by .pkit/agents/project/critic/critic.md)"
+    ]
+
+
+def test_a_project_definition_in_both_layouts_still_suspends_the_shipped_one(
+    mock_kit: Path,
+) -> None:
+    """Refused for holding both layouts, the project's definition stays the agent
+    (COR-013 point 8), so core's is named as left out, beside both its files."""
+    _write_area_agent(mock_kit, "core", "critic")
+    _write_area_agent(mock_kit, "project", "critic")
+    (mock_kit / ".pkit" / "agents" / "project" / "critic.md").write_text(
+        "---\nname: critic\ndescription: Flat.\n---\n", encoding="utf-8"
+    )
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "ships two texts of it" in result.stdout
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/agents/core/critic/critic.md (replaced by"
+        " .pkit/agents/project/critic.md and .pkit/agents/project/critic/critic.md)"
+    ]
+
+
+def test_a_definition_the_picker_does_not_count_is_not_named(mock_kit: Path) -> None:
+    """A capability's definition the project skipped, or one of a capability the
+    registry does not record, is no file the project's keeps out (COR-074,
+    "Why the installed files decide")."""
+    _write_capability_agent(mock_kit, "skipping-cap", "shared", "skipping-cap")
+    state = mock_kit / ".pkit" / "capabilities" / "skipping-cap" / "project" / "manifest.yaml"
+    state.parent.mkdir(parents=True)
+    state.write_text(
+        "backend_state:\n  skipped:\n    - kind: agent\n      name: shared\n", encoding="utf-8"
+    )
+    _write_capability_agent(
+        mock_kit, "unrecorded-cap", "shared", "unrecorded-cap", registered=False
+    )
+    _write_area_agent(mock_kit, "core", "shared")
+    _write_area_agent(mock_kit, "project", "shared")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert _deployed_description(mock_kit, "shared") == "From project."
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/agents/core/shared/shared.md"
+        " (replaced by .pkit/agents/project/shared/shared.md)"
+    ]
+
+
+def test_an_unmarked_file_at_a_capability_agent_s_place_names_each_shipped_one(
+    mock_kit: Path,
+) -> None:
+    """A file without the mark keeps out every shipped definition of its name, the
+    capability's that would deploy and core's alike."""
+    _write_area_agent(mock_kit, "core", "shared")
+    _write_capability_agent(mock_kit, "my-cap", "shared", "my-cap")
+    own = mock_kit / ".claude" / "agents" / "shared.md"
+    own.parent.mkdir(parents=True)
+    own.write_text("---\nname: shared\ndescription: Kept by hand.\n---\n", encoding="utf-8")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    replaced_by = " (replaced by .claude/agents/shared.md, a file the deploy did not make)"
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/capabilities/my-cap/agents/shared.md" + replaced_by,
+        "suspended  .pkit/agents/core/shared/shared.md" + replaced_by,
+    ]
+    assert "2 shipped agent(s) suspended" in result.stdout
+
+
+def test_a_capability_agent_over_core_s_suspends_nothing(mock_kit: Path) -> None:
+    """A capability's agent over core's is precedence between shipped agents."""
+    _write_area_agent(mock_kit, "core", "shared")
+    _write_capability_agent(mock_kit, "my-cap", "shared", "my-cap")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "suspended" not in result.stdout
+
+
 def test_the_python_resolvers_pick_the_agent_the_deploy_writes(mock_kit: Path) -> None:
     """`pkit agents`, the refs ownership check and `pkit new storyboard` name "the
-    agent that deploys" through their own resolvers; each must pick the source
-    `deploy-agents.sh` writes, for every shape of collision."""
-    from project_kit import agents, agents_overlay
+    agent that deploys" through the picker the deploy asks (ADR-087); each must
+    pick the source `deploy-agents.sh` writes, for every shape of collision."""
+    from project_kit import agent_definitions, agents_overlay
 
     for namespace, names in {
         "core": ("core-only", "core-and-cap", "all-three"),
@@ -249,12 +458,7 @@ def test_the_python_resolvers_pick_the_agent_the_deploy_writes(mock_kit: Path) -
         assert _deployed_description(mock_kit, name) == description, name
         source = winners[name][1]
         assert f"description: {description}" in source.read_text(encoding="utf-8"), name
-        first = next(
-            found
-            for _, folder in agents.agent_locations(mock_kit)
-            if (found := agents.find_agent_file(folder, name)) is not None
-        )
-        assert first == source, name
+        assert agent_definitions.answer(mock_kit).picks[name].file == source, name
 
 
 def test_deploy_unresolved_category_degrades_not_aborts(mock_kit: Path) -> None:
@@ -521,11 +725,13 @@ def test_deploy_read_carrying_category_may_name_sync_managed_paths(mock_kit: Pat
 
 
 def test_deploy_missing_ownership_module_fails_loudly(mock_kit: Path) -> None:
-    """Without the shared predicate the check cannot run — skip loudly, never silently.
+    """Without the shared predicate the check cannot run — an error, never silent.
 
     Deploying an agent whose write grant was never validated is the outcome
-    ADR-051 exists to prevent, so an absent `.pkit/lifecycle/ownership.py` skips
-    every placeholder-bearing agent with a `pkit sync` pointer.
+    ADR-051 exists to prevent, so an absent `.pkit/lifecycle/ownership.py` leaves
+    every placeholder-bearing agent undeployed, with an `error` line and a `pkit
+    sync` pointer. The deploy cannot tell, so it changes nothing for the name
+    (COR-013 point 8).
     """
     (mock_kit / ".pkit" / "lifecycle" / "ownership.py").unlink()
     _write_carrying_agent(mock_kit)
@@ -533,10 +739,101 @@ def test_deploy_missing_ownership_module_fails_loudly(mock_kit: Path) -> None:
 
     result = _run_deploy(mock_kit)
     assert result.returncode == 0, result.stderr  # still degrades, not aborts
-    assert "skipped" in result.stdout
+    assert "error" in result.stdout
     assert "ownership.py" in result.stdout
     assert "pkit sync" in result.stdout
     assert not (mock_kit / ".claude" / "agents" / "process-author.md").exists()
+
+
+# --- every category a capability's agent owns (ADR-088 point 7) --------------
+#
+# The check binds each category in the `owns` of an agent a capability ships, in any
+# definition that names it, and refuses a grant that lies in, or holds, what sync
+# overwrites, or an externally-sourced copy.
+
+_CAPABILITY_CATEGORY = "drawing.work"
+
+
+def _capability_designer(root: Path) -> None:
+    """The capability `drawing`, registered so its definitions count (COR-017),
+    shipping `designer`, which owns `drawing.work`."""
+    cap_dir = root / ".pkit" / "capabilities" / "drawing"
+    (cap_dir / "agents").mkdir(parents=True, exist_ok=True)
+    (cap_dir / "package.yaml").write_text(
+        "component:\n  kind: capability\n  name: drawing\n  version: 0.1.0\n", encoding="utf-8"
+    )
+    (cap_dir / "agents" / "designer.md").write_text(
+        f"---\nname: designer\ndescription: From drawing.\nowns:\n  - <{_CAPABILITY_CATEGORY}>\n"
+        "---\n\n# Designer\n",
+        encoding="utf-8",
+    )
+    _register(root, "drawing")
+
+
+@pytest.mark.parametrize("grant", [".pkit/agents/core/", ".pkit/", "."])
+def test_deploy_refuses_a_capability_agent_a_grant_reaching_managed_content(
+    mock_kit: Path, grant: str
+) -> None:
+    _capability_designer(mock_kit)
+    _overlay(mock_kit, f'{_CAPABILITY_CATEGORY}: ["{grant}"]\n')
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped" in result.stdout and "designer" in result.stdout
+    assert f"<{_CAPABILITY_CATEGORY}>" in result.stdout and "sync-managed" in result.stdout
+    assert not (mock_kit / ".claude" / "agents" / "designer.md").exists()
+
+
+def test_deploy_refuses_a_capability_agent_an_externally_sourced_copy(mock_kit: Path) -> None:
+    _capability_designer(mock_kit)
+    _register_capability(mock_kit, "pulled", origin="externally-sourced")
+    _register(mock_kit, "drawing")  # the line above rewrites the registry
+    _overlay(mock_kit, f'{_CAPABILITY_CATEGORY}: [".pkit/capabilities/pulled/scripts/"]\n')
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped" in result.stdout and ".pkit/capabilities/pulled/scripts/" in result.stdout
+    assert not (mock_kit / ".claude" / "agents" / "designer.md").exists()
+
+
+def test_deploy_refuses_a_projects_copy_of_a_capability_agent_alike(mock_kit: Path) -> None:
+    """The project's definition wins by name, and is bound by the capability's."""
+    _capability_designer(mock_kit)
+    _write_agent(
+        mock_kit,
+        "project",
+        "designer",
+        f"---\nname: designer\ndescription: From project.\nreads:\n  paths:\n"
+        f"    - <{_CAPABILITY_CATEGORY}>\n---\n\n# Mine\n",
+    )
+    _overlay(mock_kit, f'{_CAPABILITY_CATEGORY}: [".pkit/"]\n')
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped" in result.stdout and "sync-managed" in result.stdout
+    assert not (mock_kit / ".claude" / "agents" / "designer.md").exists()
+
+
+def test_deploy_grants_a_capability_agent_its_folder(mock_kit: Path) -> None:
+    _capability_designer(mock_kit)
+    _overlay(mock_kit, f'{_CAPABILITY_CATEGORY}: ["visual/"]  # pkit-written: ["visual/"]\n')
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped" not in result.stdout
+    assert "visual/" in (mock_kit / ".claude" / "agents" / "designer.md").read_text()
+
+
+def test_deploy_names_the_fill_commands_for_an_undefined_capability_category(
+    mock_kit: Path,
+) -> None:
+    _capability_designer(mock_kit)
+
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert f"<{_CAPABILITY_CATEGORY}> is a capability's category" in result.stdout
+    assert "pkit agents reconcile --write" in result.stdout
+    assert "Deploy it:  pkit agents adopt designer" not in result.stdout
 
 
 def test_deploy_reports_bare_optional_key_and_still_deploys(mock_kit: Path) -> None:
@@ -658,7 +955,8 @@ def test_deploy_skips_existing_user_content_without_marker(mock_kit: Path) -> No
     result = _run_deploy(mock_kit)
     assert result.returncode == 0
     assert "skipped" in result.stdout
-    assert "no kit marker" in result.stdout
+    assert "carries no deploy mark" in result.stdout
+    assert "the harness may run it in place of the agent product-manager" in result.stdout
     # File is untouched.
     assert user_file.read_text() == user_content
 
@@ -693,6 +991,7 @@ def test_deploy_picks_up_agents_from_installed_capabilities(mock_kit: Path) -> N
     # No core agent — just an agent inside an installed capability.
     cap_agents_dir = mock_kit / ".pkit" / "capabilities" / "evidence" / "agents"
     cap_agents_dir.mkdir(parents=True)
+    _register(mock_kit, "evidence")
     (cap_agents_dir / "evidence-reviewer.md").write_text(
         "---\nname: evidence-reviewer\ndescription: From the evidence capability.\n---\n\n"
         "# Reviewer\n",
@@ -714,6 +1013,7 @@ def _capability_agent_with_storyboards(root: Path, body: str, *entries: str) -> 
     """A folder-form capability agent declaring `entries`, each written beside it."""
     folder = root / ".pkit" / "capabilities" / "cap" / "agents" / "scripted"
     folder.mkdir(parents=True)
+    _register(root, "cap")
     for entry in entries:
         (folder / Path(entry).name).write_text("---\nconsumers: []\n---\n# SB\n", encoding="utf-8")
     listed = "".join(f"  - {entry}\n" for entry in entries)
@@ -790,6 +1090,25 @@ def test_committed_deployed_storyboards_resolve() -> None:
             assert (SOURCE_REPO / entry).is_file(), f"{deployed.name}: {entry} does not resolve"
             assert entry in body, f"{deployed.name}: body does not cite {entry}"
     assert checked, "no deployed agent declares a storyboard — the check has nothing to hold"
+
+
+def test_the_deploy_and_the_resolver_hold_one_mark_and_one_set_of_statuses() -> None:
+    """The deploy reads the mark the resolver writes, and acts on the statuses it
+    exits with, so each value both name is one value (ADR-087 point 4)."""
+    text = RESOLVE_SCRIPT.read_text(encoding="utf-8")
+    script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+    for name in (
+        "MARKER",
+        "MARK_DEFINITION",
+        "REFUSED",
+        "TOOL_ACCESS_REFUSED",
+        "KEEP_EARLIER",
+        "CANNOT_TELL",
+    ):
+        in_script = re.search(rf'^{name}="?([^"\n]*)"?$', script, re.MULTILINE)
+        in_resolver = re.search(rf"^{name} = (.+)$", text, re.MULTILINE)
+        assert in_script is not None and in_resolver is not None, name
+        assert in_script[1] == str(ast.literal_eval(in_resolver[1])), name
 
 
 # --- stale-removal pass ------------------------------------------------------
@@ -945,3 +1264,333 @@ def test_deploy_refuses_to_write_a_value_the_harness_rejects(mock_kit: Path) -> 
     assert "warning" in result.stdout
     assert "'sonet'" in result.stdout and "overrides.typo.model" in result.stdout
     assert "'extreme'" in result.stdout
+
+
+# --- the agent's tool access (COR-013 point 7, ADR-085, ADR-086) ---------------------------
+
+
+def _front_matter(path: Path) -> str:
+    return path.read_text(encoding="utf-8").split("---\n")[1]
+
+
+def _tooled(root: Path, access: str, name: str = "tooled") -> Path:
+    """Write agent *name* with *access* as its tool access; its deployed copy's path."""
+    _write_agent(
+        root, "core", name, f"---\nname: {name}\ndescription: Test.\n{access}---\n\n# Body\n"
+    )
+    return root / ".claude" / "agents" / f"{name}.md"
+
+
+def test_deploy_writes_a_withheld_list_as_disallowed_tools(mock_kit: Path) -> None:
+    deployed = _tooled(
+        mock_kit, "withheld:\n  - Workflow  # starts work outside the session\n  - SendMessage\n"
+    )
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    front_matter = _front_matter(deployed)
+    assert "disallowedTools: [Workflow, SendMessage]\n" in front_matter
+    keys = "".join(line for line in front_matter.splitlines(True) if not line.startswith("#"))
+    assert "withheld" not in keys
+    # The mark records the access the reader read, in the methodology's keys.
+    assert '# pkit-tool-access: withheld: ["Workflow", "SendMessage"]\n' in front_matter
+    assert "tools:" not in front_matter.replace("disallowedTools:", "")
+
+
+@pytest.mark.parametrize(
+    ("access", "written"),
+    [
+        ("tools: [Read, Grep]\n", "tools: [Read, Grep]\n"),
+        ("tools: Read, Grep\n", "tools: [Read, Grep]\n"),
+        ("tools:\n  - Read\n  - Grep  # why\n", "tools: [Read, Grep]\n"),
+        ("tools: []\n", "tools: []\n"),
+        ("tools:\n", "tools: []\n"),
+        ("tools: Read, Agent(worker, reviewer)\n", "tools: [Read, 'Agent(worker, reviewer)']\n"),
+    ],
+)
+def test_deploy_writes_a_grant_from_the_readers_answer(
+    mock_kit: Path, access: str, written: str
+) -> None:
+    """Never the author's text: each entry whole, and an empty grant as an empty list."""
+    deployed = _tooled(mock_kit, access)
+    assert _run_deploy(mock_kit).returncode == 0
+    assert written in _front_matter(deployed)
+
+
+def test_deploy_writes_no_tool_key_for_a_definition_naming_neither(mock_kit: Path) -> None:
+    deployed = _tooled(mock_kit, "")
+    assert _run_deploy(mock_kit).returncode == 0
+    front_matter = _front_matter(deployed)
+    assert "tools" not in front_matter
+    assert "disallowedTools" not in front_matter
+
+
+@pytest.mark.parametrize(
+    ("access", "cause"),
+    [
+        ("tools: [Read]\nwithheld: [Workflow]\n", "names both `tools` and `withheld`"),
+        ("withheld: [Wrokflow]\n", "`withheld` names `Wrokflow`, which this adapter does not know"),
+        ("withheld: ['Bash(rm:*)']\n", "measured to withhold only a whole built-in tool"),
+        ("withheld: [Workflow]\ndisallowedTools: [Monitor]\n", "own key `disallowedTools`"),
+        ("tools: [read-file]\n", "a name in a form Claude Code does not take"),
+        ("tools: [Read,\n  Grep]\n", "goes on over more than one line"),
+    ],
+)
+def test_deploy_refuses_a_tool_access_and_removes_the_earlier_copy(
+    mock_kit: Path, access: str, cause: str
+) -> None:
+    deployed = _tooled(mock_kit, "tools: [Read]\n")
+    assert _run_deploy(mock_kit).returncode == 0
+    assert deployed.is_file()
+    _tooled(mock_kit, access)
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "skipped    tooled — tooled: its tool access is refused" in result.stdout
+    assert cause in result.stdout
+    assert "removed    .claude/agents/tooled.md (the copy deployed before" in result.stdout
+    assert "Mend its tool access in .pkit/agents/core/tooled/tooled.md" in result.stdout
+    assert "1 agent(s) refused for their tool access" in result.stdout
+    assert not deployed.exists()
+
+
+def test_deploy_refuses_a_tool_access_before_an_undefined_category(mock_kit: Path) -> None:
+    """The refusal removes the earlier copy whatever else the definition gets wrong."""
+    deployed = _tooled(mock_kit, "tools: [Read]\n")
+    assert _run_deploy(mock_kit).returncode == 0
+    _tooled(mock_kit, "tools: [Read]\nwithheld: []\nowns:\n  - <no-such-category>\n")
+    result = _run_deploy(mock_kit)
+    assert "its tool access is refused" in result.stdout
+    assert "no-such-category" not in result.stdout
+    assert not deployed.exists()
+
+
+def test_deploy_leaves_an_adopters_own_copy_of_a_refused_agent(mock_kit: Path) -> None:
+    deployed = _tooled(mock_kit, "tools: [Read]\nwithheld: [Workflow]\n")
+    deployed.parent.mkdir(parents=True, exist_ok=True)
+    deployed.write_text("---\nname: tooled\n---\nThe adopter's own.\n", encoding="utf-8")
+    result = _run_deploy(mock_kit)
+    assert "carries no deploy mark, so the deploy leaves it" in result.stdout
+    assert "removed" not in result.stdout
+    assert deployed.read_text(encoding="utf-8") == "---\nname: tooled\n---\nThe adopter's own.\n"
+
+
+def test_deploy_without_the_reader_skips_and_keeps_the_earlier_copy(mock_kit: Path) -> None:
+    """A tree with no reader cannot tell a refused access from a sound one, so the agent is
+    skipped as any other skip is, and its earlier copy stays."""
+    deployed = _tooled(mock_kit, "tools: [Read]\n")
+    assert _run_deploy(mock_kit).returncode == 0
+    (mock_kit / ".pkit" / "agents" / "tool_access.py").unlink()
+    (mock_kit / ".pkit" / "agents" / "core" / "tooled" / "tooled.md").write_text(
+        "---\nname: tooled\ndescription: Changed.\ntools: [Read]\n---\n\n# Body\n",
+        encoding="utf-8",
+    )
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "cannot read the agent's tool access" in result.stdout
+    assert "pkit sync" in result.stdout
+    assert "removed" not in result.stdout
+    assert "description: Test." in deployed.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("declaration", "cause"),
+    [
+        (None, "tool-access.json, is not there"),
+        ('{"schema_version": 2}', "cannot be read: its schema version is 2"),
+    ],
+)
+def test_deploy_without_a_declaration_it_reads_skips_and_keeps_the_earlier_copy(
+    mock_kit: Path, declaration: str | None, cause: str
+) -> None:
+    """With no declaration of tool access it reads, the deploy cannot tell what Claude Code
+    can enforce, so the agent is skipped as any other skip is, and its earlier copy stays."""
+    deployed = _tooled(mock_kit, "withheld: [Workflow]\n")
+    assert _run_deploy(mock_kit).returncode == 0
+    path = mock_kit / ".pkit" / "adapters" / "claude-code" / "tool-access.json"
+    if declaration is None:
+        path.unlink()
+    else:
+        path.write_text(declaration, encoding="utf-8")
+    _tooled(mock_kit, "withheld: [Wrokflow]\n")
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "cannot check the agent's tool access" in result.stdout
+    assert cause in result.stdout
+    assert "removed" not in result.stdout
+    assert "disallowedTools: [Workflow]" in deployed.read_text(encoding="utf-8")
+
+
+# --- the picker's agent, and the copies that are not its (ADR-087) ------------------------
+
+
+def _copy_lines(root: Path, name: str) -> list[str]:
+    """The first lines of the deployed copy of *name*: the opening, the mark, and the
+    three lines beside the mark."""
+    text = (root / ".claude" / "agents" / f"{name}.md").read_text(encoding="utf-8")
+    return text.splitlines()[:5]
+
+
+def test_the_mark_records_the_definition_its_digest_and_its_tool_access(mock_kit: Path) -> None:
+    import hashlib
+
+    deployed = _tooled(mock_kit, "withheld: [Workflow]\n")
+    assert _run_deploy(mock_kit).returncode == 0
+    source = mock_kit / ".pkit" / "agents" / "core" / "tooled" / "tooled.md"
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    assert _copy_lines(mock_kit, "tooled") == [
+        "---",
+        _MARKER,
+        "# pkit-definition: core",
+        f"# pkit-digest: sha256:{digest}",
+        '# pkit-tool-access: withheld: ["Workflow"]',
+    ]
+    assert deployed.is_file()
+
+
+def test_an_unregistered_capabilitys_agent_is_not_deployed_and_its_copy_goes(
+    mock_kit: Path,
+) -> None:
+    """Uninstalled, a capability's folder may stay on disk: the deploy then removes its
+    copies, and writes the definition another place ships (COR-017, ADR-087 point 4)."""
+    _write_area_agent(mock_kit, "core", "shared")
+    _write_capability_agent(mock_kit, "kept-on-disk", "shared", "kept-on-disk")
+    _write_capability_agent(mock_kit, "kept-on-disk", "lonely", "kept-on-disk")
+    assert _run_deploy(mock_kit).returncode == 0
+    assert _deployed_description(mock_kit, "lonely") == "From kept-on-disk."
+
+    (mock_kit / ".pkit" / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 1.0.0\ncomponents: []\n", encoding="utf-8"
+    )
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert not (mock_kit / ".claude" / "agents" / "lonely.md").exists()
+    assert "removed    .claude/agents/lonely.md (lonely has no agent)" in result.stdout
+    assert _deployed_description(mock_kit, "shared") == "From core."
+
+
+def test_the_projects_choice_between_two_capabilities_deploys(mock_kit: Path) -> None:
+    _write_capability_agent(mock_kit, "a-cap", "twin", "a-cap")
+    _write_capability_agent(mock_kit, "b-cap", "twin", "b-cap")
+    manifest = mock_kit / ".pkit" / "manifest.yaml"
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8") + "agent_choices:\n  twin: b-cap\n", "utf-8"
+    )
+    assert _run_deploy(mock_kit).returncode == 0
+    assert _deployed_description(mock_kit, "twin") == "From b-cap."
+
+
+def test_the_order_between_capabilities_is_by_code_points_under_any_locale(
+    mock_kit: Path,
+) -> None:
+    """`a-z` comes before `ab` by code points; a locale's collation that ignores the
+    hyphen would put `ab` first."""
+    _write_capability_agent(mock_kit, "ab", "twin", "ab")
+    _write_capability_agent(mock_kit, "a-z", "twin", "a-z")
+    script = mock_kit / ".pkit" / "adapters" / "claude-code" / "deploy-agents.sh"
+    result = subprocess.run(
+        ["bash", str(script)],
+        cwd=mock_kit,
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "LC_ALL": "en_US.UTF-8", "LANG": "en_US.UTF-8"},
+    )
+    assert result.returncode == 0, result.stderr
+    assert _deployed_description(mock_kit, "twin") == "From a-z."
+
+
+def test_a_skipped_definition_yields_to_the_next_place(mock_kit: Path) -> None:
+    _write_area_agent(mock_kit, "core", "shared")
+    _write_capability_agent(mock_kit, "my-cap", "shared", "my-cap")
+    state = mock_kit / ".pkit" / "capabilities" / "my-cap" / "project" / "manifest.yaml"
+    state.parent.mkdir(parents=True)
+    state.write_text(
+        "backend_state:\n  skipped:\n    - kind: agent\n      name: shared\n", encoding="utf-8"
+    )
+    assert _run_deploy(mock_kit).returncode == 0
+    assert _deployed_description(mock_kit, "shared") == "From core."
+
+
+def test_a_name_it_cannot_tell_is_left_as_it_is_and_the_rest_deploy(mock_kit: Path) -> None:
+    """A registry with a merge conflict decides nothing a capability ships: its copy
+    stays, an error line names why, and the run exits 0 (ADR-087 point 4)."""
+    _write_capability_agent(mock_kit, "my-cap", "from-cap", "my-cap")
+    _write_area_agent(mock_kit, "project", "mine")
+    assert _run_deploy(mock_kit).returncode == 0
+    before = (mock_kit / ".claude" / "agents" / "from-cap.md").read_bytes()
+    (mock_kit / ".pkit" / "manifest.yaml").write_text("components: [\n", encoding="utf-8")
+    _write_area_agent(mock_kit, "core", "new-core")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "error      from-cap — cannot tell which is the agent" in result.stdout
+    assert (mock_kit / ".claude" / "agents" / "from-cap.md").read_bytes() == before
+    assert (mock_kit / ".claude" / "agents" / "new-core.md").is_file()
+    assert (mock_kit / ".claude" / "agents" / "mine.md").is_file()
+
+
+def test_both_layouts_refuse_the_agent_and_remove_its_copy(mock_kit: Path) -> None:
+    _write_area_agent(mock_kit, "project", "twice")
+    assert _run_deploy(mock_kit).returncode == 0
+    flat = mock_kit / ".pkit" / "agents" / "project" / "twice.md"
+    flat.write_text("---\nname: twice\ndescription: Flat.\n---\n", encoding="utf-8")
+    _write_area_agent(mock_kit, "core", "twice")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "ships two texts of it" in result.stdout
+    assert not (mock_kit / ".claude" / "agents" / "twice.md").exists()
+
+
+def test_a_definition_naming_another_agent_is_refused(mock_kit: Path) -> None:
+    _write_agent(mock_kit, "core", "named", "---\nname: other\ndescription: Test.\n---\n\n# Body\n")
+    result = _run_deploy(mock_kit)
+    assert result.returncode == 0, result.stderr
+    assert "its front matter names the agent 'other', not 'named'" in result.stdout
+    assert not (mock_kit / ".claude" / "agents" / "named.md").exists()
+
+
+def test_a_refused_text_keeps_the_earlier_copy_where_it_gives_nothing_more(
+    mock_kit: Path,
+) -> None:
+    """A gap in the overlay refuses the current text; the earlier copy gives no tool it
+    does not, so it stays, and is said not to be of the current text."""
+    deployed = _tooled(mock_kit, "tools: [Read]\n")
+    assert _run_deploy(mock_kit).returncode == 0
+    _tooled(mock_kit, "tools: [Read, Grep]\nowns:\n  - <undefined-category>\n")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "kept       .claude/agents/tooled.md — written from an earlier text" in result.stdout
+    assert '# pkit-tool-access: tools: ["Read"]' in deployed.read_text(encoding="utf-8")
+
+
+def test_a_refused_text_removes_an_earlier_copy_that_gives_more(mock_kit: Path) -> None:
+    deployed = _tooled(mock_kit, "tools: [Read, Grep]\n")
+    assert _run_deploy(mock_kit).returncode == 0
+    _tooled(mock_kit, "tools: [Read]\nowns:\n  - <undefined-category>\n")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert not deployed.exists()
+    assert "removed    .claude/agents/tooled.md" in result.stdout
+
+
+def test_cores_copy_does_not_stand_in_for_a_refused_capability_definition(
+    mock_kit: Path,
+) -> None:
+    """A refused agent stays the agent: the copy written from core's definition is not
+    its, so it goes (COR-013 point 8)."""
+    _write_area_agent(mock_kit, "core", "shared")
+    assert _run_deploy(mock_kit).returncode == 0
+    cap = _write_capability_agent(mock_kit, "my-cap", "shared", "my-cap")
+    cap.write_text("---\nname: shared\nowns:\n  - <undefined-category>\n---\n\n# shared\n", "utf-8")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert not (mock_kit / ".claude" / "agents" / "shared.md").exists()

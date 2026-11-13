@@ -7,9 +7,10 @@ status: experimental
 # on the family's fill.
 about: >-
   A label on a filled shape with rounded corners, painted in its colour family: its fill,
-  its edge, and its label on that fill. It is as large as its label, on one line. It is
-  drawn at rest, and pressing it does nothing. A button that cannot be pressed takes the
-  neutral family.
+  its edge, and its label on that fill. Where its concept has a sign, the sign stands
+  before the label. It is as large as its label and its sign, on one line. It is drawn at
+  rest, and pressing it does nothing. A button that cannot be pressed takes the neutral
+  family.
 
 fields:
   type: object
@@ -27,6 +28,10 @@ colour: blue
 states:
   disabled: {colour: neutral}
 
+values:
+  # How tall the row is that the sign and the label share, each centred on it.
+  band: "=max(sign.height, label.height)"
+
 parts:
   box:
     box:
@@ -36,12 +41,22 @@ parts:
       rx: "=@starter.button.corner"
     width: "=:width"
     height: "=:height"
+  # The concept's sign, before the label, as a tag's stands, no wider than the label, since
+  # the button is as wide as what it holds. It takes the family's text, as the label does,
+  # and a state changes its paint, never its sign. A button whose family comes from no
+  # concept with a sign draws none, and the sign then has no size.
+  sign:
+    sign: {fill: ":colour.text"}
+    x: "=@starter.inset"
+    y: "=@space.2 + (band - sign.height) / 2"
+    width: "=min(@starter.sign, label.width)"
+    height: "=min(@starter.sign, label.width)"
   # The label is the family's text on the family's fill, a pair the foundations declare.
   label:
     text: {content: label, style: type.strong, fill: ":colour.text"}
-    x: "=@starter.inset"
-    y: "=@space.2"
+    x: "=sign.right + min(sign.width, @space.sign-gap)"
+    y: "=@space.2 + (band - label.height) / 2"
 
 preferred:
   width: "=label.right + @starter.inset"
-  height: "=label.bottom + @space.2"
+  height: "=@space.2 + band + @space.2"

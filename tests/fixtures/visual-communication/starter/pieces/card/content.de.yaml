@@ -78,3 +78,25 @@ slides:
             - "Zunächst schlicht, dann "
             - {text: hervorgehoben, style: strong}
             - ", beides in der Textfarbe der Familie."
+
+  - id: signs
+    layout: slide
+    title: Das Zeichen ihres Begriffs steht am Ende der Zeile ihrer Überschrift
+    visual:
+      use: starter/list
+      items:
+        - id: head
+          fill: tint
+          concept: test-notation/person
+          head: Eine Überschrift neben dem Zeichen bricht vor ihm um
+          text: Das Zeichen behält das Ende der Überschriftenzeile.
+        - id: text
+          concept: test-notation/person
+          text: Ohne Überschrift beendet das Zeichen die erste Zeile des Textes, der vor ihm umbricht, sodass die Karte dafür nicht höher wird.
+        - id: runs
+          fill: tint
+          concept: test-notation/person
+          head: Abschnitte
+          text:
+            - {text: Eine Benutzerin, style: strong, concept: test-notation/person}
+            - " zeichnet jeden Abschnitt, der sie nennt."

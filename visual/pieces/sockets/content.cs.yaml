@@ -25,4 +25,4 @@ body:
     - {id: docs-fixers, from: {item: "left[living-docs]"}, to: {item: "right[slots].groups[project-management].items[fixers]"}}
     - {id: analysis-fixers, from: {item: "left[software-analysis]"}, to: {item: "right[slots].groups[project-management].items[fixers]"}}
     - {id: analysis-use-cases, from: {item: "left[software-analysis]"}, to: {item: "right[slots].groups[project-management].items[use-cases]"}}
-caption: Capability nikdy nejmenuje jinou capability, jen roli. Když něco potřebuje, otevře slot. Vyplní ho kterákoli jiná.
+caption: "Capability se propojují přes role: která něco potřebuje, otevře slot, kterákoli jiná ho vyplní."

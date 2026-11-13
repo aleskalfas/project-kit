@@ -29,6 +29,7 @@ from tests.test_visual_communication_pipeline import (
     PIECE_FOLDER,
     ROW,
     TESTS,
+    device_project,
     drawing_project,
     exported_up_to,
     filled,
@@ -36,12 +37,19 @@ from tests.test_visual_communication_pipeline import (
     lab_project,
     list_drawing_libraries,
     on_devices,
+    projector_project,
     stamped,
     today,
     write_content,
     write_picture,
 )
-from tests.visual_communication_project import CONFIG, importable, write, write_list
+from tests.visual_communication_project import (
+    CONFIG,
+    RECORDED_DEFAULT,
+    importable,
+    write,
+    write_list,
+)
 from tests.visual_communication_writes import FULL, failing
 
 script, svg, seam, framing, files, reading, pl, checks, libraries = load(
@@ -61,10 +69,7 @@ PREVIEWS = ".pkit/capabilities/visual-communication/project/local/previews/flow"
 FINDINGS = f"{PIECE_FOLDER}/findings.yaml"
 TESTS_FOLDER = "visual/libraries/tests/1.0.0"
 BRAND_FONT = "visual/libraries/test-brand/1.0.0/fonts/SourceSansPro-Regular.otf"
-LOCATION = (
-    f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
-    f"to move the work, move the folder and change the `location:` line there"
-)
+LOCATION = RECORDED_DEFAULT
 
 
 @pytest.fixture(autouse=True)
@@ -144,7 +149,7 @@ def test_it_draws_a_figure_of_steps_and_a_callout_over_a_produced_picture(
     drawn = previews(root)
     assert sorted(drawn) == ["flow.en.colour-scheme.dark.svg", "flow.en.default.svg"]
     light = drawn["flow.en.default.svg"]
-    assert 'data-key="default"' in light and 'data-renderer="svg 1.1.0"' in light
+    assert 'data-key="default"' in light and 'data-renderer="svg 1.4.0"' in light
     assert '<image data-id="figure/body/steps[note]/pictures[square]/image"' in light
     assert ">Here</tspan>" in light and ">The flow.</tspan>" in light
     assert '@font-face{font-family:"Source Sans Pro"' in light
@@ -674,6 +679,55 @@ def test_a_loss_only_both_newest_versions_show_holds_back_the_later_library_alon
         "tie `body.links[ab]` would not be found; the end `to` of the tie `body.links[ab]` "
         "would not be found",
     ]
+
+
+@pytest.mark.parametrize(
+    ("devices", "blocks"),
+    [
+        pytest.param(["projector"], "1.1.0", id="the-projector-alone"),
+        pytest.param(["phone", "projector"], "1.0.0", id="a-phone-beside"),
+    ],
+)
+def test_a_draft_drawn_in_a_mode_only_newer_foundations_hold_moves_its_lock_to_them(
+    tmp_path: Path, devices: list[str], blocks: str
+) -> None:
+    """The blocks 1.1.0 lose the net's ends on a phone. So under a lock that places the
+    piece on a phone they are held back, and under one that places it at no key they
+    are not."""
+    root = projector_project(tmp_path, devices)
+
+    shown = run(root, PIECE)
+
+    assert shown.returncode == 0, shown.stderr
+    assert locked(root) == {**lab_lock(blocks, "1.0.0"), "foundations": "1.1.0"}
+    held = [line for line in shown.stdout.splitlines() if "held back" in line]
+    lost = f"{AT_LOCK} the render held back {BLOCKS}@1.1.0: under it, {'; '.join(LOST)}"
+    assert held == ([] if blocks == "1.1.0" else [lost])
+
+
+@pytest.mark.parametrize(
+    ("devices", "on_a_phone", "blocks"),
+    [
+        pytest.param(["phone"], True, "1.1.0", id="a-phone"),
+        pytest.param(["desktop", "phone"], False, "1.0.0", id="a-desktop-beside"),
+    ],
+)
+def test_a_draft_drawn_on_an_axis_only_newer_foundations_hold_moves_its_lock_to_them(
+    tmp_path: Path, devices: list[str], on_a_phone: bool, blocks: str
+) -> None:
+    """The lock's foundations declare no `device`, so the lock places the piece at
+    `default`, the desktop's key under the newer foundations. The blocks 1.1.0 lose the
+    net's ends on a phone alone, or on every device: they are held back only where they
+    lose them at that key, for a piece drawn on the desktop."""
+    root = device_project(tmp_path, devices, on_a_phone=on_a_phone)
+
+    shown = run(root, PIECE)
+
+    assert shown.returncode == 0, shown.stderr
+    assert locked(root) == {**lab_lock(blocks, "1.0.0"), "foundations": "1.1.0"}
+    held = [line for line in shown.stdout.splitlines() if "held back" in line]
+    lost = f"{AT_LOCK} the render held back {BLOCKS}@1.1.0: under it, {'; '.join(LOST)}"
+    assert held == ([] if blocks == "1.1.0" else [lost])
 
 
 def test_past_its_bound_of_combinations_judged_the_render_keeps_the_lock_and_says_so(

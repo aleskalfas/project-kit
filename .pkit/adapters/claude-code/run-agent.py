@@ -9,20 +9,33 @@ and nowhere in a capability.
 
 **The request**, one JSON document on standard input: `schema_version` (1),
 `agent`, `brief`, `limit_seconds`, `effort` (a level or null), and either
-`folder` (the unconfined form, the review command's runs, ADR-066 point 10) or
-`confined` (the confined form, the drift command's runs). A request that
-carries any other key is refused, never run without it.
+`folder` (the unconfined form, the review command's runs and a drift command's
+run a person watches, ADR-066 point 10) or `confined` (the confined form, which
+every fixer's run takes where the harness holds it). With `folder`, the request
+may carry `local_settings_from`, the person's checkout. A request that carries
+any other key is refused, never run without it.
 
 **The marker** (ADR-066 point 8). The runner refuses whenever `PKIT_AGENT_RUN`
 is in its own environment, empty included, and sets `PKIT_AGENT_RUN=1` in the
 harness's environment, so every process of a run inherits it.
 
-**The unconfined form.** The runner refuses when `claude` is not on the path,
-or when the agent is not deployed. It starts `claude -p --agent <agent>`, with
-`--effort <level>` where one is set, in the request's folder. The run takes the
-person's and the project's settings there, as a session started in that folder
-would. The harness gets the runner's environment, less the backbone's
-variables for its run of this runner (`RUN_VARIABLES`).
+**The unconfined form** (ADR-066 point 10, ADR-087 point 3). The runner
+refuses when `claude` is not on the path. For a name some place of the
+methodology ships, it asks the agents area's picker, through the deploy's
+resolver beside it, which definition is the agent, in the project's tree it lies
+in. It passes that definition as the confined form resolves it, under a name
+unique to the run (`--agents`, `--agent`), so the harness loads that agent and no
+other copy of the name, and it refuses where the confined form refuses the
+definition. For a name no place ships, it refuses when the agent is not
+deployed, and starts `claude -p --agent <agent>`, which loads an agent the
+project wrote straight into the harness's own folder. Either way `--effort
+<level>` is passed where one is set, and the harness starts in the request's
+folder. The run takes the person's and the project's settings there, as a
+session started in that folder would. Where the request names the person's
+checkout, the runner first carries their local settings from it into the
+folder (`carry_local_settings`, ADR-066 point 10). The harness gets the runner's
+environment, less the backbone's variables for its run of this runner
+(`RUN_VARIABLES`).
 
 **The confined form** (ADR-066 points 2 to 6 and 9). Before the harness starts,
 the runner refuses, naming the cause, when the harness's version lies outside
@@ -57,6 +70,7 @@ does: no `uv`, nothing to provision.
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import json
 import os
 import queue
@@ -69,6 +83,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 REQUEST_VERSION = 1
@@ -81,12 +96,25 @@ HARNESS = "claude"
 #: own environment, and sets it in the harness's. Nothing else sets or unsets it.
 MARKER = "PKIT_AGENT_RUN"
 
-#: The keys of an unconfined request. Any other key is refused.
-REQUEST_KEYS = frozenset({"schema_version", "agent", "brief", "folder", "limit_seconds", "effort"})
+#: The keys of an unconfined request, `local_settings_from` among them where
+#: the caller asks for the person's local settings. Any other key is refused.
+REQUEST_KEYS = frozenset(
+    {"schema_version", "agent", "brief", "folder", "local_settings_from", "limit_seconds", "effort"}
+)
 
-#: The keys of a confined request: the unconfined form's, without `folder`,
-#: with `confined`.
-CONFINED_REQUEST_KEYS = (REQUEST_KEYS - {"folder"}) | {"confined"}
+#: The keys of a confined request: the unconfined form's, without `folder` and
+#: `local_settings_from`, with `confined`.
+CONFINED_REQUEST_KEYS = (REQUEST_KEYS - {"folder", "local_settings_from"}) | {"confined"}
+
+#: Where Claude Code keeps the person's settings for one checkout, out of git
+#: (ADR-029 point 1): the file an unconfined run carries from the person's
+#: checkout into its folder where the request asks (ADR-066 point 10), and whose
+#: denies a confined run carries (ADR-066 point 3).
+LOCAL_SETTINGS = (".claude", "settings.local.json")
+
+#: How the runner writes the copy of the local settings: a new file, never
+#: through a link.
+NEW_FILE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
 
 #: The keys of a request's `confined` object, and the ones that name a folder.
 CONFINED_KEYS = frozenset(
@@ -95,8 +123,10 @@ CONFINED_KEYS = frozenset(
 CONFINED_FOLDERS = ("working_copy", "workspace", "temp", "pkit_folder", "project_root")
 
 #: The closed set of flags of the unconfined form (ADR-066 point 4), each with
-#: whether it takes a value. No member approves a call by itself.
-FLAGS = {"-p": False, "--agent": True, "--effort": True}
+#: whether it takes a value. No member approves a call by itself. `--agents`
+#: passes the agent's checked definition, for a name some place ships (ADR-087
+#: point 3).
+FLAGS = {"-p": False, "--agents": True, "--agent": True, "--effort": True}
 
 #: A confined run's tools (ADR-066 point 4): reading, searching, writing new
 #: files and the shell.
@@ -239,10 +269,32 @@ TEMP_VARIABLES = ("TMPDIR", "CLAUDE_CODE_TMPDIR")
 SYSTEM_PATH = ("/usr/bin", "/bin", "/usr/sbin", "/sbin")
 
 #: Where the backbone runs this runner from: the working copy's adapter folder
-#: (ADR-066 point 3). The deploy's resolver lies beside it.
+#: (ADR-066 point 3). The deploy's resolver lies beside it, and so does the
+#: adapter's declaration of tool access, which the reader reads (ADR-086 point 4).
 ADAPTER_FOLDER = Path(__file__).resolve().parent
 ADAPTER_PATH = (".pkit", "adapters", "claude-code")
 RESOLVER = "_resolve_agent.py"
+
+#: The flag that has the resolver keep the methodology's keys of tool access,
+#: `tools` and `withheld`, which the runner reads and then writes in Claude
+#: Code's (ADR-086 point 4).
+METHODOLOGY_KEYS_FLAG = "--methodology-keys"
+
+#: The resolver's entry that answers which definition of a name is the agent, as
+#: the agents area's picker answers it (ADR-087 point 2): the runner has no YAML
+#: library, and the picker's reader of the records needs one.
+PICK_FLAG = "--pick"
+
+#: The agents area's reader of an agent's tool access, in the working copy
+#: (ADR-086 point 1), and the functions the runner calls in it.
+READER_PATH = (".pkit", "agents", "tool_access.py")
+READER_FUNCTIONS = (
+    "tool_access",
+    "read_declaration",
+    "declaration_path",
+    "harness_refusal",
+    "BadDeclaration",
+)
 
 #: The longest the runner waits for the harness's version, and for the
 #: deploy's resolution of the agent. Both count against the run's limit.
@@ -322,7 +374,7 @@ RULE_FAMILY = {
 #: The rule families a run's tools fall in.
 RUN_FAMILIES = frozenset(RULE_FAMILY.get(tool, tool) for tool in RUN_TOOLS)
 
-#: A tool's name in a rule, or in an agent's tools.
+#: A tool's name in a rule.
 TOOL_NAME = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 
 #: A command token a rule may hold: none holds whitespace, a quote, `*`, `(`,
@@ -338,13 +390,15 @@ FOLDER_REFUSED = re.compile(r"[*?\[\]{}()\\\x00-\x1f\x7f]")
 #: The front-matter fields of the methodology's shape (ADR-066 point 3): those
 #: of `refs.Declared`, the shape the methodology gives its agents and skills,
 #: with `reads` holding its three lists, and an agent's name, description,
-#: tools, model and effort. A parity test holds this set to
-#: `src/project_kit/refs.py`. Any other field refuses the run.
+#: tool access (`tools` or `withheld`, COR-013 point 7), model and effort. A
+#: parity test holds this set to `src/project_kit/refs.py`. Any other field
+#: refuses the run, Claude Code's own `disallowedTools` among them.
 DEFINITION_FIELDS = frozenset(
     {
         "name",
         "description",
         "tools",
+        "withheld",
         "model",
         "effort",
         "reads",
@@ -491,6 +545,15 @@ def read_request(text: str) -> dict[str, Any]:
             or not Path(folder).is_dir()
         ):
             raise Refused(f"the folder {folder!r} is not a directory")
+        checkout = request.get("local_settings_from", "")
+        if "local_settings_from" in request and (
+            not isinstance(checkout, str)
+            or not Path(checkout).is_absolute()
+            or not Path(checkout).is_dir()
+        ):
+            raise Refused(
+                f"the checkout the local settings come from, {checkout!r}, is not a directory"
+            )
     limit = request.get("limit_seconds")
     if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= MAX_LIMIT_SECONDS:
         raise Refused(f"the limit {limit!r} is not from 1 to {MAX_LIMIT_SECONDS} seconds")
@@ -686,7 +749,7 @@ def left_out_settings(env: dict[str, str], working_copy: Path, project_root: Pat
         Path(config) / "settings.json",
         working_copy / ".claude" / "settings.json",
         project_root / ".claude" / "settings.json",
-        project_root / ".claude" / "settings.local.json",
+        project_root.joinpath(*LOCAL_SETTINGS),
     ]
 
 
@@ -935,21 +998,52 @@ def confined_environment(
 # --- the agent's definition ------------------------------------------------------------
 
 
-def agent_source(working_copy: Path, agent: str) -> Path | None:
-    """The agent's file in the working copy, as the deploy picks it among
-    agents of one name: the project's, then an installed capability's (the
-    first by name), then core's, each flat before folder form."""
-    pkit = working_copy / ".pkit"
-    capabilities = pkit / "capabilities"
-    folders = [pkit / "agents" / "project"]
-    if capabilities.is_dir():
-        folders += [entry / "agents" for entry in sorted(capabilities.iterdir())]
-    folders.append(pkit / "agents" / "core")
-    for folder in folders:
-        for candidate in (folder / f"{agent}.md", folder / agent / f"{agent}.md"):
-            if candidate.is_file():
-                return candidate
-    return None
+def picked_source(
+    resolver: Path, tree: Path, agent: str, env: dict[str, str], timeout: float = RESOLVE_SECONDS
+) -> Path | None:
+    """The file of the agent's definition in *tree*, as the agents area's picker
+    answers it through the deploy's resolver (ADR-087 point 2); None where no
+    place of the methodology ships the name. Refuses where the picker cannot tell
+    which definition is the agent, where none of its definitions counts, where
+    the one that is the agent is refused before its text is read, or where the
+    resolver gives no answer the runner reads."""
+    try:
+        done = subprocess.run(
+            [str(resolver), PICK_FLAG, agent],
+            cwd=str(tree),
+            env={key: value for key, value in env.items() if key not in RUN_VARIABLES},
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=max(timeout, 1),
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise Refused(f"the deploy's pick of the agent's definition could not run: {exc}") from None
+    try:
+        picked = json.loads(done.stdout.decode("utf-8", errors="replace"))
+    except ValueError:
+        picked = None
+    if done.returncode != 0 or not isinstance(picked, dict):
+        errors = done.stderr.decode("utf-8", errors="replace")
+        first = next((line for line in errors.splitlines() if line.strip()), "")
+        raise Refused(
+            "the deploy's resolver gave no answer which definition of the agent is the agent: "
+            + (first.strip() or f"it exited with {done.returncode}")
+        )
+    if picked.get("shipped") is False:
+        return None
+    for key, says in (
+        ("untold", "the runner cannot tell which definition of {agent} is the agent: {why}"),
+        ("none", "{agent} has no agent: {why}"),
+        ("refused", "the definition that is the agent {agent} is refused: {why}"),
+    ):
+        why = picked.get(key)
+        if isinstance(why, str):
+            raise Refused(says.format(agent=agent, why=why))
+    source = picked.get("agent")
+    if not isinstance(source, str) or not source:
+        raise Refused("the deploy's resolver named no file of the agent's definition")
+    return Path(source)
 
 
 def _unreadable(field: str, why: str) -> Refused:
@@ -1091,41 +1185,69 @@ def scalar(lines: list[str], field: str) -> str:
     return _plain(head, rest, field)
 
 
-def _item(text: str, field: str) -> str:
-    if text[:1] in ('"', "'"):
-        return _quoted(text, [], field)
-    return _plain(text, [], field)
+def load_module(path: Path, name: str) -> ModuleType:
+    """The module at *path*, loaded from its file, writing no bytecode beside it.
+    Raises `Refused`, naming the file, where it is absent or cannot load."""
+    if not path.is_file():
+        raise Refused(f"{path} is not there. Run `pkit sync`, which copies it with this runner")
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise Refused(f"{path} cannot be loaded")
+    module = importlib.util.module_from_spec(spec)
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:
+        raise Refused(f"{path} cannot be loaded: {exc}") from None
+    finally:
+        sys.dont_write_bytecode = previous
+    return module
 
 
-def tool_list(lines: list[str], field: str = "tools") -> list[str]:
-    """The agent's tools: a flow list, a block list, or one comma-separated
-    string."""
-    head, rest = lines[0].strip(), lines[1:]
-    if head.startswith("["):
-        raw = " ".join([head, *(line.strip() for line in rest)])
-        close = raw.find("]")
-        tail = raw[close + 1 :].strip() if close != -1 else ""
-        if close == -1 or (tail and not tail.startswith("#")):
-            raise _unreadable(field, "is not a closed list")
-        body = raw[1:close]
-        if any(mark in body for mark in "[]{}"):
-            raise _unreadable(field, "nests a collection")
-        names = [_item(item.strip(), field) for item in body.split(",") if item.strip()]
-    elif head == "" or head.startswith("#"):
-        names = []
-        for line in rest:
-            text = line.strip()
-            if not text or text.startswith("#"):
-                continue
-            if not text.startswith("- "):
-                raise _unreadable(field, f"holds {text!r} in a list")
-            names.append(_item(_without_comment(text[2:].strip()), field))
-    else:
-        names = [name.strip() for name in scalar(lines, field).split(",") if name.strip()]
-    for name in names:
-        if not TOOL_NAME.fullmatch(name):
-            raise _unreadable(field, f"names {name!r}, which is not a tool's name")
-    return names
+def tool_access(
+    working_copy: Path, text: str, fields: dict[str, list[str]]
+) -> tuple[str, list[str]] | None:
+    """The tool access of the resolved definition *text*, as the working copy's
+    reader answers it (ADR-086): Claude Code's key for its form, and its
+    entries, each whole; None where it names neither form. Refuses where the
+    working copy has no reader with the functions the runner calls, where the
+    adapter's declaration of tool access cannot be read, where the reader
+    refuses the definition, or where Claude Code cannot enforce or translate its
+    access, by that declaration."""
+    reader = load_module(working_copy.joinpath(*READER_PATH), "pkit_agents_tool_access")
+    missing = [name for name in READER_FUNCTIONS if not callable(getattr(reader, name, None))]
+    if missing:
+        raise Refused(
+            f"the working copy's reader of an agent's tool access has no {', '.join(missing)}. "
+            "Run `pkit sync`, which copies it with this runner (ADR-086 point 5)"
+        )
+    try:
+        declaration = reader.read_declaration(ADAPTER_FOLDER)
+    except reader.BadDeclaration as exc:
+        raise Refused(
+            "the adapter's declaration of tool access cannot be read: "
+            f"{exc}. Run `pkit sync`, which copies it with this runner"
+        ) from None
+    if declaration is None:
+        raise Refused(
+            "the adapter declares no tool access: "
+            f"{reader.declaration_path(ADAPTER_FOLDER)} is not there. Run `pkit sync`, which "
+            "copies it with this runner"
+        )
+    try:
+        access = reader.tool_access(text)
+    except reader.Refused as exc:
+        raise Refused(f"the agent's tool access is refused: {exc}") from None
+    problem = reader.harness_refusal(access, list(fields), declaration)
+    if problem is not None:
+        raise Refused(
+            f"the agent's tool access is refused, since {declaration.harness} cannot enforce or "
+            f"translate it: {problem}"
+        )
+    if access.form is None:
+        return None
+    return declaration.keys[access.form], [str(entry) for entry in access.entries]
 
 
 def resolve_definition(
@@ -1137,11 +1259,13 @@ def resolve_definition(
     env: dict[str, str],
     timeout: float = RESOLVE_SECONDS,
 ) -> str:
-    """The deploy's resolution of the agent's file: its text. Refuses where the
-    resolver fails, or warns that it drops a value the run passes."""
+    """The deploy's resolution of the agent's file, with the methodology's keys
+    of tool access: its text. Refuses where the resolver fails, a definition
+    refused for its tool access among them, or warns that it drops a value the
+    run passes."""
     try:
         done = subprocess.run(
-            [str(resolver), str(source), agent, str(overlay)],
+            [str(resolver), str(source), agent, str(overlay), METHODOLOGY_KEYS_FLAG],
             cwd=str(cwd),
             env={key: value for key, value in env.items() if key not in RUN_VARIABLES},
             stdin=subprocess.DEVNULL,
@@ -1182,17 +1306,34 @@ def checked_definition(
     timeout: float = RESOLVE_SECONDS,
 ) -> dict[str, Any]:
     """The agent's definition as a confined run passes it (ADR-066 point 3):
-    the deploy's resolution of the file the deploy picks, checked against the
-    methodology's shape. It holds the description, the body as the prompt, the
-    tools, the model and the effort, the caller's effort over the
-    definition's. The other fields of the shape are read and never passed."""
-    source = agent_source(working_copy, agent)
+    the deploy's resolution of the file the agents area's picker names (ADR-087
+    point 2), checked against the methodology's shape. It holds the description,
+    the body as the prompt, the tool access in Claude Code's key (ADR-085 point
+    1), the model and the effort, the caller's effort over the definition's. The
+    other fields of the shape are read and never passed. The tool access is the
+    reader's answer, refused where the reader or the adapter refuses it
+    (ADR-086)."""
+    source = picked_source(resolver, working_copy, agent, env, timeout)
     if source is None:
         raise Refused(
-            f"the working copy holds no definition of {agent} that the deploy would pick: no "
-            f"{agent}.md or {agent}/{agent}.md in .pkit/agents/project, a capability's agents "
-            "folder or .pkit/agents/core"
+            f"the working copy holds no definition of {agent}: no place of the methodology "
+            "ships the name, in .pkit/agents/project, an installed capability's agents folder "
+            "or .pkit/agents/core"
         )
+    return checked_source(working_copy, source, agent, effort, resolver, env, timeout)
+
+
+def checked_source(
+    working_copy: Path,
+    source: Path,
+    agent: str,
+    effort: str | None,
+    resolver: Path,
+    env: dict[str, str],
+    timeout: float = RESOLVE_SECONDS,
+) -> dict[str, Any]:
+    """The definition at *source*, the agent's, checked as `checked_definition`
+    checks it."""
     if not _inside(source, working_copy):
         raise Refused(f"the agent's file {source} leads outside the working copy")
     overlay = working_copy / ".pkit" / "agents" / "project" / "overlay.yaml"
@@ -1217,8 +1358,10 @@ def checked_definition(
     if not prompt.strip():
         raise Refused("the agent's definition has no instructions")
     definition: dict[str, Any] = {"description": description, "prompt": prompt}
-    if "tools" in fields:
-        definition["tools"] = tool_list(fields["tools"])
+    access = tool_access(working_copy, text, fields)
+    if access is not None:
+        key, entries = access
+        definition[key] = entries
     model = scalar(fields["model"], "model").strip() if "model" in fields else ""
     if model:
         definition["model"] = model
@@ -1235,10 +1378,16 @@ def checked_definition(
 # --- the command line --------------------------------------------------------------------
 
 
-def command(harness: str, agent: str, effort: str | None) -> list[str]:
+def command(
+    harness: str, agent: str, effort: str | None, definition: dict[str, Any] | None = None
+) -> list[str]:
     """The unconfined form's command line: the closed set's flags, and nothing
-    else."""
-    argv = [harness, "-p", "--agent", agent]
+    else. With *definition*, the agent's checked definition passed under *agent*,
+    a name unique to the run (ADR-087 point 3)."""
+    argv = [harness, "-p"]
+    if definition is not None:
+        argv += ["--agents", json.dumps({agent: definition})]
+    argv += ["--agent", agent]
     if effort is not None:
         argv += ["--effort", effort]
     check_flags(argv)
@@ -1427,17 +1576,90 @@ def agent_file(agent: str, folder: Path, env: dict[str, str]) -> Path | None:
     return candidate if candidate.is_file() else None
 
 
+def unconfined_command(
+    harness: str, agent: str, folder: Path, effort: str | None, env: dict[str, str], deadline: float
+) -> list[str]:
+    """The unconfined form's command line for *agent* (ADR-087 point 3).
+
+    For a name some place of the methodology ships, the definition the agents
+    area's picker names in the project's tree this runner lies in, checked as a
+    confined run checks it, under a name unique to the run. For a name no place
+    ships, the agent by name, which the harness loads where it finds it; refused
+    where it finds none.
+    """
+    tree = ADAPTER_FOLDER.parents[2]
+    resolver = ADAPTER_FOLDER / RESOLVER
+    source = picked_source(
+        resolver, tree, agent, env, min(RESOLVE_SECONDS, deadline - time.monotonic())
+    )
+    if source is None:
+        if agent_file(agent, folder, env) is None:
+            raise Refused(
+                f"the agent {agent} is not deployed: no .claude/agents/{agent}.md in {folder} "
+                "or a folder above it, nor in the person's own agents folder"
+            )
+        return command(harness, agent, effort)
+    definition = checked_source(
+        tree,
+        source,
+        agent,
+        effort,
+        resolver,
+        env,
+        min(RESOLVE_SECONDS, deadline - time.monotonic()),
+    )
+    return command(harness, RUN_AGENT_PREFIX + secrets.token_hex(8), effort, definition)
+
+
+def carry_local_settings(checkout: Path, folder: Path) -> None:
+    """Copy the person's local settings from `checkout` into the run's
+    `folder`, where the checkout has them and the folder is another (ADR-066
+    point 10). Raises `Refused` where a link lies on the way, or the copy
+    fails.
+
+    The file holds the person's settings for that machine (ADR-029 point 1):
+    the seal of the retry outside the sandbox (ADR-028), their own denies of
+    credential reads, and on macOS the exclusion of `pkit` and `uv` from the
+    sandbox (ADR-027 condition 4). A file the folder holds at that path stays
+    as the folder has it: in a clone at a commit, it is the project's. A link
+    on the way refuses the run, so the copy writes nothing outside the
+    folder. The file stays in the folder after the run, which its caller
+    owns."""
+    source = checkout.joinpath(*LOCAL_SETTINGS)
+    if _real(str(checkout)) == _real(str(folder)) or not source.is_file():
+        return
+    parent = folder / LOCAL_SETTINGS[0]
+    target = parent / LOCAL_SETTINGS[1]
+    shown = "/".join(LOCAL_SETTINGS)
+    if parent.is_symlink() or target.is_symlink():
+        raise Refused(f"the run's folder holds a symbolic link on the way to `{shown}`")
+    if os.path.lexists(target):
+        return
+    try:
+        held = source.read_bytes()
+        parent.mkdir(mode=0o700, exist_ok=True)
+        with os.fdopen(os.open(target, NEW_FILE_FLAGS, 0o600), "wb") as written:
+            written.write(held)
+    except OSError as exc:
+        raise Refused(
+            f"the local settings, `{shown}`, cannot be copied into the run's folder: "
+            f"{exc.strerror or exc}"
+        ) from None
+
+
 def run_unconfined(request: dict[str, Any], env: dict[str, str]) -> dict[str, Any]:
-    """Run an unconfined request, and answer how it ended."""
+    """Run an unconfined request, and answer how it ended. The limit counts from
+    here, so the pick and the check of the definition count against it. The
+    person's local settings are carried in last before the harness starts, so
+    a run refused before then writes nothing in its folder."""
+    deadline = time.monotonic() + request["limit_seconds"]
     harness = find_harness(env)
     folder = Path(request["folder"])
-    agent = request["agent"]
-    if agent_file(agent, folder, env) is None:
-        raise Refused(
-            f"the agent {agent} is not deployed: no .claude/agents/{agent}.md in {folder} "
-            "or a folder above it, nor in the person's own agents folder"
-        )
-    argv = command(harness, agent, request.get("effort"))
+    argv = unconfined_command(
+        harness, request["agent"], folder, request.get("effort"), env, deadline
+    )
+    if "local_settings_from" in request:
+        carry_local_settings(Path(request["local_settings_from"]), folder)
     try:
         process = subprocess.Popen(
             argv,
@@ -1454,7 +1676,8 @@ def run_unconfined(request: dict[str, Any], env: dict[str, str]) -> dict[str, An
     limit = request["limit_seconds"]
     try:
         raw_out, raw_err = process.communicate(
-            request["brief"].encode("utf-8", errors="replace"), timeout=limit
+            request["brief"].encode("utf-8", errors="replace"),
+            timeout=max(deadline - time.monotonic(), 0.001),
         )
     except subprocess.TimeoutExpired:
         end_harness(process)

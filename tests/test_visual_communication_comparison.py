@@ -7,8 +7,9 @@ foundations they build on, and reads each version in full (`full_read.read`) bef
 compares them. A component library `parts` carries one component of each shape the records
 name: a pattern of fields, options, states, an exposed part, a list and runs; a pattern of
 ties and the component that draws them; a top whose layouts are its pages' forms; a top of
-one layout; a deprecated component; and two experimental ones. For each record, a change it
-names as a break is found as one, and a change it names as none is not.
+one layout; a deprecated component; and two experimental ones. The test brand holds a
+stable component of its own and the fixture's drawing of the deck's cover. For each record,
+a change it names as a break is found as one, and a change it names as none is not.
 """
 
 from __future__ import annotations
@@ -23,9 +24,11 @@ import pytest
 
 from tests.in_process import load
 from tests.visual_communication_project import (
+    FIXTURES,
     FOUNDATIONS,
     RELEASED_FOUNDATIONS,
     TEST_BRAND,
+    TEST_PARTS,
     add_library,
     bound,
     copy_library,
@@ -46,7 +49,8 @@ Change = Callable[[Any], Any]
 
 #: A stable pattern: its fields, one of them of runs, its options, a state, an exposed
 #: part, and a list whose items name their component and carry an arrangement field. It
-#: paints and spaces with the library's own roles.
+#: paints and spaces with the library's own roles, and strokes its rim with a token of its
+#: own, which defaults to the library's rim.
 CARD = bound(
     "component",
     status="stable",
@@ -66,8 +70,14 @@ CARD = bound(
     states={"done": {"colour": "green"}},
     exposes=["title"],
     lists={"tags": {"component": "tag", "arrangement": {"span": {"words": ["narrow", "wide"]}}}},
+    tokens={"rim": {"type": "color", "default": "{parts.rim}"}},
     parts={
         "back": {"box": {"fill": "parts.paper"}, "width": "=:width", "height": "=:height"},
+        "rim": {
+            "box": {"fill": "parts.paper", "stroke": "component.parts.card.rim"},
+            "width": "=:width",
+            "height": "=:height",
+        },
         "title": {
             "text": {"content": "title", "style": "type.heading", "fill": "parts.ink"},
             "width": "=:width",
@@ -201,13 +211,21 @@ OLD = bound(
     parts={"box": {"box": {"fill": "surface"}, "width": "=:width", "height": "=:height"}},
 )
 
-#: An experimental component, the only one that reads the library's role `parts.glow`.
+#: An experimental component, the only one that reads the library's role `parts.glow`,
+#: through a token of its own.
 SKETCH = bound(
     "component",
     status="experimental",
     about="A glowing box, small or large.",
     options={"size": ["small", "large"]},
-    parts={"box": {"box": {"fill": "parts.glow"}, "width": "=:width", "height": "=:height"}},
+    tokens={"glow": {"type": "color", "default": "{parts.glow}"}},
+    parts={
+        "box": {
+            "box": {"fill": "component.parts.sketch.glow"},
+            "width": "=:width",
+            "height": "=:height",
+        }
+    },
 )
 
 #: An experimental component the patterns draw their items with.
@@ -218,12 +236,13 @@ TAG = bound(
     parts={"box": {"box": {"fill": "surface"}, "width": "=:width", "height": "=:height"}},
 )
 
-#: The library's own roles: its ink, paper and gap end their chains at shared roles; its
-#: glow has no default, and only an experimental component reads it.
+#: The library's own roles: its ink, paper, gap and rim end their chains at shared roles;
+#: its glow has no default, and only an experimental component reads it.
 ROLES = {
     "parts.ink": {"type": "color", "default": "{text-primary}"},
     "parts.paper": {"type": "color", "default": "{background}"},
     "parts.gap": {"type": "dimension", "default": "{space.2}"},
+    "parts.rim": {"type": "color", "default": "{line}"},
     "parts.glow": {"type": "color"},
 }
 PAIRS = [{"text": "parts.ink", "under": "parts.paper", "level": "text"}]
@@ -347,6 +366,18 @@ def asking_no_height(spec: Any) -> None:
     slides["layouts"]["points"]["preferred"] = {"height": "=points.bottom"}
 
 
+def printed_at(width: float, height: float) -> Callable[[Any], None]:
+    """The slides, printed at `width` by `height` mm, so they ask for their height through
+    that size alone (DEC-034 point 3)."""
+
+    def change(spec: Any) -> None:
+        slides = spec["components"]["slides"]
+        slides["preferred"].pop("height", None)
+        slides["physical-size"] = {"width": width, "height": height}
+
+    return change
+
+
 def new_list_of_ties(spec: Any) -> None:
     diagram = spec["components"]["diagram"]
     diagram["fields"]["properties"]["routes"] = {"type": "array", "items": {"type": "object"}}
@@ -362,6 +393,42 @@ def new_role(default: str | None) -> Change:
         card(spec)["parts"]["back"]["box"]["stroke"] = "parts.edge"
 
     return change
+
+
+def rim(spec: Any) -> Any:
+    return card(spec)["tokens"]["rim"]
+
+
+def card_token(name: str, default: str) -> Change:
+    """A new token of the card, which its rim's box fills with."""
+
+    def change(spec: Any) -> None:
+        card(spec)["tokens"][name] = {"type": "color", "default": default}
+        card(spec)["parts"]["rim"]["box"]["fill"] = f"component.parts.card.{name}"
+
+    return change
+
+
+def without_rim(spec: Any) -> None:
+    del card(spec)["tokens"]["rim"]
+    card(spec)["parts"]["rim"]["box"]["stroke"] = "line"
+
+
+def rim_as_dimension(spec: Any) -> None:
+    """The card's rim, a width its rim's box strokes with, no longer a colour."""
+    put(card(spec)["tokens"], "rim", {"type": "dimension", "default": "{space.1}"})
+    box = card(spec)["parts"]["rim"]["box"]
+    box.update({"stroke": "line", "stroke-width": "=@component.parts.card.rim"})
+
+
+def without_glow(spec: Any) -> None:
+    sketch = spec["components"]["sketch"]
+    del sketch["tokens"]
+    sketch["parts"]["box"]["box"]["fill"] = "parts.glow"
+
+
+#: The card's rim token, as the comparison names it.
+RIM = "`parts/card`, token `component.parts.card.rim`"
 
 
 #: Each change, the breaks the comparison names for it, and an addition among those it
@@ -603,6 +670,12 @@ CASES: dict[str, tuple[Change, list[str], str | None]] = {
         ["`parts/slides`: ceases to ask for a height (DEC-022 point 8)"],
         None,
     ),
+    # DEC-034 point 3: a top's physical size.
+    "a top that comes to declare a physical size": (
+        printed_at(297, 210),
+        ["`parts/slides`: comes to declare a physical size (DEC-034 point 3)"],
+        None,
+    ),
     "a layout's height said under a top that asks for one": (
         lambda s: put(s["components"]["slides"]["layouts"]["cover"], "preferred", {"height": 300}),
         [],
@@ -736,6 +809,54 @@ CASES: dict[str, tuple[Change, list[str], str | None]] = {
         [],
         "pair `parts.glow` on `parts.paper`: is new (DEC-008 point 7)",
     ),
+    # DEC-035 points 4 and 6: a stable component's tokens, and the roles their defaults read.
+    "a stable component's token removed": (
+        without_rim,
+        [f"{RIM}: is removed (DEC-003 point 6, DEC-035 point 6)"],
+        None,
+    ),
+    "a stable component's token of another type": (
+        rim_as_dimension,
+        [f"{RIM}: is of type `dimension`, where it was `color` (DEC-003 point 6, DEC-035 point 6)"],
+        None,
+    ),
+    "a stable component's token whose chain no longer ends at a shared role": (
+        lambda s: put(rim(s), "default", "{parts.glow}"),
+        [f"{RIM}: no longer ends its chain of defaults at a shared role (DEC-035 point 6)"],
+        None,
+    ),
+    "a stable component's token pointed at another role": (
+        lambda s: put(rim(s), "default", "{line}"),
+        [],
+        None,
+    ),
+    "a part that stops reading a token": (
+        lambda s: put(card(s)["parts"]["rim"]["box"], "stroke", "line"),
+        [],
+        None,
+    ),
+    "a role a stable component's token reads removed": (
+        lambda s: (s["roles"].pop("parts.rim"), put(rim(s), "default", "{line}")),
+        ["role `parts.rim`: is removed (DEC-003 point 6, DEC-008 point 7)"],
+        None,
+    ),
+    "a new token whose chain ends at no shared role": (
+        card_token("glow", "{parts.glow}"),
+        [],
+        "`parts/card`, token `component.parts.card.glow`: is new (DEC-035 point 6)",
+    ),
+    "a new token that reads a new role with no default": (
+        lambda s: (
+            put(s["roles"], "parts.edge", {"type": "color"}),
+            card_token("edge", "{parts.edge}")(s),
+        ),
+        [
+            "role `parts.edge`: is new, read by a stable or deprecated component, and its "
+            "chain of defaults ends at no shared role (DEC-008 point 7)"
+        ],
+        "`parts/card`, token `component.parts.card.edge`: is new (DEC-035 point 6)",
+    ),
+    "an experimental component's token removed": (without_glow, [], None),
 }
 
 
@@ -773,6 +894,72 @@ def test_a_top_that_comes_to_ask_for_a_height_breaks_and_a_layouts_height_does_n
     ]
     for pair in (("1.2.0", "1.3.0"), ("1.3.0", "1.4.0")):
         assert said(compared(root, "parts", *pair).breaks) == [], pair
+
+
+def test_a_physical_size_breaks_where_it_comes_goes_or_changes_its_proportion(
+    tmp_path: Path,
+) -> None:
+    """A size changed in the same proportion breaks nothing: each page draws as before, only
+    larger in print. One that ceases is named once, though the top then asks for its height
+    by a formula (DEC-034 point 3)."""
+    root = project(tmp_path)
+    foundations(root)
+    for version, change in (
+        ("1.0.0", printed_at(297, 210)),
+        ("1.1.0", printed_at(594, 420)),
+        ("1.2.0", printed_at(300, 200)),
+        ("1.3.0", None),
+    ):
+        spec = copy.deepcopy(PARTS)
+        if change is not None:
+            change(spec)
+        write_parts(root, version, spec)
+
+    assert said(compared(root, "parts", "1.0.0", "1.1.0").breaks) == []
+    assert said(compared(root, "parts", "1.1.0", "1.2.0").breaks) == [
+        "`parts/slides`: changes its physical size's proportion, from 594 by 420 mm to 300 by "
+        "200 mm (DEC-034 point 3)"
+    ]
+    assert said(compared(root, "parts", "1.2.0", "1.3.0").breaks) == [
+        "`parts/slides`: ceases to declare a physical size (DEC-034 point 3)"
+    ]
+
+
+#: Pairs of papers, earlier and later, in millimetres, each with the breaks of the move.
+PAPERS: dict[str, tuple[tuple[float, float], tuple[float, float], list[str]]] = {
+    "A2 after A1": ((594, 841), (420, 594), []),
+    "A3 after A4": ((210, 297), (297, 420), []),
+    "A5 after A2": ((420, 594), (148, 210), []),
+    "US Letter after A4": (
+        (210, 297),
+        (215.9, 279.4),
+        [
+            "`parts/slides`: changes its physical size's proportion, from 210 by 297 mm to "
+            "215.9 by 279.4 mm (DEC-034 point 3)"
+        ],
+    ),
+}
+
+
+@pytest.mark.parametrize("earlier,later,breaks", PAPERS.values(), ids=PAPERS.keys())
+def test_a_physical_size_keeps_its_proportion_within_the_rounding_of_whole_millimetres(
+    tmp_path: Path,
+    earlier: tuple[float, float],
+    later: tuple[float, float],
+    breaks: list[str],
+) -> None:
+    """Each A size rounds its sides to whole millimetres, so A1 and A2, or A4 and A3, have
+    one proportion though the width of each times the height of the other differs. A move
+    between them changes how the pages look, and breaks nothing. US Letter after A4 changes
+    the proportion (DEC-034 point 3)."""
+    root = project(tmp_path)
+    foundations(root)
+    for version, size in (("1.0.0", earlier), ("1.1.0", later)):
+        spec = copy.deepcopy(PARTS)
+        printed_at(*size)(spec)
+        write_parts(root, version, spec)
+
+    assert said(compared(root, "parts", "1.0.0", "1.1.0").breaks) == breaks
 
 
 def test_a_version_that_changes_nothing_needs_a_patch(tmp_path: Path) -> None:
@@ -845,12 +1032,13 @@ def test_the_foundations_being_built_add_the_size_axis_device_which_breaks_their
     tmp_path: Path,
 ) -> None:
     """The version being built of the foundations, compared with their release 1.0.0, adds
-    the shared size axis `device`, the top `site` and its role `size.site`, and the length
-    of a line, `size.line`, and changes nothing else. A brand may now hold an axis of its own,
+    the shared size axis `device`, the top `site` and its role `size.site`, the length of a
+    line, `size.line`, the shapes a notation maps a concept to, and the lengths of a run's
+    sign and ground, and changes nothing else. A brand may now hold an axis of its own,
     whose name a new shared axis may meet, so `device` breaks their release 1.0.0 (DEC-004
-    point 5): it lands in a release of the foundations before brands can hold their own
-    axes, or in a major (DEC-021 point 9). The rest are additions (DEC-003 point 1, DEC-022
-    point 8)."""
+    point 5): it landed in their release 1.1.0 before brands could hold their own axes
+    (DEC-021 point 9). The rest are additions: a new component, a new role with a default
+    (DEC-003 point 1, DEC-022 point 8, DEC-036 point 3) and a new shape (DEC-036 point 7)."""
     root = project(tmp_path)
     copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     built = str(libraries.read_library(FOUNDATIONS).version)
@@ -866,6 +1054,15 @@ def test_the_foundations_being_built_add_the_size_axis_device_which_breaks_their
         "`foundations/site`: is new (DEC-003 point 1)",
         "shared role `size.line`: is new, with a default (DEC-004 point 5)",
         "shared role `size.site`: is new, with a default (DEC-004 point 5)",
+        "shared role `space.ground-corner`: is new, with a default (DEC-004 point 5)",
+        "shared role `space.ground-room`: is new, with a default (DEC-004 point 5)",
+        "shared role `space.sign-gap`: is new, with a default (DEC-004 point 5)",
+        "shape `circle`: is new (DEC-036 point 7)",
+        "shape `diamond`: is new (DEC-036 point 7)",
+        "shape `hexagon`: is new (DEC-036 point 7)",
+        "shape `square`: is new (DEC-036 point 7)",
+        "shape `star`: is new (DEC-036 point 7)",
+        "shape `triangle`: is new (DEC-036 point 7)",
     ]
     assert found.segment == "major"
 
@@ -881,6 +1078,20 @@ def axis(name: str) -> Callable[[Any], Any]:
 def dim(data: Any) -> None:
     """A third mode of the colour scheme."""
     axis("colour-scheme")(data)["modes"].append("dim")
+
+
+#: A shape's outline: a square in its square.
+SQUARE = {"d": "M 3 3 H 21 V 21 H 3 Z", "fill-rule": "nonzero", "square": 24}
+
+
+def shaped(*names: str) -> Change:
+    """The foundations declaring the shapes `names`, each a square's outline."""
+    return lambda data: data.update(shapes={name: dict(SQUARE) for name in names})
+
+
+def redrawn(data: Any) -> None:
+    """The foundations declaring the shape `square`, its outline drawn again within it."""
+    data["shapes"] = {"square": {**SQUARE, "d": "M 2 2 H 22 V 22 H 2 Z"}}
 
 
 FOUNDATIONS_CASES: dict[str, tuple[Change, Change | None, list[str], str | None]] = {
@@ -991,6 +1202,24 @@ FOUNDATIONS_CASES: dict[str, tuple[Change, Change | None, list[str], str | None]
         ["colour family `red`: is removed (DEC-003 point 6)"],
         None,
     ),
+    "a shape removed": (
+        shaped("square"),
+        shaped("square", "star"),
+        ["shape `star`: is removed (DEC-036 point 7)"],
+        None,
+    ),
+    "a shape renamed": (
+        shaped("box"),
+        shaped("square"),
+        ["shape `square`: is removed (DEC-036 point 7)"],
+        "shape `box`: is new (DEC-036 point 7)",
+    ),
+    "a new shape": (
+        shaped("square", "star"),
+        shaped("square"),
+        [],
+        "shape `star`: is new (DEC-036 point 7)",
+    ),
     "a new picture role": (
         lambda d: roles(d).update({"picture.mark": {"type": "picture"}}),
         None,
@@ -1018,6 +1247,14 @@ def test_each_change_of_the_foundations_is_named_whatever_reads_it(
     assert said(found.breaks) == breaks
     if addition is not None:
         assert addition in said(found.additions)
+
+
+def test_a_shape_s_outline_drawn_again_changes_only_how_a_piece_looks(tmp_path: Path) -> None:
+    """A shape's outline redrawn within what its name says breaks nothing and adds nothing
+    (DEC-036 point 7)."""
+    found = compared_foundations(tmp_path, redrawn, shaped("square"))
+
+    assert (said(found.breaks), said(found.additions)) == ([], [])
 
 
 def test_a_new_top_group_of_the_shared_roles_breaks_the_foundations_whatever_its_roles_carry(
@@ -1110,6 +1347,55 @@ def test_a_brands_exported_token_removed_breaks_it_and_a_new_one_is_an_addition(
     assert (said(added.breaks), said(added.additions)) == (
         [],
         ["exported token `size.poster`: is new (DEC-004 point 5)"],
+    )
+
+
+#: The test library's tag's token, which a brand that names the library may give a value.
+TAG_FILL = "component.test-parts.tag.fill"
+
+
+def parts_brand_location(tmp: Path, version: str, gives_fill: bool) -> Any:
+    """A location that holds the foundations, the test library and the test brand at
+    `version`, which names the library and gives its warning a value, and gives the tag's
+    token one where `gives_fill` (DEC-035 point 7)."""
+    root = project(tmp)
+    foundations(root)
+    copy_library(root, TEST_PARTS, "test-parts", "1.0.0")
+    folder = copy_library(root, TEST_BRAND, "test-brand", version)
+    named = [{"name": "foundations", "major": 1}, {"name": "test-parts", "major": 1}]
+    edit(folder / "library.yaml", lambda data: data.update(version=version, **{"builds-on": named}))
+    path = folder / "tokens" / "base.tokens.json"
+    tokens = json.loads(path.read_text(encoding="utf-8"))
+    tokens["test-parts"] = {"warning": {"$type": "color", "$value": "{scheme.ink}"}}
+    if gives_fill:
+        fill = {"$type": "color", "$value": "{scheme.ink}"}
+        tokens["component"] = {"test-parts": {"tag": {"fill": fill}}}
+    path.write_text(json.dumps(tokens), encoding="utf-8")
+    return libraries.Held(root, LOCATION)
+
+
+def test_a_component_token_a_brand_ceases_to_give_breaks_it_and_a_new_one_is_an_addition(
+    tmp_path: Path,
+) -> None:
+    """A brand exports each component token it gives a value, as it does a library's own
+    role (DEC-004 point 5, DEC-035 point 7)."""
+    version = libraries.Version.parse
+
+    def compared_fill(tmp: Path, earlier: bool, later: bool) -> Any:
+        was = parts_brand_location(tmp / "earlier", "1.0.0", earlier)
+        now = parts_brand_location(tmp / "later", "1.1.0", later)
+        return comparison.compare(
+            full_read.read(was, "test-brand", version("1.0.0")),
+            full_read.read(now, "test-brand", version("1.1.0")),
+        )
+
+    removed = compared_fill(tmp_path / "removed", True, False)
+    added = compared_fill(tmp_path / "added", False, True)
+
+    assert said(removed.breaks) == [f"exported token `{TAG_FILL}`: is removed (DEC-004 point 5)"]
+    assert (said(added.breaks), said(added.additions)) == (
+        [],
+        [f"exported token `{TAG_FILL}`: is new (DEC-004 point 5)"],
     )
 
 
@@ -1335,6 +1621,198 @@ def test_a_brands_own_axis_removed_renamed_or_changed_breaks_it(
     found = compared_own(tmp_path, season(), later)
     assert said(found.breaks) == breaks
     assert found.segment == "major"
+
+
+# --- a brand's components (DEC-034 point 8, DEC-003 point 7) ------------------------------------
+
+#: A stable component of the test brand's own: its label on a box, ringed by a token of its
+#: own that defaults to a shared role.
+BADGE = bound(
+    "component",
+    status="stable",
+    about="A badge: its label on a ringed box.",
+    fields={
+        "type": "object",
+        "required": ["label"],
+        "properties": {"label": {"type": "string"}, "note": {"type": "string"}},
+    },
+    tokens={"rim": {"type": "color", "default": "{text-primary}"}},
+    parts={
+        "back": {
+            "box": {"fill": "surface", "stroke": "component.test-brand.badge.rim"},
+            "width": "=:width",
+            "height": "=:height",
+        },
+        "label": {
+            "text": {"content": "label", "style": "type.body", "fill": "text-primary"},
+            "width": "=:width",
+        },
+    },
+    preferred={"width": "=@space.4 * 10", "height": "=label.bottom"},
+)
+
+#: The test brand's drawing of the deck's cover, which carries no status.
+COVER = reading.read_yaml(FIXTURES / "drawings" / "cover.yaml")
+
+
+def holding(tmp: Path, version: str, components: Mapping[str, Any]) -> Any:
+    """A location that holds the foundations, the test library and the test brand at
+    `version`, built on both, which holds `components`, each by its name."""
+    held = parts_brand_location(tmp, version, gives_fill=False)
+    folder = held.root / LOCATION / "libraries" / "test-brand" / version / "components"
+    for name, data in components.items():
+        write(folder / f"{name}.yaml", yaml_text(data))
+    return libraries.Held(held.root, LOCATION)
+
+
+def compared_components(tmp: Path, earlier: Mapping[str, Any], later: Mapping[str, Any]) -> Any:
+    """The test brand 1.0.0, holding the components `earlier`, compared with 1.1.0, holding
+    `later`."""
+    version = libraries.Version.parse
+    return comparison.compare(
+        full_read.read(holding(tmp / "earlier", "1.0.0", earlier), "test-brand", version("1.0.0")),
+        full_read.read(holding(tmp / "later", "1.1.0", later), "test-brand", version("1.1.0")),
+    )
+
+
+def badge(**changes: Any) -> dict[str, Any]:
+    """The badge, each of `changes` set at its key, or removed where it is None."""
+    data = copy.deepcopy(BADGE)
+    for key, value in changes.items():
+        if value is None:
+            data.pop(key, None)
+        else:
+            data[key] = value
+    return data
+
+
+def ringed(default: str, type_: str = "color") -> dict[str, Any]:
+    """The badge's `tokens`, its rim defaulting to `default`."""
+    return {"rim": {"type": type_, "default": default}}
+
+
+def changed_look(data: Any) -> dict[str, Any]:
+    """The drawing with a part of its look removed and a value changed."""
+    data = copy.deepcopy(dict(data))
+    del data["parts"]["band"]
+    data["parts"]["title"]["y"] = "=margin"
+    data["values"]["margin"] = "=@space.3"
+    return data
+
+
+@pytest.mark.parametrize(
+    "earlier,later",
+    [
+        ({"cover": COVER}, {"cover": changed_look(COVER)}),
+        ({"cover": COVER}, {}),
+        ({}, {"cover": COVER}),
+    ],
+    ids=["its-look", "removed", "begins-to-serve"],
+)
+def test_a_brands_drawing_is_passed_over_and_a_base_that_begins_to_serve_a_top_needs_no_major(
+    tmp_path: Path, earlier: Mapping[str, Any], later: Mapping[str, Any]
+) -> None:
+    """A drawing carries no status, so neither its look, its parts, nor its arrival or
+    departure is named. The test brand is the test edition's base, so a later version that
+    holds a drawing it did not begins to serve a top: a minor release may carry it."""
+    found = compared_components(tmp_path, earlier, later)
+
+    assert (found.breaks, found.additions, found.segment, found.allowed) == ((), (), "patch", True)
+
+
+@pytest.mark.parametrize("status", ["stable", "deprecated"])
+def test_a_promised_component_that_becomes_a_drawing_breaks_as_one_removed_does(
+    tmp_path: Path, status: str
+) -> None:
+    found = compared_components(tmp_path, {"cover": badge(status=status)}, {"cover": COVER})
+
+    assert said(found.breaks) == [
+        f"`test-brand/cover`: is a drawing, where it was {status} (DEC-034 point 8)"
+    ]
+    assert not found.allowed
+
+
+def test_an_experimental_component_may_become_a_drawing_and_a_drawing_that_ceases_is_new(
+    tmp_path: Path,
+) -> None:
+    became = compared_components(
+        tmp_path / "became", {"cover": badge(status="experimental")}, {"cover": COVER}
+    )
+    ceased = compared_components(tmp_path / "ceased", {"cover": COVER}, {"cover": BADGE})
+
+    assert (became.breaks, became.additions) == ((), ())
+    assert (said(ceased.breaks), said(ceased.additions)) == (
+        [],
+        ["`test-brand/cover`: is new, where it was a drawing (DEC-034 point 8)"],
+    )
+
+
+#: Each change of the badge, and what it is named: its breaks, then its additions.
+BRAND_CASES: dict[str, tuple[Mapping[str, Any], Mapping[str, Any], list[str], list[str]]] = {
+    "removed": (
+        {"badge": BADGE},
+        {},
+        ["`test-brand/badge`: is removed, where it was stable (DEC-003 points 6 and 7)"],
+        [],
+    ),
+    "marked-experimental": (
+        {"badge": BADGE},
+        {"badge": badge(status="experimental")},
+        ["`test-brand/badge`: is marked experimental, where it was stable (DEC-003 point 7)"],
+        [],
+    ),
+    "field-removed": (
+        {"badge": BADGE},
+        {"badge": badge(fields={**BADGE["fields"], "properties": {"label": {"type": "string"}}})},
+        ["`test-brand/badge`, field `note`: is removed (DEC-003 point 6)"],
+        [],
+    ),
+    "token-retyped": (
+        {"badge": BADGE},
+        {"badge": badge(tokens=ringed("{space.1}", "dimension"))},
+        [
+            "`test-brand/badge`, token `component.test-brand.badge.rim`: is of type "
+            "`dimension`, where it was `color` (DEC-003 point 6, DEC-035 point 6)"
+        ],
+        [],
+    ),
+    "token-off-the-shared-roles": (
+        {"badge": BADGE},
+        {"badge": badge(tokens=ringed("{test-parts.warning}"))},
+        [
+            "`test-brand/badge`, token `component.test-brand.badge.rim`: no longer ends its "
+            "chain of defaults at a shared role (DEC-035 point 6)"
+        ],
+        [],
+    ),
+    "token-new": (
+        {
+            "badge": badge(
+                tokens=None, parts={**BADGE["parts"], "back": {"box": {"fill": "surface"}}}
+            )
+        },
+        {"badge": BADGE},
+        [],
+        ["`test-brand/badge`, token `component.test-brand.badge.rim`: is new (DEC-035 point 6)"],
+    ),
+    "experimental-removed": ({"badge": badge(status="experimental")}, {}, [], []),
+    "new": ({}, {"badge": BADGE}, [], ["`test-brand/badge`: is new (DEC-003 point 1)"]),
+}
+
+
+@pytest.mark.parametrize(
+    "earlier,later,breaks,additions", BRAND_CASES.values(), ids=BRAND_CASES.keys()
+)
+def test_a_brands_other_components_are_compared_as_a_component_librarys_are(
+    tmp_path: Path,
+    earlier: Mapping[str, Any],
+    later: Mapping[str, Any],
+    breaks: list[str],
+    additions: list[str],
+) -> None:
+    found = compared_components(tmp_path, earlier, later)
+
+    assert (said(found.breaks), said(found.additions)) == (breaks, additions)
 
 
 # --- a shape that follows a size (DEC-021 points 3 and 7) ---------------------------------------
