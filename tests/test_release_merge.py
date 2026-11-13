@@ -2123,6 +2123,53 @@ def test_a_dry_run_reports_a_release_that_would_not_land_sound(
     assert host.merges() == []
 
 
+def test_a_release_pr_recording_a_pre_release_is_refused_naming_each(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """In the methodology's source repository, at its request and in a dry run:
+    refused, nothing merged, nothing deleted, each version named (ADR-089 point
+    3). `tests/test_release_landing.py` reads the versions on real repositories."""
+    recorded = [
+        release.RecordedPreRelease("backbone", ".pkit/VERSION", "1.6.0rc1"),
+        release.RecordedPreRelease(
+            "claude-code", ".pkit/adapters/claude-code/package.yaml", "0.6.0rc1"
+        ),
+    ]
+    judged: list[str] = []
+
+    def records(pr: release.ReleasePrState, repo_root: Path) -> list[release.RecordedPreRelease]:
+        judged.append(pr.head_oid)
+        return recorded
+
+    monkeypatch.setattr(release, "release_pr_pre_releases", records)
+    for queue, dry_run in ((False, False), (True, False), (False, True)):
+        host = _Host(queue=queue)
+        seen = _fake_run(monkeypatch)
+        with pytest.raises(click.ClickException) as exc:
+            _land(monkeypatch, host, dry_run=dry_run)
+        assert exc.value.message == (
+            "release PR #42 records a pre-release version, and the default branch holds release "
+            "versions alone (ADR-089 point 3):\n"
+            "  .pkit/VERSION: backbone at 1.6.0rc1\n"
+            "  .pkit/adapters/claude-code/package.yaml: claude-code at 0.6.0rc1\n"
+            "Run the release again, so that it is planned from the default branch's head, and "
+            "never amend the release commit. Where the default branch records a pre-release "
+            "version itself, give it back its release version first. Nothing was merged."
+        )
+        assert host.merges() == [] and host.deletions == [] and seen == []
+    assert judged == [HEAD, HEAD, HEAD]
+
+
+def test_a_release_pr_outside_the_source_repository_is_not_read_for_pre_releases(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`/repo` holds no package source beside a `.pkit/`, so nothing is read."""
+    _fake_run(monkeypatch)
+    pr = release.parse_release_pr(_raw(number=42))
+    assert release.release_pr_pre_releases(pr, Path("/repo")) == []
+    assert _land(monkeypatch, _Host(queue=False)).exit_code == 0
+
+
 def test_a_release_pr_already_queued_is_waited_for_without_the_predicate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

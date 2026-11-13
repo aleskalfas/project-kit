@@ -61,14 +61,17 @@ _PACKAGE = (
 _CHANGESET = ".changes/unreleased/backbone-minor.yaml"
 
 
-def _kit(repo: Path) -> Path:
+def _kit(repo: Path, *, source: bool = False) -> Path:
     """A repository holding a source kit with one component and one pending
-    changeset, committed as `main`; its `.pkit/`."""
+    changeset, committed as `main`; its `.pkit/`. With `source`, the package
+    source sits beside it: the methodology's source repository, as the marker
+    test finds it (ADR-059 point 3)."""
     repo.mkdir(parents=True, exist_ok=True)
     _git(repo, "init", "-q", "-b", "main")
     _git(repo, "config", "user.email", "t@example.com")
     _git(repo, "config", "user.name", "T")
     sign_nothing(repo)
+    marker: dict[str, str | None] = {"src/project_kit/__init__.py": ""} if source else {}
     _commit(
         repo,
         "seed",
@@ -77,6 +80,7 @@ def _kit(repo: Path) -> Path:
             ".pkit/adapters/claude-code/package.yaml": _PACKAGE.format(version="0.5.0"),
             "src/seed.txt": "x\n",
             _CHANGESET: "component: backbone\nkind: minor\nbody: A note.\n",
+            **marker,
         },
     )
     return repo / ".pkit"
@@ -298,13 +302,13 @@ def test_the_command_passes_a_merge_with_no_release_commit(
 # --- `pkit release merge` at its request -----------------------------------------
 
 
-def _origin(tmp_path: Path) -> tuple[Path, Path, str]:
+def _origin(tmp_path: Path, *, source: bool = False) -> tuple[Path, Path, str]:
     """A bare `origin`, and a clone of it holding the source kit on `main`;
-    the clone's root, the origin, and `main`'s head."""
+    the clone's root, the origin, and `main`'s head. `source` as for `_kit`."""
     origin = tmp_path / "origin.git"
     _git(tmp_path, "init", "-q", "--bare", "-b", "main", str(origin))
     clone = tmp_path / "clone"
-    _kit(clone)
+    _kit(clone, source=source)
     _git(clone, "remote", "add", "origin", str(origin))
     _git(clone, "push", "-q", "origin", "main")
     return clone, origin, _git(clone, "rev-parse", "HEAD")
@@ -337,12 +341,15 @@ def _body(plan: str) -> str:
     return f"Automated release PR.\n\n{release.plan_commit_line(plan)}\n"
 
 
-def _released(tmp_path: Path, **extra: str | None) -> tuple[Path, Path, str, str]:
-    """A release PR open on `origin`, planned from `main`'s head; the clone,
-    the origin, the plan's commit and the PR's head."""
-    clone, origin, plan = _origin(tmp_path)
+def _released(
+    tmp_path: Path, *, source: bool = False, extra: dict[str, str | None] | None = None
+) -> tuple[Path, Path, str, str]:
+    """A release PR open on `origin`, planned from `main`'s head, its release
+    commit holding `extra` beside the release step's writes; the clone, the
+    origin, the plan's commit and the PR's head. `source` as for `_kit`."""
+    clone, origin, plan = _origin(tmp_path, source=source)
     _git(clone, "checkout", "-q", "-b", BRANCH)
-    head = _release(clone, plan, extra=extra or None)
+    head = _release(clone, plan, extra=extra)
     _git(clone, "checkout", "-q", "main")
     _open(clone, head)
     return clone, origin, plan, head
@@ -430,6 +437,65 @@ def test_a_base_the_remote_does_not_have_merges_nothing(tmp_path: Path) -> None:
     with pytest.raises(release.click.ClickException) as exc:
         release.release_pr_problem(pr, clone)
     assert "refs/heads/trunk" in str(exc.value) and "Nothing was merged." in str(exc.value)
+
+
+# --- A release PR records release versions alone (ADR-089 point 3) ----------------
+
+_CANDIDATE_VERSION: dict[str, str | None] = {".pkit/VERSION": "1.6.0rc1\n"}
+
+
+def test_a_release_pr_recording_a_pre_release_lands_sound_and_is_refused(tmp_path: Path) -> None:
+    """In the methodology's source repository: the predicate passes it, since
+    `apply` writes the backbone's `VERSION` whole, so only this refusal stops it."""
+    clone, _, plan, head = _released(tmp_path, source=True, extra=_CANDIDATE_VERSION)
+    pr = _pr(head, _body(plan))
+
+    assert release.release_pr_problem(pr, clone) is None
+    assert [each.named for each in release.release_pr_pre_releases(pr, clone)] == [
+        ".pkit/VERSION: backbone at 1.6.0rc1"
+    ]
+
+
+def test_each_pre_release_a_release_pr_records_is_named(tmp_path: Path) -> None:
+    package = _PACKAGE.format(version="0.6.0rc1")
+    clone, _, plan, head = _released(
+        tmp_path,
+        source=True,
+        extra={**_CANDIDATE_VERSION, ".pkit/adapters/claude-code/package.yaml": package},
+    )
+
+    recorded = release.release_pr_pre_releases(_pr(head, _body(plan)), clone)
+
+    assert [(each.component, each.path, each.version) for each in recorded] == [
+        ("backbone", ".pkit/VERSION", "1.6.0rc1"),
+        ("claude-code", ".pkit/adapters/claude-code/package.yaml", "0.6.0rc1"),
+    ]
+
+
+def test_a_release_pr_recording_release_versions_passes(tmp_path: Path) -> None:
+    clone, _, plan, head = _released(tmp_path, source=True)
+    assert release.release_pr_pre_releases(_pr(head, _body(plan)), clone) == []
+
+
+def test_the_head_is_fetched_where_the_clone_does_not_hold_it(tmp_path: Path) -> None:
+    clone, origin, plan = _origin(tmp_path, source=True)
+    maker = tmp_path / "maker"
+    _git(tmp_path, "clone", "-q", str(origin), str(maker))
+    sign_nothing(maker)
+    _git(maker, "config", "user.email", "t@example.com")
+    _git(maker, "config", "user.name", "T")
+    head = _release(maker, plan, extra=_CANDIDATE_VERSION)
+    _open(maker, head)
+
+    recorded = release.release_pr_pre_releases(_pr(head, _body(plan)), clone)
+
+    assert [each.version for each in recorded] == ["1.6.0rc1"]
+
+
+def test_an_adopters_release_pr_recording_a_pre_release_passes(tmp_path: Path) -> None:
+    """Outside the methodology's source repository the refusal binds nothing."""
+    clone, _, plan, head = _released(tmp_path, extra=_CANDIDATE_VERSION)
+    assert release.release_pr_pre_releases(_pr(head, _body(plan)), clone) == []
 
 
 # --- `pkit release apply` prints the line ----------------------------------------
