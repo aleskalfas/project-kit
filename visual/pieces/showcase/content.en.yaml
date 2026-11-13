@@ -78,8 +78,10 @@ slides:
       # The lead's order runs across: what the project writes down as data, what the AI
       # tool gets from it, and what a call then meets. Each row is one of the three places
       # an agent's limits come from, read in that order; the column heads number the steps,
-      # so the order holds without arrows, in either language.
-      use: piece/matrix
+      # so the order holds without arrows, in either language. The table sets no inset of
+      # its own, so its first column starts on the title's edge.
+      use: starter/table
+      inset: none
       rows:
         - id: steps
           cells:
