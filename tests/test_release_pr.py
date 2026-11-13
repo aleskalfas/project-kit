@@ -40,6 +40,10 @@ CAPABILITY_FLOOR = "requires_capabilities project-management floor raised to >=0
 BOUND = "requires_capabilities living-docs upper bound widened to <2.0.0 (runs on 1.0.0)"
 WARNING = "backbone migration dir 2.2.0 does not match the computed backbone release 2.1.0"
 
+#: The commit the release's plan read, and the trailer line naming it (ADR-092 point 6).
+PLAN_COMMIT = "0123456789abcdef0123456789abcdef01234567"
+TRAILER = release.plan_commit_line(PLAN_COMMIT)
+
 
 def _plan(*, warnings: list[str] | None = None) -> dict[str, Any]:
     """A plan shaped as `pkit release plan --json` prints one: a backbone move, a
@@ -108,7 +112,9 @@ def _changelog(*entries: str) -> str:
 
 
 def _body(plan: dict[str, Any], changelog: str, branch: str = BRANCH) -> str:
-    return release_pr.pull_request_body(plan, changelog, branch=branch, repository_url=REPOSITORY)
+    return release_pr.pull_request_body(
+        plan, changelog, branch=branch, repository_url=REPOSITORY, trailer=TRAILER
+    )
 
 
 # --- A description that fits ------------------------------------------------
@@ -135,8 +141,21 @@ def test_a_description_that_fits_holds_the_changelogs_new_section() -> None:
             "- A new entry (#1).",
             "",
             "",
+            TRAILER,
+            "",
         ]
     )
+
+
+def test_the_description_ends_with_the_trailer_line_whether_the_section_fits_or_not() -> None:
+    """Last, so `pkit release merge` and the queue's check read the commit the
+    plan read from the body, and the squash commit's message, whole (ADR-092
+    point 6)."""
+    for changelog in (_changelog("A new entry."), _too_long()):
+        body = _body(_plan(), changelog)
+
+        assert body.endswith(f"\n{TRAILER}\n")
+        assert release.plan_commits_named(body) == [PLAN_COMMIT]
 
 
 def test_without_warnings_the_description_has_no_warnings_section() -> None:
@@ -231,7 +250,9 @@ def test_the_link_names_the_branch_a_run_pushed() -> None:
 
 
 def test_without_a_repository_address_the_pointer_names_the_file_and_branch() -> None:
-    body = release_pr.pull_request_body(_plan(), _too_long(), branch=BRANCH, repository_url=None)
+    body = release_pr.pull_request_body(
+        _plan(), _too_long(), branch=BRANCH, repository_url=None, trailer=TRAILER
+    )
 
     assert f"Read it as the first section of `CHANGELOG.md` on `{BRANCH}`." in body
     assert "](" not in body
@@ -335,6 +356,8 @@ def test_the_command_writes_the_description_as_the_workflow_runs_it(tmp_path: Pa
             BRANCH,
             "--repository-url",
             REPOSITORY,
+            "--trailer",
+            TRAILER,
         ],
         cwd=tmp_path,
         capture_output=True,
@@ -353,9 +376,112 @@ def test_a_plan_that_cannot_be_read_is_refused(
     plan = tmp_path / "plan.json"
     plan.write_text("[]", encoding="utf-8")
 
-    assert release_pr.main(["body", "--plan", str(plan), "--branch", BRANCH]) == 1
+    assert (
+        release_pr.main(["body", "--plan", str(plan), "--branch", BRANCH, "--trailer", TRAILER])
+        == 1
+    )
 
     assert "is no JSON object" in capsys.readouterr().err
+
+
+def test_a_trailer_that_is_not_the_line_alone_is_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps(_plan()), encoding="utf-8")
+    args = ["body", "--plan", str(plan), "--branch", BRANCH, "--trailer", f"{TRAILER} and more"]
+
+    assert release_pr.main(args) == 1
+
+    assert "is not the trailer line alone" in capsys.readouterr().err
+
+
+# --- The trailer line `pkit release apply` printed ------------------------------
+
+
+def test_the_trailer_is_the_one_line_apply_printed(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    printed = tmp_path / "apply.txt"
+    printed.write_text(f"Backbone: 2.0.0 -> 2.1.0\n{TRAILER}\n", encoding="utf-8")
+
+    assert release_pr.main(["trailer", "--apply-output", str(printed)]) == 0
+
+    assert capsys.readouterr().out == f"{TRAILER}\n"
+
+
+@pytest.mark.parametrize(
+    "printed",
+    [
+        "No pending changesets move a version — nothing to release.\n",
+        f"{TRAILER}\n{release.plan_commit_line('f' * 40)}\n",
+    ],
+    ids=["none", "two"],
+)
+def test_apply_output_without_one_trailer_line_is_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], printed: str
+) -> None:
+    output = tmp_path / "apply.txt"
+    output.write_text(printed, encoding="utf-8")
+
+    assert release_pr.main(["trailer", "--apply-output", str(output)]) == 1
+
+    assert "trailer lines naming the commit its plan read, not one" in capsys.readouterr().err
+
+
+# --- The open release pull requests: the way on --------------------------------
+
+
+def _listed(number: int, branch: str, body: str) -> dict[str, Any]:
+    return {"number": number, "headRefName": branch, "body": body}
+
+
+def test_a_release_pr_planned_from_the_head_is_current_and_every_other_stale() -> None:
+    """A release PR planned from an older head, or naming none, is stale, and
+    a PR on any other branch is no release PR at all."""
+    older = release.plan_commit_line("f" * 40)
+    listed = [
+        _listed(7, "release/v2.1.0", f"Bumps.\n\n{TRAILER}\n"),
+        _listed(8, "release/v2.0.9", f"Bumps.\n\n{older}\n"),
+        _listed(9, "release/41", "Opened before the trailer existed.\n"),
+        _listed(10, "feat/1-thing", f"{older}\n"),
+    ]
+
+    assert release_pr.open_release_pull_requests(listed, PLAN_COMMIT) == ([7], [8, 9])
+
+
+def test_a_body_naming_the_head_beside_another_commit_is_stale() -> None:
+    body = f"{TRAILER}\n{release.plan_commit_line('f' * 40)}\n"
+
+    assert release_pr.open_release_pull_requests([_listed(7, BRANCH, body)], PLAN_COMMIT) == (
+        [],
+        [7],
+    )
+
+
+def test_the_command_prints_current_and_stale_for_the_workflow(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    prs = tmp_path / "open.json"
+    prs.write_text(
+        json.dumps([_listed(7, BRANCH, TRAILER), _listed(8, "release/v2.0.9", "")]),
+        encoding="utf-8",
+    )
+
+    assert release_pr.main(["open", "--prs", str(prs), "--head", PLAN_COMMIT]) == 0
+
+    assert capsys.readouterr().out == "current=7\nstale=8\n"
+
+
+def test_a_listing_that_is_not_the_one_asked_for_is_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    prs = tmp_path / "open.json"
+    prs.write_text(json.dumps([{"number": 7}]), encoding="utf-8")
+
+    assert release_pr.main(["open", "--prs", str(prs), "--head", PLAN_COMMIT]) == 1
+
+    assert "lacks its number, branch or body" in capsys.readouterr().err
 
 
 # --- The workflow --------------------------------------------------------------
@@ -390,3 +516,33 @@ def test_the_description_is_built_after_the_apply_and_before_the_push() -> None:
     assert apply < body < run.index("git push") < run.index("gh pr create")
     assert '--branch "${branch}"' in run
     assert '--body-file "${body}"' in run
+
+
+def test_a_release_pr_planned_from_an_older_head_is_closed_before_the_branch_is_derived() -> None:
+    """The way on (ADR-092 point 6): the run reads the open PRs' bodies,
+    closes each stale one with its branch, and skips only for a current one."""
+    steps = _steps()
+    existing = steps[_index(steps, "scripts/release_pr.py open")]
+    run = existing["run"]
+
+    assert existing["id"] == "existing"
+    assert "gh pr list --state open --json number,headRefName,body" in run
+    assert '--head "${head}"' in run and 'head="$(git rev-parse HEAD)"' in run
+    assert run.index("scripts/release_pr.py open") < run.index(
+        'gh pr close "${number}" --delete-branch'
+    )
+    assert 'echo "count=${count}" >> "$GITHUB_OUTPUT"' in run
+    assert _index(steps, "scripts/release_pr.py open") < _index(
+        steps, "scripts/release_pr.py branch"
+    )
+
+
+def test_the_release_commit_and_the_body_carry_the_line_apply_printed() -> None:
+    steps = _steps()
+    run = steps[_index(steps, "scripts/release_pr.py body")]["run"]
+
+    apply = run.index('uv run pkit release apply --yes | tee "${applied}"')
+    trailer = run.index('scripts/release_pr.py trailer --apply-output "${applied}"')
+    assert apply < trailer < run.index("scripts/release_pr.py body")
+    assert '--trailer "${trailer}"' in run
+    assert 'git commit -m "${title}" -m "${trailer}"' in run

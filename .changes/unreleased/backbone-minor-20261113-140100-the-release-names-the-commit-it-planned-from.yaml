@@ -1,0 +1,9 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit release apply` prints a `Release-plan-commit:` line naming the commit
+  it planned from, for the release commit and its pull request to carry, and
+  `pkit release check-queue` checks each release a merge queue is about to
+  merge.

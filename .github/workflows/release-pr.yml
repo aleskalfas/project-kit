@@ -67,17 +67,31 @@ jobs:
         if: steps.plan.outputs.empty == 'true'
         run: echo "No pending changesets move a version — nothing to release."
 
-      # Idempotency: if a release PR is already open (any head under release/),
-      # do not open a second one — a human is already reviewing it.
-      - name: Skip if a release PR is already open
+      # The way on (ADR-092 point 6). A release PR (any head under release/)
+      # whose body's trailer line names main's head, the commit this run plans
+      # from, is the one a human reviews: the run opens no second. Every other
+      # one was planned from an older head, or names none, so `pkit release
+      # merge` refuses it: the run closes it, deletes its branch, and opens one
+      # planned from this head (scripts/release_pr.py).
+      - name: Replace a release PR planned from an older head
         id: existing
         if: steps.plan.outputs.empty != 'true'
         run: |
-          open="$(gh pr list --state open --json headRefName \
-            --jq '[.[] | select(.headRefName | startswith("release/"))] | length')"
-          echo "count=${open}" >> "$GITHUB_OUTPUT"
-          if [ "${open}" != "0" ]; then
-            echo "A release PR is already open — skipping."
+          set -euo pipefail
+          head="$(git rev-parse HEAD)"
+          prs="${RUNNER_TEMP}/open-prs.json"
+          gh pr list --state open --json number,headRefName,body > "${prs}"
+          found="$(uv run python scripts/release_pr.py open --prs "${prs}" --head "${head}")"
+          current="$(printf '%s\n' "${found}" | sed -n 's/^current=//p')"
+          stale="$(printf '%s\n' "${found}" | sed -n 's/^stale=//p')"
+          for number in ${stale}; do
+            gh pr close "${number}" --delete-branch --comment "Replaced by a release planned from ${head}, the head of main: this one was planned from an older head, so \`pkit release merge\` refuses it (ADR-092 point 6)."
+          done
+          count=0
+          for number in ${current}; do count=$((count + 1)); done
+          echo "count=${count}" >> "$GITHUB_OUTPUT"
+          if [ "${count}" != "0" ]; then
+            echo "A release PR planned from ${head} is already open — skipping."
           fi
 
       # The release branch, from the computed backbone version: release/v<version>,
@@ -113,8 +127,12 @@ jobs:
 
           # Write versions + CHANGELOG and consume the changesets. No tag here:
           # the tag points at the MERGED release commit and is cut post-merge by
-          # release-tag.yml (PRJ-004 / .pkit/release/README.md).
-          uv run pkit release apply --yes
+          # release-tag.yml (PRJ-004 / .pkit/release/README.md). `apply` prints
+          # the trailer line naming the commit its plan read, which the release
+          # commit and the PR's body carry (ADR-092 point 6).
+          applied="${RUNNER_TEMP}/apply.txt"
+          uv run pkit release apply --yes | tee "${applied}"
+          trailer="$(uv run python scripts/release_pr.py trailer --apply-output "${applied}")"
 
           # PR body, built before the push, so a body that cannot be built leaves
           # no branch behind: the computed bumps, each with the requires_backbone
@@ -122,18 +140,18 @@ jobs:
           # capabilities a changeset declared for it (the lines `pkit release
           # plan` prints), any migration-dir prediction warnings (#465), and the
           # freshly generated changelog entry (the top block of CHANGELOG.md) for
-          # review. Where that entry would take the body past the 65,536
-          # characters GitHub keeps in a PR's description, a link to CHANGELOG.md
-          # on the release branch takes its place, and the bumps and warnings stay
-          # whole (scripts/release_pr.py). A range on a capability that excludes
-          # a dependency's version never reaches here: the plan step refuses it
-          # (PRJ-002 D4).
+          # review, then the trailer line. Where that entry would take the body
+          # past the 65,536 characters GitHub keeps in a PR's description, a link
+          # to CHANGELOG.md on the release branch takes its place, and the bumps,
+          # the warnings and the trailer line stay whole (scripts/release_pr.py).
+          # A range on a capability that excludes a dependency's version never
+          # reaches here: the plan step refuses it (PRJ-002 D4).
           body="${RUNNER_TEMP}/pr-body.md"
-          uv run python scripts/release_pr.py body --plan "${plan}" --branch "${branch}" --repository-url "${REPOSITORY_URL}" > "${body}"
+          uv run python scripts/release_pr.py body --plan "${plan}" --branch "${branch}" --repository-url "${REPOSITORY_URL}" --trailer "${trailer}" > "${body}"
 
           title="chore(release): v${version:-$(date -u +%Y-%m-%d)}"
           git add -A
-          git commit -m "${title}"
+          git commit -m "${title}" -m "${trailer}"
           git push --set-upstream origin "${branch}"
 
           gh pr create --base main --head "${branch}" --title "${title}" --body-file "${body}"
