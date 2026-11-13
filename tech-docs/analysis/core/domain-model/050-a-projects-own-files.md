@@ -34,6 +34,7 @@ pkit:
         - ADR-065#4
         - ADR-089#6
         - ADR-089#7
+        - ADR-092#7
       artefact:
         - TERM-project-owned-content
         - TERM-seeding
@@ -260,25 +261,27 @@ A version pin is a project-owned file, `.pkit/version-pin`, that names a [releas
 - `pkit upgrade` writes it at the release it brought the project to, unless asked not to ([ADR-064 point 1](../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#1-the-default-pin)).
 - A version pin that names a release candidate asks for it, so an upgrade moves the project to that candidate (ADR-089 point 6).
 - A move to a release candidate always pins the project, and so does a first [install](../glossary.md#term-install--install) run by a release candidate ([ADR-089 point 7](../../../architecture/decisions/ADR-089-release-candidates.md#7-an-upgrade-or-an-init-refuses-a-candidate-nobody-asked-for-and-a-move-to-a-candidate-always-pins)).
+- Where the project's [manifest](../glossary.md#term-manifest--manifest) records a release candidate, no raise moves the pin to another release ([ADR-092 point 7](../../../architecture/decisions/ADR-092-final-release-from-head.md#7-a-project-on-a-candidate-moves-to-no-other-release)). There `pkit unpin` refuses to remove it (ADR-089 point 7).
 - It is no [recorded version](../glossary.md#term-recorded-version--recorded-version): it directs which release runs, where a recorded version records the content held ([ADR-049 point 1](../../../architecture/decisions/ADR-049-per-project-version-pin.md#1-pin-source-a-dedicated-project-owned-directive-file)).
 - The [methodology](../glossary.md#term-methodology--methodology)'s [source repository](../glossary.md#term-source-repository--source-repository) is never pinned ([ADR-064 point 3](../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#3-what-the-default-does-not-reach)).
 
-**States:** A project has no pin until `pkit pin` or `pkit upgrade` writes one, or a first install run by a release candidate does. A later pin may raise it, and `pkit unpin` removes it (ADR-049 point 3, ADR-064 point 1, ADR-089 point 7).
+**States:** A project has no pin until `pkit pin` or `pkit upgrade` writes one, or a first install run by a release candidate does. A later pin may raise it, and `pkit unpin` removes it (ADR-049 point 3, ADR-064 point 1, ADR-089 point 7). Where the manifest records a release candidate, the pin is raised to no other release, and stays (ADR-092 point 7).
 
 ```mermaid
 stateDiagram-v2
   accTitle: The states of a version pin
-  accDescr: A project has no pin until pkit pin or pkit upgrade writes one, or a first install run by a release candidate does. A pin may be raised to a later release or release candidate, and pkit unpin removes it.
+  accDescr: A project has no pin until pkit pin or pkit upgrade writes one, or a first install run by a release candidate does. A pin may be raised to a later release or release candidate, and pkit unpin removes it. Where the manifest records a release candidate, the pin is raised to no other release, and pkit unpin does not remove it.
   [*] --> absent
   absent --> present : pkit pin, pkit upgrade or a candidate's first install writes it
-  present --> present : it is raised to a later release or release candidate
-  present --> absent : pkit unpin removes it
+  present --> present : it is raised to a later release or release candidate, never off a release candidate the manifest records
+  present --> absent : pkit unpin removes it, save where the manifest records a release candidate
 ```
 
 **Always true:**
 
 - It is written last, after the content and the [migrations](../glossary.md#term-migration--migration), so it never runs ahead of the content (ADR-049 point 1, ADR-064 point 1).
 - It is never lowered: naming an older release is refused (ADR-049 point 3).
+- Where the manifest records a release candidate, the pin is raised to no other release, and is not removed (ADR-089 point 7, ADR-092 point 7).
 - `pkit sync` writes no pin, and `pkit init` writes one only where a release candidate runs it (ADR-064 point 3).
 
 ## Router
