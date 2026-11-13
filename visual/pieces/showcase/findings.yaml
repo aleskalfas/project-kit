@@ -8,12 +8,10 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 1042dabe940729604d45bd81ab98ecda60cd8885499323ae9a67f42fcc96e2b9
+  value: 16ddc3322a8d5c956c9e12493d33210e67b6d648c7a02d60c16357e3e156815a
   inputs:
     - file: components/capability.yaml
       sha256: 49ab721151fd9313be944c5458fc6137819d61fbbe1d0bed713a7f6e0c385b4a
-    - file: components/matrix.yaml
-      sha256: f24ac4b285686812f7ed666565be0bd2baa2237684cc8d5864c42232106b0bcf
     - file: components/pyramid.yaml
       sha256: 00024af81b28a51c2444d01eedca562c9e68741a594031e8e713e46cedeecbef
     - file: components/slot.yaml
@@ -23,9 +21,9 @@ key:
     - file: components/wiring.yaml
       sha256: 36623a694e67be519da4a4e36226e472059b220cace3806e036aad50673f4fb0
     - file: content.cs.yaml
-      sha256: cd61570d8cb9e58fc8c3c224c115b5891d09fdb1537011a3c59e68c6f8525279
+      sha256: 448134cc2ab756d2699e5f14656b587522ea163b0a667c840ed0ff0a4c340b04
     - file: content.en.yaml
-      sha256: 4d3ba2503a6bd0c1d22606153abc95d8db098634b8fb53908d20631779ce6297
+      sha256: aefbe948a79038b73cac1a94260eca5ce020c521fb2f9f7947d0c4f7baa52daa
     - file: piece.yaml
       sha256: 18bc7cb9651de9477c5c8e6d0572256c7507de7eb917513a63338eb5dc33fc49
     - library: foundations
@@ -115,7 +113,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: 7d00c8dbd1d58fdd71f3f2a0e215a6c2c1f053af1dad6e2d6e4b8df2c9d94bff
+      sha256: 2d0aa0013191445e17c5306bc5edea66514ae573e7b79f9c9ad22c40003a0edf
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -203,7 +201,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/table.yaml
-      sha256: 17c7cb7ef1bd3b10f06039417e79edf02b77803c234dbc15441db61daa4918bc
+      sha256: dca1cef275ae4826bec65697c9707bdd885a3ff685691e9c4f3fe0dc83045d5a
     - library: starter
       version: 1.1.0
       path: components/tag.yaml
@@ -286,7 +284,7 @@ findings:
     where: deck/slides[install]/visual/under/panels#2/under
   - code: component-experimental
     level: fact
-    message: 'the piece uses `piece/matrix`, which is experimental: its library may still change it in any release'
+    message: 'the piece uses `starter/table`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[permissions]/visual
   - code: component-experimental
