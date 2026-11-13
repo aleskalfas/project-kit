@@ -100,9 +100,9 @@ def test_pending_scripts_ignores_non_versioned_dirs(tmp_path: Path) -> None:
     ("lower", "target", "folders"),
     [
         pytest.param("0.54.2", "0.55.0rc1", ["0.55.0"], id="a-candidate-runs-its-final-folder"),
-        pytest.param("0.55.0rc1", "0.55.0", ["0.55.0"], id="from-a-candidate-the-folder-again"),
-        pytest.param("0.55.0rc1", "0.55.0rc2", ["0.55.0"], id="between-candidates-again"),
-        pytest.param("0.55.0rc1", "0.56.0", ["0.55.0", "0.56.0"], id="whole-and-past-it"),
+        pytest.param("0.55.0rc1", "0.55.0", ["0.55.0"], id="a-candidate-bound-below-its-folder"),
+        pytest.param("0.55.0rc1", "0.55.0rc2", ["0.55.0"], id="a-candidate-bound-to-a-candidate"),
+        pytest.param("0.55.0rc1", "0.56.0", ["0.55.0", "0.56.0"], id="a-candidate-bound-past-it"),
         pytest.param("0.55.0", "0.55.0", [], id="at-the-final-release-nothing"),
         pytest.param("0.54.0+x", "0.55.0", ["0.55.0"], id="a-local-segment-reads-dropped"),
         pytest.param("v0.54.0", "0.55.0", ["0.55.0"], id="a-leading-v"),
@@ -113,7 +113,7 @@ def test_the_window_reads_its_lower_bound_in_pep_440_order(
 ) -> None:
     """Each folder above the lower bound in PEP 440 order, and at or below the
     target by minor: a candidate's lower bound sits below its final release's
-    folder, which runs again whole, every script it holds."""
+    folder, so that folder is in the window with every script it holds."""
     root = tmp_path / "migrations"
     for folder in ("0.54.0", "0.55.0", "0.56.0", "0.57.0"):
         _stage_script(root, folder, "001-a.sh", "#!/usr/bin/env bash\nexit 0\n")

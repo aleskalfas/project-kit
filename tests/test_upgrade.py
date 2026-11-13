@@ -2774,11 +2774,11 @@ def test_a_recorded_version_is_compared_as_a_public_version(
     assert upgrade.as_recorded_version(recorded) == str(Version(Version(recorded).public))
 
 
-def test_a_capability_recorded_at_its_candidate_moves_to_the_final_release(
+def test_a_capability_recorded_at_a_candidate_reads_below_its_final_release(
     installed_target: Path,
 ) -> None:
-    """A component recorded at the candidate of the version its bundle ships is no
-    longer read as at it, so the transition moves it (ADR-089 point 5)."""
+    """A component recorded at the candidate of the version its bundle ships compares
+    below it, as public versions do, so it is not read as at it (ADR-089 point 5)."""
     source = install.find_source_kit()
     bundled = manifest.read_component_package(source / "capabilities" / "evidence" / "package.yaml")
     assert bundled is not None

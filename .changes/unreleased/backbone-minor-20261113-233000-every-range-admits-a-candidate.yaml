@@ -10,6 +10,7 @@ body: >
   pre-releases itself, so the reading no longer depends on the `packaging`
   release installed (ADR-089 point 4). An upgrade compares each recorded
   version with the version it brings as a public version, the pre-release kept
-  and a local segment dropped. So a component recorded at `0.55.0rc1` moves to
-  `0.55.0`, and a move to a candidate runs its final release's migration folder
-  (ADR-089 point 5). The lookup of the latest release still picks no candidate.
+  and a local segment dropped. So `0.55.0rc1` reads below `0.55.0`, a version
+  such as `0.6.0+x` reads as `0.6.0`, and a move to a candidate runs its final
+  release's migration folder (ADR-089 point 5). The lookup of the latest
+  release still picks no candidate.

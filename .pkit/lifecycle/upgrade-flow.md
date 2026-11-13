@@ -107,7 +107,7 @@ Otherwise upgrade runs, to finish what is not, even at the same backbone version
 
 - **A move to a candidate,** such as `0.55.0rc1`, runs the folder of its final release, `0.55.0/`.
 - **For a release version,** the window holds the minors above the one recorded.
-- **Public versions:** every comparison of a recorded version with the version the target ships, the early return's among them, reads both as public versions. The pre-release is kept and a local segment dropped, so `0.55.0rc1` to `0.55.0` is a move, and `0.6.0+x` reads as `0.6.0`.
+- **Public versions:** every comparison of a recorded version with the version the target ships, the early return's among them, reads both as public versions. The pre-release is kept and a local segment dropped, so `0.55.0rc1` reads below `0.55.0`, and `0.6.0+x` reads as `0.6.0`.
 
 **The report and the dry run** name the target, each component's move, and the replay where no completion is recorded. They list each component's migrations, each collision the upgrade asks about, and each question it would ask. `--dry-run` asks nothing and writes nothing.
 
