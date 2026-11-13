@@ -57,6 +57,7 @@ pkit:
         - ADR-089#9
         - ADR-092#2
         - ADR-092#3
+        - ADR-092#4
         - ADR-092#5
         - ADR-092#6
         - ADR-092#8
@@ -144,7 +145,7 @@ pkit:
   - **The commit.** The system commits `chore(release): v<candidate>` on no branch, and puts the annotated tag `v<candidate>` on that commit.
   - **The wheel.** The CI pipeline builds the wheel from that commit, installs it alone, and checks that its `pkit --version` names the candidate ([ADR-089 point 9](../../../../../architecture/decisions/ADR-089-release-candidates.md#9-a-candidate-is-cut-by-the-release-workflows-pre-release-run-and-notes-past-the-hosts-caps-are-linked)).
   - **The tag.** Only then does the CI pipeline push the tag, alone. On this path, the CI pipeline forces no push and deletes no tag. So a release candidate's tag, once pushed, keeps one content ([ADR-092 point 10](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#10-a-run-on-a-branch-runs-that-branchs-code-so-its-checks-guard-against-mistakes-alone)).
-  - **The notes.** It runs `pkit release publish-notes <candidate>`. The system reads the notes from `CHANGELOG.md` at the tag, and sets GitHub's pre-release mark on the release candidate's GitHub release (ADR-089 point 9).
+  - **The notes.** It runs `pkit release publish-notes <candidate>`. The system reads the notes from `CHANGELOG.md` at the tag, and sets GitHub's pre-release mark on the release candidate's GitHub release (ADR-089 point 9). The notes end with how to try the candidate, `pkit pin <candidate>` beside the first hop ([ADR-092 point 4](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#4-a-withdrawal-is-a-tag-which-pkit-upgrade---pre-passes-by-and-pkit-pin-warns-of)).
 - **1h.** On the path of 1g, the system refuses the cut before it writes anything, and says why. The run pushes nothing, and the use case ends. The system refuses where one of these holds:
   - `HEAD` names no commit, as in a clone with none yet.
   - The default branch's head on the remote is not in the history of the commit the cut runs at ([ADR-092 point 2](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#2-a-candidate-is-cut-from-a-commit-that-has-the-default-branchs-head-in-its-history)).
