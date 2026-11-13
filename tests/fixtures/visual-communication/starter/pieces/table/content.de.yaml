@@ -39,3 +39,28 @@ pages:
           cells:
             - {id: size, text: Telefon}
             - {id: width, text: So breit wie ein aufrecht gehaltenes Telefon.}
+
+  # Ohne eigenen Einzug, wie auf einer Folie, deren Rand die Folie hält: Kopf und Zeilen
+  # reichen an die Kanten des Raums, den die Tabelle bekommt.
+  - id: no-inset
+    layout: standard
+    main:
+      use: starter/table
+      inset: none
+      head: Wo die Zeilen einer Tabelle stehen
+      rows:
+        - id: names
+          cells:
+            - {id: place}
+            - {id: rows, head: Ihre Zeilen}
+            - {id: inset, head: Ihr Einzug}
+        - id: page
+          cells:
+            - {id: place, head: Eine Webseite}
+            - {id: rows, text: Im Einzug der Tabelle.}
+            - {id: inset, text: Der Einzug der Tabelle.}
+        - id: slide
+          cells:
+            - {id: place, head: Eine Folie}
+            - {id: rows, text: Auf dem Folienrand.}
+            - {id: inset, text: Der Rand der Folie.}
