@@ -7,5 +7,6 @@ body: >
   one link, the document in its reading order, each line ending with what the
   engine used up at its break, a picture's text an element at the picture's
   frame, and nothing of it reported dropped. It is record text only, and
-  nothing you run changes. The Task that gives a reader the reading order and
-  the Task of links and alternative text carry the real changesets.
+  nothing you run changes. The three Tasks that build DEC-033's changes, a
+  text's structure and a reading order, a run's link and structure, and a
+  picture's text, carry the real changesets.
