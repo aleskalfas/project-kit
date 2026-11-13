@@ -70,12 +70,12 @@ The test ran in Chrome 157, on one Mac set to dark. It read the showcase deck's 
 
 ### 4. Its first read checks that the forced palette reached the text
 
-- **The same planted page, its checks unchanged.** Its mode boxes and its spans with no paint are kept out of forcing. So the reads name every planted fault, as in the first start (DEC-020 point 7).
+- **The same planted file and its pages, its checks unchanged.** Its mode boxes and its spans with no paint are kept out of forcing. So the reads name, and leave unnamed, what the first start does (DEC-020 point 7; refinement per [visual-communication:DEC-037-text-the-page-hides] point 5).
 - **Each signal by its own box.** A change of scheme repaints the whole page under the flag, so the check that each signal repaints judges each by its own mode box.
-- **One more span with no paint, left to forcing,** must show ink in each forced palette. Where it shows none, the forced palette did not reach the text, so the run stops.
+- **One more text with no paint, left to forcing,** of two lines at a step below its font's height, its first line with descenders, on the file's grounds and kept out of the backplate. Each line must show ink in each forced palette, and neither may be named in `dropped`, or the run stops. Where a line shows none, the forced palette did not reach the text (refinement per [visual-communication:DEC-039-forced-colours-grounds-and-edges] point 5).
 - **Each forced palette is what its name says:** its ground lighter than its text in the light one, and darker in the dark, as the browser gives them. Otherwise the run stops.
 - **A stop of this start stops the run,** with no image, as any start's stop does (DEC-020 point 8). Beside the ways on that point names, it names a run without forced colours.
-- **The four reads run in each forced image,** as in each key drawn (DEC-023 point 6). Under a forced palette every text takes its text colour. So the ink read names what that palette's reader loses: a span off its page, or one that drew nothing.
+- **The four reads run in each forced image,** as in each key drawn (DEC-023 point 6). Under a forced palette every text takes its text colour. So the ink read names what that palette's reader loses: a span off its page, one the page's edge cuts, or one that drew nothing. The read of the page drawn whole names there a span a later part covers, a text's ground among them (refinement per [visual-communication:DEC-037-text-the-page-hides] points 1 and 3).
 
 ### 5. How the images and the report name the forced palette
 

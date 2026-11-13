@@ -1,7 +1,7 @@
 ---
 id: DEC-037
 title: A text another part covers, or the page's edge cuts, is reported as dropped
-status: proposed
+status: accepted
 date: 2026-11-13
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

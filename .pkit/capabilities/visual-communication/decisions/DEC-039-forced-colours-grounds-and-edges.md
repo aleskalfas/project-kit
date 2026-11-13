@@ -1,7 +1,7 @@
 ---
 id: DEC-039
 title: Under forced colours, the HTML renderer's file draws its texts' grounds, and a fill's edge lies inside the fill
-status: proposed
+status: accepted
 date: 2026-11-13
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
