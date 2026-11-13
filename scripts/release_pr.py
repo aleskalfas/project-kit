@@ -18,7 +18,8 @@ printed and for the pull request's description, before it pushes:
   tag on `origin` with no GitHub Release lacks its notes: the run that pushed it
   stopped before it published them. The script names the version of each such
   tag, oldest first, and the workflow publishes their notes before anything
-  else.
+  else. A tag below the oldest tag that has a Release predates the notes, which
+  no run left, so the script passes it by.
 - **The open release pull requests** (ADR-092 point 6, the way on). A release
   pull request whose body's trailer line names the default branch's head, the
   commit this run plans from, is the one a person reviews, so the run opens no
@@ -236,17 +237,29 @@ def unpublished(ls_remote_output: str, released: Collection[str]) -> list[str]:
     """The version of each release or candidate tag `git ls-remote --tags` lists, one
     `<object id>\\t<ref>` a line, with no Release: its tag is none of `released`,
     the tags the Releases are on. Oldest first in PEP 440's order, so each
-    candidate comes before the release of its version."""
+    candidate comes before the release of its version.
+
+    A tag below the oldest listed tag that has a Release predates the notes, so
+    it is passed by: no run left its notes unpublished."""
     versions: dict[str, tuple[int, ...]] = {}
     for line in ls_remote_output.split("\n"):
         _, tab, ref = line.removesuffix("\r").partition("\t")
         match = _RELEASE_TAG_RE.fullmatch(ref) if tab else None
-        if match is None or f"v{match.group(1)}" in released:
+        if match is None:
             continue
         major, minor, patch, number = match.group(2, 3, 4, 5)
         final = (1, 0) if number is None else (0, int(number))
         versions[match.group(1)] = (int(major), int(minor), int(patch), *final)
-    return sorted(versions, key=versions.__getitem__)
+    published = [key for version, key in versions.items() if f"v{version}" in released]
+    oldest = min(published, default=None)
+    return sorted(
+        (
+            version
+            for version, key in versions.items()
+            if f"v{version}" not in released and (oldest is None or key > oldest)
+        ),
+        key=versions.__getitem__,
+    )
 
 
 # --- The trailer line, and the open release pull requests -------------------

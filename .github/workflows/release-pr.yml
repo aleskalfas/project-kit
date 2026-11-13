@@ -16,8 +16,9 @@ name: release-pr
 #
 # Either run starts in the job `start`, which first refuses an ordinary run off
 # the default branch, then finishes the notes an earlier run left unpublished: a
-# tag on origin, of a release or a candidate, with no GitHub Release. Where that
-# fails, it says so and goes on (ADR-089 point 9; ADR-092 point 5).
+# tag on origin, of a release or a candidate, with no GitHub Release. A tag
+# below the oldest one with a Release predates the notes and is passed by.
+# Where that fails, it says so and goes on (ADR-089 point 9; ADR-092 point 5).
 #
 # The run's checks are an interlock against a mistake, not a defence: a run on
 # a branch runs that branch's workflow and the pkit it runs (ADR-092 point 10).

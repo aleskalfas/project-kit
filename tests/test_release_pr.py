@@ -510,6 +510,20 @@ def test_each_release_and_candidate_tag_without_a_release_is_named_oldest_first(
     assert named == ["2.3.0rc2", "2.3.0rc10", "2.3.0"]
 
 
+def test_a_tag_below_the_oldest_release_predates_the_notes_and_is_passed_by() -> None:
+    listed = _ls_remote(
+        "refs/tags/v1.134.0",
+        "refs/tags/v1.140.0",
+        "refs/tags/v1.141.0",
+        "refs/tags/v1.141.1",
+        "refs/tags/v1.142.0rc1",
+    )
+
+    named = release_pr.unpublished(listed, {"v1.141.0", "v1.142.0"})
+
+    assert named == ["1.141.1", "1.142.0rc1"]
+
+
 def test_with_every_tag_released_nothing_is_named() -> None:
     assert release_pr.unpublished(_ls_remote("refs/tags/v2.2.0"), {"v2.2.0"}) == []
     assert release_pr.unpublished("", set()) == []

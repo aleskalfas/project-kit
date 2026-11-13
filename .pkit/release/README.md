@@ -1208,8 +1208,10 @@ Every run starts in the job `start`, which:
   run that pushed it stopped before it published them. The job lists the tags
   with `git ls-remote` and the Releases with `gh api`, and
   `scripts/release_pr.py unpublished` names each such version, oldest first.
-  It runs `pkit release publish-notes` for each. Where one fails, or the
-  listing does, it warns and goes on, and the next run tries again.
+  It passes by a tag below the oldest tag that has a Release, since that tag
+  predates the notes. It runs `pkit release publish-notes` for each version it
+  names. Where one fails, or the listing does, it warns and goes on, and the
+  next run tries again.
 
 Started without the input, the job `release-pr` then:
 
