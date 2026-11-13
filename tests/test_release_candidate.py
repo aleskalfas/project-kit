@@ -360,6 +360,39 @@ def test_a_tag_this_clone_holds_already_is_refused_before_anything_is_written(
     assert _status(repo) == ""
 
 
+def test_release_check_passes_the_candidate_s_own_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`pkit release check` refuses no candidate's own commit, the one its tag names,
+    though its tree records pre-release versions (ADR-089 point 3). The cut's writes
+    touch the backbone's surface with no changeset of the diff's own, so `--skip`
+    waives the surface check here."""
+    repo = _project(tmp_path, monkeypatch)
+    assert _run("apply", "--pre", "--tag", "--yes").exit_code == 0
+
+    result = _run("check", "--base", "main", "--skip")
+
+    assert result.exit_code == 0, result.output
+    assert release.pre_releases_bound_for_the_default_branch(repo.root / ".pkit") == []
+
+
+def test_release_check_refuses_a_branch_that_took_in_a_candidate_s_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _project(tmp_path, monkeypatch)
+    assert _run("apply", "--pre", "--tag", "--yes").exit_code == 0
+    repo.checkout("main")
+    repo.checkout("feature", create=True)
+    repo.merge("v1.1.0rc1")
+
+    result = _run("check", "--base", "main", "--skip")
+
+    assert result.exit_code == 1, result.output
+    said = _said(result)
+    assert ".pkit/VERSION: backbone at 1.1.0rc1" in said
+    assert ".pkit/capabilities/houseware/package.yaml: houseware at 0.3.1rc1" in said
+
+
 def test_a_base_that_is_not_one_is_refused() -> None:
     with pytest.raises(ValueError, match="no JSON object"):
         release_candidate.parse_base("[]")

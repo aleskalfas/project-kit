@@ -1539,3 +1539,172 @@ def test_guard_from_the_checkout_itself_is_silent_and_unchanged(
     assert result.exit_code == 0, result.output
     assert "no surface-touched components" in result.stdout
     assert result.stderr == ""
+
+
+# --- The default branch holds release versions alone (ADR-089 point 3) --------
+
+_CANDIDATE_VERSIONS = {
+    ".pkit/VERSION": "1.6.0rc1\n",
+    ".pkit/adapters/claude-code/package.yaml": (
+        "schema_version: 1\ncomponent:\n  kind: adapter\n  name: claude-code\n"
+        '  version: 0.5.0rc1\nrequires_backbone: ">=0.1.0,<2.0.0"\n'
+    ),
+}
+
+
+def _make_source_repo(tmp_path: Path) -> Path:
+    """`_make_repo`, with the package source beside `.pkit/` on `main`: the
+    methodology's source repository, as the marker test finds it (ADR-059 point
+    3). `feature` starts at `main`."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    _commit_change(source_kit, "src/project_kit/__init__.py", "")
+    _git(repo, "checkout", "-q", "-B", "feature")
+    return source_kit
+
+
+def _record_pre_releases(source_kit: Path) -> None:
+    """A commit on the branch recording a candidate's versions, as one that took
+    in a candidate's commit would, with a changeset for each component it
+    touches, so the surface check passes."""
+    _add_changeset(source_kit, "backbone", "none")
+    _add_changeset(source_kit, "claude-code", "none")
+    for relpath, content in _CANDIDATE_VERSIONS.items():
+        (source_kit.parent / relpath).write_text(content, encoding="utf-8")
+    _git(source_kit.parent, "add", "-A")
+    _git(source_kit.parent, "commit", "-q", "-m", "took in a candidate's versions")
+
+
+def test_a_pre_release_bound_for_the_default_branch_is_refused_naming_each(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_source_repo(tmp_path)
+    _record_pre_releases(source_kit)
+    monkeypatch.chdir(source_kit.parent)
+    monkeypatch.delenv("PKIT_CHANGESET_SKIP", raising=False)
+
+    guard = release.check_changesets(source_kit, "main")
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert guard.surface_ok and not guard.ok
+    assert [(each.component, each.path, each.version) for each in guard.pre_releases] == [
+        ("backbone", ".pkit/VERSION", "1.6.0rc1"),
+        ("claude-code", ".pkit/adapters/claude-code/package.yaml", "0.5.0rc1"),
+    ]
+    assert result.exit_code == 1, result.output
+    assert (
+        "a pre-release version in a tree bound for the default branch, which holds release "
+        "versions alone (ADR-089 point 3):\n"
+        "  .pkit/VERSION: backbone at 1.6.0rc1\n"
+        "  .pkit/adapters/claude-code/package.yaml: claude-code at 0.5.0rc1\n"
+        "  A release candidate's versions live only in its tag, on a commit no branch holds "
+        "(ADR-089 point 1): give each file back its release version. The `skip-changeset` "
+        "label does not waive this."
+    ) in result.output
+    assert "surface change without a changeset" not in result.output
+
+
+def test_a_single_component_at_a_pre_release_is_refused(tmp_path: Path) -> None:
+    """The backbone at a release version, one component at a beta: a pre-release
+    in PEP 440's sense, whatever its suffix."""
+    source_kit = _make_source_repo(tmp_path)
+    _add_changeset(source_kit, "claude-code", "none")
+    _commit_change(
+        source_kit,
+        ".pkit/adapters/claude-code/package.yaml",
+        "schema_version: 1\ncomponent:\n  kind: adapter\n  name: claude-code\n"
+        '  version: 0.6.0b2\nrequires_backbone: ">=0.1.0,<2.0.0"\n',
+    )
+
+    guard = release.check_changesets(source_kit, "main")
+
+    assert [each.named for each in guard.pre_releases] == [
+        ".pkit/adapters/claude-code/package.yaml: claude-code at 0.6.0b2"
+    ]
+    assert not guard.ok
+
+
+def test_no_escape_hatch_waives_a_pre_release(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_source_repo(tmp_path)
+    _record_pre_releases(source_kit)
+    monkeypatch.chdir(source_kit.parent)
+    monkeypatch.setenv("PKIT_CHANGESET_SKIP", "1")
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main", "--skip"])
+
+    assert result.exit_code == 1, result.output
+    assert "surface check skipped (escape hatch active)" in result.stdout
+    assert ".pkit/VERSION: backbone at 1.6.0rc1" in result.output
+
+
+def test_release_versions_in_the_source_repository_pass(tmp_path: Path) -> None:
+    source_kit = _make_source_repo(tmp_path)
+    _add_changeset(source_kit, "backbone", "minor")
+    _commit_change(source_kit, "src/project_kit/foo.py")
+
+    guard = release.check_changesets(source_kit, "main")
+
+    assert guard.pre_releases == [] and guard.ok
+
+
+def test_the_tree_is_read_as_committed_not_as_the_working_tree(tmp_path: Path) -> None:
+    """The refusal reads HEAD's tree, as the guard reads committed work only."""
+    source_kit = _make_source_repo(tmp_path)
+    (source_kit / "VERSION").write_text("1.6.0rc1\n", encoding="utf-8")
+
+    assert release.pre_releases_bound_for_the_default_branch(source_kit) == []
+
+
+def test_a_candidates_own_commit_passes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """HEAD is the commit the tag of the candidate its backbone records names, as
+    a cut leaves it (`tests/test_release_candidate.py` cuts one)."""
+    source_kit = _make_source_repo(tmp_path)
+    _record_pre_releases(source_kit)
+    _git(source_kit.parent, "tag", "-a", "v1.6.0rc1", "-m", "v1.6.0rc1")
+    _git(source_kit.parent, "switch", "-q", "--detach")
+    monkeypatch.chdir(source_kit.parent)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert release.pre_releases_bound_for_the_default_branch(source_kit) == []
+    assert result.exit_code == 0, result.output
+
+
+def test_a_commit_past_a_candidates_own_is_refused(tmp_path: Path) -> None:
+    """A commit made on top of a candidate's: its tag names another commit."""
+    source_kit = _make_source_repo(tmp_path)
+    _record_pre_releases(source_kit)
+    _git(source_kit.parent, "tag", "-a", "v1.6.0rc1", "-m", "v1.6.0rc1")
+    _commit_change(source_kit, "docs/notes.md")
+
+    recorded = release.pre_releases_bound_for_the_default_branch(source_kit)
+
+    assert [each.version for each in recorded] == ["1.6.0rc1", "0.5.0rc1"]
+
+
+def test_a_tag_of_another_candidate_exempts_nothing(tmp_path: Path) -> None:
+    source_kit = _make_source_repo(tmp_path)
+    _record_pre_releases(source_kit)
+    _git(source_kit.parent, "tag", "-a", "v1.6.0rc2", "-m", "v1.6.0rc2")
+
+    recorded = release.pre_releases_bound_for_the_default_branch(source_kit)
+
+    assert [each.component for each in recorded] == ["backbone", "claude-code"]
+
+
+def test_an_adopters_repository_passes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Outside the methodology's source repository the refusal binds nothing: an
+    adopter's own component, or a default branch a tester moved to a candidate,
+    may record a pre-release."""
+    source_kit = _make_repo(tmp_path)
+    _record_pre_releases(source_kit)
+    monkeypatch.chdir(source_kit.parent)
+    monkeypatch.delenv("PKIT_CHANGESET_SKIP", raising=False)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert release.pre_releases_bound_for_the_default_branch(source_kit) == []
+    assert result.exit_code == 0, result.output

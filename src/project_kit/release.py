@@ -32,7 +32,8 @@ import json
 import re
 import subprocess
 from collections import Counter
-from collections.abc import Callable, Collection, Mapping, Sequence
+from collections.abc import Callable, Collection, Generator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
@@ -66,6 +67,7 @@ from project_kit.changesets import (
 )
 from project_kit.manifest import BACKBONE_VERSION_KEY, COMPLETED_VERSION_KEY, set_state_line
 from project_kit.migrations import _VERSION_DIR_RE, minor_of, parse_version_tuple
+from project_kit.router import is_source_checkout
 
 # Repo-root-relative path prefixes whose changes count as touching the
 # backbone's surface, for the changeset guard. A heuristic — see the "Limits"
@@ -2048,6 +2050,9 @@ class GuardResult:
     # Each edit this diff makes to the range of an existing `requires_capabilities`
     # entry (`range_edits`), the ones the guard refuses among them.
     range_edits: list[RangeEdit] = field(default_factory=lambda: [])
+    # Each pre-release version the tree records, which the default branch never
+    # holds (`pre_releases_bound_for_the_default_branch`, ADR-089 point 3).
+    pre_releases: list[RecordedPreRelease] = field(default_factory=lambda: [])
 
     @property
     def surface_ok(self) -> bool:
@@ -2064,10 +2069,16 @@ class GuardResult:
     @property
     def ok(self) -> bool:
         """The escape hatch and the release exemption waive the surface check
-        only: a stray floor or a refused range edit fails the guard either way.
-        A release diff, which only deletes changesets, declares no floor to be
-        stray, and its range writes ride on the declarations it consumes."""
-        return self.surface_ok and not self.stray_floors and not self.refused_ranges
+        only: a stray floor, a refused range edit or a pre-release version fails
+        the guard either way. A release diff, which only deletes changesets,
+        declares no floor to be stray, and its range writes ride on the
+        declarations it consumes."""
+        return (
+            self.surface_ok
+            and not self.stray_floors
+            and not self.refused_ranges
+            and not self.pre_releases
+        )
 
 
 def changed_files(repo_root: Path, base: str) -> list[str]:
@@ -2422,7 +2433,10 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
     never does, and an escape hatch that could pass one would let any pull
     request raise any component's floor. Nor is the range tie (`range_edits`),
     which refuses an edit to an existing `requires_capabilities` entry's range
-    but the correction PRJ-002 D1 allows, for the same reason.
+    but the correction PRJ-002 D1 allows, for the same reason. Nor, in the
+    methodology's source repository, is the refusal of a pre-release version
+    HEAD's tree records (`pre_releases_bound_for_the_default_branch`), which
+    reads the tree, not the diff (ADR-089 point 3).
     """
     repo_root = source_kit.parent
     components = discover_components(source_kit)
@@ -2440,6 +2454,7 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
         release_exempt=release_exempt,
         stray_floors=stray_floors(repo_root, base, pending, files, touched),
         range_edits=range_edits(source_kit, base, files, components),
+        pre_releases=pre_releases_bound_for_the_default_branch(source_kit),
     )
 
 
@@ -2541,6 +2556,109 @@ def _text_at(repo_root: Path, rev: str, path: str) -> str | None:
     return result.stdout if result.returncode == 0 else None
 
 
+# --- The default branch holds release versions alone (ADR-089 point 3) --------
+#
+# A release candidate's versions live only in its tag: its cut commits them on
+# no branch (ADR-089 point 1). A commit that records one could still reach a
+# branch, by hand or by a mistaken run. So `pkit release check`, which CI runs
+# on every pull request, refuses a tree that records a pre-release version, and
+# `pkit release merge` refuses a release PR whose head records one. Neither
+# refuses a candidate's own commit, the one its tag names. Both refuse only in
+# the methodology's source repository, the one the marker test finds (ADR-059
+# point 3): candidates are cut only there (ADR-089 point 2), and anywhere else an
+# adopter's own component, or a default branch a tester moved to a candidate,
+# may record one.
+
+
+@dataclass(frozen=True)
+class RecordedPreRelease:
+    """A pre-release version a tree records: the backbone's, or a component's."""
+
+    component: str
+    path: str  # repo-root-relative, git's path form: the file that records it
+    version: str
+
+    @property
+    def named(self) -> str:
+        """The version as a refusal names it: the file, the component and the version."""
+        return f"{self.path}: {self.component} at {self.version}"
+
+
+def recorded_pre_releases(source_kit: Path, rev: str) -> list[RecordedPreRelease]:
+    """Each pre-release version the tree at `rev` records: the backbone's in its
+    `VERSION`, and each component's in its `package.yaml`, found as
+    `discover_components` finds them, in its order. A pre-release is PEP 440's, so a
+    development release is one too. A version that does not parse is none here,
+    and validation's to refuse."""
+    with _kit_at(source_kit, rev, ("package.yaml",)) as copy:
+        return [
+            RecordedPreRelease(
+                component.name,
+                component.version_path.relative_to(copy.parent).as_posix(),
+                component.version,
+            )
+            for component in discover_components(copy)
+            if _is_pre_release(component.version)
+        ]
+
+
+def _is_pre_release(version: str) -> bool:
+    try:
+        return Version(version).is_prerelease
+    except InvalidVersion:
+        return False
+
+
+def pre_releases_bound_for_the_default_branch(source_kit: Path) -> list[RecordedPreRelease]:
+    """The pre-release versions `pkit release check` refuses: each one HEAD's tree
+    records, in the methodology's source repository, unless HEAD is a release
+    candidate's own commit (`_is_a_candidates_own_commit`). Empty anywhere else."""
+    repo_root = source_kit.parent
+    if not is_source_checkout(repo_root):
+        return []
+    recorded = recorded_pre_releases(source_kit, "HEAD")
+    if recorded and _is_a_candidates_own_commit(repo_root, "HEAD", recorded):
+        return []
+    return recorded
+
+
+def _is_a_candidates_own_commit(
+    repo_root: Path, rev: str, recorded: Sequence[RecordedPreRelease]
+) -> bool:
+    """Whether `rev` is the commit a release candidate's tag names: where the
+    backbone records a candidate's version, `X.Y.ZrcN`, the clone's tag
+    `vX.Y.ZrcN` names `rev`'s commit."""
+    backbone = next((each.version for each in recorded if each.component == BACKBONE), None)
+    if backbone is None or not versioning.is_candidate_version(backbone):
+        return False
+    tagged = _commit_named(repo_root, f"refs/tags/v{backbone}")
+    return tagged is not None and tagged == _commit_named(repo_root, rev)
+
+
+def _commit_named(repo_root: Path, name: str) -> str | None:
+    """The commit `name` resolves to in `repo_root`, or None where it names none."""
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{name}^{{commit}}"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=False,
+    )
+    commit = result.stdout.strip()
+    return commit if result.returncode == 0 and commit else None
+
+
+def release_pr_pre_releases(pr: ReleasePrState, repo_root: Path) -> list[RecordedPreRelease]:
+    """The pre-release versions release PR `pr`'s head records, which `pkit release
+    merge` refuses, in the methodology's source repository. Empty anywhere else.
+    Fetches the head where the clone does not hold it; raises
+    `click.ClickException` where it still does not."""
+    if not is_source_checkout(repo_root):
+        return []
+    _fetch_unless_held(repo_root, (pr.head_oid,), base=pr.base_ref, number=pr.number)
+    return recorded_pre_releases(repo_root / ".pkit", pr.head_oid)
+
+
 # --- A range a branch edits (PRJ-002 D1) ---------------------------------------
 #
 # Once a `requires_capabilities` entry exists, its floor and upper bound move at
@@ -2623,7 +2741,7 @@ def range_edits(
         )
     if not found:
         return []
-    carried = _carried_at(repo_root, source_kit, merge_base)
+    carried = _carried_at(source_kit, merge_base)
     consumed = (
         _consumed_declarations(repo_root, base, merge_base)
         if is_release_diff(source_kit, base)
@@ -2790,13 +2908,24 @@ def _renamed_from(repo_root: Path, base: str) -> dict[str, str]:
     return renamed
 
 
-def _carried_at(repo_root: Path, source_kit: Path, rev: str) -> dict[str, str]:
+def _carried_at(source_kit: Path, rev: str) -> dict[str, str]:
     """The version the tree at `rev` carries for each component but the backbone,
     read as `capability_versions` reads the working tree's: the backbone's version
-    and every package and manifest file under the kit, written from `rev` into a
-    temporary folder. Nothing is checked out."""
+    and every package and manifest file under the kit, as `rev` holds them."""
+    with _kit_at(source_kit, rev, ("package.yaml", "manifest.yaml")) as copy:
+        components = {c.name: c for c in discover_components(copy)}
+        return dict(capability_versions(copy, components, {}).carries)
+
+
+@contextmanager
+def _kit_at(source_kit: Path, rev: str, names: tuple[str, ...]) -> Generator[Path]:
+    """The kit as the tree at `rev` holds it, for as long as the context lasts:
+    its backbone's `VERSION` and each file under it named one of `names`,
+    written from `rev` into a temporary folder, whose copy of the kit this
+    yields at the kit's own path from the folder. Nothing is checked out."""
     import tempfile
 
+    repo_root = source_kit.parent
     kit = _repo_rel(repo_root, source_kit)
     listed = subprocess.run(
         ["git", "ls-tree", "-r", "-z", "--name-only", rev, "--", kit],
@@ -2805,11 +2934,7 @@ def _carried_at(repo_root: Path, source_kit: Path, rev: str) -> dict[str, str]:
         cwd=repo_root,
         check=True,
     ).stdout.split("\0")
-    wanted = [
-        path
-        for path in listed
-        if path == f"{kit}/VERSION" or Path(path).name in ("package.yaml", "manifest.yaml")
-    ]
+    wanted = [path for path in listed if path == f"{kit}/VERSION" or Path(path).name in names]
     with tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
         for path in wanted:
@@ -2819,9 +2944,7 @@ def _carried_at(repo_root: Path, source_kit: Path, rev: str) -> dict[str, str]:
             target = root / path
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(text, encoding="utf-8")
-        copy = root / kit
-        components = {c.name: c for c in discover_components(copy)}
-        return dict(capability_versions(copy, components, {}).carries)
+        yield root / kit
 
 
 def _consumed_declarations(
@@ -3372,7 +3495,11 @@ def merge_release_pr(
     through a queue the PR is enqueued, pinned to the checked head, and the
     run waits for the queue's merge — `wait_seconds` None as long as the
     queue estimates, 0 not at all — saying through `say` where the PR stands;
-    without one it squash-merges directly, pinned the same way. A dry run
+    without one it squash-merges directly, pinned the same way. Before the
+    landing, in a dry run too, it refuses a release that would not land sound
+    (`release_pr_problem`), and in the methodology's source repository a
+    release PR whose head records a pre-release version
+    (`release_pr_pre_releases`, ADR-089 point 3). A dry run
     reports from the plan and lands nothing. Does **not** tag: the flow's
     post-merge tag step cuts the backbone tag on the resulting push to `main`
     (VERSION-driven).
@@ -3453,6 +3580,15 @@ def merge_release_pr(
         raise click.ClickException(
             f"release PR #{number} would not land what its release step wrote onto the commit its "
             f"plan read: {unsound}. {RUN_THE_RELEASE_AGAIN} Nothing was merged."
+        )
+    recorded = release_pr_pre_releases(pr, repo_root)
+    if recorded:
+        named = "\n".join(f"  {each.named}" for each in recorded)
+        raise click.ClickException(
+            f"release PR #{number} records a pre-release version, and the default branch holds "
+            f"release versions alone (ADR-089 point 3):\n{named}\n{RUN_THE_RELEASE_AGAIN} Where "
+            "the default branch records a pre-release version itself, give it back its release "
+            "version first. Nothing was merged."
         )
     if dry_run:
         if would == pull_request_landing.ENQUEUE_REQUEST:
