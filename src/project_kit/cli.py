@@ -3162,7 +3162,9 @@ def release_plan(as_json: bool, pre: bool) -> None:
     is_flag=True,
     default=False,
     help="Refused with --pre: a candidate's tag is pushed only once the wheel built from "
-    "its commit is checked (ADR-089 point 9).",
+    "its commit is checked (ADR-089 point 9). Without --pre it changes nothing, since apply "
+    "then cuts no tag: a final release's tag is pushed by `pkit version tag --push` once its "
+    "release PR merges (ADR-092 point 6).",
 )
 @click.option("--pre", is_flag=True, default=False, help=_PRE_HELP)
 @click.option(

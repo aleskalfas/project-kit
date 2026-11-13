@@ -20,7 +20,7 @@ pkit:
         - scripts/release_pr.py
         - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
-      record: [COR-010, COR-030, COR-041, "COR-054#2", PRJ-002, PRJ-004, PRJ-016, ADR-040, "ADR-059#3", "ADR-061#5", "ADR-061#8", "ADR-089#1", "ADR-089#9", "ADR-092#2", "ADR-092#3", "ADR-092#5", "ADR-092#6", "ADR-092#8", "ADR-092#9", "ADR-092#10"]
+      record: [COR-010, COR-030, COR-041, "COR-054#2", PRJ-002, PRJ-004, PRJ-016, ADR-040, "ADR-059#3", "ADR-061#5", "ADR-061#8", "ADR-089#1", "ADR-089#2", "ADR-089#9", "ADR-092#2", "ADR-092#3", "ADR-092#5", "ADR-092#6", "ADR-092#8", "ADR-092#9", "ADR-092#10"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/upgrade-flow.md#the-replay-a-missing-completion
@@ -809,27 +809,31 @@ the one a final release would make there, at release versions, so every check
 reads it as it reads a final release's. Only the writes add the suffix `rcN`
 (ADR-089 point 1).
 
-**Refused before anything is written,** with `refusing to cut a candidate:
-<why> Nothing was written.`, where:
+**Refused before anything is written,** where:
 
-- the default branch's head, read from `origin` with `git ls-remote`, is not in
-  the commit's history. The refusal names both commits, and says to merge
-  `origin/main` into the branch. Where the clone does not hold that head, it
-  says to fetch it first, and in a shallow clone to fetch the whole history.
+- the commit has not taken in the default branch's head, read from `origin`
+  with `git ls-remote`, or whether it has cannot be told, since only then is
+  its plan the one the default branch's release would make once the branch
+  merges (ADR-092 point 2).
 - the working tree differs from the commit, by a changed file or one git does
   not track, since the plan would then not be the commit's.
 - the release would move no backbone version, since a candidate is a backbone
   tag (ADR-089 point 2).
 - the project is not the methodology's source repository, as the marker test
   tells it (ADR-059 point 3).
-- a migration script would ship stranded (below).
+- a migration script would ship stranded, as a final release refuses it
+  ("The stranded-script refusal", below).
 - the remote's tags cannot be read, since the cut's number counts them.
 - with `--tag`, this clone already holds the candidate's tag, which `origin`
-  does not: an earlier cut here left it unpushed.
+  does not: an earlier cut here left it unpushed, and a candidate's tag is
+  never moved or deleted (PRJ-016 point 5).
 
-**The number.** `N` is one past the highest number any candidate tag on
-`origin` carries, whatever its version, and 1 where there is none (ADR-092
-point 3). A candidate tag is one whose full reference is
+[The CLI reference's `release plan` and `release apply` rows](../cli/README.md#surface) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
+give each refusal's message, and the prompt and `--json` keys of a cut.
+
+**The number.** `N` is one past the highest number any release candidate's
+tag on `origin` carries, whatever its version, and 1 where there is none
+(ADR-092 point 3). The cut counts a tag whose full reference is
 `refs/tags/v<X.Y.Z>rc<N>`. A `withdrawn/` tag, a final release's tag and
 `latest` count for none, and nor does a tag only the clone holds.
 
