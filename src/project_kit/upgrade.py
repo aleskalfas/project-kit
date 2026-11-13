@@ -84,6 +84,7 @@ from project_kit.manifest import (
 from project_kit.migrations import (
     execute_migration_scripts,
     pending_migration_scripts,
+    public_version,
     report_pending_migrations,
 )
 from project_kit.router import (
@@ -443,15 +444,12 @@ class ComponentMove:
 
 
 def as_recorded_version(text: str | None) -> str | None:
-    """A recorded version as the `X.Y.Z` the migration window reads, or None when
-    it is missing or no version, which reads as no record (ADR-065 point 2)."""
-    if not text:
-        return None
-    try:
-        parsed = Version(text)
-    except InvalidVersion:
-        return None
-    return f"{parsed.major}.{parsed.minor}.{parsed.micro}"
+    """A recorded version as the public version the migration window reads, the
+    pre-release kept and a local segment dropped (`migrations.public_version`), or
+    None when it is missing or no version, which reads as no record (ADR-065 point
+    2)."""
+    parsed = public_version(text)
+    return None if parsed is None else str(parsed)
 
 
 def replay_lower_bound(manifest: BackboneManifest | None) -> str | None:
@@ -525,33 +523,36 @@ def capability_move(name: str, recorded: str | None, bundled: str) -> ComponentM
 
 
 def _same_version(recorded: str | None, bundled: str) -> bool:
-    """Whether *recorded* names the version *bundled* does, however each is
-    written (`v0.6.0` and `0.6.0` alike)."""
-    normalised = as_recorded_version(recorded)
-    return normalised is not None and normalised == as_recorded_version(bundled)
+    """Whether *recorded* names the version *bundled* does, compared as public
+    versions (ADR-089 point 5): `v0.6.0`, `0.6.0` and `0.6.0+x` alike, and
+    `0.55.0rc1` not `0.55.0`."""
+    parsed = public_version(recorded)
+    return parsed is not None and parsed == public_version(bundled)
 
 
 def _moves_up(recorded: str | None, bundled: str) -> bool:
     """Whether a component recorded at *recorded* moves to *bundled*: it records no
-    version, or an older one. A bundled version that is no version moves nothing."""
-    if as_recorded_version(bundled) is None:
+    version, or an older public version (ADR-089 point 5), such as `0.55.0rc1`
+    below `0.55.0`. A bundled version that is no version moves nothing."""
+    parsed_bundled = public_version(bundled)
+    if parsed_bundled is None:
         return False
-    if as_recorded_version(recorded) is None:
-        return True
-    return Version(recorded or "") < Version(bundled)
+    parsed = public_version(recorded)
+    return parsed is None or parsed < parsed_bundled
 
 
 def is_current(
     target_root: Path, source_kit: Path, manifest: BackboneManifest, target_version: str
 ) -> bool:
     """Whether upgrade's early return applies (ADR-065 point 2): `backbone_version`
-    and `completed_version` both name *target_version*, and every registered
-    adapter and shipped capability records the version the bundle ships, under
-    its `project/`. A capability manifest still at its root is one sync skips
-    and names `pkit upgrade` for, so the transition runs to move it."""
+    and `completed_version` both name *target_version*, compared as public
+    versions (ADR-089 point 5), and every registered adapter and shipped
+    capability records the version the bundle ships, under its `project/`. A
+    capability manifest still at its root is one sync skips and names `pkit
+    upgrade` for, so the transition runs to move it."""
     return (
-        manifest.backbone_version == target_version
-        and manifest.completed_version == target_version
+        _same_version(manifest.backbone_version, target_version)
+        and _same_version(manifest.completed_version, target_version)
         and not component_moves(target_root, source_kit, manifest)
         and not _capability_manifests_at_root(target_root, manifest)
     )
@@ -598,7 +599,7 @@ def _report_transition(
         origin = f"{manifest.backbone_version!r}, which is no version"
     else:
         origin = manifest.backbone_version
-    if origin == target_version:
+    if _same_version(origin, target_version):
         click.echo(f"Completing the transition to backbone v{target_version}")
     else:
         click.echo(f"Upgrading backbone: {origin} -> {target_version}")
@@ -1806,8 +1807,9 @@ def _run_backbone_migrations(
     after the propagation, they're present in the target tree. A dry run copies
     nothing, so it reads the same scripts from the running pkit's bundle.
 
-    Window: every minor version strictly above `completed_version` and
-    at-or-below `target_version` (ADR-065 point 3). A missing completion has no
+    Window: every folder above `completed_version` in PEP 440 order and
+    at-or-below `target_version` by minor (ADR-065 points 3 and 4,
+    `pending_migration_scripts`). A missing completion has no
     lower bound: every backbone migration up to the target runs once, the
     replay (point 5), which the report names and lists. Halts on the first
     non-zero exit, so the completion is not recorded and the next upgrade runs

@@ -7,8 +7,9 @@ Four responsibilities:
    contract is the same across backbone, adapter, and capability tiers:
 
    - Scripts live under `<root>/<X.Y.0>/<NNN>-<slug>.sh`.
-   - Execution walks version directories whose minor falls strictly
-     above the installed minor and at-or-below the target minor.
+   - Execution walks version directories above the installed version in
+     PEP 440 order and at-or-below the target minor, each version read as
+     its public version (`public_version`, ADR-089 point 5).
    - Each script runs via `bash` with `ROOT=<target_root>` in the
      environment and `cwd` set to `target_root`.
    - A bare `pkit` in a script reaches the running pkit: the runner puts a
@@ -58,6 +59,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Literal, cast
 
 import click
+from packaging.version import InvalidVersion, Version
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
@@ -99,6 +101,19 @@ def parse_version_tuple(value: str) -> tuple[int, int, int]:
         return int(parts[0]), int(parts[1]), int(parts[2])
     except ValueError as exc:
         raise click.ClickException(f"version {value!r} has non-integer components.") from exc
+
+
+def public_version(text: str | None) -> Version | None:
+    """A recorded or bundled version as a transition compares it: its public
+    version, the pre-release kept and a local segment dropped (ADR-089 point 5).
+    So `0.55.0rc1` sorts below `0.55.0`, and `0.6.0+x` reads as `0.6.0`. None
+    when *text* is missing or no PEP 440 version."""
+    if not text:
+        return None
+    try:
+        return Version(Version(text).public)
+    except InvalidVersion:
+        return None
 
 
 # --- which version a migration targets (COR-010; #1754) ---------------
@@ -238,10 +253,17 @@ def pending_migration_scripts(
     installed_version: str | None,
     target_version: str,
 ) -> list[Path]:
-    """Collect migration scripts whose minor falls in (installed, target].
+    """Collect the migration scripts of each folder in the window (installed, target].
 
     `migrations_root` is the directory containing `<X.Y.0>/<NNN>-*.sh`
     subdirectories. Missing or non-versioned subdirectories are ignored.
+
+    The window holds each folder above `installed_version` in PEP 440 order,
+    and at or below `target_version` by minor (ADR-065 point 4, ADR-089 point
+    5). Both are read as public versions (`public_version`). So a move to a
+    release candidate, `0.55.0rc1`, runs its final release's folder `0.55.0/`,
+    and a lower bound at that candidate sits below that folder. For a release
+    version the window is the range of minors above the installed one.
 
     `installed_version` is the window's lower bound: for the backbone, the
     last completed transition (`completed_version`, ADR-065 point 3); for a
@@ -250,33 +272,41 @@ def pending_migration_scripts(
     backbone that is the replay a missing completion runs once (point 5),
     which a backbone migration's contract makes safe over any state (COR-010).
 
-    Returns scripts in execution order: version-dir ascending semver,
-    then `NNN-*.sh` filename within each version-dir.
+    Raises `click.ClickException` when a bound given is no version. Returns
+    scripts in execution order: version-dir ascending, then `NNN-*.sh`
+    filename within each version-dir.
     """
     if not migrations_root.is_dir():
         return []
 
-    target_minor = parse_version_tuple(target_version)[:2]
-    if installed_version is None:
-        installed_minor: tuple[int, int] = (-1, -1)
-    else:
-        installed_minor = parse_version_tuple(installed_version)[:2]
+    target = _window_bound(target_version)
+    lower = None if installed_version is None else _window_bound(installed_version)
 
     scripts: list[Path] = []
     version_dirs = sorted(
         (p for p in migrations_root.iterdir() if p.is_dir() and _VERSION_DIR_RE.match(p.name)),
-        key=lambda p: parse_version_tuple(p.name),
+        key=lambda p: Version(p.name),
     )
     for version_dir in version_dirs:
-        ver_minor = parse_version_tuple(version_dir.name)[:2]
-        # Window: installed < version ≤ target. A minor below the
-        # installed version is already applied; a minor above the target
-        # version isn't shipping yet.
-        if not (installed_minor < ver_minor <= target_minor):
+        folder = Version(version_dir.name)
+        # A folder at or below the lower bound has run already; one past the
+        # target's minor ships with a later release.
+        if lower is not None and folder <= lower:
+            continue
+        if (folder.major, folder.minor) > (target.major, target.minor):
             continue
         for script in sorted(version_dir.glob("[0-9]*.sh")):
             scripts.append(script)
     return scripts
+
+
+def _window_bound(value: str) -> Version:
+    """A bound of the migration window as its public version (`public_version`).
+    Raises `click.ClickException` when it is no version."""
+    parsed = public_version(value)
+    if parsed is None:
+        raise click.ClickException(f"version {value!r} is not a version.")
+    return parsed
 
 
 def execute_migration_scripts(
