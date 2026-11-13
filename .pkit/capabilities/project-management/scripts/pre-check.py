@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -220,12 +221,12 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
         )
         return results
 
-    # 3. gh authentication.
-    results.append(_check_gh_auth())
-
-    # Adopter config — read once; needed by checks 4, 6, 7.
+    # Adopter config — read once; needed by checks 3, 4, 6, 7.
     config_path = capability_root / ADOPTER_CONFIG_PATH
     config, config_result = _check_adopter_config(config_path)
+
+    # 3. gh authentication, on the host the project's `gh` calls reach.
+    results.append(_check_gh_auth(config))
     results.append(config_result)
 
     # Substrate map — read once (per DEC-036 / ADR-026). `None` ⇒ greenfield
@@ -251,10 +252,10 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
         results.extend(_check_substrate_board_arm_satisfiable(config, substrate_map))
         results.extend(_check_board_arm_default_has_hook(capability_root, substrate_map))
 
-    # 3b. gh: block validation + host-pinned auth (per DEC-023).
+    # 3b. gh: block validation (per DEC-023). The configured host's
+    #     authentication is check 3's.
     if config is not None:
         results.append(_check_gh_block(config))
-        results.append(_check_gh_host_auth(config))
 
     # 4. Repo accessibility.
     results.append(_check_repo_accessible())
@@ -363,19 +364,95 @@ def _check_command_on_path(cmd: str) -> CheckResult:
     return CheckResult(f"`{cmd}` on PATH", "ok", detail)
 
 
-def _check_gh_auth() -> CheckResult:
-    """Verify `gh auth status` reports an authenticated host (ambient)."""
-    proc = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True, check=False)
-    if proc.returncode != 0:
-        return CheckResult(
-            "`gh` authenticated",
-            "fail",
-            "`gh auth status` reports no active authentication",
-            remediation="Run `gh auth login` and follow the prompts.",
+_GH_AUTH_CHECK = "`gh` authenticated"
+# The host `gh` reaches for a call that names none, where neither `GH_HOST` nor
+# a sole logged-in host decides it.
+_GH_DEFAULT_HOST = "github.com"
+
+
+def _check_gh_auth(config: dict[str, Any] | None) -> CheckResult:
+    """Verify `gh` is authenticated on the host the project's `gh` calls reach.
+
+    `gh auth status` with no host exits non-zero when any host it is logged in
+    to fails, such as a second account whose keychain read times out, though
+    the project's own host passes. So the check names the host and judges it
+    alone (#3007): the configured `gh.host`, which wins over the shell's
+    `GH_HOST` (DEC-023), else the host `gh` picks for a call that names none
+    (:func:`_gh_default_host`). Where `gh` cannot list its hosts, the check
+    judges every host, as it did before it named one.
+    """
+    configured = _configured_gh_host(config)
+    if configured is not None:
+        host, source = configured, "configured as `gh.host`"
+        hint = "DEC-023 requires the adopter's configured host to be authenticated locally."
+    else:
+        host, source = _gh_default_host()
+        hint = (
+            "Where the project lives on another host, set `gh.host` in "
+            "project/config.yaml to it instead (DEC-023)."
         )
-    # First line of `gh auth status` typically names the host.
-    first_line = (proc.stderr or proc.stdout).strip().split("\n", maxsplit=1)[0]
-    return CheckResult("`gh` authenticated", "ok", first_line)
+    argv = ["gh", "auth", "status", *(["-h", host] if host else [])]
+    proc = subprocess.run(argv, capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        login = f"gh auth login -h {host}" if host else "gh auth login"
+        return CheckResult(
+            _GH_AUTH_CHECK,
+            "fail",
+            f"`{' '.join(argv)}` reports no active authentication",
+            remediation=f"Run `{login}` and follow the prompts. {hint}",
+        )
+    return CheckResult(_GH_AUTH_CHECK, "ok", f"host={host} ({source})" if host else source)
+
+
+def _configured_gh_host(config: dict[str, Any] | None) -> str | None:
+    """The `gh.host` the config sets, or None where it sets none (DEC-023).
+
+    A value of the wrong shape counts as none, as `_lib/gh.gh_env` reads it;
+    :func:`_check_gh_block` reports the shape.
+    """
+    gh_block = config.get("gh") if isinstance(config, dict) else None
+    host = gh_block.get("host") if isinstance(gh_block, dict) else None
+    return host if isinstance(host, str) and host else None
+
+
+def _gh_default_host() -> tuple[str | None, str]:
+    """The host `gh` reaches for a call that names none, and how it was picked.
+
+    `GH_HOST` where the shell sets it, else the one host `gh` is logged in to,
+    else github.com. The host is None where `gh` cannot list the hosts it is
+    logged in to, as one too old for `gh auth status --json`.
+    """
+    env_host = os.environ.get("GH_HOST")
+    if env_host:
+        return env_host, "from `GH_HOST`"
+    hosts = _gh_logged_in_hosts()
+    if hosts is None:
+        return None, "every host `gh` is logged in to passes; this `gh` cannot list them"
+    if len(hosts) == 1:
+        return hosts[0], "the one host `gh` is logged in to"
+    return _GH_DEFAULT_HOST, "`gh`'s default host"
+
+
+def _gh_logged_in_hosts() -> list[str] | None:
+    """The hosts `gh` is logged in to, or None where it cannot list them.
+
+    `gh auth status --json hosts` lists each host and exits zero whatever its
+    accounts report, so a failing host hides no other.
+    """
+    proc = subprocess.run(
+        ["gh", "auth", "status", "--json", "hosts"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return None
+    hosts = data.get("hosts") if isinstance(data, dict) else None
+    return list(hosts) if isinstance(hosts, dict) else None
 
 
 def _check_gh_block(config: dict[str, Any]) -> CheckResult:
@@ -442,41 +519,6 @@ def _check_gh_block(config: dict[str, Any]) -> CheckResult:
         summary_parts.append(f"default_owner={raw['default_owner']}")
     summary = ", ".join(summary_parts) if summary_parts else "empty block (no overrides)"
     return CheckResult("`gh:` config block valid", "ok", summary)
-
-
-def _check_gh_host_auth(config: dict[str, Any]) -> CheckResult:
-    """When `gh.host` is set, verify `gh auth status -h <host>` succeeds.
-
-    Per DEC-023's adopter-portability discipline: a correct `config.yaml`
-    should be enough for any team member or agent to reach the configured
-    host. If `gh` isn't authenticated against the configured host, the
-    pre-check fails early with a remediation pointing at `gh auth login`.
-    """
-    host = (config.get("gh") or {}).get("host") if isinstance(config.get("gh"), dict) else None
-    if not isinstance(host, str) or not host:
-        return CheckResult(
-            "`gh` authenticated against configured host",
-            "skip",
-            "no `gh.host` configured",
-        )
-    proc = subprocess.run(
-        ["gh", "auth", "status", "-h", host],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        return CheckResult(
-            "`gh` authenticated against configured host",
-            "fail",
-            f"`gh auth status -h {host}` reports no active authentication",
-            remediation=(
-                f"Run `gh auth login -h {host}` and follow the prompts. "
-                "DEC-023 requires the adopter's configured host to be "
-                "authenticated locally."
-            ),
-        )
-    return CheckResult("`gh` authenticated against configured host", "ok", f"host={host}")
 
 
 def _check_bootstrap_stamp(capability_root: Path) -> CheckResult:
