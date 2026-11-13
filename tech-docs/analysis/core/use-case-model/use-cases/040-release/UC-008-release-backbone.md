@@ -51,6 +51,7 @@ pkit:
         - ADR-034#1
         - ADR-061#6
         - ADR-061#8
+        - ADR-089#2
         - ADR-089#9
         - ADR-092#2
         - ADR-092#3
@@ -145,11 +146,11 @@ pkit:
 - **1h.** On the path of 1g, the system refuses the cut before it writes anything, and says why. The run pushes nothing, and the use case ends. The system refuses where one of these holds:
   - `HEAD` names no commit, as in a clone with none yet.
   - The default branch's head on the remote is not in the history of the commit the cut runs at ([ADR-092 point 2](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#2-a-candidate-is-cut-from-a-commit-that-has-the-default-branchs-head-in-its-history)).
-  - The working tree differs from that commit, or the release moves no backbone version.
+  - The release moves no backbone version ([ADR-089 point 2](../../../../../architecture/decisions/ADR-089-release-candidates.md#2-a-candidates-number-comes-from-the-remotes-tags-and-six-states-refuse-a-cut)), or the working tree differs from that commit.
   - The system refuses the release step, as in 2b, 2c or 2d.
   - The system cannot read the remote's tags, so it cannot count the candidates ([ADR-092 point 3](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#3-a-cuts-number-counts-every-candidate)).
   - A [migration](../../../glossary.md#term-migration--migration) script is stranded, as in 2f, or the system cannot tell, as in 2g.
-  - The run is outside the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository).
+  - The run is outside the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository) (ADR-089 point 2).
   - The clone already holds the tag `v<candidate>`.
 - **1i.** On the path of 1g, `pkit release check` fails, as where the branch carries a surface change that no changeset declares. The CI pipeline cuts nothing, and the use case ends ([ADR-092 point 2](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#2-a-candidate-is-cut-from-a-commit-that-has-the-default-branchs-head-in-its-history)).
 - **1j.** On the path of 1g, the wheel does not build, or its `pkit --version` does not name the candidate. The CI pipeline pushes no tag, and the use case ends ([ADR-089 point 9](../../../../../architecture/decisions/ADR-089-release-candidates.md#9-a-candidate-is-cut-by-the-release-workflows-pre-release-run-and-notes-past-the-hosts-caps-are-linked)).

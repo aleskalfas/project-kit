@@ -20,6 +20,7 @@ pkit:
         - COR-054
         - COR-050
         - PRJ-002
+        - PRJ-016
         - ADR-089#9
         - ADR-092#2
         - ADR-092#5
@@ -35,6 +36,6 @@ A project's continuous integration, acting on the system from outside. It is an 
   - The [change check](../../glossary.md#term-change-check--change-check) serves the developer and the merge authoriser.
   - What the [whole-repository check](../../glossary.md#term-whole-repository-check--whole-repository-check) publishes serves the developer (a [change](../../glossary.md#term-change--change) that edits what a document rests on reaches them).
   - A [release tag](../../glossary.md#term-release-tag--release-tag) serves the methodology maintainer.
-  - A [release candidate](../../glossary.md#term-release-candidate--release-candidate) serves the methodology maintainer too, who tests a change with it before the change ships.
+  - A [release candidate](../../glossary.md#term-release-candidate--release-candidate) serves the methodology maintainer too, who tests a change with it before the change ships ([PRJ-016](../../../../../.pkit/decisions/project/PRJ-016-candidates-hold-no-release.md)).
 - **Core:** the [backbone](../../glossary.md#term-backbone--backbone) ships no workflow. It ships only checks made to run unattended, and one [base](../../glossary.md#term-base--base) a pipeline names for all of them ([COR-054 point 3](../../../../../.pkit/decisions/core/COR-054-default-branch.md#3-the-override-is-a-base-not-a-declaration)). The checks bind once the [project](../../glossary.md#term-project--project) makes them a required status ([COR-050 point 12](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - **Note:** project-kit's workflows are one way to wire these. Three of their steps are project-kit's alone: the [changeset guard](../../glossary.md#term-changeset-guard--changeset-guard), the [release tag](../../glossary.md#term-release-tag--release-tag) and the cut of a [release candidate](../../glossary.md#term-release-candidate--release-candidate) ([PRJ-002](../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md), [ADR-092 point 2](../../../../architecture/decisions/ADR-092-final-release-from-head.md#2-a-candidate-is-cut-from-a-commit-that-has-the-default-branchs-head-in-its-history)).

@@ -34,6 +34,7 @@ pkit:
         - ADR-065#3
         - ADR-065#4
         - ADR-065#6
+        - ADR-089#1
         - ADR-089#4
         - ADR-089#5
         - ADR-089#9
@@ -191,7 +192,7 @@ A release tag is the annotated git tag `v<version>` on the commit that lands a n
 
 - Each release gets one. New versions of [components](../glossary.md#term-component--component) alone, with no new backbone version, get none (PRJ-004).
 - A reader of release tags, such as the lookup of the highest release, reads them alone and skips `latest` (PRJ-004).
-- A [release candidate](../glossary.md#term-release-candidate--release-candidate)'s tag, such as `v3.0.0rc1`, is no release tag. It names a commit no branch holds. The CI pipeline pushes it only once the wheel built from that commit names the candidate's version ([ADR-089 point 9](../../../architecture/decisions/ADR-089-release-candidates.md#9-a-candidate-is-cut-by-the-release-workflows-pre-release-run-and-notes-past-the-hosts-caps-are-linked)).
+- A [release candidate](../glossary.md#term-release-candidate--release-candidate)'s tag, such as `v3.0.0rc1`, is no release tag. It names a commit no branch holds ([ADR-089 point 1](../../../architecture/decisions/ADR-089-release-candidates.md#1-a-candidate-is-the-final-releases-own-plan-with-the-suffix-added-where-the-step-writes)). The CI pipeline pushes it only once the wheel built from that commit names the candidate's version ([ADR-089 point 9](../../../architecture/decisions/ADR-089-release-candidates.md#9-a-candidate-is-cut-by-the-release-workflows-pre-release-run-and-notes-past-the-hosts-caps-are-linked)).
 
 ## Recorded version
 
