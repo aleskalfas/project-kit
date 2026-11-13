@@ -397,11 +397,18 @@ def test_a_pair_below_its_contrast_fails_in_the_combination_it_lies_in(
     folder = brand_copy(tmp_path)
     edit_json(folder / DARK, setting("scheme|ink|$value", "{palette.night.800}"))
     found = tokens.read_brand(folder, foundations).findings
-    assert codes(found) == {"pair-contrast"}
-    # The neutral family paints its text with the primary text, so its pair falls with it.
-    # An order, at its defaults, takes the neutral family's colours, and repeats none of its
-    # findings (DEC-032 point 1).
-    assert sorted(finding.where for finding in found) == ["family.neutral.text", "text-primary"]
+    assert codes(found) == {"pair-contrast", "order-text-between"}
+    pairs = [finding for finding in found if finding.code == "pair-contrast"]
+    # The neutral family paints its text with the primary text, so its pair falls with it,
+    # and so does an order's text on each end, at their defaults the neutral family's
+    # colours (DEC-032 point 1). The order's own rule is judged there too
+    # (`test_an_order_at_its_defaults_is_judged_in_every_combination`).
+    assert sorted(finding.where for finding in pairs) == [
+        "family.neutral.text",
+        "family.order.text",
+        "family.order.text",
+        "text-primary",
+    ]
     for finding in found:
         assert finding.level == findings.FAILS
         assert "`colour-scheme.dark`" in finding.message
@@ -2243,19 +2250,56 @@ def test_the_foundations_declare_an_orders_roles_apart_from_the_families(
     assert foundations.roles[ORDER.ground] == tokens.Role("background", "color")
 
 
-def test_a_brand_that_gives_an_order_no_value_draws_it_as_the_neutral_family(brand: Any) -> None:
+#: The neutral brand being built, which gives an order no value.
+NEUTRAL = FOUNDATIONS.parent / "neutral"
+
+
+@pytest.mark.parametrize(
+    "folder",
+    [TEST_BRAND, NEUTRAL, RELEASED_NEUTRAL],
+    ids=["test-brand", "neutral", "neutral-1.0.0"],
+)
+def test_a_brand_that_gives_an_order_no_value_draws_it_as_the_neutral_family(
+    folder: Path, foundations: Any
+) -> None:
     """Both ends take the neutral family's fill, and the text its text, in every
     combination, and the brand exports the three roles as every shared role (DEC-032 point
-    1). Its ends are equal, so they pass."""
-    assert brand.findings == ()
-    assert set(ORDER.roles) <= set(brand.roles)
-    for combination in brand.combinations():
-        fill = brand.resolve("family.neutral.fill", combination)
-        assert brand.resolve(ORDER.first, combination) == fill
-        assert brand.resolve(ORDER.last, combination) == fill
-        assert brand.resolve(ORDER.text, combination) == brand.resolve(
+    1). The order is judged at its defaults in every combination, as at a brand's values
+    (point 2): its ends are equal, so the first passes, and its text holds on them as the
+    neutral family's does on its fill, so nothing fails."""
+    read = tokens.read_brand(folder, foundations)
+    assert read.findings == ()
+    assert set(ORDER.roles) <= set(read.roles)
+    for combination in read.combinations():
+        fill = read.resolve("family.neutral.fill", combination)
+        assert read.resolve(ORDER.first, combination) == fill
+        assert read.resolve(ORDER.last, combination) == fill
+        assert read.resolve(ORDER.text, combination) == read.resolve(
             "family.neutral.text", combination
         )
+
+
+def test_an_order_at_its_defaults_is_judged_in_every_combination(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """At its defaults an order's text lies on one side of both ends unless it is as light
+    as the neutral family's fill, so it fails only where that family's own pair falls to 1
+    to 1 (DEC-032 points 1 and 2). The test brand's dark ink, as dark as its neutral fill,
+    brings it there, and the order's text fails its rule and both its pairs."""
+    folder = brand_copy(tmp_path)
+    edit_json(folder / DARK, setting("scheme|ink|$value", "{palette.night.800}"))
+    read = tokens.read_brand(folder, foundations)
+    ordered = [finding for finding in read.findings if finding.where == ORDER.text]
+    assert sorted(finding.code for finding in ordered) == [
+        "order-text-between",
+        "pair-contrast",
+        "pair-contrast",
+    ]
+    assert keys_named(ordered) == {"colour-scheme.dark"}
+    (between,) = (finding for finding in ordered if finding.code == "order-text-between")
+    assert "is as light as `family.order.first` and as light as `family.order.last`" in (
+        between.message
+    )
 
 
 def test_a_brand_whose_ends_hold_reads_with_no_findings_the_first_end_furthest_from_the_ground(

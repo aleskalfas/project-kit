@@ -1708,7 +1708,7 @@ class _BrandReader:
         open_roles, opened = self._check_open(library.get("open", []), base)
         fonts = self._read_fonts(resolved, hidden, base)
         self._check_pairs(views, resolved, base)
-        self._check_order(views, resolved, base)
+        self._check_order(resolved, base)
         valued = tuple(
             path
             for path in sorted(self.scope.roles)
@@ -3151,11 +3151,7 @@ class _BrandReader:
         """Each pair of the scope in every combination; a combination where the pair is as
         its base gives it is the base's to report. A library's pair is judged only where
         the brand's values reach it, and then in every combination where both its roles
-        have a value; at its defaults it is its library's (DEC-008 point 6). A pair of an
-        order's role is judged only where a brand of the chain gives the order a value
-        (`_order_given`)."""
-        order = self.scope.foundations.order
-        ordered = set(order.roles) if order is not None else set()
+        have a value; at its defaults it is its library's (DEC-008 point 6)."""
         for pair in self.scope.pairs:
             roles = (pair.text, pair.under)
             if any(self.scope.owner.get(r) for r in roles) and not any(
@@ -3164,8 +3160,6 @@ class _BrandReader:
                 continue
             for key, values in resolved.items():
                 if pair.text not in values or pair.under not in values:
-                    continue
-                if ordered & set(roles) and not self._order_given(views[key]):
                     continue
                 text, under = values[pair.text].value, values[pair.under].value
                 below = base._resolved[key] if base is not None else {}
@@ -3199,34 +3193,24 @@ class _BrandReader:
                         pair.text,
                     )
 
-    def _order_given(self, view: _View) -> bool:
-        """Whether a brand of the chain gives one of an order's roles a value in `view`. At
-        their defaults they take the neutral family's colours (DEC-032 point 1), whose own
-        pair judges them, so an order's checks there would only repeat its findings."""
-        order = self.scope.foundations.order
-        return order is not None and any(
-            path in view.roles and view.roles[path].owner for path in order.roles
-        )
-
     def _check_order(
         self,
-        views: Mapping[str, _View],
         resolved: Mapping[str, Mapping[str, _Resolved]],
         base: Brand | None,
     ) -> None:
-        """An order's ends in every combination where a brand of the chain gives the order a
-        value (`_order_given`), where the foundations declare them (DEC-004 point 8, DEC-032
-        point 2): the order's text lies on one side of both ends, and the first end
-        contrasts with the page's ground at least as much as the last. A combination where
-        the four colours are as the base gives them is the base's to report, and one whose
-        ground is translucent is not measured. The order's text on each end is a declared
-        pair, which `_check_pairs` measures."""
+        """An order's ends in every combination, where the foundations declare them (DEC-004
+        point 8, DEC-032 point 2), at their defaults as at a brand's values: the order's
+        text lies on one side of both ends, and the first end contrasts with the page's
+        ground at least as much as the last. A combination where the four colours are as
+        the base gives them is the base's to report, and one whose ground is translucent is
+        not measured. The order's text on each end is a declared pair, which `_check_pairs`
+        measures."""
         order = self.scope.foundations.order
         if order is None:
             return
         named = (order.first, order.last, order.text, order.ground)
         for key, values in resolved.items():
-            if any(path not in values for path in named) or not self._order_given(views[key]):
+            if any(path not in values for path in named):
                 continue
             colours = [values[path].value for path in named]
             below = base._resolved[key] if base is not None else {}
