@@ -634,17 +634,25 @@ def test_the_question_is_built_from_the_capability_s_name_and_the_descriptions()
     question = fixers.Question(
         FIXER, (_entry(), _entry(type=GUIDE, description="your guides")), (PAGE, GUIDE)
     )
+    # It says when the agent starts: at a terminal, and after each merge with
+    # nobody watching, confined or where the switch is on (DEC-069 point 3).
     assert fixers.question_text(question) == (
-        f"{DOCS} can keep your pages and your guides true on its own. After each merge, its "
-        f"agent {FIXER} proposes a fix for each one that went out of date, and nothing is "
-        "applied until you approve it. Turn this on?"
+        f"{DOCS} can keep your pages and your guides true. When you run `pkit pm fix-drift` "
+        f"at a terminal, its agent {FIXER} proposes a fix for each one that went out of date, "
+        f"under your settings and the project's. After each merge, its agent {FIXER} also "
+        "starts with nobody watching: confined, once your harness can confine it, and where "
+        "the project's switch is on, under the settings of whoever runs the drift command. "
+        "Nothing it proposes is applied until you approve it. Turn this on?"
     )
     project = _entry(
         type="handbook", agent="editor", origin="project filler", description="your handbook"
     )
     assert fixers.question_text(fixers.Question("editor", (project,), ("handbook",))) == (
-        "The agent editor can keep your handbook true on its own. After each merge, it "
-        "proposes a fix for each one that went out of date, and nothing is applied until you "
+        "The agent editor can keep your handbook true. When you run `pkit pm fix-drift` at a "
+        "terminal, it proposes a fix for each one that went out of date, under your settings "
+        "and the project's. After each merge, it also starts with nobody watching: confined, "
+        "once your harness can confine it, and where the project's switch is on, under the "
+        "settings of whoever runs the drift command. Nothing it proposes is applied until you "
         "approve it. Turn this on?"
     )
 
@@ -825,9 +833,12 @@ def test_with_nobody_at_a_terminal_the_question_grants_nothing_and_prints_the_li
     result = _run(project, "ask-fixers")
     assert result.returncode == 0, result.stderr
     assert result.stdout.splitlines() == [
-        f"{DOCS} can keep your pages true on its own. After each merge, its agent {FIXER} "
-        "proposes a fix for each one that went out of date, and nothing is applied until you "
-        "approve it. Turn this on?",
+        f"{DOCS} can keep your pages true. When you run `pkit pm fix-drift` at a terminal, "
+        f"its agent {FIXER} proposes a fix for each one that went out of date, under your "
+        f"settings and the project's. After each merge, its agent {FIXER} also starts with "
+        "nobody watching: confined, once your harness can confine it, and where the project's "
+        "switch is on, under the settings of whoever runs the drift command. Nothing it "
+        "proposes is applied until you approve it. Turn this on?",
         f"  To turn it on: pkit pm grant-fixer {FIXER} --type {PAGE}",
         "Nothing was granted: nobody was at a terminal to answer.",
     ]
@@ -1301,11 +1312,11 @@ def test_the_grant_list_s_change_is_each_grant_and_refusal_added_or_removed() ->
     after = _answers_of(a={"granted": ["t:1", "t:3"], "refused": ["t:2"]}, c={"refused": ["t:9"]})
     change = fixers.grant_change(before, after)
     assert [c.said() for c in change] == [
-        "Fixer grant removed: a no longer starts on its own on t:2",
+        "Fixer grant removed: a no longer starts on t:2",
         "Fixer refusal added: a is refused t:2",
         "Fixer refusal removed: a is no longer refused t:3",
-        "Fixer grant added: a may start on its own on t:3",
-        "Fixer grant removed: b no longer starts on its own on t:1",
+        "Fixer grant added: a may start on t:3",
+        "Fixer grant removed: b no longer starts on t:1",
         "Fixer refusal added: c is refused t:9",
     ]
     assert fixers.grant_change(before, before) == ()

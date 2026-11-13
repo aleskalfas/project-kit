@@ -53,10 +53,11 @@ requirements:
     observation_point: out-of-session
     evidence: >-
       A design dependency (COR-047 point 9): project-management DEC-056 point
-      5 starts each granted fixer with nobody watching, held to what
-      proposing needs, and ADR-066 point 13 words what it requires of the
-      harness. The drift command, `pkit pm fix-drift`, is the first command
-      that depends on it.
+      5 holds a fixer's confined run to what proposing needs, and ADR-066
+      point 13 words what it requires of the harness. The drift command,
+      `pkit pm fix-drift`, depends on it once it starts a confined run, the
+      form every fixer's run takes, watched or not, where it is built and
+      the harness holds it (DEC-069 point 2).
   unattended-working-run:
     title: A process can start an agent unattended that edits and builds in a folder the process names
     behaviour: >-

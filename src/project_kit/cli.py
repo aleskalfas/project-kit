@@ -577,7 +577,19 @@ def _stops_on_signal() -> Generator[None]:
     type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
     default=None,
     help="The folder an unconfined run runs in. The run takes the person's and the project's "
-    "settings there, as a session started in it would.",
+    "settings there, as a session started in it would. The folder also chooses the runner: "
+    "where it is a project's root, the runner that project registers, run from it; else the "
+    "runner of the project the command runs in.",
+)
+@click.option(
+    "--local-settings",
+    "local_settings",
+    is_flag=True,
+    default=False,
+    help="Unconfined: carry the person's local settings, which their harness keeps for one "
+    "checkout out of git, from the project you run the command in into FOLDER. The runner "
+    "knows which file holds them. It copies the file only where FOLDER holds nothing at that "
+    "path, and refuses the run where a link lies on the way.",
 )
 @click.option(
     "--commit",
@@ -620,6 +632,7 @@ def _stops_on_signal() -> Generator[None]:
 def agents_run(
     agent_name: str,
     folder: Path | None,
+    local_settings: bool,
     commit: str | None,
     rules_of: str | None,
     files_to: Path | None,
@@ -627,7 +640,8 @@ def agents_run(
     effort: str | None,
     as_json: bool,
 ) -> None:
-    """Run AGENT once, with nobody watching, on the brief read from standard input.
+    """Run AGENT once, which nobody can answer during its run, on the brief read
+    from standard input.
 
     The one way a command starts an agent (ADR-066 point 1). The backbone
     starts the runner the project's adapter registers in its `commands:` tree
@@ -640,7 +654,9 @@ def agents_run(
     \b
     Two forms:
     - Unconfined, with --folder: the runner starts the harness in FOLDER, in
-      the mode the settings there, or the harness, choose.
+      the mode the settings there, or the harness, choose. With
+      --local-settings, it first carries the person's local settings into
+      FOLDER from the project the command runs in (ADR-066 point 10).
     - Confined, with --commit, --rules-of and --files-to, together: the run
       runs in a fresh clone at the commit, held by the run rules of the named
       command, and its files are copied to the folder after the clone is
@@ -675,6 +691,8 @@ def agents_run(
         raise click.UsageError(
             "give --folder, or --commit, --rules-of and --files-to, all three together."
         )
+    if local_settings and folder is None:
+        raise click.UsageError("--local-settings goes only with --folder.")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -688,6 +706,7 @@ def agents_run(
         commit=commit,
         rules_of=rules_of,
         files_to=None if files_to is None else files_to.resolve(),
+        local_settings_from=target_root if local_settings else None,
     )
     problem = request.problem(target_root)
     if problem is not None:

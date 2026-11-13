@@ -1,0 +1,35 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  A fixer starts when you run `pkit pm fix-drift` at a terminal, and
+  you watch it (DEC-069 points 1 and 2). The command tells you started it
+  when its standard input and standard output are both terminals. Each
+  granted fixer then runs through `pkit agents run` in the runner's
+  unconfined form, as `review-pr` runs its reviewers: in a clone of the
+  default branch's commit made for that fixer, with a git folder of its own
+  and no remote, under your settings and the project's, and Ctrl-C stops the
+  run. Your checkout's local settings, which hold your own settings for that
+  machine, are copied into the clone, and no other file of your checkout
+  reaches it: the command asks for them with `pkit agents run
+  --local-settings`, and your adapter's runner, which knows the file, copies
+  it, such as Claude Code's `.claude/settings.local.json`. A runner that
+  does not take the option's request refuses the run, so the adapter must be
+  the one this release ships. The fixer that runs is the commit's: the
+  backbone runs the runner the clone registers, which picks a shipped fixer's
+  definition there. So this needs the backbone this release ships. Where your project keeps its
+  deployed agents out of git, the run of a fixer that no place of the
+  methodology ships, such as one your project wrote straight into the
+  harness's own folder, is refused. The command copies each fixer's workspace
+  into the queue with the guards of the backbone's copy, and sets its files
+  aside where they hold a link or a special file, or where the fixer wrote
+  into the queue itself. With nobody at a terminal, as in the project manager's
+  run after a merge, it starts no fixer and writes nothing: it lists each
+  stale artefact a granted fixer would take, and the command to run. The
+  fixers question says the same, "When you run `pkit pm fix-drift` at a
+  terminal", and, with `grant-fixer`, that the fixer also starts after each
+  merge with nobody watching: confined, once your harness can confine it, and
+  where the project's switch is on (DEC-069 point 3). The pm skill's `fix-drift` sub-procedure and the project
+  manager show you what went stale instead of starting a fixer.
