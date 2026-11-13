@@ -43,6 +43,7 @@ pkit:
         - ADR-009
         - ADR-034#1
         - ADR-089#6
+        - ADR-092#7
       artefact:
         - ACT-operator
         - REQ-002
@@ -98,6 +99,7 @@ pkit:
 - **3c.** The running CLI is older than the project's content or its version pin. The system stops, writes nothing, and names the remedies for that state (REQ-010).
 - **3d.** The last [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete. The system stops, writes nothing, and names `pkit upgrade`, which finishes the transition (REQ-010).
 - **3e.** The router could not fetch the project's version pin, and runs the installed CLI instead (UC-052). The system stops only where its check finds another version, naming the remedies of the fallback ([ADR-065 point 8](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#8-each-stop-names-the-remedy-for-the-state-it-finds)).
+- **3f.** The project's recorded version is a release candidate above the running CLI, as a move onto it cut short leaves it. The system stops, writes nothing, and names `pkit upgrade --pre`, which hands over to that candidate, whose own upgrade finishes the move. No other release finishes it, since a project on a release candidate moves to no other release ([ADR-065 point 8](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#8-each-stop-names-the-remedy-for-the-state-it-finds) and [ADR-092 point 7](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#7-a-project-on-a-candidate-moves-to-no-other-release)).
 - **4a.** A [capability](../../../glossary.md#term-capability--capability) the project records is shipped newer, older or not at all, or has no recorded version. The system copies none of these, and reports each ([ADR-065 point 1](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#1-syncs-propagation-step-has-two-callers)).
 - **4b.** A folder of the project's own sits at `.pkit/lifecycle/`, where the core [area](../../../glossary.md#term-area--area) of that name would be copied. The system stops before it writes, and names how to move the project's area ([ADR-065 point 13](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#13-a-transition-and-sync-stop-on-a-clash-of-area-names-and-no-core-area-but-rule-sets-is-added-until-1600)).
 - **6a.** The [session anchor](../../../glossary.md#term-session-anchor--session-anchor) is not the clone's root, as where the clone lies in a folder below the session anchor. The system then warns that the [harness](../../../glossary.md#term-harness--harness) will not load what [sync](../../../glossary.md#term-sync--sync) wrote until a session starts at the root. On the path of 3a, it warns the same.

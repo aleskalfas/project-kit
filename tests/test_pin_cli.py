@@ -31,11 +31,15 @@ def _git_repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def _write_manifest(tmp_path: Path, backbone_version: str) -> None:
+def _write_manifest(
+    tmp_path: Path, backbone_version: str, completed_version: str | None = None
+) -> None:
     """Seed a minimal `.pkit/manifest.yaml` so `pin <version>` can read the
-    current content version it compares the target against (ADR-049)."""
+    current content version it compares the target against (ADR-049), with a
+    completion where *completed_version* names one."""
+    completed = f"completed_version: {completed_version}\n" if completed_version else ""
     (tmp_path / ".pkit" / "manifest.yaml").write_text(
-        f"schema_version: 1\nbackbone_version: {backbone_version}\ncomponents: []\n",
+        f"schema_version: 1\nbackbone_version: {backbone_version}\n{completed}components: []\n",
         encoding="utf-8",
     )
 
@@ -217,6 +221,40 @@ def test_pin_refuses_a_candidate_older_than_the_content(
     assert "refusing to pin 2.0.0rc1: it is OLDER" in result.output
 
 
+@pytest.mark.parametrize("target", ["2.0.0", "2.0.0rc2", "v2.1.0"])
+@pytest.mark.parametrize(
+    "completed", ["2.0.0rc1", "1.9.0"], ids=["on-it", "a-move-onto-it-cut-short"]
+)
+def test_pin_raises_a_project_on_a_candidate_to_no_other_release(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, target: str, completed: str
+) -> None:
+    """A raise of the pin refuses to move a project whose manifest records a release
+    candidate to any release but that candidate, candidate or final, before it
+    writes anything, and names the ways off. Where the move onto the candidate was
+    cut short, it names `pkit upgrade --pre` too (ADR-092 point 7)."""
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, "2.0.0rc1", completed)
+    router.pin_file_path(tmp_path).write_text(f"{completed}\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    def _boom(*_a: object, **_k: object) -> int:
+        raise AssertionError("a raise off a candidate must not reconcile content")
+
+    monkeypatch.setattr(upgrade, "run_bypassed", _boom)
+
+    result = CliRunner().invoke(main, ["pin", target])
+
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert (
+        f"refusing to move this project to pkit {target.removeprefix('v')}: its manifest "
+        "records the release candidate 2.0.0rc1"
+    ) in output
+    assert "leave the testers' branch" in output
+    assert ("`pkit upgrade --pre` finishes it" in output) is (completed != "2.0.0rc1")
+    assert router.read_version_pin(tmp_path) == completed
+
+
 def test_pin_freezes_a_project_at_its_candidate_content(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -289,6 +327,47 @@ def test_unpin_is_idempotent_when_absent(tmp_path: Path, monkeypatch: pytest.Mon
     result = CliRunner().invoke(main, ["unpin"])
 
     assert result.exit_code == 0  # no error when there is nothing to remove
+    assert not router.pin_file_path(tmp_path).exists()
+
+
+@pytest.mark.parametrize(
+    ("backbone", "completed"),
+    [("2.0.0rc1", "2.0.0rc1"), ("2.0.0rc1", "1.9.0")],
+    ids=["on-it", "a-move-onto-it-cut-short"],
+)
+def test_unpin_refuses_in_a_project_on_a_candidate_and_names_the_ways_off(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, backbone: str, completed: str
+) -> None:
+    """A project whose manifest records a release candidate stays pinned: `unpin`
+    refuses, writes nothing, and names the ways off (ADR-089 point 7, PRJ-016 point
+    4)."""
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, backbone, completed)
+    router.pin_file_path(tmp_path).write_text("2.0.0rc1\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["unpin"])
+
+    assert result.exit_code != 0
+    output = " ".join(result.output.split())
+    assert "refusing to remove this project's pin: its manifest records the release candidate " in (
+        output
+    )
+    assert "leave the testers' branch" in output
+    assert router.read_version_pin(tmp_path) == "2.0.0rc1"
+
+
+def test_unpin_removes_the_pin_of_a_project_at_a_final_release(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, "2.0.0", "2.0.0")
+    router.pin_file_path(tmp_path).write_text("2.0.0\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(main, ["unpin"])
+
+    assert result.exit_code == 0, result.output
     assert not router.pin_file_path(tmp_path).exists()
 
 

@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  A project whose manifest records a release candidate moves to no other
+  release (ADR-092 point 7). Every `pkit upgrade`, with `--pre` or without, and
+  every raise by `pkit pin` refuses, first and before it writes anything, to
+  move such a project to any release but that candidate, final or candidate,
+  and names the ways off: leave the testers' branch for one at the final
+  release the project stood at, or install again with a final release's
+  `pkit init`. `pkit upgrade --pre` there targets the recorded candidate, with
+  no lookup, so it only finishes a move to it cut short, and the message of a
+  pkit older than such a move, from `sync` or `upgrade`, names `pkit upgrade
+  --pre`. `pkit unpin` refuses, and writes nothing, in a project on a
+  candidate. A candidate's own upgrade refuses, last of its checks, where the
+  migrations it would run for the backbone or a component start above the
+  versions it was cut from, naming entry from a final release at or below
+  them, or the next candidate (ADR-092 point 9). The CLI reference and the
+  lifecycle's upgrade flow say so.

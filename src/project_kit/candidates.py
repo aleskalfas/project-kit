@@ -10,35 +10,43 @@ only when someone asks, and such a move always pins (ADR-089 point 7):
   `refuse_init`). Someone asks by `pkit upgrade --pre`, by a run with routing
   bypassed, or by a pin that names the candidate.
 - **A move to one always pins,** so `--no-pin` is refused on it
-  (`refuse_no_pin`).
+  (`refuse_no_pin`), and `pkit unpin` refuses in a project on one
+  (`refuse_unpin`).
 - **The first hop,** from a final release whose pkit has no `--pre`, is the
   candidate's own upgrade, run through the router's bypass (`first_hop`;
   ADR-089 point 8).
+
+A project on a candidate moves to no other release, and leaves it only by the
+ways off PRJ-016 point 4 sets (`ways_off`):
+
+- **No move off it.** An upgrade or a raise of the pin refuses to move a project
+  whose manifest records a candidate (`recorded_candidate`) to any release but
+  that candidate (`refuse_move_off`; ADR-092 point 7).
+- **No entry from above its base.** A candidate's own upgrade refuses a window
+  that starts above the versions its cut was made from, which its own package
+  records (`refuse_above_base`; ADR-092 point 9).
 """
 
 from __future__ import annotations
 
-import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 import click
 from packaging.version import InvalidVersion, Version
 
 from project_kit.install import LATEST_TAG
+from project_kit.manifest import BackboneManifest
 from project_kit.migrations import public_version
 from project_kit.router import DISTRIBUTION_GIT_URL
-
-# A candidate in PEP 440's normal form: `X.Y.ZrcN`, no part padded by a leading
-# zero, as the release step writes it and its tag carries it (PRJ-004).
-_CANDIDATE_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)rc(0|[1-9]\d*)$")
+from project_kit.versioning import is_candidate_version
 
 
 def is_candidate(version: str | None) -> bool:
     """Whether *version* names a release candidate in PEP 440's normal form,
     `X.Y.ZrcN`: the only spelling the router can route to the candidate's tag,
     which it reaches as `v<version>` (ADR-089 point 6)."""
-    return version is not None and _CANDIDATE_RE.match(version) is not None
+    return version is not None and is_candidate_version(version)
 
 
 def normal_form(token: str) -> str | None:
@@ -139,3 +147,161 @@ def refuse_init(version: str, target_root: Path, *, bypassed: bool) -> None:
             ]
         )
     )
+
+
+# --- A project on a candidate (ADR-092 points 7 and 9) ---------------------------
+
+
+def recorded_candidate(manifest: BackboneManifest | None) -> str | None:
+    """The release candidate *manifest* records: its target, `backbone_version`,
+    where that is a candidate, else its completion, `completed_version`, where
+    that is one. None where it records no candidate, or there is no manifest."""
+    if manifest is None:
+        return None
+    for version in (manifest.backbone_version, manifest.completed_version):
+        if is_candidate(version):
+            return version
+    return None
+
+
+def ways_off(candidate: str) -> list[str]:
+    """The ways off *candidate* PRJ-016 point 4 sets, as each refusal of a move off
+    it names them: the project leaves the testers' branch, and from the final
+    release it stood at upgrades or enters a later candidate. A project the
+    candidate's `init` installed starts again from a final release's `init`."""
+    return [
+        f"To leave {candidate}, leave the testers' branch, the branch of this project that "
+        "entered it: switch back to a branch at the final release the project stood at. "
+        "From there, `pkit upgrade` moves it on, or it enters a later candidate (PRJ-016 "
+        "point 4).",
+        f"A project that {candidate}'s `pkit init` installed has no such branch: install it "
+        "again with a final release's `pkit init`.",
+    ]
+
+
+def refuse_move_off(manifest: BackboneManifest | None, target: str) -> None:
+    """Refuse to move a project whose *manifest* records a release candidate to
+    *target*, any release but that candidate, before anything is written (ADR-092
+    point 7). Every upgrade, with `--pre` or without, and every raise of the pin
+    calls it with the release its move would reach.
+
+    The message names the ways off (`ways_off`), and, where the move to the
+    candidate was cut short, `pkit upgrade --pre`, which targets the recorded
+    candidate and so only finishes that move.
+    """
+    candidate = recorded_candidate(manifest)
+    if manifest is None or candidate is None:
+        return
+    if public_version(target) == public_version(candidate):
+        return
+    lines = [
+        f"refusing to move this project to pkit {target}: its manifest records the release "
+        f"candidate {candidate}, and a project on a candidate moves to no other release, "
+        "candidate or final (ADR-092 point 7). Nothing was written.",
+    ]
+    if manifest.backbone_version == candidate and manifest.transition_incomplete:
+        lines.append(
+            f"Its move to {candidate} was cut short: `pkit upgrade --pre` finishes it, and "
+            "moves the project to no other release."
+        )
+    lines.extend(ways_off(candidate))
+    raise click.ClickException("\n       ".join(lines))
+
+
+def refuse_unpin(manifest: BackboneManifest | None) -> None:
+    """Refuse `pkit unpin` in a project whose *manifest* records a release
+    candidate, before anything is written (ADR-089 point 7). A project on a
+    candidate stays pinned, so the router keeps running the candidate's code
+    whatever pkit is installed. The message names the ways off (`ways_off`)."""
+    candidate = recorded_candidate(manifest)
+    if candidate is None:
+        return
+    raise click.ClickException(
+        "\n       ".join(
+            [
+                "refusing to remove this project's pin: its manifest records the release "
+                f"candidate {candidate}, and a project on a candidate stays pinned, so that "
+                "the router keeps running the candidate's code whatever pkit is installed "
+                "(ADR-089 point 7). Nothing was written.",
+                *ways_off(candidate),
+            ]
+        )
+    )
+
+
+def own_base_file() -> Path:
+    """Where this pkit's own package keeps its cut's base, which a release
+    candidate's package alone carries (ADR-092 point 9)."""
+    from project_kit.release_candidate import BASE_PATH
+
+    return Path(__file__).parent / BASE_PATH.name
+
+
+def refuse_above_base(
+    candidate: str, *, backbone_from: str | None, components_from: Mapping[str, str]
+) -> None:
+    """In a release candidate's own upgrade, refuse a migration window that starts
+    above its cut's base, before anything is written (ADR-092 point 9).
+
+    *candidate* is the version the running pkit's bundle records: an upgrade by a
+    final release meets no such refusal. The base, the version the backbone and
+    each component recorded at the commit the candidate was cut from, is read
+    from the candidate's own package (`own_base_file`), and a base it cannot read
+    refuses too, since the limit could not be kept. *backbone_from* is where the
+    backbone's window starts, None where it runs none or runs from no completion,
+    and *components_from* where each moving component's starts, by name. A window
+    that starts above the version the base records for its component would pass
+    over what a final release made after the cut ran. The message names entering
+    from a final release at or below the base, or waiting for the next cut.
+    """
+    if not is_candidate(candidate):
+        return
+    from project_kit.release_candidate import parse_base
+
+    path = own_base_file()
+    try:
+        base = parse_base(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise click.ClickException(
+            "\n       ".join(
+                [
+                    f"refusing to move this project to pkit {candidate}: this release "
+                    "candidate carries no readable record of the versions it was cut from "
+                    f"({path.name}: {exc}), so it cannot tell whether this project may "
+                    "enter it (ADR-092 point 9). Nothing was written.",
+                    "A candidate run from its tag carries that record: run its own upgrade "
+                    f"from the tag, `{first_hop(candidate)}`.",
+                ]
+            )
+        ) from None
+    above: list[str] = []
+    if backbone_from is not None and _above(backbone_from, base.backbone):
+        above.append(f"the backbone's from {backbone_from}, above {base.backbone}")
+    for name, start in sorted(components_from.items()):
+        recorded = base.components.get(name)
+        if recorded is not None and _above(start, recorded):
+            above.append(f"{name}'s from {start}, above {recorded}")
+    if not above:
+        return
+    raise click.ClickException(
+        "\n       ".join(
+            [
+                f"refusing to move this project to pkit {candidate}: the migrations it would "
+                "run here start above the versions it was cut from, so they would pass over "
+                "what a final release made after the cut ran in this project (ADR-092 point "
+                "9). Nothing was written.",
+                "The windows that start above the cut: " + "; ".join(above) + ".",
+                f"Enter {candidate} from a final release at or below the versions it was cut "
+                f"from, pkit {base.backbone} for the backbone, or wait for the next candidate, "
+                "cut once its branch has taken in the release this project is at.",
+            ]
+        )
+    )
+
+
+def _above(version: str, ceiling: str) -> bool:
+    """Whether *version* is newer than *ceiling*, both read as public versions, the
+    pre-release kept; False where either is no version, so only an unambiguous
+    order refuses."""
+    parsed, parsed_ceiling = public_version(version), public_version(ceiling)
+    return parsed is not None and parsed_ceiling is not None and parsed > parsed_ceiling

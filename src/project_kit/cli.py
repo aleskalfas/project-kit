@@ -5496,11 +5496,19 @@ def unpin() -> None:
     The project reverts to floating on the installed pkit binary — the router
     runs the installed tool as-is (today's un-pinned behaviour). Idempotent: it
     is fine to run when no pin file is present.
+
+    Refused, before anything is written, in a project whose manifest records a
+    release candidate: a project on a candidate stays pinned (ADR-089 point 7).
+    The message names the ways off the candidate (PRJ-016 point 4).
     """
+    from project_kit.candidates import refuse_unpin
+    from project_kit.manifest import read_backbone_manifest
+
     refuse_inside_migration("unpin")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+    refuse_unpin(read_backbone_manifest(target_root))
     pin_path = router.pin_file_path(target_root)
     if pin_path.exists():
         router.write_version_pin(target_root, None)

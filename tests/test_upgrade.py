@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import re
 import shutil
 import subprocess
@@ -12,7 +13,7 @@ import click
 import pytest
 from packaging.version import Version
 
-from project_kit import candidates, install, manifest, router, upgrade
+from project_kit import candidates, install, manifest, release_candidate, router, upgrade
 from tests.adopter_repo import MakeAdopterRepo
 
 
@@ -3705,10 +3706,25 @@ def _a_candidate_above_this_pkit() -> str:
     return f"{this.major}.{this.minor}.{this.micro + 1}rc1"
 
 
+def _this_pkits_base() -> release_candidate.Base:
+    """The base of a cut made from this pkit's own tree: the version the backbone and
+    each component record there, which a project this pkit installed records too."""
+    return release_candidate.base_at(install.find_source_kit(), "0" * 40)
+
+
+def _cut_from(monkeypatch: pytest.MonkeyPatch, where: Path, base: release_candidate.Base) -> None:
+    """Make *base* the cut's base the running candidate's own package records, kept
+    at *where* (ADR-092 point 9)."""
+    where.write_text(base.text(), encoding="utf-8")
+    monkeypatch.setattr(candidates, "own_base_file", lambda: where)
+
+
 def _run_as(monkeypatch: pytest.MonkeyPatch, source: Path, version: str) -> None:
     """Run this upgrade as pkit *version*: its bundle, *source*, records *version*,
     and so does the running code. No bypass and no routed child, unless the test
-    sets one."""
+    sets one. Where *version* is a candidate, it was cut from this pkit's tree, so
+    a project this pkit installed may enter it."""
+    _cut_from(monkeypatch, source.parent / "candidate_base.json", _this_pkits_base())
     (source / "VERSION").write_text(f"{version}\n", encoding="utf-8")
     _use_source(monkeypatch, source)
     monkeypatch.setattr(upgrade, "running_version", lambda: version)
@@ -4003,7 +4019,9 @@ def test_a_first_hop_cut_short_goes_on_when_it_is_run_again(
     """A first hop cut short leaves the candidate recorded as the target, the
     completion and the pin at the release the project left. The same command, run
     again, finishes the move from the recorded states, and pins the project at the
-    candidate (ADR-089 point 8)."""
+    candidate (ADR-089 point 8). The candidate's base reads the window, which
+    starts at the release the project left, not the candidate the manifest records
+    (ADR-092 point 9)."""
     candidate = _a_candidate_above_this_pkit()
     router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     manifest.record_backbone_target(installed_target, candidate)
@@ -4022,13 +4040,15 @@ def test_a_move_under_pre_cut_short_hands_over_again_when_it_is_run_again(
     """`pkit upgrade --pre` cut short leaves the candidate recorded as the target,
     the pin at the release the project left. Run again, its routed child hands
     over to the candidate once more, whose upgrade finishes the move (ADR-089
-    point 8)."""
+    point 8). It targets the candidate the project records, with no lookup, so a
+    newer candidate or final release published since takes no part (ADR-092 point
+    7, ADR-065 point 9)."""
     candidate = "3.0.0rc1"
     router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     manifest.record_backbone_target(installed_target, candidate)
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
     stub_ls_remote.ls_remote_returncode = 0
-    stub_ls_remote.ls_remote_stdout = _tag_output(_this_pkit(), candidate)
+    stub_ls_remote.ls_remote_stdout = _tag_output(_this_pkit(), candidate, "3.0.0rc2", "3.0.0")
     handed: list[tuple[str, list[str]]] = []
     monkeypatch.setattr(
         upgrade, "run_bypassed", lambda pin, argv, _environ=None: handed.append((pin, argv)) or 0
@@ -4038,6 +4058,7 @@ def test_a_move_under_pre_cut_short_hands_over_again_when_it_is_run_again(
 
     assert handed == [(candidate, ["upgrade"])]
     assert router.read_version_pin(installed_target) == candidate
+    assert stub_ls_remote.ls_remote_calls == []
 
 
 def test_the_lookup_under_pre_counts_candidates_in_their_normal_form_alone() -> None:
@@ -4077,3 +4098,320 @@ def test_cli_upgrade_pre_flag_forwards(monkeypatch: pytest.MonkeyPatch) -> None:
     res = CliRunner().invoke(cli.main, ["upgrade"])
     assert res.exit_code == 0, res.output
     assert captured["pre"] is False
+
+
+# --- A project on a candidate moves to no other release (ADR-092 points 7 and 9) --
+
+
+def _the_final_of(candidate: str) -> str:
+    """The final release a candidate's version names, `3.0.0` for `3.0.0rc1`."""
+    return Version(candidate).base_version
+
+
+def _a_candidate_below_this_pkit() -> str:
+    """A candidate of this pkit's own version, which sorts below it."""
+    return f"{_this_pkit()}rc1"
+
+
+def _put_on(target: Path, candidate: str, *, completed: str | None = None) -> None:
+    """Record *candidate* as the project's target, and *completed* as its completion:
+    the candidate itself where it is None, as a finished move onto it leaves it."""
+    manifest.record_backbone_target(target, candidate)
+    manifest.record_completed_version(target, completed if completed is not None else candidate)
+
+
+def _pin(target: Path, version: str) -> None:
+    router.pin_file_path(target).write_text(f"{version}\n", encoding="utf-8")
+
+
+def test_a_plain_upgrade_moves_a_project_on_a_candidate_to_no_later_release(
+    installed_target: Path,
+    tmp_path: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Under its pin's code, a project on a candidate whose final release has since
+    shipped refuses to hand over to it, before it writes anything, and the message
+    names PRJ-016 point 4's ways off (ADR-092 point 7, ADR-065 point 9)."""
+    candidate = _a_candidate_above_this_pkit()
+    final = _the_final_of(candidate)
+    _run_as(monkeypatch, _real_source_copy(tmp_path), candidate)
+    _put_on(installed_target, candidate)
+    _pin(installed_target, candidate)
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output(_this_pkit(), candidate, final)
+    _no_hand_over(monkeypatch, "a project on a candidate moves to no other release")
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target)
+
+    message = _one_line(excinfo.value.message)
+    assert (
+        f"refusing to move this project to pkit {final}: its manifest records the release "
+        f"candidate {candidate}, and a project on a candidate moves to no other release"
+    ) in message
+    assert "leave the testers' branch" in message
+    assert "(PRJ-016 point 4)" in message
+    assert "cut short" not in message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_pre_on_a_candidate_targets_it_and_takes_no_later_release(
+    installed_target: Path,
+    tmp_path: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Under `--pre`, a project on a candidate targets that candidate, with no lookup:
+    a later candidate and its final release take no part, and the project stays
+    where it is (ADR-092 point 7, ADR-065 point 9)."""
+    candidate = _a_candidate_above_this_pkit()
+    later = candidate.replace("rc1", "rc2")
+    _run_as(monkeypatch, _real_source_copy(tmp_path), candidate)
+    _put_on(installed_target, candidate)
+    _pin(installed_target, candidate)
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output(candidate, later, _the_final_of(candidate))
+    _no_hand_over(monkeypatch, "`--pre` on a candidate takes no later release")
+
+    upgrade.run_upgrade(installed_target, pre=True)
+
+    out = capsys.readouterr().out
+    assert f"Already at the release candidate this project records (v{candidate})" in out
+    assert f"Already at backbone v{candidate}" in out
+    assert stub_ls_remote.ls_remote_calls == []
+    assert router.read_version_pin(installed_target) == candidate
+
+
+@pytest.mark.parametrize("run", ["unpinned", "bypassed", "router-fallback"])
+def test_a_later_pkit_refuses_to_move_a_project_on_a_candidate_before_any_other_check(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    run: str,
+) -> None:
+    """Any upgrade not run under its pin's code, by a pkit later than the candidate
+    the project records, refuses first, before the refusal under the router's
+    fallback and before the tool step, and writes nothing (ADR-092 point 7,
+    ADR-065 point 4)."""
+    candidate = _a_candidate_below_this_pkit()
+    _put_on(installed_target, candidate)
+    if run != "unpinned":
+        _pin(installed_target, candidate)
+    if run == "bypassed":
+        monkeypatch.setenv(router._BYPASS_ENV, "1")
+    if run == "router-fallback":
+        monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, candidate)
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target)
+
+    message = _one_line(excinfo.value.message)
+    assert (
+        f"refusing to move this project to pkit {_this_pkit()}: its manifest records the "
+        f"release candidate {candidate}"
+    ) in message
+    assert "could not fetch" not in message
+    assert stub_ls_remote.ls_remote_calls == []
+    assert stub_ls_remote.install_calls == []
+    assert _tree_bytes(installed_target) == before
+
+
+def test_pre_hands_a_move_cut_short_over_to_its_candidate_alone(
+    installed_target: Path, stub_ls_remote: _RecordingRun, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """In a project with no pin, a move onto a candidate cut short is finished by
+    `pkit upgrade --pre`, which hands over to the candidate the project records,
+    not to a later one, and pins the project there (ADR-092 point 7)."""
+    candidate = _a_candidate_above_this_pkit()
+    _put_on(installed_target, candidate, completed=_this_pkit())
+    assert router.read_version_pin(installed_target) is None
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output(
+        _this_pkit(), candidate, candidate.replace("rc1", "rc2")
+    )
+    handed: list[tuple[str, list[str]]] = []
+    monkeypatch.setattr(
+        upgrade, "run_bypassed", lambda pin, argv, _environ=None: handed.append((pin, argv)) or 0
+    )
+
+    upgrade.run_upgrade(installed_target, pre=True)
+
+    assert handed == [(candidate, ["upgrade"])]
+    assert router.read_version_pin(installed_target) == candidate
+
+
+@pytest.mark.parametrize("lookup", ["offline", "no-later-release"])
+def test_a_plain_upgrade_of_a_move_cut_short_names_pre(
+    installed_target: Path,
+    stub_ls_remote: _RecordingRun,
+    monkeypatch: pytest.MonkeyPatch,
+    lookup: str,
+) -> None:
+    """Under its pin's code, a plain upgrade of a project whose move onto a candidate
+    was cut short refuses, as content ahead of its pin, and names `pkit upgrade
+    --pre` instead, online or offline, since no other release finishes that move
+    (ADR-065 point 9)."""
+    candidate = _a_candidate_above_this_pkit()
+    _put_on(installed_target, candidate, completed=_this_pkit())
+    _pin(installed_target, _this_pkit())
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    if lookup == "no-later-release":
+        stub_ls_remote.ls_remote_returncode = 0
+        stub_ls_remote.ls_remote_stdout = _tag_output(_this_pkit())
+    _no_hand_over(monkeypatch, "no release but the candidate finishes the move")
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target)
+
+    message = _one_line(excinfo.value.message)
+    assert f"older than this project's content ({candidate}" in message
+    assert (
+        f"This project records the release candidate {candidate} as its target: run `pkit "
+        f"upgrade --pre`, which hands over to {candidate}"
+    ) in message
+    assert "Reconnect" not in message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_a_plain_upgrade_of_a_move_cut_short_hands_over_to_no_later_release(
+    installed_target: Path, stub_ls_remote: _RecordingRun, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Online, with a final release later than the pin, the routed child of a move
+    onto a candidate cut short refuses to hand over to it, and names `pkit upgrade
+    --pre`, which finishes the move (ADR-092 point 7)."""
+    candidate = _a_candidate_above_this_pkit()
+    final = _the_final_of(candidate)
+    _put_on(installed_target, candidate, completed=_this_pkit())
+    _pin(installed_target, _this_pkit())
+    monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")
+    stub_ls_remote.ls_remote_returncode = 0
+    stub_ls_remote.ls_remote_stdout = _tag_output(_this_pkit(), candidate, final)
+    _no_hand_over(monkeypatch, "no release but the candidate finishes the move")
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target)
+
+    message = _one_line(excinfo.value.message)
+    assert f"refusing to move this project to pkit {final}" in message
+    assert f"Its move to {candidate} was cut short: `pkit upgrade --pre` finishes it" in message
+
+
+def _lowered_base(backbone: str) -> release_candidate.Base:
+    """This pkit's base with the backbone the cut found at *backbone*. Read before the
+    test runs as a candidate, whose bundle records another version."""
+    return dataclasses.replace(_this_pkits_base(), backbone=backbone)
+
+
+@pytest.mark.parametrize("dry_run", [False, True], ids=["run", "dry-run"])
+def test_a_candidate_admits_no_project_above_its_base(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dry_run: bool
+) -> None:
+    """A candidate's own upgrade refuses a project whose backbone window would start
+    above the version its cut was made from, before anything is written and under
+    `--dry-run` too. The message names entering from a final release at or below the
+    base, or waiting for the next cut (ADR-092 point 9)."""
+    candidate, this = _a_candidate_above_this_pkit(), _this_pkit()
+    lowered = _lowered_base(backbone="0.1.0")
+    _run_as(monkeypatch, _real_source_copy(tmp_path), candidate)
+    _cut_from(monkeypatch, tmp_path / "lowered.json", lowered)
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+    _no_hand_over(monkeypatch, "the candidate's own upgrade runs in its own process")
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target, dry_run=dry_run)
+
+    message = _one_line(excinfo.value.message)
+    assert f"refusing to move this project to pkit {candidate}" in message
+    assert f"the backbone's from {this}, above 0.1.0." in message
+    assert (
+        f"Enter {candidate} from a final release at or below the versions it was cut from, "
+        "pkit 0.1.0 for the backbone, or wait for the next candidate"
+    ) in message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_a_candidate_admits_no_project_above_its_base_for_a_component(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The limit holds for each component the candidate moves: its window starts at
+    the version the project records, and refuses above the base's (ADR-092 point
+    9)."""
+    candidate = _a_candidate_above_this_pkit()
+    base = _this_pkits_base()
+    source = _real_source_copy(tmp_path)
+    package = source / "adapters" / "claude-code" / "package.yaml"
+    recorded = re.search(r"(?m)^  version: (\S+)$", package.read_text(encoding="utf-8"))
+    assert recorded is not None
+    package.write_text(
+        re.sub(
+            r"(?m)^  version: \S+$", "  version: 99.0.0rc1", package.read_text(encoding="utf-8")
+        ),
+        encoding="utf-8",
+    )
+    _run_as(monkeypatch, source, candidate)
+    _cut_from(
+        monkeypatch,
+        tmp_path / "lowered.json",
+        dataclasses.replace(base, components={**base.components, "claude-code": "0.0.1"}),
+    )
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target)
+
+    message = _one_line(excinfo.value.message)
+    assert f"claude-code's from {recorded.group(1)}, above 0.0.1." in message
+    assert "the backbone's" not in message
+    assert _tree_bytes(installed_target) == before
+
+
+def test_a_candidate_whose_base_cannot_be_read_moves_no_project(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A candidate that cannot read the versions it was cut from refuses, since it
+    cannot keep the limit on entry (ADR-092 point 9)."""
+    candidate = _a_candidate_above_this_pkit()
+    _run_as(monkeypatch, _real_source_copy(tmp_path), candidate)
+    monkeypatch.setattr(candidates, "own_base_file", lambda: tmp_path / "missing.json")
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+    before = _tree_bytes(installed_target)
+
+    with pytest.raises(click.ClickException, match="carries no readable record"):
+        upgrade.run_upgrade(installed_target)
+
+    assert _tree_bytes(installed_target) == before
+
+
+@pytest.mark.parametrize("refusal", ["the guard", "the older-direction check"])
+def test_the_refusal_above_the_base_is_the_last_of_upgrades_checks(
+    installed_target: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, refusal: str
+) -> None:
+    """The refusal of a window above the base comes last of upgrade's own checks:
+    after the guard on a candidate nobody asked for, and after the older-direction
+    check (ADR-065 point 4)."""
+    candidate = _a_candidate_above_this_pkit()
+    lowered = _lowered_base(backbone="0.1.0")
+    _run_as(monkeypatch, _real_source_copy(tmp_path), candidate)
+    _cut_from(monkeypatch, tmp_path / "lowered.json", lowered)
+    if refusal == "the older-direction check":
+        monkeypatch.setenv(router._BYPASS_ENV, "1")
+        _put_on(installed_target, "99.0.0")
+
+    with pytest.raises(click.ClickException) as excinfo:
+        upgrade.run_upgrade(installed_target)
+
+    message = _one_line(excinfo.value.message)
+    if refusal == "the guard":
+        assert "a project moves onto one only when someone asks" in message
+    else:
+        assert "older than this project's content (99.0.0" in message
+    assert "above the versions it was cut from" not in message

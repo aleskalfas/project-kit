@@ -1,5 +1,5 @@
 """Tests for `project_kit.candidates`: a release candidate as a project meets it
-(ADR-089 points 6 to 8, as ADR-092 refines them).
+(ADR-089 points 6 to 8, as ADR-092 refines them, and ADR-092 points 7 and 9).
 
 The upgrade's and the pin's uses of it are in `test_upgrade.py` and
 `test_pin_cli.py`, and the `init`'s in `test_install.py`.
@@ -13,6 +13,8 @@ import click
 import pytest
 
 from project_kit import candidates, router
+from project_kit.manifest import BackboneManifest
+from project_kit.release_candidate import Base
 
 
 @pytest.mark.parametrize(
@@ -127,3 +129,198 @@ def test_an_init_by_a_candidate_refuses_unless_routing_is_bypassed(tmp_path: Pat
 
     candidates.refuse_init("2.0.0", tmp_path, bypassed=False)
     candidates.refuse_init("2.0.0rc1", tmp_path, bypassed=True)
+
+
+# --- A project on a candidate (ADR-092 points 7 and 9) ---------------------------
+
+
+def _manifest(backbone: str, completed: str | None) -> BackboneManifest:
+    return BackboneManifest(backbone_version=backbone, completed_version=completed)
+
+
+def _one_line(message: str) -> str:
+    return " ".join(message.split())
+
+
+@pytest.mark.parametrize(
+    ("backbone", "completed", "expected"),
+    [
+        pytest.param("2.0.0rc1", "2.0.0rc1", "2.0.0rc1", id="on-it"),
+        pytest.param("2.0.0rc1", "1.9.0", "2.0.0rc1", id="a-move-onto-it-cut-short"),
+        pytest.param("2.0.0rc1", None, "2.0.0rc1", id="no-completion"),
+        pytest.param("2.0.0", "2.0.0rc1", "2.0.0rc1", id="only-its-completion"),
+        pytest.param("2.0.0", "2.0.0", None, id="a-final-release"),
+    ],
+)
+def test_the_candidate_a_manifest_records_is_its_target_else_its_completion(
+    backbone: str, completed: str | None, expected: str | None
+) -> None:
+    assert candidates.recorded_candidate(_manifest(backbone, completed)) == expected
+
+
+def test_no_manifest_records_no_candidate() -> None:
+    assert candidates.recorded_candidate(None) is None
+
+
+@pytest.mark.parametrize(
+    "manifest",
+    [
+        pytest.param(None, id="no-manifest"),
+        pytest.param(_manifest("2.0.0", "2.0.0"), id="a-final-release"),
+        pytest.param(_manifest("2.0.0rc1", "2.0.0rc1"), id="to-the-candidate-itself"),
+        pytest.param(_manifest("2.0.0rc1", "1.9.0"), id="finishing-a-move-cut-short"),
+    ],
+)
+def test_a_move_to_the_recorded_candidate_or_from_a_final_release_passes(
+    manifest: BackboneManifest | None,
+) -> None:
+    """Only a project whose manifest records a candidate is held, and a move to that
+    candidate is no move off it (ADR-092 point 7)."""
+    candidates.refuse_move_off(manifest, "2.0.0rc1")
+
+
+@pytest.mark.parametrize("target", ["2.0.0", "2.0.0rc2", "2.1.0", "1.9.1"])
+def test_a_move_off_the_recorded_candidate_refuses_and_names_the_ways_off(target: str) -> None:
+    """A project on a candidate moves to no other release, candidate or final, and
+    the message names PRJ-016 point 4's ways off (ADR-092 point 7)."""
+    with pytest.raises(click.ClickException) as excinfo:
+        candidates.refuse_move_off(_manifest("2.0.0rc1", "2.0.0rc1"), target)
+
+    message = _one_line(excinfo.value.message)
+    assert (
+        f"refusing to move this project to pkit {target}: its manifest records the release "
+        "candidate 2.0.0rc1, and a project on a candidate moves to no other release"
+    ) in message
+    assert "Nothing was written" in message
+    assert "leave the testers' branch" in message
+    assert "`pkit upgrade` moves it on, or it enters a later candidate (PRJ-016 point 4)" in (
+        message
+    )
+    assert "install it again with a final release's `pkit init`" in message
+    assert "cut short" not in message
+
+
+def test_a_move_off_a_candidate_whose_move_was_cut_short_names_pre() -> None:
+    """Where the move onto the candidate was cut short, the refusal also names `pkit
+    upgrade --pre`, which finishes that move and takes no other release (ADR-092
+    point 7)."""
+    with pytest.raises(click.ClickException) as excinfo:
+        candidates.refuse_move_off(_manifest("2.0.0rc1", "1.9.0"), "2.0.0")
+
+    assert (
+        "Its move to 2.0.0rc1 was cut short: `pkit upgrade --pre` finishes it, and moves the "
+        "project to no other release."
+    ) in _one_line(excinfo.value.message)
+
+
+def test_unpin_refuses_in_a_project_on_a_candidate_alone() -> None:
+    """A project on a candidate stays pinned, and the refusal names the ways off
+    (ADR-089 point 7, PRJ-016 point 4)."""
+    candidates.refuse_unpin(None)
+    candidates.refuse_unpin(_manifest("2.0.0", "2.0.0"))
+
+    with pytest.raises(click.ClickException) as excinfo:
+        candidates.refuse_unpin(_manifest("2.0.0rc1", "1.9.0"))
+
+    message = _one_line(excinfo.value.message)
+    assert (
+        "refusing to remove this project's pin: its manifest records the release candidate 2.0.0rc1"
+    ) in message
+    assert "Nothing was written" in message
+    assert "leave the testers' branch" in message
+
+
+def _cut(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, base: Base) -> None:
+    """Make *base* the cut's base the running candidate's own package records."""
+    where = tmp_path / "candidate_base.json"
+    where.write_text(base.text(), encoding="utf-8")
+    monkeypatch.setattr(candidates, "own_base_file", lambda: where)
+
+
+_BASE = Base("0" * 40, "2.1.0", {"claude-code": "1.4.0", "project-management": "0.30.0"})
+
+
+@pytest.mark.parametrize(
+    ("backbone_from", "components_from"),
+    [
+        pytest.param(None, {}, id="no-window"),
+        pytest.param("2.1.0", {}, id="at-the-base"),
+        pytest.param("2.0.0", {"claude-code": "1.3.0"}, id="below-the-base"),
+        pytest.param(None, {"claude-code": "1.4.0"}, id="a-component-at-the-base"),
+        pytest.param(None, {"a-component-of-its-own": "9.0.0"}, id="no-version-in-the-base"),
+    ],
+)
+def test_a_window_at_or_below_the_base_passes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    backbone_from: str | None,
+    components_from: dict[str, str],
+) -> None:
+    """A window that starts at or below the version the base records for its
+    component passes (ADR-092 point 9)."""
+    _cut(monkeypatch, tmp_path, _BASE)
+
+    candidates.refuse_above_base(
+        "3.0.0rc2", backbone_from=backbone_from, components_from=components_from
+    )
+
+
+def test_a_window_above_the_base_refuses_naming_each_and_the_ways_in(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A window that starts above the version the base records refuses, for the
+    backbone and for a component alike, and the message names entering from a final
+    release at or below the base, or waiting for the next cut (ADR-092 point 9)."""
+    _cut(monkeypatch, tmp_path, _BASE)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        candidates.refuse_above_base(
+            "3.0.0rc2",
+            backbone_from="2.2.0",
+            components_from={"project-management": "0.31.0", "claude-code": "1.4.0"},
+        )
+
+    message = _one_line(excinfo.value.message)
+    assert "refusing to move this project to pkit 3.0.0rc2" in message
+    assert "Nothing was written" in message
+    assert (
+        "The windows that start above the cut: the backbone's from 2.2.0, above 2.1.0; "
+        "project-management's from 0.31.0, above 0.30.0."
+    ) in message
+    assert "claude-code's" not in message
+    assert "from a final release at or below the versions it was cut from, pkit 2.1.0" in message
+    assert "or wait for the next candidate" in message
+
+
+def test_an_upgrade_by_a_final_release_reads_no_base(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A final release carries no base, and its upgrade meets no such refusal."""
+    monkeypatch.setattr(candidates, "own_base_file", lambda: tmp_path / "missing.json")
+
+    candidates.refuse_above_base("3.0.0", backbone_from="9.0.0", components_from={})
+
+
+@pytest.mark.parametrize("text", [None, "not json", '{"commit": "x"}'], ids=str)
+def test_a_candidate_whose_base_cannot_be_read_refuses(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, text: str | None
+) -> None:
+    """A candidate that cannot read its base cannot keep the limit, so it refuses,
+    and names the candidate's upgrade run from its tag (ADR-092 point 9)."""
+    where = tmp_path / "candidate_base.json"
+    if text is not None:
+        where.write_text(text, encoding="utf-8")
+    monkeypatch.setattr(candidates, "own_base_file", lambda: where)
+
+    with pytest.raises(click.ClickException) as excinfo:
+        candidates.refuse_above_base("3.0.0rc2", backbone_from=None, components_from={})
+
+    message = _one_line(excinfo.value.message)
+    assert "carries no readable record of the versions it was cut from" in message
+    assert f"`{candidates.first_hop('3.0.0rc2')}`" in message
+
+
+def test_the_base_is_read_from_the_candidates_own_package() -> None:
+    """The base sits in the package beside this module, where the cut writes it and
+    the wheel carries it (ADR-092 point 9)."""
+    assert candidates.own_base_file() == Path(candidates.__file__).parent / "candidate_base.json"
