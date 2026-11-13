@@ -884,7 +884,7 @@ Each drawn property names its source in `sources`:
 - **`:as`:** a value a switch on `:as` chose, by whether its instance is a page ([Switches](#switches)). It is a kind of its own, and names neither value.
 - **`default:<library>/<component>`:** the component's own value, such as the picture file an image names by `file`. A field that a `use` part does not pass on is the placing component's, which gives it nothing.
 - **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, a run's typography role, or the role whose line height a text takes. It is also the source of the picture role an image shows.
-- **`engine`:** a value the engine computed, such as a text's measured height, an item's frame, but for the size across that a `cross-size` gives it, which names what a part's formula names, or the height a top asks for through its [physical size](#a-physical-size), or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none.
+- **`engine`:** a value the engine computed, such as a text's measured height, an item's frame or the height a top asks for through its [physical size](#a-physical-size), or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none. An item's size across that a `cross-size` gives it names what a part's formula names instead.
 
 ## Text
 
