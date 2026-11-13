@@ -265,7 +265,7 @@ The comparison vouches for content only under a tagged install, the one the CLI 
   - **So every shipped file a project holds comes from the release its backbone records,** wherever a version names one content. A version names one content under a tagged install, the one the CLI README recommends ("Installing pkit on PATH").
   - **`capabilities register`** copies nothing and does not call the guard.
 - **`upgrade` calls it in the older direction only,** before it writes anything. It refuses a running pkit older than the newest of `backbone_version`, `completed_version` and the pin. It calls the propagation step, never the sync command, so the sync command's guard never stops it.
-- **A move to a candidate cut short** leaves `backbone_version` a release candidate above the running pkit. There sync's message and upgrade's name `pkit upgrade --pre` ("A release candidate, only on request", below). It hands over to that candidate, and no other release finishes the move.
+- **A move to a candidate cut short** leaves `backbone_version` a release candidate above the running pkit. There sync's message and upgrade's message name `pkit upgrade --pre` ("A release candidate, only on request", below). That command hands over to that candidate, and no other release finishes the move.
 - **How it stops:** exit non-zero, name the state found and its remedy, and write nothing: no content, no manifest, no pin. No flag overrides it, `sync --force` and the capability commands' `--force` included, and a dry run stops too.
 
   The CLI README's `sync` entry carries the wording, and the router's notice when it runs a pkit other than the pin.
