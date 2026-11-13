@@ -7,7 +7,11 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   group says it is a page. Draw order is the tree's order.
 - **Primitives at the leaves:** `box`, `ellipse`, `text`, `line`, `image` and `path`,
   their properties under SVG's names. Colours stay role names; a renderer takes their values
-  from the document of resolved values, so one scene serves every mode of the value axes.
+  from the document of resolved values, so one scene serves every mode of the value axes. A
+  paint may name an order's step instead, by its two roles and its share of the way between
+  them, `step(<first>,<last>,<share>)`, the same in every mode; its value in each mode comes
+  with the scene, among the colours, never from that document (`colour_steps`, DEC-032
+  point 5).
 - **A text** holds its text, its line height, the greatest among the typography roles
   its runs take, its paragraphs of runs, its lines and its measured height. Each run
   holds its text, its typography role and font properties, its paint, the font files

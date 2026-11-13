@@ -509,6 +509,47 @@
         ]
       }
     },
+    "place-colour": {
+      "description": "The colour family a list's places take: a colour family, or a switch of them on an option of words.",
+      "anyOf": [
+        {
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        {
+          "$ref": "#/$defs/place-colour-switch"
+        }
+      ]
+    },
+    "place-colour-switch": {
+      "description": "A switch of the families a list's places take: `by` names an option of words, and every word of it a colour family, `:steps`, an order's steps spread over the places the list draws (DEC-032 points 3 and 4), or null, no family from the pattern.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the families switch on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          {
+            "const": ":steps"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
     "yes-or-no": {
       "description": "`true` or `false`; or a switch of them on an option of words, or, for a text's `sign`, on the field of runs the text shows, whose each run then takes the one its style chooses (DEC-036 point 3).",
       "anyOf": [
@@ -1733,8 +1774,8 @@
           "$ref": "defs.schema.json#/$defs/use"
         },
         "colour": {
-          "description": "The items' default colour family.",
-          "$ref": "defs.schema.json#/$defs/name"
+          "description": "The items' default colour family, the family of each place of its list (DEC-010 point 6); or a switch of them on an option of words, under whose word the places may take an order's steps instead (DEC-032 point 3).",
+          "$ref": "#/$defs/place-colour"
         },
         "row": {
           "$ref": "#/$defs/operator"
