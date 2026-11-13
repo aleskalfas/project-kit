@@ -4,8 +4,8 @@
 the reading compares and what it refuses, and a real browser drawing the file in each mode
 as the one-key file of that mode.
 
-The renderer's version is the one-key file's, 1.4.0 since it stops a line at its arrowhead's
-base and draws a connector's turns round, as it is pinned in `test_visual_communication_svg`.
+The renderer's version is the one-key file's, 1.5.0 since an arrowhead of a step of an order
+takes an id of its own, as it is pinned in `test_visual_communication_svg`.
 """
 
 from __future__ import annotations
@@ -135,7 +135,7 @@ def test_it_declares_svg_modes_with_the_colour_schemes_pairs_and_no_contrast_pai
             }
         }
     }
-    assert svg.VERSION == "1.4.0"
+    assert svg.VERSION == "1.5.0"
 
 
 @pytest.mark.parametrize("roles", foundations_majors(), ids=lambda path: path.parent.name)

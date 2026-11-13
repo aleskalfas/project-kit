@@ -93,8 +93,8 @@ HOLDS_MODES = {
 DECLARATION = {
     "name": "html",
     "kind": "renderer",
-    "version": "1.7.0",
-    "seam": 8,
+    "version": "1.8.0",
+    "seam": 9,
     "module": "html",
     "about": (
         "A page file for each language and each key over the size axes, holding the modes a "
