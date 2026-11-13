@@ -32,6 +32,7 @@ pkit:
         - src/project_kit/cli.py
         - src/project_kit/pull_request_landing.py
         - src/project_kit/session_guard.py
+        - src/project_kit/stranded_migrations.py
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
         - scripts/latest_tag.py
@@ -46,6 +47,7 @@ pkit:
         - COR-004
         - ADR-034#1
         - ADR-061#6
+        - ADR-092#8
       artefact:
         - ACT-methodology-maintainer
         - ACT-ci-pipeline
@@ -122,16 +124,18 @@ pkit:
 - **2c.** A changeset declares a floor or an upper bound the release step cannot write. The system refuses before writing anything, such as with `cannot raise a requires_backbone floor:` and the changeset's problem. The use case ends.
 - **2d.** The release step would leave a [capability](../../../glossary.md#term-capability--capability) whose [range](../../../glossary.md#term-range--range) excludes the version of a capability it depends on. The system refuses before writing anything, listing each such range, and the use case ends ([PRJ-002 D4](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)).
 - **2e.** A [backbone](../../../glossary.md#term-backbone--backbone) [migration](../../../glossary.md#term-migration--migration)'s folder names a version above the current backbone's version, and the release step does not compute that version. The system warns that the folder `does not match the computed backbone release`, and goes on. The release pull request's body shows the warning ([UC-010](UC-010-migrate-backbone-change.md)).
+- **2f.** A migration script sits in a folder at or below the version its backbone or component records at the newest final [release tag](../../../glossary.md#term-release-tag--release-tag). The first final release tag recording that version lacks the script, as when a pull request landed after a release its checks did not see. The system refuses before writing anything, naming each such script with a folder above the version the [default branch](../../../glossary.md#term-default-branch--default-branch) records ([ADR-092 point 8](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#8-a-branchs-scripts-are-its-own-until-it-merges-and-no-release-ships-one-stranded)). The use case ends.
+- **2g.** The system cannot read the remote's release tags, or the clone lacks the commit of one, as a shallow clone may. The system refuses before writing anything, since it cannot tell whether 2f holds ([ADR-092 point 8](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#8-a-branchs-scripts-are-its-own-until-it-merges-and-no-release-ships-one-stranded)). The use case ends.
 - **3a.** A release pull request is already open, on a `release/` branch. `release-pr.yml` opens no second one, and the use case ends.
 - **3b.** A run that failed after its push left the branch `release/v<version>` on the remote, and no release pull request is open from it. The CI pipeline creates the branch `release/v<version>-<run id>` instead, and the path goes on (`scripts/release_pr.py`). Step 9 takes that branch too, as a `release/` branch.
 - **6a.** The new changelog entry would take the pull request's body past the 65,536 characters GitHub keeps. The body then holds each move and warning whole, and links `CHANGELOG.md` on the pushed branch instead of the entry (`scripts/release_pr.py`).
 - **7a.** The [project](../../../glossary.md#term-project--project) gave `release-pr.yml` no token of its own, so the release pull request starts no checks. The maintainer starts them by hand, and the path goes on at step 7. Where nobody starts them, the release pull request shows no check, and step 10 reads that as green.
 - **9a.** The pull request is no release pull request. The system refuses it, saying that `pkit release merge` merges only release pull requests. Where the pull request's head branch is no `release/` branch, the refusal names `pkit pull-request land`, the backbone's own command for landing any other pull request. The use case ends.
 - **10a.** The release pull request has a conflict, or a check that is red or still running. The system refuses with the reason, and merges nothing. The path rejoins at step 8.
-- **10b.** Where merges into the [default branch](../../../glossary.md#term-default-branch--default-branch) go through a queue, the system enqueues the release pull request at the [head](../../../glossary.md#term-head--head) commit whose checks it read. The system then waits for the queue to merge the pull request. Where the wait ends with the release pull request still queued, the system exits 4 and deletes nothing. A later run deletes the head branch once the release pull request merges.
+- **10b.** Where merges into the default branch go through a queue, the system enqueues the release pull request at the [head](../../../glossary.md#term-head--head) commit whose checks it read. The system then waits for the queue to merge the pull request. Where the wait ends with the release pull request still queued, the system exits 4 and deletes nothing. A later run deletes the head branch once the release pull request merges.
 - **10c.** The queue does not squash, or its squash defaults are not the pull request's title and body. The system refuses, enqueues nothing, and the use case ends.
 - **10d.** The queue drops the release pull request, or the release pull request's head commit moves after the checks were read. The system exits 3 and deletes nothing, and the path rejoins at step 7.
-- **11a.** The version in `.pkit/VERSION` already has its [release tag](../../../glossary.md#term-release-tag--release-tag), as after any push that is no release. `release-tag.yml` cuts no tag and publishes no notes, and the path goes on at step 15.
+- **11a.** The version in `.pkit/VERSION` already has its release tag, as after any push that is no release. `release-tag.yml` cuts no tag and publishes no notes, and the path goes on at step 15.
 - **11b.** The run of `release-tag.yml` for the release push fails. The next push to the default branch finds the version untagged, and tags that push's commit instead of the one the release pull request landed.
 - **13a.** A release step that moved only components came between this release and the previous one. That step's changelog section is headed by its date, so no GitHub release's notes carry it (`release.py`).
 - **13b.** The version's changelog section is longer than the 125,000 characters a GitHub release keeps. The notes then hold the section's heading, a link to the section in `CHANGELOG.md` at the tag, and each component's new version (`release.py`).
