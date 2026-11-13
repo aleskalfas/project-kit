@@ -31,7 +31,7 @@ Three things stand in the way:
 
 ### 1. The foundations declare one size axis
 
-- **The axis.** `device`, with the modes `desktop`, `tablet` and `phone`, and the default `desktop`.
+- **The axis.** `device`, with the modes `desktop`, `tablet`, `phone` and `projector`, and the default `desktop`.
 - **A person chooses among its modes,** where a piece names its modes (DEC-005 point 6).
 - **A width is a brand's value.** A piece names none, since a size would then have two owners.
 - **Three sizes for now.** A brand adds no mode to a shared axis, so a fourth size is a new mode of the foundations.
