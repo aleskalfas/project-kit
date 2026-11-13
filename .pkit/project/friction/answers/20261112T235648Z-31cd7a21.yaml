@@ -1,0 +1,1334 @@
+answers:
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/030-keep-current/UC-045-propose-page-fix.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T221110Z-a675de74.yaml
+    revalidated:
+      at: 2026-11-12T23:56:48Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T221110Z-a675de74.yaml
+    revalidated:
+      at: 2026-11-12T23:56:56Z
+      outcome: updated
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T193339Z-5bd2a791.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T160032Z-7fd436db.yaml
+      - 20261112T163245Z-ea50e1b3.yaml
+      - 20261112T221110Z-a675de74.yaml
+    revalidated:
+      at: 2026-11-12T23:57:03Z
+      outcome: updated
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T174956Z-c97b966f.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T155747Z-06175c8e.yaml
+      - 20261107T171148Z-59c0d09e.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T010504Z-7ceac335.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T221110Z-a675de74.yaml
+    revalidated:
+      at: 2026-11-12T23:57:12Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T142151Z-09f16c62.yaml
+    revalidated:
+      at: 2026-11-13T00:00:26Z
+      outcome: unchanged
+      unchanged-because: Main's answer 91725510 judged, with b6b1d9a3 and ec4f3511, release candidates, the install script and PRJ-004's line, which landing a change does not reach, and ADR-066 point 10 having a review run pass the picked definition under a name unique to the run. This change has ADR-066 point 1 run, for an unconfined run whose folder is a project's root, the runner that project registers, from that folder, with the caller naming that folder and whether the runner carries the person's local settings into it. Point 10, now titled "What a run in the unconfined form gets", to whose new heading this change re-points the link here, covers a drift command's unconfined runs beside the review command's, keeps the review command's runs in the person's checkout, and leaves whether they are confined undecided. The backbone still runs each required reviewer, in the person's checkout under the runner it registers, and returns its output, so judged together the use case holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-batch-plan
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:57:23Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged the agent's definition withholding six tools in place of granting eight, under which the plan's drafting, review and filing keep their tools. In this change, the project manager's definition changes only its section on the fixers after a merge, where its run starts no fixer, since only a person at a terminal starts one, and shows the person what went stale with the command to run, and DEC-029 changes only the last sentence of its invocation pattern, which now says the run command starts a fixer in the run DEC-056 point 5 and DEC-069 set, where it said confined and with nobody watching. Judged together, a batch plan is still an outline of issues for one intent, approved whole before any is filed, so the entry holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-seat
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:57:29Z
+      outcome: unchanged
+      unchanged-because: Main's answer c6177e80 judged COR-013 point 1 letting an agent be its canonical file alone and point 8 deciding which definition of a name is the agent. This change's DEC-029 changes only the last sentence of its invocation pattern, which says the run command starts a fixer in the run DEC-056 point 5 and DEC-069 set, where it said confined and with nobody watching. A seat is still a topology's place and the definition its agent follows, so judged together the entry holds.
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:57:34Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged DEC-029's dispatch paragraph, where a named helper's messaging tool is now one the agent's definition withholds. This change's DEC-029 changes only the last sentence of its invocation pattern, which now says the run command starts a fixer in the run DEC-056 point 5 and DEC-069 set, where it said confined and with nobody watching. The view names neither a fixer nor the agent's tools, so seats, pools and helpers hold with both.
+  - artefact: tech-docs/analysis/project-management/domain-model/050-batch-planning.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:57:39Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged DEC-029's dispatch paragraph on the messaging tool, which leaves the batch plan a person approves whole and its adversarial review. This change's DEC-029 changes only the last sentence of its invocation pattern, which now says the run command starts a fixer in the run DEC-056 point 5 and DEC-069 set, where it said confined and with nobody watching, which the view does not state. Judged together, the plan's states and its approval hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-lead-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:57:43Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged DEC-029's dispatch paragraph withholding the messaging tool, with the depth limit and the no-name dispatch standing. This change's DEC-029 changes only the last sentence of its invocation pattern, which now says the run command starts a fixer in the run DEC-056 point 5 and DEC-069 set, where it said confined and with nobody watching, a run the lead agent does not start. Judged together, the actor holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planner.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:57:47Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged DEC-029's dispatch paragraph on the messaging tool, which the planner does not meet. This change's DEC-029 changes only the last sentence of its invocation pattern, which now says the run command starts a fixer in the run DEC-056 point 5 and DEC-069 set, where it said confined and with nobody watching. Judged together, the planner still approves the batch plan the project-manager agent files from, so the actor holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planning-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:57:52Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged DEC-029's dispatch paragraph on the messaging tool, which the actor does not mention. This change's DEC-029 changes only the last sentence of its invocation pattern, which now says the run command starts a fixer in the run DEC-056 point 5 and DEC-069 set, where it said confined and with nobody watching. Judged together, the planning agent still files nothing before the planner approves the batch plan, so the actor holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-worker-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:57:56Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged DEC-029's dispatch paragraph on the messaging tool, which the actor does not name. This change's DEC-029 changes only the last sentence of its invocation pattern, which now says the run command starts a fixer in the run DEC-056 point 5 and DEC-069 set, where it said confined and with nobody watching. Judged together, the worker agent's role holder, the project-manager agent on its seat's direction, is as DEC-029 has it, so the actor holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:58:02Z
+      outcome: unchanged
+      unchanged-because: Main's answer c6177e80 judged COR-013 point 8 and COR-017 deciding which definition of an agent's name is the agent, of which delegating a Task to a helper by name says nothing. This change's DEC-029 changes only the last sentence of its invocation pattern, which says the run command starts a fixer in the run DEC-056 point 5 and DEC-069 set, where it said confined and with nobody watching; a fixer the drift command starts stays no dispatch. A lead's delegation to helpers is the dispatch that pattern covers, so judged together the use case holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:58:06Z
+      outcome: unchanged
+      unchanged-because: Main's answer 91725510 judged, with b6b1d9a3 and ec4f3511, the operator still installing a final release beside the install script, and COR-013 point 8 and COR-017 deciding which definition of an agent's name is the agent. In this change the project manager's definition changes only its section on the fixers after a merge, where its run starts no fixer and shows what went stale with the command to run, and its DEC-029 changes only the sentence on the run DEC-056 point 5 and DEC-069 set for a fixer. Planning from intent behind one approval gate reaches none of these, so judged together the use case holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:58:09Z
+      outcome: unchanged
+      unchanged-because: Main's answer 91725510 judged, with b6b1d9a3 and ec4f3511, the operator still installing a final release beside the install script, and COR-013 point 8 and COR-017 deciding which definition of an agent's name is the agent. This change's DEC-029 changes only the last sentence of its invocation pattern, which says the run command starts a fixer in the run DEC-056 point 5 and DEC-069 set, where it said confined and with nobody watching. Planning across scopes dispatches no fixer and never reads which definition is the agent, so judged together the use case holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:58:12Z
+      outcome: unchanged
+      unchanged-because: Main's answer 91725510 judged, with b6b1d9a3 and ec4f3511, the operator still installing a final release beside the install script, and COR-013 point 8 and COR-017 deciding which definition of an agent's name is the agent. In this change the project manager's definition changes only its section on the fixers after a merge, where its run starts no fixer and shows what went stale with the command to run, and its DEC-029 changes only the sentence on the run DEC-056 point 5 and DEC-069 set for a fixer. Taking a seat and running its role reach none of these, so judged together the use case holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T23:58:15Z
+      outcome: unchanged
+      unchanged-because: Main's answer 91725510 judged, with b6b1d9a3 and ec4f3511, the operator still installing a final release beside the install script, and COR-013 point 8 and COR-017 deciding which definition of an agent's name is the agent. This change's DEC-029 changes only the last sentence of its invocation pattern, which says the run command starts a fixer in the run DEC-056 point 5 and DEC-069 set, where it said confined and with nobody watching. Taking the next Task and building it dispatches no fixer, so judged together the use case holds.
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-proposal
+    read:
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T23:58:17Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged the agent's definition writing in full the paths it reads, which moves no step. In this change, living-docs DEC-001 point 5 calls the run in which a provider starts the fixer of pages one nobody can answer during, where it said one nobody watches, says what the run passes the agent and the line the agent returns are the provider's records', where it said that record's, and cites DEC-069 beside DEC-056. Its rationale's heading calls such a run one a command starts, and the living-docs agent's definition only calls a fixer's run one nobody can answer it during, limited to proposing, where it said nobody watches it and it is confined; such a run still proposes friction fixes and nothing else. Judged together, a proposal is still an edit the agent drafts with its evidence and leaves for a person to apply, so the entry holds.
+  - artefact: tech-docs/analysis/living-docs/domain-model/010-spaces-and-pages.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+    revalidated:
+      at: 2026-11-12T23:58:20Z
+      outcome: unchanged
+      unchanged-because: Main's answers updated the view with cbabcdd3, then judged living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, DEC-001 point 5 calls the run in which a provider starts the fixer of pages one nobody can answer during, where it said one nobody watches, says what the run passes the agent and the line the agent returns are the provider's records', where it said that record's, and cites DEC-069 beside DEC-056. Its rationale's heading calls such a run one a command starts. The view states the spaces, the pages and their places, and neither a fixer's run nor where a mention is read, so judged together it holds.
+  - artefact: tech-docs/analysis/living-docs/requirements/constraints/REQ-025-never-fetch-source.md
+    read:
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+    revalidated:
+      at: 2026-11-12T23:58:23Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged PRJ-002's release candidates, under which D1 and D2 stand, and living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, DEC-001 point 5 calls the run in which a provider starts the fixer of pages one nobody can answer during, where it said one nobody watches, says what the run passes the agent and the line the agent returns are the provider's records', where it said that record's, and cites DEC-069 beside DEC-056. Its rationale's heading calls such a run one a command starts. The agent's definition calls its fixer's run one nobody can answer it during, limited to proposing. It still says the agent never fetches a captured source, and asks what changed or holds the page with one question, so judged together the requirement holds.
+  - artefact: tech-docs/analysis/living-docs/requirements/functional/REQ-024-checks-where-rule-binds.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+    revalidated:
+      at: 2026-11-12T23:58:26Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged PRJ-002's release candidates, under which D1 and D2 stand, and living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, DEC-001 point 5 calls the run in which a provider starts the fixer of pages one nobody can answer during, where it said one nobody watches, says what the run passes the agent and the line the agent returns are the provider's records', where it said that record's, and cites DEC-069 beside DEC-056. Its rationale's heading calls such a run one a command starts. Which parts of an LDOC rule validation checks, and where, is untouched by either, so judged together the requirement holds.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/journeys/JRN-015-publish-page-for-reader.md
+    read:
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+    revalidated:
+      at: 2026-11-12T23:58:29Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged PRJ-002's release candidates, under which D1 and D2 stand, and living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, DEC-001 point 5 calls the run in which a provider starts the fixer of pages one nobody can answer during, where it said one nobody watches, says what the run passes the agent and the line the agent returns are the provider's records', where it said that record's, and cites DEC-069 beside DEC-056. Its rationale's heading calls such a run one a command starts. The journey publishes a page for its reader through the agent's proposals in a session, which point 5 still has the agent propose and never apply, so judged together it holds.
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+      - 20261112T064427Z-13d336b0.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T221110Z-a675de74.yaml
+    revalidated:
+      at: 2026-11-12T23:58:33Z
+      outcome: unchanged
+      unchanged-because: "Read with main's a675de74, made apart: release v2.2.0 widened only doc-examples' requires_backbone bound in package.yaml, and the page names no version or bound, only that the range is declared there. Main's answer 6ef4bac4 judged, with 13d336b0, the validate section's refs row gaining warnings of an undeclared dotted category, of a collision between capabilities over an agent's name and of a choice that decides nothing, having read 4cfa1660 and 99925b10. In this change, living-docs DEC-001 point 5 calls the run in which a provider starts the fixer of pages one nobody can answer during, where it said one nobody watches, says what the run passes the agent and the line the agent returns are the provider's records', where it said that record's, and cites DEC-069 beside DEC-056. Its rationale's heading calls such a run one a command starts. The README installs and uses doc-examples' commands and its member, which none of these touches, so judged with them all it holds."
+  - artefact: .pkit/capabilities/living-docs/pages.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T221424Z-d421012e.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+      - 20261112T064427Z-13d336b0.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+    revalidated:
+      at: 2026-11-12T23:58:39Z
+      outcome: unchanged
+      unchanged-because: Main's answer 6ef4bac4 judged, with 13d336b0, the validate section's refs row gaining warnings of an undeclared dotted category, of a collision over an agent's name and of a choice that decides nothing, having read 99925b10. In this change, living-docs DEC-001 point 5 calls the run in which a provider starts the fixer of pages one nobody can answer during, where it said one nobody watches, says what the run passes the agent and the line the agent returns are the provider's records', where it said that record's, and cites DEC-069 beside DEC-056. Its rationale's heading calls such a run one a command starts. The page states what a page is and holds, and names only the friction and packages members of validate, so judged together it holds.
+  - artefact: .pkit/capabilities/living-docs/spaces.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T221424Z-d421012e.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+      - 20261112T064427Z-13d336b0.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+    revalidated:
+      at: 2026-11-12T23:58:44Z
+      outcome: unchanged
+      unchanged-because: Main's answer 6ef4bac4 judged, with 13d336b0, the validate section's refs row gaining warnings of an undeclared dotted category, of a collision over an agent's name and of a choice that decides nothing, having read 99925b10. In this change, living-docs DEC-001 point 5 calls the run in which a provider starts the fixer of pages one nobody can answer during, where it said one nobody watches, says what the run passes the agent and the line the agent returns are the provider's records', where it said that record's, and cites DEC-069 beside DEC-056. Its rationale's heading calls such a run one a command starts. The page declares the spaces and their rules, and neither a fixer's run nor the refs member, so judged together it holds.
+  - artefact: .pkit/capabilities/living-docs/validation.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T221424Z-d421012e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+      - 20261112T064427Z-13d336b0.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+    revalidated:
+      at: 2026-11-12T23:58:49Z
+      outcome: unchanged
+      unchanged-because: Main's answer 6ef4bac4 judged, with 13d336b0, the validate section's refs row gaining warnings of an undeclared dotted category, of a collision over an agent's name and of a choice that decides nothing, having read 4cfa1660 and 99925b10. In this change, living-docs DEC-001 point 5 calls the run in which a provider starts the fixer of pages one nobody can answer during, where it said one nobody watches, says what the run passes the agent and the line the agent returns are the provider's records', where it said that record's, and cites DEC-069 beside DEC-056. Its rationale's heading calls such a run one a command starts. The page states what validation checks, not a fixer's run, so judged together it holds.
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T061853Z-ad99d5f3.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T140220Z-88174d4e.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T200020Z-29c3a865.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T200759Z-8c2bd4d1.yaml
+      - 20261110T200914Z-2e887a60.yaml
+      - 20261110T220739Z-00e08993.yaml
+      - 20261110T221424Z-d421012e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261110T233258Z-e52c0d95.yaml
+      - 20261111T015803Z-61c2bd27.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T090717Z-79117d13.yaml
+      - 20261111T115332Z-fe0ee923.yaml
+      - 20261111T121349Z-f345977a.yaml
+      - 20261111T123330Z-d1f9f1db.yaml
+      - 20261111T125512Z-b6a4d9d7.yaml
+      - 20261111T130022Z-0e0654a5.yaml
+      - 20261111T132731Z-8df40a54.yaml
+      - 20261111T141225Z-79582137.yaml
+      - 20261111T141442Z-6f33e777.yaml
+      - 20261111T141513Z-fcef7af9.yaml
+      - 20261111T142616Z-17d8fc2c.yaml
+      - 20261111T150037Z-eb14d4dd.yaml
+      - 20261111T154718Z-a7fded93.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T205847Z-d7581484.yaml
+      - 20261111T205850Z-3058ca7c.yaml
+      - 20261111T214613Z-efb53593.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261111T222434Z-87eb96b0.yaml
+      - 20261112T064427Z-13d336b0.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T091107Z-f688e930.yaml
+      - 20261112T092904Z-d68bb594.yaml
+      - 20261112T093249Z-343f225d.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T104254Z-f108bd54.yaml
+      - 20261112T123303Z-7c4eb2ad.yaml
+      - 20261112T130137Z-789ac0f0.yaml
+      - 20261112T133209Z-3c2ab69c.yaml
+      - 20261112T142951Z-5fceeb08.yaml
+      - 20261112T145713Z-62aec44a.yaml
+      - 20261112T162516Z-61340766.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261112T232144Z-798fe9aa.yaml
+    revalidated:
+      at: 2026-11-12T23:58:54Z
+      outcome: unchanged
+      unchanged-because: "Read with main's a675de74 and 798fe9aa, made apart: release v2.2.0 changed only visual-communication's version and backbone floor in package.yaml, and the foundations' release 1.1.0 only says it is released, needs release 0.4.0 and brings the size axis device, leaving the roles, the site's header and footer, the axes and the library folder this page's checks read. Judged with 3c2ab69c and 5fceeb08, answered apart, under which the checks page gains the designer's grant check and the sign checks, sign-outline, concept-unsigned, sign-missing, run-sign-missing and sign-shared, anchored on grant.py, signs.py and their records. This change adds one thing to the manifest's section on how a registered command is run: the agent-run row says an unconfined run whose folder is a project's root takes the runner that project registers, run from that folder. The page cites the section only for how pkit validate runs the capability's check, a query from the project root under a fixed bound with its deadline in PKIT_COMMAND_DEADLINE, which is as it was, and no check starts an agent, so the page holds with them all."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-fixer
+    read:
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T170257Z-9f91acd4.yaml
+    revalidated:
+      at: 2026-11-12T23:58:58Z
+      outcome: unchanged
+      unchanged-because: "Main's answer judged COR-001's writers of project-owned paths, which leave the grant in project-management's settings. In this change, fix-drift.py starts a granted fixer only where a person runs the drift command at a terminal, and with nobody at one lists the stale artefacts with the command to run. fixers.py's question, and the grant command grant-fixer.py runs, say that the fixer starts then, and after each merge with nobody watching: confined, once the harness can confine it, and where the project's switch is on, under the settings of whoever runs the drift command (DEC-069 point 3). DEC-056 now opens by naming what DEC-069 overturns, among it point 3's \"Who runs it\" for a run the confined form does not hold. Its point 1 limits a fixer's shell by what holds its run, and its point 2 holds a change to the grant list at each merge while the project's switch is on. A fixer is still the agent declared for a type that a command starts where the project granted it, and that only proposes, and the example names nobody who runs `pkit pm fix-drift`, so judged together the entry holds."
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T020441Z-7e50a784.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T215716Z-41cae09d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261111T222332Z-9c425d5a.yaml
+      - 20261111T222703Z-6042811b.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T103254Z-8c80b62f.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T134741Z-2c56fd6c.yaml
+      - 20261112T142932Z-280780ce.yaml
+      - 20261112T153532Z-b0471fdf.yaml
+      - 20261112T162755Z-424e83da.yaml
+      - 20261112T171918Z-7f8cd174.yaml
+    revalidated:
+      at: 2026-11-12T23:59:02Z
+      outcome: unchanged
+      unchanged-because: "Read with main's 424e83da, made apart, which found: `src/project_kit/capabilities.py` only gained `origin_mark`, the mark `pkit status` and `pkit capabilities list` give each origin, and changes nothing the lifecycle does. The lifecycle's skip by origin and the ownership predicates are as the page says. Judged with 2c56fd6c and 280780ce, answered apart, which add a reading of each registered adapter's enforcement declaration to the gap report and only split the manifest reference's loaded_rules pointer, and with 6ef4bac4's layout listing capability_records.py and definition_source.py. This change's manifest reference changes only the agent run's row in 'How a registered command is run', to say an unconfined run in a project's root takes the runner that project registers. No key, shape or owning record in 'Field layout and casing' or 'Package metadata' moves, so the page's layout, its ownership predicates and its signposts hold with both. Living-docs DEC-001 changes only point 5, on the run in which a provider starts the fixer of pages, and a heading of its rationale, and leaves point 1, for which the page cites it: a synced copy is never a place. Main's change names only a capability's origin, which this change leaves alone, so the two hold together."
+  - artefact: README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261027T191803Z-5aae943e.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T221648Z-ac7a1532.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T230732Z-908440cd.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T102842Z-19c5fb4f.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T084307Z-31fa735e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T140022Z-1a3a1d07.yaml
+      - 20261111T140427Z-15276336.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T150420Z-3caaee28.yaml
+      - 20261111T205239Z-c97bba2e.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T215558Z-fb9e6aef.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T103254Z-8c80b62f.yaml
+      - 20261112T123303Z-7c4eb2ad.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T134741Z-2c56fd6c.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T142932Z-280780ce.yaml
+      - 20261112T153532Z-b0471fdf.yaml
+      - 20261112T162755Z-424e83da.yaml
+      - 20261112T163411Z-b652b29d.yaml
+      - 20261112T170257Z-9f91acd4.yaml
+      - 20261112T171918Z-7f8cd174.yaml
+      - 20261112T181419Z-045fe687.yaml
+    revalidated:
+      at: 2026-11-12T23:59:06Z
+      outcome: unchanged
+      unchanged-because: "Read with main's ac7a1532, 19c5fb4f, 424e83da and b652b29d, made apart, under which deploy-agents.sh adds a suspended line read from the resolver's plan and still writes the reviewers' copies under .claude/agents, and cli.py and status.py change only how a capability's origin is named, leaving the `Backbone version` and deployed lines the page greps from status. Judged with 2c56fd6c, answered apart, under which the permission example's gap report reads as before with only Claude Code registered, and with 280780ce's anchor on the adapters guide and 6ef4bac4's lines on the overlay and the picker. This change's cli.py only changes `pkit agents run`: it gains `--local-settings`, with which the runner carries the person's local settings into an unconfined run's folder, and its help says nobody can answer the agent during its run, where it said nobody watches it, and that `--folder` also chooses the runner. The Go deeper link to docs/010-nobody-at-the-terminal.md holds, since that guide names no fixer, and `fix-drift` with nobody at a terminal starts no fixer and writes nothing. Living-docs DEC-001 point 5, which the README anchors, calls the run in which a provider starts the fixer of pages one nobody can answer during, where it said one nobody watches, and leaves what the run passes and returns to the provider's records. The README says nothing of a fixer's run, so it holds with them all."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T221648Z-ac7a1532.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T102842Z-19c5fb4f.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T111933Z-cf8cf3aa.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T205239Z-c97bba2e.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213215Z-323ee2bd.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T103254Z-8c80b62f.yaml
+      - 20261112T123303Z-7c4eb2ad.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T134741Z-2c56fd6c.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T142151Z-09f16c62.yaml
+      - 20261112T142932Z-280780ce.yaml
+      - 20261112T153532Z-b0471fdf.yaml
+      - 20261112T162755Z-424e83da.yaml
+      - 20261112T163411Z-b652b29d.yaml
+      - 20261112T171918Z-7f8cd174.yaml
+      - 20261112T181419Z-045fe687.yaml
+    revalidated:
+      at: 2026-11-12T23:59:09Z
+      outcome: unchanged
+      unchanged-because: Read with main's ac7a1532, 19c5fb4f, cf8cf3aa, 424e83da and b652b29d, made apart, under which the agents' deploy also writes a suspended line for each shipped definition a project's file keeps out, read from the plan's definition lines, and writes or removes nothing else, and cli.py changes only `pkit capabilities list`'s origin column. Judged with 2c56fd6c and 280780ce, answered apart, which edit only the adapters reference's enforcement-declaration bullet and its permission paragraph, and with 6ef4bac4's account of which agent deploys, variant 5a and the marked copies removed. This change's cli.py only changes `pkit agents run`, whose help it rewords and to which it adds `--local-settings`, and the adapters reference changes only its agent runner section and the status line of `unattended-confined-run`. ADR-066 now has a drift command's unconfined run work in a clone the drift command makes at the pinned commit, under the runner that clone registers, which passes a shipped agent's definition itself, and has the drift command refuse only a fixer no place ships where the commit deploys no copy. The deploy, the overlay's paths and the grants this use case walks are untouched, so it holds with them all.
+  - artefact: docs/agents/README.md
+    read:
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T221648Z-ac7a1532.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T102842Z-19c5fb4f.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T111933Z-cf8cf3aa.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T205239Z-c97bba2e.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T103254Z-8c80b62f.yaml
+      - 20261112T123303Z-7c4eb2ad.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T142932Z-280780ce.yaml
+      - 20261112T153532Z-b0471fdf.yaml
+      - 20261112T163411Z-b652b29d.yaml
+      - 20261112T171918Z-7f8cd174.yaml
+    revalidated:
+      at: 2026-11-12T23:59:13Z
+      outcome: unchanged
+      unchanged-because: "Read with main's ac7a1532, 19c5fb4f, cf8cf3aa and b652b29d, made apart, which updated the guide: where your definition keeps out a shipped one of its name, each sync names both files on a `suspended` line. This change touches no deploy, so that line holds beside it. Judged with c97bba2e, 8c80b62f and 280780ce, answered apart, under which 'Currently shipped' still names Claude Code's as the only adapter shipped and the overlay gains the designer's line, and with 7c4eb2ad's placeholders and 6ef4bac4's picker. This change's DEC-029 changes only the last sentence of its invocation pattern, which now says the backbone's run command starts a fixer in the run DEC-056 point 5 and DEC-069 set, where it said confined and with nobody watching, and cites DEC-069 beside DEC-056. Every other anchor of the guide stays as main holds it. The guide says nothing of a fixer's run, so its account of placeholders, of the picker's order and of another harness, where nothing deploys a definition, holds with them all."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+    revalidated:
+      at: 2026-11-12T23:59:16Z
+      outcome: unchanged
+      unchanged-because: Main's answer c6177e80 judged COR-017 placing installed capabilities' agents of one name, of which the use case says nothing. In this change DEC-056's new top line names what DEC-069 overturns, none of it in point 6. Point 6's "A fixer runs no writer" says a fixer cannot ask the person during its run, a confined run is denied every writer and an unconfined run's brief forbids them, where it said point 5 denies every fixer every writer, and its "Visible" has the count line also count the faults, failures and refused copies a run nobody watches left, with the form each such run took. Its "Files, not pull requests" stands as main holds it. Each clone still keeps the proposals its own runs made, so judged together the use case holds.
+  - artefact: tech-docs/analysis/living-docs/requirements/functional/REQ-022-agent-proposes-only.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T153532Z-b0471fdf.yaml
+    revalidated:
+      at: 2026-11-13T00:00:23Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: tests/test_living_docs_agent.py
+        outcome: unchanged
+        reason: "REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges have the test build the deployed copy with the mark the deploy writes for the capability's definition. The tests read the definition and its storyboard, not who watches a run: its grants of Read, Glob, Grep, Bash and Write alone, no owned path, the writers named and run by none, and no consent handed over. They pass at the merged head, so they verify the requirement for every run it covers. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link."
+      - anchor:
+          kind: record
+          value: ADR-060#6
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left ADR-060 as it was. Point 6 realises the workspace's allow by the hook, which confines nothing. A watched run is unconfined and runs the hook as a session started in its clone does, so nothing at run time confines the agent's Write in a session, as the verification says, and the point stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: ADR-061#3
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left ADR-061 as it was. Point 3 has the backbone reach the hosting service through `gh`, which the measure's posted reader-review uses, so the point stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: COR-001
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left COR-001 as it was. It gives each file one owner, and the agent's definition owns no path, so the agent changes no tracked file in any run, and the record stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: COR-009
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left COR-009 as it was. Its pull-request workflow is where the person reviews each proposal and where a reader-review is posted, and whether a run is watched moves neither, so the record stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: COR-010
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left COR-010 as it was. Its lifecycle deploys the agent's definition, which the picker names since no other place ships its name, and rewording the requirement breaks no installed project's state, so the record stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: COR-050#3
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left COR-050 as it was. Point 3 leaves each answer to a person, or the delegate a person named, and the agent runs no writer in any run, so the statement and its rationale rest on the point as written. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: COR-050#6
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left COR-050 as it was. Point 6's two checks find the friction a fixer's run proposes fixes for, watched or not, and the agent answers none of it, so the point stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: COR-050#9
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left COR-050 as it was. Point 9 derives debt from git, to which the agent writes nothing in any run, so the point stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: COR-051#4
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left COR-051 as it was. Point 4 has a person accept a rule through the gate, and the agent's reader-review cites rules and accepts none, so the point stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: COR-053#8
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left COR-053 as it was. Point 8's plans predict the wiring without acting, and the drift command's fixer role is wired as before, so the point stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: COR-059#3
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges add to COR-059 point 7 that an override of another capability's agent records the project's choice, and leaves point 3. Point 3 leaves moving a recorded version to a transition, which no run of the agent performs, so the point stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: COR-062#1
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left COR-062 as it was. Point 1 puts answers in answer files, which the agent writes in no run, so the rationale's reading of an answer as a person's decision stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: COR-066#1
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left COR-066 as it was. Point 1 keeps a proposal in its change, and each edit the agent drafts stays a proposal until a person takes it into one, so the point stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: COR-066#2
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left COR-066 as it was. Point 2's check refuses to land a proposal, and nothing the agent writes in any run lands a record, so the point stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: PRJ-002#D1
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left PRJ-002 as it was. D1 has each surface change declared in a changeset, which this change does for its wording, and a run's being watched declares nothing, so D1 stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: PRJ-002#D2
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left PRJ-002 as it was. D2 leaves a changeset's segment to a person's judgment, which the agent makes in no run, so D2 stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: living-docs:DEC-001
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches. In this change living-docs DEC-001 changes only in point 5, which calls the run in which a provider starts the fixer of pages one nobody can answer during, where it said one nobody watches, and in its rationale's heading, which calls such a run one a command starts. The record still keeps its agent to proposing in every intent and gives each file one owner the agent's definition does not claim, so it stands beside the wider requirement.
+      - anchor:
+          kind: record
+          value: living-docs:DEC-001#5
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches. In this change living-docs DEC-001 point 5 has a provider of the work-tracking role start the agent on stale pages in a run nobody can answer during, where it said one nobody watches, and still has the agent propose friction fixes there and do nothing else. That run is one a command starts, as the measure now names it, so the point stands beside the wider requirement.
+      - anchor:
+          kind: record
+          value: living-docs:DEC-001#6
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges reword point 6 only to name validation.md, in place of the README, as where a mention is read. Point 6's reader-review runs in a session, and the measure's one other write, a review posted as a pull-request comment where the person asks for one, is unchanged, so the point stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
+      - anchor:
+          kind: record
+          value: living-docs:DEC-001#8
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to name a run a command starts, watched or not, where they named one nobody watches, and main's answers on REQ-022, c6177e80, 91725510 and a0e54751, judged it holding under the picker, release candidates and validation.md's naming. Main's merges left point 8 as it was. Its onboarding proposes, each move landing as a reviewable change, and runs in a session with its plan in the agent workspace, which the measure names first, so the point stands. Main's release v2.2.0 and the foundations' release 1.1.0, merged since, change no target of REQ-022's link.
