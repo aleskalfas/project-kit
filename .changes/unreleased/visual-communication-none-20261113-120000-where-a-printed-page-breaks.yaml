@@ -1,8 +1,7 @@
 component: visual-communication
 kind: none
 body: >
-  Design-ahead: DEC-041, still proposed, decides where a printed page that is
-  no fixed page breaks: only between lines of text and around pictures, at
-  places its file offers as the rows of one grid that keeps the document in
-  reading order. It is record text only, and nothing you run changes. The Task
-  that lays a page out in strips carries the real changeset.
+  Design-ahead: adds DEC-041, the record on where a printed page that is no
+  fixed page breaks: only between lines of text, at places its file offers.
+  It is record text only, and nothing you run changes. The Task that lays a
+  page out in strips carries the real changeset.
