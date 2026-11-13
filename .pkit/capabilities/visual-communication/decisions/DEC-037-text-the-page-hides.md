@@ -14,7 +14,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 The records leave these losses out by design. The check for dropped text asks nothing of what lies over a text, and it names a span that lies wholly off its page, never one that the page's edge cuts ([visual-communication:DEC-020-html-page-drawing] point 6). Under a forced palette it names a span off its page, or one that drew nothing ([visual-communication:DEC-027-forced-colours-viewing] point 4). A first probe of a page with each loss found that, in the start without forced colours, the report named only the text wholly off the page. Under a forced palette the ink read left other texts' backplates painted, so a span wholly under one was named as one that drew no ink, and a span partly under one was not named at all.
 
-On 13 November 2026, after a first review of this record, the project manager chose five of its rules: what stays out of *covered*, the principle of a sliver, the share in each entry, the SVG renderer's notice, and that a cut or covered text is a fault the piece mends. Later that day, after the architect's review and the critic's second, they moved how the file draws a text's ground under forced colours into a record of its own, DEC-039. They also chose one entry for each cause, a sliver in the span's em², and a read bound by what it measures, with its cost weighed. After the architect's second read and the critic's third, they chose strength measured in a draw of its own, beside an ink read left on the span's own paint.
+On 13 November 2026, after a first review of this record, the project manager chose five of its rules: what stays out of *covered*, the principle of a sliver, the share in each entry, the SVG renderer's notice, and that a cut or covered text is a fault the piece mends. Later that day, after the architect's review and the critic's second, they moved how the file draws a text's ground under forced colours into a record of its own, DEC-039. They also chose one entry for each cause, a sliver in the span's em², and a read bound by what it measures, with its cost weighed. After the architect's second read and the critic's third, they chose strength measured in a draw of its own, beside an ink read left on the span's own paint. After the architect's third read and the critic's fourth, they had the edge control's sliver set from its last device row, and left DEC-039's edge to a test of the file and a person's look.
 
 Terms:
 - A *backplate*, a line's *ground* under forced colours, and a *run of texts* are as DEC-039 defines them.
@@ -23,7 +23,7 @@ Terms:
 
 ### What the probes showed
 
-Three probes drew one page of the HTML renderer, in one face, through the viewing step's browser module, in Chrome 157 on one Mac. They read it in the start without forced colours and in both forced palettes, at device scales of 2 and 1.225, the scale the step's images use. The second and third read a page in the form DEC-039 decides too, as that record says. Their code is thrown away.
+Four probes drew one page of the HTML renderer, in one face, through the viewing step's browser module, in Chrome 157 on one Mac. They read it in the start without forced colours and in both forced palettes, at device scales of 2 and 1.225, the scale the step's images of a deck use. The second, third and fourth read a page in DEC-039's forms too, each as that record says. Their code is thrown away.
 
 Each row gives the share of the span's strong ink lost, at a scale of 2. Where it says em², it gives the area lost in the span's em², at 1.225 unless it says otherwise, for a span at 16 px, or 24 px for a heading. The last row gives the share of all its ink.
 
@@ -41,8 +41,11 @@ Each row gives the share of the span's strong ink lost, at a scale of 2. Where i
 | A heading set close above body text at 1.1 em, on the browser's backplates, em² at 2 and at 1.225 | 0 | 0.016 and 0.002 | 0.022 and 0.009 |
 | The same, on a run's grounds | 0 | 0 | 0 |
 | The same with a box between the two texts in the tree, em² at 2 and at 1.225 | 0 | 0.016 and 0.002 | 0.022 and 0.010 |
-| A box whose edge, centred on its outline, touches the foot of the descenders, em² | 0 | 0 to 0.031 | 0.003 to 0.034 |
+| A box whose edge, centred on its outline, touches the foot of the descenders, em², in two probes that placed the box differently | 0 | 0 to 0.031 | 0.003 to 0.034 |
 | The same, its edge inside the fill (DEC-039), em² | 0 | 0 | 0.003 |
+| Capitals whose feet rest on a later box's top edge, its edge centred or clipped with the fill, em² | 0 | 0.19 | 0.20 |
+| The same, the box drawn as DEC-039 point 4 draws it, em² | 0 | 0 | 0 |
+| The same on a path's top edge, drawn as DEC-039 point 4 draws it, at nine steps an eighth of a device pixel apart, em² | 0 | 0 to 0.078 | 0 to 0.086 |
 | A box whose edge meets a letter's side, em² | 0 | 0 | 0 |
 | A comma under a box, em² | 0.026 | 0.026 | 0.036 |
 | A háček under a box, em² | 0.023 | 0.028 | 0.039 |
@@ -52,16 +55,16 @@ Each row gives the share of the span's strong ink lost, at a scale of 2. Where i
 - **Two colours.** The probes changed a span's letters between the forced palette's text colour and its ground colour, which forcing keeps.
 - **Strength in a draw of its own.** Drawn alone in those two colours, every span's strong ink lost what it lost when measured from its own paint on a white and a black ground. The words at 30% alpha had no strong ink in their own paint.
 - **The ink read without other backplates.** Under both forced palettes, today's ink read saw a quarter of the ink of the words under a later text, and 94% of the heading's first line. With every line but the span's own hidden, it saw all of it, and the span kept the forced palette's text colour.
-- **A graze between texts.** Where a box lies between two texts in the tree, the heading's graze is named where it passes the sliver. At the step's scale it was the size of a seam beside a letter in the light forced palette, so it goes unnamed there, and four times that in the dark, where it is named only if the sliver lies below it.
-- **A forced edge.** Centred on a box's outline, the edge a forced palette gives an opaque fill reached over the descenders' tips, by as much as the edge fell over them among the device's pixels. DEC-039 point 4 removes that edge: inside the fill, the box hid no more than its own smoothed edge.
-- **The sliver's room.** The most an unnamed plant lost, at either scale, was 0.003 em². The least a mark a reader needs lost was 0.023 em², a háček at body size.
+- **A graze between texts.** Where a box lies between two texts in the tree, the heading's graze is named where it passes the sliver. At the step's scale it was 0.002 em² in the light forced palette, below the most an unnamed plant lost, so it goes unnamed there, and 0.010 em² in the dark, where it is named only if the sliver lies below it.
+- **A forced edge.** Centred on a box's outline, the edge a forced palette gives an opaque fill reached over the descenders' tips, by as much as the edge fell over them among the device's pixels, and over the feet of capitals resting on the box. Drawn as DEC-039 point 4 draws a box, the box hid what it hides in its own colours. A path drawn so still hid a device row of the capitals at two of nine steps (DEC-039 point 4's known gap).
+- **The sliver's room.** The most an unnamed plant lost, at either scale, was 0.003 em². The edge control's last device row holds 0.017 em² of its strong ink at the planted page's 14 px at 1.225, and 0.036 at a scale of 1. The least a mark a reader needs lost was 0.023 em², a háček at body size.
 - **The top edge.** With no room above the first page, the line past its top lost nothing, so its cut was silent.
-- **The cost.** Measured on that Mac at 1.225, in a naive form: each span read alone, one at a time, its four images decoded in Python's standard library. Today's ink read took 0.08 s for each span in each key or forced palette, and these reads 0.21 to 0.26 s more, about a fifth of it decoding. Each figure below is a saved run:
+- **The cost.** Measured on that Mac at 1.225, in a naive form: each span read alone, one at a time, its four images taken and decoded in Python's standard library. That run timed taking and decoding the images, not comparing them or the room past the page's edges. The probes' own reads, which took, decoded and compared a span's four images in about 0.2 s, suggest those add little. Today's four reads took 0.08 s for each span in each key or forced palette, and these reads 0.21 to 0.26 s more, about a fifth of it decoding. Each figure below is a saved run:
   - **One look of the showcase deck,** in one language and one key, 108 spans: 14 s today, and 38 s with these reads on every span.
-  - **CI's run,** every language and key of the deck and of the project's other piece: 58 s today, and 2.7 minutes.
+  - **CI's run,** every language and key of the deck and of the project's other piece: 58 s today, and 2.7 minutes. On CI's runner today's run took 60 to 74 s in six runs on 13 November, its log shows, so the runner takes 1.04 to 1.28 times the Mac's time.
   - **The look before a designer stops,** the deck in every language and key and under forced colours: 1.6 minutes today, and 4.7 minutes.
   - **A pre-filter** by the browser's own boxes, widened by an em, kept 85 of the deck's 108 spans and 9 of the other piece's 15. It was counted, not timed.
-  - **Extrapolated, not measured:** a look grows by about 0.22 s for each span in each key or forced palette it draws, so a piece three times the deck's size takes about two minutes a look in one key. CI's runner was not timed.
+  - **Extrapolated, not measured:** a look grows by about 0.22 s for each span in each key or forced palette it draws, so a piece three times the deck's size takes about two minutes a look in one key. On CI's runner the deck's look in one language and one key would take 39 to 48 s with these reads, and its look in every language and key 2.4 to 2.9 minutes, against 46 to 57 s today.
 
 **Not reached:** a picture under a text, a fixed page and its keyline, a page after the first, ink past a page's other edges, a span both cut and covered, a light weight at a small size, a real forced palette, another browser, Linux, a Mac set to light.
 
@@ -100,10 +103,10 @@ Each row gives the share of the span's strong ink lost, at a scale of 2. Where i
 ### 5. The first read plants each loss
 
 - **Named in every start** (DEC-020 point 7): a span cut past its page's top edge, and, as covered, the text under a later box and a span wholly under another text, which is never named as one with no ink.
-- **Left unnamed:** a text under a translucent fill, a text whose descenders' foot a part's edge touches, and the text in the colour of its ground.
-- **The sliver clears the unnamed plants.** The area the outputs page states lies well above the most an unnamed plant loses, and below a háček at body size, so both starts name the same on every machine.
+- **Left unnamed:** a text under a translucent fill, a text whose descenders' foot a box's edge touches (the edge control), and the text in the colour of its ground.
+- **The sliver clears the unnamed plants.** The area the outputs page states lies above the strong ink in the edge control's last device row at the smallest scale a start uses, and below a háček at body size. So the control stays unnamed wherever the box's edge falls among the device's pixels.
 - **Its rule under forced colours is the renderer's.** Only a fill opaque in every key takes the reader's ground, so the translucent fill stays (DEC-023 point 7).
-- **The text left to forcing** (DEC-039 point 5) is a text of two lines at a step below its font's height, its first line with descenders. Each line must show ink, and neither may be named. So where a browser paints its backplates again, the run stops.
+- **The text left to forcing** (DEC-039 point 5) is a text of two lines at a step below its font's height, its first line with descenders. Each line must show ink, and neither may be named. So where a browser paints its backplates again, the run stops. The first read holds DEC-039's grounds and the forcing, and its edge is held by #3088's test of the file and a person's look (DEC-039 point 5).
 
 ## Rationale
 
@@ -125,7 +128,7 @@ Each row gives the share of the span's strong ink lost, at a scale of 2. Where i
 
 **Why the SVG renderer waits.** Through resvg the page's frame clips a cut text, so it is gone for every reader. Its read needs a canvas past the page and a read of cover of its own, a change of resvg's module, which [project-kit#3111](https://github.com/aleskalfas/project-kit/issues/3111) builds. Until then its report says what it did not read, so an empty list never reads as clean.
 
-**The cost, accepted.** These reads add about 0.22 s for each span in each key or forced palette to today's 0.08 s, so the showcase deck's looks take two and a half to three times as long (Context). The build loop looks at a page after each change, and a look of a piece the deck's size stays under a minute, which keeps that pace. A larger piece's look grows with its spans, so the cost is revisited where a look comes to hold up a build loop. The look before a designer stops runs once in a round, beside the reviewer's read of every image, so a few more minutes there slow no step that repeats. CI's run stays well inside its job's 30 minutes, with room for a slower runner and more pieces. So the cost is accepted as the price of a report that names every lost text. Point 3 leaves the build room to make the read cheaper.
+**The cost, accepted.** These reads add about 0.22 s for each span in each key or forced palette to the 0.08 s of today's four reads, so the showcase deck's looks take two and a half to three times as long (Context). The build loop looks at a page after each change, and a look of a piece the deck's size stays under a minute, which keeps that pace. A larger piece's look grows with its spans, so the cost is revisited where a look comes to hold up a build loop. The look before a designer stops runs once in a round, beside the reviewer's read of every image, so a few more minutes there slow no step that repeats. CI's run stays well inside its job's 30 minutes, with room for a slower runner and more pieces. So the cost is accepted as the price of a report that names every lost text. Point 3 leaves the build room to make the read cheaper.
 
 ### Alternatives considered
 
@@ -148,7 +151,7 @@ Each row gives the share of the span's strong ink lost, at a scale of 2. Where i
 ## Implications
 
 - **Edits to accepted records,** made once this record is accepted, each citing it. Accepting this record accepts them (COR-066 point 5).
-  - **DEC-020 point 6, "Ink".** It comes to say that each span is drawn alone in its own paint, with no other text and nothing drawn beneath a text, with room past its page's edges; that a span's strength is measured in a draw of its own, its letters alone in one colour on another; and that the read reports a cut or covered span, in one entry for each cause, with its share.
+  - **DEC-020 point 6, "Ink".** It comes to say that each span is drawn alone in its own paint, with no other text and nothing drawn beneath a text, with room past its page's edges; that a span's strength is measured in a draw of its own, its letters alone in one opaque colour on another; and that the read reports a cut or covered span, in one entry for each cause, with its share.
   - **DEC-020 point 6, "It asks nothing of what lies over a text".** It comes to say that the read names a text as far as a part drawn after it hides its strong ink, and that a text in the colour of what lies under it, or one that shows and reads poorly, is for the check and the reviewer.
   - **DEC-027 point 4, "The four reads run in each forced image".** Its list of what that palette's reader loses comes to add a span the page's edge cuts, and a span a later part covers, a text's ground among them.
   - **DEC-027 point 4, "One more span with no paint, left to forcing".** Beside DEC-039's edit to it, it comes to say that what is left to forcing is a text of two lines at a step below its font's height, its first line with descenders, and that each line must show ink and neither may be named, or the run stops.
@@ -157,7 +160,7 @@ Each row gives the share of the span's strong ink lost, at a scale of 2. Where i
   - **DEC-031 point 5, "The reads hold".** "No read looks outside a page" comes to say that the read past a page's edge paints its own ground there and hides the keyline, so the planted page still needs no keyline.
   - **[visual-communication:DEC-022-web-site-and-parts], its Implications, "A brand's or a local part past a page's edge".** It comes to add that a text past it is named as cut.
 - **The reviewer's agent file** comes to say, in #3088's change, that a cut or covered entry is the fault of a part missing or blank, and is never accepted. A covered entry whose cover is another text is not counted again as text over text, which keeps the overlaps the report does not name. Where a run through the SVG renderer says that cover and cut were not read, the reviewer reads them in its images, and its report says it did.
-- **The capability's page on outputs** comes to say, for each renderer, what `dropped` holds, its causes and shares, and the numbers that set strong ink, what hides it and a sliver. **The build loop's table** comes to say what mends each cause. Both in #3088's change.
+- **The capability's page on outputs** comes to say, for each renderer, what `dropped` holds, its causes and shares, and the numbers that set strong ink, what hides it and a sliver. **The build loop's table** comes to say what mends each cause, and that the draw order mends a cover between two texts (DEC-039, its Rationale): the part drawn before both texts or after both, which changes no other reader's page. Both in #3088's change.
 - **This record rests on DEC-039,** and both are accepted in #3088's change.
 - **#3088** builds points 1 to 5, drawing many spans alone at once, with a test that draws a page with each loss and finds it in the report. Its changeset is `minor` for visual-communication.
 - **The planted page** takes DEC-039's form under forced colours, as a page in the renderer's form does.
@@ -168,4 +171,4 @@ Each row gives the share of the span's strong ink lost, at a scale of 2. Where i
   - DEC-023 point 6. The reads run in each key drawn and in each forced palette, in each language's page file.
   - DEC-022 point 7. Each page is read whole, so a band's edge cuts no span.
   - [visual-communication:DEC-036-concept-signs] point 3. A run's ground and sign stay as they are when the read changes its letters' colour.
-- **Revisit this record** if a browser comes to paint a forced fill or a ground in a way that makes the read name a text that shows, if the sliver's area names a text that shows or misses a mark a reader needs, if a look of a shipped piece passes a minute on the CI runner, if the reads come to hold up a piece's build loop, or when #3111 builds the SVG renderer's read of cover and cut.
+- **Revisit this record** if a browser comes to paint a forced fill or a ground in a way that makes the read name a text that shows, if the sliver's area names a text that shows or misses a mark a reader needs, if the build loop's look of a shipped piece, in one language and one key, passes a minute on CI's runner, if the reads come to hold up a piece's build loop, or when #3111 builds the SVG renderer's read of cover and cut.
