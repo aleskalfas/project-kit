@@ -1,12 +1,16 @@
-"""How project-management starts an agent with nobody watching (ADR-066 point 1).
+"""How project-management starts an agent through the backbone (ADR-066 point 1).
 
 A capability never calls a harness, and never looks for an adapter. It asks the
 backbone's run command, `pkit agents run`, which starts the runner the
 project's adapter registers, and the runner starts the harness. This module is
-the one place project-management asks: `review-pr` starts its reviewers
-through it (`run_agent`, the unconfined form), and `fix-drift` starts the
-granted fixers through it (`run_confined`, the confined form: a clone at a
-pinned commit, under the rules `permissions/runs.yaml` declares).
+the one place project-management asks. `review-pr` starts its reviewers
+through it (`run_agent`, the unconfined form), and so does `fix-drift` each
+fixer a person watches, in a working copy of its own (DEC-069 point 2).
+`run_confined` is the confined form, which every fixer's run takes, watched
+or not, once it is built and the harness holds it: a clone at a pinned
+commit, under the rules `permissions/runs.yaml` declares. The drift command
+starts no confined run yet, and a run nobody watches waits for that form or
+the project's switch (DEC-069 points 2 and 4).
 
 The command reads the brief on standard input and writes one JSON document, a
 version this module reads (`VERSION`): how the run ended, the harness's exit,
@@ -109,11 +113,17 @@ def run_agent(
     folder: Path,
     limit_seconds: int,
     effort: str | None = None,
+    local_settings: bool = False,
 ) -> AgentRun:
     """Run agent `name` once on `brief`, in `folder`, within `limit_seconds`, at
-    `effort` where one is set. Never raises for what the run did: every ending
-    is in the answer. An interrupt stops the run, then propagates."""
+    `effort` where one is set. With `local_settings`, the runner first carries
+    the person's local settings into `folder` from the checkout `pkit` runs in
+    (ADR-066 point 10); which file holds them is the adapter's to know. Never
+    raises for what the run did: every ending is in the answer. An interrupt
+    stops the run, then propagates."""
     argv = [*ARGV, "--folder", str(folder), "--limit", str(limit_seconds)]
+    if local_settings:
+        argv.append("--local-settings")
     return _run(name, brief, argv, limit_seconds=limit_seconds, effort=effort)
 
 

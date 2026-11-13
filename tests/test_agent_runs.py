@@ -8,6 +8,12 @@
 - the run reaches the harness through the claude-code adapter's runner: the
   closed set of flags, the brief on standard input, the folder, and none of the
   backbone's run variables;
+- a run whose folder is a project's root, such as a clone at a commit, runs the
+  runner that project registers, so a shipped agent's definition is that
+  project's;
+- asked for the person's local settings, the request names the project the
+  command runs in as the checkout they come from, and a confined run takes
+  none;
 - the runner's answer is read strictly: another version, a finished run with no
   exit, or a runner that exits without an answer is a run with no answer, and
   one that cannot start did not start;
@@ -304,6 +310,11 @@ def test_the_copies_across_the_three_layers_agree() -> None:
         ({"effort": "bypass"}, "effort 'bypass'"),
         ({"commit": "0" * 40}, "never both"),
         ({"folder": None}, "all three"),
+        ({"local_settings_from": Path("relative")}, "the local settings come from"),
+        (
+            {"folder": None, "local_settings_from": Path("/"), "commit": "0" * 40},
+            "takes no local settings",
+        ),
     ],
 )
 def test_a_request_with_a_problem_is_refused_before_any_runner(
@@ -404,6 +415,65 @@ def test_the_harness_exit_is_the_runs(
     assert not run.succeeded
 
 
+# A project's definition of an agent it ships, in the methodology's shape, whose
+# instructions say whose definition it is.
+_SHIPPED_AGENT = """---
+name: {name}
+description: A fixer of pages.
+tools: [Read, Grep, Glob]
+---
+
+{says}
+"""
+
+
+def _ship_agent(root: Path, name: str, says: str) -> None:
+    source = root / ".pkit" / "agents" / "project" / name / f"{name}.md"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(_SHIPPED_AGENT.format(name=name, says=says), encoding="utf-8")
+
+
+def _passed_instructions(record: Path) -> str:
+    """The instructions of the definition the runner passed the harness, as the
+    deploy resolves them: the file's, then what the overlay adds."""
+    argv = json.loads(record.read_text(encoding="utf-8"))["argv"]
+    [definition] = json.loads(argv[argv.index("--agents") + 1]).values()
+    return definition["prompt"]
+
+
+def test_a_run_in_a_clone_runs_the_clones_definition_of_a_shipped_agent(
+    make_adopter_repo: MakeAdopterRepo,
+    harness_bin: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A drift command's watched fixer runs in a clone at the pinned commit, and
+    the definition that runs is the commit's, never an edit in the person's
+    checkout that has not merged (DEC-056 point 3). So the backbone runs the
+    runner the clone registers, from the clone's root, which picks and checks
+    the definition there, as a confined run's does (ADR-066 point 3). A review's
+    run, in the person's checkout, keeps the checkout's."""
+    fixer = "page-fixer"
+    checkout = make_adopter_repo(root=tmp_path / "checkout").root
+    clone = make_adopter_repo(root=tmp_path / "clone", chdir=False).root
+    at_commit, unmerged = "The commit's instructions.", "The checkout's instructions."
+    _ship_agent(checkout, fixer, unmerged)
+    _ship_agent(clone, fixer, at_commit)
+    _script(harness_bin / "claude", _RECORDING_HARNESS)
+    record = tmp_path / "record.json"
+    monkeypatch.setenv("HARNESS_RECORD", str(record))
+
+    run = run_agent(checkout, _request(clone, agent=fixer))
+    assert (run.ending, run.exit_code) == (agent_runs.FINISHED, 0), run.reason
+    passed = _passed_instructions(record)
+    assert passed.lstrip().startswith(at_commit) and unmerged not in passed
+
+    run = run_agent(checkout, _request(checkout, agent=fixer))
+    assert (run.ending, run.exit_code) == (agent_runs.FINISHED, 0), run.reason
+    passed = _passed_instructions(record)
+    assert passed.lstrip().startswith(unmerged) and at_commit not in passed
+
+
 # --- reading the runner's answer -------------------------------------------------
 
 
@@ -491,6 +561,34 @@ def test_the_request_reaches_the_runner_on_standard_input(
         "limit_seconds": 40,
         "effort": "high",
     }
+    # Asked for the person's local settings, the request names the checkout
+    # they come from; the runner knows which file holds them (ADR-066 point 1).
+    run_agent(root, _request(tmp_path, local_settings_from=root))
+    assert json.loads(seen.read_text(encoding="utf-8"))["local_settings_from"] == str(root)
+
+
+def test_the_local_settings_come_from_the_project_the_command_runs_in(
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_adopter_repo().root
+    seen = tmp_path / "request.json"
+    _sole_runner(
+        root,
+        "import json, sys\n"
+        f"open({str(seen)!r}, 'w').write(sys.stdin.read())\n"
+        "print(json.dumps({'schema_version': 1, 'ending': 'finished', 'exit_code': 0}))\n",
+    )
+    folder = tmp_path / "clone"
+    folder.mkdir()
+    monkeypatch.chdir(root)
+    result = CliRunner().invoke(
+        main,
+        ["agents", "run", AGENT, "--folder", str(folder), "--local-settings", "--limit", "5"],
+        input="Go.",
+    )
+    assert result.exit_code == 0, result.output
+    request = json.loads(seen.read_text(encoding="utf-8"))
+    assert Path(request["local_settings_from"]).resolve() == root.resolve()
 
 
 def test_a_runner_that_exits_without_an_answer_is_no_answer(
@@ -641,6 +739,19 @@ def test_a_usage_error_exits_2(
     root = make_adopter_repo().root
     result = CliRunner().invoke(main, ["agents", "run", *args, "--folder", str(root)], input=brief)
     assert result.exit_code == 2, result.output
+
+
+def test_local_settings_go_only_with_a_folder(
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path
+) -> None:
+    """A confined run loads none of the person's settings (ADR-066 point 3)."""
+    make_adopter_repo()
+    confined = ["--commit", "0" * 40, "--rules-of", "a:b", "--files-to", str(tmp_path)]
+    result = CliRunner().invoke(
+        main, ["agents", "run", AGENT, *confined, "--local-settings", "--limit", "5"], input="Go."
+    )
+    assert result.exit_code == 2, result.output
+    assert "--local-settings goes only with --folder" in result.output
 
 
 def test_sigterm_stops_the_runner_and_its_harness(

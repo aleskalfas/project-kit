@@ -38,6 +38,7 @@ pkit:
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
+        - .pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift
 ---
 
 # Adapters
@@ -191,13 +192,13 @@ An adapter whose harness reaches the files another way needs a key of its own, o
 
 ## The agent runner
 
-A command that starts an agent with nobody watching never calls a harness. It asks the backbone's run command, `pkit agents run`, which starts the runner the project's adapter registers. The runner starts the harness, so the tie to a harness's command line lives in its adapter, as every other tie does. project-management's `review-pr` starts its reviewers this way, and its `fix-drift` starts the fixers a project granted, confined.
+A command that starts an agent nobody can answer during its run never calls a harness. It asks the backbone's run command, `pkit agents run`, which starts the runner the project's adapter registers. The runner starts the harness, so the tie to a harness's command line lives in its adapter, as every other tie does. project-management's `review-pr` starts its reviewers this way, and its `fix-drift` starts the fixers a project granted, when [its README, "Starting the fixers"](../capabilities/project-management/README.md#starting-the-fixers--fix-drift) says.
 
 **What makes a runner.** Unlike the primitives above, the lifecycle never runs it, and the backbone never finds it by a file's name:
 
 - **A registered command.** The adapter registers it in its package's `commands:` tree, under the one reference `run-agent`. The backbone finds it through its one lookup of that tree ([the lifecycle reference's manifest schema, "How a registered command is run"](../lifecycle/manifest.md#how-a-registered-command-is-run)). A capability's command of that name is no runner.
 - **Run once for each run.** Each call starts one agent, so a runner is not idempotent. The backbone runs it under the agent-run policy that the manifest schema states, with no arguments and the request on standard input.
-- **Where it runs:** from the project's root, or from the clone's root for a confined run.
+- **Where it runs:** from the project's root. A confined run's runner is the one its clone registers, run from the clone's root. Where an unconfined run's folder is a project's root, its runner is the one that project registers, run from that folder. So a run in a clone at a commit gets the runner that commit registers.
 - **One runner for a project.** Where no registered adapter registers one, the run is refused, and the command that asked starts no agent and says why. Where more than one does, the run is refused too, until a record says how a project names its harness.
 
 **The request** is one JSON document on standard input: `schema_version` (`1`), `agent`, `brief`, `limit_seconds` and `effort`, a level or `null`. A runner refuses a request with any other key, rather than run it without that key. So a runner that does not know the confined form refuses it.
@@ -206,8 +207,14 @@ A command that starts an agent with nobody watching never calls a harness. It as
 
 The request then takes one of two forms:
 
-- **Unconfined,** the form of the review command's runs: `folder`, an absolute path, where the run runs under the person's and the project's settings.
-- **Confined,** the form of the drift command's runs: no `folder`, and `confined`, an object the backbone fills in once it has made the run's clone.
+- **Unconfined,** the form of the review command's runs, and of a drift command's fixers where the confined form does not hold them. It holds `folder`, an absolute path, where the run runs under the person's and the project's settings.
+- **Confined,** the form every fixer's run takes where that form is built and the harness holds it. It has no `folder` and no `local_settings_from`, and holds `confined`, an object the backbone fills in once it has made the run's clone.
+
+An unconfined request may also hold this key:
+
+- `local_settings_from`: the absolute path of the person's checkout. The runner then copies the file its harness keeps for one checkout, out of git, from there into `folder` before the harness starts. It copies nothing where `folder` already holds that file, and refuses the run where a link lies on the way. Only the runner knows which file it is, so no capability names a harness's file.
+
+When the drift command starts a fixer, and in which form, is project-management's ([its README, "Starting the fixers"](../capabilities/project-management/README.md#starting-the-fixers--fix-drift)).
 
 A confined request's `confined` holds these keys:
 
@@ -333,7 +340,7 @@ The methodology depends on properties of the harness that hosts it, which it can
 **Status.** The core declares six requirements:
 
 - `delegated-result-complete`: a delegated helper's full result reaches the agent that delegated to it.
-- `unattended-confined-run`: a process can start an agent unattended, confined for that one run. The drift command depends on it.
+- `unattended-confined-run`: a process can start an agent unattended, confined for that one run. A drift command's confined run depends on it.
 - `unattended-working-run`: a process can start an agent unattended that edits and builds in a folder the process names. The build command depends on it.
 - `session-loads-rules`: every session holds every layer's loaded rules from its start to its end ([COR-070](../decisions/core/COR-070-capability-loaded-rules.md) point 6). An answer names apart each kind of session the adapter's own way of starting one leaves without the files.
 - `session-agent-withheld-tools`: a whole session's agent withheld named tools has none of them, and keeps every other tool its session holds. It is observed from outside a session.

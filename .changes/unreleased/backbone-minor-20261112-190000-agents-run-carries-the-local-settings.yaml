@@ -1,0 +1,15 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit agents run --folder <dir> --local-settings` carries your local
+  settings, the file your harness keeps for one checkout out of git, from the
+  project you run it in into `<dir>`, before the harness starts. The request
+  the adapter's runner reads then names your checkout as
+  `local_settings_from`, and the runner, which knows the file, copies it
+  (ADR-066 points 1 and 10). It copies nothing where `<dir>` already holds
+  that file, and refuses the run where a link lies on the way. The option
+  goes only with `--folder`: a confined run loads none of your settings. A
+  run that does not ask sends the request as before, so a runner that
+  predates the key still runs it. The CLI and adapters references say so.
