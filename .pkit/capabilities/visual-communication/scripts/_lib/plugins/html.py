@@ -920,6 +920,9 @@ class PageFile(Canvas):
             return super()._path(element)
         rule = element.get("fill-rule")
         fill = self._paint(element, "fill")
+        # No key gives the stroke a colour, so it draws nothing; asking for it still reports the
+        # stroke's role left out in each key, as the path drawn whole does.
+        self._stroke(element)
         return self._clipped(element["id"], outline, rule if rule == "evenodd" else None, fill)
 
     def _clipped(

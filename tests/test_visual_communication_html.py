@@ -1914,6 +1914,36 @@ def test_a_path_and_a_shape_with_a_hole_take_the_clip_by_their_fill_rule() -> No
     assert "[data-clip]{stroke:CanvasText;stroke-width:2px}" in forced(root)
 
 
+def test_a_shape_that_takes_an_edge_reports_a_stroke_no_key_gives_a_colour() -> None:
+    """A path, a box and an ellipse whose fill is opaque in every key, and whose stroke's role
+    no key gives a colour, take the edge, the path as a clipped shape, and each still reports
+    its stroke left out in each key (DEC-039 point 4, DEC-023 point 8)."""
+    look = {"fill": "surface", "stroke": "gone", "stroke-width": 1}
+    drawn = draw(
+        scene(
+            element("path", "figure/path", x=0, y=0, width=30, height=30, d=HOLED, **look),
+            element("box", "figure/box", x=40, y=0, width=30, height=30, **look),
+            element("ellipse", "figure/ellipse", x=80, y=0, width=30, height=30, **look),
+        ),
+        keys=EVERY,
+    )
+
+    [layer] = marked(ElementTree.fromstring(drawn.document), "layer")
+    assert [node.get("data-id") for node in layer if html.CLIP in node.attrib] == ["figure/path"]
+    assert set(insets(layer)) == {"figure/box", "figure/ellipse"}
+    assert [loss.as_dict() for loss in drawn.losses] == [
+        {
+            "plugin": "html",
+            "what": trace,
+            "did": "left-out",
+            "why": f"the brand gives the role `gone` of its stroke no colour in `{key}`",
+            "key": key,
+        }
+        for trace in ("figure/path", "figure/box", "figure/ellipse")
+        for key in EVERY
+    ]
+
+
 def test_no_clip_and_no_inset_shape_applies_outside_forced_colours() -> None:
     """Outside forced colours the inset shape is hidden and no clip applies, so the layers
     draw as the SVG renderer draws them (DEC-039 point 4, DEC-020 point 1)."""
