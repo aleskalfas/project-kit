@@ -6,6 +6,8 @@ date: 2026-05-08
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [PRJ-016](PRJ-016-candidates-hold-no-release.md).** A change that must be tested before it ships is tested on its own branch before it merges, a candidate is cut from that branch's head, a project tries each candidate fresh from a final release, and every final release is the ordinary release from `main`'s head. Overturned: the final release cut from the last candidate's source commit, in D3, D5 and the Rationale, with D5's "What cannot wait" and "No other release ships while a line runs", a candidate cut from `main`'s head alone, and the candidate line. PRJ-016's "What this overturns in PRJ-002, and what stands" lists each passage. The rest of PRJ-002 stands.
+
 ## Context
 
 COR-010 fixes that backbone and components use semver, components declare `requires_backbone` ranges, and migrations land per `<major>.<minor>.0/`. What COR-010 deliberately does *not* cover — because it is project-neutral — is *when* the source kit's backbone version actually bumps and *who* performs the bump. That is a project-kit-the-project policy.
@@ -48,7 +50,7 @@ Which segment a change warrants — and which *tier* (backbone vs a specific com
 
 A *release PR* is the sole writer of version state on `main`. It writes the version numbers and the changelog the release step generates, and consumes the changesets that release includes. No other PR writes a version.
 
-The release step computes each tier's new version from one commit of `main` and the changesets pending there, and cuts the release's tag via the existing `pkit version tag --push` (per PRJ-004, which already mandates annotated tags matching `.pkit/VERSION`; this reuses that mechanism and is not a new distribution decision). The tagged commit is the coherent state the version-locked official install is built from (ADR-033). A final release that ends no candidate line is computed from the current state on `main`, and its tag is cut on the commit its release PR leaves there.
+The release step computes each tier's new version from one commit of `main` and the changesets pending there, and cuts the release's tag via the existing `pkit version tag --push` (per PRJ-004, which already mandates annotated tags matching `.pkit/VERSION`; this reuses that mechanism and is not a new distribution decision). The tagged commit is the coherent state the version-locked official install is built from (ADR-033). A final release that ends no candidate line is computed from the current state on `main`, and its tag is cut on the commit that holds what the release PR merged and nothing merged after it (refinement per [PRJ-016](PRJ-016-candidates-hold-no-release.md) point 1).
 
 The final release that ends a candidate line is computed from the last candidate's source commit (D5). Its versions are written on a commit on top of that one, which its tag takes. Its release PR then brings them into `main`, consuming the changesets that release includes and leaving later ones pending.
 
@@ -71,7 +73,7 @@ The release refuses to leave a capability whose range excludes the version the r
 
 A floor, on the backbone or on a capability, is raised only to a release version, never to a pre-release. The release step states each raised floor and each widened bound in the component's changelog entry.
 
-A release candidate raises no floor. Its tree keeps the floors its source commit carries, and the final release raises them (D5). The candidate writes the broaden and each declared upper bound as the final release would, at release versions, so its own components admit it. It checks every floor and range as the final release would, and refuses where the final release would refuse.
+A release candidate raises no floor. Its tree keeps the floors the commit it is cut from carries (refinement per [PRJ-016](PRJ-016-candidates-hold-no-release.md) point 3), and the final release raises them (D5). The candidate writes the broaden and each declared upper bound as the final release would, at release versions, so its own components admit it. It checks every floor and range as the final release would, and refuses where the final release would refuse.
 
 ### D5 — A release candidate previews the next final release, and changes nothing on `main`
 
@@ -80,7 +82,7 @@ A release is a backbone version together with each component's version ([COR-059
 A *release candidate* is a release that previews the next final release, so that it can be tested before it ships. Each version the final release would write, the candidate writes with the suffix `rcN`, PEP 440's form of a pre-release, as `2.0.0rc1` previews `2.0.0`. The candidates of one final release make its *candidate line*, which *runs* from its first candidate's tag until its final release's tag. A candidate's *source commit* is the head of `main` it was cut from.
 
 - **Cut on request.** A candidate is cut only when a person asks for one, from the head of `main`.
-- **From the pending changesets, which stay pending.** A candidate holds the versions the final release would compute from its source commit and the changesets pending there, each with the suffix `rcN`. That is the backbone's version and each moved component's, all with one `N`. A component the final release would not move keeps its version.
+- **From the pending changesets, which stay pending.** A candidate holds the versions the final release would compute from the commit it is cut from and the changesets pending there, each with the suffix `rcN` (refinement per [PRJ-016](PRJ-016-candidates-hold-no-release.md) point 3). That is the backbone's version and each moved component's, all with one `N`. A component the final release would not move keeps its version.
 - **It consumes nothing.** Its changelog section lists every pending entry and lives in its tag. The final release consumes the changesets once, and `main`'s changelog gains that one section.
 - **One version, one content.** No `N` is reused. A person *withdraws* a candidate found unfit by marking its Release so, and its tag and number stay. The next candidate takes the next `N`, and PRJ-004 says how a candidate's tag keeps one content.
 - **`main` holds release versions alone** (D3). A change that would put a pre-release version there is refused ([ADR-089](../../../tech-docs/architecture/decisions/ADR-089-release-candidates.md) point 3).
@@ -117,7 +119,7 @@ The changeset-file **format** and the release-step **mechanics** (changeset nami
 
 **Why the release refuses a range that excludes its dependency.** The tagged commit a release produces is the coherent state the version-locked install is built from (D3). A capability whose range excludes the version of a capability the same tag carries breaks that state. An upgrade's dependency gates take the capabilities one release ships to agree with each other (ADR-065 point 6), and an adopter's upgrade refuses a tag in which one excludes another. So the release refuses to leave such a range, however it arose. The cost is that a pending major of a capability holds every release until each dependent in the tree declares it runs on that major, or the major waits. The hold falls where the break is cheapest to answer, before any adopter meets it.
 
-**Why a candidate's versions live only in its tag.** A candidate consumes no changeset. So a commit of `main` and the changesets pending there already make the next final release, `main`'s head for each candidate and the last candidate's source commit for the final release. `main` never records a candidate, so no reader of `main`'s versions meets a pre-release, and no release is computed from one. The cost is a commit that no branch holds, kept by its tag alone.
+**Why a candidate's versions live only in its tag.** A candidate consumes no changeset. So `main`'s head and the changesets pending there make the next final release (refinement per [PRJ-016](PRJ-016-candidates-hold-no-release.md) point 1). `main` never records a candidate, so no reader of `main`'s versions meets a pre-release, and no release is computed from one. The cost is a commit that no branch holds, kept by its tag alone.
 
 **Why each moved component carries the suffix.** A transition tells a component's move, and which of its migrations to run, by comparing its versions. Every candidate of a line is computed from the same base, so at a release version two candidates would carry one version of a capability with different content. A project moving between them would see no move, and would run none of the migrations added in between. With the suffix, each move between candidates is a move.
 
@@ -165,7 +167,7 @@ The changeset-file **format** and the release-step **mechanics** (changeset nami
   - raises each floor a changeset declares, on the backbone or on another capability, and widens each upper bound on a capability a changeset declares
   - refuses to leave a capability whose range excludes the version the release writes or carries for a capability it depends on
   - generates the changelog, stating each raised floor and widened bound in its component's entry
-  - is tagged via `pkit version tag --push` (PRJ-004), on the commit it leaves on `main`, except for the final release that ends a line, whose tag is cut before its PR opens (D3)
+  - is tagged via `pkit version tag --push` (PRJ-004), on the commit that holds what the release PR merged and nothing merged after it (refinement per [PRJ-016](PRJ-016-candidates-hold-no-release.md) point 1), except for the final release that ends a line, whose tag is cut before its PR opens (D3)
 - **The release step cuts a candidate on request, off `main`.** Its commit and tag carry the candidate's versions and changelog section, and the changesets stay pending (D5). How the code cuts and reads a candidate is ADR-089, and its commands are the release-flow spec's.
 - **The project's `CLAUDE.md`** restates this record's mode in its Versioning paragraph, and follows each change to it.
 - **Capability promotion emits a changeset too.** When a capability is promoted from adopter-incubated origin (COR-031) into kit source (EPIC #131), the promotion is a surface change like any other: it drops the promoted capability's first changeset, so the release step records that capability's initial version in kit source.
