@@ -9,6 +9,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/component.yaml
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
         - .pkit/capabilities/visual-communication/scripts/_lib/names.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/colour_steps.py
         - .pkit/capabilities/visual-communication/scripts/_lib/formula.py
         - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
         - .pkit/capabilities/visual-communication/scripts/_lib/scene.py
@@ -24,6 +25,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/deck.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/site.yaml
+        - .pkit/capabilities/visual-communication/libraries/starter/components/layers.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/steps.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/card.yaml
@@ -87,7 +89,11 @@ pkit:
         - visual-communication:DEC-025#6
         - visual-communication:DEC-025#7
         - visual-communication:DEC-031#2
+        - visual-communication:DEC-032#3
+        - visual-communication:DEC-032#4
+        - visual-communication:DEC-032#5
         - visual-communication:DEC-032#6
+        - visual-communication:DEC-032#7
         - visual-communication:DEC-034#1
         - visual-communication:DEC-034#2
         - visual-communication:DEC-034#3
@@ -106,6 +112,13 @@ pkit:
         - visual-communication:DEC-036#2
         - visual-communication:DEC-036#3
         - visual-communication:DEC-036#5
+        - visual-communication:DEC-038#1
+        - visual-communication:DEC-038#2
+        - visual-communication:DEC-038#3
+        - visual-communication:DEC-038#4
+        - visual-communication:DEC-038#5
+        - visual-communication:DEC-038#6
+        - visual-communication:DEC-038#7
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -249,7 +262,10 @@ An option takes a value from what the component declares, never a free number or
 - **`preferred`** holds `width` and `height`, each a formula that gives a length. A component placed with no size given, and that asks for none, is reported.
 - **`colour`** names the component's default colour family. A *colour family* is a group of colour roles that paints one thing, such as its line, its fill and the text on it. The foundations declare each family in their `roles.yaml`, as a mapping of its members to colour roles (DEC-004 point 10; [the foundations](files.md#the-foundations)).
 - **`states`** maps each state to `{colour: <family>}`, the family the state paints with, or to `{}`, which keeps the instance's family. The content names a state as `state: <name>`.
-- **An instance's family** is the family its concept maps to, where the content names one as `concept: <notation>/<concept>` ([content files](files.md#content-files)). Else it is the `colour` of the `repeat` part that draws it as an item, else its component's `colour`, else the family of the component that places it. A state with a `colour` then replaces it. A concept the piece's notations do not hold is reported, and the instance takes its family as if it named none.
+- **An instance's family** is the family its concept maps to, where the content names one as `concept: <notation>/<concept>` ([content files](files.md#content-files)). Else it is the family, or the step of an order, that the `repeat` part that draws it as an item gives its place ([Repeating over a list](#repeating-over-a-list-row-and-column)), else its component's `colour`, else the family of the component that places it. A state with a `colour` then replaces it. A concept the piece's notations do not hold is reported, and the instance takes its family as if it named none.
+- **An order's steps** (DEC-032 points 3 and 4). Under a word of an option, a pattern may give the places of a list colour steps instead of a family. Place k of the n places the list draws takes the colour (k − 1) / (n − 1) of the way from the order's first end to its last, and a list of one place the first end. Every item drawn counts, one that names its own component included, and an item left out counts for nothing. The foundations declare which roles are the ends and which the text on every step ([`roles.yaml`](files.md#rolesyaml)). A step paints as a family: `:colour.fill` and `:colour.line` paint with the step's colour, and `:colour.text` with the order's text. An item's concept, and a state with a `colour`, still come before its step, and an item passes its step on to what sits in it, as it would a family. Under foundations that declare no ends, a place takes no step, its item takes its family as if the pattern gave none, and the piece's check states it at the lock.
+- **How the engine spreads a step.** In Oklab, along the straight line between the two ends, each end's components multiplied by its alpha before the spread and divided by the step's alpha after, as CSS Color 4 interpolates. A step that falls outside sRGB, the range format 1 gives every colour in, comes back by CSS Color 4's gamut mapping: its lightness and hue stay, and its chroma is lowered until clipping it moves it by less than a difference anyone sees. The first and the last share are the ends exactly as given. Every step between is computed in one fixed order, and each component and its alpha are rounded to 1/10 000, half away from zero, as the scene's lengths are rounded, so the same ends give the same step on every machine. The engine spreads each combination's own ends: a step's value differs by mode, and its name does not ([What a scene holds](#what-a-scene-holds)).
+- **Only a place takes a step** (DEC-032 point 6). A component's `colour`, a state's and a `repeat` part's family never name `order`, the key the foundations declare the order's roles under, nor one of those roles. No part of a library's component paints with an order's role by its name, which a brand tunes for steps alone. A piece's own component, and content's `override`, may point a part at one, such as a legend's swatch of the first end. Each is found when the component is read (*checks*).
 - **A run's family.** A run of a field of runs that names a concept takes that concept's family, before its instance's own. A run that names none takes its instance's family. A state with a `colour` replaces the family of each run of the instance too, a run's concept included (DEC-012 point 3).
 - **A paint `:colour.<member>`** paints with the role the foundations map that member of the instance's family to, or, for a run, of the run's family. Where the instance has no family, its family is none the foundations declare, or the family has no such member, the part paints nothing there, and is reported.
 - **The content's `override: {<part>: <role>}`** points one part's paint at another role, never at a component token: the `fill` of a box, an ellipse, a sign or a text, every run of the text included, the `stroke` of a line.
@@ -322,7 +338,7 @@ A text part may show a fact of the export it is drawn for, where it would show a
 
 ### Switches
 
-A value may be a *switch*: `{by: <option>, <word>: <value>, ...}`. It names an option of words, and gives a value for each of its words, no more and no fewer. In a brand's drawing a switch may leave a word of its top's option out: the drawing then does not take that word ([A brand's drawing](#a-brands-drawing)). A branch may be a switch itself. A paint's branch may be `null`, which paints nothing. A switch serves wherever a part takes a formula, a paint, a style, a word of `text-anchor` or of an operator, or a placed component's option, and in `values` and `preferred`. `values.gap` of `tests/steps` above is a switch.
+A value may be a *switch*: `{by: <option>, <word>: <value>, ...}`. It names an option of words, and gives a value for each of its words, no more and no fewer. In a brand's drawing a switch may leave a word of its top's option out: the drawing then does not take that word ([A brand's drawing](#a-brands-drawing)). A branch may be a switch itself. A paint's branch may be `null`, which paints nothing. A switch serves wherever a part takes a formula, a paint, a style, a word of `text-anchor` or of an operator, or a placed component's option, and in `values` and `preferred`. A `repeat` part's `colour` takes a switch on an option of words alone, one level deep ([Repeating over a list](#repeating-over-a-list-row-and-column)). `values.gap` of `tests/steps` above is a switch.
 
 **A switch on a size,** `{by: ":<axis>", <mode>: <value>, ...}`, chooses by the mode of a size axis. It names the axis after `:`, as a formula reads `:width`. It serves wherever a switch on an option does, and as a `when` ([Parts](#parts)). `tests/steps` could space its steps closer on a phone:
 
@@ -566,6 +582,7 @@ A *formula* is text that starts with `=` and computes one number (DEC-005 point 
 | `@<token path>` | a role, such as `@space.2`: a length or a number |
 | `:width`, `:height` | the size the component gets |
 | `:index`, `:count` | an item's place among the items its list draws, from 1, and how many it draws |
+| `:place`, `:places` | in a `cross-size` alone, the place of the item it sizes, from 1, and how many items its list draws ([Repeating over a list](#repeating-over-a-list-row-and-column)) |
 | `<value>` | a value of the component, by its name alone, such as `gap` |
 | `<part>.<exposed>….<measure>` | a measure of a part's frame, or of a part exposed below it |
 | `{<option>}.….<measure>` | a measure of the item, or the point, an option gives |
@@ -601,11 +618,14 @@ Each term is a number with no unit or a length (a power of length). The engine c
 A formula is refused with a message that names it and says why, such as "the formula `=:width - 6` subtracts a number with no unit (`6`) from a length (`:width`)". The engine finds these when it reads the component:
 
 - **It cannot be read:** it does not start with `=`, is empty, ends too early, or holds a sign or a term where none belongs. Or it breaks a rule of the grammar: a binary minus without its spaces, an engine name that does not exist, `min` or `max` with fewer than two arguments, `round` with other than one, or a path that ends in no measure.
-- **It reads what it may not:** a value, a part or an option the component lacks, an option that names an item of a list over which not exactly one part repeats, or below where a step may reach.
+- **It reads what it may not:** a value, a part or an option the component lacks, an option that names an item of a list over which not exactly one part repeats, below where a step may reach, or `:place` or `:places` in any formula but a `cross-size`.
+- **It reads the size it gives:** a `cross-size` that reads its part's size across the line where the part gives none, itself or through a named value, as a loop (DEC-038 point 7).
 - **Its dimensions disagree,** or it gives another dimension than its key needs.
 - **It reads a role** that has no value under the brand, a length in a unit other than `px`, or a role that is neither a length nor a number. A role has none where no library the piece locks declares it, or where it is a library's role that neither the brand nor its chain of defaults gives a value ([`roles.yaml`](files.md#rolesyaml)). A part reads no value from a picture role, whether the brand gives it a file or not ([Picture roles](files.md#picture-roles)). A library's role with no value, a component token among them, is found at the piece's lock, not in the component. Where the brand, or a base below it, names the library, the part takes no finding: that brand's `library-role-missing`, or its library's own finding where a default does not hold, reports it.
 
-It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point, an item or an end that is missing, and a loop. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
+Beside a formula, it refuses then a `cross-size` on a part whose items are pages, and a `stretch` written beside a `cross-size` that gives a size, as a second writer of the size ([Repeating over a list](#repeating-over-a-list-row-and-column)). It judges that loop and that `stretch` for each set of options, sizes and `:as` that holds together, so a pair only some options would draw is found in the library's own check.
+
+It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point, an item or an end that is missing, and a loop, but for the loop through a `cross-size`'s own part, which it found when it read the component. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
 
 ## Layout operators and drawing primitives
 
@@ -652,7 +672,20 @@ A primitive's properties lie in its own mapping, under SVG's names.
 
 ### Repeating over a list: `row` and `column`
 
-A `repeat` part draws a component for each item of a list field, in the content's order. **What draws an item** is the component its own `use` names, else the one its list's component field names, else `draw` ([Lists](#lists)). An item that is not a mapping, repeats an id, or names no component, is reported and left out. It takes no place among the items drawn, so `:index` and `:count` do not count it, and its trace id keeps its place in the content's list. `colour` gives the items' default colour family.
+A `repeat` part draws a component for each item of a list field, in the content's order. **What draws an item** is the component its own `use` names, else the one its list's component field names, else `draw` ([Lists](#lists)). An item that is not a mapping, repeats an id, or names no component, is reported and left out. It takes no place among the items drawn, so `:index` and `:count` do not count it, and its trace id keeps its place in the content's list. `colour` gives the items' default colour family, the family of each place ([Values, states and colour](#values-states-and-colour)).
+
+**A switch of the places' families.** `colour` may switch on an option of words, naming each word, as any switch does ([Switches](#switches)). Each branch names a family, `null` for no family from the pattern, or `:steps`, the order's steps. So the steps are always a person's choice: the content's author by the word, or the pattern's owner by the option's default. `:steps` lies in a branch alone, and the switch reads no size and holds no switch again. Where a word gives a list the steps, no other part over the list that may be drawn under that word may name a family for its places (*checks*). A row of cards that shows an order under `shade: steps`:
+
+```yaml
+options:
+  shade: [plain, steps]
+parts:
+  items:
+    repeat: items
+    draw: tests/card
+    colour: {by: shade, plain: blue, steps: ":steps"}
+    row: {gap: "=@space.2", sizes: equal}
+```
 
 The part's *layout operator*, `row` or `column`, lays the items along a line, across or down. Its settings take the names of CSS flexible layout:
 
@@ -661,9 +694,12 @@ The part's *layout operator*, `row` or `column`, lays the items along a line, ac
 | `gap` | a formula that gives a length | zero | the space between two items along the line |
 | `sizes` | `own`, `equal`, `shares` | `own` | `own`: each item takes the size it asks for along the line. `equal`: the items share the part's size along the line, less the gaps, equally. `shares`: they share it in proportion to the shares their list's weight gives them, and equally where every share is the same ([Lists](#lists)). With `equal` or `shares`, the part must give that size. |
 | `justify-content` | `start`, `center`, `end`, `space-between` | `start` | Where the items lie along a line longer than they ask for. `space-between` widens each gap instead. |
-| `align-items` | `stretch`, `start`, `center`, `end` | `stretch` | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. Where the stretch goes inside the item is in [What an element asks for, and what it gets](#what-an-element-asks-for-and-what-it-gets). Otherwise each item takes the size it asks for across, at the start, the centre or the end of the line. |
+| `align-items` | `stretch`, `start`, `center`, `end` | `stretch`, and `start` beside a `cross-size` that gives a size | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. Where the stretch goes inside the item is in [What an element asks for, and what it gets](#what-an-element-asks-for-and-what-it-gets). Otherwise each item takes the size it asks for across, or the size `cross-size` gives it, at the start, the centre or the end of the line. A `stretch` written beside a `cross-size` that gives a size is refused, and drawn as `start`. |
+| `cross-size` | a formula that gives a length | none | Each item's size across the line, by its place: the formula reads `:place`, the item's place from 1, and `:places`, how many items the list draws, beside what the part's other formulas read. It reads nothing an item carries, and its part's size across the line only where the part gives one. It may switch, and a branch may give none, which leaves the list without it there ([Switches](#switches)). A part whose items are pages takes none (DEC-038 points 1 and 2). |
 
-- **The part's own size,** where it gives none, is what its items ask for: along the line, their sizes and the gaps; across, the largest.
+- **The part's own size,** where it gives none, is what its items ask for: along the line, their sizes and the gaps; across, the largest. A part that gives `cross-size` asks across for the greatest size the formula gives at any place, or zero where that is greater or its list draws no item, whether or not it gives its own size there. Where it gives less, the check reports it as a list that gets less than it asks for (DEC-038 point 4).
+- **An item that `cross-size` sizes** asks for its size as before, and the check takes it to ask across for more than zero besides. Where the formula gives it less than it asks for, zero or less included, it is reported at the content as a component that gets less than it asks for. Where it gives zero or less, the item gets zero, so its frame never inverts. Ties, references, the checks and every renderer read its frame as any item's (DEC-038 points 5 and 6).
+- **In the starter,** `layers` with `shape: steps` lays its levels with `align-items: center` and `cross-size: "=levels.width * (:places + :place) / (2 * :places)"`. In a column 400 px wide, of four levels the first is 250 px wide and the last 400 px.
 - **In the tests' figure,** where `@space.2` is 8 px, `tests/steps` lays three steps with `row: {gap: "=gap", sizes: equal, align-items: stretch}` in a row 608 px wide. Each step is 197.33 px wide, and as tall as the tallest.
 - **Over a list of ties,** the part takes neither `row` nor `column`. Each tie lies in the part's whole frame, by default the component's, and is drawn between its ends ([Ties and connectors](#ties-and-connectors)). A tie whose component takes no ends is left out.
 
@@ -750,10 +786,10 @@ links:
 
 - **Each element asks** for its `preferred` size, and **gets** one (DEC-005 point 3). It gets a size from what places it. A top component gets what it asks for. A page of a top whose layouts are its pages' forms gets the size [Layouts](#layouts) gives it.
 - **A brand's drawing writes what its instance asks for, and the top what a page gets** (DEC-034 point 2). Each size is the drawing's or the top's by the file it is written in. A page drawn by a brand's drawing asks for the height its drawing writes, and gets the top's width, and the top's height where the top asks for one. A top whose one layout is the whole top, drawn by a brand's drawing, asks for the drawing's `preferred`. A component placed by `use` or `slot` gets its part's size, else what it asks for, unless [a stretch reaches it](#what-an-element-asks-for-and-what-it-gets). An item gets what the operator gives it. A formula reads the size it gets as `:width` and `:height`.
-- **A stretch reaches the part drawn last.** An item that `stretch` makes larger across than it asks for passes the rest on to the last part it draws. That part takes it where it places a component by `use` or `slot` and gives no size across. Its component gets as much more, and passes it on the same way. So a panel that holds panels of its own ends where the row's other panels end.
+- **A stretch reaches the part drawn last** (DEC-038 point 3). An item that `stretch` or `cross-size` makes larger across than it asks for passes the rest on to the last part it draws. That part takes it where it places a component by `use` or `slot` and gives no size across. Its component gets as much more, and passes it on the same way. So a panel that holds panels of its own ends where the row's other panels end.
   - **What the item asks for is unchanged.** Its formulas still read that part at the size the part asks for.
   - **The size passed on names `engine` as its source** ([Sources](#sources)).
-  - **Only a stretch passes on.** A component that a part's formula gives more than it asks for keeps its parts as they ask.
+  - **Only a list passes on,** by a stretch or by `cross-size`, and only from an item that asks for its size across. A component that a part's formula gives more than it asks for keeps its parts as they ask.
 - **A top with a physical size asks for its height through it,** wherever it lies: the width it asks for, in the size's proportion ([A physical size](#a-physical-size)). Its height names `engine` as its source, and so does the height of a page that gets it, or of a part that places it and gives none.
 - **Each value has one owner:** a part's formula, its measured text, or its parent's layout.
 - **A component that gets less than it asks for** is reported.
@@ -829,7 +865,7 @@ An `image` adds `preserveAspectRatio` (`xMidYMid meet`), and what it shows (DEC-
 - **A picture file:** `file`, its bare name, and `library`, where it lies: `piece`, or the library's version as `<library>@<version>`. It holds no variants and no points.
 - **A picture role:** `role`, its token path. It holds no file, no variants and no points, so one scene serves every value mode.
 
-Colours stay role names. A renderer takes their values from the brand's resolved values, so one scene serves every mode of the value axes at its key (*outputs*). This is the first step's head in a scene of the figure, trimmed. Its field takes no runs, so it is one run:
+Colours stay role names. A renderer takes their values from the brand's resolved values, so one scene serves every mode of the value axes at its key (*outputs*). A paint may name a step of an order instead, by the two roles it is spread between and its place's share of the way, a fraction in lowest terms: `step(family.order.first,family.order.last,1/3)`, or `0` and `1` at the ends. Its name is the same in every mode, and no token path takes its shape. Its value in each combination comes with the scene, among the colour roles' values, by that name, and never from the document of resolved values (DEC-032 point 5). Where one of its ends has no colour in a combination, the step has none there either. This is the first step's head in a scene of the figure, trimmed. Its field takes no runs, so it is one run:
 
 ```json
 {"type": "text", "id": "figure/body/steps[plan]/head",
@@ -869,7 +905,7 @@ Each drawn property names its source in `sources`:
 - **`:as`:** a value a switch on `:as` chose, by whether its instance is a page ([Switches](#switches)). It is a kind of its own, and names neither value.
 - **`default:<library>/<component>`:** the component's own value, such as the picture file an image names by `file`. A field that a `use` part does not pass on is the placing component's, which gives it nothing.
 - **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, a run's typography role, or the role whose line height a text takes. It is also the source of the picture role an image shows.
-- **`engine`:** a value the engine computed, such as a text's measured height, an item's frame or the height a top asks for through its [physical size](#a-physical-size), or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none.
+- **`engine`:** a value the engine computed, such as a text's measured height, an item's frame or the height a top asks for through its [physical size](#a-physical-size), or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none. An item's size across that a `cross-size` gives it names what a part's formula names instead.
 
 ## Text
 

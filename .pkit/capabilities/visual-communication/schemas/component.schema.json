@@ -416,7 +416,7 @@
       }
     },
     "formula": {
-      "description": "A formula: text that starts with `=` and computes one number from numbers, `+ - * /`, parentheses, `min max round`, roles (`@<token path>`), the engine's names (`:width :height :index :count`), the component's values and the frames it may reach (DEC-005 points 1 and 3). The engine checks what it reads and its dimensions.",
+      "description": "A formula: text that starts with `=` and computes one number from numbers, `+ - * /`, parentheses, `min max round`, roles (`@<token path>`), the engine's names (`:width :height :index :count`, and in a `cross-size` alone `:place :places`), the component's values and the frames it may reach (DEC-005 points 1 and 3). The engine checks what it reads and its dimensions.",
       "type": "string",
       "pattern": "^="
     },
@@ -502,6 +502,47 @@
         "anyOf": [
           {
             "$ref": "#/$defs/paint"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "place-colour": {
+      "description": "The colour family a list's places take: a colour family, or a switch of them on an option of words.",
+      "anyOf": [
+        {
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        {
+          "$ref": "#/$defs/place-colour-switch"
+        }
+      ]
+    },
+    "place-colour-switch": {
+      "description": "A switch of the families a list's places take: `by` names an option of words, and every word of it a colour family, `:steps`, an order's steps spread over the places the list draws (DEC-032 points 3 and 4), or null, no family from the pattern.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the families switch on.",
+          "$ref": "defs.schema.json#/$defs/name"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          {
+            "const": ":steps"
           },
           {
             "type": "null"
@@ -638,7 +679,7 @@
       }
     },
     "align-items-value": {
-      "description": "`align-items`: one of stretch, start, center, end, the first the default; or a switch of them on an option of words.",
+      "description": "`align-items`: one of stretch, start, center, end, the first the default; or a switch of them on an option of words. Beside a `cross-size` that gives a size, a value left out places each item at the start of the line, and `stretch` is refused, as a value with two owners (visual-communication DEC-038 points 3 and 7).",
       "anyOf": [
         {
           "enum": [
@@ -671,6 +712,44 @@
       },
       "additionalProperties": {
         "$ref": "#/$defs/align-items-value"
+      }
+    },
+    "cross-size-value": {
+      "description": "`cross-size`: a formula that gives each item its size across the line, read at the item's place, which it alone reads as `:place`, from 1, with how many items its list draws as `:places`; or a switch of them, whose branch may be null to give none (visual-communication DEC-038 points 1 and 2).",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/formula"
+        },
+        {
+          "$ref": "#/$defs/cross-size-switch"
+        }
+      ]
+    },
+    "cross-size-switch": {
+      "description": "A switch of `cross-size` formulas on an option of words; a word's formula may be null, where the list gives its items no size across the line.",
+      "type": "object",
+      "required": [
+        "by"
+      ],
+      "minProperties": 2,
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "properties": {
+        "by": {
+          "description": "The option of words the value switches on, or the size axis, by its marked name.",
+          "$ref": "#/$defs/chooser"
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/cross-size-value"
+          },
+          {
+            "type": "null"
+          }
+        ]
       }
     },
     "justify-content-value": {
@@ -1360,6 +1439,9 @@
         "align-items": {
           "$ref": "#/$defs/align-items-value"
         },
+        "cross-size": {
+          "$ref": "#/$defs/cross-size-value"
+        },
         "justify-content": {
           "$ref": "#/$defs/justify-content-value"
         },
@@ -1692,8 +1774,8 @@
           "$ref": "defs.schema.json#/$defs/use"
         },
         "colour": {
-          "description": "The items' default colour family.",
-          "$ref": "defs.schema.json#/$defs/name"
+          "description": "The items' default colour family, the family of each place of its list (DEC-010 point 6); or a switch of them on an option of words, under whose word the places may take an order's steps instead (DEC-032 point 3).",
+          "$ref": "#/$defs/place-colour"
         },
         "row": {
           "$ref": "#/$defs/operator"

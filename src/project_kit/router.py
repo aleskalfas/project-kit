@@ -510,9 +510,10 @@ def _notice_pin_unresolved(pin: str, running: str, environ: MutableMapping[str, 
 def _is_older_release(version: str, than: str) -> bool:
     """True iff release *version* is strictly older than release *than*.
 
-    Stdlib-only, for the pre-click hot path: both must be bare
-    `MAJOR.MINOR.PATCH` releases (the only pin `pkit pin` writes, ADR-049);
-    anything else is not ordered, so the caller claims no order it cannot show.
+    Stdlib-only, for the pre-click hot path: each must be a bare
+    `MAJOR.MINOR.PATCH` release (ADR-049) or a release candidate's
+    `MAJOR.MINOR.PATCHrcN`, the two forms a pin takes (ADR-089 point 6).
+    Anything else is not ordered, so the caller claims no order it cannot show.
     """
     parsed, parsed_than = _release_tuple(version), _release_tuple(than)
     if parsed is None or parsed_than is None:
@@ -520,13 +521,27 @@ def _is_older_release(version: str, than: str) -> bool:
     return parsed < parsed_than
 
 
-def _release_tuple(version: str) -> tuple[int, int, int] | None:
-    """*version*'s `MAJOR.MINOR.PATCH` parts, or None when it is not that shape."""
-    parts = version.split(".")
-    if len(parts) != 3 or not all(part.isascii() and part.isdigit() for part in parts):
+def _release_tuple(version: str) -> tuple[int, int, int, int, int] | None:
+    """*version*'s order key, or None when it is neither form a pin takes.
+
+    A candidate sorts below its final release, as PEP 440 orders them: the key
+    is the three parts, then 1 for a release or 0 and N for a candidate `rcN`.
+    """
+    release, rc, candidate = version.partition("rc")
+    parts = release.split(".")
+    if len(parts) != 3 or not all(_is_number(part) for part in parts):
         return None
     major, minor, patch = (int(part) for part in parts)
-    return major, minor, patch
+    if not rc:
+        return major, minor, patch, 1, 0
+    if not _is_number(candidate):
+        return None
+    return major, minor, patch, 0, int(candidate)
+
+
+def _is_number(part: str) -> bool:
+    """True iff *part* is a run of ASCII digits."""
+    return part.isascii() and part.isdigit()
 
 
 def _pinned_base(pin: str) -> list[str]:

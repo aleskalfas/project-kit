@@ -35,6 +35,7 @@ pkit:
         - src/project_kit/migrations.py
         - src/project_kit/point_questions.py
         - src/project_kit/router.py
+        - src/project_kit/candidates.py
       record:
         - COR-010
         - COR-059
@@ -51,6 +52,11 @@ pkit:
         - ADR-059
         - COR-061
         - ADR-034#1
+        - ADR-089#7
+        - ADR-089#8
+        - ADR-065#8
+        - ADR-092#7
+        - ADR-092#9
       artefact:
         - ACT-adopter
         - ACT-operator
@@ -110,22 +116,57 @@ pkit:
 - **1a.** The adopter passes `--dry-run`. The [system](../../../glossary.md#term-system--system) names the target, each [component](../../../glossary.md#term-component--component)'s move, each [migration](../../../glossary.md#term-migration--migration), any collision it would ask about and the [version pin](../../../glossary.md#term-version-pin--version-pin) it would write. It writes nothing, and runs no question ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
 - **1b.** The [project](../../../glossary.md#term-project--project) is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), run by its own code. The system runs [sync](../../../glossary.md#term-sync--sync)'s branch for that repository, which copies nothing and moves no [version](../../../glossary.md#term-version--version) ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)). The use case ends.
 - **1c.** A migration runs `pkit upgrade`. The system refuses before it reads anything, since a [version transition](../../../glossary.md#term-version-transition--version-transition) runs no transition inside it ([ADR-065 point 14](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#14-a-migration-that-runs-pkit-reaches-the-running-pkit)).
-- **3a.** The CLI is behind the latest [release](../../../glossary.md#term-release--release). The system updates the CLI and runs the upgrade again under it, as [UC-048](UC-048-install-cli.md)'s steps 6 and 7 do, unless `--no-self-update` declines ([ADR-063](../../../../../architecture/decisions/ADR-063-upgrade-updates-the-tool.md) and [REQ-031](../../../requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md)).
+- **1d.** The adopter passes `--pre`, and the system asks the [distribution](../../../glossary.md#term-distribution--distribution)'s repository for its newest [release](../../../glossary.md#term-release--release) or [release candidate](../../../glossary.md#term-release-candidate--release-candidate) ([ADR-089 point 8](../../../../../architecture/decisions/ADR-089-release-candidates.md#8-the-way-into-a-candidate-and-the-way-on-refinement-per-adr-092)). Where that is a candidate above the CLI, the system hands over to the candidate's own upgrade, run with routing switched off. The project ends pinned at the candidate. Where it is a final release, `--pre` hands over to none.
+- **1e.** The project is at a final release, and its CLI has no `--pre`. The adopter moves it onto the candidate by the candidate's own upgrade, run with routing switched off: `PKIT_NO_ROUTE=1 uvx --from <distribution URL>@v<candidate> project-kit upgrade`. The system runs the main path from step 4 under the candidate's code, and pins the project at the candidate ([ADR-089 point 8](../../../../../architecture/decisions/ADR-089-release-candidates.md#8-the-way-into-a-candidate-and-the-way-on-refinement-per-adr-092)).
+- **1f.** The project's [manifest](../../../glossary.md#term-manifest--manifest) records a release candidate, and a newer CLI or a version pin's hand-over would move the project to another release. First of its checks, before the refusal of 3c, the system refuses and writes nothing ([ADR-092 point 7](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#7-a-project-on-a-candidate-moves-to-no-other-release)). Its message names the ways off:
+  - leaving the branch that moved onto the candidate, for one at the final release the project stood at
+  - from that final release, `pkit upgrade`, or a move onto a later candidate
+  - for a project the candidate's `pkit init` installed, a new [install](../../../glossary.md#term-install--install) by a final release's `pkit init`
+  - for a move onto the candidate cut short, `pkit upgrade --pre`, which finishes it
+
+  The use case ends.
+- **1g.** The project's manifest records a release candidate, and the adopter passes `--pre`. The system asks the distribution's repository for nothing, and takes the recorded candidate for the newest release ([ADR-092 point 7](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#7-a-project-on-a-candidate-moves-to-no-other-release)). Where the CLI is at another release, the system hands over to the candidate's own upgrade, run with routing switched off. That upgrade finishes a move onto the candidate cut short, or finds the project at it already.
+- **3a.** The CLI is behind the latest release. The system updates the CLI and runs the upgrade again under it, as [UC-048](UC-048-install-cli.md)'s steps 6 and 7 do, unless `--no-self-update` declines ([ADR-063](../../../../../architecture/decisions/ADR-063-upgrade-updates-the-tool.md) and [REQ-031](../../../requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md)).
 - **3b.** The project pins a version. The system runs the upgrade under the version pin's code, and never updates the CLI. Where a newer release resolves, it hands over to that release's upgrade, then raises the version pin last ([ADR-065 point 9](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#9-a-pinned-projects-upgrade-runs-under-the-code-of-its-pin-or-of-a-newer-release)).
 - **3c.** The [router](../../../glossary.md#term-router--router) could not fetch the project's version pin, and runs the installed CLI instead. The system refuses, writes nothing, and names reconnecting, the version pin run through `uvx`, or `pkit unpin` then `pkit upgrade` ([ADR-065 point 9](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#9-a-pinned-projects-upgrade-runs-under-the-code-of-its-pin-or-of-a-newer-release)).
 - **4a.** The CLI is older than the project's content or its version pin. The system refuses, writes nothing, and names the remedies ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)). The use case ends.
 - **4b.** The project is at the target already. The system prints `Already at backbone v<version>; nothing to upgrade.`. It writes the version pin at that version unless `--no-pin` declines it, and the use case ends ([ADR-064 point 1](../../../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#1-the-default-pin)).
 - **4c.** The last transition is incomplete. The system says `The last transition is incomplete`, and runs the [backbone](../../../glossary.md#term-backbone--backbone)'s migrations from the recorded [completion](../../../glossary.md#term-completion--completion), so this upgrade finishes that transition ([REQ-026](../../../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)).
-- **4d.** No completion is recorded, or no [manifest](../../../glossary.md#term-manifest--manifest). The system says the project's migration history is unknown, and runs every backbone migration up to the target once ([ADR-065 point 5](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#5-a-missing-completion-runs-every-backbone-migration-once) and REQ-026).
+- **4d.** No completion is recorded, or no manifest. The system says the project's migration history is unknown, and runs every backbone migration up to the target once ([ADR-065 point 5](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#5-a-missing-completion-runs-every-backbone-migration-once) and REQ-026).
+- **4e.** The CLI is at a release candidate nobody asked for in any of these ways:
+  - `--pre`
+  - a run with routing switched off
+  - a version pin that names it
+
+  The system refuses and writes nothing ([ADR-089 point 7](../../../../../architecture/decisions/ADR-089-release-candidates.md#7-an-upgrade-or-an-init-refuses-a-candidate-nobody-asked-for-and-a-move-to-a-candidate-always-pins)). Its message names the ways on:
+  - `pkit upgrade --pre`
+  - the command of 1e
+  - where the CLI is the installed one, installing the latest release instead
+
+  The use case ends.
+- **4f.** The target is a release candidate, and the adopter passed `--no-pin`. The system refuses before it writes anything, since a move to a candidate always pins ([ADR-064 point 2](../../../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#2---no-pin)). The use case ends.
+- **4g.** On the path of 4a, the manifest's target is a release candidate above the CLI, left by a move cut short. Online or offline, the message names `pkit upgrade --pre`, which hands over to that candidate, whose own upgrade finishes the move. No other release finishes it ([ADR-065 point 8](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#8-each-stop-names-the-remedy-for-the-state-it-finds)).
+- **4h.** The CLI is a release candidate whose migrations would start above the versions recorded at the commit it was cut from:
+  - the backbone's start at the recorded completion, above the backbone's version at that commit
+  - a component's start at the version it records, above the component's version at that commit
+
+  Last of its checks, after 4e and 4a, the system refuses and writes nothing, under `--dry-run` too ([ADR-092 point 9](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#9-a-candidate-admits-no-project-above-its-base)). Its message names:
+  - each such start
+  - a move onto the candidate from a final release at or below its versions at that commit
+  - waiting for the next candidate
+
+  The use case ends.
+- **4i.** The CLI is a release candidate that carries no readable record of the versions at the commit it was cut from. Last of its checks, as in 4h, the system refuses and writes nothing. The use case ends.
 - **5a.** The system finds one of these conflicts, and refuses before it writes anything, naming each ([REQ-029](../../../requirements/functional/050-adopt/REQ-029-compatibility-before-write.md)). The use case ends.
   - a component whose [range](../../../glossary.md#term-range--range) excludes the target
-  - a component its [distribution](../../../glossary.md#term-distribution--distribution) ships older than the project records
+  - a component its distribution ships older than the project records
   - a folder of the project's own that takes a core [area](../../../glossary.md#term-area--area)'s name
 - **5b.** A [dependency gate](../../../glossary.md#term-dependency-gate--dependency-gate) fails for a [capability](../../../glossary.md#term-capability--capability) that does not move. The system warns, naming each dependent, and refuses unless the adopter passes `--force` ([ADR-065 point 6](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
 - **5c.** A capability's new version brings a new name collision. For each, the system asks override, skip or inspect, and records each skip before the copy, so it never asks again ([ADR-065 point 6](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
 - **5d.** On the path of 5c, nobody can reply. The system refuses before it writes anything, naming a run at a terminal or a rename of the project's [artefact](../../../glossary.md#term-artefact--artefact) ([REQ-030](../../../requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md)). The use case ends.
-- **5e.** A moving capability needs a dependency that is missing, or one that does not move and falls outside its range. The system refuses, names what to [install](../../../glossary.md#term-install--install) or upgrade first, and writes nothing, whatever flag is passed ([ADR-065 point 6](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
+- **5e.** A moving capability needs a dependency that is missing, or one that does not move and falls outside its range. The system refuses, names what to install or upgrade first, and writes nothing, whatever flag is passed ([ADR-065 point 6](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
 - **8a.** A migration exits non-zero. The system stops, records no completion and writes no version pin. The next upgrade runs that migration again (REQ-026).
+- **8b.** On the path of 1d or 1e, the move onto the candidate is cut short. The adopter runs the same command again. Run again, `pkit upgrade --pre` hands over to the candidate once more, and the candidate's own upgrade of 1e runs once more. Either finishes the move from the recorded states ([ADR-089 point 8](../../../../../architecture/decisions/ADR-089-release-candidates.md#8-the-way-into-a-candidate-and-the-way-on-refinement-per-adr-092)).
 - **11a.** The adopter passed `--no-pin`. The system writes no version pin, and the project keeps following the installed CLI until its next upgrade ([ADR-064 point 2](../../../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#2---no-pin)).
 - **12a.** Nobody can reply. The system runs no question, and prints each question's command for a person to run later ([COR-061](../../../../../../.pkit/decisions/core/COR-061-point-questions.md)).
 

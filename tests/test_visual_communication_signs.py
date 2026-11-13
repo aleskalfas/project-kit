@@ -476,7 +476,7 @@ def test_each_renderer_declares_the_path_and_every_property_the_scene_holds() ->
     for declaration in (svg_declaration, html_declaration, pdf_declaration):
         drawn = declaration.DECLARATION
         assert set(drawn["draws"]["path"]) == held
-        assert drawn["seam"] == seam.SEAM_VERSION == 8
+        assert drawn["seam"] == seam.SEAM_VERSION == 9
         assert checks.losses(scene(PATH, EVEN_ODD), drawn) == []
 
 

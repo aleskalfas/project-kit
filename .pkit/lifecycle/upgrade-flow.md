@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/upgrade.py
+        - src/project_kit/candidates.py
         - src/project_kit/sync.py
         - src/project_kit/install.py
         - src/project_kit/capabilities.py
@@ -24,7 +25,7 @@ pkit:
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - hatch_build.py
         - tests/test_area_name_clash.py
-      record: [COR-001, COR-010, COR-011, COR-015, COR-017, COR-030, COR-031, COR-041, "COR-053#6", "COR-059#5", "COR-059#6", "COR-059#7", "COR-059#8", "COR-059#9", "COR-062#11", "COR-070#3", ADR-033, ADR-039, ADR-049, ADR-059, ADR-064, ADR-065, ADR-076]
+      record: [COR-001, COR-010, COR-011, COR-015, COR-017, COR-030, COR-031, COR-041, "COR-053#6", "COR-059#5", "COR-059#6", "COR-059#7", "COR-059#8", "COR-059#9", "COR-062#11", "COR-070#3", ADR-033, ADR-039, ADR-049, ADR-059, ADR-064, ADR-065, ADR-076, "ADR-089#1", "ADR-089#4", "ADR-089#5", "ADR-089#6", "ADR-089#7", "ADR-089#8", "ADR-092#7", "ADR-092#9"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/manifest.md#where-a-capabilitys-manifest-lives
@@ -56,6 +57,7 @@ How a version transition moves a project to a release, what guards it, and how o
 - [Rolling back an upgrade](#rolling-back-an-upgrade)
 - [The replay: a missing completion](#the-replay-a-missing-completion)
 - [Sync's guard: no path down, and no migration passed over](#syncs-guard-no-path-down-and-no-migration-passed-over)
+- [A release candidate, only on request](#a-release-candidate-only-on-request)
 - [Per-component upgrade](#per-component-upgrade)
 <!-- /pkit:contents -->
 
@@ -75,7 +77,7 @@ The upgrade command transitions an adopter project to a target backbone version.
    - an adapter the copy placed that the registry lacks is registered, and recorded at the version it ships
    - `.pkit/.gitignore` <!-- unanchored: names the file the step reads or writes, not its content --> is rendered, so a migration reads the render of the target's declarations
    - the upgrade says what the copy newly binds of each loaded set it delivered ("What a step newly binds", below)
-4. **Backbone migrations** run in order ([`migrations.md`, "Three scopes (per tier)"](migrations.md#three-scopes-per-tier)): manifest-schema → structural → resource-scoped. They run across minor-version boundaries from the recorded completion, `completed_version`, to the target. With no completion recorded, every backbone migration up to the target runs (the replay, below).
+4. **Backbone migrations** run in order ([`migrations.md`, "Three scopes (per tier)"](migrations.md#three-scopes-per-tier)): manifest-schema → structural → resource-scoped. They run each folder in the window from the recorded completion, `completed_version`, to the target ("The migration window", below). With no completion recorded, every backbone migration up to the target runs (the replay, below).
 5. **Adapter migrations** run for each adapter, from the version its manifest records, in version order with the same scope ordering within each `<major>.<minor>.0/` directory. Their scripts are read from the running pkit's bundle, as a capability's are. Each registered adapter is then recorded at the version the target ships. One with no manifest runs no migration ([`manifest.md`, "An adapter's manifest"](manifest.md#an-adapters-manifest)).
 6. **Capability migrations** run for each copied capability, dependencies first by their `requires_capabilities` (COR-030), each from the version it records. Each capability is then restamped at the version it ships. One with no readable version runs none and is recorded at that version.
 7. **Seed paths.** Each one that is missing is created, never over one that exists ("Seed paths", below). They follow the migrations, so a migration that moves a project's file to a seed path finds no fresh seed there.
@@ -102,6 +104,12 @@ Every write of the upgrade is made before the first question starts. So a questi
 - every registered adapter and shipped capability records the version the target ships, each capability under its `project/`
 
 Otherwise upgrade runs, to finish what is not, even at the same backbone version.
+
+**The migration window.** Steps 4 to 6 each run the folders above a lower bound and at or below the target by minor. The lower bound is the completion for the backbone, and the version its manifest records for each component. It is read in PEP 440 order, where a release candidate sorts below its final release.
+
+- **A move to a candidate,** such as `0.55.0rc1`, runs the folder of its final release, `0.55.0/`.
+- **For a release version,** the window holds the minors above the one recorded.
+- **Public versions:** every comparison of a recorded version with the version the target ships, the early return's among them, reads both as public versions. The pre-release is kept and a local segment is dropped, so `0.55.0rc1` reads below `0.55.0`, and `0.6.0+x` reads as `0.6.0`.
 
 **The report and the dry run** name the target, each component's move, and the replay where no completion is recorded. They list each component's migrations, each collision the upgrade asks about, and each question it would ask. `--dry-run` asks nothing and writes nothing.
 
@@ -191,6 +199,7 @@ The gates run as `pkit capabilities upgrade` runs them (COR-030, COR-053 point 6
 - **A moving dependency** warns when its new version falls outside the range a capability that does not move declares for it, naming each such dependent. So does one that leaves such a capability's mandatory connection unmet. The upgrade proceeds only under `pkit upgrade --force`, so neither is a hard block.
 - **`--force` overrides those two warnings and nothing else.** It overrides no guard, no compatibility refusal, no refusal of a component bundled older, no collision, and no clash of area names.
 - **Not the upgrade's to judge:** a pair in which neither side moves, and a mandatory connection of a capability that does not move, already unmet before the upgrade.
+- **How a range is read:** with its pre-releases admitted, by every check of a range, compatibility resolution and validation among them. So a range admits a release candidate within its bounds, and `>=2.0.0` and `<2.0.0` both refuse `2.0.0rc1`.
 
 ## What the settings merge widens
 
@@ -212,7 +221,7 @@ A transition is complete when its two recorded states are equal (COR-059 point 6
   - each adapter, registered and recorded after the copy
   - the completion, last
 
-  The next upgrade finishes an interrupted install.
+  The next upgrade finishes an interrupted install. After an `init` run by a release candidate, the candidate's own upgrade through the router's bypass finishes it ("A release candidate, only on request", below).
 
 ## Rolling back an upgrade
 
@@ -237,7 +246,7 @@ With no `completed_version`, the project's backbone migration history is unknown
 
 ## Sync's guard: no path down, and no migration passed over
 
-One guard keeps a pkit at another version than the project's from writing its release over the project's (COR-059 point 9). It reads the backbone manifest's two recorded states and the pin (`.pkit/version-pin`), and compares them with the running pkit's version.
+One guard keeps a pkit at another version than the project's from writing its release over the project's (COR-059 point 9). It reads the backbone manifest's two recorded states and the pin (`.pkit/version-pin`), and compares them with the running pkit's version. It compares public versions, as the migration window does ("The steps of a transition", above).
 
 The content a sync writes, and the target of a backbone upgrade, is the running pkit's own version. A release's content is tied to its code. That version can be another than the project's:
 
@@ -256,6 +265,7 @@ The comparison vouches for content only under a tagged install, the one the CLI 
   - **So every shipped file a project holds comes from the release its backbone records,** wherever a version names one content. A version names one content under a tagged install, the one the CLI README recommends ("Installing pkit on PATH").
   - **`capabilities register`** copies nothing and does not call the guard.
 - **`upgrade` calls it in the older direction only,** before it writes anything. It refuses a running pkit older than the newest of `backbone_version`, `completed_version` and the pin. It calls the propagation step, never the sync command, so the sync command's guard never stops it.
+- **A move to a candidate cut short** leaves `backbone_version` a release candidate above the running pkit. There sync's message and upgrade's message name `pkit upgrade --pre` ("A release candidate, only on request", below). That command hands over to that candidate, and no other release finishes the move.
 - **How it stops:** exit non-zero, name the state found and its remedy, and write nothing: no content, no manifest, no pin. No flag overrides it, `sync --force` and the capability commands' `--force` included, and a dry run stops too.
 
   The CLI README's `sync` entry carries the wording, and the router's notice when it runs a pkit other than the pin.
@@ -272,6 +282,37 @@ Read-only commands are unaffected.
 A pinned project's `upgrade` under its pin's code checks first for a newer release, and hands over to it. That release's upgrade finishes content left ahead of the pin by an interrupted raise. With no newer release, the check refuses such content before the run's own transition to the pin, which would take it down.
 
 The methodology's source repository is exempt: its sync runs the self-host branch, and moves no version.
+
+## A release candidate, only on request
+
+A project moves onto a release candidate only when someone asks, and such a move always pins it there. A release candidate, such as `3.0.0rc1`, is a set of versions cut to test changes before they ship.
+
+- **The guard.** An upgrade whose target is a candidate refuses, and writes nothing, unless someone asked. A target at a release version never meets the guard. Its message names the ways in, and the install of `latest` as the tool where the running pkit is the installed tool.
+- **The ways in:**
+  - `pkit upgrade --pre`
+  - a run with routing bypassed (`PKIT_NO_ROUTE`), as a raise and the first hop run
+  - a pin that names the candidate, in PEP 440's normal form, `X.Y.ZrcN`
+- **Where the guard runs:** among upgrade's own checks. It follows the refusal of a move off a candidate (below), the tool update and the hand-over of `--pre`. It comes before the older direction of sync's guard. Under its pin's code, an upgrade moves only to its pin or hands over through the bypass, so it never meets the guard.
+- **`--pre`** moves the project to the newest release, candidates included. Its lookup reads candidate tags beside release tags, from the source the tool update reads. Where the newest is a final release, `--pre` hands over to none. In a project on a candidate, `--pre` targets that candidate instead (below).
+- **The hand-over of `--pre`.** Where the newest is a candidate above the running pkit, the upgrade hands over to the candidate's own upgrade through the bypass. A pinned project's routed child makes it in place of its hand-over to the latest release. Any other upgrade makes it after the tool update, which installs no candidate, even under `--pre`.
+- **A plain `pkit upgrade`** never moves a project onto a candidate its pin does not name.
+- **A move to a candidate always pins,** and `--no-pin` is refused on it before anything is written.
+- **An `init` run by a candidate** refuses unless routing is bypassed. Let through, it pins the project it installs at the candidate, last of its writes.
+- **The first hop,** from a final release whose pkit has no `--pre`, is the candidate's own upgrade through the router's bypass. It runs the candidate's code in its own process, and moves the project, pinned:
+
+  ```
+  PKIT_NO_ROUTE=1 uvx --from <distribution URL>@v<candidate> project-kit upgrade
+  ```
+
+- **A move onto a candidate cut short** goes on with the command that started it, run again, or with `pkit upgrade --pre`. Either hands over to the candidate, whose upgrade finishes the move from the recorded states ("Two recorded states, and an interrupted upgrade", above). No other release finishes it (below).
+- **A project on a candidate moves to no other release.** A project is on a candidate where its manifest records one, as `backbone_version` or else as `completed_version`. Every upgrade and every raise by `pkit pin` refuses, before it writes anything, to move it to another release. That holds for a final release or a candidate, with `--pre` or without.
+- **`--pre` on a candidate** targets that candidate, with no lookup. So it only finishes a move to it cut short.
+- **Where that refusal runs:** first of upgrade's checks, before the refusal under the router's fallback. In the routed child it comes before the hand-over. An upgrade by a pkit older than the candidate meets the older direction of sync's guard instead, whose message names `--pre`.
+- **A project on a candidate stays pinned.** `pkit unpin` refuses there, and writes nothing, so the router keeps running the candidate's code whatever pkit is installed.
+- **The ways off,** which every such refusal names. The project leaves the testers' branch, the branch that entered the candidate, for a branch at the final release it stood at. From there `pkit upgrade` moves it on, or it enters a later candidate. A project a candidate's `init` installed has no such branch, and is installed again by a final release's `init`.
+- **A candidate admits no project above the versions the backbone and each component recorded at the commit the candidate was cut from.** The candidate's bundle records those versions. Its own upgrade refuses where a window of migrations it would run starts above the version the bundle records for the backbone or that component. The backbone's window starts at `completed_version`, and a component's at the version it records.
+- **How that refusal runs:** last of upgrade's checks, after the older direction of sync's guard, before anything is written, under `--dry-run` too. Its message names each such window, and names entering from a final release at or below those versions, or the next candidate. A candidate whose record of those versions cannot be read moves no project.
+- **What it reads:** the windows, not the target the manifest records, so a move to the candidate cut short still finishes. An upgrade by a final release meets no such refusal.
 
 ## Per-component upgrade
 

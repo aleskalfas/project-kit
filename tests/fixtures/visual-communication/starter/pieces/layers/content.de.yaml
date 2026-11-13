@@ -65,3 +65,29 @@ slides:
         - id: checked
           head: Überprüft
           text: Eine abweichende Ebene wird zuerst überprüft.
+
+  - id: steps
+    layout: slide
+    title: Stufen, die sich nach oben verjüngen, an ihrer Kante mit einer Notiz verbunden
+    visual:
+      use: starter/layers
+      shape: steps
+      level: {use: starter/card, fill: tint, concept: test-notation/service}
+      note: {use: starter/card, bar: left}
+      levels:
+        - id: decisions
+          head: Entscheidungen
+        - id: rules
+          head: Arbeitsregeln
+        - id: commands
+          head: Befehle und Prüfungen
+        - id: work
+          head: Quellcode und Dokumente
+      notes:
+        - id: start
+          head: Wo Ideen entstehen
+          text: Im Gespräch, und in einer Notiz, wenn eine länger braucht.
+      ties:
+        - id: start-decisions
+          from: {item: "notes[start]"}
+          to: {item: "levels[decisions]"}

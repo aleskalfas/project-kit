@@ -32,9 +32,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import click
-from packaging.version import InvalidVersion, Version
+from packaging.version import Version
 
 from project_kit import install
+from project_kit.candidates import is_candidate
 
 if TYPE_CHECKING:
     from project_kit.capabilities import CapabilityRecord, CapabilitySource
@@ -45,6 +46,7 @@ from project_kit.manifest import (
     read_backbone_manifest,
     read_kit_version,
 )
+from project_kit.migrations import public_version
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
     fell_back_from_pin,
@@ -600,10 +602,14 @@ def _mismatch_lines(
 
     1. pinned, and the router fell back to another installed pkit
     2. no manifest, or a recorded version that is no version
-    3. this pkit older than the content or the pin (#1212)
-    4. the last upgrade incomplete
-    5. pinned, the content behind the pin, the pin's code running
-    6. unpinned, this pkit newer than the content
+    3. the recorded target a release candidate above this pkit
+    4. this pkit older than the content or the pin (#1212)
+    5. the last upgrade incomplete
+    6. pinned, the content behind the pin, the pin's code running
+    7. unpinned, this pkit newer than the content
+
+    Rows 3 and 4 share their message but for its remedy
+    (`_content_downgrade_lines`).
 
     A pinned project whose content this pkit, not the pin's code, is newer
     than matches none of them: its message names running the pin, or moving.
@@ -642,7 +648,7 @@ def _mismatch_lines(
             "migration once.",
         ]
     if _is_older(running, content) or pin_ahead:
-        return _content_downgrade_lines(command, running, content, pin)
+        return _content_downgrade_lines(command, running, content, pin, target=recorded)
     if incomplete:
         if completed is None:
             remedy = (
@@ -803,7 +809,10 @@ def refuse_content_downgrade(
     that could not look up the latest release (ADR-065 point 9). Content ahead
     of the pin is then what an interrupted raise to a newer release leaves, so
     the message names reconnecting: online, that upgrade hands over to the
-    latest release, whose upgrade finishes the raise.
+    latest release, whose upgrade finishes the raise. Where the recorded target
+    is a release candidate above this pkit, the message names `pkit upgrade
+    --pre` instead, online or offline, since no other release finishes that move
+    (ADR-065 points 8 and 9).
     """
     tool = read_kit_version(source_kit)
     manifest = read_backbone_manifest(target_root)
@@ -815,21 +824,37 @@ def refuse_content_downgrade(
     pin = read_version_pin(target_root)
     if not (_is_older(tool, content) or _is_older(tool, pin)):
         return
+    target = manifest.backbone_version if manifest is not None else None
     raise click.ClickException(
-        "\n       ".join(_content_downgrade_lines(command, tool, content, pin, offline=offline))
+        "\n       ".join(
+            _content_downgrade_lines(command, tool, content, pin, target=target, offline=offline)
+        )
     )
 
 
 def _content_downgrade_lines(
-    command: str, tool: str, content: str | None, pin: str | None, *, offline: bool = False
+    command: str,
+    tool: str,
+    content: str | None,
+    pin: str | None,
+    *,
+    target: str | None = None,
+    offline: bool = False,
 ) -> list[str]:
-    """#1212's refusal: the versions ahead of this pkit, why, and the way to the right pkit."""
+    """#1212's refusal: the versions ahead of this pkit, why, and the way to the right pkit.
+
+    Where the recorded *target* is a release candidate above this pkit, the way
+    is `pkit upgrade --pre` (ADR-065 point 8's row for it, `_candidate_remedy`).
+    """
     ahead: list[str] = []
     if _is_older(tool, content):
         ahead.append(f"content ({content}, in .pkit/manifest.yaml)")
     if _is_older(tool, pin):
         ahead.append(f"pin ({pin}, in .pkit/version-pin)")
-    if offline:
+    if is_candidate(target) and _is_older(tool, target):
+        assert target is not None  # `is_candidate` holds it
+        remedy = _candidate_remedy(target)
+    elif offline:
         remedy = [
             "This upgrade could not look up the latest release, so it could not hand over "
             f"to one. Reconnect and run `pkit {command}` again: it then hands over to the "
@@ -849,6 +874,18 @@ def _content_downgrade_lines(
         "To take the project back to an older version, revert the commit of each upgrade "
         "since that version, `git revert <commit>`, which restores every file those "
         "upgrades changed, inside `.pkit/` and outside.",
+    ]
+
+
+def _candidate_remedy(candidate: str) -> list[str]:
+    """The way on where the recorded target is *candidate*, a release candidate
+    above this pkit: a move to it cut short, which only `pkit upgrade --pre`
+    finishes, since it hands over to that candidate and a project on a candidate
+    moves to no other release (ADR-065 point 8, ADR-092 point 7)."""
+    return [
+        f"This project records the release candidate {candidate} as its target: run `pkit "
+        f"upgrade --pre`, which hands over to {candidate}, whose own upgrade finishes the "
+        "move. No other release finishes it (ADR-092 point 7).",
     ]
 
 
@@ -912,10 +949,7 @@ def _newest(*versions: str | None) -> str | None:
 
 
 def _parse_version(text: str | None) -> Version | None:
-    """*text* as a version, or None when it is absent or not valid semver."""
-    if not text:
-        return None
-    try:
-        return Version(text)
-    except InvalidVersion:
-        return None
+    """*text* as the public version every comparison here reads, the pre-release
+    kept and a local segment dropped (`migrations.public_version`, ADR-089 point
+    5), or None when it is absent or not valid semver."""
+    return public_version(text)

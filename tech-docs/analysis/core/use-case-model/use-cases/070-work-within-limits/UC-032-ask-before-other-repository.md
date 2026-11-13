@@ -81,7 +81,6 @@ pkit:
 >
 > - the `pkit pull-request` verbs that write
 > - `pkit version tag` and `untag` with `--push`
-> - `pkit release apply` with `--tag --push`
 > - `release merge`
 > - `release publish-notes`
 > - `pkit workspace remove`, which takes no confirmation with the call, so only a terminal confirms it ([ADR-060 point 10](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#10-removal-through-a-backbone-command-that-tests-its-own-paths))

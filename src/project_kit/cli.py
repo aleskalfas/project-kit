@@ -80,6 +80,7 @@ if TYPE_CHECKING:
         friction_since,
         friction_write,
         pull_request_landing,
+        release_candidate,
         scratchpads,
         session_guard,
         workspace_remove,
@@ -109,6 +110,7 @@ if TYPE_CHECKING:
         plan_commit,
         plan_commit_line,
         publish_release_notes,
+        refuse_final_release_tag,
         release_summary,
     )
     from project_kit.scaffolds import (
@@ -160,6 +162,7 @@ else:
     friction_since = _OnFirstUse("project_kit.friction_since")
     friction_write = _OnFirstUse("project_kit.friction_write")
     pull_request_landing = _OnFirstUse("project_kit.pull_request_landing")
+    release_candidate = _OnFirstUse("project_kit.release_candidate")
     scratchpads = _OnFirstUse("project_kit.scratchpads")
     session_guard = _OnFirstUse("project_kit.session_guard")
     workspace_remove = _OnFirstUse("project_kit.workspace_remove")
@@ -180,6 +183,7 @@ else:
     plan_commit = _OnFirstUse("project_kit.release", "plan_commit")
     plan_commit_line = _OnFirstUse("project_kit.release", "plan_commit_line")
     publish_release_notes = _OnFirstUse("project_kit.release", "publish_release_notes")
+    refuse_final_release_tag = _OnFirstUse("project_kit.release", "refuse_final_release_tag")
     release_summary = _OnFirstUse("project_kit.release", "release_summary")
     register_kit_shipped_component = _OnFirstUse(
         "project_kit.scaffolds", "register_kit_shipped_component"
@@ -2994,7 +2998,14 @@ def version_promote() -> None:
 )
 @_allow_foreign_repo_option
 def version_tag(push: bool, allow_foreign_repo: bool) -> None:
-    """Tag HEAD as `v<version>` from .pkit/VERSION (per PRJ-002 + PRJ-004).
+    """Tag the commit the last final release landed as `v<version>` (PRJ-004).
+
+    The commit is the newest at or before HEAD on the default branch's
+    first-parent history that changed .pkit/VERSION, and the version is the one
+    it records, so every way of tagging a final release tags one commit (ADR-092
+    point 6). It refuses, tagging nothing, where HEAD is off that history, where
+    that commit records no final release version, and where the tag exists
+    locally or, with `--push`, on `origin`.
 
     With `--push` the cross-repository guard runs first, before the tag is
     made: in another repository than the session's anchor's it asks at a
@@ -3082,6 +3093,15 @@ def release() -> None:
     """
 
 
+#: The `--pre` option `release plan` and `release apply` take, and what it asks for.
+_PRE_HELP = (
+    "A release candidate, planned from the commit this runs at, the versions it records "
+    "and the changesets pending in its tree, each moved version with the suffix rcN "
+    "(ADR-092 point 2). Refused where the default branch's head on origin is not in that "
+    "commit's history."
+)
+
+
 @release.command("plan")
 @click.option(
     "--json",
@@ -3090,16 +3110,39 @@ def release() -> None:
     default=False,
     help="Emit the computed release as JSON (for the release-PR automation).",
 )
-def release_plan(as_json: bool) -> None:
+@click.option("--pre", is_flag=True, default=False, help=_PRE_HELP)
+def release_plan(as_json: bool, pre: bool) -> None:
     """Preview the release computed from pending changesets (read-only).
 
     Refuses, as `apply` does, a release it would refuse: a declaration it cannot
     write, a range on a capability that would exclude the version the release
     writes or carries for it (PRJ-002 D4), or a migration script stranded in a
-    folder at or below its tier's fixed version (ADR-092 point 8)."""
+    folder at or below its tier's fixed version (ADR-092 point 8).
+
+    With `--pre`, the release candidate a cut at HEAD would write, refused as
+    `apply --pre` refuses it: its number, one past the highest any candidate tag
+    on origin carries (ADR-092 point 3), and the base it would record (point 9)."""
     import json
 
     source_kit = _target_kit()
+    if pre:
+        candidate = release_candidate.plan_candidate(source_kit)
+        if as_json:
+            summary = release_summary(
+                source_kit,
+                candidate.written(),
+                warnings=migration_dir_mismatches(source_kit, candidate.plan),
+            )
+            summary["candidate"] = {
+                "version": candidate.version,
+                "number": candidate.number,
+                "tag": candidate.tag,
+            }
+            summary["base"] = json.loads(candidate.base.text())
+            click.echo(json.dumps(summary, indent=2))
+            return
+        _print_candidate(source_kit, candidate)
+        return
     refuse_stranded_scripts(source_kit.parent)
     plan = compute_release(source_kit)
     if as_json:
@@ -3114,10 +3157,20 @@ def release_plan(as_json: bool) -> None:
     "--tag",
     is_flag=True,
     default=False,
-    help="Also cut the tag now. Off by default — tag is a separate step "
-    "(`pkit version tag --push`) after the release commit lands on main.",
+    help="With --pre, tag the candidate's commit v<candidate>. Without it, refused before "
+    "anything is written: a final release is tagged once its release PR merges, by `pkit "
+    "version tag --push` on main (ADR-092 point 6).",
 )
-@click.option("--push", is_flag=True, default=False, help="With --tag, push the tag to origin.")
+@click.option(
+    "--push",
+    is_flag=True,
+    default=False,
+    help="Refused with --pre: a candidate's tag is pushed only once the wheel built from "
+    "its commit is checked (ADR-089 point 9). Without --pre it changes nothing, since apply "
+    "then cuts no tag: a final release's tag is pushed by `pkit version tag --push` once its "
+    "release PR merges (ADR-092 point 6).",
+)
+@click.option("--pre", is_flag=True, default=False, help=_PRE_HELP)
 @click.option(
     "--no-broaden",
     is_flag=True,
@@ -3131,13 +3184,14 @@ def release_plan(as_json: bool) -> None:
 @click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt (CI).")
 @_allow_foreign_repo_option
 def release_apply(
-    tag: bool, push: bool, no_broaden: bool, yes: bool, allow_foreign_repo: bool
+    tag: bool, push: bool, pre: bool, no_broaden: bool, yes: bool, allow_foreign_repo: bool
 ) -> None:
     """Consume changesets and write versions + changelog (the release write).
 
     The sole main-only writer of version state (PRJ-002 D3). Run from a
     release PR against `main` — not on every merge. Tagging is a separate,
-    anchored step by default; see `pkit version tag`.
+    anchored step, `pkit version tag`, run once the release PR merges: `--tag`
+    is refused before anything is written (ADR-092 point 6).
 
     On a component release, widens that component's `requires_backbone` to
     cover the repo's current backbone (the version being released under) unless
@@ -3163,23 +3217,34 @@ def release_apply(
     fixed version, naming a folder to move it to (ADR-092 point 8). See
     `.pkit/release/README.md`.
 
-    With `--tag --push` the tag's push changes the hosting service, so the
-    cross-repository guard runs first, before anything is written, as for
-    `version tag --push`.
-
     A release that moves a version ends by printing the trailer line naming
     the commit its plan read, `Release-plan-commit: <commit>`: commit the
     release with it, and open its PR with it in the body, so `pkit release
     merge` lands it only onto that commit (ADR-092 point 6).
+
+    With `--pre`, it cuts a release candidate from the commit it runs at
+    (ADR-092 point 2), as `plan --pre` shows it: each version the release moves
+    with the suffix rcN, the broaden and each declared upper bound as the final
+    release writes them, and the changelog section headed by the candidate's
+    version. It raises no floor and consumes no changeset (PRJ-002 D4). It
+    records the cut's base in `src/project_kit/candidate_base.json` (ADR-092
+    point 9), and commits the writes on no branch, leaving HEAD detached there.
+    `--tag` tags that commit `v<candidate>`; the tag is pushed only once the
+    wheel built from it is checked (ADR-089 point 9).
     """
+    if pre:
+        if push:
+            raise click.ClickException(
+                "refusing `--push` with `--pre`: a candidate's tag is pushed only once the "
+                "wheel built from its commit is checked (ADR-089 point 9). Run without it, "
+                "and push the tag alone after the check. Nothing was written."
+            )
+    else:
+        refuse_final_release_tag(tag)
     source_kit = _target_kit()
-    clearance = (
-        _cleared_at_entry(
-            source_kit.parent, allow_foreign_repo, unchanged="Nothing was written or pushed."
-        )
-        if tag and push
-        else None
-    )
+    if pre:
+        _cut_candidate(source_kit, tag=tag, broaden=not no_broaden, yes=yes)
+        return
     refuse_stranded_scripts(source_kit.parent)
     plan = compute_release(source_kit)
     _print_release_plan(plan)
@@ -3190,16 +3255,12 @@ def release_apply(
     for warning in check_raised_ranges(plan, broaden=broaden):
         click.echo(f"warning: {warning}", err=True)
     if plan.is_empty:
-        apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
+        apply_release(source_kit, plan, broaden=broaden)
         return
     if not yes:
         from project_kit.project_config import confirm_at_terminal
 
-        flags = [
-            flag
-            for flag, given in (("--tag", tag), ("--push", push), ("--no-broaden", no_broaden))
-            if given
-        ]
+        flags = [flag for flag, given in (("--push", push), ("--no-broaden", no_broaden)) if given]
         rerun = shlex.join(["pkit", "release", "apply", *flags, "--yes"])
         confirm_at_terminal(
             "Write these versions and consume the changesets?",
@@ -3208,7 +3269,7 @@ def release_apply(
             "nobody confirmed it (#2003). Nothing was written. To release non-interactively, "
             f"run:\n  {rerun}",
         )
-    apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
+    apply_release(source_kit, plan, broaden=broaden)
     click.echo(plan_commit_line(plan_commit(source_kit.parent)))
 
 
@@ -3233,7 +3294,10 @@ def release_check(base: str | None, skip: bool | None) -> None:
     `requires_capabilities` floor, or a `runs_on_capabilities` upper bound, for a
     component it neither touches nor moves, or edits the range of an existing
     `requires_capabilities` entry other than to correct one that excludes the
-    version the tree carries (PRJ-002 D1).
+    version the tree carries (PRJ-002 D1). In the methodology's source
+    repository, fail too where HEAD's tree records a pre-release version, in
+    `.pkit/VERSION` or a component's `package.yaml`, unless HEAD is a release
+    candidate's own commit, the one its tag names (ADR-089 point 3).
 
     The diff is taken from where HEAD left the base — REF, else
     $PKIT_CHECK_BASE, else the default branch (COR-054); a base that resolves
@@ -3241,9 +3305,9 @@ def release_check(base: str | None, skip: bool | None) -> None:
     `none` changeset for the component, or the `skip-changeset` label
     (PKIT_CHANGESET_SKIP env). Surface is a human judgment (PRJ-002 D2) — this
     path heuristic can mis-fire; the override exists. No escape hatch waives
-    the floor tie or the range tie. A pending changeset the diff leaves alone —
-    another pull request's — does not count for this one, whatever component it
-    names.
+    the floor tie, the range tie or a pre-release version. A pending changeset
+    the diff leaves alone — another pull request's — does not count for this
+    one, whatever component it names.
     """
     source_kit = _target_kit()
     fork = _settled_base(source_kit.parent, base).fork
@@ -3321,6 +3385,15 @@ def release_check(base: str | None, skip: bool | None) -> None:
             "that moves its version, and the release writes it. A branch edits a range only to "
             "correct one that excludes the version the tree carries — see .pkit/release/"
             'README.md, "Correcting a range that excludes a carried version". The '
+            "`skip-changeset` label does not waive this."
+        )
+    if result.pre_releases:
+        problems.append(
+            "a pre-release version in a tree bound for the default branch, which holds release "
+            "versions alone (ADR-089 point 3):\n"
+            + "\n".join(f"  {each.named}" for each in result.pre_releases)
+            + "\n  A release candidate's versions live only in its tag, on a commit no branch "
+            "holds (ADR-089 point 1): give each file back its release version. The "
             "`skip-changeset` label does not waive this."
         )
     raise click.ClickException("\n".join(problems))
@@ -3499,7 +3572,9 @@ def release_merge(
     saw nothing merged, with the reading and the re-run that tell. Every `gh`
     call is bounded, so no stuck call holds the run. Exit 3 when the queue dropped the PR
     or its head moved; nothing is deleted then. A head the queue already
-    dropped is not enqueued again without `--force`. It does **not** tag —
+    dropped is not enqueued again without `--force`. In the methodology's
+    source repository it refuses, nothing merged, a release PR whose head
+    records a pre-release version (ADR-089 point 3). It does **not** tag —
     `release-tag.yml` cuts the backbone tag on the resulting push to `main`
     (PRJ-004). Human-gated: a human decides to run it; nothing auto-merges.
 
@@ -3617,6 +3692,58 @@ def _declared_floors(cs: Changeset) -> list[str]:
         f"runs_on_capabilities: {name}: {value}" for name, value in cs.runs_on_capabilities
     )
     return floors
+
+
+def _print_candidate(source_kit: Path, candidate: release_candidate.Candidate) -> None:
+    """Print the plan of a cut, as the candidate writes it, with its number and base,
+    and the migration-dir warnings its release versions give."""
+    _print_release_plan(candidate.written())
+    base = candidate.base
+    click.echo(
+        f"Candidate: {candidate.tag}, number {candidate.number}, one past the highest any "
+        "candidate tag on origin carries (ADR-092 point 3)."
+    )
+    click.echo(
+        f"Base: {base.commit[:12]}, backbone {base.backbone}, and the version of each of "
+        f"{len(base.components)} components there (ADR-092 point 9)."
+    )
+    _warn_migration_mismatches(source_kit, candidate.plan)
+
+
+def _cut_candidate(source_kit: Path, *, tag: bool, broaden: bool, yes: bool) -> None:
+    """Plan, confirm and cut a release candidate from HEAD (`release apply --pre`)."""
+    candidate = release_candidate.plan_candidate(source_kit)
+    _print_candidate(source_kit, candidate)
+    for warning in check_raised_ranges(candidate.plan, broaden=broaden):
+        click.echo(f"warning: {warning}", err=True)
+    if not yes:
+        from project_kit.project_config import confirm_at_terminal
+
+        flags = ["--pre", *(["--tag"] if tag else []), *([] if broaden else ["--no-broaden"])]
+        rerun = shlex.join(["pkit", "release", "apply", *flags, "--yes"])
+        confirm_at_terminal(
+            f"Cut {candidate.tag} from HEAD, committing it on no branch?",
+            abort=True,
+            refusal="refusing to cut a candidate: stdin is not a terminal and --yes was not "
+            "given, so nobody confirmed it (#2003). Nothing was written. To cut it "
+            f"non-interactively, run:\n  {rerun}",
+        )
+    branch = release_candidate.current_branch(source_kit.parent)
+    commit = release_candidate.cut_candidate(source_kit, candidate, tag=tag, broaden=broaden)
+    back = f"`git switch {branch}`" if branch else "a switch to the branch you were on"
+    if tag:
+        click.echo(
+            f"Next: build the wheel from {commit[:12]} and check that `pkit --version` names "
+            f"{candidate.version}, then push the tag alone: `git push origin "
+            f"refs/tags/{candidate.tag}` (ADR-089 point 9). HEAD is detached at the "
+            f"candidate; {back} returns."
+        )
+    else:
+        click.echo(
+            f"Next: only a tag would hold {commit[:12]}, which no branch holds: tag it "
+            f"{candidate.tag}, or let it go. HEAD is detached at the candidate; {back} "
+            "returns."
+        )
 
 
 def _print_release_plan(plan: ReleasePlan) -> None:
@@ -5261,7 +5388,17 @@ def merge(targets: tuple[str, ...], dry_run: bool) -> None:
     "those two warnings and nothing else. A pinned project's upgrade passes it to the "
     "newer release it hands over to. Per ADR-065 points 6 and 9.",
 )
-def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> None:
+@click.option(
+    "--pre",
+    is_flag=True,
+    default=False,
+    help="Move the project to the newest release, release candidates included. Where "
+    "that is a candidate newer than this pkit, its own upgrade runs through the "
+    "router's bypass, and the project is pinned there. Where it is a final release, "
+    "--pre hands over to none. It never installs a candidate as the tool. "
+    "Per ADR-089 point 8.",
+)
+def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool, pre: bool) -> None:
     """Transition the project to a newer backbone (per COR-010).
 
     Moves the project to the source kit's current backbone version, running
@@ -5290,6 +5427,13 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> N
     `--force`, or else finishes the transition to its pin. It never updates the
     tool. Where the router could not fetch the pin and runs the installed pkit
     instead, it refuses, before it writes anything.
+
+    **A release candidate only on request** (ADR-089 points 7 and 8). `--pre`
+    moves the project to the newest release, candidates included, handing over
+    to a candidate's own upgrade where that is newer than this pkit. An upgrade
+    whose target is a candidate nobody asked for, by `--pre`, by a run with
+    routing bypassed, or by a pin that names it, refuses before it writes. A move
+    to a candidate always pins, and `--no-pin` is refused on it.
     """
     refuse_inside_migration("upgrade")
     target_root = find_target_root()
@@ -5303,6 +5447,7 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> N
         pin=not no_pin,
         self_update=not no_self_update,
         force=force,
+        pre=pre,
     )
 
 
@@ -5321,15 +5466,19 @@ def pin(version: str | None, force: bool) -> None:
     """Pin this project to a pkit version (per ADR-049): write `.pkit/version-pin`.
 
     VERSION, when given, is a version number only — `1.145.0`, or `v1.145.0`
-    (a single leading `v` is stripped). Branch, commit-sha, and pre-release /
-    build-metadata pins are refused: the router can only route a bare `v<semver>`
-    tag, so those are deferred. Both forms require `.pkit/manifest.yaml` (the
-    project's recorded content version); if it is absent, `pkit upgrade` writes it.
+    (a single leading `v` is stripped) — or a release candidate in PEP 440's
+    normal form, `2.0.0rc1`, which asks for that candidate (ADR-089 point 6).
+    Branch, commit-sha, other pre-release and build-metadata pins are refused,
+    and so is a candidate spelt another way, such as `2.0.0-rc.1`, naming its
+    normal form: the router routes a pin to the tag `v<pin>` as written. Both
+    forms require `.pkit/manifest.yaml` (the project's recorded content version);
+    if it is absent, `pkit upgrade` writes it.
 
     With no argument, freezes the project at its current CONTENT version
     (`.pkit/manifest.yaml`'s `backbone_version`) — the common case: lock this
     project where its content is, don't move it. With a VERSION token, the
-    behaviour depends on how it orders against that content version:
+    behaviour depends on how it orders against that content version, by PEP 440,
+    where a candidate sorts below its final release:
 
     \b
     - equal   → freeze in place (write the pin, no content sync);
@@ -5365,11 +5514,19 @@ def unpin() -> None:
     The project reverts to floating on the installed pkit binary — the router
     runs the installed tool as-is (today's un-pinned behaviour). Idempotent: it
     is fine to run when no pin file is present.
+
+    Refused, before anything is written, in a project whose manifest records a
+    release candidate: a project on a candidate stays pinned (ADR-089 point 7).
+    The message names the ways off the candidate (PRJ-016 point 4).
     """
+    from project_kit.candidates import refuse_unpin
+    from project_kit.manifest import read_backbone_manifest
+
     refuse_inside_migration("unpin")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+    refuse_unpin(read_backbone_manifest(target_root))
     pin_path = router.pin_file_path(target_root)
     if pin_path.exists():
         router.write_version_pin(target_root, None)

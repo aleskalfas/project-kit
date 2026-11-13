@@ -1749,6 +1749,33 @@ def test_sync_stops_when_the_content_is_behind_the_pin_the_pin_running(
     )
 
 
+def test_sync_names_upgrade_pre_where_the_recorded_target_is_a_candidate_above_it(
+    installed_target: Path,
+) -> None:
+    """A move onto a release candidate cut short leaves the candidate recorded as the
+    target, above the pin's code: the guard names `pkit upgrade --pre`, which hands
+    over to that candidate, since no other release finishes the move (ADR-065 point
+    8, ADR-092 point 7)."""
+    candidate = "999.0.0rc1"
+    _record_states(installed_target, candidate, _INSTALLED_BACKBONE)
+    _write_pin(installed_target, _INSTALLED_BACKBONE)
+    before = _tree_bytes(installed_target)
+
+    message = _refusal(installed_target)
+
+    assert (
+        f"this pkit is {_INSTALLED_BACKBONE}, older than this project's content ({candidate}"
+        in (message)
+    )
+    assert (
+        f"This project records the release candidate {candidate} as its target: run `pkit "
+        f"upgrade --pre`, which hands over to {candidate}, whose own upgrade finishes the "
+        "move. No other release finishes it"
+    ) in message
+    assert f"`pkit pin {candidate}`" not in message
+    assert _tree_bytes(installed_target) == before
+
+
 def test_sync_under_the_routers_fallback_names_reconnecting_not_a_bare_upgrade(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

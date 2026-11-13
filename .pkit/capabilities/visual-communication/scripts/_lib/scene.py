@@ -7,7 +7,11 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   group says it is a page. Draw order is the tree's order.
 - **Primitives at the leaves:** `box`, `ellipse`, `text`, `line`, `image` and `path`,
   their properties under SVG's names. Colours stay role names; a renderer takes their values
-  from the document of resolved values, so one scene serves every mode of the value axes.
+  from the document of resolved values, so one scene serves every mode of the value axes. A
+  paint may name an order's step instead, by its two roles and its share of the way between
+  them, `step(<first>,<last>,<share>)`, the same in every mode; its value in each mode comes
+  with the scene, among the colours, never from that document (`colour_steps`, DEC-032
+  point 5).
 - **A text** holds its text, its line height, the greatest among the typography roles
   its runs take, its paragraphs of runs, its lines and its measured height. Each run
   holds its text, its typography role and font properties, its paint, the font files
@@ -94,6 +98,7 @@ from _lib import names, signs
 from _lib.env import Env
 from _lib.findings import ATTENTION, FACT, Finding
 from _lib.layout import (
+    CROSS_SIZE,
     DRAWING_MISFIT,
     ENDS,
     ENDS_OF_LINE,
@@ -358,10 +363,15 @@ class _Emitter:
             self._short(instance.trace, size, gets, asks)
         return element
 
-    def _short(self, trace: str, size: str, gets: float, asks: float) -> None:
+    def _short(self, trace: str, size: str, gets: float, asks: float | None) -> None:
+        """A component, or a list, that gets less than it asks for. An item its list sizes
+        by place asks for more than zero across its line, `asks` None (DEC-038 point 5)."""
+        asked = (
+            f"{length(asks)}" if asks is not None else "more than 0, as its list sizes it by place"
+        )
         self.ctx.report(
             "gets-less",
-            f"{trace} gets {length(gets)} px of {size} and asks for {length(asks)}",
+            f"{trace} gets {length(gets)} px of {size} and asks for {asked}",
             where=trace,
         )
 
@@ -714,17 +724,25 @@ class _Emitter:
         element.set("preserveAspectRatio", FIT, ENGINE)
 
     def _items(self, element: Element, instance: Instance, node: Node) -> None:
+        """A list's items, each a group in its frame. An item's size across its line that a
+        `cross-size` gives names what a part's formula names as its source (DEC-038 point
+        6); the engine sets the rest."""
         name, part = node.part.name, node.part
+        sizes = {"width": ENGINE, "height": ENGINE}
+        if instance.sized_by_place(name) is not None:
+            where = f"parts.{name}.{part.operator}.{CROSS_SIZE}"
+            sizes[part.cross] = instance.source(where, part.settings[CROSS_SIZE])
         for item in node.items:
             frame = self.ctx.attempt(
                 lambda i=item: instance.item_frame(name, i.position), (0.0, 0.0, 0.0, 0.0)
             )
-            group = self.group(item, (frame[0], frame[1]), (ENGINE, ENGINE), (ENGINE, ENGINE))
+            group = self.group(
+                item, (frame[0], frame[1]), (ENGINE, ENGINE), (sizes["width"], sizes["height"])
+            )
             element.children.append(group)
         if instance.component.ties(part) is not None:
             return  # each tie lies in the part's whole frame, asking for none
-        cross = "height" if part.main == "width" else "width"
-        for axis, size in (("main", part.main), ("cross", cross)):
+        for axis, size in (("main", part.main), ("cross", part.cross)):
             if size in part.spec:
                 gets = self.ctx.attempt(lambda s=size: instance.get("part", name, s), 0.0)
                 asks = self.ctx.attempt(lambda a=axis: instance.get(a, name).asked, 0.0)
