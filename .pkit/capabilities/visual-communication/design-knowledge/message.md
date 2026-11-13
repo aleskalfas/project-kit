@@ -27,6 +27,6 @@ What a piece says comes before how it looks. This topic covers finding a piece's
 - Nancy Duarte, *slide:ology: The Art and Science of Creating Great Presentations*, O'Reilly, 2008.
 - Nancy Duarte, *Resonate: Present Visual Stories that Transform Audiences*, Wiley, 2010.
 - Cole Nussbaumer Knaflic, *Storytelling with Data: A Data Visualization Guide for Business Professionals*, Wiley, 2015.
-- Richard E. Mayer, *Multimedia Learning*, Cambridge University Press, first edition 2001.
+- Richard E. Mayer, *Multimedia Learning*, Cambridge University Press, second edition 2009.
 - Barbara Minto, *The Pyramid Principle: Logic in Writing and Thinking*.
 - Ben Shneiderman, "The Eyes Have It: A Task by Data Type Taxonomy for Information Visualizations", *Proceedings of the IEEE Symposium on Visual Languages*, 1996.
