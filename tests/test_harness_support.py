@@ -148,10 +148,10 @@ def test_a_session_agent_withheld_tools_is_answered_and_a_helper_left_indetermin
 
 
 def test_that_an_ask_reaches_a_person_is_answered_at_cost_for_the_version_measured() -> None:
-    """No point sees whether a person gave an answer, so the requirement names the
-    nearest, inside a session, and resolves indeterminate (COR-047 point 4). Claude
-    Code's answer rests on the trial on an agent host, bounded to the version it ran
-    (ADR-091 point 6, #3004)."""
+    """The requirement is observed only inside a session, where the answer arrives, and
+    only where the harness tells the session who gave it (COR-047 point 4). Claude Code's
+    answer rests on the trial on an agent host, bounded to the version it ran (ADR-091
+    point 6, #3004), so the report resolves it indeterminate."""
     (requirement,) = [r for r in harness_support.requirements(REPO) if r.id == "ask-reaches-person"]
     assert requirement.observation_point == "in-session"
     document = harness_support.load_declaration(REPO, "claude-code")

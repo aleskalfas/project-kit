@@ -509,9 +509,8 @@ The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harnes
 - **A helper withheld named tools has none of them** (`helper-withheld-tools`): unanswered, so it reports `indeterminate`. A helper's tools are visible only inside a session, and nobody has measured them yet.
 - **An ask the harness puts to a person reaches a person who can answer it** (`ask-reaches-person`): `at-cost`, for 2.1.321, the version a trial on an agent host ran (#3004).
   - **The cost.** A session keeps a person who answers its asks. In a turn that something other than a person answers, each ask is refused, and the refusal reads as the person's own. In a turn nobody answers, each ask holds the turn until someone answers it.
-  - **The asks** are the permission hook's ("When the hook asks" above): where a call may hide a guardrail, and before an `Edit` or `Write` outside the session's repository.
+  - **The asks** are the permission hook's ("When the hook asks" above).
   - **What the trial saw,** in auto mode. In a turn a message in a chat channel started, the hook's ask was refused at once, and the tool returned `User refused permission to run tool`. In a run with nobody at it, the ask waited in the host's approval inbox, which expires after 24 hours.
-  - **Why it stays `indeterminate`.** No point sees whether a person gave an answer, since a refusal given in a person's place reads as the person's own inside a session. So a pass there could not resolve it either, until Claude Code tells a session who gave each answer.
 
 ### `permission-enforcement.yaml`
 

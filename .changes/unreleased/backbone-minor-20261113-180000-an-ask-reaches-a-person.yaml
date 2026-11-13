@@ -5,9 +5,8 @@ custom:
 body: >
   The harness requirements gain `ask-reaches-person`: an ask the harness puts
   to a person reaches a person who can answer it, and only that person's
-  answer decides the call (ADR-091 point 6). No point observes whether a
-  person gave an answer, since inside a session a refusal given in a person's
-  place reads as the person's own. So the requirement names the nearest
-  point, inside a session, and `pkit harness report` resolves it
-  `indeterminate`, as a pass there would too, until the harness tells a
-  session who gave each answer. The adapters README says so.
+  answer decides the call (ADR-091 point 6). It is observed only inside a
+  session, where the answer arrives, and only where the harness tells the
+  session who gave the answer. `pkit harness report` resolves it
+  `indeterminate`, as a pass inside a session would until the harness does.
+  The adapters README says so.
