@@ -153,6 +153,21 @@ def test_a_step_is_read_back_from_its_name_and_no_role_reads_as_one() -> None:
         assert not colour_steps.is_step(named)
 
 
+def test_a_name_reads_as_a_step_only_whole_and_with_token_paths_for_its_ends() -> None:
+    assert colour_steps.read("step(space.3,a-b.c,1/2)") == colour_steps.Step(
+        "space.3", "a-b.c", Fraction(1, 2)
+    )
+    for named in (
+        f"{step('1/2')}\n",
+        f"{step('1/2')} ",
+        "step(Family.order.first,b,1/2)",
+        "step(a b,c,1/2)",
+        "step(a..b,c,1/2)",
+        "step(a,b<c>,1/2)",
+    ):
+        assert not colour_steps.is_step(named), named
+
+
 def test_a_step_paints_as_a_family_its_text_the_orders_text() -> None:
     assert colour_steps.members(step("1/2"), TEXT) == {
         "fill": step("1/2"),

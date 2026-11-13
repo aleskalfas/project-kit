@@ -24,7 +24,7 @@ combination, which comes with the scene.
   colour, as a role with none there. The document of a brand's resolved values holds no
   step.
 
-Standard library and `_lib.formula` only.
+Standard library, `_lib.formula` and `_lib.names` only.
 """
 
 from __future__ import annotations
@@ -37,6 +37,7 @@ from fractions import Fraction
 from typing import Any
 
 from _lib import formula as fm
+from _lib.names import SEGMENT
 
 #: The decimal places a step's components and alpha are rounded to.
 PLACES = 4
@@ -51,7 +52,13 @@ TEXT = "text"
 JND = 0.02
 EPSILON = 0.0001
 
-_NAME = re.compile(r"^step\(([^,()]+),([^,()]+),(0|1|[1-9][0-9]*/[1-9][0-9]*)\)$")
+#: A step's name, its ends token paths as the foundations name an order's roles: segments
+#: of `names.SEGMENT`'s shape joined by `.`. `read` matches it whole.
+_SEGMENT = SEGMENT.strip("^$")
+_ROLE = rf"{_SEGMENT}(?:\.{_SEGMENT})*"
+_NAME = re.compile(
+    rf"step\((?P<first>{_ROLE}),(?P<last>{_ROLE}),(?P<share>0|1|[1-9][0-9]*/[1-9][0-9]*)\)"
+)
 
 #: The paints of an element, and of a run of a text, that may name a step.
 _PAINTS = ("fill", "stroke", "ground")
@@ -83,10 +90,10 @@ def placed(first: str, last: str, place: int, count: int) -> Step:
 
 def read(name: object) -> Step | None:
     """The step a paint names; None where it names a role, or nothing."""
-    found = _NAME.match(name) if isinstance(name, str) else None
+    found = _NAME.fullmatch(name) if isinstance(name, str) else None
     if found is None:
         return None
-    first, last, share = found.groups()
+    first, last, share = found.group("first", "last", "share")
     shared = Fraction(share)
     if shared > 1 or str(shared) != share:
         return None  # a share past the last end, or not in lowest terms, names no step
