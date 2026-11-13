@@ -150,6 +150,7 @@ from typing import Any, Protocol
 from _lib import (
     briefs,
     code,
+    colour_steps,
     copies,
     current_copy,
     exports,
@@ -2632,9 +2633,11 @@ def scene_findings(
     lies in one (the findings record keeps them so).
 
     Each scene is computed at one key over the size axes, and contrast is measured on it in
-    each combination it serves. A finding the scenes of every key find alike is reported
-    once, as it reads. Any other is reported for each key whose scenes find it, its message
-    opening with that key, so a finding takes no field for its size. Content a scene draws
+    each combination it serves, each step of an order it paints in its value there, which
+    comes with the scene (`_steps_of`, DEC-032 point 5). A finding the scenes of every key
+    find alike is reported once, as it reads. Any other is reported for each key whose
+    scenes find it, its message opening with that key, so a finding takes no field for its
+    size. Content a scene draws
     at one key and not at another is stated at the key that hides it (`_hidden`). A finding
     in what a field of the top draws, read alike on several pages, is reported once, naming
     its pages (`_once_on_pages`). A size at which the top is as wide as at the default asks
@@ -2663,15 +2666,16 @@ def scene_findings(
         content = pl.content_file(language)
         found = [_placed(finding, content, project) for finding in result.findings]
         found.extend(_hidden(language, size, shown))
-        found.extend(drawn_contrast(scene, colours, served))
-        found.extend(_unknown_colours(scene, colours))
+        drawn = {**colours, **_steps_of(scene, colours, served)}
+        found.extend(drawn_contrast(scene, drawn, served))
+        found.extend(_unknown_colours(scene, drawn))
         for renderer in renderers(piece):
             declared = seam.declaration(renderer, seam.RENDERER)
             for loss in losses(scene, declared):
                 if not accepted(loss, piece.accepted_losses):
                     found.append(loss_finding(loss))
         found.extend(_statuses(scene, project.env))
-        found.extend(_no_ground(piece, scene, colours, served))
+        found.extend(_no_ground(piece, scene, drawn, served))
         for finding in _once_on_pages(found, result.shared):
             by_size[size].setdefault(_mark(finding), finding)
     unique: dict[tuple[str, str, str, str, str], Finding] = {}
@@ -2687,6 +2691,21 @@ def scene_findings(
     for finding in [*_widths(project, results), *_brand_forms(project), *signed]:
         unique.setdefault(_mark(finding), finding)
     return sorted(unique.values(), key=lambda f: (f.file, f.where, f.code, f.message))
+
+
+def _steps_of(
+    scene: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any]], keys: Sequence[str]
+) -> dict[str, dict[str, Any]]:
+    """The value of each step of an order `scene` paints, by its name, in each combination
+    `keys` names, spread from that combination's own ends, whose values `colours` gives by
+    key (DEC-032 point 5). Each step holds every key, as each role does: None in one where
+    one of its ends has no colour (`colour_steps.values_at`)."""
+    found: dict[str, dict[str, Any]] = {}
+    for key in keys:
+        at = {role: by_key.get(key) for role, by_key in colours.items()}
+        for name, value in colour_steps.values_at(scene, at).items():
+            found.setdefault(name, dict.fromkeys(keys))[key] = value
+    return found
 
 
 #: The finding on a piece drawn at a size at which its top is as wide as at the default
@@ -3017,7 +3036,9 @@ def drawn_contrast(
     under a run's span of a line, or under a sign, is that of the last box or ellipse drawn
     before it that holds the span's or the sign's middle; a translucent one is laid over the
     one under it. A text or a sign over a picture is not measured, nor one with nothing
-    under it."""
+    under it. A fill with no colour in a combination draws nothing there, so what lies
+    under it shows; a paint of a run or a sign with none there draws nothing to measure
+    there, and the renderer reports the loss."""
     found = []
     for page in _pages(scene):
         painted: list[tuple[Mapping[str, Any], float, float]] = []
@@ -3117,17 +3138,18 @@ def _run_contrast(
     minimum = tokens.LEVELS[level]
     found = []
     for key in keys:
-        ground = _ground([colours[fill][key] for fill in stack])
-        if ground is None:
-            continue
+        shown = _drawn_fills(stack, colours, key)
+        ground = _ground([colours[fill][key] for fill in shown])
         ink = colours[role][key] if role is not None else BLACK
+        if ground is None or ink is None:
+            continue
         ratio = tokens.contrast_ratio(ink, ground)
         if ratio < minimum:
             found.append(
                 Finding(
                     CONTRAST_DRAWN,
                     FAILS,
-                    f"`{role or 'black'}` on `{stack[-1]}` has the contrast {ratio:.2f} in "
+                    f"`{role or 'black'}` on `{shown[-1]}` has the contrast {ratio:.2f} in "
                     f"the combination `{key}`, below the {minimum} {what} needs (`{level}`)",
                     file=pl.PIECE_FILE,
                     where=str(text["id"]),
@@ -3171,16 +3193,18 @@ def _sign_contrast(
         return []  # a colour role the brand lacks is a finding of its own
     minimum, found = tokens.LEVELS[MARKS], []
     for key in keys:
-        ground = _ground([colours[fill][key] for fill in stack])
-        if ground is None:
+        shown = _drawn_fills(stack, colours, key)
+        ground = _ground([colours[fill][key] for fill in shown])
+        inked = [role for role in inks if colours[role][key] is not None]
+        if ground is None or not inked:
             continue
-        ratios = [tokens.contrast_ratio(colours[role][key], ground) for role in inks]
+        ratios = [tokens.contrast_ratio(colours[role][key], ground) for role in inked]
         if max(ratios) < minimum:
             measured = " and ".join(
-                f"`{role}` ({ratio:.2f})" for role, ratio in zip(inks, ratios, strict=True)
+                f"`{role}` ({ratio:.2f})" for role, ratio in zip(inked, ratios, strict=True)
             )
             message = (
-                f"the sign paints {measured} on `{stack[-1]}` in the combination `{key}`, and "
+                f"the sign paints {measured} on `{shown[-1]}` in the combination `{key}`, and "
                 f"none reaches the {minimum} a sign needs (`{MARKS}`)"
             )
             found.append(
@@ -3207,6 +3231,14 @@ def _under(
         if len(stack) > 8:
             break
     return stack
+
+
+def _drawn_fills(
+    stack: Sequence[str], colours: Mapping[str, Mapping[str, Any]], key: str
+) -> list[str]:
+    """The fills of `stack` that draw in the combination `key`, bottom first: one with no
+    colour there draws nothing, so what lies under it shows."""
+    return [fill for fill in stack if colours[fill][key] is not None]
 
 
 def _ground(stack: Sequence[Mapping[str, Any]]) -> Mapping[str, Any] | None:
