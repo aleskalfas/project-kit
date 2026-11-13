@@ -49,7 +49,7 @@ The second, third and fourth probes that [visual-communication:DEC-037-text-the-
 
 - **Beneath a run of texts.** The grounds of a run of texts, one for each line, all lie beneath all of the run's lines in the order the browser paints. So no line's ground covers a line of its own text, or of another text in the run. Where a part lies between two texts, the later text's grounds lie over it, as the draw order has them. Where a `z-index` carries the draw order, the grounds take a place between the part before the run and the run's first text.
 - **Over the backplate's area, and a sign's square.** A line's ground covers what the browser's backplate would, from the line's start to its end and from the highest ascent to the lowest descent of its runs' faces, and the square of each sign on the line with its gap. Beyond it, only the margin at each end.
-- **The lines take no backplate,** and the browser colours their letters in the reader's text colour.
+- **The lines take no backplate,** and the browser colours their letters from the reader's palette.
 - **A ground takes no pointer,** so a text under it can still be selected.
 - **Outside forced colours** a line's ground draws nothing.
 
