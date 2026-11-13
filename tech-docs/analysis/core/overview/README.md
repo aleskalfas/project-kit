@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=5 fingerprint=sha256:7e449864cb9854a8edd995256831958fe77d910c3bfbaa6ef79638cd7e5e23d5 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:41e03019bbedf3b669489b6c00df9b85409ec1d377a7d9a4814acc7c778bd0f5 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -138,6 +138,7 @@ Release the backbone and each component on its own version, so projects can move
 - [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
 - [040 — Versions and synced copies](../domain-model/040-versions-and-copies.md)
 - [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+- [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
 - [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
 **Its requirements:**

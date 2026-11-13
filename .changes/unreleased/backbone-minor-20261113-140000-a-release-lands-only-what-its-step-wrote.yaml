@@ -4,6 +4,6 @@ custom:
   category: Changed
 body: >
   `pkit release merge` now refuses a release pull request that would land more
-  than `pkit release apply` wrote, or onto another commit than the release was
-  planned from, or behind another pull request in the merge queue, and says to
-  run the release again.
+  than `pkit release apply` wrote and the answer files it adds, or onto another
+  commit than the release was planned from, or behind another pull request in
+  the merge queue, and says to run the release again.
