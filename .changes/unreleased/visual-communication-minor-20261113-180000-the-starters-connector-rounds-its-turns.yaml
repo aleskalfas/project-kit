@@ -1,0 +1,10 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  The starter's version being built, 1.1.0, gains the role `starter.turn`, the
+  radius a connector's turns are drawn round at, which defaults to the
+  foundations' `space.2`. The connector draws its line with it, so a tie routed
+  with corners reads as one smooth path. A brand that wants sharp turns gives
+  the role no length.

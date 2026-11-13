@@ -169,7 +169,7 @@ A block draws one item of a pattern, or stands alone where content places it.
 
 ### `connector`
 
-- **Form:** a line from where a tie starts to where it ends, in its colour family's text, with arrowheads where the content asks. It routes around nothing, so a tie best joins items set apart, with nothing between them.
+- **Form:** a line from where a tie starts to where it ends, in its colour family's text, with arrowheads where the content asks. Its turns are drawn round, so a route with corners reads as one smooth path. It routes around nothing, so a tie best joins items set apart, with nothing between them.
 - **Source:** Yuri Engelhardt's linking by a connector.
 - **Ends:** it takes the two ends a pattern's list of ties gives it, so a pattern draws it as a tie.
 - **Options:**
@@ -347,6 +347,7 @@ A component reads a shared role where the starter means just that role, such as 
 | `starter.bar` | how thick a card's or an aside's bar is | `space.1` |
 | `starter.edge` | how wide a block's edge is | `stroke.thin` |
 | `starter.connector` | how wide a connector's line is | `stroke.thick` |
+| `starter.turn` | the radius a connector's turns are drawn round at | `space.2` |
 | `starter.type.head` | the type of a block's head and a list's head | `type.heading` |
 | `starter.type.strong` | the type of a strong run in a card's text | `type.strong` |
 | `starter.type.code` | the type of a code block's text | `type.code` |
