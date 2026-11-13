@@ -29,7 +29,7 @@ The release step cuts each final release as PRJ-002 D3 cuts any, from the defaul
 
 ### 2. What merges into the default branch ships with its next release
 
-A change merged into the default branch ships with the next release, whether or not a candidate held it, so the default branch can release at any time. A change that must be tested before it ships, such as a major, stays on its own branch until its testing passes. Such a branch lives longer than most, still only as long as its pull request ([COR-009](../core/COR-009-pr-workflow.md) point 4), and pays for its drift with the take-in point 3 requires.
+A change merged into the default branch ships with the next release, whether or not a candidate held it, so the default branch can release whenever no stranded migration script holds it (ADR-092 point 8). A change that must be tested before it ships, such as a major, stays on its own branch until its testing passes. Such a branch lives longer than most, still only as long as its pull request ([COR-009](../core/COR-009-pr-workflow.md) point 4), and pays for its drift with the take-in point 3 requires.
 
 ### 3. A candidate previews the release a branch's merge would make
 
@@ -41,7 +41,7 @@ A project moves onto a candidate only from a final release no newer than the las
 
 ### 5. The release step reuses no candidate number, whatever its version or branch
 
-The release step gives each candidate a number `N` that no earlier candidate took, so each pre-release version a candidate writes names one content. That holds for every cut whose branch keeps the release code as it is ([ADR-092](../../../tech-docs/architecture/decisions/ADR-092-final-release-from-head.md) point 10).
+The release step gives each candidate a number `N` that no earlier candidate took, so each pre-release version a candidate writes names one content. That holds for every cut the release workflow makes whose branch keeps that workflow and the `pkit` it runs as the default branch has them (ADR-092 point 10).
 
 ### What this overturns in PRJ-002, and what stands
 
@@ -52,7 +52,7 @@ Overturned:
 - in D3, "that ends no candidate line", the paragraph on the final release that ends a candidate line, and a candidate's commit "made on top of `main`'s head"
 - in D5, "from the head of `main`" in "Cut on request", "by marking its Release so" in "One version, one content", which ADR-092 point 4 takes, and the bullets "The final release is cut from the last candidate's source commit", with its last candidate withdrawn needing another candidate first, "What cannot wait" and "No other release ships while a line runs"
 - in "Policy, not mechanics", ADR-089 as the home of the counter and of the final release's cut from the source commit and its refusals, which ADR-092 takes
-- in the Rationale, "its head unless a candidate line ends" in "Why version numbers reach `main` only through the release step", the commits it names in "Why a candidate's versions live only in its tag", all but the first sentence of "Why each moved component carries the suffix", whose reason point 5's replaces, and the paragraphs "Why the final release is cut from the last candidate's source commit" and "Why some changes merged since cannot wait"
+- in the Rationale, "its head unless a candidate line ends" in "Why version numbers reach `main` only through the release step", all but the first sentence of "Why each moved component carries the suffix", whose reason point 5's replaces, and the paragraphs "Why the final release is cut from the last candidate's source commit" and "Why some changes merged since cannot wait"
 - the alternative of a final release cut from a later commit a person judges safe, which point 2 takes: a person judges a change releasable when it merges
 - in the Implications, the exception for the final release that ends a line, whose tag is cut before its PR opens, and "off `main`" for where a candidate is cut
 
@@ -84,9 +84,13 @@ Standing: the rest of PRJ-002. Among it are a candidate consuming no changeset, 
 - **PRJ-002** gains this line at the top of its body, before its Context, and its text stays as it is under it but for the refinements below:
 
   > **Partially superseded by [PRJ-016](PRJ-016-candidates-hold-no-release.md).** A change that must be tested before it ships is tested on its own branch before it merges, a candidate is cut from that branch's head, a project tries each candidate fresh from a final release, and every final release is the ordinary release from the default branch's head. Overturned: the final release cut from the last candidate's source commit, in D3, D5 and the Rationale, with D5's "What cannot wait" and "No other release ships while a line runs", a candidate cut from `main`'s head alone, and the candidate line. PRJ-016's "What this overturns in PRJ-002, and what stands" lists each passage. The rest of PRJ-002 stands.
-- **PRJ-002, refined in place,** each with the pointer `(refinement per PRJ-016)`: "the commit it is cut from" in place of "its source commit" in D4's "Its tree keeps the floors its source commit carries" and in D5's "From the pending changesets".
-- **PRJ-004, refined in place,** each with the pointer `(refinement per PRJ-016)`: its candidate tag serves whoever chooses "to test a change before it merges" in place of "to test the next final release before it ships", and its Implications bullet on release notes publishes them from the release workflow's run "for a candidate" in place of "for a candidate and for the final release that ends a line".
-- **ADR-092** records the release step's side, and names its edits to ADR-089, ADR-065, ADR-063, ADR-049 and PRJ-004.
+- **PRJ-002, refined in place:**
+  - with the pointer `(refinement per PRJ-016)`: "the commit it is cut from" in place of "its source commit" in D4's "Its tree keeps the floors its source commit carries" and in D5's "From the pending changesets", and in "Why a candidate's versions live only in its tag", "So the default branch's head and the changesets pending there still make the next final release" in place of the sentence that names commits of `main`
+  - with the pointer `(refinement per ADR-092 point 6)`: in D3 and in the Implications, the tag is cut on "the commit, of those its release PR leaves on `main`, that changed `.pkit/VERSION`" in place of "the commit its release PR leaves there" and "the commit it leaves on `main`"
+- **PRJ-004, refined in place:**
+  - with the pointer `(refinement per PRJ-016)`: its candidate tag serves whoever chooses "to test a change before it merges" in place of "to test the next final release before it ships", and its Implications bullet on release notes publishes them from the release workflow's run "for a candidate" in place of "for a candidate and for the final release that ends a line"
+  - with the pointer `(refinement per ADR-092 point 4)`: its list of refs gains `withdrawn/v<candidate>`, a candidate's withdrawal, which names no install: every reader of release and candidate tags, `scripts/latest_tag.py` and `pkit upgrade`'s lookups among them, matches the full reference `refs/tags/v…`, so none takes a tag under `withdrawn/` for a release or a candidate
+- **ADR-092** records the release step's side, and names its edits to ADR-089, ADR-065, ADR-063 and ADR-049.
 - **The analysis anchored on PRJ-002** is answered in the change that makes these edits.
 - **The project's `CLAUDE.md`, "Versioning",** gains: a change that must be tested before it ships stays on its branch until its testing passes, and no coordinator lands it before.
 - **No migration.**
