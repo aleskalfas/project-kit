@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: d8751e13ebdb53dab77d11c337e255ec3e1da878b6b9b2a0aa9ad2f68de2a757
+  value: 973fbac9005ac38e1d6fce05e48e67cb7f7681b961055a6a1e13360a69b0ce03
   inputs:
     - file: content.cs.yaml
       sha256: 151dbbc838ad85baf0f8703cafe19def90ec17fc6641c7f79ebdffe2cf01cdf9
@@ -79,7 +79,7 @@ key:
     - library: neutral
       version: 1.1.0
       path: tokens/palette.tokens.json
-      sha256: b6db58a5ecf985393850149facd77072e9487b36ffb90a4180e18416dd561919
+      sha256: 2fe92db15d1a1dec76ffbd5e9802db556fe39e6e80d4f1358f7b06c8109fe627
     - library: neutral
       version: 1.1.0
       path: tokens/phone.tokens.json

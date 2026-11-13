@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import itertools
+import json
 import math
 import shutil
 from collections.abc import Iterator, Mapping
@@ -329,35 +330,139 @@ def test_every_reference_render_passes_the_check_under_it(location: Path) -> Non
     assert not report.failed()
 
 
+#: The neutral brand's version being built.
+BUILT_BRAND = taken("neutral", being_built=True).version
+#: The neutral brand's release the comparison of the foundations draws on their release 1.0.0.
+RELEASED_BRAND = taken("neutral").version
+#: The reference piece the tests of that comparison draw: one piece shows what it tells apart.
+COMPARED = "card"
+
+
+def read_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def taken_back(built: Any, released: Any) -> Any:
+    """The tree of tokens `built`, each token the tree `released` holds at its path taken back
+    to the one `released` holds there, and each token `released` alone holds added."""
+    if not isinstance(built, dict) or not isinstance(released, dict) or "$value" in released:
+        return released
+    return {**built, **{key: taken_back(built.get(key), each) for key, each in released.items()}}
+
+
+def with_the_releases_look(root: Path) -> None:
+    """The copy of the neutral brand being built in the location at `root`, each token its
+    release gives taken back to the value it gives there, in each token file of that
+    release: so a comparison with the release finds what the version being built adds,
+    such as its sizes, and not a change of its look, which breaks nothing (DEC-003 point
+    6)."""
+    built = version_folder(root, "neutral", BUILT_BRAND)
+    released = version_folder(root, "neutral", RELEASED_BRAND)
+    for path in sorted((released / "tokens").glob("*.tokens.json")):
+        target = built / "tokens" / path.name
+        assert target.is_file(), f"the version being built holds no {path.name}"
+        target.write_text(
+            json.dumps(taken_back(read_json(target), read_json(path))), encoding="utf-8"
+        )
+
+
+def comparison_location(root: Path, only: str | None = None) -> Path:
+    """The location of `location`, laid out in the project at `root`, holding the reference
+    piece `only` alone where it names one, and beside the versions being built the
+    releases the comparison of the foundations draws on: the foundations' release 1.0.0,
+    the starter's newest release and the neutral brand's `RELEASED_BRAND`. The deck of the
+    foundations being built places its parts where their release places them
+    (`starter.DECK_PLACES`)."""
+    reference_location(root)
+    if only is not None:
+        for folder in (root / "visual" / "pieces").iterdir():
+            if folder.name != only:
+                shutil.rmtree(folder)
+    hold_shipped(root, "foundations", version="1.0.0")
+    hold_shipped(root, "starter", being_built=False)
+    starter.with_the_releases_deck_places(root)
+    assert hold_shipped(root, "neutral", being_built=False).version == RELEASED_BRAND
+    return root
+
+
+def compared(root: Path) -> dict[str, tuple[Any, Any]]:
+    """Each piece of the comparison location at `root` whose component the starter's release
+    holds, by name, drawn with that release twice: under the neutral brand being built, its
+    look taken back to its release's (`with_the_releases_look`), on the foundations being
+    built, as their release would show it (`starter.as_released`), and under the brand's
+    release on theirs. Each drawing is a document of values and the previews. The brand
+    being built gives `size.line`, which no piece that names no size reads."""
+    with_the_releases_look(root)
+    released, built = starter.on_each_foundations(root, brand={"neutral": RELEASED_BRAND}).values()
+    return {
+        name: ((starter.as_released(values, given=["size.line"]), files), released[name])
+        for name, (values, files) in built.items()
+    }
+
+
 def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_release(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The neutral brand being built gives the sizes of the axis `device`, which the
     foundations being built add to their release 1.0.0, and a piece that names none is
     drawn at the default, `desktop` (DEC-021 points 2 and 9). Their deck places its lead
-    and its visual otherwise, which the comparison takes back (`starter.DECK_PLACES`). So
-    each reference piece of a component the starter's release holds, drawn with that
-    release, draws under it on them as under the brand's release 1.0.0 on theirs, byte for
-    byte: each preview, but for the foundations' version they name, and its values, but
-    for the role `size.site` they add, which the brand gives as wide as its slide on a
-    desktop, `size.line`, which no piece that names no size reads, those of a run's sign
-    and ground, at its smallest space, and their deck's title and lead, which the brand
-    gives on a desktop in the types the deck drew them in before. The starter being built
-    reads roles the foundations' release does not declare, and its web parts name the
-    sizes, which that release does not declare either."""
+    and its visual otherwise, which the comparison takes back (`starter.DECK_PLACES`), and
+    the brand being built may look otherwise than its release, which the comparison takes
+    back too (`with_the_releases_look`). So each reference piece of a component the
+    starter's release holds, drawn with that release, draws under it on them as under the
+    brand's release 1.0.0 on theirs, byte for byte: each preview, but for the foundations'
+    version they name, and its values, but for the role `size.site` they add, which the
+    brand gives as wide as its slide on a desktop, `size.line`, which no piece that names
+    no size reads, those of a run's sign and ground, at its smallest space, and their
+    deck's title and lead, which the brand gives on a desktop in the types the deck drew
+    them in before. The starter being built reads roles the foundations' release does not
+    declare, and its web parts name the sizes, which that release does not declare
+    either."""
     importable(monkeypatch, starter.svg)
-    root = reference_location(project(tmp_path))
-    hold_shipped(root, "foundations", version="1.0.0")
-    hold_shipped(root, "starter", being_built=False)
-    starter.with_the_releases_deck_places(root)
-    released_brand = hold_shipped(root, "neutral", being_built=False).version
-    assert released_brand != taken("neutral", being_built=True).version
-    on_each = starter.on_each_foundations(root, brand={"neutral": released_brand})
-    released, built = on_each.values()
-    assert sorted(built) == starter.ON_THE_RELEASE
-    for name, (values, files) in built.items():
+    assert BUILT_BRAND != RELEASED_BRAND
+    drawn = compared(comparison_location(project(tmp_path)))
+    assert sorted(drawn) == starter.ON_THE_RELEASE
+    for name, ((values, files), released) in drawn.items():
         assert files, name
-        assert (starter.as_released(values, given=["size.line"]), files) == released[name], name
+        assert (values, files) == released, name
+
+
+def test_the_comparison_finds_a_default_size_that_draws_otherwise(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """What the comparison guards: a brand being built whose default size, `desktop`, gives
+    a body of its own, as large as on a projector, draws a piece that names no size
+    otherwise than its release, so the comparison finds it."""
+    importable(monkeypatch, starter.svg)
+    root = comparison_location(project(tmp_path), only=COMPARED)
+    built = version_folder(root, "neutral", BUILT_BRAND)
+    body = read_json(built / "tokens" / "projector.tokens.json")["type"]["body"]
+    desktop = {"type": {"$type": "typography", "body": body}}
+    (built / "tokens" / "desktop.tokens.json").write_text(json.dumps(desktop), encoding="utf-8")
+    resolver = read_json(built / "neutral.resolver.json")
+    resolver["modifiers"]["device"]["contexts"]["desktop"] = [
+        {"$ref": "tokens/desktop.tokens.json"}
+    ]
+    (built / "neutral.resolver.json").write_text(json.dumps(resolver), encoding="utf-8")
+    [(drawn, released)] = compared(root).values()
+    assert drawn != released
+
+
+def test_the_comparison_passes_a_change_of_the_brands_look(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A change of how the brand being built looks breaks nothing (DEC-003 point 6), so the
+    comparison passes one: its accent pointed at another hue, and its body set larger."""
+    importable(monkeypatch, starter.svg)
+    root = comparison_location(project(tmp_path), only=COMPARED)
+    built = version_folder(root, "neutral", BUILT_BRAND)
+    path = built / "tokens" / "base.tokens.json"
+    base = read_json(path)
+    base["scheme"]["accent"]["$value"] = "{palette.purple.600}"
+    base["type"]["body"]["$value"]["fontSize"]["value"] = 18
+    path.write_text(json.dumps(base), encoding="utf-8")
+    [(drawn, released)] = compared(root).values()
+    assert drawn == released
 
 
 def test_each_text_of_the_reference_renders_reaches_its_contrast_in_every_combination(
