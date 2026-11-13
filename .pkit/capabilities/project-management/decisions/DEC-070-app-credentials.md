@@ -1,149 +1,241 @@
 ---
 id: DEC-070
-title: Under an app's credential, the commands act as the app and never as a person
+title: Under a credential that names no person, the commands never act as one
 status: proposed
 date: 2026-11-13
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** an agent may reach GitHub under an app's credential, such as a GitHub App installation's token or a CI workflow's. Such a credential acts as an account that names no person. GitHub will not look that account up as a user, and refuses it as an assignee.
+**In plain terms:** an agent may reach GitHub under a credential that names no person, such as a GitHub App installation's token or a CI workflow's. GitHub will not look such an account up as a user, and refuses it as an assignee.
 
-Under such a credential, this capability's commands act as the app's account, and never take a person's identity in its place. Nothing that account writes counts as a person's claim, approval or authorisation. A command that needs a person takes one named in the call where naming them grants nothing, and otherwise refuses and says why. A project with a board is left out for now, and its commands refuse under such a credential. A setup that needs more gives the agent a credential that acts as the person it works for.
+Under such a credential, this capability's commands never take a person's identity for the account they act as, in a CI workflow and in an agent's session alike. Nothing an account that names no person writes counts as a person's claim on work or a person's approval, and no comment names a person as having authorised what it records. The person the agent works for, which the session names, serves only where naming a person grants nothing: as the default assignee, and to keep the agent off a Task assigned to someone else.
+
+What a person accepting this weighs:
+
+- **No instance ownership.** Such a clone claims no Task. In a project with a topology it builds nothing, and elsewhere two sessions under one such credential can start the same Task unseen.
+- **Bots approve nothing in human mode.** In every project, an approval from an account GitHub records as a bot, or one the project registers as a reviewer agent's, does not count where a person's approval is required.
+- **Closed-mode CI.** A workflow under its own token passes a closed membership gate only where its account is a member. Neither `PM_INVOKER_LOGIN` nor git's email stands for it.
+- **Every board is checked first.** Under any credential, a command that reads or writes the project's board first confirms that the board answers, and refuses where it does not.
+- **The caller's word stays unguarded.** A bypass, a held move or a release by force passes on the caller's word, as under any credential. Who may give that word in an agent's turn is a record of its own.
 
 ## Context
 
 **The terms.**
 
-- **A credential acts as an app** where the hosting service reports that the account it acts as is an app's, not a user's. On GitHub, an App installation's token and a CI workflow's token do. GitHub answers a request to look such an account up as a user with `Resource not accessible by integration (HTTP 403)`, and refuses it as an assignee.
-- **The app's account** is the account such a credential acts as. It names no person.
-- **A user account kept for an agent,** a machine user, is a user's account. pkit acts as it as it acts as a person's, and this record does not reach it.
-- **The person the agent works for** is whoever directs the agent.
+- **A credential names a person** where the hosting service, asked which account the credential acts as, answers with a user's account.
+- **A credential names no person** where the service answers, and its answer names no user's account. It is of one of two kinds:
+  - **an app's credential,** where the answer says that the account is an app's, and gives its login;
+  - **an unresolved identity,** where the answer is any other, such as a refusal, which the commands report with its cause ([project-kit#3162](https://github.com/aleskalfas/project-kit/issues/3162)).
 
-**What happens today.** On a trial of an agent host, an agent reached GitHub under an App installation's token ([project-kit#3004](https://github.com/aleskalfas/project-kit/issues/3004)). The commands resolve the acting account by looking it up as a user ([project-management:DEC-021-team-membership-gate], "Identity resolution"), and that lookup fails.
+  Where the service cannot be asked at all, such as with no network, [project-management:DEC-021-team-membership-gate] stands as it is.
+- **An app's account** is the account an app's credential acts as. It names no person, and every session that holds the credential acts as it.
+- **A user account kept for an agent,** a machine user, is a user's account. Its credential names a person, so this record reaches it only where the project registers it as a reviewer agent's (point 5).
+- **The person the agent works for** is the person whose work the agent's session does.
+- **The setup** is what prepares the machine and starts the agent's session or the workflow, outside this capability ([pkit:ADR-091] point 7).
+
+**What happens today.** On a trial of software that starts agent sessions on hosted machines, an agent reached GitHub under an App installation's token ([project-kit#3004](https://github.com/aleskalfas/project-kit/issues/3004)). The commands resolve the acting account by looking it up as a user (DEC-021, "Identity resolution"), and the service refuses the lookup:
 
 - **No default assignee.** `create-issue` cannot default the assignee to the filer ([project-management:DEC-019-mandatory-issue-state], "Mandatory assignment").
 - **Every assignee is someone else.** `start-work` refuses every Task assigned to the person the agent works for, and sends it to `handoff-issue`, which cannot help ([project-management:DEC-026-work-ownership-lifecycle]).
 - **A workaround.** The trial went on by unassigning the person, starting the work, and assigning the person back.
 
-pkit is to report an identity it cannot resolve, with its cause, rather than act as if the account were someone else ([project-kit#3162](https://github.com/aleskalfas/project-kit/issues/3162)). How such an account should act is this record's.
+[project-kit#3162](https://github.com/aleskalfas/project-kit/issues/3162) has the commands report an identity they cannot resolve, with its cause. How they act under such a credential is this record's.
 
-**What was measured.** Two facts were measured on the trial before this record was drafted ([project-kit#3164](https://github.com/aleskalfas/project-kit/issues/3164)):
+**What was measured** on the trial ([project-kit#3164](https://github.com/aleskalfas/project-kit/issues/3164)):
 
-- **A credential that acts as the person is on offer.** The host's setup can grant the agent an OAuth sign-in or a personal access token beside the App's. Under either, pkit acts as on the person's own machine, and every comment and pull request reads as the person's own.
-- **An app's credential sees no board a user owns.** Asked for the person's boards, the person's token found three, and the App's token none, with no error. An organisation's board, under an App granted access to organisation projects, was not measured.
+- **The setup offers a credential that names the person.** It can grant the agent an OAuth sign-in or a personal access token beside the App's. Neither was granted to the trial's agent, so no command has run under one.
+- **An app's credential saw none of a user's boards.** Asked for a user's boards, the person's own token, of a kind the measurement did not record, found three, one of them public. The App's token, under an App granted no project permission, found none, and gave no error.
+- **An app's account is spelled differently on different surfaces.** Read under the person's credential, the comments the trial's App wrote give its login with a `[bot]` suffix and the type `Bot`, and name the App that performed each write. gh's JSON gives the same account, on its pull requests, with an `app/` prefix, marked as a bot.
+
+**What was not measured:**
+
+- **Whether an installation's token can learn its own account and kind.** Both attempts to ask from inside the trial's agent failed before reaching it. Point 1 says what holds without it.
+- **Boards:** whether an organisation's board answers to an App granted access to it ([project-kit#3172](https://github.com/aleskalfas/project-kit/issues/3172)), how a configured board answers when it is out of reach, and which boards a fine-grained token, or a sign-in through a host's app, reaches. Point 8 rests on none of them.
+- **Whether the service answers an app's account's write access to a repository,** which an open project's state issues read (point 7).
+- **Whether a person's sign-in through a host's app marks the agent's writes as that app's.**
 
 **What the records already say.**
 
-- **No identity comes from a value the user controls.** DEC-021 takes `PM_INVOKER_LOGIN` only from a CI secret or a workflow input.
+- **The membership gate takes `PM_INVOKER_LOGIN` in CI and agent contexts,** sourced from a CI secret or a workflow input, never from a value the user controls (DEC-021, "Identity resolution"). The commands cannot tell where the variable was set.
 - **A claim on an issue of work counts only from the assignee's account** ([project-management:DEC-043-ownership-substrate-selection] point 3). The ownership fold applies that filter in one place ([pkit:ADR-041]).
 - **A gate's authorisation comes from another authority than the actor it gates** ([pkit:COR-033] P4).
+- **In human mode, an `Approved` comment counts from the last commenter that is no bot** (DEC-026, Rationale, "Why the three-way OR"). The commands count it from any commenter but the author.
 - **A comment names who authorised an act** where they differ from the account that posted it ([project-management:DEC-052-comment-house-style]).
-- **A state issue counts a comment from any account that may write** ([project-management:DEC-058-state-issues] point 4).
-- **A need that differs between machines is met by a property,** never by a host's name. A need not worth meeting is a limit, stated by its property ([pkit:ADR-091] points 2 and 4).
+- **A need that differs between machines is met by a property,** never by a host's name. A need not worth meeting is a limit, stated by its property with what meeting it would cost ([pkit:ADR-091] points 2 and 4).
 
 ## Decision
 
-**Under a credential that acts as an app, this capability's commands act as the app's account, and never take a person's identity in its place. Nothing that account writes counts as a person's claim, approval or authorisation. A command that needs a person takes one named in the call where naming them grants nothing, and otherwise refuses and says why. A project with a board is left out for now, and under such a credential its commands refuse.**
+**Under a credential that names no person, this capability's commands never take a person's identity for the account they act as. Nothing an account that names no person writes counts as a person's claim or approval, and no comment names a person as its authoriser. The person the agent works for serves only where naming a person grants nothing. Under every credential, a board is used only where the credential reaches it.**
 
-### 1. pkit reads the property from the hosting service
+### 1. The commands read a credential's kind from the service's answer
 
-A command knows that its credential acts as an app from what the hosting service answers, such as GitHub's refusal to look the account up as a user. It never knows it from the host or the tool that issued the credential ([pkit:ADR-091] point 2). The report of an identity pkit cannot resolve carries this cause ([project-kit#3162](https://github.com/aleskalfas/project-kit/issues/3162)), and the points below act on it.
+- **An app's, only from a positive answer.** A credential is an app's only where the hosting service answers, for the credential, that its account is an app's, and gives its login. It is never read from a refusal, whose cause may be a rate limit, a suspended account or a network's rule as well as an app. Nor is it read from the host or the tool that issued the credential ([pkit:ADR-091] point 2).
+- **Any other answer that names no person** leaves the identity unresolved, and the commands act on it as on an app's credential with no account they know.
+- **Only a grant needs the app's own account.** The membership gate (point 2) and a seat's claim (point 7) read the app's login, since they grant the acting account something. Everything else this record decides holds under an unresolved identity too. So an answer misread grants nothing, and never lets a person's identity stand for the acting account.
+- **Each guard reads the property it rests on:** the credential's answer for the acting account, the service's record of an author for what that author wrote (point 5), and the board's answer for the board (point 8).
 
-### 2. The acting account is the app's, and no person stands in for it
+Whether an installation's token receives a positive answer is unmeasured. Where it does not, such a token leaves the identity unresolved: everything below holds, except that its account can be neither a member (point 2) nor a seat's holder (point 7).
 
-Under such a credential, the identity DEC-021 resolves is the app's account, except where a CI workflow names another as DEC-021 provides:
+### 2. No person stands for the acting account
 
-- **Its login** is the one the hosting service gives that account. Where it gives none, the identity is unresolved, and pkit reports it with its cause.
-- **Git's configured email does not stand for it.** The email names whoever set up git on the machine, a value the user controls. So where the membership gate is closed, it matches the app's account alone. A project lets an app's account act by adding it as a member, as DEC-021 adds a CI's service identity.
-- **No agent's session sets `PM_INVOKER_LOGIN`.** An agent can set its session's environment for any command, so a value set there is one the user controls, which DEC-021 rules out. pkit cannot tell where the variable was set, so this binds the agent and the setup that starts its session.
-- **A CI workflow keeps the variable,** set from a CI secret or a workflow input as DEC-021 provides. Where it names a user's account, pkit acts as that account, and points 3 and 4 do not apply.
+Under a credential that names no person, in a CI workflow and in an agent's session alike:
 
-### 3. Nothing defaults to a person
+- **The acting account** is the app's, by the login the service gives it. Under an unresolved identity, the commands know no acting account.
+- **One spelling.** An app's account is compared in one form, whichever surface named it: the member list, a claim's author, a review's author.
+- **Git's configured email does not stand for it.** The email names whoever set up git on the machine, a person the credential does not act as.
+- **Nor does `PM_INVOKER_LOGIN`.** Whoever starts the run or the session can set it, and the commands cannot tell who did. It names the person the agent works for (point 3).
+- **The closed membership gate** matches an app's account by its login alone. A project lets such an account act by adding it as a member. That admits every session that holds the credential, whoever starts it, and the project decides so by adding it.
+- **The member list changes under no such credential.** Membership grants authority, and an account that names no person has no one to stand behind a change to it. So a command that adds or removes a member refuses, and a person changes the list under their own credential. This holds while the gate is open too, where adding such an account as the first member would close the gate with no person in it.
+- **An app's account in the member list is no person.** Where a command picks members as people, such as reviewers in human mode, it passes over an app's account.
 
-The app's account is never an assignee, since the hosting service refuses it. So under such a credential, a command never makes the acting account an assignee:
+Under a credential that names a person, this record changes nothing in how the acting account is resolved.
 
-- **`create-issue`** takes the assignee named in the call. It refuses a filing that names none, and says that the account names no person. Filing so is filing for another, as a person may ([project-management:DEC-035-instance-ownership] point 5).
-- **`assign-issue --me`** refuses, for the same reason.
+### 3. The person the agent works for serves only where naming a person grants nothing
 
-Naming the assignee grants the app's account nothing. The assignee names who is responsible for the issue (DEC-019), and only the assignee's own account can claim it (point 5).
+- **Where it comes from.** Under a credential that names no person, `PM_INVOKER_LOGIN` names the person the agent works for. The setup sets it, as it sets whatever else the session needs ([pkit:ADR-091] point 7).
+- **Where it serves.** It stands where the commands would name the acting account as a person, and grant nothing by doing so:
+  - the default assignee at filing, and `--me` on an assignment (DEC-019);
+  - `start-work`'s refusal of a Task assigned to someone else, and the assignee it writes (point 4);
+  - which Tasks `next-task` hands out, since it hands out only what `start-work` takes.
+- **Where it never serves.** It never stands where naming a person grants: the membership gate, a claim, an approval, or the authoriser a comment names. So `--me` on a command that changes the member list refuses (point 2).
+- **Without it,** a command that needs a person refuses, and says that the account names no person and how the session can name one. `create-issue` still takes an assignee named in the call, as when a person files for another ([project-management:DEC-035-instance-ownership] point 5).
 
-### 4. `start-work` works under the assignee the Task has
+It is the caller's word, as an assignee the caller names is. Set wrongly, it lets the agent past the refusal that keeps it off another person's Task. Like DEC-035's clash guard, that refusal catches the mistakes of agents that follow the procedure, and is no security boundary.
 
-Under such a credential, `start-work` writes no assignee, and counts no assignee as someone else. It refuses a Task with no assignee, since DEC-019 needs one and the account cannot be it, and it names `assign-issue`. The assignee stays the person responsible for the Task, as DEC-019 keeps the filer responsible until the issue is reassigned.
+### 4. `start-work` keeps its refusal, against the person the agent works for
 
-Every other command that compares the acting account with an assignee reads an app's account the same way, as neither the assignee nor another person. `handoff-issue` hands a Task from one person to another, and never to the app's account.
+Under a credential that names no person, in a project with no topology, `start-work`:
 
-### 5. Nothing the app's account writes counts as a person's
+- **refuses a Task assigned to someone other than the person the agent works for,** and names `handoff-issue`, as DEC-026 has it;
+- **assigns that person a Task with no assignee,** since DEC-019 needs one and the acting account cannot be it, and writes no assignee where that person is one already;
+- **posts no claim,** since no claim it wrote would count (point 5);
+- **refuses a Task an instance owns.** The clash guard reads the owner for such a clone, though the clone claims nothing. A reason overrides the refusal and posts an audit comment, as for any clash (DEC-035 point 6).
 
-A comment or a review that the app's account writes is that account's. It never stands for a person's claim, approval or authorisation, since an actor never authorises itself through another's name ([pkit:COR-033] P4). This record keeps the guard the records state, and loosening it is a person's decision of its own:
+Every other ordinary lifecycle verb under such a credential reads the owner the same way. `handoff-issue` hands a Task from one person to another, and never to an app's account.
 
-- **A claim on an issue of work.** A claim counts only from the assignee's account (DEC-043 point 3, [pkit:ADR-041]), and the app's account is never one. So a clone under such a credential takes no part in instance ownership on issues of work, and posts no claim.
-  - **With no topology,** a command acts as for a clone with no instance id ([project-management:DEC-035-instance-ownership] point 1), and says why.
-  - **With a topology,** the clone takes no seat whose role builds, since such a seat's work rests on claims that count ([project-management:DEC-059-topology-of-seats] point 9).
-- **A claim on a state.** A claim the app's account writes on a state issue is that account's own, and names no person (DEC-058 point 4). So the app's account may hold a state as itself, such as a planner's seat.
-- **An approval.** In `done-work`'s human mode, an `Approved` comment or an approving review counts only from a user's account, never from an app's. A reviewer agent's verdict is no person's approval, and DEC-028's paths count it as they stand ([project-management:DEC-028-agent-as-approver-paths]).
-- **An authorisation in a comment.** The authoriser pkit knows is the acting account, here the account that posts. So an override comment names no person as its authoriser (DEC-052). A reason the caller gives may report a person's word, and stays the caller's report alone.
+Two sessions under one such credential, working for one person, can start the same Task, since neither claims it. Nothing tells them apart, as nothing tells apart two of a person's clones with no instance id (DEC-035 point 1). This is a limit (point 9).
 
-### 6. A project with a board is left out for now
+In a project with a topology, such a clone starts no Task (point 7).
 
-An app's credential reaches no board a user owns, and the hosting service says nothing of it: the board is simply absent from its answers. Whether such a credential reaches an organisation's board, once its app is granted that access, is unmeasured.
+### 5. Nothing an account that names no person writes counts as a person's
 
-So this record decides how the commands act only in a project with no board (DEC-019, "Auto-add to board"). In a project whose configuration names a board, a command that reads or writes the board refuses under such a credential, before it changes anything. It says that the board may be out of the credential's reach. A record of its own decides what the commands do there, once an organisation's board is measured.
+The commands read the kind of an author from the service's record of that author, which says whether it is a bot. These guards hold for every account the service records as a bot, under whatever credential the command runs, and whether or not the service lets that account be assigned:
 
-### 7. Where a need stays unmet, the setup chooses the credential
+- **A claim on an issue of work** counts only from the assignee's account (DEC-043 point 3), and never from a bot's. So a clone under a credential that names no person takes no part in instance ownership on issues of work.
+- **An approval in human mode.** An `Approved` comment or an approving review counts only from an account the service records as no bot, and that the project does not register as a reviewer agent's ([project-management:DEC-028-agent-as-approver-paths], the remote path's list). A request for changes holds the merge whoever made it, since holding a merge grants nothing. So human mode's gate rests on another authority than the actor, as COR-033 P4 asks.
+- **A reviewer agent's verdict** counts in agent mode as DEC-028's paths have it. Under a credential that names no person, the local path's verdict is posted by the acting account. It attests what that account ran, and names no person responsible for it.
+- **An authoriser in a comment.** The authoriser the commands know is the acting account, which here names no person. So an override comment names no person as its authoriser (DEC-052). A reason the caller gives may report a person's word, and stays the caller's report.
+- **A claim on a state issue** that an app's account writes is that account's own, and names no person ([project-management:DEC-058-state-issues] point 5). Point 7 says where it counts.
 
-Two needs stay unmet under such a credential, each a limit stated by its property ([pkit:ADR-091] point 4):
+### 6. What passes on the caller's word stays as it is
 
-- **Work a clone owns on an issue of work,** and so a seat that builds. Meeting it would loosen the guard of point 5, which is a person's decision.
-- **A project with a board.** Meeting it waits on a measurement and a record (point 6).
+Some acts pass on the caller's word under every credential: a merge by bypass, a move the user holds, a promotion on a person's request in the session, and a release of a seat by force on a person's word ([project-management:DEC-006-state-machine-and-cascade], DEC-026, [project-management:DEC-059-topology-of-seats] point 5). Under a credential that names no person they pass as they do elsewhere. Each is recorded as the acting account's act, with the caller's reason, and names no person as its authoriser (point 5).
 
-A setup that needs them gives the agent a credential that acts as the person it works for, which the measured setup offers. pkit then acts as on the person's own machine, and everything the agent writes reads as that person's. Which credential an agent holds is its setup's choice ([pkit:ADR-091] point 7).
+This record guards none of them. Who may give that word in an agent's turn is a record of its own ([pkit:ADR-091], Implications, gap 5).
+
+### 7. In a project with a topology, such a clone builds nothing
+
+- **No seat that builds.** A worker's or a lead's seat rests on claims on Tasks that count (DEC-059 point 9), and such a clone's never do. So it takes no such seat (DEC-059 point 4).
+- **No Task without a seat.** A clone with no seat marks no issue and is guarded by nothing (DEC-059 point 6). A Task it started would stand In Progress with no claim that counts, which a worker reads as ready to take over (DEC-059 point 7). So under such a credential `start-work` refuses.
+- **A seat that builds nothing, where its claim counts.** An app's clone may hold a planner's seat, since its claim on the seat's state issue is its own account's. That claim counts only where DEC-058 point 4 counts its author: as a member where the gate is closed, and otherwise where the service answers that the account may write to the repository, which is unmeasured. Where the claim does not count, the seat cannot be taken under that credential. Under an unresolved identity, the clone takes no seat.
+- **A planner's filings** are assigned to the person the agent works for (point 3). Workers under that person's own credential take them. A worker under another person's credential meets `start-work`'s refusal, as it does with the filings of a planner under any one person's credential.
+
+### 8. A board is used only where the credential reaches it
+
+Under every credential, a command that reads or writes the project's board first confirms that the service answers with the configured board under that credential (DEC-019, "Auto-add to board"). Only that answer counts. Where the service refuses, fails, or answers without the board, the command refuses before changing anything, and says that the board may be out of the credential's reach.
+
+A board out of reach may answer empty rather than fail, as the listing of a user's boards did under an app's credential. Whether a read of the configured board does too is unmeasured. A command that read it empty would find no state, and might move an issue from a state it cannot see. A check that counts only a positive answer holds however a read out of reach answers, and under every kind of credential.
+
+### 9. What stays unmet, and the setup's choice of credential
+
+These needs stay unmet under a credential that names no person. Each is a limit, stated by its property with what meeting it would cost ([pkit:ADR-091] point 4):
+
+- **Instance ownership on issues of work,** and so building in a project with a topology. Meeting it would count a claim from an account that names no person, which loosens DEC-043 point 3: anyone holding the credential could then claim work for any person. That loosening is a person's decision of its own.
+- **Two sessions under one such credential, kept off one Task.** Meeting it needs a mark that such a clone makes and that other such clones read, a design of its own.
+- **The closed membership gate under an unresolved identity.** Meeting it needs the service's positive answer for the credential (point 1).
+
+Under every credential, a board the credential does not reach is refused (point 8). Meeting that needs a credential that reaches the board.
+
+A setup that needs one of them gives the agent another credential:
+
+- **A credential that names the person the agent works for,** which the measured setup offers and which no command has run under yet. The commands then act as the person, and the agent's pull requests are the person's own, which the person cannot approve (DEC-028, "Self-approval degrade").
+- **A machine user,** which is not recommended. The commands act as it as they act as a person, so the assignee would name no person responsible for the work (DEC-019).
+
+Which credential an agent holds is its setup's choice ([pkit:ADR-091] point 7).
 
 ## Rationale
 
-**Why the app's account, and never the person.** pkit knows a person's identity only from a credential that acts as that person. Any other value that names the person is the caller's word. Acting as the person on that word would make each act of the app's account read as the person's own, in the tracker and in every check that reads it. Acting as the app's account keeps that record true, since the hosting service shows which account wrote each change.
+**Why the commands never take the person's identity.** The commands know a person's identity only from a credential that names that person. Any other value that names the person is the caller's word. Acting as the person on that word would make each act of the account read as the person's own, in the tracker and in every check that reads it. Acting as the account the service names keeps that record true, since the service shows which account wrote each change.
 
-**Why `PM_INVOKER_LOGIN=<person>` is not enough.** Set in the session, it would let `start-work` write the person as assignee. Three things stand against it:
+**Why `PM_INVOKER_LOGIN` names no acting account, in CI as in a session.** Set to the person, it would let `start-work` write the person as assignee. Two things stand against it:
 
-- **It names the person as the actor of every act.** Each override comment would name the person as its authoriser, beside the app's account that posted it (DEC-052), whether or not the person authorised anything.
-- **It is a value the user controls.** DEC-021 takes the variable from a CI secret or a workflow input, which what runs cannot change. An agent sets its session's environment at will, so no session meets that rule.
-- **It still would not make a claim count.** The ownership fold reads who wrote a claim, never the variable (DEC-043 point 3). So instance ownership stays out of reach.
+- **It names the person as the actor of every act.** Each override comment would name the person as its authoriser, beside the account that posted it (DEC-052), whether or not the person authorised anything.
+- **It would not make a claim count.** The ownership fold reads who wrote a claim, never the variable (DEC-043 point 3). So instance ownership stays out of reach.
 
-**Why the call names the assignee.** The assignee says who is responsible, and grants nothing: no claim, approval or authorisation follows from it. A caller already names an assignee when it files for another. A setting that named the person on each machine would make a value the user controls the default person. A project setting is the same on every clone, while the person differs from clone to clone ([pkit:ADR-091] point 5).
+DEC-021 meant to keep the variable from a value the user controls, and trusted a CI workflow to keep it so. That line does not hold. A workflow's input is typed by whoever dispatches the run, and an earlier step can set the environment of later ones. A pipeline that runs an agent's session on one prompt is both a CI workflow and an agent's session ([pkit:ADR-091], Rationale, "Why the test should hold beyond DAM"). So the variable is read the same way in both: as the caller's word, where the caller's word grants nothing.
 
-**Why `start-work` goes on under the assignee.** The refusal keeps one person off another's work, and points them to a handover. The app's account is no person, so it rivals nobody, and no handover can make it the assignee. The cost is that an agent may start a Task assigned to someone it does not work for. pkit could check that only against the caller's word, and the membership gate already decides which accounts may act at all.
+**Why git's email does not stand for the account.** Under any credential the email is a value the user controls, and that hole is no question of this record's. Under a credential that names no person, there is a reason of its own: the email names a person the credential does not act as.
 
-**Why the guard stays.** A claim means something because only the assignee's own account can make it (DEC-043 point 3). Counting an app's claim for the assignee would let anyone who holds the credential claim work for any person. An approval or an authorisation that the actor writes for a person is the self-authorisation COR-033 P4 rules out.
+**Why the person the agent works for grants nothing.** Most of what the commands do with a person's login says whose the work is: the assignee at filing, and whether a Task is someone else's. A wrong value there misleads, and grants nothing, since a claim, an approval and membership are each read from the account that wrote or acts, never from the assignee. A command that takes an assignee from the caller, when a person files for another, takes the caller's word the same way.
 
-**Why a building seat is refused, not only its claims.** A seat stays taken until it is released (DEC-059 point 5). A clone that took a building seat and could claim no Task would hold the seat while doing none of its work.
+**Why `start-work` keeps its refusal.** Without a person to compare with, an account that names no person is nobody's assignee. The refusal would then either catch every assignee, as on the trial, or none, which would let an agent start any member's Task. The refusal is a mistake-catcher, as are its neighbours (DEC-058 point 5, and DEC-059's release by force, which "catches mistakes, and it is no security boundary"). On the caller's word, it keeps catching the mistakes of agents that follow the procedure.
 
-**Why a project with a board refuses.** A board the credential cannot see answers as empty. A command reading it would find no state, and might move an issue from a state it cannot see, or report a filed issue missing from the board. A refusal costs such a project its app's credential until a record decides otherwise, and misleads nobody.
+**Why the clash guard reads for such a clone.** A person's clone with no instance id may opt into ownership, and is guarded once it does (DEC-035 point 1). A clone under a credential that names no person cannot opt in, since none of its claims counts. Reading the owner is then the only guard it can have, and it grants nothing.
 
-**Why not only a limit.** The first measurement allows a shorter record: since the setup can offer the person's credential, every need could be a limit. But most of what the commands do needs no person at all. Under the person's credential, nothing the agent writes can be told from the person's own. Acting as the app's account keeps that line visible, and costs a few refinements.
+**Why the guards read the author's kind.** A claim means something because only the assignee's own account can make it (DEC-043 point 3). A guard derived from the service refusing a bot as an assignee would fail once a bot can be assigned, as GitHub lets its own coding agent be. Read from the author's kind, the guard holds for every bot, whatever the service lets it be. Counting a bot's claim for its assignee would let anyone who holds the credential claim work for any person.
+
+**Why a bot approves nothing in human mode, in every project.** Human mode asks for a person's approval. DEC-026 counts the comment from the last commenter that is no bot, and the commands count it from any commenter but the author. Reading the author's kind aligns the two. It also leaves out the accounts the project registers as its reviewer agents', which name no person whatever the service reports. A request for changes still holds, since holding a merge back grants nothing.
+
+**Why DEC-028's local path stands.** DEC-028 rests the local path on the developer's attestation, the trust of a bypass, rather than on a trace from another authority. Under a credential that names no person, a bypass passes all the same (point 6). Refusing the local path would push such an agent to a bypass, which records less: no verdict, no reviewer, no head reviewed. What changes is that the attestation names no person, and point 5 says so.
+
+**Why such a clone builds nothing in a topology.** A seat stays taken until it is released (DEC-059 point 5). A clone that took a building seat and could claim no Task would hold the seat while doing none of its work. A Task it started without a seat would read as ready to take over, and a worker would take it over from under the agent.
+
+**Why the board is checked under every credential.** ADR-091 point 4 asks first for a change that is right on every machine. A board out of reach could answer empty under other credentials than an app's too, such as a fine-grained token, or a sign-in limited by the app it passed through, which is unmeasured. Keyed to the board, the check covers them. It also lets a board that an app does reach work at once, such as an organisation's if #3172 shows it, with nothing waiting on a record. The cost is one read before each command that touches the board.
+
+**Why act as the account, and not only state a limit.** The setup offers a credential that names the person, so every need could be a limit. But most of what the commands do needs no person at all. And under the person's credential, the agent's pull request is the person's own, which the person cannot approve (DEC-028, "Self-approval degrade"). Under an account that names no person, the person can approve it, by a review or an `Approved` comment. That is the trace from another authority that COR-033 P4 asks of a gate.
 
 ### Alternatives considered
 
-- **State a limit and nothing more:** the commands act only under a credential that acts as a person. Rejected: most of what they do needs no person, and the person's credential hides which acts were the agent's.
-- **Set `PM_INVOKER_LOGIN` to the person.** Rejected, for the three reasons above.
-- **A setting on each machine that names the person the agent works for,** as the default assignee and as `--me`. Rejected: a value the user controls would stand for a person by default, and the call names the assignee at no cost.
-- **Count an app's claim for the assignee,** loosening DEC-043 point 3. Not taken: it would let anyone holding the credential claim for any person, and loosening the guard is a person's decision.
-- **Give `start-work` the person the agent works for,** and refuse a Task assigned to anyone else. Rejected: the check would rest on the caller's word alone, a flag that guards nothing.
-- **Act in a project with a board as elsewhere.** Rejected: a board out of reach answers as empty, so a command would act on state it cannot see.
+- **State a limit and nothing more:** the commands act only under a credential that names a person. The case: one sentence, and nothing to build. Rejected: most of what the commands do needs no person, and the person could not approve their agent's pull requests.
+- **A limit, plus a mark the commands add to what an agent's session writes.** The case: no edits to other records, and instance ownership keeps working under the person's credential. Rejected: the mark is the session's own word, so the line it draws is weaker than the service's record of which account wrote, and the person still cannot approve the agent's pull requests.
+- **`PM_INVOKER_LOGIN` names the acting account,** in an agent's session, or only in a CI workflow as DEC-021 provides. The case: `start-work` and `create-issue` work as under the person's credential, with nothing new. Rejected, for the reasons above, and because no line between a workflow and a session holds.
+- **`start-work` works under whatever assignee the Task has,** with no person named. The case: nothing rests on the caller's word, and the setup gives nothing. Rejected: an agent could start any member's Task, which drops a mistake-catcher that costs one value to keep.
+- **A setting kept for the clone names the person the agent works for,** written by the setup through a command, in place of the variable. The case: it lasts across sessions, and ADR-091 point 7 names such a setting as what a setup writes. Not taken: it needs a command and a stored value of its own, a CI run would write it each time, and the variable already serves these contexts.
+- **No clash guard for such a clone,** as for a person's clone with no instance id. The case: one rule for every clone with no id. Rejected: a person's clone can opt in and such a clone cannot, so without the read it would act on a Task another of the person's clones is building, with nothing to warn it.
+- **Count a bot's claim for its assignee,** loosening DEC-043 point 3. The case: instance ownership, and building in a topology, under such a credential. Not taken: anyone holding the credential could claim work for any person, and loosening the guard is a person's decision.
+- **Drop every review by a bot in human mode,** requests for changes included. The case: one rule for every bot review. Rejected: a bot's request for changes would stop holding a merge, which loosens a guard for no gain.
+- **Treat only accounts the service records as bots as no person.** The case: one source for an account's kind. Rejected: a reviewer agent's machine user would then approve in human mode, and the project already names its reviewer agents' accounts (DEC-028), so leaving them out costs nothing.
+- **Refuse DEC-028's local path under such a credential,** asking another account to post the verdict. The case: no verdict that the actor posts on its own pull request. Rejected: a bypass passes there all the same (point 6), and records less.
+- **Refuse a project with a board under an app's credential,** until an organisation's board is measured. The case: no new read under any credential, and nothing rests on how a board out of reach answers. Rejected: too broad, since it refuses a board an app does reach, and too narrow, since it misses any other credential that does not reach the board.
+- **Read an app's credential from the service's refusal to look the account up.** The case: it is what the trial saw. Rejected: a refusal has other causes, and gives no account to act as.
 
 ## Implications
 
 - **Edits once accepted.** Once a person accepts this record, each record below is refined in place in this change, with the pointer `(refinement per [project-management:DEC-070-app-credentials])`:
-  - **DEC-019, "Mandatory assignment":** under a credential that acts as an app, the filer is no person. So `create-issue` takes the assignee named in the call and refuses without one, and `assign-issue --me` refuses. "Auto-add to board" says such a credential leaves a project with a board to a record of its own, and its commands refuse there.
-  - **DEC-021, "Identity resolution":** under such a credential, the identity is the app's account, by the login the hosting service gives it. Git's configured email does not stand for it, and no agent's session sets `PM_INVOKER_LOGIN`.
-  - **DEC-026:** the `start-work` row of "The seven commands", and the assignee-conflict row of "Sub-decisions index", say that under such a credential `start-work` writes no assignee, counts none as someone else, and refuses a Task with none. The `done-work` row of each table says that in human mode an `Approved` comment or an approving review counts only from a user's account, never from an app's.
-  - **DEC-035 point 1:** a clone under such a credential takes no part in instance ownership on issues of work, as a clone with no instance id.
-  - **DEC-043 point 3:** an app's account is never an assignee, so no marker it writes counts.
-  - **DEC-052, the roster's override row:** under such a credential, the authoriser pkit knows is the posting account, so the comment names no person as authoriser.
-  - **DEC-058 point 4:** a claim an app's account writes on a state issue counts as that account's own, never a person's.
-  - **DEC-059 point 4:** a clone under such a credential takes no seat whose role builds.
-- **The work** is planned once this record is accepted. It builds on the report of an unresolved identity that [project-kit#3162](https://github.com/aleskalfas/project-kit/issues/3162) adds, whose cause tells an app's credential apart (point 1). It covers points 2 to 6, with their messages and the tests that hold them. It changes how the commands act under an app's credential, so it declares a `minor` change for project-management.
+  - **DEC-019, "Mandatory assignment":** under a credential that names no person, the default assignee at filing and `--me` are the person the agent works for. Without one, `create-issue` takes the assignee named in the call and refuses a filing that names none, and `assign-issue --me` refuses. No command makes such an account an assignee. **"Auto-add to board":** under every credential, a command that reads or writes the board first confirms that the service answers with the configured board, and refuses before changing anything where it does not.
+  - **DEC-021, "Identity resolution":** the service is asked first. Under a credential it answers as an app's, the identity is the app's account, by its login, compared in one spelling across surfaces. Under any other answer that names no person, the identity is unresolved. Under either, neither git's email nor `PM_INVOKER_LOGIN` stands for the acting account, in a CI workflow and in an agent's session alike, and the variable names the person the agent works for. **"Membership change authority":** under such a credential, a command that adds or removes a member refuses. **Implications, the CI invocations:** a workflow under a credential that names no person passes the closed gate only where its account is a member.
+  - **DEC-022, "Authority":** the scheduled workflow, under a credential that names no person, passes the closed gate only where its account is a member, and `PM_INVOKER_LOGIN` does not stand for it.
+  - **DEC-026:**
+    - the `start-work` row of "The seven commands", and the assignee-conflict row of "Sub-decisions index": under such a credential, `start-work` compares the Task's assignee with the person the agent works for, refuses another's Task as under a person's credential, assigns that person a Task with none, posts no claim, refuses a Task an instance owns, and refuses where the session names no person or the project has a topology;
+    - the `done-work` row of each table: in human mode, an `Approved` comment or an approving review counts only from an account the service records as no bot and the project does not register as a reviewer agent's;
+    - "Reviewer assignment": human mode passes over an app's account in the member list;
+    - the `handoff-issue` row: a Task is never handed to an app's account.
+  - **DEC-028, "Path 2: Local agent":** under a credential that names no person, the verdict is posted by the acting account, attests what that account ran, and names no person responsible for it.
+  - **DEC-035 point 1:** a clone under such a credential takes no part in instance ownership on issues of work, and the clash guard of point 6 reads the owner for it.
+  - **DEC-043 point 3:** a marker counts only from the assignee's account, and never from an account the service records as a bot.
+  - **DEC-052, the roster's override row:** under such a credential, the authoriser the commands know is the posting account, so the comment names no person as its authoriser.
+  - **DEC-058 point 4:** a comment an app's account writes on a state issue counts by the same test as any author's, as that account's own, and never as a person's.
+  - **DEC-059 points 4 and 6:** a clone under such a credential takes no seat that builds, and under an unresolved identity no seat at all. With no seat, it starts no Task.
+- **The work** is planned once this record is accepted. It builds on the report of an unresolved identity that [project-kit#3162](https://github.com/aleskalfas/project-kit/issues/3162) adds. It covers points 1 to 8, with their messages and the tests that hold them, and:
+  - first, which answer of the service tells an app's credential, measured under an installation's token (point 1);
+  - the member list's description of a login, which names one lookup's spelling (point 2);
+  - the pm skill's procedure on these refusals: the agent tells the person what the session lacks, and never sets a person's login as the acting account;
+  - pkit's page on running with nobody at the terminal, which states the limits of point 9 with their costs ([pkit:ADR-091] point 7).
+
+  It declares a `minor` change for project-management. It adds behaviour, and changes no installed file, name or schema, so it needs no migration. Three of its changes reach projects that run no agent under such a credential: a bot's approval in human mode, a closed-mode workflow that passes by the variable or by git's email, and the read before each board command. Each refuses more, or counts less, and its message names the way out. Whether any of them weighs as `major` is a person's judgment, made when the work's changeset is written.
 - **Left out, for records of their own:**
-  - **The backbone's own reads of who is acting,** such as the cross-authority gate's default actor and the account `pkit report` posts as. A follow-up issue holds them.
-  - **Who may authorise in a turn that a chat started** ([pkit:ADR-091], Implications, gap 5).
-  - **A project with a board under such a credential,** once an organisation's board is measured (point 6). A follow-up issue holds it.
+  - **The backbone's own reads of who is acting,** such as the cross-authority gate's default actor and the account `pkit report` posts as ([project-kit#3171](https://github.com/aleskalfas/project-kit/issues/3171)). They need point 1's reading too, and two readings of one credential could disagree. Whether one reading serves both, and where it lives, is that issue's first question, and an architectural one.
+  - **Who may authorise in a turn that a chat started** ([pkit:ADR-091], Implications, gap 5), which decides the acts of point 6.
+  - **Git's email and `PM_INVOKER_LOGIN` beside a person's login.** Under a credential that names a person, DEC-021 lets the email match a member the resolved login does not, and the variable take the login's place. That holds on every machine, and is no question of a credential that names no person.
+  - **An organisation's board under an app's credential,** measured on [project-kit#3172](https://github.com/aleskalfas/project-kit/issues/3172). Point 8 waits on nothing from it: it tells whether such a setup can use a board at all.
 - **This change** lands the record with a `none` changeset for project-management, since no behaviour changes until it is built. It needs no migration.
