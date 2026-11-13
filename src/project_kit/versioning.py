@@ -92,6 +92,10 @@ _SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 # version the way its release heading and tag spell it.
 _RELEASE_VERSION_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 
+# A release candidate's version as the release step writes it: a release version
+# with PEP 440's suffix `rcN` (`2.0.0rc1`; ADR-089 point 1).
+_CANDIDATE_VERSION_RE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)rc(0|[1-9]\d*)$")
+
 # PEP 440-aware: optional pre-release suffix `(a|b|rc)<N>` directly
 # appended (no separator) per PEP 440's normal form for pre-releases.
 # Captures: major, minor, patch, kind (or empty), counter (or empty).
@@ -537,6 +541,12 @@ def is_version(version: str) -> bool:
     """Whether `version` is a backbone version this module reads,
     `major.minor.patch[(a|b|rc)N]` — a release or a pre-release."""
     return _PEP440_RE.match(version) is not None
+
+
+def is_candidate_version(version: str) -> bool:
+    """Whether `version` is a release candidate's, `major.minor.patchrcN`: a release
+    version with the suffix the release step writes for a candidate (ADR-089 point 1)."""
+    return _CANDIDATE_VERSION_RE.match(version) is not None
 
 
 def is_at_or_below(version: str, ceiling: str) -> bool:

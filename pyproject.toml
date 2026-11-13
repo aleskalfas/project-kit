@@ -54,7 +54,9 @@ dev = [
 
 [tool.hatch.version]
 path = ".pkit/VERSION"
-pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
+# A release version, or PEP 440's pre-release form of one, so a release candidate's
+# tree, whose `.pkit/VERSION` records `X.Y.ZrcN`, builds (ADR-089 point 9).
+pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+(?:(?:a|b|rc)[0-9]+)?)$"
 
 [tool.hatch.build.targets.sdist]
 # EVERYTHING is excluded from the sdist's own walk and force-included by
