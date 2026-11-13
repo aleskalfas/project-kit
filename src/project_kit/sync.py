@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import click
-from packaging.version import InvalidVersion, Version
+from packaging.version import Version
 
 from project_kit import install
 
@@ -45,6 +45,7 @@ from project_kit.manifest import (
     read_backbone_manifest,
     read_kit_version,
 )
+from project_kit.migrations import public_version
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
     fell_back_from_pin,
@@ -912,10 +913,7 @@ def _newest(*versions: str | None) -> str | None:
 
 
 def _parse_version(text: str | None) -> Version | None:
-    """*text* as a version, or None when it is absent or not valid semver."""
-    if not text:
-        return None
-    try:
-        return Version(text)
-    except InvalidVersion:
-        return None
+    """*text* as the public version every comparison here reads, the pre-release
+    kept and a local segment dropped (`migrations.public_version`, ADR-089 point
+    5), or None when it is absent or not valid semver."""
+    return public_version(text)
