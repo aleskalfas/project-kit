@@ -19,9 +19,12 @@ pages:
           - visual.down
           - visual.up
       - text: >-
-          The levels are in order, the decisions on top and your code at the foot, and
-          each rests on the one under it. The order is told by place and by width, the top
-          narrowest, and by no colour, since the levels name no concept.
+          The levels are in order, the decisions on top and your code at the foot. The
+          decisions govern every level under them (COR-065). The order among the four
+          lower levels, from the working rules down to your code, is the talk's framing,
+          from the general to the specific, and no source states it. The order is told by
+          place and by width, the top narrowest, and by no colour, since the levels name
+          no concept.
         relates:
           - visual.levels
       - text: >-
@@ -34,10 +37,11 @@ pages:
       - aspect: structure
         about: visual
         text: >-
-          Five levels in a fixed order, each carrying out the decisions above it, so the
-          content is a hierarchy of rank, not a set of kinds. Around it stand three notes:
-          one that feeds the top level, and two on the two directions between the levels,
-          down and back up.
+          Five levels in a fixed order: the decisions on top govern the rest, which carry
+          them out (COR-065), and the four under them stand in the talk's order, from the
+          general to the specific. So the content is a hierarchy of rank, not a set of
+          kinds. Around it stand three notes: one that feeds the top level, and two on the
+          two directions between the levels, down and back up.
         principle:
           name: Name the content's structure before choosing its form; an ordered structure takes an ordered form
           source: Yuri Engelhardt, The Language of Graphics

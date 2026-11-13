@@ -20,7 +20,7 @@ slides:
         - {id: commands, label: Příkazy a kontroly pkitu}
         - {id: work, label: Váš kód a dokumenty}
       down: [{text: "↓ Provádění. ", style: strong}, "Každá vrstva provádí rozhodnutí nad sebou. Důvody zůstávají na jednom místě. Agent si je tam přečte dřív, než cokoli změní."]
-      up: [{text: "↑ Kontrola. ", style: strong}, "Když vrstva nesedí s rozhodnutím, nejdřív se prověří vrstva. Rozhodnutí se tak nikdy nepřizpůsobí kódu. Změnit ho můžete jen vy."]
+      up: [{text: "↑ Kontrola. ", style: strong}, "Když vrstva nesedí s rozhodnutím, nejdřív se prověří vrstva. Rozhodnutí se tak nikdy nepřizpůsobí kódu. Změnit ho může jen člověk, nikdy váš AI nástroj."]
     footer: pkit si jako vlastní rozhodnutí, COR-065, zapsal, že přijaté rozhodnutí řídí a zbytek ho provádí.
 
   - id: install
