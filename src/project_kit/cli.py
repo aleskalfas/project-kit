@@ -3334,7 +3334,7 @@ def release_check_queue(base: str | None, head_rev: str) -> None:
     holds would not land what its release step wrote onto the commit its
     plan read (ADR-092 point 6).
 
-    Judges each commit from where HEAD left the base — REF, else
+    Judges each commit from where REV left the base — REF, else
     $PKIT_CHECK_BASE, else the default branch (COR-054) — to REV, on REV's
     first-parent line, whose subject is a `chore(release):` one: the squash
     commit the queue made of a release PR. Each lands sound where its parent
