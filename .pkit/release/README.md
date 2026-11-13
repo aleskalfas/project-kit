@@ -17,7 +17,7 @@ pkit:
         - scripts/release_pr.py
         - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
-      record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040, "ADR-061#5", "ADR-061#8", "ADR-092#6", "ADR-092#8"]
+      record: [COR-010, COR-030, COR-041, "COR-054#2", PRJ-002, PRJ-004, ADR-040, "ADR-061#5", "ADR-061#8", "ADR-092#6", "ADR-092#8"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/upgrade-flow.md#the-replay-a-missing-completion
@@ -758,17 +758,17 @@ history that changed `.pkit/VERSION`, and names the tag by the version that
 commit records. So a push that carries more than the release, or a run after a
 later merge, still tags the release's own commit, and `release-tag.yml` and a
 run by hand tag the same one. `main` here is the default branch as `pkit
-repository base` resolves it: `origin/main` where `origin` holds it. It
-refuses, tagging nothing, where:
+repository base` resolves it: `origin/main` where `origin` holds it (COR-054
+point 2). It refuses, tagging nothing, where:
 
-- HEAD is off that history, as on a branch or on a commit `origin` lacks. Check
-  out `main`'s head, fetched, and run it again.
+- HEAD is off that history, as on a branch.
 - That commit records no final release version, `major.minor.patch`. A
   candidate's tag stays on the commit its cut made.
-- The tag exists locally, or, with `--push`, on `origin`.
-- The clone is shallow, and its history stops at the commit it found, so an
-  older one may have changed `.pkit/VERSION`. Fetch the whole history (`git
-  fetch --unshallow`).
+- The tag exists.
+
+It refuses in other cases too, such as in a shallow clone.
+[The CLI reference's `version tag`](../cli/README.md#version-tag---push--version-untag---push) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
+lists every case.
 
 `apply --tag` is refused before anything is written, naming `pkit version tag`
 after the merge: the release commit does not exist yet when `apply` runs. A
