@@ -3,14 +3,16 @@ schema_version: 1
 
 # The neutral brand: a brand to start from, so a project can draw before it writes one of
 # its own (DEC-004, Implications). It gives every shared role a value, in light and dark
-# and at both contrasts. It gives the three sizes of the size axis `device`, desktop, tablet
-# and phone, each but the desktop from a token file of its own, and a site's width at each
-# (DEC-021 point 2, DEC-022 point 3). It names no library but the foundations, so it draws
-# the starter at its defaults (DEC-008, Implications), and it draws no layout, so each top
-# draws its own (DEC-009, Implications). It opens no role: opening one later breaks
-# nothing, closing one does (DEC-004 point 5). Its fonts are Source Sans Pro, a family for
-# each weight, and Source Code Pro for code, committed unchanged with their licences in
-# fonts/. A released version never changes: a change is a new version (DEC-003 point 6).
+# and at both contrasts. It gives the four sizes of the size axis `device`, desktop,
+# tablet, phone and projector, each but the desktop from a token file of its own: a site's
+# width on a tablet and a phone, and on a projector the larger type a slide is read in
+# from across a room, the deck's title and lead among it (DEC-021 point 2, DEC-022
+# point 3). It names no library but the foundations, so it draws the starter at its
+# defaults (DEC-008, Implications), and it draws no layout, so each top draws its own
+# (DEC-009, Implications). It opens no role: opening one later breaks nothing, closing one
+# does (DEC-004 point 5). Its fonts are Source Sans Pro, a family for each weight, and
+# Source Code Pro for code, committed unchanged with their licences in fonts/. A released
+# version never changes: a change is a new version (DEC-003 point 6).
 name: neutral
 version: 1.1.0
 kind: brand

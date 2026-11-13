@@ -23,6 +23,11 @@ roles:
   # not to the edge's: an arrowhead is as long as five widths of its line, so an edge's
   # width would draw it too small to read.
   starter.connector: {type: dimension, default: '{stroke.thick}'}
+  # The radius a connector's turns are drawn round at: a small spacing, so a line with
+  # corners reads as one smooth path, which the eye follows more easily than one that
+  # bends sharply (Colin Ware, good continuation). A brand that wants sharp turns gives it
+  # no length.
+  starter.turn: {type: dimension, default: '{space.2}'}
   # The typography of a card's head and of a list's head.
   starter.type.head: {type: typography, default: '{type.heading}'}
   # The typography of a strong run in a card's text: the shared strong type, the body's

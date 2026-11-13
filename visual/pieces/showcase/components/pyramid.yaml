@@ -1,0 +1,90 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+# How pkit fits together, for the first page: a stepped pyramid of its layers, and the
+# notes that tell how they hang together. The starter's layers draws its levels as equal
+# cards, so it cannot narrow them to a top; this piece draws its own.
+#
+# The page's story starts where ideas start, so that note stands at the top left, where
+# the eye enters, and its arrow runs on along the line of reading into the top level. The
+# notes on what runs down the layers and what runs back up follow under it, in the order
+# the talk tells them.
+status: experimental
+about: >-
+  A stepped pyramid with its notes: on the right, the levels one under another, each a
+  step narrower than the one under it; on the left, where ideas start, with an arrow into
+  the top level, and under it what runs down the levels and what runs back up.
+
+fields:
+  type: object
+  required: [levels, start]
+  properties:
+    levels:
+      type: array
+      minItems: 2
+      description: The levels, from the top, each drawn by `step`.
+      items: {type: object}
+    start:
+      type: string
+      description: >-
+        Where what the top level holds comes from: a head in the strong type, then its
+        text. An arrow runs from it into the top level.
+      x-pkit-prose: true
+      x-pkit-runs: [plain, strong]
+    down:
+      type: string
+      description: What runs down the levels, a head in the strong type, then its text.
+      x-pkit-prose: true
+      x-pkit-runs: [plain, strong]
+    up:
+      type: string
+      description: What runs back up the levels, a head in the strong type, then its text.
+      x-pkit-prose: true
+      x-pkit-runs: [plain, strong]
+
+values:
+  # The notes take five twelfths of the width, the pyramid the rest, past a wide gap.
+  notes-width: "=:width * 5 / 12"
+  pyramid-x: "=notes-width + @space.4"
+
+parts:
+  start:
+    text:
+      content: start
+      style: {by: start, plain: type.body, strong: type.strong}
+      fill: text-primary
+    width: "=notes-width"
+  # The top level's middle lies level with the note's, so the arrow between them runs
+  # straight along the line of reading.
+  levels:
+    repeat: levels
+    draw: piece/step
+    x: "=pyramid-x"
+    y: "=start.middle - levels:first.height / 2"
+    width: "=:width - pyramid-x"
+    column: {gap: "=@space.2", align-items: stretch}
+  arrow:
+    line: {stroke: text-secondary, stroke-width: "=@stroke.thick", marker-end: arrow}
+    x1: "=notes-width + @space.3"
+    y1: "=levels:first.middle"
+    x2: "=levels:first.box.x - @space.2"
+    y2: "=levels:first.middle"
+  down:
+    when: down
+    text:
+      content: down
+      style: {by: down, plain: type.body, strong: type.strong}
+      fill: text-primary
+    y: "=start.bottom + @space.4"
+    width: "=notes-width"
+  up:
+    when: up
+    text:
+      content: up
+      style: {by: up, plain: type.body, strong: type.strong}
+      fill: text-primary
+    y: "=down.bottom + @space.3"
+    width: "=notes-width"
+
+preferred:
+  height: "=max(levels.bottom, up.bottom)"

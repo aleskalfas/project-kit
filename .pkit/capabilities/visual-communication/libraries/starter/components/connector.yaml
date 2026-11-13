@@ -4,9 +4,9 @@ schema_version: 1
 status: experimental
 about: >-
   A line from where a tie starts to where it ends, in its colour family's text, straight
-  or with corners, and an arrowhead at its end, at its start, at both or at neither. Where
-  its concept has a sign, the sign stands on the line, halfway along it. It takes the two
-  ends a pattern's list of ties gives it, and routes around nothing.
+  or with rounded corners, and an arrowhead at its end, at its start, at both or at
+  neither. Where its concept has a sign, the sign stands on the line, halfway along it. It
+  takes the two ends a pattern's list of ties gives it, and routes around nothing.
 
 options:
   # The connector tool's route between the two ends.
@@ -22,11 +22,12 @@ parts:
   # The line is a mark that nothing beside it shows, so it needs 3:1 against what it lies
   # on (WCAG 2.1, 1.4.11). It takes its family's text, the member a brand makes legible:
   # the foundations pair it with the family's fill. A family's line edges a fill, and may
-  # be faint.
+  # be faint. Its turns are drawn round, so a route with corners reads as one smooth path.
   line:
     line:
       stroke: ":colour.text"
       stroke-width: "=@starter.connector"
+      rx: "=@starter.turn"
       marker-start: {by: arrow, end: none, start: arrow, both: arrow, none: none}
       marker-end: {by: arrow, end: arrow, start: none, both: arrow, none: none}
     connect: {by: route, straight: straight, corners: corners}

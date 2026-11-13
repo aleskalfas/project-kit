@@ -664,9 +664,9 @@ def test_a_piece_in_a_brand_built_on_another_reads_its_base_at_the_version_it_lo
 
 # --- the axes a brand has (DEC-021 points 1, 2 and 9) ------------------------------------------
 
-#: The size axis the foundations declare from the version built after their release 1.0.0
-#: (DEC-021 points 1 and 9).
-DEVICE = tokens.Axis("device", "size", ("desktop", "tablet", "phone"), "desktop")
+#: The size axis the foundations being built declare (DEC-021 points 1 and 9): their release
+#: 1.1.0's, of a desktop, a tablet and a phone, with a fourth size, a projector.
+DEVICE = tokens.Axis("device", "size", ("desktop", "tablet", "phone", "projector"), "desktop")
 
 #: The brand the capability ships to start from, as its release 1.0.0 holds it, which gives
 #: no size.
@@ -698,11 +698,12 @@ def released() -> Any:
 def test_the_foundations_being_built_add_the_size_axis_device_and_their_roles_alone(
     foundations: Any, released: Any
 ) -> None:
-    """`device`, with the modes `desktop`, `tablet` and `phone`, and the default `desktop`
-    (DEC-021 point 1). `size.site`, a dimension whose default is `size.slide` (DEC-004
-    point 7), `size.line`, the length of a line, whose default is `size.figure` (DEC-022
-    point 5), and the lengths of a run's sign and ground, each of whose defaults is
-    `space.1` (DEC-036 point 3). Every other declaration is their release 1.0.0's."""
+    """`device`, with the modes `desktop`, `tablet`, `phone` and `projector`, a screen read
+    from across a room, and the default `desktop` (DEC-021 point 1). `size.site`, a
+    dimension whose default is `size.slide` (DEC-004 point 7), `size.line`, the length of
+    a line, whose default is `size.figure` (DEC-022 point 5), and the lengths of a run's
+    sign and ground, each of whose defaults is `space.1` (DEC-036 point 3). Every other
+    declaration is their release 1.0.0's."""
     assert foundations.findings == ()
     assert foundations.axes["device"] == DEVICE
     assert {name: axis for name, axis in foundations.axes.items() if name != "device"} == (
