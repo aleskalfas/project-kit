@@ -122,7 +122,17 @@ pkit:
 - **4b.** The project is at the target already. The system prints `Already at backbone v<version>; nothing to upgrade.`. It writes the version pin at that version unless `--no-pin` declines it, and the use case ends ([ADR-064 point 1](../../../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#1-the-default-pin)).
 - **4c.** The last transition is incomplete. The system says `The last transition is incomplete`, and runs the [backbone](../../../glossary.md#term-backbone--backbone)'s migrations from the recorded [completion](../../../glossary.md#term-completion--completion), so this upgrade finishes that transition ([REQ-026](../../../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)).
 - **4d.** No completion is recorded, or no [manifest](../../../glossary.md#term-manifest--manifest). The system says the project's migration history is unknown, and runs every backbone migration up to the target once ([ADR-065 point 5](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#5-a-missing-completion-runs-every-backbone-migration-once) and REQ-026).
-- **4e.** The CLI is at a release candidate nobody asked for, by `--pre`, a run with routing switched off or a version pin that names it. The system refuses and writes nothing ([ADR-089 point 7](../../../../../architecture/decisions/ADR-089-release-candidates.md#7-an-upgrade-or-an-init-refuses-a-candidate-nobody-asked-for-and-a-move-to-a-candidate-always-pins)). Its message names `pkit upgrade --pre`, the command of 1e and, where the CLI is the installed one, installing the latest release instead. The use case ends.
+- **4e.** The CLI is at a release candidate nobody asked for in any of these ways:
+  - `--pre`
+  - a run with routing switched off
+  - a version pin that names it
+
+  The system refuses and writes nothing ([ADR-089 point 7](../../../../../architecture/decisions/ADR-089-release-candidates.md#7-an-upgrade-or-an-init-refuses-a-candidate-nobody-asked-for-and-a-move-to-a-candidate-always-pins)). Its message names the ways on:
+  - `pkit upgrade --pre`
+  - the command of 1e
+  - where the CLI is the installed one, installing the latest release instead
+
+  The use case ends.
 - **4f.** The target is a release candidate, and the adopter passed `--no-pin`. The system refuses before it writes anything, since a move to a candidate always pins ([ADR-064 point 2](../../../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#2---no-pin)). The use case ends.
 - **5a.** The system finds one of these conflicts, and refuses before it writes anything, naming each ([REQ-029](../../../requirements/functional/050-adopt/REQ-029-compatibility-before-write.md)). The use case ends.
   - a component whose [range](../../../glossary.md#term-range--range) excludes the target

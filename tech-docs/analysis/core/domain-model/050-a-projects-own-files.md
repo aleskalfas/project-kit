@@ -268,10 +268,10 @@ A version pin is a project-owned file, `.pkit/version-pin`, that names a [releas
 ```mermaid
 stateDiagram-v2
   accTitle: The states of a version pin
-  accDescr: A project has no pin until pkit pin or pkit upgrade writes one, or a first install run by a release candidate does. A pin may be raised to a later release, and pkit unpin removes it.
+  accDescr: A project has no pin until pkit pin or pkit upgrade writes one, or a first install run by a release candidate does. A pin may be raised to a later release or release candidate, and pkit unpin removes it.
   [*] --> absent
   absent --> present : pkit pin, pkit upgrade or a candidate's first install writes it
-  present --> present : it is raised to a later release
+  present --> present : it is raised to a later release or release candidate
   present --> absent : pkit unpin removes it
 ```
 
