@@ -1298,13 +1298,7 @@ def apply_release(
     check_raised_ranges(plan, broaden=broaden)  # the CLI prints its warnings before confirming
 
     backbone = plan.backbone
-    for rel in plan.releases:
-        if rel.component.name == BACKBONE:
-            rel.component.version_path.write_text(f"{rel.new_version}\n", encoding="utf-8")
-            click.echo(f"Backbone: {rel.old_version} -> {rel.new_version}")
-            _sync_self_host_manifest_backbone(source_kit, rel.new_version)
-        else:
-            _write_component_version(rel)
+    _write_versions(source_kit, plan)
 
     if broaden:
         _broaden_at_release(source_kit, plan)
@@ -1320,6 +1314,48 @@ def apply_release(
             "Next: commit the release, then `pkit version tag --push` on main "
             f"to cut v{backbone.new_version} (PRJ-004)."
         )
+
+
+def apply_candidate(
+    source_kit: Path,
+    plan: ReleasePlan,
+    candidate: ReleasePlan,
+    *,
+    broaden: bool = True,
+    today: date | None = None,
+) -> None:
+    """Write a release candidate: `candidate`, the plan as the candidate writes it,
+    each version `plan` moves with the suffix `rcN` (ADR-089 point 1).
+
+    Every check reads `plan`, at release versions, so a cut is refused wherever the
+    final release would be: `check_raised_ranges` refuses an empty range before
+    anything is written. Then it writes as `apply_release` does, but for what
+    PRJ-002 D4 and D5 keep out of a candidate's tree: it raises no floor, on the
+    backbone or on a capability, and deletes no changeset. The broaden and each
+    declared upper bound are written as the final release writes them, at release
+    versions, so the candidate's own components admit it. The changelog's section is
+    headed by the candidate's version, and each component's entry is tagged with its
+    candidate version.
+    """
+    check_raised_ranges(plan, broaden=broaden)
+    _write_versions(source_kit, candidate)
+    if broaden:
+        _broaden_at_release(source_kit, plan)
+    _widen_declared_capability_bounds(source_kit, plan)
+    _write_changelog(source_kit.parent, candidate, today or date.today())
+
+
+def _write_versions(source_kit: Path, plan: ReleasePlan) -> None:
+    """Write the version each release of `plan` moves to: the backbone's to
+    `.pkit/VERSION` and the self-host manifest (PRJ-007), and each component's to its
+    package file."""
+    for rel in plan.releases:
+        if rel.component.name == BACKBONE:
+            rel.component.version_path.write_text(f"{rel.new_version}\n", encoding="utf-8")
+            click.echo(f"Backbone: {rel.old_version} -> {rel.new_version}")
+            _sync_self_host_manifest_backbone(source_kit, rel.new_version)
+        else:
+            _write_component_version(rel)
 
 
 def _broaden_at_release(source_kit: Path, plan: ReleasePlan) -> None:
@@ -1830,7 +1866,9 @@ def _delete_changesets(changesets: list[Changeset]) -> None:
 # --- Automation-facing summary + migration-dir alignment -----------------
 
 
-def release_summary(source_kit: Path, plan: ReleasePlan) -> dict[str, object]:
+def release_summary(
+    source_kit: Path, plan: ReleasePlan, *, warnings: list[str] | None = None
+) -> dict[str, object]:
     """A machine-readable summary of a computed release, for automation.
 
     Emitted as JSON by `pkit release plan --json` so the release-PR workflow
@@ -1841,6 +1879,9 @@ def release_summary(source_kit: Path, plan: ReleasePlan) -> dict[str, object]:
     on), and surface the migration-dir prediction warnings
     (`migration_warnings`). A range that excludes a dependency's version has no
     key: `compute_release` refuses such a release, so `plan --json` fails.
+    `warnings`, where given, are the migration-dir warnings in place of those
+    `plan`'s versions predict, as for a candidate, whose warnings its release
+    versions give.
     """
     backbone = plan.backbone
     return {
@@ -1864,7 +1905,9 @@ def release_summary(source_kit: Path, plan: ReleasePlan) -> dict[str, object]:
             for rel in plan.releases
         ],
         "changesets_consumed": len(plan.consumed),
-        "migration_warnings": migration_dir_mismatches(source_kit, plan),
+        "migration_warnings": (
+            migration_dir_mismatches(source_kit, plan) if warnings is None else warnings
+        ),
     }
 
 
@@ -2829,16 +2872,18 @@ _BARE_REF_RE = re.compile(r"(?:#\d+|ADR-\d+|DEC-\d+|COR-\d+|https?://\S+)", re.I
 # date-only section (a component-only release with no backbone key). The `—`
 # em-dash is what the generator writes; a plain `-` and the canonical KaC
 # `[version]` brackets are also accepted so a hand-edit in either idiom passes.
-# Group 1 is the version, a backbone release the tree records
-# (`recorded_backbone_releases`).
+# Group 1 is the version: a backbone release the tree records
+# (`recorded_backbone_releases`), or the candidate a candidate's tree records
+# (`X.Y.ZrcN`, ADR-089 point 9), which `publish-notes` reads as the lint does.
 _CHANGELOG_VERSION_HEADING_RE = re.compile(
-    r"^## \[?(\d+\.\d+\.\d+)\]?(?: [—-] \d{4}-\d{2}-\d{2})?$"
+    r"^## \[?(\d+\.\d+\.\d+(?:rc\d+)?)\]?(?: [—-] \d{4}-\d{2}-\d{2})?$"
 )
 _CHANGELOG_DATE_HEADING_RE = re.compile(r"^## \d{4}-\d{2}-\d{2}$")
 # The tag that opens a component's changelog entry, `- **<component> X.Y.Z** —`
 # (`render_changelog_entry`): group 1 the component, group 2 the version it
-# released (`recorded_capability_releases`).
-_CHANGELOG_COMPONENT_TAG_RE = re.compile(r"^- \*\*([^*\s]+) (\d+\.\d+\.\d+)\*\* ")
+# released (`recorded_capability_releases`), or its candidate version, `X.Y.ZrcN`,
+# in a candidate's tree.
+_CHANGELOG_COMPONENT_TAG_RE = re.compile(r"^- \*\*([^*\s]+) (\d+\.\d+\.\d+(?:rc\d+)?)\*\* ")
 
 
 @dataclass(frozen=True)
@@ -4642,19 +4687,20 @@ def publish_release_notes(
     notes reach `gh` on its standard input, never as an argument, whose
     length the system caps.
 
+    A candidate's notes, for a version `X.Y.ZrcN`, are read from `CHANGELOG.md` at
+    its tag, since only the tag holds the commit that records them, and its Release
+    is marked a pre-release, so GitHub never shows a candidate as its latest
+    release (ADR-089 point 9).
+
     `clearance` is the cross-repository guard's for `repo_root`, cleared at the
     entry (`session_guard.clear`), before `gh` is asked anything (ADR-061
     point 6).
     """
     session_guard.require(clearance, repo_root)
-    changelog = repo_root / CHANGELOG_NAME
-    if not changelog.is_file():
-        raise click.ClickException(
-            f"no {CHANGELOG_NAME} at {changelog} — run `pkit release apply` first."
-        )
-    text = changelog.read_text(encoding="utf-8")
-    notes = extract_changelog_section(text, version)
     tag = f"v{version}"
+    candidate = versioning.is_candidate_version(version)
+    text = _changelog_at_tag(repo_root, tag) if candidate else _changelog_here(repo_root)
+    notes = extract_changelog_section(text, version)
     form = "its whole changelog section"
     if len(notes) > RELEASE_BODY_LIMIT:
         form = (
@@ -4665,17 +4711,50 @@ def publish_release_notes(
         changelog_url = f"{repository_url}/blob/{tag}/{CHANGELOG_NAME}" if repository_url else None
         notes = short_release_notes(text, version, changelog_url=changelog_url)
 
+    kind = "notes-only GitHub pre-release" if candidate else "notes-only GitHub Release"
     if dry_run:
-        return (
-            f"[dry-run] would publish notes-only GitHub Release {tag} "
-            f"(no artifact) with {form}:\n\n{notes}"
-        )
+        return f"[dry-run] would publish {kind} {tag} (no artifact) with {form}:\n\n{notes}"
 
     if _gh_release_exists(tag, repo_root):
-        _gh_release_edit_notes(tag, notes, repo_root)
-        return f"Updated notes-only GitHub Release {tag} with {form} (no artifact)."
-    _gh_release_create_notes(tag, notes, repo_root)
-    return f"Published notes-only GitHub Release {tag} with {form} (no artifact)."
+        _gh_release_edit_notes(tag, notes, repo_root, pre_release=candidate)
+        return f"Updated {kind} {tag} with {form} (no artifact)."
+    _gh_release_create_notes(tag, notes, repo_root, pre_release=candidate)
+    return f"Published {kind} {tag} with {form} (no artifact)."
+
+
+def _changelog_here(repo_root: Path) -> str:
+    """The text of the working tree's `CHANGELOG.md`, where a final release's notes
+    are read."""
+    changelog = repo_root / CHANGELOG_NAME
+    if not changelog.is_file():
+        raise click.ClickException(
+            f"no {CHANGELOG_NAME} at {changelog} — run `pkit release apply` first."
+        )
+    return changelog.read_text(encoding="utf-8")
+
+
+def _changelog_at_tag(repo_root: Path, tag: str) -> str:
+    """The text of `CHANGELOG.md` at the commit `tag` names, where a candidate's
+    notes are read: only its tag holds that commit (ADR-089 point 1)."""
+    try:
+        result = subprocess.run(
+            ["git", "show", f"refs/tags/{tag}:{CHANGELOG_NAME}"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            cwd=repo_root,
+            check=False,
+        )
+    except OSError as exc:
+        raise click.ClickException(f"`git` could not be run ({exc}).") from exc
+    if result.returncode != 0:
+        said = result.stderr.strip() or f"exit status {result.returncode}"
+        raise click.ClickException(
+            f"{CHANGELOG_NAME} cannot be read at the tag {tag} (git says: {said}). A "
+            "candidate's notes are read at its tag, since no branch holds its commit: fetch "
+            f"the tag (`git fetch {default_branch.REMOTE} tag {tag}`), and run again."
+        )
+    return result.stdout
 
 
 def _gh_release_exists(tag: str, repo_root: Path) -> bool:
@@ -4700,7 +4779,9 @@ def _gh_release_exists(tag: str, repo_root: Path) -> bool:
     return result.returncode == 0
 
 
-def _gh_release_create_notes(tag: str, notes: str, repo_root: Path) -> None:
+def _gh_release_create_notes(
+    tag: str, notes: str, repo_root: Path, *, pre_release: bool = False
+) -> None:
     """Create a notes-only Release for `tag` — notes body, NO artifact.
 
     `--verify-tag` makes `gh` refuse when the git tag does not exist (the clear
@@ -4708,11 +4789,15 @@ def _gh_release_create_notes(tag: str, notes: str, repo_root: Path) -> None:
     `--generate-notes`: the Release is a pure notes overlay on the tag install
     path (PRJ-004), never an artifact channel. Title is the tag. The notes go
     on standard input (`--notes-file -`), so no length of theirs meets the
-    cap the system puts on one argument.
+    cap the system puts on one argument. A `pre_release`, a candidate's, is
+    marked so (`--prerelease`), which GitHub never shows as the latest release.
     """
+    command = ["gh", "release", "create", tag, "--title", tag, "--notes-file", "-", "--verify-tag"]
+    if pre_release:
+        command.append("--prerelease")
     try:
         result = subprocess.run(
-            ["gh", "release", "create", tag, "--title", tag, "--notes-file", "-", "--verify-tag"],
+            command,
             input=notes,
             capture_output=True,
             text=True,
@@ -4728,16 +4813,21 @@ def _gh_release_create_notes(tag: str, notes: str, repo_root: Path) -> None:
         raise click.ClickException(f"`gh release create {tag}` failed: {result.stderr.strip()}")
 
 
-def _gh_release_edit_notes(tag: str, notes: str, repo_root: Path) -> None:
+def _gh_release_edit_notes(
+    tag: str, notes: str, repo_root: Path, *, pre_release: bool = False
+) -> None:
     """Update an existing Release's notes for `tag` — notes only, NO artifact.
 
     Edits only the notes body (the idempotent re-run path); title and the
     no-artifact posture are unchanged. The notes go on standard input, as for
-    `_gh_release_create_notes`.
+    `_gh_release_create_notes`. A `pre_release`, a candidate's, is kept marked so.
     """
+    command = ["gh", "release", "edit", tag, "--notes-file", "-"]
+    if pre_release:
+        command.append("--prerelease")
     try:
         result = subprocess.run(
-            ["gh", "release", "edit", tag, "--notes-file", "-"],
+            command,
             input=notes,
             capture_output=True,
             text=True,
