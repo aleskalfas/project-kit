@@ -1354,6 +1354,7 @@ TERM-release-candidate:
           - PRJ-016#3
           - ADR-089#1
           - ADR-089#7
+          - ADR-089#8
           - ADR-092#2
 TERM-release-pull-request:
   name: release pull request
@@ -1848,7 +1849,7 @@ TERM-version-pin:
   name: version pin
   noun-forms: [version pins]
   status: active
-  definition: "project-owned file naming the release whose system runs the project's commands instead of the installed one, while that release can be fetched"
+  definition: "project-owned file naming the release or release candidate whose system runs the project's commands, not the installed one, while what it names can be fetched"
   pkit:
     friction:
       anchors:
@@ -1860,6 +1861,7 @@ TERM-version-pin:
           - ADR-049#3
           - ADR-064#1
           - ADR-064#3
+          - ADR-089#6
 TERM-version-transition:
   name: version transition
   noun-forms: [version transitions]
@@ -3127,7 +3129,7 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 
 - **Release:** a set of [versions](#term-version--version) shipped together. A release candidate is none, since each version it raises is a pre-release, and its versions live only in its tag ([ADR-089 point 1](../../architecture/decisions/ADR-089-release-candidates.md#1-a-candidate-is-the-final-releases-own-plan-with-the-suffix-added-where-the-step-writes)). Its final release is the release at its backbone version without the suffix, such as 3.0.0 for `3.0.0rc1`.
 - **Pre-release:** a version with a suffix after its patch number, as PEP 440 reads it. Each version a release candidate raises carries `rcN`, and sorts below the same version without the suffix. So a [version transition](#term-version-transition--version-transition) to `0.55.0rc1` runs the [migration](#term-migration--migration) folder `0.55.0/` ([ADR-089 point 5](../../architecture/decisions/ADR-089-release-candidates.md#5-a-candidate-runs-its-final-releases-migration-folders-and-has-not-finished-them)).
-- **Release tag:** a release candidate's own tag, such as `v3.0.0rc1`, is none. It names a commit no branch holds, and the lookup of the highest release skips it ([ADR-089 point 4](../../architecture/decisions/ADR-089-release-candidates.md#4-every-range-is-read-with-its-pre-releases-admitted)).
+- **Release tag:** a release candidate's own tag, such as `v3.0.0rc1`, is none. It names a commit no branch holds, and the lookup of the highest release skips it ([ADR-089 point 4](../../architecture/decisions/ADR-089-release-candidates.md#4-every-range-is-read-with-its-pre-releases-admitted)). `pkit upgrade --pre` reads it too, beside the [release tags](#term-release-tag--release-tag) ([ADR-089 point 8](../../architecture/decisions/ADR-089-release-candidates.md#8-the-way-into-a-candidate-and-the-way-on-refinement-per-adr-092)).
 
 ## TERM-release-pull-request — release pull request
 
