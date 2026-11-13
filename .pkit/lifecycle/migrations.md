@@ -10,10 +10,12 @@ pkit:
         - src/project_kit/visibility.py
         - src/project_kit/upgrade.py
         - src/project_kit/default_branch.py
-      record: [COR-010, COR-059, "COR-048#5", "COR-050#12", "COR-050#14", "COR-054#3", "ADR-065#14"]
+        - src/project_kit/stranded_migrations.py
+      record: [COR-010, COR-059, "COR-048#5", "COR-050#12", "COR-050#14", "COR-054#3", "ADR-065#14", "ADR-059#3", "ADR-092#8"]
       artefact:
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
+        - .pkit/lifecycle/manifest.md#the-methodologys-literals
 ---
 
 # Migration framework
@@ -80,7 +82,7 @@ Each number is used once in a folder. The runner runs a folder's scripts in the 
 - **The stamp.** `pkit new migration` numbers a script one past the highest in its folder, in the working tree or on the default branch.
 - **The check.** `pkit migrations check-diff` fails a script a change adds, or moves in, whose number another script in its folder holds. It reads the folder as merging the base would leave it. So a number another change took on the base since the branch left it counts too. It skips a script the project receives by sync.
   - **The finding:** it gives each script it names a number of its own to take, past the highest in the folder. Of two scripts the change itself adds with one number, it names the one whose name sorts later.
-- **Renumbering.** The stamp reads no scope. So a script that must run before one already in its folder, such as a manifest-schema script beside a resource-scoped one, is renumbered by hand. That script takes the lower number, and the other moves up. Renumber only in a folder no release has shipped.
+- **Renumbering.** The stamp reads no scope. So a script that must run before one already in its folder, such as a manifest-schema script beside a resource-scoped one, is renumbered by hand. That script takes the lower number, and the other moves up. Renumber a script already on the default branch only in a folder above its tier's fixed version ("Which version a migration targets", below).
   - **Unchecked:** no check holds this, since a rename inside a migrations folder triggers nothing.
 
 ## Which version a migration targets
@@ -100,6 +102,17 @@ A migration's folder names the version it carries a project to, never one alread
     - a script the project receives by sync
     - one the tip already holds, at its path or under another name in its folder with the same content, as a rename leaves it
 - **What neither predicts.** Neither reads pending changesets for a major: the release computes the version, by the project's version-bump policy. A folder that names a minor below the release still runs inside the transition across it, since the runner's window is a range of minors.
+- **The release's guard.** `pkit release plan` and `apply` refuse, before anything is written, to ship a stranded script. A stranded script sits in a folder at or below its tier's fixed version, and is new since the commit that fixed it. A tier's fixed version is its newest version whose scripts everyone who takes it has received. So a script added later to that folder, or below it, runs for none of them.
+  - **Where a version is fixed** follows from how the project's versions reach those who take them. The marker test tells the two kinds of project apart ([`manifest.md`, "The methodology's literals"](manifest.md#the-methodologys-literals)).
+    - In the methodology's source repository, those who take a version take it through the tag that carries it. The fixed version is the one the tier records at the newest final release tag, `v<X.Y.Z>`, read from the remote's tags. Its commit is the first final release tag that carries it. A candidate's tag, a `withdrawn/` tag and `latest` count for none.
+    - In every other project, those who use its components pin a ref on its default branch. The fixed version is the one the default branch's head records, as the check reads it. Its commit is the first of the default branch's first-parent history that records it.
+  - **What it skips:**
+    - a script the project receives by sync, or by a capability's install or upgrade
+    - one the fixed version's commit holds, at its path or renamed in its folder with the same content
+  - **The finding:** each script is told a folder past the version the default branch records for its tier, as the check tells one. So the move passes both.
+  - **No answer is a refusal:** it refuses where it cannot read the remote's tags, a tag's commit or the default branch. It refuses in a shallow clone too, whose history may stop before the commit it needs. Where no tier holds a script of the project's own, it reads none of them.
+  - **The window:** a pull request's checks read the default branch as it stood when they ran. So a change merged after a release can strand a script in a folder that release fixed, until the next release's plan refuses it. A project closes that window by requiring each change to be up to date with its base. Or it merges through a queue whose run checks the merge.
+- **On a branch:** a script may be renumbered or moved until its branch merges, whether or not a candidate shipped it. When the branch takes in the default branch, it moves each of its scripts above the version the default branch then records.
 
 ## Three scopes (per tier)
 
