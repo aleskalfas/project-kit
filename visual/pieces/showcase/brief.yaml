@@ -8,11 +8,11 @@ pages:
     relations:
       - text: >-
           The order of explanation, from the lead, which is the maintainer's: decisions
-          at the top, each layer under it carrying out the ones above, down to your code.
-          The talk's notes add where decisions come from, on the top level's band, and
-          then what runs down and what runs back up. So the page opens on the top of the
-          pyramid and where ideas start beside it, joined by one arrow as one step, runs
-          down the levels, and then tells what runs down and what runs back up.
+          at the top, each layer under it carrying out the decisions above it, down to
+          your code. The talk's notes add where decisions come from, on the top level's
+          band, and then what runs down and what runs back up. So the page opens on the
+          top of the pyramid and where ideas start beside it, joined by one arrow as one
+          step, runs down the levels, and then tells what runs down and what runs back up.
         relates:
           - visual.start
           - visual.levels
@@ -34,9 +34,9 @@ pages:
       - aspect: structure
         about: visual
         text: >-
-          Five levels in a fixed order, each carrying out the ones above it, so the content
-          is a hierarchy of rank, not a set of kinds. Around it stand three notes: one
-          that feeds the top level, and two on the two directions between the levels,
+          Five levels in a fixed order, each carrying out the decisions above it, so the
+          content is a hierarchy of rank, not a set of kinds. Around it stand three notes:
+          one that feeds the top level, and two on the two directions between the levels,
           down and back up.
         principle:
           name: Name the content's structure before choosing its form; an ordered structure takes an ordered form

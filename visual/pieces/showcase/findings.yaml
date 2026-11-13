@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 4ba571b6587d78655b8666f34f513f320520b1d2e68814f75cf3b9d3e82cc119
+  value: 6df54c82386a39e8f6f463dc936fadbc18032e0aae1ad0df4a17986ca91ddd07
   inputs:
     - file: components/capability.yaml
       sha256: 49ab721151fd9313be944c5458fc6137819d61fbbe1d0bed713a7f6e0c385b4a
@@ -23,9 +23,9 @@ key:
     - file: components/wiring.yaml
       sha256: 36623a694e67be519da4a4e36226e472059b220cace3806e036aad50673f4fb0
     - file: content.cs.yaml
-      sha256: bab893a318259b7711574b5ae5710b1f3258ac79beb56ba3f50ac9738808067e
+      sha256: 3109eaad98eb5a98a4b417cf223d06b7918c3ae349c3c97b6ae9f0013137704b
     - file: content.en.yaml
-      sha256: 30901b963afa3cd97344581c49f31f8744ac91f347be687edd9d01673563dbae
+      sha256: d82b6665d140b629a5ed2cc957e58631bdb7a1a39012778d57b7309297d8b739
     - file: piece.yaml
       sha256: 18bc7cb9651de9477c5c8e6d0572256c7507de7eb917513a63338eb5dc33fc49
     - library: foundations

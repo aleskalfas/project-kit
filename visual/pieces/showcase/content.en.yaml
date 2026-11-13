@@ -7,11 +7,11 @@ slides:
   - id: fits
     layout: slide
     title: How pkit fits together
-    lead: "In five layers, from your decisions down to your code: each carries out the ones above it."
+    lead: "In five layers, from your decisions down to your code: each carries out the decisions above it."
     visual:
       # The lead's order runs down the pyramid: decisions at the top, each layer under it
-      # carrying out the ones above, down to your code. The talk adds where the decisions
-      # come from, which opens the page at its top left, and what runs back up.
+      # carrying out the decisions above it, down to your code. The talk adds where the
+      # decisions come from, which opens the page at its top left, and what runs back up.
       use: piece/pyramid
       start: [{text: "Where ideas start. ", style: strong}, "In conversation, and in a scratchpad note when one needs longer."]
       levels:

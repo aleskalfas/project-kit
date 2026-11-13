@@ -6,11 +6,11 @@ slides:
   - id: fits
     layout: slide
     title: Jak je pkit poskládaný
-    lead: Skládá se z pěti vrstev, od vašich rozhodnutí až po váš kód. Každá vrstva provádí to, co určují vrstvy nad ní.
+    lead: Skládá se z pěti vrstev, od vašich rozhodnutí až po váš kód. Každá vrstva provádí rozhodnutí nad sebou.
     visual:
       # Pořadí perexu běží pyramidou dolů: rozhodnutí nahoře, každá vrstva pod nimi provádí
-      # ty nad sebou, až po váš kód. Přednáška přidává, odkud rozhodnutí přicházejí, čímž
-      # stránka začíná vlevo nahoře, a co běží zpátky nahoru.
+      # rozhodnutí nad sebou, až po váš kód. Přednáška přidává, odkud rozhodnutí
+      # přicházejí, čímž stránka začíná vlevo nahoře, a co běží zpátky nahoru.
       use: piece/pyramid
       start: [{text: "Kde vznikají nápady. ", style: strong}, "V rozhovoru. A když nápad potřebuje víc času, v poznámce ve scratchpadu."]
       levels:
@@ -21,7 +21,7 @@ slides:
         - {id: work, label: Váš kód a dokumenty}
       down: [{text: "↓ Provádění. ", style: strong}, "Každá vrstva provádí rozhodnutí nad sebou. Důvody zůstávají na jednom místě. Agent si je tam přečte dřív, než cokoli změní."]
       up: [{text: "↑ Kontrola. ", style: strong}, "Když vrstva nesedí s rozhodnutím, nejdřív se prověří vrstva. Rozhodnutí se tak nikdy nepřizpůsobí kódu. Změnit ho můžete jen vy."]
-    footer: pkit si jako vlastní rozhodnutí, COR-065, zapsal, že přijaté rozhodnutí platí a zbytek ho provádí.
+    footer: pkit si jako vlastní rozhodnutí, COR-065, zapsal, že přijaté rozhodnutí řídí a zbytek ho provádí.
 
   - id: install
     layout: slide
