@@ -131,7 +131,7 @@ def test_a_part_is_exactly_one_kind_of_the_engines() -> None:
 
 
 def test_the_operators_take_the_engines_settings() -> None:
-    assert set(DEFS["operator"]["properties"]) == {"gap", *engine.OPERATOR_WORDS}
+    assert set(DEFS["operator"]["properties"]) == {"gap", engine.CROSS_SIZE, *engine.OPERATOR_WORDS}
     assert {"row", "column"} == set(engine.OPERATORS)
 
 

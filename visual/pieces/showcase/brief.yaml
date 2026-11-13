@@ -9,15 +9,16 @@ pages:
       - text: >-
           The order of explanation, from the lead, which is the maintainer's: decisions
           at the top, each layer under it carrying out the decisions above it, down to
-          your code. The talk's notes add where decisions come from, on the top level's
-          band, and then what runs down and what runs back up. So the page opens on the
-          top of the pyramid and where ideas start beside it, joined by one arrow as one
-          step, runs down the levels, and then tells what runs down and what runs back up.
+          your code. The talk's notes add where decisions come from, tied into the top
+          level, and then what runs down and what runs back up. So the page opens on the
+          top of the steps and where ideas start beside it, joined by one tie as one
+          step, runs down the levels, and the notes beside them then tell what runs down
+          and what runs back up.
         relates:
-          - visual.start
+          - visual.notes[start]
           - visual.levels
-          - visual.down
-          - visual.up
+          - visual.notes[down]
+          - visual.notes[up]
       - text: >-
           The levels are in order, the decisions on top and your code at the foot. The
           decisions govern every level under them (COR-065). The second level names the
@@ -34,7 +35,7 @@ pages:
           Ideas become decisions: where ideas start leads into the top level, and into no
           other.
         relates:
-          - visual.start
+          - visual.notes[start]
           - visual.levels[decisions]
     reasons:
       - aspect: structure
@@ -51,48 +52,56 @@ pages:
       - aspect: form
         about: visual.levels
         text: >-
-          A stepped pyramid: the levels one under another, each a step narrower than the
-          one under it, so the order reads from place and width alone, and the few
-          decisions sit on the many things that carry them out. Two other forms were
-          weighed. The starter's layers stacks equal cards, so it shows an order by place
-          only, and its notes column took a third of the width. A flow of boxes and arrows
-          reads as a process in time, which the levels are not. The starter cannot narrow
-          its levels by place, so the page draws them with a component of its own, a step
-          that narrows its box inside its frame by its place among the levels. Each level
-          holds its name alone, on one line, since a name and a gloss on each did not fit
-          at a projector's type.
+          The starter's layers as steps: the levels one under another, each a step
+          narrower than the one under it and centred on it, so the order reads from place
+          and width alone, and the few decisions sit on the many things that carry them
+          out. Two other forms were weighed. Layers as a stack of one width shows an order
+          by place only. A flow of boxes and arrows reads as a process in time, which the
+          levels are not. Each level holds its name alone, on one line, since a name and
+          a gloss on each did not fit at a projector's type.
         principle:
           name: Map an order to an ordered variable, position and size, never to hue
           source: Jacques Bertin, Semiology of Graphics; Tamara Munzner, Visualization Analysis and Design
       - aspect: form
-        about: visual.start
+        about: visual.notes[start]
         text: >-
-          Where ideas start stands at the top left, on the top level's band, and a
-          straight arrow runs from it along the line of reading into the top level, level
-          with both. The pyramid weighs the most, so the eye may meet the top level first,
-          and place may take it to the note first; either way it reads the note, the arrow
-          and the top level as one step, ideas becoming decisions, before it runs down the
-          levels. The arrow points the way the eye already goes.
+          Where ideas start is the first of the notes, which layers stands to the right of
+          the steps, its top level with the top level's, and one tie runs from it into the
+          top level's drawn edge. The steps weigh the most, so the eye meets the top level
+          first, and the tie leads it to the note, so it reads the top level, the tie and
+          the note as one step, ideas becoming decisions, before it runs down the levels.
+          The tie's arrow points into the top level, against the line of reading, since it
+          says where decisions come from, not where to read next.
         principle:
-          name: Without other cues the eye starts at the top left; an arrow shows what leads to what
-          source: Cole Nussbaumer Knaflic, Storytelling with Data; Julie Heiser and Barbara Tversky, Arrows in Comprehending and Producing Mechanical Diagrams
+          name: An arrow shows what leads to what
+          source: Julie Heiser and Barbara Tversky, Arrows in Comprehending and Producing Mechanical Diagrams
       - aspect: form
-        about: visual.down
+        about: visual.notes[down]
         text: >-
-          What runs down and what runs back up are two notes under where ideas start, in
-          the order the talk tells them, each opened by an arrow that points its way, so
-          the column reads top to bottom as the explanation goes on.
+          What runs down and what runs back up are the two notes under where ideas start,
+          in the order the talk tells them, each opened by an arrow that points its way,
+          so the notes read top to bottom as the explanation goes on.
         principle:
           name: Cues that show the organisation of the material, such as pointer words and arrows
           source: Richard Mayer, Multimedia Learning, the signalling principle
+      - aspect: form
+        about: visual.notes
+        text: >-
+          Each note holds its head and one short clause, two lines at a third of the
+          width, so the three share the steps' height at a projector's type. The talk's
+          longer notes, on where the reasons stay and on who may change a decision, are
+          said aloud, and the footer keeps the record that decides it.
+        principle:
+          name: Words that cue what is essential, and nothing extraneous
+          source: Richard Mayer, Multimedia Learning, the coherence principle
       - aspect: hierarchy
         about: visual
         text: >-
-          Under the title and the lead, the pyramid is noticed first, the page's only solid
-          shapes and its largest. Where ideas start, on the top level's band and joined to
-          it by the arrow, is read with the top level as one step, and the eye then runs
-          down the levels. Outside the pyramid, the heads of the notes on direction come
-          next, in the strong type, and their text last. The arrow is a thin line in the secondary text, so it leads
+          Under the title and the lead, the steps are noticed first, the page's only
+          tinted shapes and its largest. Where ideas start, level with the top level and
+          tied to it, is read with the top level as one step, and the eye then runs down
+          the levels. Beside the steps, the heads of the notes on direction come next, in
+          the strong type, and their text last. The tie is a thin line, so it leads
           without competing.
         principle:
           name: Emphasise by de-emphasising what competes
@@ -100,32 +109,33 @@ pages:
       - aspect: type
         about: visual
         text: >-
-          The brand's projector type: a level's name in the strong type, centred in its
-          step, and the notes in the body's size, each head in the strong type within its
-          line, so a note reads as one paragraph.
+          The brand's projector type: a level's name in the card's head, at the start of
+          its step, and the notes in the body's size, each head in the strong type within
+          its line, so a note reads as one sentence.
         principle:
           name: Texts of one kind share face, size and weight, and texts of different kinds differ clearly
           source: Robert Bringhurst, The Elements of Typographic Style
       - aspect: colour
         about: visual.levels
         text: >-
-          The levels take the neutral family turned over, its text as their ground and its
-          fill as their words, the pair the brand keeps legible, as the connect page's
-          blocks take their family. They name no concept, so they take no hue, and no hue
-          of the deck's concepts is spent on them. Shading each level by its place waits on
-          the ordered steps of a colour family (DEC-032), which the engine does not draw
-          yet; until then width and place carry the order alone.
+          The levels take the neutral family's tint, its fill as their ground and its
+          text as their words, the pair the brand keeps legible, and the notes lie on the
+          surface. The levels name no concept, so they take no hue, and no hue of the
+          deck's concepts is spent on them. Shading each level by its place waits on the
+          ordered steps of a colour family (DEC-032), which the engine does not draw yet;
+          until then width and place carry the order alone.
         principle:
           name: Colour that means nothing is noise; the same meaning looks the same everywhere
           source: Edward Tufte, Envisioning Information; Jakob Nielsen, 10 Usability Heuristics, consistency and standards
       - aspect: space
         about: visual
         text: >-
-          The notes take five twelfths of the width and the pyramid the rest, past the
-          brand's largest step, so the two columns read apart. The levels stand the second
-          step apart, close enough to read as one figure. Where ideas start stands the
-          largest step above the two notes on direction, and those two stand the third step
-          apart, so they read as a pair.
+          The notes take a third of the width and the steps the rest, as layers lays
+          them. The levels stand the starter's gap apart, close enough to read as one
+          figure, and the notes share the steps' height the same gap apart, so they read
+          as one column. Beside the narrower levels the steps leave a wider space before
+          the notes, so the two columns read apart, though the widest level stands only
+          the gap from them.
         principle:
           name: Space inside a group smaller than between groups
           source: Robin Williams, The Non-Designer's Design Book

@@ -8,22 +8,18 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 8a1ada45ac060295410c50e9cd6e54192663f672fdedecb2e93391f9c06a8d45
+  value: 01ed2e56e6eb3a8a8a3d617425400654374b222ef7cbce20f8e4475343575849
   inputs:
     - file: components/capability.yaml
       sha256: 49ab721151fd9313be944c5458fc6137819d61fbbe1d0bed713a7f6e0c385b4a
-    - file: components/pyramid.yaml
-      sha256: 00024af81b28a51c2444d01eedca562c9e68741a594031e8e713e46cedeecbef
     - file: components/slot.yaml
       sha256: 58af48501e010b442380fae830e76dcaef4c748fed26239931d77d8683b9d62a
-    - file: components/step.yaml
-      sha256: 4397c53efdbf3e1423452eb64ab71e08745cd74f6491161a832cbea31a0769b6
     - file: components/wiring.yaml
       sha256: 36623a694e67be519da4a4e36226e472059b220cace3806e036aad50673f4fb0
     - file: content.cs.yaml
-      sha256: 448134cc2ab756d2699e5f14656b587522ea163b0a667c840ed0ff0a4c340b04
+      sha256: bf1eed9d73de58a77244f5002d90b9a9fe5b0cca8685a8e54e7508a5533d03ed
     - file: content.en.yaml
-      sha256: aefbe948a79038b73cac1a94260eca5ce020c521fb2f9f7947d0c4f7baa52daa
+      sha256: 0a0d9bc14c548bd9fdcb5b519a199dfe5864de561f49e433e65b7eee00c7e5cb
     - file: piece.yaml
       sha256: 18bc7cb9651de9477c5c8e6d0572256c7507de7eb917513a63338eb5dc33fc49
     - library: foundations
@@ -113,7 +109,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: d6b772aff4c51b663bcd9f3f427be2c21888a3a435729b6e39b9d63ad39dd1b6
+      sha256: fc0a0549e55d4d3aceeefc97de05b98cc117089250b33f59d69d92f1645ca26b
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -161,7 +157,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/layers.yaml
-      sha256: 0473b6d1ae11ee5d5f7f6bbe39d717f72e6514b2f51cbf9ea8192c6a340be730
+      sha256: c624dab9df2bb9dadc488241899b595f20bf7f2ce16ef88a0ff4da39479cd609
     - library: starter
       version: 1.1.0
       path: components/legend.yaml
@@ -244,19 +240,19 @@ findings:
     where: deck/slides[connect]/visual/slots[doc-check]
   - code: component-experimental
     level: fact
-    message: 'the piece uses `starter/connector`, which is experimental: its library may still change it in any release'
-    file: piece.yaml
-    where: deck/slides[connect]/visual/ties[living-docs-doc-check]
-  - code: component-experimental
-    level: fact
-    message: 'the piece uses `piece/pyramid`, which is experimental: its library may still change it in any release'
+    message: 'the piece uses `starter/layers`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[fits]/visual
   - code: component-experimental
     level: fact
-    message: 'the piece uses `piece/step`, which is experimental: its library may still change it in any release'
+    message: 'the piece uses `starter/card`, which is experimental: its library may still change it in any release'
     file: piece.yaml
-    where: deck/slides[fits]/visual/levels[decisions]
+    where: deck/slides[fits]/visual/notes[start]
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `starter/connector`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck/slides[fits]/visual/ties[start-decisions]
   - code: component-experimental
     level: fact
     message: 'the piece uses `starter/panels`, which is experimental: its library may still change it in any release'

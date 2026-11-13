@@ -1,0 +1,19 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A row or a column takes `cross-size`, a formula that gives each item its size
+  across the line by its place, read as `:place`, from 1, with how many items its
+  list draws as `:places`, names no other formula reads (DEC-038). It may switch,
+  and a branch may give none. A sized item is placed as one of set size, an
+  alignment left unnamed at the start; the part asks across for the greatest size
+  the formula gives; and what the list gives an item past what it asks for passes
+  on to the last part the item draws. Every reader of frames, a tie's end included,
+  meets the sized frame. The check refuses `cross-size` over pages
+  (`component-shape`), `:place` or `:places` elsewhere (`formula-reach`), a
+  `cross-size` that reads its part's size where the part gives none (`loop`), and
+  `stretch` beside it (`two-owners`), each judged for the options and sizes that
+  hold together, and reports a sized item given zero or less as one that gets less
+  than it asks for (`gets-less`). A file that gives no `cross-size` reads and draws
+  as before.
