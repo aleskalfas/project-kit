@@ -916,8 +916,10 @@ def _residual_pre_check(capability_root: Path) -> GateResult:
         )
         return GateResult(passed=False, checks=checks)
 
-    # 1. gh auth, 2. repo accessible — always residual hard-fails.
-    auth = pre_check._check_gh_auth()
+    # 1. gh auth, 2. repo accessible — always residual hard-fails. Auth is
+    #    judged on the host the project's `gh` calls reach, so the config goes
+    #    with it, as pre-check passes it.
+    auth = pre_check._check_gh_auth(load_adopter_config(capability_root))
     checks.append((auth.label, auth.status, auth.detail))
     repo = pre_check._check_repo_accessible()
     checks.append((repo.label, repo.status, repo.detail))
