@@ -511,8 +511,9 @@ def _is_older_release(version: str, than: str) -> bool:
     """True iff release *version* is strictly older than release *than*.
 
     Stdlib-only, for the pre-click hot path: both must be bare
-    `MAJOR.MINOR.PATCH` releases (the only pin `pkit pin` writes, ADR-049);
-    anything else is not ordered, so the caller claims no order it cannot show.
+    `MAJOR.MINOR.PATCH` releases (ADR-049). Anything else is not ordered, a
+    release candidate's pin among them (ADR-089 point 6), so the caller claims
+    no order it cannot show.
     """
     parsed, parsed_than = _release_tuple(version), _release_tuple(than)
     if parsed is None or parsed_than is None:

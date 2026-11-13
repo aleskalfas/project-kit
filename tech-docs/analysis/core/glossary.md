@@ -1348,6 +1348,8 @@ TERM-release-candidate:
   pkit:
     friction:
       anchors:
+        path:
+          - src/project_kit/candidates.py
         record:
           - PRJ-016#3
           - ADR-089#1
@@ -3114,7 +3116,7 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 - **Release pull request:** the [pull request](#term-pull-request--pull-request) that carries one release step's writes, on a `release/` branch under a `chore(release):` title. It closes no issue, so `pkit release merge` lands it.
 - **Release tag:** the annotated tag `v<version>` on the commit that lands a release's versions. Each release gets one, and a release step that moves only components gets none (PRJ-004).
 - **Release candidate:** a set of versions cut to test changes before they ship, in which each one it raises is a pre-release. It is no release, and its final release is the release at its backbone version without the suffix.
-- **Pre-release:** a version with a suffix after its patch number, such as `1.150.0rc1`. It is no release, and `pkit pin` refuses one.
+- **Pre-release:** a version with a suffix after its patch number, such as `1.150.0rc1`. It is no release, and `pkit pin` refuses one, save a [release candidate](#term-release-candidate--release-candidate)'s version in PEP 440's normal form ([ADR-089 point 6](../../architecture/decisions/ADR-089-release-candidates.md#6-a-pin-may-name-a-candidate-and-a-pin-that-names-one-asks-for-candidates)).
 - **GitHub release:** the page the hosting service shows for a tag. Its notes are the version's changelog section, and it carries no file (PRJ-004).
 
 ## TERM-release-candidate — release candidate
@@ -3600,6 +3602,7 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 - **An external source's pin:** the ref an externally-sourced [component](#term-component--component) is pulled at, which is that component's [recorded version](#term-recorded-version--recorded-version) ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
 - **The installed CLI:** the command on the machine. A pinned project runs the installed CLI only where its pin cannot be fetched, and is warned ([ADR-064](../../architecture/decisions/ADR-064-upgrade-pins-by-default.md)).
 - **The source repository:** never pinned ([ADR-064 point 3](../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#3-what-the-default-does-not-reach)).
+- **A release candidate:** a version pin may name one, in PEP 440's normal form, such as `3.0.0rc1`. The project's commands then run at that [release candidate](#term-release-candidate--release-candidate) ([ADR-089 point 6](../../architecture/decisions/ADR-089-release-candidates.md#6-a-pin-may-name-a-candidate-and-a-pin-that-names-one-asks-for-candidates)).
 - **To pin:** a project pins a release when its version pin names that release, as in "the [version](#term-version--version) it pins". Elsewhere the verb keeps its everyday sense, as in a merge pinned to one commit.
 
 ## TERM-version-transition — version transition
