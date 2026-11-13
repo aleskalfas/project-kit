@@ -10,9 +10,9 @@ the same way, the floor of each `requires_capabilities` entry a changeset
 declares for another capability, widens the entry's upper bound where a
 changeset declares the dependent runs on the version the release writes, refuses
 a release that would leave a range excluding a dependency's version, generates
-the changelog, which states each raised floor and widened bound, deletes the consumed
-changesets, and (for a backbone bump) cuts the tag via the existing
-`tag_version` (PRJ-004). The files it writes are one list, `release_writes`,
+the changelog, which states each raised floor and widened bound, and deletes the
+consumed changesets. It cuts no tag: a final release is tagged once it lands, by
+`pkit version tag` (PRJ-004; ADR-092 point 6). The files it writes are one list, `release_writes`,
 which the changeset guard recognises a release diff by, beside the answer files
 a release PR adds for the answers its writes need.
 
@@ -1211,13 +1211,27 @@ def _capability_bound_widenings(
     return tuple(bounds)
 
 
+#: Why `apply` refuses to tag the release it writes (ADR-092 point 6).
+_FINAL_RELEASE_TAG = (
+    "refusing `--tag`: a final release is tagged only once its release PR merges, by "
+    "`pkit version tag --push` on the default branch, which tags the commit the release "
+    "landed (ADR-092 point 6). Nothing was written."
+)
+
+
+def refuse_final_release_tag(tag: bool) -> None:
+    """Refuse, before anything is written, a `tag` asked of the release `apply` writes:
+    the release commit does not exist yet, and a final release is tagged only on the
+    commit it lands, by `pkit version tag` (ADR-092 point 6)."""
+    if tag:
+        raise click.ClickException(_FINAL_RELEASE_TAG)
+
+
 def apply_release(
     source_kit: Path,
     plan: ReleasePlan,
     *,
     tag: bool = False,
-    push: bool = False,
-    clearance: session_guard.Clearance | None = None,
     broaden: bool = True,
     today: date | None = None,
 ) -> None:
@@ -1267,19 +1281,14 @@ def apply_release(
     would leave the entry's range admitting no version, and a range that would
     exclude the version the release leaves for a capability it names.
 
-    Tagging is **off by default** and deliberately a separate step, matching
-    the codebase's anchoring principle (bump writes; `pkit version tag` tags —
-    per COR-004). PRJ-004 tags the *committed* `.pkit/VERSION`, so the tag must
-    point at the release commit — which does not exist yet when `apply` runs.
-    The intended sequence is: `apply` → commit the release → merge to `main` →
-    `pkit version tag --push` on `main`. Pass `tag=True` only when HEAD is
-    already the release commit (e.g. re-running on `main` post-merge). A tag
-    pushed with `push=True` changes the hosting service, so it needs
-    `clearance`, the cross-repository guard's for the repository, cleared at
-    the entry (ADR-061 point 6): it is required before anything is written.
+    Tagging is a separate step, matching the codebase's anchoring principle
+    (bump writes; `pkit version tag` tags — per COR-004). A final release is
+    tagged only on the commit it lands, which does not exist yet when `apply`
+    runs, so `tag=True` refuses before anything is written
+    (`refuse_final_release_tag`; ADR-092 point 6). The sequence is: `apply` →
+    commit the release → merge to `main` → `pkit version tag --push` on `main`.
     """
-    if tag and push:
-        session_guard.require(clearance, source_kit.parent)
+    refuse_final_release_tag(tag)
     if plan.is_empty:
         click.echo("No pending changesets move a version — nothing to release.")
         # Still consume any `none`-only changesets so the tree is clean.
@@ -1306,9 +1315,7 @@ def apply_release(
     _write_changelog(source_kit.parent, plan, today or date.today())
     _delete_changesets(plan.consumed)
 
-    if tag and backbone is not None:
-        versioning.tag_version(source_kit, push=push, clearance=clearance)
-    elif backbone is not None:
+    if backbone is not None:
         click.echo(
             "Next: commit the release, then `pkit version tag --push` on main "
             f"to cut v{backbone.new_version} (PRJ-004)."

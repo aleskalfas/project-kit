@@ -65,3 +65,29 @@ slides:
         - id: checked
           head: Checked
           text: A level that disagrees is checked first.
+
+  - id: steps
+    layout: slide
+    title: Steps that narrow to the top, tied from a note at their edge
+    visual:
+      use: starter/layers
+      shape: steps
+      level: {use: starter/card, fill: tint, concept: test-notation/service}
+      note: {use: starter/card, bar: left}
+      levels:
+        - id: decisions
+          head: Decisions
+        - id: rules
+          head: Working rules
+        - id: commands
+          head: Commands and checks
+        - id: work
+          head: Your code and documents
+      notes:
+        - id: start
+          head: Where ideas start
+          text: In conversation, and in a note when one needs longer.
+      ties:
+        - id: start-decisions
+          from: {item: "notes[start]"}
+          to: {item: "levels[decisions]"}

@@ -3,10 +3,10 @@ schema_version: 1
 
 # The layers' reference renders (DEC-007 point 3): levels alone, tinted by the concepts
 # they name, and with notes beside them, as the talk's slide of how the parts fit
-# together draws them, in English and in German, whose compound words and diacritics
-# stress its text. It has no option and no field of runs; its ties are the connector's
-# renders. Pinned with the test brand, the starter and the test notation, so only a
-# person moves what they draw.
+# together draws them, each a `stack`; and as `steps`, with a tie from a note into the top
+# level, in English and in German, whose compound words and diacritics stress its text. It
+# has no field of runs; its ties are the connector's renders. Pinned with the test brand,
+# the starter and the test notation, so only a person moves what they draw.
 top: foundations/deck
 brand: test-brand
 notations: [test-notation]

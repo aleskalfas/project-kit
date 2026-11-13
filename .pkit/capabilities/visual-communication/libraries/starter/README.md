@@ -41,9 +41,13 @@ pkit:
         - visual-communication:DEC-036#3
         - visual-communication:DEC-036#6
         - visual-communication:DEC-036#8
+        - visual-communication:DEC-038#1
+        - visual-communication:DEC-038#3
+        - visual-communication:DEC-038#6
       artefact:
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#content-files
+        - .pkit/capabilities/visual-communication/components.md#breaking-lines
 ---
 
 # The starter
@@ -64,7 +68,7 @@ Each pattern answers one question a visual answers. Choose a pattern by its ques
 
 | Pattern | Its question | Take another pattern when |
 |---|---|---|
-| `layers` | What rests on what? | the items are of equal standing, in no order: `list` |
+| `layers` | What rests on what? As steps, also: what few rest on what many? | the items are of equal standing, in no order: `list` |
 | `list` | What are the items? | each item rests on the next: `layers`; the items belong to groups: `groups`; the items say what a piece's colours stand for: `legend` |
 | `groups` | Which items belong together? | the items belong to no group: `list`; what matters is what ties them: `network` |
 | `network` | What is connected to what? | the items are only grouped: `groups` |
@@ -73,14 +77,14 @@ Each pattern answers one question a visual answers. Choose a pattern by its ques
 
 ### `layers`: what rests on what?
 
-- **Form:** levels stacked one on another, the top first, each as wide as the stack. Notes may stand to the right of the stack, sharing its height, for what holds across the levels. Ties join a note or a level to another.
+- **Form:** levels stacked one on another, the top first, as a stack of one width or as steps that narrow to the top. Notes may stand to the right of the stack, sharing its height, for what holds across the levels. Ties join a note or a level to another, and end at a level's drawn edge.
 - **Source:** Nancy Duarte's structure (*slide:ology*, chapter 3). Lohse, Biolsi, Walker and Rueter's structure diagrams, and Yuri Engelhardt's lining up in an order, check it.
-- **Options:** none.
+- **Options:** `shape`, its words `stack` and `steps`. With `stack`, the default, each level is as wide as the stack. With `steps`, each level is one step narrower than the one under it, centred on it: the last level is as wide as the stack, and a step is the stack's width over twice the number of levels, so the top stays wider than half the stack. Each level's frame is its step, so a tie into it ends at its edge (visual-communication DEC-038 points 1, 3 and 6). A card takes the width of its step and breaks its text to it (the capability's `components.md`, under *Breaking lines*), so a narrow level that holds more text stands taller than a wide one.
 - **Lists:**
   - `levels`, each drawn by the `card`, unless the component field `level` names another;
   - `notes`, each drawn by the `card`, unless the component field `note` names another;
   - `ties`, a list of ties with the end fields `from` and `to`, each drawn by the `connector`, unless the component field `tie` names another.
-- **Its boundaries:** a level rests on the one below it, where a list's items have no order. Layers say nothing of time, where steps follow one another.
+- **Its boundaries:** a level rests on the one below it, where a list's items have no order. Layers say nothing of time, where steps follow one another. As steps, each level also stands narrower than the one it rests on, the few on the many; where the levels are of one breadth, a stack says so.
 
 ### `list`: what are the items?
 
@@ -359,11 +363,10 @@ At the defaults a connector's line is as wide as a line drawn on its own, not as
 
 ## What the starter leaves out, for now
 
-- **A stepped pyramid,** whose levels narrow towards the top.
 - **Notes to the left of the stack.** `layers` places them to the right only.
-- **A colour for each place,** such as a tint that deepens down the levels (project-kit#2576).
+- **A colour for each place,** such as a tint that deepens down the levels (project-kit#3129).
 - **A legend in a column,** or one the engine fills from the concepts a page names. A legend's entries stand in one row, and content lists each (visual-communication DEC-036 point 6).
-- **The other patterns and blocks** of the first wave (project-kit#2576).
+- **The other patterns and blocks** of the starter's second wave (project-kit#3129).
 - **Other arrangement fields.** A panel's `span` and a cell's are the only ones, so no other item chooses its own size or place in its list.
 - **A menu that folds the links away.** On a phone a header lists its links under its title, where a design system shows a menu button.
 - **A table that scrolls across,** or stacks its cells on a phone. A table keeps its columns at every size.
