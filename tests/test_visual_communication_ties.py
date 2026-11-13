@@ -7,7 +7,7 @@ in-memory `Env` (`tests/visual_engine.py`):
 
 - ties between items of the pattern's own lists, straight and with corners, with an
   arrowhead at either end; the scene's line, its points, the elements it meets and the
-  sources of its ends;
+  sources of its ends; the radius of its turns, held as the part gives it;
 - a tie into a list that a nested component draws, two levels deep, through a component
   that renames the list: the key path keeps the content file's keys;
 - the engine's walk of a key path and the check of the content's, alike on the same paths;
@@ -20,7 +20,8 @@ in-memory `Env` (`tests/visual_engine.py`):
   computed is left out, and its page drawn;
 - a top whose layout holds a list of ties beside a list whose component field and
   weights it declares;
-- what a component that takes ends, a connector and a list of ties may not declare;
+- what a component that takes ends, a connector and a list of ties may not declare, and a
+  radius of turns on a line of its own ends;
 - the SVG renderer's polyline and arrowheads, and the same file from the same scene;
 - every file format 1 accepted draws as before: a line with no arrowhead draws the same
   bytes.
@@ -197,6 +198,39 @@ def test_a_tie_with_corners_leaves_and_meets_each_end_square_to_its_side() -> No
     element = result.scene.find("top/links[cz]/l")
     assert element is not None
     assert element.sources["marker-end"] == "default:lab/arrow"
+
+
+@pytest.mark.parametrize(
+    ("radius", "held", "source"),
+    [
+        ("=@space.1", 4, "role:space.1"),
+        ("=@space.3", 16, "role:space.3"),
+        ("=@space.4 * 2", 64, "default:lab/arrow"),
+    ],
+)
+def test_a_connector_holds_the_radius_its_part_gives_its_turns_from_a_role(
+    radius: str, held: float, source: str
+) -> None:
+    """Whatever the radius, the scene holds it as the part gives it, and where it reads one
+    role alone, from that role: fitting a turn to its legs is a renderer's
+    (`test_visual_communication_canvas`)."""
+    found = components(arrow=arrow("corners", rx=radius, **{"marker-end": "arrow"}))
+    content = {"steps": STEPS, "links": [link("ab", "steps[a]", "steps[b]")]}
+
+    result = draw(content, components=found)
+
+    assert result.findings == []
+    element = result.scene.find("top/links[ab]/l")
+    assert element is not None
+    assert (element.properties["rx"], element.sources["rx"]) == (held, source)
+
+
+def test_a_connector_that_gives_no_radius_holds_none() -> None:
+    content = {"steps": STEPS, "links": [link("ab", "steps[a]", "steps[b]")]}
+
+    result = draw(content, components=components(arrow=arrow("corners")))
+
+    assert "rx" not in line(result, "top/links[ab]/l")
 
 
 def test_ties_that_meet_one_side_of_an_item_spread_evenly_along_it() -> None:
@@ -650,6 +684,12 @@ def test_what_a_component_that_takes_ends_may_not_declare() -> None:
     assert issues(pinned) == [(SHAPE, "parts.l.x1")]
     worded = arrow("bent")
     assert issues(worded) == [(SHAPE, "parts.l.connect")]
+    # A radius of its turns is a length, and only a connector turns.
+    assert issues(arrow("corners", rx="=@space.2")) == []
+    assert issues(arrow("corners", rx="=2")) == [("formula-dimension", "parts.l.line.rx")]
+    standing = {"line": {"stroke": "line", "rx": "=@space.2"}}
+    standing |= dict.fromkeys(("x1", "y1", "x2", "y2"), "=@space.1")
+    assert issues(block({"l": standing})) == [(SHAPE, "parts.l.line.rx")]
     # Below an end is nothing to read.
     below = arrow()
     below["parts"]["dot"] = {

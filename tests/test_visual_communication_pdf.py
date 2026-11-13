@@ -1,7 +1,7 @@
 """The PDF renderer (visual-communication DEC-005 points 4, 5, 9 and 10, DEC-006 point 7,
 DEC-025 points 5 to 7): what it declares, what it draws, and what it reports it lost.
 
-The reference outputs below are pinned to the renderer's version, 1.5.0. A change that
+The reference outputs below are pinned to the renderer's version, 1.6.0. A change that
 gives another output for the same scene and values raises the version, and changes them
 with it (DEC-005 point 9). Version 1.1.0 came to draw every image, from the picture it is
 handed, whatever its source: a scene of no picture draws as 1.0.0 drew it, but for the
@@ -13,6 +13,9 @@ drew it, but for the renderer's version the file names. Version 1.4.0 came to dr
 a concept's sign, at seam 7 (DEC-036 point 1): a scene of no path draws as 1.3.0 drew it, but
 for the renderer's version the file names. Version 1.5.0 came to draw a run's sign and
 ground, at seam 8 (DEC-036 point 3): a scene of neither draws as 1.4.0 drew it, but for the
+renderer's version the file names. Version 1.6.0 came to stop a line at its arrowhead's base,
+and to draw a connector's turns round at the radius it holds, `rx`, each a cubic Bézier curve
+of its arc: a line with no arrowhead and no radius draws as 1.5.0 drew it, but for the
 renderer's version the file names. A page's content is pinned whole.
 An embedded font is pinned by the glyphs its subset holds and the characters its map gives
 them, not by its bytes, which are fontTools'. A picture is pinned by its image's dictionary
@@ -47,6 +50,7 @@ from tests.test_visual_communication_svg import (
     ENCODINGS,
     FONT,
     HOSTILE,
+    ROUNDED,
     SAID,
     SEMIBOLD,
     SHAPES,
@@ -229,20 +233,38 @@ def test_shapes_are_drawn_as_pinned_for_version_1_2_0() -> None:
     assert resources == "<< /Font <<  >> /ExtGState << /A0 << /Type /ExtGState /CA 0.25 >> >> >>"
 
 
-def test_a_connector_and_its_arrowheads_are_drawn_as_pinned_for_version_1_2_0() -> None:
+def test_a_connector_and_its_arrowheads_are_drawn_as_pinned_for_version_1_6_0() -> None:
     drawn = draw(TIES)
     assert drawn.losses == []
     file, page = page_of(drawn)
     # The connector through its points, its arrowhead a triangle ten px long (five strokes)
-    # and ten across, its tip at the end; the rule with one at each end, translucent.
+    # and ten across, its tip at the end and its base where the line stops; the rule with
+    # one at each end, translucent, five px long, since it gives no stroke's width.
     assert file.content(page) == (
-        OPENING + "q 0 0 0 RG 2 w\n10 20 m 60 20 l 60 60 l 110 60 l S\n"
+        OPENING + "q 0 0 0 RG 2 w\n10 20 m 60 20 l 60 60 l 100 60 l S\n"
         "0 0 0 rg\n100 65 m 110 60 l 100 55 l h f\nQ\n"
-        "q /A0 gs 0 0 0 RG 1 w\n0 90 m 200 90 l S\n"
+        "q /A0 gs 0 0 0 RG 1 w\n5 90 m 195 90 l S\n"
         "/A1 gs 0 0 0 rg\n5 87.5 m 0 90 l 5 92.5 l h f\n195 92.5 m 200 90 l 195 87.5 l h f\nQ\n"
     )
     resources = file.value(file.ref(page, "Resources"))
     assert "/A0 << /Type /ExtGState /CA 0.25 >> /A1 << /Type /ExtGState /ca 0.25 >>" in resources
+
+
+def test_a_connectors_turns_are_drawn_round_as_pinned_for_version_1_6_0() -> None:
+    drawn = draw(ROUNDED)
+    assert drawn.losses == []
+    file, page = page_of(drawn)
+    # Each turn is the cubic Bézier curve of its arc, along the course the SVG renderer
+    # draws: the first connector's at 8 px, the second's at half its shorter leg, counted
+    # to its heads' bases.
+    assert file.content(page) == (
+        OPENING + "q 0 0 0 RG 2 w\n10 20 m 52 20 l 56.42 20 60 23.58 60 28 c 60 52 l "
+        "60 56.42 63.58 60 68 60 c 100 60 l S\n"
+        "0 0 0 rg\n100 65 m 110 60 l 100 55 l h f\nQ\n"
+        "q 0 0 0 RG 1 w\n125 10 m 137.5 10 l 144.4 10 150 15.6 150 22.5 c 150 32.5 l "
+        "150 42.16 157.84 50 167.5 50 c 185 50 l S\n"
+        "0 0 0 rg\n125 7.5 m 120 10 l 125 12.5 l h f\n185 52.5 m 190 50 l 185 47.5 l h f\nQ\n"
+    )
 
 
 def test_a_line_with_no_stroke_draws_nothing() -> None:
@@ -1004,7 +1026,7 @@ def test_the_file_names_its_language_and_its_renderer() -> None:
     root = int(re.findall(r"/Root (\d+) 0 R", file.trailer)[0])
     assert file.value(root) == "<< /Type /Catalog /Pages 2 0 R /Lang (en) >>"
     info = int(re.findall(r"/Info (\d+) 0 R", file.trailer)[0])
-    assert file.value(info) == "<< /Producer (pkit visual-communication pdf 1.5.0) >>"
+    assert file.value(info) == "<< /Producer (pkit visual-communication pdf 1.6.0) >>"
 
 
 # --- the same bytes -----------------------------------------------------------------------------
@@ -1211,7 +1233,7 @@ def test_it_declares_each_property_of_an_image_of_every_source_as_the_svg_render
 def test_it_is_shipped_through_the_seam_as_plain_data_at_the_seams_version() -> None:
     declared = seam.declaration("pdf", seam.RENDERER)
     assert declared == pdf_declaration.DECLARATION
-    assert (pdf.NAME, pdf.VERSION, declared["seam"]) == ("pdf", "1.5.0", seam.SEAM_VERSION)
+    assert (pdf.NAME, pdf.VERSION, declared["seam"]) == ("pdf", "1.6.0", seam.SEAM_VERSION)
     assert (declared["programs"], declared["services"], declared["profile"]) == ([], [], "default")
     assert declared["unit"] == {"scene": "px", "page": "pt", "scale": 0.75}
     assert declared["physical-size"] == {"page": True, "maps": True}

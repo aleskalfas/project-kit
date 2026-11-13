@@ -93,7 +93,7 @@ HOLDS_MODES = {
 DECLARATION = {
     "name": "html",
     "kind": "renderer",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "seam": 8,
     "module": "html",
     "about": (
@@ -147,6 +147,7 @@ DECLARATION = {
                 "y2",
                 "stroke",
                 "stroke-width",
+                "rx",
                 "marker-start",
                 "marker-end",
                 "points",
