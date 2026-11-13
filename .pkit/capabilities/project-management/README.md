@@ -1108,7 +1108,7 @@ pkit pm open-pr 1017 --scope pm --summary "take the issue number positionally" -
 
 `create-milestone` and `close-milestone` both run the DEC-021 membership gate and the COR-039 foreign-repo guard at startup, route every `gh` call through the shared host/owner seam (DEC-023), and accept `--dry-run` (preview, write nothing) and `--yes` (skip the confirmation prompt).
 
-**A category comes first.** A project declares each category before it files the first Milestone in it, and none is declared by default. On a project with none, `create-milestone` refuses and names the command that declares one, such as:
+**A category comes first.** A project declares each category before it files the first Milestone in it, and none is declared by default. On a project with none, `create-milestone` refuses and names the command that declares the category it was given, with the title format and the close trigger left to fill. One way to run that command, for a category of two-week sprints:
 
 ```
 pkit pm add-milestone-category sprint --title-format "Sprint {n}: {name}" --close-trigger date-based --description "A two-week planning window."
