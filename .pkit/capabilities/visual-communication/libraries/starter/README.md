@@ -364,9 +364,9 @@ At the defaults a connector's line is as wide as a line drawn on its own, not as
 ## What the starter leaves out, for now
 
 - **Notes to the left of the stack.** `layers` places them to the right only.
-- **A colour for each place,** such as a tint that deepens down the levels (project-kit#2576).
+- **A colour for each place,** such as a tint that deepens down the levels (project-kit#3129).
 - **A legend in a column,** or one the engine fills from the concepts a page names. A legend's entries stand in one row, and content lists each (visual-communication DEC-036 point 6).
-- **The other patterns and blocks** of the first wave (project-kit#2576).
+- **The other patterns and blocks** of the starter's second wave (project-kit#3129).
 - **Other arrangement fields.** A panel's `span` and a cell's are the only ones, so no other item chooses its own size or place in its list.
 - **A menu that folds the links away.** On a phone a header lists its links under its title, where a design system shows a menu button.
 - **A table that scrolls across,** or stacks its cells on a phone. A table keeps its columns at every size.
