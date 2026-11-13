@@ -45,6 +45,7 @@ from packaging.version import InvalidVersion, Version
 from project_kit import (
     answer_files,
     command_runner,
+    default_branch,
     pull_request_landing,
     session_guard,
     versioning,
@@ -2085,16 +2086,15 @@ def _matches_prefix(path: str, prefixes: tuple[str, ...]) -> bool:
 # exemption waives the surface check only, never the floor tie (`GuardResult.ok`).
 
 
-def _diff_name_status(repo_root: Path, base: str) -> list[tuple[str, str]]:
-    """(`status`, path) for each change between `base` and HEAD.
+def _diff_name_status(repo_root: Path, revisions: Sequence[str]) -> list[tuple[str, str]]:
+    """(`status`, path) for each change `git diff <revisions>` shows.
 
-    Status is git's `--name-status` letter (`A`/`M`/`D`/…). Mirrors
-    `changed_files`' merge-base scoping (`base...HEAD`). A rename (`Rxxx`) yields
-    its destination path — a release renames nothing (`release_writes`), so a
-    rename is simply not the release and falls through to the normal guard.
+    Status is git's `--name-status` letter (`A`/`M`/`D`/…). A rename (`Rxxx`)
+    yields its destination path — a release renames nothing (`release_writes`),
+    so a rename is simply not the release and falls through to the normal guard.
     """
     result = subprocess.run(
-        ["git", "diff", "--name-status", f"{base}...HEAD"],
+        ["git", "diff", "--name-status", *revisions],
         capture_output=True,
         text=True,
         cwd=repo_root,
@@ -2111,10 +2111,16 @@ def _diff_name_status(repo_root: Path, base: str) -> list[tuple[str, str]]:
     return entries
 
 
-def _file_diff_lines(repo_root: Path, base: str, path: str) -> list[str]:
+def _since(base: str) -> tuple[str]:
+    """The diff from where HEAD left `base` (`base...HEAD`), mirroring
+    `changed_files`' merge-base scoping."""
+    return (f"{base}...HEAD",)
+
+
+def _file_diff_lines(repo_root: Path, revisions: Sequence[str], path: str) -> list[str]:
     """The content (`+`/`-`) lines of one file's diff, hunk headers stripped."""
     result = subprocess.run(
-        ["git", "diff", f"{base}...HEAD", "--", path],
+        ["git", "diff", *revisions, "--", path],
         capture_output=True,
         text=True,
         cwd=repo_root,
@@ -2130,45 +2136,219 @@ def _file_diff_lines(repo_root: Path, base: str, path: str) -> list[str]:
 
 
 def _changes_only(
-    repo_root: Path, base: str, path: str, patterns: tuple[re.Pattern[str], ...]
+    repo_root: Path,
+    revisions: Sequence[str],
+    path: str,
+    patterns: tuple[re.Pattern[str], ...],
 ) -> bool:
     """True when every line one file's diff adds or removes matches one of
     `patterns`. A blank changed line is tolerated (a whitespace-only hunk edge)."""
     return all(
         not line.strip() or any(pattern.match(line) for pattern in patterns)
-        for line in _file_diff_lines(repo_root, base, path)
+        for line in _file_diff_lines(repo_root, revisions, path)
     )
 
 
 def is_release_diff(source_kit: Path, base: str) -> bool:
-    """True when the diff vs `base` is only what `pkit release apply` writes,
-    and the answer files it adds for the answers those writes need.
+    """True when the diff vs `base` — from where HEAD left it — is only what
+    `pkit release apply` writes, and the answer files it adds for the answers
+    those writes need (`release_change_problem`)."""
+    return release_change_problem(source_kit, _since(base)) is None
 
-    Every changed file must be one the release writes (`release_writes`), with a
-    status that write leaves, and — for a file the release rewrites in place —
-    only the lines it rewrites (verified line-by-line), or an answer file the
-    diff adds (`answer_files.is_answer_file`, status `A`); and the diff must
-    write more than the consumed changesets it deletes and the answer files it
-    adds.
+
+def release_change_problem(source_kit: Path, revisions: Sequence[str]) -> str | None:
+    """What makes the change `git diff <revisions>` shows more than what
+    `pkit release apply` writes and the answer files it adds for the answers
+    those writes need; None where it is only that — the recogniser `pkit
+    release check` reads a release by, and the content half of the predicate
+    a release lands by (`release_landing_problem`).
+
+    Every changed file must be one the release writes (`release_writes`, read
+    from `source_kit`'s working tree), with a status that write leaves, and —
+    for a file the release rewrites in place — only the lines it rewrites
+    (verified line-by-line), or an answer file the change adds
+    (`answer_files.is_answer_file`, status `A`); and the change must write more
+    than the consumed changesets it deletes and the answer files it adds.
 
     Any other change (a `src/` edit, a doc, a new file under a component subtree,
     a package.yaml line beside its version and floor, an answer file edited or
-    removed) makes the answer False — the diff is then treated as an ordinary PR
-    and the surface guard runs. An empty diff is not a release.
+    removed) is named — the change is then no release, and the surface guard
+    runs. An empty change is no release either.
     """
     repo_root = source_kit.parent
     writes = release_writes(source_kit)
     marked = False  # a write that shows a release, not only consumed changesets
-    for status, path in _diff_name_status(repo_root, base):
+    for status, path in _diff_name_status(repo_root, revisions):
         if status == "A" and answer_files.is_answer_file(path):
             continue  # the answers the release's writes need: no surface, no release
         write = next((w for w in writes if w.covers(status, path)), None)
         if write is None:
-            return False  # anything else ⇒ not the release itself
-        if write.lines and not _changes_only(repo_root, base, path, write.lines):
-            return False  # an edit rode along in a file the release rewrites
+            return f"{path}, which `pkit release apply` does not write so ({status})"
+        if write.lines and not _changes_only(repo_root, revisions, path, write.lines):
+            return f"a line of {path} that `pkit release apply` does not write"
         marked = marked or write.marks_release
-    return marked
+    if not marked:
+        return "no version or changelog `pkit release apply` writes"
+    return None
+
+
+# --- A release lands only what its step wrote, onto its plan's commit -------
+#
+# ADR-092 point 6. A release PR consumes the changesets pending at the commit of
+# the default branch its plan read, so it lands sound only onto that commit, and
+# only with what `pkit release apply` wrote there, plus the answer files its
+# writes need. The history does not say which commit the plan read, so `apply`
+# prints a trailer line naming it, which the release commit and the release
+# PR's body carry. The predicate and the trailer's reading live here, once:
+# `pkit release merge` applies them at its request, and the queue's check
+# (`pkit release check-queue`) to each release a squashing queue's merge holds.
+
+#: The key of the trailer line naming the commit a release's plan read.
+PLAN_COMMIT_KEY = "Release-plan-commit"
+
+# The trailer line whole: the key, and a commit's full 40-character id.
+_PLAN_COMMIT_LINE_RE = re.compile(rf"{PLAN_COMMIT_KEY}: ([0-9a-f]{{40}})")
+
+#: The way on from every refusal of a release that cannot land as it stands.
+RUN_THE_RELEASE_AGAIN = (
+    "Run the release again, so that it is planned from the default branch's head, and never "
+    "amend the release commit."
+)
+
+
+def plan_commit_line(commit: str) -> str:
+    """The trailer line naming `commit`, the commit a release's plan read."""
+    return f"{PLAN_COMMIT_KEY}: {commit}"
+
+
+def plan_commits_named(text: str) -> list[str]:
+    """Each commit a trailer line in `text` names, once, in order: a line that
+    is the trailer whole, anywhere in a commit message or a pull request's
+    body, wherever git would read trailers or not."""
+    named: list[str] = []
+    for line in text.splitlines():
+        match = _PLAN_COMMIT_LINE_RE.fullmatch(line)
+        if match is not None and match.group(1) not in named:
+            named.append(match.group(1))
+    return named
+
+
+def plan_commit(repo_root: Path) -> str:
+    """The commit `pkit release apply` plans from in `repo_root`: HEAD's, in
+    full. Raises `click.ClickException` where git cannot name it."""
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", "HEAD^{commit}"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=False,
+    )
+    commit = result.stdout.strip()
+    if result.returncode != 0 or not commit:
+        raise click.ClickException(
+            "git names no commit at HEAD, so no trailer line can name the commit the release's "
+            "plan read."
+        )
+    return commit
+
+
+def release_landing_problem(
+    source_kit: Path, *, lands_on: str, plan_commit: str, head: str
+) -> str | None:
+    """Why a release whose head is commit `head`, landing onto commit
+    `lands_on`, does not land sound, or None where it does: the predicate
+    every reader applies (ADR-092 point 6). It lands sound where `lands_on` is
+    `plan_commit`, the commit its plan read, and its change from that commit
+    holds only the files and lines `pkit release apply` writes, plus answer
+    files the change adds (`release_change_problem`)."""
+    if lands_on != plan_commit:
+        return (
+            f"it would land on {lands_on[:12]}, and its plan read {plan_commit[:12]}: the "
+            "default branch has moved since the release was planned"
+        )
+    beyond = release_change_problem(source_kit, (plan_commit, head))
+    if beyond is not None:
+        return (
+            f"its change from {plan_commit[:12]}, the commit its plan read, holds more than "
+            f"`pkit release apply` writes: {beyond}"
+        )
+    return None
+
+
+@dataclass(frozen=True)
+class QueuedRelease:
+    """A release a merge queue's merge holds, as the queue's check judged it:
+    its squash commit, the commit's subject, and why it does not land sound,
+    or None where it does."""
+
+    commit: str
+    subject: str
+    problem: str | None
+
+
+def check_queue(source_kit: Path, base: str, head: str = "HEAD") -> list[QueuedRelease]:
+    """The queue's check (ADR-092 point 6): each commit from `base` to `head`,
+    on `head`'s first-parent line and oldest first, whose subject is a
+    `chore(release):` one — a squash commit a queue that squashes made of a
+    release PR — judged by the predicate (`release_landing_problem`), with its
+    parent as the commit it lands on and the trailer in its own message as the
+    plan's commit. A commit without the trailer, or naming more than one plan
+    commit, or with other than one parent, does not land sound. Reads git
+    alone: no fetch and no pull request."""
+    repo_root = source_kit.parent
+    result = subprocess.run(
+        [
+            "git",
+            "log",
+            "-z",
+            "--reverse",
+            "--first-parent",
+            "--format=%H%n%P%n%B",
+            f"{base}..{head}",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=True,
+    )
+    judged: list[QueuedRelease] = []
+    for record in result.stdout.split("\0"):
+        commit, _, rest = record.lstrip("\n").partition("\n")
+        parents, _, message = rest.partition("\n")
+        subject = message.partition("\n")[0]
+        if not commit or not subject.startswith(RELEASE_TITLE_PREFIX):
+            continue
+        judged.append(
+            QueuedRelease(
+                commit, subject, _queued_problem(source_kit, commit, parents.split(), message)
+            )
+        )
+    return judged
+
+
+def _queued_problem(source_kit: Path, commit: str, parents: list[str], message: str) -> str | None:
+    """Why release commit `commit`, with `parents` and `message`, does not
+    land sound in the queue's merge, or None where it does."""
+    named = plan_commits_named(message)
+    problem = trailer_problem(named, "its message")
+    if problem is not None:
+        return problem
+    if len(parents) != 1:
+        return f"it has {len(parents)} parents, so it lands on no one commit"
+    return release_landing_problem(
+        source_kit, lands_on=parents[0], plan_commit=named[0], head=commit
+    )
+
+
+def trailer_problem(named: Sequence[str], where: str) -> str | None:
+    """Why the commits `where` names in trailer lines (`plan_commits_named`)
+    name no one plan's commit, or None where they name exactly one."""
+    if not named:
+        return f"{where} carries no `{PLAN_COMMIT_KEY}:` line naming the commit its plan read"
+    if len(named) > 1:
+        listed = ", ".join(commit[:12] for commit in named)
+        return f"{where} names {len(named)} commits as the one its plan read: {listed}"
+    return None
 
 
 def _repo_rel(repo_root: Path, path: Path) -> str:
@@ -2601,7 +2781,7 @@ def _consumed_declarations(
     changeset the diff vs `base` deletes declared at the merge base."""
     unreleased = _repo_rel(repo_root, unreleased_dir(repo_root)) + "/"
     declared: set[tuple[str, str]] = set()
-    for status, path in _diff_name_status(repo_root, base):
+    for status, path in _diff_name_status(repo_root, _since(base)):
         if status != "D" or not path.startswith(unreleased):
             continue
         text = _text_at(repo_root, merge_base, path)
@@ -2918,6 +3098,7 @@ class ReleasePrState:
     mergeable: str  # MERGEABLE / CONFLICTING / UNKNOWN (normalised upper-case)
     checks_passing: bool
     failing_checks: tuple[str, ...]  # names (+ outcome) of non-passing checks
+    body: str = ""  # the PR's description, whose trailer line names its plan's commit
 
 
 @dataclass(frozen=True)
@@ -3013,6 +3194,7 @@ def parse_release_pr(raw: Mapping[str, Any]) -> ReleasePrState:
         mergeable=str(raw.get("mergeable", "")).upper(),
         checks_passing=passing,
         failing_checks=failing,
+        body=str(raw.get("body") or ""),
     )
 
 
@@ -3214,6 +3396,12 @@ def merge_release_pr(
         raise click.ClickException(decision.message)
     if ended != pull_request_landing.END_PLANNED:
         return landing.reported(plan)
+    unsound = release_pr_problem(pr, repo_root)
+    if unsound is not None:
+        raise click.ClickException(
+            f"release PR #{number} would not land what its release step wrote onto the commit its "
+            f"plan read: {unsound}. {RUN_THE_RELEASE_AGAIN} Nothing was merged."
+        )
     if dry_run:
         if would == pull_request_landing.ENQUEUE_REQUEST:
             return ReleaseMergeReport(
@@ -3259,6 +3447,7 @@ class _ReleaseLanding:
             seconds=wait_seconds,
             allow_dropped_head=force,
             queued_bad_shape=pull_request_landing.SHAPE_WARN,
+            first_in_queue=True,
         )
         self.say = say
         self.base = pr.base_ref or "the base branch"
@@ -3585,6 +3774,153 @@ def _head_moved(pr: ReleasePrState, end: _End, rerun: str) -> ReleaseNotMerged:
     )
 
 
+#: How long one `git` call that reaches the remote may run in `pkit release
+#: merge`, past which it is ended and the run merges nothing.
+GIT_REMOTE_SECONDS = 60.0
+
+
+def release_pr_problem(pr: ReleasePrState, repo_root: Path) -> str | None:
+    """Why release PR `pr` would not land sound at its request, or None where
+    it would (ADR-092 point 6): read just before the request, on every base,
+    from the head of the PR's base branch — the default branch — read from the
+    remote, and the PR's head, the one its gates checked.
+
+    The release commit is the one commit past the base's head, on the PR's
+    head, whose message carries the trailer line (`plan_commits_named`); the
+    PR's body names the same commit, and only it; and the predicate holds
+    (`release_landing_problem`) with the base's head as the commit it lands
+    on. Fetches the two commits where the clone does not hold them; raises
+    `click.ClickException` where the remote cannot be read."""
+    base = pr.base_ref
+    if not base:
+        return f"`gh pr view {pr.number}` names no base branch for it"
+    lands_on = _remote_head(repo_root, base)
+    _fetch_unless_held(repo_root, (lands_on, pr.head_oid), base=base, number=pr.number)
+    carriers = [
+        (commit, named)
+        for commit, message in _messages_between(repo_root, lands_on, pr.head_oid)
+        if (named := plan_commits_named(message))
+    ]
+    if not carriers:
+        return (
+            f"no commit of {pr.head_ref} past the head of {base} carries a "
+            f"`{PLAN_COMMIT_KEY}:` line naming the commit its plan read"
+        )
+    if len(carriers) > 1:
+        listed = ", ".join(commit[:12] for commit, _ in carriers)
+        return (
+            f"{len(carriers)} commits of {pr.head_ref} carry the trailer line ({listed}), not one"
+        )
+    release_commit, named = carriers[0]
+    problem = trailer_problem(named, f"its release commit {release_commit[:12]}")
+    if problem is not None:
+        return problem
+    in_body = plan_commits_named(pr.body)
+    if not in_body:
+        return (
+            f"its body carries no `{PLAN_COMMIT_KEY}:` line naming the commit its plan read, "
+            "which the squash commit's message takes from the body"
+        )
+    if in_body != named:
+        listed = ", ".join(commit[:12] for commit in in_body)
+        return (
+            f"its body names {listed} as the commit its plan read, and its release commit "
+            f"{release_commit[:12]} names {named[0][:12]}"
+        )
+    return release_landing_problem(
+        repo_root / ".pkit", lands_on=lands_on, plan_commit=named[0], head=pr.head_oid
+    )
+
+
+def _remote_head(repo_root: Path, branch: str) -> str:
+    """The commit `branch` is at on the remote, read now (`git ls-remote`);
+    raises `click.ClickException` where it cannot be read."""
+    ref = f"refs/heads/{branch}"
+    answer = _git_remote(repo_root, ["ls-remote", "--exit-code", default_branch.REMOTE, ref])
+    for line in answer.splitlines():
+        commit, _, name = line.partition("\t")
+        if name == ref and pull_request_landing.full_object_id(commit):
+            return commit.lower()
+    raise click.ClickException(
+        f"`git ls-remote {default_branch.REMOTE} {ref}` names no commit for {branch}. Nothing "
+        "was merged."
+    )
+
+
+def _fetch_unless_held(repo_root: Path, commits: Sequence[str], *, base: str, number: int) -> None:
+    """`commits` held in the clone, fetched with `base` and PR `number`'s head
+    where any is not; raises `click.ClickException` where one still is not."""
+    if all(_holds(repo_root, commit) for commit in commits):
+        return
+    _git_remote(
+        repo_root,
+        [
+            "fetch",
+            "--no-tags",
+            "--quiet",
+            default_branch.REMOTE,
+            f"refs/heads/{base}",
+            f"refs/pull/{number}/head",
+        ],
+    )
+    missing = [commit[:12] for commit in commits if not _holds(repo_root, commit)]
+    if missing:
+        raise click.ClickException(
+            f"the clone does not hold {', '.join(missing)} after a fetch of {base} and PR "
+            f"#{number}'s head from {default_branch.REMOTE}, so the release cannot be read. "
+            "Nothing was merged."
+        )
+
+
+def _holds(repo_root: Path, commit: str) -> bool:
+    result = subprocess.run(
+        ["git", "cat-file", "-e", f"{commit}^{{commit}}"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def _git_remote(repo_root: Path, args: list[str]) -> str:
+    """`git <args>`, which reaches the remote, bounded by
+    :data:`GIT_REMOTE_SECONDS`: its output, or `click.ClickException` where it
+    fails, cannot start or is ended at its bound."""
+    said = f"`git {' '.join(args)}`"
+    try:
+        result = command_runner.run_bounded(
+            ["git", *args], cwd=repo_root, seconds=GIT_REMOTE_SECONDS
+        )
+    except OSError as exc:
+        raise click.ClickException(f"{said} could not be run ({exc}). Nothing was merged.") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise click.ClickException(
+            f"{said} did not answer within {exc.timeout:g} s, and was ended. Nothing was merged."
+        ) from None
+    if result.returncode != 0:
+        why = result.stderr.strip() or f"exit {result.returncode}"
+        raise click.ClickException(f"{said} failed: {why}. Nothing was merged.")
+    return result.stdout
+
+
+def _messages_between(repo_root: Path, base: str, head: str) -> list[tuple[str, str]]:
+    """(commit, message) for each commit `head` holds that `base` does not."""
+    result = subprocess.run(
+        ["git", "log", "-z", "--format=%H%n%B", f"{base}..{head}"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=True,
+    )
+    pairs: list[tuple[str, str]] = []
+    for record in result.stdout.split("\0"):
+        commit, _, message = record.lstrip("\n").partition("\n")
+        if commit:
+            pairs.append((commit, message))
+    return pairs
+
+
 def release_pr_refusal(pr: ReleasePrState) -> ReleaseMergeDecision | None:
     """The refusal of a PR that is not a release PR — a `release/*` head under
     a `chore(release):` title — else None. A PR on another head branch is
@@ -3633,6 +3969,16 @@ def _landing_refusal(pr: ReleasePrState, end: _End) -> str:
             "the gates, so the landing sent nothing: no merge and no enqueue goes out that no "
             f"gate of this run saw. Run `pkit release merge {pr.number}` again: it plans afresh, "
             "and runs its gates before it merges or enqueues anything."
+        )
+    if kind == pull_request_landing.QUEUED_AHEAD:
+        queued: list[object] = list(reading.get("ahead") or [])
+        ahead = ", ".join(f"#{number}" for number in queued)
+        return (
+            f"the merge queue for {base} holds {ahead or 'another pull request'} ahead of release "
+            f"PR #{pr.number}, which would land first, so the release would land on another "
+            "commit than its plan read. Nothing was enqueued. Once the queue ahead of it is "
+            f"empty, run `pkit release merge {pr.number}` again; where any of them merged, "
+            f"{_lower_first(RUN_THE_RELEASE_AGAIN)}"
         )
     if kind in (pull_request_landing.QUEUE_NOT_SQUASH, pull_request_landing.SQUASH_DEFAULTS):
         problem, remedy = _squash_commit_problem(end, base)
@@ -3802,7 +4148,7 @@ def _gh_pr_view(pr_number: int, repo_root: Path) -> dict[str, Any]:
     object ends the run too, having asked nothing."""
     fields = (
         "number,title,state,headRefName,headRefOid,baseRefName,isCrossRepository,"
-        "mergeable,url,statusCheckRollup"
+        "mergeable,url,statusCheckRollup,body"
     )
     try:
         result = command_runner.run_bounded(
