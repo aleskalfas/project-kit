@@ -1,6 +1,6 @@
 """What the HTML renderer draws: its declaration, plain data (visual-communication DEC-005
 points 9 and 10, DEC-020 points 1 to 4, DEC-023 points 2, 5 and 7, DEC-031 points 3 and 5,
-DEC-026 point 6).
+DEC-026 point 6, DEC-039 points 1 to 4).
 
 The HTML renderer writes one page file for each language and each key over the size axes,
 its pages in order, holding the modes a reader's signal names. So it draws, and only draws:
@@ -14,12 +14,15 @@ calls no outside program and reaches no service. Writing a page file takes no br
   its modes, a CSS media feature, and the value of that signal each of its modes pairs with.
   The first pair of each is the signal's value for a reader who names no preference. What
   hands the renderer its keys groups them by these pairs, and holds none of its own.
-- `forced-colours`: what the file gives its shapes where a reader forces their own colours
-  (DEC-023 point 7). Each line, stroke and arrowhead takes the reader's text colour. A fill
-  opaque in every key the file holds takes the reader's background colour, with an edge of
-  the width named, in px of the page, and the text colour, where it has no stroke of its own.
-  A translucent fill stays as it is drawn. Each colour is a system colour of CSS, the
-  reader's, so the file adds none of its own.
+- `forced-colours`: what the file gives its shapes and its texts where a reader forces their
+  own colours (DEC-023 point 7, DEC-039). Each line, stroke and arrowhead takes the reader's
+  text colour. A fill opaque in every key the file holds takes the reader's background
+  colour, with an edge of the width named, in px of the page, and the text colour, where it
+  has no stroke of its own. That edge lies inside the fill (DEC-039 point 4). A translucent
+  fill stays as it is drawn. Under `grounds`, each line of a text lies on a ground of the
+  colour named, beneath all the lines of its run of texts, widened at each end by the
+  `margin` named, in px of the page, for the browser's own widths (DEC-039 points 1 and 2).
+  Each colour is a system colour of CSS, the reader's, so the file adds none of its own.
 - `pages`: each choice a scene leaves open that the medium needs (DEC-001 point 2): how
   pages lie, the gap between two of them, in px of the window, and how a page scales.
   Under `fixed`, how a file whose scene's root says its pages are fixed pages shows them
@@ -46,7 +49,8 @@ calls no outside program and reaches no service. Writing a page file takes no br
 - `marks`: the attribute that marks each thing the file holds (`MARKS`), so the viewing
   step reads the words the renderer writes. A page and a text hold their trace id. A shape
   keeps the canvas's `data-id`, so a text takes a mark of its own. A run's sign is marked
-  within its span (DEC-036 point 3).
+  within its span (DEC-036 point 3). A line's ground holds its text's trace id (DEC-039
+  point 1).
 
 Standard library only: the check and the viewing step read it without importing the
 renderer.
@@ -74,6 +78,7 @@ MARKS = {
     "strut": "data-strut",
     "span": "data-span",
     "sign": "data-sign",
+    "ground": "data-ground",
 }
 
 #: The format of the renderer that holds several modes in one file, and its signal pairs.
@@ -93,7 +98,7 @@ HOLDS_MODES = {
 DECLARATION = {
     "name": "html",
     "kind": "renderer",
-    "version": "1.8.0",
+    "version": "1.9.0",
     "seam": 9,
     "module": "html",
     "about": (
@@ -109,6 +114,7 @@ DECLARATION = {
         "opaque-fills": "Canvas",
         "edge": {"colour": "CanvasText", "width": 1},
         "translucent-fills": "as drawn",
+        "grounds": {"colour": "Canvas", "margin": 1},
     },
     "pages": {
         "lie": "one under another, each in the middle of the window",
