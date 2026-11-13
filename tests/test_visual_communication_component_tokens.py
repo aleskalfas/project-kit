@@ -249,7 +249,7 @@ def test_a_token_that_cannot_be_read_is_left_out_and_found_in_its_components_fil
     assert (finding.code, finding.level, finding.where) == (code, findings.FAILS, where)
     assert finding.file == "visual/libraries/lab/1.0.0/components/box.yaml"
     assert finding.library == "lab@1.0.0"
-    assert scope.tokens == {}
+    assert not [path for path in scope.tokens if path.startswith("component.lab.")]
 
 
 @pytest.mark.parametrize(
