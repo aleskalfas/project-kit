@@ -31,11 +31,11 @@ A row or a column takes `cross-size`, a formula that gives a length, which may s
 
 ### 2. The formula reads what the pattern reads, and the item's place by names of its own
 
-`cross-size` reads what the pattern's other formulas read, and the place of the item it sizes as `:place`, from 1, with how many items its list draws as `:places`, marked names no other formula reads. It reads nothing the item carries, and format 1 lets no value switch on an arrangement field, which a pattern reads only through a weight's shares (DEC-010 point 4). It reads its part's size across the line only where the part gives one.
+`cross-size` reads what the pattern's other formulas read, and the place of the item it sizes as `:place`, from 1, with how many items its list draws as `:places`, marked names ([visual-communication:DEC-021-size-and-shape], Context) that no other formula reads. It reads nothing the item carries, so it switches on no arrangement field. It reads its part's size across the line only where the part gives one.
 
 ### 3. A sized item is placed as one of set size, and a list's extra size across the line passes to the item's last part
 
-`align-items` places a sized item on its line as CSS's flexible layout places an item whose size across the line is set, an alignment left unnamed as `start`, and a `stretch` written beside `cross-size` is refused. What a list gives an item across the line past what the item asks for, by a stretch or by `cross-size`, passes on to the last part the item draws where that part places a component and gives no size across the line, and that component passes it on the same way. The size passed on names `engine` as its source, and the item's own formulas still read that last part at the size the part asks for. An item that asks for no size across the line passes nothing on, nor does a component that a part's formula gives more than it asks for.
+`align-items` places a sized item on its line as CSS's flexible layout places an item whose size across the line is set, an alignment left unnamed as `start`, and a `stretch` written beside `cross-size` is refused. Where such a `stretch` is drawn, the engine places the sized items as though `align-items` were left unnamed. What a list gives an item across the line past what the item asks for, by a stretch or by `cross-size`, passes on to the last part the item draws where that part places a component and gives no size across the line, and that component passes it on the same way. The size passed on names `engine` as its source, and the item's own formulas still read that last part at the size the part asks for. An item that asks for no size across the line passes nothing on, nor does a component that a part's formula gives more than it asks for.
 
 ### 4. A part asks across its line for the greatest size `cross-size` gives
 
@@ -55,9 +55,9 @@ When it reads the component, the check reports:
 - `cross-size` on a part whose items are pages (point 1), as a key its format does not allow;
 - `:place` or `:places` in any formula but `cross-size`, as a formula that reads what it may not reach;
 - `cross-size` that reads its part's size across the line where the part gives none, itself or through a named value, as a loop of references;
-- a `stretch` written beside a `cross-size` that gives a size, as a value with two owners. Where such a `stretch` is drawn, the engine places the sized items as though `align-items` were left unnamed.
+- a `stretch` written beside a `cross-size` that gives a size, as a value with two owners.
 
-It judges the last two for each set of options or sizes that hold together. It judges `cross-size` otherwise as any formula, so a loop through an item of its own list, another part, its part's size along the line or its component's own size is found when the scene is computed, as any loop is, and it adds no kind of finding.
+It judges the loop and the two owners for each set of options or sizes that hold together. It judges `cross-size` otherwise as any formula, so a loop through an item of its own list, another part, its part's size along the line or its component's own size is found when the scene is computed, as any loop is, and it adds no kind of finding.
 
 ### 8. An addition to format 1
 
@@ -85,7 +85,7 @@ It judges the last two for each set of options or sizes that hold together. It j
 
 **Why a part asks for the greatest size `cross-size` gives.** A part that asked what its items ask would let a step wider than the part spill out of it with no finding, and would need a size from an item that asks for none.
 
-**Why the check judges only what an item asks for.** An item whose component asks for its size across the line, such as a tag as wide as its label, is reported where `cross-size` gives it less, since growing it past its step would break the form in silence. One that asks for none, such as a card as wide as it is given, wraps its text to the size it gets and grows along the line, as in any narrow line, with no finding of its size, though a word wider than its narrowest step overflows its box, so a stepped option is rendered in languages that stress text by the change that builds it. The cost: a stepped list of cards draws its narrow levels taller than its wide ones.
+**Why the check judges only what an item asks for.** An item whose component asks for its size across the line, such as a tag as wide as its label, is reported where `cross-size` gives it less, since growing it past its step would break the form in silence. One that asks for none, such as a card as wide as it is given, wraps its text to the size it gets and grows along the line, as in any narrow line, with no finding of its size, though a word wider than its narrowest step overflows its box. The cost: a stepped list of cards draws its narrow levels taller than its wide ones.
 
 **Why a sized item needs more than zero.** A step that falls to zero or below at a late place is the pattern's formula meeting the content's number of items, not a fault of the item's component. As an item that gets less than it asks for, it is reported at the content, which the project can correct, so it fails validation (DEC-005 point 14), even where the item's component comes from a released library. Holding the size it gets at zero keeps a frame below zero from every reader of frames (point 6).
 
@@ -119,13 +119,13 @@ It judges the last two for each set of options or sizes that hold together. It j
   - DEC-005 point 3, "Two sizes for each element", comes to add that what a list gives an item across its line past what the item asks for passes on to the last part the item draws where that part places a component and gives no size across the line, from an item that asks for that size, on the terms of DEC-038 point 3, naming `engine` as its source; and that the check takes an item a row or a column sizes by place to ask across the line for more than zero (points 3 and 5).
 - **Read against this record, and left as they stand:**
   - DEC-001 points 4 and 6, since a recurring need becomes a general tool, and a pattern already decides its items' sizes.
-  - DEC-007 point 2, since `layers` keeps its one job, what rests on what, with its stepped form under an option.
-  - DEC-010 points 3 and 6, since an arrangement field keeps its words, and an item's place its meaning.
+  - [visual-communication:DEC-007-starter-library] point 2, since `layers` keeps its one job, what rests on what, with its stepped form under an option.
+  - DEC-010 points 3 and 6, since an item's place keeps its meaning, and an arrangement field its words: point 3 decides who may choose by an arrangement field and for what, not which of the pattern's tools must take one.
   - DEC-011 point 4, since an end still reads the element drawn for its item, whose sized frame it meets (point 6).
   - DEC-005 points 5 and 14, since a sized item's size names a source the scene already knows, and what fails gains no kind (points 6 and 7).
-  - DEC-034 point 2, since it decides who writes a page's size, not which tools may write it, and `cross-size` reaches no page (point 1).
+  - [visual-communication:DEC-034-brand-drawings] point 2, since it decides who writes a page's size, not which tools may write it, and `cross-size` reaches no page (point 1).
   - DEC-003 points 3, 6 and 8, since `cross-size` is an addition, what breaks gains nothing, and a draft takes `cross-size` as any change of look (point 8).
-- **[project-kit#3095](https://github.com/aleskalfas/project-kit/issues/3095)** builds points 1 to 8 in the engine, the component schema and the pages on components and checks, and draws `layers`' stepped form with them under an option, never its default.
+- **[project-kit#3095](https://github.com/aleskalfas/project-kit/issues/3095)** builds points 1 to 8 in the engine, the component schema and the pages on components and checks, draws `layers`' stepped form with them under an option, never its default, and renders that option in the languages that stress text ([visual-communication:DEC-007-starter-library] point 3).
 - **[project-kit#3113](https://github.com/aleskalfas/project-kit/issues/3113)** decides whether and how a size below zero from another source is reported, as an item's under a list with `sizes: equal` whose gaps exceed its line, or a placed component's under a part's formula, with a record of its own if the choice needs one. Point 5 decides it for `cross-size` alone.
 - **The lines of the page on components that #3095 changes:**
   - the formula table's row "`:index`, `:count`", beside which `:place` and `:places` come;
