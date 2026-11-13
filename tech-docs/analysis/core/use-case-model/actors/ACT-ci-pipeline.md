@@ -11,8 +11,8 @@ needs:
   - Be told when a shallow clone lacks history a check needs, rather than get a misleading result.
   - Have the whole-repository check report its findings without failing, so the check can run after merges and on a schedule.
   - Tag a release once it lands, from the version it declares, with no one there to confirm the push.
-  - Cut a release candidate from the branch a person names, and push its tag only once the wheel built from it is checked.
-  - Finish the notes an earlier release run left unpublished, and go on with the release where that fails.
+  - Cut a release candidate from the branch a person names, and push its tag only once the wheel built from the candidate's commit is checked.
+  - Finish the notes an earlier release or release candidate left unpublished, and go on with the release where that fails.
 pkit:
   friction:
     anchors:

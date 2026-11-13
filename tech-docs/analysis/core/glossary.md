@@ -3165,7 +3165,7 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 - **Release:** the set of [versions](#term-version--version) a release tag names by its [backbone](#term-backbone--backbone) version.
 - **A release step that moves only components:** gets no release tag ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 - **The `latest` tag:** a tag that points at the highest release tag. The `uv tool install` command the [system](#term-system--system) prints names it.
-- **A release candidate's tag:** a tag such as `v3.0.0rc1`, on a commit no branch holds, is no release tag. The release workflow pushes it alone, and only once the wheel built from its commit names the candidate's version ([ADR-089 point 9](../../architecture/decisions/ADR-089-release-candidates.md#9-a-candidate-is-cut-by-the-release-workflows-pre-release-run-and-notes-past-the-hosts-caps-are-linked)).
+- **A release candidate's tag:** a tag such as `v3.0.0rc1`, on a commit no branch holds, is no release tag. The CI pipeline pushes it alone, and only once the wheel built from its commit names the candidate's version ([ADR-089 point 9](../../architecture/decisions/ADR-089-release-candidates.md#9-a-candidate-is-cut-by-the-release-workflows-pre-release-run-and-notes-past-the-hosts-caps-are-linked)).
 - **GitHub release:** the page the hosting service shows for a release tag. Its notes are the version's changelog section (PRJ-004).
 
 ## TERM-report — report
