@@ -571,6 +571,23 @@ def test_a_pattern_declares_a_list_of_ties_and_a_component_takes_ends() -> None:
     switched["options"] = {"shape": ["flat", "bent"]}
     assert problems(switched) == []
     assert engine_issues(switched) == []
+    rounded = arrow(line={"stroke": "line", "marker-end": "arrow", "rx": "=@space.2"})
+    assert problems(rounded) == []
+    assert engine_issues(rounded) == []
+
+
+def test_a_line_of_its_own_ends_takes_no_radius_of_a_connectors_turns() -> None:
+    """Only a connector turns, so the schema and the engine refuse `rx` on a line that gives
+    its own ends, and take the same line without it."""
+    own = dict.fromkeys(("x1", "y1", "x2", "y2"), "=@space.1")
+    standing = arrow(connect=..., line={"stroke": "line"}, **own)
+    assert problems(standing) == []
+    assert engine_issues(standing) == []
+    turning = arrow(connect=..., line={"stroke": "line", "rx": "=@space.2"}, **own)
+    assert problems(turning) != []
+    assert [(code, where) for code, where, _ in engine_issues(turning)] == [
+        ("component-shape", "parts.l.line.rx")
+    ]
 
 
 def test_a_list_of_ties_is_arranged_by_neither_operator_and_any_other_list_by_one() -> None:

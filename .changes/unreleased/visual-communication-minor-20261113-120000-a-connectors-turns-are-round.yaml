@@ -1,0 +1,18 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A connector's turns can be drawn round, and a line stops at its arrowhead's
+  base (#3082). A `line` part that connects its component's ends takes `rx`, a
+  length, the radius its turns are drawn round at; with none, or 0, its turns
+  stay sharp. A radius larger than half the shorter of a turn's two legs is
+  reduced to fit, and never refused, and a leg that ends in an arrowhead counts
+  to the head's base. A line that gives its own ends and `rx` is refused. The
+  scene holds `rx` as the part gives it, and the SVG, PDF and HTML renderers fit
+  each turn alike: the SVG and HTML renderers draw such a connector as a `<path>`
+  of lines and arcs, and the PDF renderer each turn as the cubic curve of its
+  arc. Every line that ends in an arrowhead now stops at the head's base, at
+  either end, so the head's tip lies where the line ends. The seam stays at 8;
+  the SVG renderer rises to 1.4.0, the PDF renderer to 1.6.0 and the HTML
+  renderer to 1.7.0. A line with no arrowhead and no `rx` draws as before.

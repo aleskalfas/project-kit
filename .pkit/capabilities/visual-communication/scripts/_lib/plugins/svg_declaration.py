@@ -54,7 +54,7 @@ HOLDS_MODES = {
 DECLARATION = {
     "name": "svg",
     "kind": "renderer",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "seam": 8,
     "module": "svg",
     "about": (
@@ -82,6 +82,7 @@ DECLARATION = {
                 "y2",
                 "stroke",
                 "stroke-width",
+                "rx",
                 "marker-start",
                 "marker-end",
                 "points",

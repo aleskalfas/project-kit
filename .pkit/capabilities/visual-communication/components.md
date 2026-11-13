@@ -12,6 +12,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/formula.py
         - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
         - .pkit/capabilities/visual-communication/scripts/_lib/scene.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/canvas.py
         - .pkit/capabilities/visual-communication/scripts/_lib/text.py
         - .pkit/capabilities/visual-communication/scripts/_lib/env.py
         - .pkit/capabilities/visual-communication/scripts/_lib/outlines.py
@@ -618,14 +619,14 @@ A primitive's properties lie in its own mapping, under SVG's names.
 | `box` | `fill`, `stroke`, `stroke-width`, `rx` | a rectangle in its frame |
 | `ellipse` | `fill`, `stroke`, `stroke-width` | an ellipse in its frame |
 | `text` | `content` or `fact` (one of the two required), `style` (required), `fill`, `sign`, `ground`, `text-anchor` | the text of a field or of a fact of its export, in lines, each run in its own role and paint, with its sign and its ground |
-| `line` | `stroke` (required), `stroke-width`, `marker-start`, `marker-end` | a straight line from `x1 y1` to `x2 y2`, or a connector between its component's ends |
+| `line` | `stroke` (required), `stroke-width`, `rx`, `marker-start`, `marker-end` | a straight line from `x1 y1` to `x2 y2`, or a connector between its component's ends, its turns round at `rx` |
 | `image` | `produced`, `content`, `file` or `role` (exactly one required) | the picture of a produced output of the piece, a picture file, or the file the brand gives a picture role |
 | `sign` | `fill`, `stroke`, `stroke-width` | the sign of the concept whose colour family its instance takes |
 
 - **A paint,** `fill` or `stroke`, is a colour role's token path, `:colour.<member>`, or a switch. `stroke-width` and `rx` are formulas that give a length.
 - **A text** shows the field `content` names, or the fact `fact` names ([Parts](#parts)), in the typography role `style` names. A text that shows a field of runs draws each run in the role and the paint its style chooses ([Switches](#switches)). Such a text alone takes `sign` and `ground`, each a value or a switch on the run styles (DEC-036 point 3). `sign`, `true` or `false`, the default, says whether a run that names a concept with a sign draws it before its text, in the run's paint. `ground`, a paint or `null`, the default, paints a ground behind the run, and is the fill the run is measured against. A text that takes neither draws every run as before. Their lengths come from the foundations' roles `space.sign-gap`, `space.ground-room` and `space.ground-corner` ([The foundations](files.md#the-foundations)). Its height is always its measured text's: a text that gives a `height` is reported as a value with two owners. With a `width`, its lines are broken to that width; without one, each paragraph is one line, and the text is as wide as its widest. `text-anchor` is `start`, the default, `middle` or `end`: where each line stands in the text's width.
 - **A line's frame** comes from its ends: it starts at the lesser of the two `x` and of the two `y`, and is as wide and as tall as the distance between them. A connector's frame holds every point of its route.
-- **An arrowhead,** `marker-start` or `marker-end`, is `none`, the default, or `arrow`, or a switch. It is drawn at that end of the line, pointing away from it, in the line's stroke.
+- **An arrowhead,** `marker-start` or `marker-end`, is `none`, the default, or `arrow`, or a switch. It is drawn at that end of the line, pointing away from it, in the line's stroke. It is five widths of the line's stroke long, and as wide at its base. The line stops at the head's base, so its tip lies where the line ends, at either end. A head longer than its leg leaves the line a hundredth of a px of the leg, to point along, and its tip then lies past the end. Two heads on a line of one leg share it, each taking at most half.
 - **An image** names exactly one of four properties, each a source of its picture (DEC-025 point 1):
   - **`produced`** names a field whose value is a produced output of the piece (*outputs*).
   - **`content`** names a field whose value is the bare name of a picture file of the piece ([Content files](files.md#content-files)). A field the content leaves empty draws nothing, and the part has zero size at its place.
@@ -705,6 +706,10 @@ A *tie* is an item that its pattern draws as a connector between two other items
 - **Several ties on one side** of one item spread evenly along it. They are ordered by where the centres of their other ends lie along that side, then as their lists hold them.
 - **A point.** A tie that names a point ends at that point, which its item's component exposes ([Exposes](#exposes)). One that names a point its item does not expose, as of a picture file, is left out and reported.
 - **With corners,** the connector leaves and meets each end square to its side, and turns twice, halfway between them. Where the two ends lie in one line, it is straight.
+- **Round turns.** A connector's `rx`, a length, is the radius its turns are drawn round at. Each turn is an arc of that radius, which leaves one leg and meets the next where it touches them. With no `rx`, or 0, each turn is a sharp corner, as is a turn that goes straight on.
+  - **A radius that does not fit** is reduced to fit, and never refused: a turn takes at most half the shorter of its two legs, so two turns on one leg never cross. A leg that ends in an arrowhead counts to the head's base, where the line stops ([Primitives](#primitives)).
+  - **Who fits it.** The scene holds `rx` as the part gives it, and a renderer fits each turn to its legs as it draws the line.
+  - **Only a connector turns,** so a line that gives its own ends and `rx` is refused.
 - **Found once.** An end is the element drawn for its item, wherever a component below the pattern draws it. It is found where that item is drawn exactly once, on the tie's page.
 - **Left out.** A tie whose end is not found, or that does not lie on one page with both its ends, is left out and reported. The rest of its list is drawn.
 - **Computed like any value.** The frames of the ends are computed in the order the references give, and a loop through them is refused ([How the engine computes a scene](#how-the-engine-computes-a-scene)). Where they cannot be computed, as in a loop, the scene holds no connector for the tie, and the finding says why.
@@ -725,7 +730,7 @@ parts:
 ends: true
 parts:
   arrow:
-    line: {stroke: line, marker-end: arrow}
+    line: {stroke: line, marker-end: arrow, rx: "=@space.2"}
     connect: corners
 ```
 
@@ -799,6 +804,7 @@ The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, its 
 
 A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A line adds `marker-start` and `marker-end` where it draws an arrowhead there. A tie's connector adds these:
 
+- **`rx`:** the radius of its turns, as its part gives it, where it gives one. A renderer fits each turn to its legs ([Ties and connectors](#ties-and-connectors)).
 - **`points`:** where its route turns, every point of it, its ends first and last. A connector whose route does not turn holds no `points`, and keeps its ends as `x1 y1 x2 y2`.
 - **`attached`:** for each end, `start` and `end`, the trace id of the element it meets, with the `side` it meets, or the image part with the `point` it ends at.
 - **Its ends' sources:** the end fields that name them, such as `content:body.links[plan-build].from`.

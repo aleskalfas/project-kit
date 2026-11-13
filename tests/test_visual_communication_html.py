@@ -9,7 +9,7 @@ well-formed XML, so `ElementTree` reads it; an HTML parser reads the same elemen
 reader's signals meet is read from the file's rules (`met`), as CSS's cascade orders them, and
 so is what a reader gets around a fixed page (`around`), on screen and in print.
 
-The reference output below is pinned to the renderer's version, 1.6.0. A change that gives
+The reference output below is pinned to the renderer's version, 1.7.0. A change that gives
 another output for the same scene and values raises the version, and changes it with it
 (DEC-005 point 9). A font and a picture are pinned by what they hold, not by their bytes.
 Version 1.2.0 came with seam 5, which hands the renderer the picture each image shows, a PNG
@@ -18,7 +18,10 @@ each inside a keyline on a backdrop (DEC-031). Version 1.4.0 came with the rules
 (DEC-026). Version 1.5.0 came to draw the path, a concept's sign, at seam 7 (DEC-036 point
 1): a scene of no path draws as 1.4.0 drew it, but for the renderer's version it names.
 Version 1.6.0 came to draw a run's sign and ground, at seam 8 (DEC-036 point 3): a scene of
-neither draws as 1.5.0 drew it, but for the renderer's version it names.
+neither draws as 1.5.0 drew it, but for the renderer's version it names. Version 1.7.0 came to
+stop a line at its arrowhead's base, and to draw a connector's turns round at the radius it
+holds, as the canvas draws them: a line with no arrowhead and no radius draws as 1.6.0 drew it,
+but for the renderer's version it names.
 """
 
 from __future__ import annotations
@@ -42,6 +45,7 @@ from tests.test_visual_communication_svg import (
     COLOURS,
     FONT,
     HOSTILE,
+    ROUNDED,
     SAID,
     SEMIBOLD,
     SHAPES,
@@ -265,7 +269,7 @@ def said(
 def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
     assert seam.declaration("html", seam.RENDERER) == html_declaration.DECLARATION
     assert html.NAME == "html"
-    assert html.VERSION == "1.6.0"
+    assert html.VERSION == "1.7.0"
 
 
 def test_it_declares_what_it_draws_and_needs() -> None:
@@ -505,7 +509,7 @@ def test_a_page_writes_no_length_but_a_share_of_its_width() -> None:
 # --- shapes -------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("drawn", [SHAPES, TIES], ids=["shapes", "ties"])
+@pytest.mark.parametrize("drawn", [SHAPES, TIES, ROUNDED], ids=["shapes", "ties", "rounded"])
 def test_a_shape_is_written_as_the_svg_renderer_writes_it(drawn: dict[str, Any]) -> None:
     """But for its paint, which reads its role's custom property in place of a colour, and an
     arrowhead, which a marker defines once for each role in place of each colour."""
@@ -513,7 +517,7 @@ def test_a_shape_is_written_as_the_svg_renderer_writes_it(drawn: dict[str, Any])
     [page] = svg.render(
         drawn, key="default", colours=COLOURS, font_file=FILES.__getitem__, pictures={}
     ).pages
-    shapes = re.findall(r"<(?:rect|ellipse|line|polyline) [^>]*/>", page.svg)
+    shapes = re.findall(r"<(?:rect|ellipse|line|polyline) [^>]*/>|<path data-id[^>]*/>", page.svg)
     assert shapes
     assert all(as_custom(shape) in file for shape in shapes)
 
@@ -697,7 +701,7 @@ def test_the_file_names_its_piece_key_and_renderer() -> None:
     root = read(scene(TITLE))
     assert root.get("data-piece") == "flow"
     assert root.get("data-key") == "default"
-    assert root.get("data-renderer") == "html 1.6.0"
+    assert root.get("data-renderer") == "html 1.7.0"
 
 
 def test_pages_follow_each_other_in_the_middle_of_the_window_with_the_declared_gap() -> None:
@@ -1164,7 +1168,7 @@ REFERENCE_KEYS = {"default": LIGHT, "colour-scheme.dark": DARK}
 PINNED = (
     "<!DOCTYPE html>\n"
     '<html lang="en" data-piece="flow" data-key="default" data-renderer="html '
-    '1.6.0">\n'
+    '1.7.0">\n'
     "<head>\n"
     '<meta charset="utf-8"/>\n'
     '<meta name="viewport" content="width=device-width,initial-scale=1"/>\n'
@@ -1189,7 +1193,7 @@ PINNED = (
     "stroke-width:1px}}</style>\n"
     "</head>\n"
     '<body><svg width="0" height="0" style="position:absolute"><defs><marker '
-    'id="pkit-arrow-end--ink" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" '
+    'id="pkit-arrow-end--ink" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="5" '
     'markerHeight="5" orient="auto"><path d="M0,0L10,5L0,10z" '
     'fill="var(--ink)"/></marker></defs></svg><div data-page="first" '
     'style="width:min(100%,200px);aspect-ratio:200/100"><svg data-layer="" '
@@ -1205,7 +1209,7 @@ PINNED = (
     "Sans Pro&quot;, &quot;Source Sans Pro Semibold&quot;;font-size:8cqw;"
     'color:var(--ink)">Aé</span></div></div><svg data-layer="" viewBox="0 0 200 100">'
     '<g transform="translate(10.5,20)"><line data-id="first/mark/arrow" x1="0" '
-    'y1="5" x2="50" y2="5" stroke="var(--ink)" '
+    'y1="5" x2="45" y2="5" stroke="var(--ink)" '
     'marker-end="url(#pkit-arrow-end--ink)"/></g><rect data-id="first/over" x="20" '
     'y="50" width="30" height="10" fill="var(--shade)"/></svg></div><div '
     'data-page="second" style="width:min(100%,120px);aspect-ratio:120/60"><div '
@@ -1214,7 +1218,7 @@ PINNED = (
     'style="height:13.33333cqw"></span><span data-span="" style="font-family:&quot;'
     'Source Sans Pro&quot;;font-size:13.33333cqw;color:var(--ink)">Ab &lt;c&gt;'
     '</span></div></div><svg data-layer="" viewBox="0 0 120 60"><line '
-    'data-id="second/arrow" x1="0" y1="5" x2="50" y2="5" stroke="var(--ink)" '
+    'data-id="second/arrow" x1="0" y1="5" x2="45" y2="5" stroke="var(--ink)" '
     'marker-end="url(#pkit-arrow-end--ink)"/></svg></div></body>\n'
     "</html>\n"
 )
@@ -1289,7 +1293,7 @@ def test_the_same_scene_and_values_give_the_same_bytes(tmp_path: Path) -> None:
 
 
 def test_the_svg_renderers_version_is_its_own() -> None:
-    assert svg.VERSION == "1.3.0"
+    assert svg.VERSION == "1.4.0"
 
 
 # --- a piece through the engine -----------------------------------------------------------------
