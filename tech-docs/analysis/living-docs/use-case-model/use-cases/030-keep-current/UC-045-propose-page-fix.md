@@ -28,6 +28,7 @@ pkit:
         - living-docs:DEC-002#5
         - living-docs:DEC-002#6
         - project-management:DEC-056#3
+        - project-management:DEC-069#1
         - project-management:DEC-056#6
         - COR-013
         - COR-017

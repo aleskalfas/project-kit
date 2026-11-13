@@ -43,6 +43,7 @@ pkit:
         - software-analysis:DEC-001#6
         - software-analysis:DEC-001#8
         - project-management:DEC-056#3
+        - project-management:DEC-069#1
         - project-management:DEC-056#6
         - ADR-034#1
         - ADR-060#6

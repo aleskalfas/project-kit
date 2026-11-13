@@ -39,6 +39,7 @@ pkit:
         - project-management:DEC-055#6
         - project-management:DEC-064
         - project-management:DEC-056#3
+        - project-management:DEC-069#1
         - project-management:DEC-056#4
         - project-management:DEC-056#6
         - ADR-061

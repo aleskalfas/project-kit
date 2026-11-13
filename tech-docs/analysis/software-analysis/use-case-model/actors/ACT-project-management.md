@@ -18,6 +18,7 @@ pkit:
         - project-management:DEC-056#2
         - project-management:DEC-056#3
         - project-management:DEC-056#6
+        - project-management:DEC-069#1
 ---
 
 # ACT-project-management — Project management
