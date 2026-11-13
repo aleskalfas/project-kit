@@ -243,7 +243,7 @@ Each web part fits every size the brand gives: a desktop, a tablet, a phone and 
 - **Form:** a head, then its rows, one under another, each across the table's width. Each row's cells share its width, and their text breaks to the cell's width, so a row is as tall as its tallest cell. A row more makes the table taller.
 - **Source:** the GOV.UK Design System's table, and the U.S. Web Design System's table.
 - **Fields:** `head`, optional.
-- **Options:** `inset`, its words `own` and `none`. With `own`, the default, the table sets its own inset, as [*Their inset*](#the-web-parts-by-their-job-on-a-page) says. With `none`, it sets none, so its head and its rows reach the edges of the width it gets. On a slide, whose layout keeps the margin, its first column then starts on the title's edge. The showcase deck's permissions slide, which set the table's rows on the margin with a component of its own, is the evidence (project-kit#3097).
+- **Options:** `inset`, its words `own` and `none`. With `own`, the default, the table sets its own inset, as [*Their inset*](#the-web-parts-by-their-job-on-a-page) says. With `none`, it sets none, so its head and its rows reach the edges of the width it gets. On a slide, whose layout keeps the margin, its first column then starts on the slide's margin.
 - **Lists:** `rows`, each drawn by the `row`, unless the component field `row` names another.
 - **Its columns.** A row cannot read the table's columns, so each row gives its cells the same spans, and the columns line up. A table keeps its columns on a phone, so a word in a narrow column must fit a phone's width.
 
