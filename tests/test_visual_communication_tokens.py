@@ -22,6 +22,7 @@ import pytest
 from tests import visual_communication_logo as logos
 from tests.in_process import load
 from tests.visual_communication_project import (
+    COMPACT_SPACE,
     FOUNDATIONS,
     RELEASED_FOUNDATIONS,
     RELEASES,
@@ -29,8 +30,10 @@ from tests.visual_communication_project import (
     TEST_EDITION,
     TEST_PARTS,
     TEST_PICTURES,
+    WINTER_ACCENT,
     bound,
     copy_library,
+    giving_own_axis,
     project,
     write,
     write_piece,
@@ -1966,6 +1969,206 @@ def test_a_phone_may_take_its_own_logo_and_each_size_is_judged_apart(
     assert finding.fix == (
         "give `picture.logo` a file in every combination of the value axes, or in none"
     )
+
+
+# --- a brand's own axes (DEC-004 points 2, 5 and 6) --------------------------------------------
+
+SEASON = tokens.Axis("season", "value", ("summer", "winter"), "summer", own=True)
+DENSITY = tokens.Axis("density", "size", ("roomy", "compact"), "roomy", own=True)
+
+
+def own_resolver(folder: Path) -> Path:
+    return next(folder.glob("*.resolver.json"))
+
+
+def test_a_brand_with_a_value_axis_of_its_own_varies_colours_on_it(
+    tmp_path: Path, foundations: Any, brand: Any
+) -> None:
+    read = tokens.read_brand(giving_own_axis(brand_copy(tmp_path)), foundations)
+    assert read.findings == ()
+    assert read.axes["season"] == SEASON
+    assert {n: a for n, a in read.axes.items() if n != "season"} == brand.axes
+    assert len(read.combinations()) == 2 * len(brand.combinations())
+    assert read.resolve("accent", {"season": "winter"}) == WINTER_ACCENT
+    for combination in brand.combinations():
+        assert read.resolve("accent", combination) == brand.resolve("accent", combination)
+
+
+def test_a_brand_with_a_size_axis_of_its_own_varies_sizes_on_it(
+    tmp_path: Path, foundations: Any, brand: Any
+) -> None:
+    read = tokens.read_brand(giving_own_axis(brand_copy(tmp_path), "density", "size"), foundations)
+    assert read.findings == ()
+    assert read.axes["density"] == DENSITY
+    assert read.resolve("space.3", {}) == WIDE
+    assert read.resolve("space.3", {"density": "compact", "colour-scheme": "dark"}) == (
+        COMPACT_SPACE
+    )
+
+
+def test_a_value_axis_of_a_brands_own_that_changes_a_size_fails(
+    tmp_path: Path, foundations: Any
+) -> None:
+    folder = brand_copy(tmp_path)
+    write(
+        folder / "tokens/tight.tokens.json",
+        json.dumps({"space": {"$type": "dimension", "3": {"$value": PX}}}),
+    )
+    giving_own_axis(
+        folder, contexts={"summer": [], "winter": [{"$ref": "tokens/tight.tokens.json"}]}
+    )
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations)
+    assert codes(raised.value.findings) == {"value-axis-changes-size"}
+
+
+def test_an_axis_of_a_brands_own_that_takes_a_shared_axiss_name_fails(
+    tmp_path: Path, foundations: Any
+) -> None:
+    folder = brand_copy(tmp_path)
+
+    def declaring(data: dict[str, Any]) -> None:
+        data["modifiers"]["contrast"]["$extensions"] = {
+            "pkit.visual-communication": {"kind": "value"}
+        }
+
+    edit_json(folder / RESOLVER, declaring)
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations)
+    (finding,) = raised.value.findings
+    assert finding.code == "own-axis-name"
+    assert finding.where == "modifiers.contrast.$extensions"
+    assert "by the name of a shared axis" in finding.message
+
+
+@pytest.mark.parametrize(
+    ("contexts", "default", "kind", "said"),
+    [
+        ({"summer": []}, None, "value", "two or more"),
+        ({"summer": [], "Winter": []}, None, "value", "two or more"),
+        ({"summer": [], "winter": []}, "spring", "value", "is not one of its modes"),
+        ({"summer": [], "winter": []}, None, "colour", "gives no kind of value, size"),
+    ],
+    ids=["one-mode", "mode-name", "default", "kind"],
+)
+def test_an_axis_of_a_brands_own_names_its_kind_and_two_modes_with_one_its_default(
+    tmp_path: Path,
+    foundations: Any,
+    contexts: dict[str, Any],
+    default: str | None,
+    kind: str,
+    said: str,
+) -> None:
+    folder = giving_own_axis(brand_copy(tmp_path), "season", kind, contexts, default)
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations)
+    (finding,) = raised.value.findings
+    assert finding.code == "own-axis"
+    assert said in finding.message
+
+
+def test_a_modifier_of_no_shared_axis_that_declares_no_kind_fails(
+    tmp_path: Path, foundations: Any
+) -> None:
+    folder = brand_copy(tmp_path)
+    edit_json(
+        folder / RESOLVER,
+        setting(
+            "modifiers|season", {"contexts": {"summer": [], "winter": []}, "default": "summer"}
+        ),
+    )
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations)
+    (finding,) = [f for f in raised.value.findings if f.code == "brand-axis"]
+    assert "declares no axis of the brand's own" in finding.message
+
+
+def test_a_brand_built_on_one_with_an_axis_of_its_own_keeps_it_and_varies_it_by_its_modes(
+    tmp_path: Path, foundations: Any
+) -> None:
+    base, folder = chain_copy(tmp_path)
+    giving_own_axis(base)
+    winter = {"accent": {"$type": "color", "$value": ORANGE}}
+    write(folder / "tokens/winter.tokens.json", json.dumps(winter))
+
+    def varying(data: dict[str, Any]) -> None:
+        data["modifiers"]["season"] = {
+            "contexts": {"summer": [], "winter": [{"$ref": "tokens/winter.tokens.json"}]},
+            "default": "summer",
+        }
+        data["resolutionOrder"].append({"$ref": "#/modifiers/season"})
+
+    edit_json(folder / "test-edition.resolver.json", varying)
+    read = tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    assert read.findings == ()
+    assert read.axes == read.base.axes
+    assert read.axes["season"] == SEASON
+    assert read.resolve("accent", {"season": "winter"}) == ORANGE
+
+
+def test_a_brand_built_on_another_declares_no_axis_of_its_own(
+    tmp_path: Path, foundations: Any
+) -> None:
+    base, folder = chain_copy(tmp_path)
+    giving_own_axis(base)
+    giving_own_axis(folder, "weather")
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations, locked={"test-brand": base})
+    (finding,) = [f for f in raised.value.findings if f.code == "base-axis"]
+    assert "declares an axis of the brand's own" in finding.message
+    assert "test-brand@1.0.0 adds no axis" in finding.message
+
+    bare, again = chain_copy(tmp_path / "again")
+    giving_own_axis(bare)
+    giving_own_axis(again)
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(again, foundations, locked={"test-brand": bare})
+    assert codes(raised.value.findings) == {"base-axis"}
+
+
+def on_neutral(tmp_path: Path) -> Path:
+    """A brand built on the neutral brand's release 1.0.0, the brand a project starts from,
+    which gives no value of its own, since neutral opens none (DEC-004 point 6)."""
+    folder = tmp_path / "on-neutral" / "1.0.0"
+    library = bound(
+        "library",
+        name="on-neutral",
+        version="1.0.0",
+        kind="brand",
+        **{"needs-release": "0.3.0"},
+        **{
+            "builds-on": [
+                {"name": "foundations", "major": 1},
+                {"name": "neutral", "major": 1, "base": True},
+            ]
+        },
+        dtcg="2025.10",
+        resolver="on-neutral.resolver.json",
+        open=[],
+    )
+    write(folder / "library.yaml", yaml_text(library))
+    resolver = {"version": "2025.10", "sets": {}, "modifiers": {}, "resolutionOrder": []}
+    write(folder / "on-neutral.resolver.json", json.dumps(resolver))
+    return folder
+
+
+def test_a_brand_built_on_neutral_keeps_its_axes_and_adds_none(
+    tmp_path: Path, released: Any
+) -> None:
+    """Every brand a project builds on the neutral brand meets DEC-004 point 6 as any brand
+    built on another does."""
+    folder = on_neutral(tmp_path)
+    read = tokens.read_brand(folder, released, locked={"neutral": RELEASED_NEUTRAL})
+    assert read.findings == ()
+    assert read.axes == read.base.axes
+    assert not any(axis.own for axis in read.axes.values())
+
+    giving_own_axis(folder, contexts={"summer": [], "winter": []})
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, released, locked={"neutral": RELEASED_NEUTRAL})
+    (finding,) = raised.value.findings
+    assert finding.code == "base-axis"
+    assert "a brand built on neutral@1.0.0 adds no axis" in finding.message
 
 
 # --- an order's roles (DEC-032 points 1, 2 and 6, DEC-004 points 8 and 10) -----------------------
