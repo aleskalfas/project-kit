@@ -20,8 +20,9 @@ combination, which comes with the scene.
   components and alpha rounded to 1/10 000, half away from zero (`formula.rounded`), so the
   same ends give the same step on every machine.
 - **Its value comes with the scene** (`values_at`): each step a scene paints, in one
-  combination, spread from that combination's own ends. The document of a brand's resolved
-  values holds no step.
+  combination, spread from that combination's own ends, and None where one of them has no
+  colour, as a role with none there. The document of a brand's resolved values holds no
+  step.
 
 Standard library and `_lib.formula` only.
 """
@@ -131,12 +132,16 @@ def _paints(elements: Sequence[Mapping[str, Any]]) -> Iterator[Any]:
 def values_at(scene: Mapping[str, Any], colours: Mapping[str, Any]) -> dict[str, Any]:
     """The value of each step `scene` paints, by its name, in the one combination whose
     colour roles `colours` gives, each spread from that combination's own ends. A step one
-    of whose ends has no colour there has none."""
-    return {
-        step.name: spread(colours[step.first], colours[step.last], step.share)
-        for step in painted(scene)
-        if colours.get(step.first) is not None and colours.get(step.last) is not None
-    }
+    of whose ends has no colour there has none, None, as such a role has; one whose ends
+    `colours` does not hold is left out, as a role the brand lacks."""
+    found: dict[str, Any] = {}
+    for step in painted(scene):
+        if step.first not in colours or step.last not in colours:
+            continue
+        first, last = colours[step.first], colours[step.last]
+        unlit = first is None or last is None
+        found[step.name] = None if unlit else spread(first, last, step.share)
+    return found
 
 
 # --- the spread -------------------------------------------------------------------------------

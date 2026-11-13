@@ -20,6 +20,9 @@ what the checks fail.
   its places' families may not take.
 - **The renderers** each draw a step from the value handed to them with the scene, and the
   pipeline hands each step's value in each combination, from that combination's own ends.
+- **A step one of whose ends has no colour in a mode** has none there, as such a role has:
+  each renderer draws nothing there and reports the loss, and the check reads it as a fill
+  that draws nothing, in every mode.
 """
 
 from __future__ import annotations
@@ -31,6 +34,7 @@ from typing import Any
 import pytest
 
 from tests.in_process import load
+from tests.test_visual_communication_checks import box, page, text
 from tests.test_visual_communication_pdf import page_of
 from tests.test_visual_communication_svg import COLOURS, FONT, element, scene
 from tests.visual_communication_project import (
@@ -158,6 +162,14 @@ def test_the_values_of_a_scene_s_steps_are_spread_from_its_combination_s_ends() 
         step("1"): WHITE,
     }
     assert colour_steps.values_at(painted, {FIRST: BLACK}) == {}
+
+
+def test_a_step_one_of_whose_ends_has_no_colour_has_none_as_such_a_role_has() -> None:
+    painted = scene(element("box", "figure/a", fill=step("1/2"), stroke=step("1")))
+    assert colour_steps.values_at(painted, {FIRST: None, LAST: WHITE}) == {
+        step("1/2"): None,
+        step("1"): None,
+    }
 
 
 # --- a pattern gives a list's places their steps ----------------------------------------------
@@ -454,6 +466,35 @@ def test_the_html_renderer_paints_each_step_with_a_custom_property_of_its_own() 
     assert drawn.losses == []
 
 
+#: Each key's colours where the order's first end has no colour in the dark scheme, so its
+#: steps have none there, as the pipeline hands them.
+UNLIT = {"default": LIGHT, "colour-scheme.dark": {**DARK, step("1/2"): None, step("1"): None}}
+
+
+def test_a_file_of_both_keys_draws_a_step_with_no_colour_in_one_as_nothing_there() -> None:
+    """Each renderer of a file that holds several keys reads a step with no colour in one of
+    them as it reads such a role: it draws nothing there, and reports the loss there."""
+    switching = svg.render(
+        STEPPED_SCENE, form="svg-modes", keys=KEYS, colours=UNLIT, font_file=lambda _f: FONT,
+        pictures={key: {} for key in KEYS},
+    )  # fmt: skip
+    [page] = switching.pages
+    assert 'fill="#636363"' in page.svg
+    assert f'[data-fill="{step("1/2")}"]{{fill:none}}' in page.svg
+    assert f'[data-stroke="{step("1")}"]{{stroke:none}}' in page.svg
+
+    page_file = html.render(
+        STEPPED_SCENE, form="html", keys=KEYS, colours=UNLIT, font_file=lambda _f: FONT,
+        pictures={key: {} for key in KEYS},
+    )  # fmt: skip
+    dark = "@media (prefers-color-scheme:dark){:root{--_step-2:transparent;--_step-1:transparent}}"
+    assert dark in page_file.document.decode()
+
+    lost = {("colour-scheme.dark", "figure/a"), ("colour-scheme.dark", "figure/l")}
+    for drawn in (switching, page_file):
+        assert {(loss.key, loss.what) for loss in drawn.losses} == lost
+
+
 # --- a piece whose list takes the steps -----------------------------------------------------
 
 #: A piece's own pattern of three cards, which takes the steps under `shade: steps`.
@@ -500,11 +541,13 @@ PIECE_CARD = bound(
 UNRELEASED = {"released": False}
 
 
-def ordered_project(tmp_path: Path, text: str = "{text-primary}") -> Any:
+def ordered_project(
+    tmp_path: Path, text: str = "{text-primary}", exports: tuple[str, ...] = ()
+) -> Any:
     """The foundations being built, which declare an order's roles, the test brand, which
     gives the order its ends, blue first and the surface last, and its text, `text`, and the
     piece `ordered`: the pattern over three cards under `shade: steps`, in both colour
-    schemes."""
+    schemes, exported as `exports` says."""
     root = project(tmp_path)
     copy_library(root, FOUNDATIONS, "foundations", "1.2.0")
     brand = copy_library(root, TEST_BRAND, "test-brand", "1.0.0")
@@ -528,6 +571,7 @@ def ordered_project(tmp_path: Path, text: str = "{text-primary}") -> Any:
         "ordered",
         modes={"colour-scheme": ["light", "dark"]},
         lock={"foundations": "1.2.0", "test-brand": "1.0.0"},
+        exports=list(exports),
     )
     folder = root / "visual" / "pieces" / "ordered"
     write(folder / "components" / "pattern.yaml", yaml_text(PIECE_PATTERN))
@@ -582,3 +626,61 @@ def test_the_check_measures_a_text_on_a_step_in_the_step_s_value(tmp_path: Path)
     on_sink = [f.message for f in failed if f.where == "figure/body/items[sink]/name"]
     assert len(on_sink) == 2
     assert all(f"`{TEXT}` on `{step('1')}` has the contrast 1.00" in each for each in on_sink)
+
+
+# --- a step with no colour in one mode ------------------------------------------------------
+
+DARK_KEY = "colour-scheme.dark"
+
+
+def test_the_check_measures_what_lies_under_a_step_with_no_colour_in_a_mode() -> None:
+    """In the dark scheme the step has no colour, so it draws nothing there: a text on it is
+    measured against the paper under it, a text painted with it is not measured there, and
+    a sign filled with it is measured in its stroke alone."""
+    half = step("1/2")
+    colours = {
+        "paper": {"default": WHITE, DARK_KEY: BLACK},
+        "ink": {"default": BLACK, DARK_KEY: srgb(0.1, 0.1, 0.1)},
+        half: {"default": srgb(0.9, 0.9, 0.9), DARK_KEY: None},
+    }
+    sign = {"type": "path", "id": "figure/sign", "x": 200, "y": 40, "width": 20, "height": 20,
+            "d": "M0 0L20 20", "fill": half, "stroke": "ink", "stroke-width": 1}  # fmt: skip
+    shown = page(
+        box("figure/back", "paper"),
+        box("figure/step", half),
+        text("figure/on", "ink"),
+        text("figure/with", half, x=120),
+        sign,
+    )
+
+    found = checks.drawn_contrast(shown, colours, ["default", DARK_KEY])
+
+    assert [(f.where, f.message.split(", ")[0]) for f in found] == [
+        ("figure/on", f"`ink` on `paper` has the contrast 1.20 in the combination `{DARK_KEY}`"),
+        ("figure/with", f"`{half}` on `{half}` has the contrast 1.00 in the combination `default`"),
+        ("figure/sign", f"the sign paints `ink` (1.20) on `paper` in the combination `{DARK_KEY}`"),
+    ]
+
+
+def test_where_an_end_has_no_colour_in_one_mode_the_steps_have_none_and_the_check_reads_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The first end has no colour in the dark scheme, so no step has one there. The pipeline
+    hands each step there as None, as a role with none, and the switching file draws it as
+    nothing there. The check reads every step in each mode, so its measure of each card's
+    name, and its look at a page's own ground for a switching file, read them too."""
+    importable(monkeypatch, svg)
+    project = ordered_project(tmp_path, exports=("svg-modes",))
+    document = project.values()
+    document["tokens"][FIRST]["values"][DARK_KEY] = None
+    results = project.scenes(facts=project.piece.stand_ins)
+    [(_, result)] = results
+    shown = result.scene.to_dict()
+
+    assert pl.colours_at(document, DARK_KEY, shown)[step("1/2")] is None
+    assert pl.colours_at(document, "default", shown)[step("1/2")] is not None
+    [(_, _, switching)] = list(pl.drawn(project, results, "svg", form="svg-modes"))
+    assert {(loss.key, loss.what) for loss in switching.losses} == {
+        (DARK_KEY, f"figure/body/items[{name}]/box") for name in ("source", "middle", "sink")
+    }
+    assert [f for f in checks.scene_findings(project, results) if f.level != findings.FACT] == []

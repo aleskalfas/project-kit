@@ -2698,12 +2698,13 @@ def _steps_of(
 ) -> dict[str, dict[str, Any]]:
     """The value of each step of an order `scene` paints, by its name, in each combination
     `keys` names, spread from that combination's own ends, whose values `colours` gives by
-    key (DEC-032 point 5). A step whose ends a combination gives no colour has none there."""
+    key (DEC-032 point 5). Each step holds every key, as each role does: None in one where
+    one of its ends has no colour (`colour_steps.values_at`)."""
     found: dict[str, dict[str, Any]] = {}
     for key in keys:
-        at = {role: by_key[key] for role, by_key in colours.items() if key in by_key}
+        at = {role: by_key.get(key) for role, by_key in colours.items()}
         for name, value in colour_steps.values_at(scene, at).items():
-            found.setdefault(name, {})[key] = value
+            found.setdefault(name, dict.fromkeys(keys))[key] = value
     return found
 
 
@@ -3035,7 +3036,9 @@ def drawn_contrast(
     under a run's span of a line, or under a sign, is that of the last box or ellipse drawn
     before it that holds the span's or the sign's middle; a translucent one is laid over the
     one under it. A text or a sign over a picture is not measured, nor one with nothing
-    under it."""
+    under it. A fill with no colour in a combination draws nothing there, so what lies
+    under it shows; a paint of a run or a sign with none there draws nothing to measure
+    there, and the renderer reports the loss."""
     found = []
     for page in _pages(scene):
         painted: list[tuple[Mapping[str, Any], float, float]] = []
@@ -3135,17 +3138,18 @@ def _run_contrast(
     minimum = tokens.LEVELS[level]
     found = []
     for key in keys:
-        ground = _ground([colours[fill][key] for fill in stack])
-        if ground is None:
-            continue
+        shown = _drawn_fills(stack, colours, key)
+        ground = _ground([colours[fill][key] for fill in shown])
         ink = colours[role][key] if role is not None else BLACK
+        if ground is None or ink is None:
+            continue
         ratio = tokens.contrast_ratio(ink, ground)
         if ratio < minimum:
             found.append(
                 Finding(
                     CONTRAST_DRAWN,
                     FAILS,
-                    f"`{role or 'black'}` on `{stack[-1]}` has the contrast {ratio:.2f} in "
+                    f"`{role or 'black'}` on `{shown[-1]}` has the contrast {ratio:.2f} in "
                     f"the combination `{key}`, below the {minimum} {what} needs (`{level}`)",
                     file=pl.PIECE_FILE,
                     where=str(text["id"]),
@@ -3189,16 +3193,18 @@ def _sign_contrast(
         return []  # a colour role the brand lacks is a finding of its own
     minimum, found = tokens.LEVELS[MARKS], []
     for key in keys:
-        ground = _ground([colours[fill][key] for fill in stack])
-        if ground is None:
+        shown = _drawn_fills(stack, colours, key)
+        ground = _ground([colours[fill][key] for fill in shown])
+        inked = [role for role in inks if colours[role][key] is not None]
+        if ground is None or not inked:
             continue
-        ratios = [tokens.contrast_ratio(colours[role][key], ground) for role in inks]
+        ratios = [tokens.contrast_ratio(colours[role][key], ground) for role in inked]
         if max(ratios) < minimum:
             measured = " and ".join(
-                f"`{role}` ({ratio:.2f})" for role, ratio in zip(inks, ratios, strict=True)
+                f"`{role}` ({ratio:.2f})" for role, ratio in zip(inked, ratios, strict=True)
             )
             message = (
-                f"the sign paints {measured} on `{stack[-1]}` in the combination `{key}`, and "
+                f"the sign paints {measured} on `{shown[-1]}` in the combination `{key}`, and "
                 f"none reaches the {minimum} a sign needs (`{MARKS}`)"
             )
             found.append(
@@ -3225,6 +3231,14 @@ def _under(
         if len(stack) > 8:
             break
     return stack
+
+
+def _drawn_fills(
+    stack: Sequence[str], colours: Mapping[str, Mapping[str, Any]], key: str
+) -> list[str]:
+    """The fills of `stack` that draw in the combination `key`, bottom first: one with no
+    colour there draws nothing, so what lies under it shows."""
+    return [fill for fill in stack if colours[fill][key] is not None]
 
 
 def _ground(stack: Sequence[Mapping[str, Any]]) -> Mapping[str, Any] | None:
