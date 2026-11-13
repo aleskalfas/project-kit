@@ -1276,6 +1276,10 @@
         "stroke-width": {
           "$ref": "#/$defs/number-value"
         },
+        "rx": {
+          "description": "The radius a connector's turns are drawn round at; with none, or 0, they are sharp. Only a line that connects its component's ends takes it.",
+          "$ref": "#/$defs/number-value"
+        },
         "marker-start": {
           "$ref": "#/$defs/marker-value"
         },
@@ -1491,6 +1495,16 @@
             "required": [
               "connect"
             ]
+          },
+          "properties": {
+            "line": {
+              "description": "A line of its own ends turns nowhere, so it takes no radius of a connector's turns.",
+              "not": {
+                "required": [
+                  "rx"
+                ]
+              }
+            }
           }
         },
         {
