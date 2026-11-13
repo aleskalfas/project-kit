@@ -67,8 +67,9 @@ strip() {
 }
 
 # True where $1 is a release version, MAJOR.MINOR.PATCH, no part padded by a
-# leading zero: the only pin the router can route, and the only version a
-# release tag names.
+# leading zero: the only version a release tag names, and so the only one this
+# script installs (ADR-090 point 4). A release candidate's pin, which the
+# router runs, is none.
 is_release_version() {
     case $1 in
         *[!0123456789.]*) return 1 ;;
@@ -141,8 +142,8 @@ fi
 
 if [ -n "$pin" ]; then
     if ! is_release_version "$pin"; then
-        fail "this project's pin, '$pin' in $pin_file, is no release version MAJOR.MINOR.PATCH, so the router cannot run it. Nothing was installed." \
-            "Mend the pin: \`pkit pin <version>\` writes a release version, or remove the file to install the version the project records."
+        fail "this project's pin, '$pin' in $pin_file, is no release version MAJOR.MINOR.PATCH, and this script installs only a release. Nothing was installed." \
+            "Mend the pin in $pin_file to name a release, as \`pkit pin <version>\` does with a release version, or remove the file to install the version the project records."
     fi
     version=$pin
     source_of_version="the version this project pins"

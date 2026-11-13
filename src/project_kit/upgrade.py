@@ -5,10 +5,14 @@ first, and depend on the code that runs it (ADR-065 points 4 and 9):
 
 - **a pinned project's upgrade under its pin's code** (the router's routed
   child, or the installed pkit that is the pin): the hand-over to a newer
-  latest release, then the older-direction check. Otherwise it runs the
-  transition to its pin.
+  latest release, or under `--pre` to the newest release, candidates included,
+  then the older-direction check. Otherwise it runs the transition to its pin.
 - **any other upgrade:** the refusal under the router's fallback, then
-  ADR-063's tool step in an un-pinned project, then the older-direction check.
+  ADR-063's tool step in an un-pinned project, then the hand-over of `--pre` to
+  a newer release candidate and the refusal of a candidate nobody asked for
+  (ADR-089 points 7 and 8; `candidates`), then the older-direction check.
+
+A move to a release candidate always pins, so `--no-pin` is refused on it.
 
 It records its target first, as `backbone_version`, and its completion last,
 as `completed_version`, and every migration runs inside it, in COR-010's order
@@ -58,6 +62,7 @@ from typing import TYPE_CHECKING, NoReturn
 import click
 from packaging.version import InvalidVersion, Version
 
+from project_kit.candidates import is_candidate, normal_form, refuse_no_pin, refuse_unasked
 from project_kit.install import (
     InstallContext,
     find_source_kit,
@@ -138,6 +143,7 @@ def run_upgrade(
     pin: bool = True,
     self_update: bool = True,
     force: bool = False,
+    pre: bool = False,
 ) -> None:
     """Transition the project to the source kit's current backbone version.
 
@@ -149,6 +155,13 @@ def run_upgrade(
     refusal under the router's fallback (point 6). A pinned upgrade that hands
     over to a newer release passes it, and *dry_run*, to that release's upgrade
     (point 9).
+
+    *pre* (`pkit upgrade --pre`) moves the project to the newest release,
+    release candidates included (ADR-089 point 8). Where that is a candidate
+    above the running pkit, the upgrade hands over to the candidate's own
+    upgrade through the router's bypass, and pins the project there. Where it is
+    a final release, *pre* hands over to none. It is also the ask that lets the
+    running pkit's own candidate through upgrade's guard (point 7).
 
     **Pins by default** (ADR-064): an **un-pinned** project is pinned at the
     version its content just synced to, so pinning is the norm and a project
@@ -195,11 +208,17 @@ def run_upgrade(
     if current_pin is not None and runs_at_its_pin(current_pin):
         # Under its pin's code (ADR-065 point 9): the router's routed child, or
         # the installed pkit the router runs in process because it is the pin.
-        # Its checks, in order: the hand-over to a newer latest release, then
-        # the older-direction check. Otherwise it runs the transition to its pin
-        # below, with no tool step (ADR-063 point 5).
-        if _auto_advance_pinned(target_root, source_kit, current_pin, dry_run=dry_run, force=force):
+        # Its checks, in order: the hand-over to a newer latest release, or
+        # under `--pre` to the newest release, candidates included, then the
+        # older-direction check. Otherwise it runs the transition to its pin
+        # below, with no tool step (ADR-063 point 5). Its target is its pin, so
+        # a candidate it moves to is one its pin names, which asked for it
+        # (ADR-089 point 6): only `--no-pin` is refused there.
+        if _auto_advance_pinned(
+            target_root, source_kit, current_pin, dry_run=dry_run, force=force, pre=pre, pin=pin
+        ):
             return
+        refuse_no_pin(read_kit_version(source_kit), pin=pin)
     else:
         # Any other upgrade. First the refusal under the router's fallback
         # (ADR-065 point 9): run by the installed pkit because the router could
@@ -230,6 +249,15 @@ def run_upgrade(
             # successful self-update); otherwise instruct or report current.
             _maybe_self_update_tool(self_update=self_update, dry_run=dry_run)
 
+        # ADR-089 point 8: under `--pre`, the hand-over to a release candidate
+        # newer than the running pkit, after the tool step, which installs no
+        # candidate. A final release newest is the tool step's, as without
+        # `--pre`.
+        if pre and _hand_over_under_pre(
+            target_root, current_pin, dry_run=dry_run, force=force, pin=pin
+        ):
+            return
+
         # Past the self-host short-circuit: a real adopter upgrade reads
         # `read_kit_version(source_kit)` next and propagates from `source_kit`
         # via its sync step. Guard the resolved source first, so an incomplete
@@ -238,6 +266,19 @@ def run_upgrade(
         # The self-host branch above is skipped — its source is the live
         # checkout.
         refuse_if_source_kit_incomplete(source_kit)
+
+        # ADR-089 point 7: a release candidate as the target only where someone
+        # asked for it, and then always pinned. The running pkit's own bundle
+        # is the target here.
+        bundled = read_kit_version(source_kit)
+        refuse_unasked(
+            bundled,
+            pre=pre,
+            bypassed=is_route_bypassed(os.environ),
+            pin=current_pin,
+            installed_tool=_running_is_installed_tool,
+        )
+        refuse_no_pin(bundled, pin=pin)
 
         # #1212: a pkit older than the project's content or pin must not sync
         # its older content over the project's or move the pin down. Checked
@@ -1013,7 +1054,8 @@ def freeze_pin(target_root: Path, version: str) -> None:
     `pkit pin` with no argument (freeze at the current content version, via
     `freeze_at_content`) and `pkit pin <version>` when the target equals the
     current content version (ADR-049). `version` is always a bare
-    `MAJOR.MINOR.PATCH` semver — the callers normalise and validate before this
+    `MAJOR.MINOR.PATCH` semver, or a release candidate in PEP 440's normal form,
+    `MAJOR.MINOR.PATCHrcN` — the callers normalise and validate before this
     point (`_normalize_pin_version`), so the router can always route it. The
     write is atomic (`write_version_pin`)."""
     pin_path = pin_file_path(target_root)
@@ -1067,25 +1109,31 @@ def reconcile_pin(target_root: Path, version: str, *, force: bool = False) -> No
     """Set the pin at `version`, reconciling content per the target-vs-current order.
 
     `pkit pin <version>` normalises and validates the token first
-    (`_normalize_pin_version`: a bare `MAJOR.MINOR.PATCH` semver, a single leading
-    `v` stripped), then compares it against the project's current content version
+    (`_normalize_pin_version`: a bare `MAJOR.MINOR.PATCH` semver or a release
+    candidate's `MAJOR.MINOR.PATCHrcN`, a single leading `v` stripped), then
+    compares it, in PEP 440 order, against the project's current content version
     (`.pkit/manifest.yaml`'s `backbone_version`) and dispatches on the ordering
-    (ADR-049):
+    (ADR-049, ADR-089 point 6):
 
     - **equal** → freeze in place (write the pin, no content sync);
     - **newer** → reconcile content forward to the target under the target's own
-      code (via the router bypass), then flip the pin last, atomically;
+      code (via the router bypass), then flip the pin last, atomically. A pin
+      that names a release candidate asks for it, so the candidate's upgrade,
+      run through the bypass, moves the project there;
     - **older** → HARD REFUSE — pkit migrations are forward-only (COR-010), so
       there is no safe downgrade path; nothing is written and no content is
       touched (reverting each upgrade's commit is the rollback route).
 
-    A version-only token is required: branch names, commit shas, and pre-release /
-    build-metadata forms are refused at the boundary, because the router's route-2
-    can only route a bare `v<semver>` tag (branch/sha pins need a router change and
-    are deferred). A project with no `.pkit/manifest.yaml` (no recorded content
-    version) is refused too — there is nothing to order the target against — and
-    so is the methodology's source repository (`_refuse_pin_in_source`), first,
-    so a newer target never bootstraps a release's `upgrade` over it.
+    A version-only token is required: branch names, commit shas, any pre-release
+    but a release candidate, and build metadata are refused at the boundary,
+    because the router's route-2 routes a pin to the tag `v<pin>` as written, and
+    only a release tag or a candidate tag has that form (branch/sha pins need a
+    router change and are deferred). A candidate spelt another way, such as
+    `2.0.0-rc.1`, is refused with its normal form named. A project with no
+    `.pkit/manifest.yaml` (no recorded content version) is refused too — there
+    is nothing to order the target against — and so is the methodology's source
+    repository (`_refuse_pin_in_source`), first, so a newer target never
+    bootstraps a release's `upgrade` over it.
 
     *force* (`pkit pin <newer> --force`) is passed to the target's `upgrade`,
     where it overrides the two warnings of the dependency gates and nothing else
@@ -1112,30 +1160,43 @@ def reconcile_pin(target_root: Path, version: str, *, force: bool = False) -> No
     _advance_pin_to(target_root, normalized, force=force)
 
 
-# Accepted pin token: a bare MAJOR.MINOR.PATCH semver. Deliberately stricter than
-# `packaging.version.Version` (which also parses `1.2`, `1.2.3rc1`, `1.2.3+build`)
+# Accepted pin token: a bare MAJOR.MINOR.PATCH semver, or a release candidate in
+# PEP 440's normal form (`candidates.is_candidate`). Deliberately stricter than
+# `packaging.version.Version` (which also parses `1.2`, `1.2.3a1`, `1.2.3+build`)
 # — the router's route-2 pins by the git tag `v<token>`, and only a plain
-# three-part release tag is guaranteed to resolve. Pre-release / build-metadata /
-# branch / sha pins need a router change and are deferred (ADR-049).
+# three-part release tag or a candidate tag is guaranteed to resolve (PRJ-004).
+# Other pre-release / build-metadata / branch / sha pins need a router change and
+# are deferred (ADR-049).
 _PIN_SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
 
 def _normalize_pin_version(token: str) -> str:
-    """Normalise + validate a `pkit pin <token>` argument to a bare semver (ADR-049).
+    """Normalise + validate a `pkit pin <token>` argument (ADR-049, ADR-089 point 6).
 
     Strips a single leading `v` (`v1.145.0` and `1.145.0` both normalise to the
     bare `1.145.0` that gets ordered, written, AND routed), then requires a plain
-    `MAJOR.MINOR.PATCH` semver. Refuses anything else — branch names, commit shas,
-    pre-release / build-metadata forms — because the router can only route a bare
-    `v<semver>` tag. Raises `click.ClickException` (nothing is written) on refusal.
+    `MAJOR.MINOR.PATCH` semver or a release candidate in PEP 440's normal form,
+    `MAJOR.MINOR.PATCHrcN`. A candidate spelt another way (`2.0.0-rc.1`,
+    `2.0.0RC1`) is refused with its normal form named, since the router routes
+    the pin as written. Refuses anything else — branch names, commit shas, any
+    other pre-release, build metadata — because the router routes only a tag
+    `v<pin>` that a release or a candidate carries. Raises
+    `click.ClickException` (nothing is written) on refusal.
     """
-    candidate = token[1:] if token.startswith("v") else token
-    if not _PIN_SEMVER_RE.match(candidate):
+    bare = token[1:] if token.startswith("v") else token
+    if _PIN_SEMVER_RE.match(bare) or is_candidate(bare):
+        return bare
+    normal = normal_form(bare)
+    if normal is not None and is_candidate(normal):
         raise click.ClickException(
-            f"pkit pin takes a version like 1.145.0 (got {token!r}); branch and "
-            "commit pins aren't supported yet."
+            f"pkit pin takes a release candidate in PEP 440's normal form, {normal} (got "
+            f"{token!r}): the router runs a pin from the tag `v<pin>` as written, and only "
+            "that form names the candidate's tag. Nothing was written."
         )
-    return candidate
+    raise click.ClickException(
+        f"pkit pin takes a version like 1.145.0, or a release candidate like 2.0.0rc1 (got "
+        f"{token!r}); branch, commit and other pre-release pins aren't supported."
+    )
 
 
 def _require_backbone_version(target_root: Path) -> str:
@@ -1203,10 +1264,11 @@ def reconcile_forward_via_target(
 def _pin_order(target: str, current: str) -> str:
     """Order `target` against `current` for the pin guard: equal | newer | older.
 
-    `target` is already a validated bare semver (`_normalize_pin_version`);
-    `current` is the project's recorded `backbone_version`. A malformed recorded
-    version (a corrupt manifest) is refused cleanly rather than crashing the
-    comparison (ADR-049)."""
+    `target` is already a validated bare semver or release candidate
+    (`_normalize_pin_version`); `current` is the project's recorded
+    `backbone_version`. Both are ordered by PEP 440, so a candidate sorts below
+    its final release (ADR-089 point 6). A malformed recorded version (a corrupt
+    manifest) is refused cleanly rather than crashing the comparison (ADR-049)."""
     parsed_target = Version(target)
     try:
         parsed_current = Version(current)
@@ -1284,20 +1346,29 @@ def runs_at_its_pin(pin: str) -> bool:
 
 
 def _auto_advance_pinned(
-    target_root: Path, source_kit: Path, current_pin: str, *, dry_run: bool, force: bool
+    target_root: Path,
+    source_kit: Path,
+    current_pin: str,
+    *,
+    dry_run: bool,
+    force: bool,
+    pre: bool = False,
+    pin: bool = True,
 ) -> bool:
     """The checks of `pkit upgrade` under its pin's code, in ADR-065 point 9's order.
 
     Run by the routed child, or by the installed pkit that is the pin
     (`runs_at_its_pin`). It cannot mutate the global tool, and needs not: it
-    resolves the latest release (ADR-063 point 1's `git ls-remote` check), then
-    checks three cases, in this order:
+    resolves the latest release (ADR-063 point 1's `git ls-remote` check), or
+    under *pre* the newest release, candidates included, which then takes the
+    latest's place (ADR-089 point 8). It then checks three cases, in this order:
 
     1. **A newer latest release that resolves:** it hands over to the latest
        through the router's bypass, and returns True. The latest's upgrade runs
        from the recorded states, so it finishes the pin's own interrupted
        transition on the way. `--dry-run` and `--force` pass to it, and the pin
-       flips last (`_advance_pin_to`).
+       flips last (`_advance_pin_to`). A release candidate is the target only
+       under *pre*, and `--no-pin` (*pin* False) is refused on it.
     2. **A recorded state ahead of the pin,** in `backbone_version` or
        `completed_version`: the older-direction check refuses, before anything
        is written. Offline its message names reconnecting, since the latest's
@@ -1310,10 +1381,15 @@ def _auto_advance_pinned(
     A pin that is no version cannot be ordered against the latest release, so
     it hands over to none.
     """
-    latest = _latest_released_version()
+    if pre:
+        latest = _newest_release_or_candidate()
+        named = _NEWEST_UNDER_PRE
+    else:
+        latest = _latest_released_version()
+        named = _LATEST
     if latest is None:
         click.secho(
-            "warning: could not check for the latest pkit release "
+            f"warning: could not check for the {named} "
             f"(`git ls-remote {DISTRIBUTION_REMOTE_URL}` failed — offline, missing "
             "credentials, git unavailable, or timed out), so this upgrade hands over to "
             f"no newer release. The pin stays at {current_pin}; re-run when the release "
@@ -1329,20 +1405,21 @@ def _auto_advance_pinned(
         if pinned_version is None:
             click.secho(
                 f"warning: this project's pin ({current_pin!r}) is not valid semver, so "
-                f"`pkit upgrade` cannot order it against the latest release (v{latest}) "
+                f"`pkit upgrade` cannot order it against the {named} (v{latest}) "
                 "and hands over to none.",
                 err=True,
                 fg="yellow",
             )
         elif latest > pinned_version:
-            _hand_over_to_latest(target_root, current_pin, str(latest), dry_run, force)
+            refuse_no_pin(str(latest), pin=pin)
+            _hand_over(target_root, current_pin, str(latest), named, dry_run=dry_run, force=force)
             return True
         elif latest == pinned_version:
-            click.echo(f"Already at the latest pkit release (v{latest}); the pin stays.")
+            click.echo(f"Already at the {named} (v{latest}); the pin stays.")
         else:
             click.echo(
-                f"This project is pinned to {current_pin}, which is AHEAD of the latest "
-                f"pkit release (v{latest}); the pin stays (pkit does not downgrade a pin)."
+                f"This project is pinned to {current_pin}, which is AHEAD of the {named} "
+                f"(v{latest}); the pin stays (pkit does not downgrade a pin)."
             )
 
     # Case 2: a recorded state ahead of the pin, before the child's own
@@ -1352,25 +1429,78 @@ def _auto_advance_pinned(
     return False
 
 
-def _hand_over_to_latest(
-    target_root: Path, current_pin: str, target: str, dry_run: bool, force: bool
+# How the upgrade names the release its lookup found: the latest final release,
+# or under `--pre` the newest release, candidates included (ADR-089 point 8).
+_LATEST = "latest pkit release"
+_NEWEST_UNDER_PRE = "newest pkit release, candidates included"
+
+
+def _hand_over_under_pre(
+    target_root: Path, current_pin: str | None, *, dry_run: bool, force: bool, pin: bool
+) -> bool:
+    """The hand-over of `pkit upgrade --pre`, in any upgrade not run under its pin's
+    code (ADR-089 point 8, ADR-065 point 4).
+
+    It looks up the newest release, candidates included, from the source ADR-063
+    point 1 reads. Where that is a release candidate above the running pkit, it
+    hands over to the candidate's own upgrade through the router's bypass, flips
+    the pin to the candidate last, and returns True. `--no-pin` (*pin* False) is
+    refused on it, since a move to a candidate always pins (point 7). Where the
+    newest is a final release, or the running pkit itself, or the lookup fails,
+    it hands over to none and returns False. ADR-063's tool step, which installs
+    no candidate, has already run.
+    """
+    newest = _newest_release_or_candidate()
+    if newest is None:
+        click.secho(
+            f"warning: could not check for the {_NEWEST_UNDER_PRE} "
+            f"(`git ls-remote {DISTRIBUTION_REMOTE_URL}` failed — offline, missing "
+            "credentials, git unavailable, or timed out), so this upgrade hands over to "
+            "no release candidate.",
+            err=True,
+            fg="yellow",
+        )
+        return False
+    running = public_version(running_version())
+    if not is_candidate(str(newest)) or (running is not None and newest <= running):
+        return False
+    refuse_no_pin(str(newest), pin=pin)
+    _hand_over(
+        target_root, current_pin, str(newest), _NEWEST_UNDER_PRE, dry_run=dry_run, force=force
+    )
+    return True
+
+
+def _hand_over(
+    target_root: Path,
+    current_pin: str | None,
+    target: str,
+    named: str,
+    *,
+    dry_run: bool,
+    force: bool,
 ) -> None:
-    """Hand a pinned upgrade over to the newer latest release *target*, through the
-    router's bypass, and flip the pin last (ADR-049, ADR-065 point 9).
+    """Hand an upgrade over to the newer release *target*, which the lookup found as
+    the release *named*, through the router's bypass, and flip the pin last
+    (ADR-049, ADR-065 point 9, ADR-089 point 8). A project with no pin is pinned
+    at the target.
 
     A dry run runs the target's upgrade with `--dry-run`, so it lists what that
     upgrade would do, the pin it would raise included, and writes no pin.
     """
+    prior = current_pin if current_pin is not None else "(unpinned)"
     if dry_run:
+        newer_than = (
+            f"the pin, {current_pin}" if current_pin is not None else f"pkit {running_version()}"
+        )
         click.echo(
-            f"  (dry-run) the latest pkit release, v{target}, is newer than the pin, "
-            f"{current_pin}: its own upgrade runs with --dry-run, through the router's "
-            "bypass."
+            f"  (dry-run) the {named}, v{target}, is newer than {newer_than}: its own "
+            "upgrade runs with --dry-run, through the router's bypass."
         )
         reconcile_forward_via_target(target_root, target, dry_run=True, force=force)
         return
     click.echo(
-        f"Raising the pin: {current_pin} -> {target} (latest pkit release); "
+        f"Raising the pin: {prior} -> {target} ({named}); "
         "reconciling content forward under the target's own code first."
     )
     _advance_pin_to(target_root, target, force=force)
@@ -1675,6 +1805,21 @@ def _latest_released_version() -> Version | None:
     terminal prompt is off, so a server that asks for a credential fails the lookup
     at once (ADR-090 point 2).
     """
+    return _newest_tagged_version(candidates=False)
+
+
+def _newest_release_or_candidate() -> Version | None:
+    """The lookup of `pkit upgrade --pre`: the highest release tag or release
+    candidate tag, from the source `_latest_released_version` reads, with the same
+    failures (ADR-089 point 8). Every other pre-release and dev release is still
+    skipped."""
+    return _newest_tagged_version(candidates=True)
+
+
+def _newest_tagged_version(*, candidates: bool) -> Version | None:
+    """The highest version the distribution source's tags name, release candidates
+    among them only where *candidates* is set, or None on any failure of the
+    lookup or where no tag names one (`_latest_released_version`)."""
     try:
         completed = subprocess.run(
             ["git", "ls-remote", "--tags", DISTRIBUTION_REMOTE_URL],
@@ -1688,10 +1833,10 @@ def _latest_released_version() -> Version | None:
         return None
     if completed.returncode != 0:
         return None
-    return _max_released_tag(completed.stdout)
+    return _max_released_tag(completed.stdout, candidates=candidates)
 
 
-def _max_released_tag(ls_remote_output: str) -> Version | None:
+def _max_released_tag(ls_remote_output: str, *, candidates: bool = False) -> Version | None:
     """Pick the highest release tag from `git ls-remote --tags` output.
 
     Each line is `<sha>\trefs/tags/<tag>`. Annotated tags also emit a
@@ -1704,13 +1849,21 @@ def _max_released_tag(ls_remote_output: str) -> Version | None:
     non-release tag, a malformed ref). So what the tool step installs and a
     pinned raise writes is a release `pkit pin` accepts. Returns None when no
     release tag is present.
+
+    With *candidates*, a release candidate's tag counts too, in PEP 440's normal
+    form, `vX.Y.ZrcN` (`candidates.is_candidate`), and sorts below its final
+    release: the lookup of `pkit upgrade --pre` (ADR-089 point 8). Any other
+    pre-release or dev release is skipped still.
     """
     versions: list[Version] = []
     for line in ls_remote_output.splitlines():
         ref = line.rpartition("refs/tags/")[2].strip()
         ref = ref.removesuffix("^{}")
-        if ref.startswith("v") and is_release_version(ref[1:]):
-            versions.append(Version(ref[1:]))
+        if not ref.startswith("v"):
+            continue
+        version = ref[1:]
+        if is_release_version(version) or (candidates and is_candidate(version)):
+            versions.append(Version(version))
     return max(versions) if versions else None
 
 

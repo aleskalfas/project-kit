@@ -294,16 +294,18 @@ def test_it_reads_the_pin_as_the_router_does(clone: Clone, text: str) -> None:
 
 
 @pytest.mark.parametrize("pin", ["v1.2.3", "main", "1.2", "01.2.3", "1.2.3rc1", "1.2.3\n4.5.6"])
-def test_it_refuses_a_pin_the_router_cannot_route(clone: Clone, pin: str) -> None:
-    """A pin that is no bare release version is one the router can never route.
-    The script installs nothing, names the pin to mend, and does not fall back to
-    the recorded version (ADR-090 point 4)."""
+def test_it_refuses_a_pin_that_names_no_release(clone: Clone, pin: str) -> None:
+    """A pin that is no bare release version names no release, and the script
+    installs only a release, so it refuses a release candidate's pin too, which
+    the router runs. It installs nothing, names the pin to mend, and does not
+    fall back to the recorded version (ADR-090 point 4)."""
     clone.pin(pin + "\n")
 
     run = clone.run(clone.uv_bin)
 
     assert run.code == 1
     assert "this project's pin" in run.err
+    assert "installs only a release" in run.err
     assert "pkit pin <version>" in run.err
     assert run.installs == []
     assert run.checks == []
