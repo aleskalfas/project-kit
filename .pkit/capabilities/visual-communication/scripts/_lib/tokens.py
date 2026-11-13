@@ -1,6 +1,6 @@
 """Brands: their design tokens and Resolver document in the DTCG format 2025.10, the
-foundations' declarations of the shared roles, axes, colour families, shapes and pairs
-(DEC-004, DEC-036 point 1),
+foundations' declarations of the shared roles, axes, colour families, shapes, an order's
+roles and pairs (DEC-004, DEC-032 point 1, DEC-036 point 1),
 the own roles of the component libraries resolved with a brand (DEC-008), and the
 component tokens of their components (DEC-035).
 
@@ -8,20 +8,22 @@ component tokens of their components (DEC-035).
 its type, and a default that aliases an older role where it has one; each shared axis with
 its kind, its modes and its default; the colour families, each a mapping of its members to
 colour roles; the shapes a notation maps a concept to, each an outline by its name
-(`outlines`); and the pairs of colour roles that must contrast, at WCAG's levels. A shared
-role carries no value, so it is no DTCG token. A role of the type `picture` takes a picture
-file of the brand as its value; it carries no default, and no brand owes it a value
-(DEC-025 point 4).
+(`outlines`); an order's roles, where they declare them (`Order`): which colour role is the
+first end, which the last, which the text on every step and which the page's ground, the
+first three in no family, and no family named `order`; and the pairs of colour roles that
+must contrast, at WCAG's levels. A shared role carries no value, so it is no DTCG token. A
+role of the type `picture` takes a picture file of the brand as its value; it carries no
+default, and no brand owes it a value (DEC-025 point 4).
 
 **A component library's own roles** (`roles.yaml` of a library of kind `components` other
 than the foundations, `read_own_roles`) lie under a group of its name, none under the group
 of component tokens (DEC-004 point 7). Each has a type, and may carry a default: an alias
 to another of its own roles, or to a role of a library it builds on, the shared roles
 included, of the same type, never to a value or a component token (DEC-008 point 3). Its
-pairs each name one of its own roles. It declares no axes, no colour families, no shapes
-and no picture role, which the foundations' alone are. What is wrong in it never refuses it: it
-is kept as its findings, each naming its version, and a role or a pair that cannot be
-read is left out.
+pairs each name one of its own roles. It declares no axes, no colour families, no shapes,
+no order's roles and no picture role, which the foundations' alone are. What is wrong in it
+never refuses it: it is kept as its findings, each naming its version, and a role or a pair
+that cannot be read is left out.
 
 **A component token** (`read_component_tokens`) is declared in its component's own file,
 under `tokens`, by its name alone, as `{type, default}`: its path is
@@ -38,13 +40,14 @@ component (`layout`). The foundations ship components too, so theirs declare tok
 of each component library resolved with them, one version of each, under a lock or as a
 version is checked alone (DEC-008 point 1). It judges each library's defaults and pairs
 against the libraries it builds on there: a default that aliases a component token, a
-role of another type or of a library it does not build on, a default that leads nowhere
-or a loop of defaults, each fails; a pair that, its own roles replaced by their defaults,
-falls on no pair the foundations, the library or a library it builds on declares at a
-level as strict fails; a role whose chain of defaults does not end at a shared role is
-stated as a fact. A role's type reads from the scope with no brand. It holds each
-component library, one that declares neither an own role nor a component token among them,
-since a brand that names a library draws its tops too (DEC-009 point 3).
+role of an order (DEC-032 point 6), a role of another type or of a library it does not
+build on, a default that leads nowhere or a loop of defaults, each fails; a pair that, its
+own roles replaced by their defaults, falls on no pair the foundations, the library or a
+library it builds on declares at a level as strict fails; a role whose chain of defaults
+does not end at a shared role is stated as a fact. A role's type reads from the scope with
+no brand. It holds each component library, one that declares neither an own role nor a
+component token among them, since a brand that names a library draws its tops too (DEC-009
+point 3).
 
 **A brand** is one library version of kind `brand`. Its `library.yaml` names the DTCG
 version, its Resolver document, its open roles, and the brand it builds on as its base, if
@@ -153,7 +156,8 @@ a Brand, whose `findings` hold what is wrong but leaves it usable: an open role 
 not have, a value for a role its base does not open, a font file nothing holds, a picture
 file nothing holds or the capability does not read, a picture role given in some value
 combinations of a key and not in others or given files of two proportions there, a
-declared pair below its contrast, a
+declared pair below its contrast, an order's text between its two ends or a first end that
+stands out less from the page's ground than the last (DEC-032 point 2), a
 token under a library's name that gives none of its roles a value, a role of a library it
 names that it leaves with no value. Its `facts` hold what its version alone states: each
 shared picture role it gives no value (DEC-025 point 9). A library's own `roles.yaml` is
@@ -161,8 +165,8 @@ no brand's: its findings are the scope's (`Scope.findings`), each naming the lib
 version. Every finding of a brand names the brand's version as where it lies, so its level
 is read where it lies (DEC-002 point 7); a fault of the lock, a base it names at another
 major or not at all, names none, and always fails. A brand's findings hold its base's too,
-each naming the base's version; a pair or a font family is judged at the brand only where
-the brand's values change what the base gives.
+each naming the base's version; a pair, an order's ends or a font family is judged at the
+brand only where the brand's values change what the base gives.
 
 Knows nothing of the working folder, pieces, the list or the configuration.
 """
@@ -249,6 +253,11 @@ _DECLARATION_KEYS = ("type", "default")
 #: no role takes or a picture (DEC-035 points 2, 4 and 9).
 TOKEN_SHAPE = "component-token-shape"
 
+#: The key of the foundations' `roles.yaml` that declares an order's roles, a name no colour
+#: family takes, and the keys of its declaration, each naming a colour role (DEC-032 point 1).
+ORDER = "order"
+ORDER_KEYS = ("first", "last", "text", "ground")
+
 
 class TokenError(Exception):
     """Declarations or a brand that cannot be read or resolved; `findings` says why."""
@@ -329,6 +338,24 @@ class Pair:
 
 
 @dataclass(frozen=True)
+class Order:
+    """An order's roles as the foundations declare them (DEC-032 point 1): `first`, the end
+    an order's first place takes; `last`, the end its last place takes; `text`, the text on
+    every step; and `ground`, the shared role of the page's ground, from which the first end
+    stands out at least as much as the last (DEC-004 point 8)."""
+
+    first: str
+    last: str
+    text: str
+    ground: str
+
+    @property
+    def roles(self) -> tuple[str, str, str]:
+        """The roles of an order, its two ends and its text. The ground is the page's."""
+        return (self.first, self.last, self.text)
+
+
+@dataclass(frozen=True)
 class GivenPicture:
     """The file a brand gives a picture role in one combination (DEC-025 point 4): its bare
     name, `name`, and the brand version whose `pictures/` holds it, the brand's own or a
@@ -351,9 +378,11 @@ class GivenPicture:
 @dataclass(frozen=True)
 class Declarations:
     """A library's declarations, its `roles.yaml`: the foundations' shared roles, axes,
-    colour families, shapes and pairs (DEC-004, DEC-036 point 1), or a component library's
-    own roles and pairs (DEC-008 point 8).
+    colour families, shapes, an order's roles and pairs (DEC-004, DEC-032 point 1, DEC-036
+    point 1), or a component library's own roles and pairs (DEC-008 point 8).
 
+    - `order`: an order's roles, where the foundations declare them; None in a version
+      that declares none, as every version before them, and in a library's own roles.
     - `label`: `<name>@<version>` of the library they lie in, and `file` the file as
       findings name it.
     - `own`: for a library other than the foundations, its name, the group its own roles
@@ -372,6 +401,7 @@ class Declarations:
     families: dict[str, dict[str, str]]
     pairs: tuple[Pair, ...]
     shapes: dict[str, Outline] = field(default_factory=dict)
+    order: Order | None = None
     label: str = ""
     file: str = ""
     own: str = ""
@@ -410,6 +440,7 @@ def read_declarations(path: Path, *, library: str = "", shown: str = "") -> Decl
     axes = _read_axes(data.get("axes", {}), problems)
     families = _read_families(data.get("families", {}), roles, problems)
     shapes = _read_shapes(data.get("shapes", {}), problems)
+    order = _read_order(data.get(ORDER), roles, families, problems)
     pairs = _read_pairs(data.get("pairs", []), roles, problems)
     if problems.found:
         raise TokenError(problems.found)
@@ -427,6 +458,7 @@ def read_declarations(path: Path, *, library: str = "", shown: str = "") -> Decl
         families=families,
         pairs=pairs,
         shapes=shapes,
+        order=order,
         label=library,
         file=file,
         findings=unclosed,
@@ -438,6 +470,7 @@ _FOUNDATIONS_ONLY = {
     "axes": "the shared axes",
     "families": "the colour families",
     "shapes": "the shapes",
+    ORDER: "an order's ends and its text",
 }
 
 
@@ -707,6 +740,13 @@ def _read_families(
                 "family-shape", f"the family `{name}` is not a name with its members", where
             )
             continue
+        if name == ORDER:
+            problems.add(
+                "family-shape",
+                f"the family `{name}` takes the name of an order's roles, which no family takes",
+                where,
+            )
+            continue
         for member, role in members.items():
             if not is_name(member) or roles.get(role) is None or roles[role].type != "color":
                 problems.add(
@@ -739,6 +779,54 @@ def _read_shapes(raw: Any, problems: _Problems) -> dict[str, Outline]:
             continue
         shapes[name] = outline
     return shapes
+
+
+def _read_order(
+    raw: Any,
+    roles: Mapping[str, Role],
+    families: Mapping[str, Mapping[str, str]],
+    problems: _Problems,
+) -> Order | None:
+    """An order's roles as `raw` declares them (DEC-032 point 1), or None where it declares
+    none: four different colour roles, `first`, `last`, `text` and `ground`, of which the
+    order's own three lie in no colour family."""
+    if raw is None:
+        return None
+    if not isinstance(raw, Mapping) or set(raw) != set(ORDER_KEYS):
+        keys = ", ".join(f"`{key}`" for key in ORDER_KEYS)
+        problems.add(
+            "order-shape", f"`{ORDER}` is not a mapping of {keys}, each to a colour role", ORDER
+        )
+        return None
+    named = tuple(raw[key] for key in ORDER_KEYS)
+    stray = [
+        key
+        for key, role in zip(ORDER_KEYS, named, strict=True)
+        if not isinstance(role, str) or role not in roles or roles[role].type != "color"
+    ]
+    for key in stray:
+        problems.add("order-shape", f"`{ORDER}.{key}` names no colour role", f"{ORDER}.{key}")
+    if stray:
+        return None
+    if len(set(named)) != len(named):
+        problems.add(
+            "order-shape",
+            f"`{ORDER}` names one role twice: an order's two ends, its text and the page's "
+            f"ground are four roles",
+            ORDER,
+        )
+        return None
+    order = Order(*named)
+    for family, members in families.items():
+        for member, role in members.items():
+            if role in order.roles:
+                problems.add(
+                    "order-shape",
+                    f"the member `{member}` of the family `{family}` is `{role}`, a role of an "
+                    f"order, which no family holds",
+                    f"families.{family}.{member}",
+                )
+    return order
 
 
 def _read_pairs(
@@ -860,6 +948,10 @@ class Scope:
         return self.foundations.shapes
 
     @property
+    def order(self) -> Order | None:
+        return self.foundations.order
+
+    @property
     def top_groups(self) -> tuple[str, ...]:
         return self.foundations.top_groups
 
@@ -934,8 +1026,10 @@ class Scope:
 
     def _check_defaults(self, name: str) -> None:
         """Each default of the library's own roles and of its components' tokens, against
-        the roles it may reach (DEC-008 point 3, DEC-035 point 4)."""
+        the roles it may reach (DEC-008 point 3, DEC-035 point 4). None aliases a role of
+        an order (DEC-032 point 6)."""
         reach = self.reach(name)
+        ordered = self.order.roles if self.order is not None else ()
         for path, role, file, where in self._declared(name):
             target = role.default
             if target is None:
@@ -946,6 +1040,15 @@ class Scope:
                     "role-default",
                     f"the default of `{path}` aliases `{target}`, a component token: a role "
                     f"defaults to a role, never to the token of one part",
+                    where,
+                    file=file,
+                )
+            elif target in ordered:
+                self._add(
+                    name,
+                    "role-default",
+                    f"the default of `{path}` aliases `{target}`, a role of an order: a brand "
+                    f"tunes an order's colours for its steps alone, so no default aliases one",
                     where,
                     file=file,
                 )
@@ -1587,6 +1690,7 @@ class _BrandReader:
         open_roles, opened = self._check_open(library.get("open", []), base)
         fonts = self._read_fonts(resolved, hidden, base)
         self._check_pairs(views, resolved, base)
+        self._check_order(views, resolved, base)
         valued = tuple(
             path
             for path in sorted(self.scope.roles)
@@ -2916,7 +3020,11 @@ class _BrandReader:
         """Each pair of the scope in every combination; a combination where the pair is as
         its base gives it is the base's to report. A library's pair is judged only where
         the brand's values reach it, and then in every combination where both its roles
-        have a value; at its defaults it is its library's (DEC-008 point 6)."""
+        have a value; at its defaults it is its library's (DEC-008 point 6). A pair of an
+        order's role is judged only where a brand of the chain gives the order a value
+        (`_order_given`)."""
+        order = self.scope.foundations.order
+        ordered = set(order.roles) if order is not None else set()
         for pair in self.scope.pairs:
             roles = (pair.text, pair.under)
             if any(self.scope.owner.get(r) for r in roles) and not any(
@@ -2925,6 +3033,8 @@ class _BrandReader:
                 continue
             for key, values in resolved.items():
                 if pair.text not in values or pair.under not in values:
+                    continue
+                if ordered & set(roles) and not self._order_given(views[key]):
                     continue
                 text, under = values[pair.text].value, values[pair.under].value
                 below = base._resolved[key] if base is not None else {}
@@ -2957,6 +3067,104 @@ class _BrandReader:
                         "",
                         pair.text,
                     )
+
+    def _order_given(self, view: _View) -> bool:
+        """Whether a brand of the chain gives one of an order's roles a value in `view`. At
+        their defaults they take the neutral family's colours (DEC-032 point 1), whose own
+        pair judges them, so an order's checks there would only repeat its findings."""
+        order = self.scope.foundations.order
+        return order is not None and any(
+            path in view.roles and view.roles[path].owner for path in order.roles
+        )
+
+    def _check_order(
+        self,
+        views: Mapping[str, _View],
+        resolved: Mapping[str, Mapping[str, _Resolved]],
+        base: Brand | None,
+    ) -> None:
+        """An order's ends in every combination where a brand of the chain gives the order a
+        value (`_order_given`), where the foundations declare them (DEC-004 point 8, DEC-032
+        point 2): the order's text lies on one side of both ends, and the first end
+        contrasts with the page's ground at least as much as the last. A combination where
+        the four colours are as the base gives them is the base's to report, and one whose
+        ground is translucent is not measured. The order's text on each end is a declared
+        pair, which `_check_pairs` measures."""
+        order = self.scope.foundations.order
+        if order is None:
+            return
+        named = (order.first, order.last, order.text, order.ground)
+        for key, values in resolved.items():
+            if any(path not in values for path in named) or not self._order_given(views[key]):
+                continue
+            colours = [values[path].value for path in named]
+            below = base._resolved[key] if base is not None else {}
+            if all(path in below for path in named) and colours == [
+                below[path].value for path in named
+            ]:
+                continue
+            first, last, text, ground = colours
+            if ground["alpha"] < 1:
+                continue
+            self._check_text_side(order, key, (first, last), text, ground)
+            self._check_first_end(order, key, first, last, ground)
+
+    def _check_text_side(
+        self,
+        order: Order,
+        key: str,
+        ends: tuple[Mapping[str, Any], Mapping[str, Any]],
+        text: Mapping[str, Any],
+        ground: Mapping[str, Any],
+    ) -> None:
+        """The order's text lighter than both ends, or darker than both, by WCAG's relative
+        luminance, each end laid over the ground and the text over each end, as drawn. Else
+        a step between the ends may come as light as the text."""
+        sides: list[float] = []
+        for end in ends:
+            under = _laid_over(end, ground)
+            drawn = _laid_over(text, under)
+            sides.append(_luminance(drawn["components"]) - _luminance(under["components"]))
+        if all(side > 0 for side in sides) or all(side < 0 for side in sides):
+            return
+        said = " and ".join(
+            f"{_compared(side)} `{role}`"
+            for side, role in zip(sides, (order.first, order.last), strict=True)
+        )
+        self._keep(
+            "order-text-between",
+            f"`{order.text}` is {said} in the combination `{key}`, so a step between the ends "
+            f"may come as light as it: an order's text is lighter than both its ends, or darker "
+            f"than both",
+            "",
+            order.text,
+            fix=f"give `{order.text}` a colour lighter than both ends in `{key}`, or darker than "
+            f"both",
+        )
+
+    def _check_first_end(
+        self,
+        order: Order,
+        key: str,
+        first: Mapping[str, Any],
+        last: Mapping[str, Any],
+        ground: Mapping[str, Any],
+    ) -> None:
+        """The first end's contrast with the page's ground at least the last's, by WCAG's
+        ratio, each end laid over the ground. Equal ends pass."""
+        stands_first, stands_last = contrast_ratio(first, ground), contrast_ratio(last, ground)
+        if stands_first >= stands_last or math.isclose(stands_first, stands_last):
+            return
+        self._keep(
+            "order-first-weaker",
+            f"`{order.first}` has the contrast {stands_first:.2f} with `{order.ground}`, the "
+            f"page's ground, in the combination `{key}`, below the {stands_last:.2f} of "
+            f"`{order.last}`: an order's first end stands out at least as much as its last",
+            "",
+            order.first,
+            fix=f"swap the colours of the two ends in `{key}`, or move `{order.first}` further "
+            f"from `{order.ground}`",
+        )
 
 
 def _families(*maps: Mapping[str, Mapping[str, _Resolved]]) -> set[str]:
@@ -3052,13 +3260,27 @@ def _unit(value: Any) -> bool:
 def contrast_ratio(text: Mapping[str, Any], under: Mapping[str, Any]) -> float:
     """The WCAG contrast of the colour `text` drawn on the opaque colour `under`, both in
     canonical form: a translucent text is laid over `under` first."""
-    alpha = text["alpha"]
-    drawn = [
-        t * alpha + u * (1 - alpha)
-        for t, u in zip(text["components"], under["components"], strict=True)
-    ]
+    drawn = _laid_over(text, under)["components"]
     lighter, darker = sorted((_luminance(drawn), _luminance(under["components"])), reverse=True)
     return (lighter + 0.05) / (darker + 0.05)
+
+
+def _laid_over(top: Mapping[str, Any], under: Mapping[str, Any]) -> dict[str, Any]:
+    """The colour `top` laid over the opaque colour `under`, both in canonical form, as the
+    opaque colour drawn, in canonical form."""
+    alpha = top["alpha"]
+    components = [
+        t * alpha + u * (1 - alpha)
+        for t, u in zip(top["components"], under["components"], strict=True)
+    ]
+    return {"colorSpace": "srgb", "components": components, "alpha": 1}
+
+
+def _compared(side: float) -> str:
+    """How a colour's relative luminance stands to another's, `side` their difference."""
+    if side > 0:
+        return "lighter than"
+    return "darker than" if side < 0 else "as light as"
 
 
 def _luminance(components: Iterable[float]) -> float:

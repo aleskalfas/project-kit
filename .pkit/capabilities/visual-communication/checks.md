@@ -106,6 +106,10 @@ pkit:
         - visual-communication:DEC-029#5
         - visual-communication:DEC-030#5
         - visual-communication:DEC-030#6
+        - visual-communication:DEC-032#1
+        - visual-communication:DEC-032#2
+        - visual-communication:DEC-032#6
+        - visual-communication:DEC-032#7
         - visual-communication:DEC-034#1
         - visual-communication:DEC-034#2
         - visual-communication:DEC-034#3
@@ -370,10 +374,11 @@ A finding marked *stops the brand* leaves the brand unread: no piece that locks 
 | Label | What it means | Level |
 |---|---|---|
 | `roles-unreadable`, `roles-shape`, `role-name`, `role-type`, `role-default`, `axes-shape`, `axis-shape`, `families-shape`, `family-shape`, `shapes-shape`, `shape-shape`, `pairs-shape`, `pair-shape` | The foundations' `roles.yaml` cannot be read, or one of its roles, axes, families, shapes or pairs is not of its shape. A shape is not of its shape where its name is no name, or its outline is not `{d, fill-rule, square}`, path data SVG reads, filled by `nonzero` or `evenodd`, within a square of a positive side. Stops the brand. In a library's own `roles.yaml`, the same labels say that the file cannot be read, or that one of its roles or pairs is not of its shape: a role outside the group of the library's name, or under `component`; a pair that names none of its own roles, a component token, or a role that is no colour role it may reach. They stop nothing: what cannot be read is left out. | fails |
+| `order-shape` | The foundations' `order` is not a mapping of `first`, `last`, `text` and `ground`, each naming a colour role they declare, four different roles; or a colour family holds one of the order's own three roles, its ends and its text ([`roles.yaml`](files.md#rolesyaml), DEC-032 point 1). A family named `order` is `family-shape`, since no family takes that name. Stops the brand. | fails |
 | `sign-outline` | A shape of the foundations is no closed outline within its square: a part of its path that draws a line or a curve ends with no `Z`, or a point it draws, a curve's whole sweep included, lies outside its square ([Signs](files.md#signs), DEC-036 point 8). It stops nothing, since the shape still draws. | fails |
-| `roles-declaration` | A library other than the foundations declares `axes`, `families` or `shapes`, which are the foundations' alone. It is not read. | fails |
+| `roles-declaration` | A library other than the foundations declares `axes`, `families`, `shapes` or `order`, which are the foundations' alone (DEC-032 point 7 for an order's ends). It is not read. | fails |
 | `role-picture` | A library other than the foundations declares a role of the type `picture`. Only the foundations declare a picture role (DEC-025 point 4). The role is not read. | fails |
-| `role-default`, `default-dangling`, `default-loop` | A library's own role, or a component token, has a default that is no alias, or that aliases a component token, a role of another type, or a role of a library its library does not build on; or one that leads to no role; or defaults that make a loop, found at each role in it (DEC-008 point 3). The role takes no default. A component token is `role-default` too where it carries no default. Where it carries none, or one that is no alias, the token is left out instead, found in its component's file at `#tokens.<name>`. | fails |
+| `role-default`, `default-dangling`, `default-loop` | A library's own role, or a component token, has a default that is no alias, or that aliases a component token, a role of an order (DEC-032 point 6), a role of another type, or a role of a library its library does not build on; or one that leads to no role; or defaults that make a loop, found at each role in it (DEC-008 point 3). The role takes no default. A component token is `role-default` too where it carries no default. Where it carries none, or one that is no alias, the token is left out instead, found in its component's file at `#tokens.<name>`. | fails |
 | `component-token-shape` | A component's `tokens` is not a mapping, or a token's name is not of the name shape, its declaration is not a mapping or holds a key other than `type` and `default`, or its type is no role's type, or `picture` ([tokens](components.md#tokens)). A declaration with no default, or with a default that is no alias, is `role-default` instead. The token is left out. | fails |
 | `component-token-unread` | A component declares a token its file reads nowhere, so a brand's value for it changes nothing. Found where a version is checked alone. In an experimental component, which may drop it at once, it asks the component's owner for attention; in a stable or deprecated one, which keeps it until the library's next major, it states a fact. | asks the component's owner for attention, or states a fact |
 | `pair-defaults` | A library's pair, at its defaults, falls on no pair the foundations, the library or a library it builds on declares at a level as strict (DEC-008 point 6). | fails |
@@ -406,6 +411,12 @@ A finding marked *stops the brand* leaves the brand unread: no piece that locks 
 | `font-missing` | A font family the brand names has no file, or names a file the version folder or the location's `fonts/` does not hold. | fails |
 | `pair-contrast` | A declared pair is below the contrast its level needs, in some combination of the brand's axes (DEC-004 points 8 and 11). A library's pair is measured only where the brand's values reach it ([`roles.yaml`](files.md#rolesyaml)). | fails |
 | `pair-translucent` | The colour under a declared pair is translucent in some combination, so its contrast depends on what lies under it. | asks for attention |
+| `order-text-between` | In some combination, an order's text is lighter than one of its ends and darker than the other, or as light as one, by WCAG's relative luminance, so a step between the ends may come as light as it (DEC-004 point 8). Each end is laid over the page's ground first, and the text over each end, as they are drawn. | fails |
+| `order-first-weaker` | In some combination, an order's first end contrasts with the page's ground less than its last end does, by WCAG's ratio, an end with alpha laid over the ground first (DEC-004 point 8). Equal ends pass. | fails |
+
+**An order's ends.** The foundations declare which role is each end of an order, which is its text, and which is the page's ground ([`roles.yaml`](files.md#rolesyaml)). The order's text on each end is a declared pair, so a text below its level there is `pair-contrast`, at `family.order.text`. A finding on the text lies at its token path, and `order-first-weaker` at the first end's. So the first end lies furthest from the page: where both ends are darker than a light ground, the first is the darker, and where both are lighter than a dark ground, the first is the lighter. Nothing is measured against another fill an order lies on, such as a surface.
+
+An order's pairs and its two rules are measured in each combination where the brand, or a base below it, gives one of the order's roles a value. Where none does, the roles take their defaults, the neutral family's fill for both ends and its text for the order's text, whose own pair judges them. So a brand that gives an order no value, as every brand released before the roles, takes no finding of an order. Nor are the two rules measured where the page's ground is translucent, which a pair on it asks attention for, nor under a base where the four colours are as the base gives them, which the base's own findings report.
 
 ### Picture files
 
