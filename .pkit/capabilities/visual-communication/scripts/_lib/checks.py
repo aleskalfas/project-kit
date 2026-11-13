@@ -150,6 +150,7 @@ from typing import Any, Protocol
 from _lib import (
     briefs,
     code,
+    colour_steps,
     copies,
     current_copy,
     exports,
@@ -2632,9 +2633,11 @@ def scene_findings(
     lies in one (the findings record keeps them so).
 
     Each scene is computed at one key over the size axes, and contrast is measured on it in
-    each combination it serves. A finding the scenes of every key find alike is reported
-    once, as it reads. Any other is reported for each key whose scenes find it, its message
-    opening with that key, so a finding takes no field for its size. Content a scene draws
+    each combination it serves, each step of an order it paints in its value there, which
+    comes with the scene (`_steps_of`, DEC-032 point 5). A finding the scenes of every key
+    find alike is reported once, as it reads. Any other is reported for each key whose
+    scenes find it, its message opening with that key, so a finding takes no field for its
+    size. Content a scene draws
     at one key and not at another is stated at the key that hides it (`_hidden`). A finding
     in what a field of the top draws, read alike on several pages, is reported once, naming
     its pages (`_once_on_pages`). A size at which the top is as wide as at the default asks
@@ -2663,15 +2666,16 @@ def scene_findings(
         content = pl.content_file(language)
         found = [_placed(finding, content, project) for finding in result.findings]
         found.extend(_hidden(language, size, shown))
-        found.extend(drawn_contrast(scene, colours, served))
-        found.extend(_unknown_colours(scene, colours))
+        drawn = {**colours, **_steps_of(scene, colours, served)}
+        found.extend(drawn_contrast(scene, drawn, served))
+        found.extend(_unknown_colours(scene, drawn))
         for renderer in renderers(piece):
             declared = seam.declaration(renderer, seam.RENDERER)
             for loss in losses(scene, declared):
                 if not accepted(loss, piece.accepted_losses):
                     found.append(loss_finding(loss))
         found.extend(_statuses(scene, project.env))
-        found.extend(_no_ground(piece, scene, colours, served))
+        found.extend(_no_ground(piece, scene, drawn, served))
         for finding in _once_on_pages(found, result.shared):
             by_size[size].setdefault(_mark(finding), finding)
     unique: dict[tuple[str, str, str, str, str], Finding] = {}
@@ -2687,6 +2691,20 @@ def scene_findings(
     for finding in [*_widths(project, results), *_brand_forms(project), *signed]:
         unique.setdefault(_mark(finding), finding)
     return sorted(unique.values(), key=lambda f: (f.file, f.where, f.code, f.message))
+
+
+def _steps_of(
+    scene: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any]], keys: Sequence[str]
+) -> dict[str, dict[str, Any]]:
+    """The value of each step of an order `scene` paints, by its name, in each combination
+    `keys` names, spread from that combination's own ends, whose values `colours` gives by
+    key (DEC-032 point 5). A step whose ends a combination gives no colour has none there."""
+    found: dict[str, dict[str, Any]] = {}
+    for key in keys:
+        at = {role: by_key[key] for role, by_key in colours.items() if key in by_key}
+        for name, value in colour_steps.values_at(scene, at).items():
+            found.setdefault(name, {})[key] = value
+    return found
 
 
 #: The finding on a piece drawn at a size at which its top is as wide as at the default

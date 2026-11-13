@@ -1,0 +1,25 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A pattern can give an order's places colour steps under a word of an option
+  (#3014, DEC-032 points 3 to 7). A `repeat` part's `colour` may switch on an
+  option of words, each branch a colour family, `null`, or `:steps`. Under a
+  word that gives the steps, place k of the n places the list draws takes the
+  colour (k - 1) / (n - 1) of the way from the order's first end to its last,
+  which the engine spreads in Oklab, alpha premultiplied, and brings back into
+  sRGB by CSS Color 4's gamut mapping. A step paints as a family: its fill and
+  line are its colour, its text the order's text. An item's concept and a state
+  with a colour still come before it. The scene names a step by its two roles
+  and its share, as `step(<first>,<last>,<share>)`, and its value in each
+  combination comes with the scene, never from the document of resolved values.
+  So the seam rose to 9, and every plugin's declaration names it. The HTML
+  renderer rose to 1.8.0, painting each step with a custom property of its own,
+  `--_step-<n>`, and the SVG renderer to 1.5.0, whose switching file gives a
+  step's arrowhead an id of its own. The checks measure a text on a step in the
+  step's value, and fail an order named where a family is named, or painted by
+  its name in a library's component (`order-named`), and a word that gives a
+  list the steps and names a family for it (`order-steps-family`). A list that
+  takes the steps under foundations that declare no ends takes none, which the
+  lock states (`order-no-ends`). A pattern that gives no steps draws as before.

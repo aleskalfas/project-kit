@@ -120,7 +120,15 @@ DEC-012).
   items, equally where they are all the same). An item that `stretch` makes larger
   across than it asks for passes the rest on to the last part it draws, where that part
   places a component and gives no size across (`passed_on`). `colour` gives
-  the items' default family. A part over a list of ties takes neither `row` nor
+  the items' default family, the family of each place (DEC-010 point 6): a family's name,
+  or a switch on an option of words, naming each word, whose each branch is a family's
+  name, null, no family from the pattern, or `:steps` (`STEPS`), an order's steps. Under a
+  word that gives the steps, place k of the n places the list draws takes the step (k - 1)
+  / (n - 1) of the way from the order's first end to its last, the first end where it draws
+  one (`colour_steps`, DEC-032 points 3 and 4), which paints as a family: its fill and line
+  are its colour, and its text the order's text. Under foundations that declare no ends a
+  place takes no step, which is stated at the piece's lock. A part over a list of ties
+  takes neither `row` nor
   `column`: each tie is drawn in the part's whole frame, by default the component's, and
   given its ends (`find_ends`). A tie whose component takes no ends is left out.
 
@@ -166,7 +174,11 @@ family to (DEC-004 point 10). The instance's family is the one a notation maps t
 content's `concept: <notation>/<concept>` to, else the `colour` of the `repeat` part
 that draws it, else its component's, else its container's; a state may change it. A run
 that names a concept takes that concept's family before its instance's, and a state
-that changes the instance's family replaces it too. Content's `override: {<part>:
+that changes the instance's family replaces it too. A place's step stands in for its
+family, so a concept and a state still come before it (DEC-032 point 3). Only a place takes
+a step: a component's own family, a state's and a place's never name an order, nor one of
+its roles, and no part of a library's component paints with an order's role by its name
+(`ORDER_NAMED`, point 6). Content's `override: {<part>:
 <role>}` points a part's paint at another role, each run's included. `:index` and
 `:count` are an item's place among the items its list draws, from 1, and how many it
 draws.
@@ -216,9 +228,16 @@ from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any, TypeVar
 
+from _lib import colour_steps, names
 from _lib import formula as fm
-from _lib import names
-from _lib.env import Env, PictureInfo, UnknownConcept, UnreadableComponent, UnvaluedRole
+from _lib.env import (
+    Env,
+    OrderRoles,
+    PictureInfo,
+    UnknownConcept,
+    UnreadableComponent,
+    UnvaluedRole,
+)
 from _lib.findings import ATTENTION, FAILS, Finding
 from _lib.findings import FACT as STATED
 from _lib.keys import AxisLike, key_order
@@ -453,6 +472,18 @@ RUN_KEYS = ("text", "style", "concept")
 #: The engine's mark for a member of the instance's colour family.
 FAMILY = ":colour."
 
+#: The engine's mark by which a branch of a `repeat` part's switch of its places' families
+#: gives each place an order's step instead (DEC-032 point 3).
+STEPS = ":steps"
+
+#: The findings on an order's roles (DEC-032 points 6 and 7): an order, or one of its roles,
+#: named where a family is named, or painted by its name in a library's component; a list
+#: given the steps by a word that also names a family for some place of it; and, stated at a
+#: piece's lock, a list that takes the steps under foundations that declare no ends.
+ORDER_NAMED = "order-named"
+ORDER_STEPS_FAMILY = "order-steps-family"
+ORDER_NO_ENDS = "order-no-ends"
+
 #: The start of the source of a value the content gave.
 CONTENT = "content:"
 
@@ -466,6 +497,11 @@ TOLERANCE = 0.005
 _ONLY_ROLE = re.compile(r"^=@([a-z0-9.-]+)$")
 
 T = TypeVar("T")
+
+#: An item a list draws, known before it is built: the item, the step of its trace, its
+#: trace, the component that draws it, what it is given and the source of each key a field
+#: gave it.
+_Drawn = tuple[Mapping[str, Any], str, str, "Component", Mapping[str, Any], dict[str, str]]
 
 
 class Fault(Exception):
@@ -824,6 +860,39 @@ def _may_hold(when: Any) -> bool:
     """Whether a `when` by a field or an option's words may hold, on some content: one of
     either form."""
     return isinstance(when, str) or (isinstance(when, Mapping) and len(when) == 1)
+
+
+def _steps_words(colour: Any) -> list[tuple[str, str]]:
+    """The option and the word of each branch of a `repeat` part's switch of its places'
+    families that gives them an order's steps (DEC-032 point 3)."""
+    if not (isinstance(colour, Mapping) and isinstance(colour.get(SWITCH), str)):
+        return []
+    by = colour[SWITCH]
+    return [(by, str(word)) for word, each in colour.items() if word != SWITCH and each == STEPS]
+
+
+def _names_family(colour: Any, option: str, word: str) -> bool:
+    """Whether a `repeat` part's `colour` may name a family for its places where `option`
+    takes `word`: a family's name does, and a switch on that option does where its branch
+    for the word names one; a switch on another option may, where any branch names one."""
+    if not (isinstance(colour, Mapping) and SWITCH in colour):
+        return isinstance(colour, str) and colour != STEPS
+    if colour[SWITCH] == option:
+        branches = [colour.get(word)]
+    else:
+        branches = [branch for key, branch in colour.items() if key != SWITCH]
+    return any(isinstance(branch, str) and branch != STEPS for branch in branches)
+
+
+def _drawn_under(part: Part, option: str, word: str) -> bool:
+    """Whether a part may be drawn where `option` takes `word`: its `when` on that option
+    holds there, and any other `when` may hold on some content or at some size."""
+    when = part.spec.get("when")
+    if isinstance(when, Mapping) and len(when) == 1 and SWITCH not in when:
+        ((name, words),) = when.items()
+        if name == option:
+            return word in (words if isinstance(words, list) else [words])
+    return True
 
 
 def source_of_choice(chosen: Any) -> str:
@@ -1333,6 +1402,15 @@ class Component:
                 )
         for state, decl in self._mapping(data, "states").items():
             self.states[state] = decl.get("colour") if isinstance(decl, Mapping) else None
+            self._family_named(
+                f"states.{state}.colour",
+                self.states[state],
+                f"the state `{state}` gives the family",
+                "a state says how a thing stands",
+            )
+        self._family_named(
+            "colour", self.colour, "its own family is", "a component's own family says what it is"
+        )
         for name, spec in self._mapping(data, "parts").items():
             self._read_kind(name, spec)
         # What it declares for each list it repeats, known before any `repeat` part is
@@ -1369,6 +1447,7 @@ class Component:
                     "over which not exactly one part repeats",
                 )
         self._read_size_repeats()
+        self._read_steps()
         if self.top:
             self._read_layouts(data)
         elif any(isinstance(s, Mapping) and PAGES in s for s in self.fields.values()):
@@ -1614,6 +1693,8 @@ class Component:
             self._shape(f"{where}.repeat", f"repeats over `{listed}`, which is no list field")
         if "draw" in part.spec and not _is_use(part.spec["draw"]):
             self._shape(f"{where}.draw", f"`{part.spec['draw']}` is not `<library>/<component>`")
+        if "colour" in part.spec:
+            self._read_place_colour(part)
         operators = [name for name in OPERATORS if name in part.spec]
         if isinstance(listed, str) and listed in self._tie_lists:
             for name in operators:
@@ -1645,6 +1726,91 @@ class Component:
                 f"shares the line by the weight of `{listed}`, and declares no weight for it "
                 "under `lists`",
             )
+
+    def _read_place_colour(self, part: Part) -> None:
+        """The family a `repeat` part gives each place of its list (DEC-010 point 6): a
+        family's name, or a switch on an option of words that names each word, whose each
+        branch is a family's name, `STEPS`, an order's steps, which only a word gives
+        (DEC-032 point 3), or null, no family from the pattern. None names an order, nor
+        one of its roles (point 6). The shape of a family's name is the schema's to judge."""
+        where, value = f"parts.{part.name}.colour", part.spec["colour"]
+        if not (isinstance(value, Mapping) and SWITCH in value):
+            self._place_family(part, where, value, switched=False)
+            return
+        by = value[SWITCH]
+        option = self.options.get(by) if isinstance(by, str) else None
+        if option is None or not option.words:
+            self._shape(
+                where,
+                f"the families of the places of `{part.name}` switch on `{by}`, which is no "
+                "option of words: they switch on an option alone",
+            )
+            return
+        branches = dict(value)
+        for word, branch in value.items():
+            if word != SWITCH and isinstance(branch, Mapping):
+                self._shape(
+                    f"{where}.{word}",
+                    f"the branch `{word}` of the families of the places of `{part.name}` holds "
+                    f"a mapping: it names a family, `{STEPS}` or nothing",
+                )
+                branches[word] = None
+        self._switched(
+            where,
+            branches,
+            lambda at, family: self._place_family(part, at, family, switched=True),
+            nothing=True,
+        )
+
+    def _place_family(self, part: Part, where: str, value: Any, *, switched: bool) -> None:
+        """What a `repeat` part gives its places, through its switch: `STEPS` in a branch of
+        a switch alone, or a family, which is no order (DEC-032 points 3 and 6)."""
+        if value != STEPS:
+            self._family_named(
+                where,
+                value,
+                f"the list `{part.name}` gives its places the family",
+                f"a pattern gives a list's places an order's steps by `{STEPS}`, under a word",
+            )
+        elif not switched:
+            self._shape(
+                where,
+                f"the list `{part.name}` gives its places `{STEPS}` under no word: an order's "
+                "steps are a person's choice, by a word of an option, so `:steps` lies in a "
+                "branch of a switch on one",
+            )
+
+    def _read_steps(self) -> None:
+        """Each word that gives a list's places an order's steps names no family for any
+        place of that list (DEC-032 points 3 and 7): no other part over the list that may be
+        drawn under the word names a family under it. The finding lies at the branch that
+        gives the steps."""
+        over: dict[str, list[Part]] = {}
+        for part in self.parts.values():
+            listed = part.spec.get("repeat")
+            if part.kind == "repeat" and isinstance(listed, str):
+                over.setdefault(listed, []).append(part)
+        for listed, parts in over.items():
+            for part in parts:
+                for option, word in _steps_words(part.spec.get("colour")):
+                    if not _drawn_under(part, option, word):
+                        continue
+                    named = [
+                        other.name
+                        for other in parts
+                        if other is not part
+                        and _drawn_under(other, option, word)
+                        and _names_family(other.spec.get("colour"), option, word)
+                    ]
+                    if named:
+                        self._issue(
+                            ORDER_STEPS_FAMILY,
+                            f"parts.{part.name}.colour.{word}",
+                            f"gives the places of `{listed}` an order's steps under `{option}: "
+                            f"{word}`, and the part `{named[0]}` may name a family for them "
+                            "under it too: a word that gives a list the steps names no family "
+                            "for any place of it",
+                        )
 
     def _read_lists(self, data: Mapping[str, Any]) -> None:
         """What the component declares under `lists` (DEC-010 points 1 to 4, and 9, DEC-011
@@ -2224,6 +2390,32 @@ class Component:
             self._shape(where, f"`{value}` is not a role's token path, nor `{FAMILY}<member>`")
             return
         self._read_role(where, value)
+        order = self._ctx.order()
+        own = self.use.partition("/")[0] == names.PIECE
+        if order is not None and value in order.roles and not own:
+            self._issue(
+                ORDER_NAMED,
+                where,
+                f"paints with `{value}`, a role of an order, by its name: a brand tunes an "
+                "order's colours for its steps alone, which only a list's places take, so no "
+                "part of a library's component paints with one; content may point a part at "
+                "it by `override`",
+            )
+
+    def _family_named(self, where: str, value: Any, what: str, why: str) -> None:
+        """A family named where `what` names one, which is never an order, by the name of
+        its roles, nor one of its roles (DEC-032 point 6); `why` says what that family says
+        instead, in the finding."""
+        if not isinstance(value, str):
+            return
+        order = self._ctx.order()
+        if value == names.ORDER or (order is not None and value in order.roles):
+            self._issue(
+                ORDER_NAMED,
+                where,
+                f"{what} `{value}`, an order's, where a colour family is named: {why}, and only "
+                "a list's places take an order's steps, under a word of an option",
+            )
 
     def _role(self, where: str, value: Any) -> None:
         if not names.is_token_path(value):
@@ -2518,6 +2710,8 @@ class Context:
         self._roles: dict[str, Any] = {}
         self._pictured: dict[str, Picture | None | Exception] = {}
         self._families: dict[str, Mapping[str, str] | None] = {}
+        self._order: OrderRoles | None = None
+        self._order_read = False
         self._concepts: dict[str, str | UnknownConcept | None] = {}
         self._signs: dict[str, Outline | None] = {}
 
@@ -2777,13 +2971,29 @@ class Context:
 
     def family(self, name: str) -> Mapping[str, str] | None:
         """The members of a colour family the foundations declare, each mapped to a colour
-        role (DEC-004 point 10); `None` where they declare no such family."""
+        role (DEC-004 point 10), or of a step of an order, which paints as a family: its
+        fill and line are the step, and its text the order's text (DEC-032 point 4). `None`
+        where the foundations declare no such family, or no order a step is spread over."""
         if name not in self._families:
-            try:
-                self._families[name] = self.env.family(name)
-            except KeyError:
+            step = colour_steps.read(name)
+            order = self.order() if step is not None else None
+            if step is None:
+                try:
+                    self._families[name] = self.env.family(name)
+                except KeyError:
+                    self._families[name] = None
+            elif order is not None and (step.first, step.last) == (order.first, order.last):
+                self._families[name] = colour_steps.members(name, order.text)
+            else:
                 self._families[name] = None
         return self._families[name]
+
+    def order(self) -> OrderRoles | None:
+        """An order's roles, read once (`Env.order`); None where the foundations declare
+        none, so a place takes no step (DEC-032 point 3)."""
+        if not self._order_read:
+            self._order, self._order_read = self.env.order(), True
+        return self._order
 
     def concept(self, name: str) -> str | None:
         """The colour family a concept maps to, `<notation>/<concept>` (DEC-004 point 10);
@@ -3701,9 +3911,9 @@ class Instance:
         component and its list declare is read by neither, so the component's field stays
         unfilled and the arrangement field takes its default (point 2). An item that is no
         mapping, repeats an id, or names no component is left out: it takes no place among
-        the items drawn, so `:index` and `:count` never count it. Its trace keeps its place
-        in the content's list, and so does its key path, which names the list as the
-        content file writes it.
+        the items drawn, so `:index` and `:count` never count it, nor does an order's step
+        (`_places`). Its trace keeps its place in the content's list, and so does its key
+        path, which names the list as the content file writes it.
 
         In a list of ties, the tie keeps the value of each end field in `end_values`, and an
         end field that its component also declares gives no end (DEC-011 point 1). A tie
@@ -3714,12 +3924,14 @@ class Instance:
         name = spec["repeat"]
         listed = self.given.get(name)
         listed = listed if isinstance(listed, list) else []
-        place = (spec["colour"], f"default:{self.component.use}") if spec.get("colour") else None
         path = self.field_path(name)
         declared = self.component.list_fields.get(name, ListFields(None, {}))
         ties = declared if declared.ends is not None else None
         chosen = self._list_component(node, declared, trace)
         seen: set[str] = set()
+        # Each item drawn, known before any is built, since an order's step depends on how
+        # many places the list draws (DEC-032 point 4).
+        drawn: list[_Drawn] = []
         for index, item in enumerate(listed, start=1):
             key = item.get("id") if isinstance(item, Mapping) else None
             step = f"[{key}]" if key is not None else f"#{index}"
@@ -3751,6 +3963,9 @@ class Instance:
             if ties is not None and not component.takes_ends:
                 self._no_ends(node, component, by_default="use" not in item and chosen is None)
                 continue
+            drawn.append((item, step, at, component, given, sources))
+        places = self._places(node, len(drawn))
+        for (item, step, at, component, given, sources), place in zip(drawn, places, strict=True):
             claimed = {*component.fields, *component.options}
             instance = Instance(
                 self.ctx, component,
@@ -3769,6 +3984,43 @@ class Instance:
                 if field_name not in claimed:
                     instance.end_values[which] = item.get(field_name)
             node.items.append(instance)
+
+    def _places(self, node: Node, count: int) -> list[tuple[str, str] | None]:
+        """The family the part gives each of the `count` places its list draws, in turn, and
+        where it comes from (DEC-010 point 6): the one its `colour` names, through its
+        switch; or, where the word its switch takes gives an order's steps, each place's
+        step, spread between the order's ends over the places drawn, every item counted,
+        one that names its own component included (DEC-032 points 3 and 4). None for each
+        where it names none, and where the foundations declare no ends, which is stated at
+        the piece's lock (point 7)."""
+        part = node.part
+        _, value, chosen = self.pick(f"parts.{part.name}.colour", part.spec.get("colour"))
+        source = source_of_choice(chosen) if chosen else f"default:{self.component.use}"
+        if value != STEPS:
+            return [(value, source) if isinstance(value, str) and value else None] * count
+        order = self.ctx.order()
+        if chosen is None or order is None:
+            if chosen is not None:
+                self._no_steps(part, str(chosen))
+            return [None] * count
+        return [
+            (colour_steps.placed(order.first, order.last, place, count).name, source)
+            for place in range(1, count + 1)
+        ]
+
+    def _no_steps(self, part: Part, option: str) -> None:
+        """The fact that a list takes an order's steps by its word under foundations that
+        declare no ends, so its places take none (DEC-032 points 3 and 7). Neither the
+        pattern nor the foundations alone is at fault, so it lies at the piece's lock, which
+        combines them, and the piece says so."""
+        word = self.options.get(option)
+        message = (
+            f"under this lock, the list `{part.spec['repeat']}` of {self.component.use} takes an "
+            f"order's steps by `{option}: {word}`, and the foundations declare no ends: its "
+            "places take no step, and each item takes its family as at a place the pattern "
+            "names none for"
+        )
+        self.ctx.add(Finding(ORDER_NO_ENDS, STATED, message, where="lock", extra={"piece": True}))
 
     def _no_ends(self, node: Node, component: Component, *, by_default: bool) -> None:
         """A tie whose component takes no ends, which is left out (DEC-011 points 1 and 8).

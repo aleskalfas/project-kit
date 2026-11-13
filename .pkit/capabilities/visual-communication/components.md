@@ -9,6 +9,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/component.yaml
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
         - .pkit/capabilities/visual-communication/scripts/_lib/names.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/colour_steps.py
         - .pkit/capabilities/visual-communication/scripts/_lib/formula.py
         - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
         - .pkit/capabilities/visual-communication/scripts/_lib/scene.py
@@ -87,6 +88,9 @@ pkit:
         - visual-communication:DEC-025#6
         - visual-communication:DEC-025#7
         - visual-communication:DEC-031#2
+        - visual-communication:DEC-032#3
+        - visual-communication:DEC-032#4
+        - visual-communication:DEC-032#5
         - visual-communication:DEC-032#6
         - visual-communication:DEC-034#1
         - visual-communication:DEC-034#2
@@ -249,7 +253,10 @@ An option takes a value from what the component declares, never a free number or
 - **`preferred`** holds `width` and `height`, each a formula that gives a length. A component placed with no size given, and that asks for none, is reported.
 - **`colour`** names the component's default colour family. A *colour family* is a group of colour roles that paints one thing, such as its line, its fill and the text on it. The foundations declare each family in their `roles.yaml`, as a mapping of its members to colour roles (DEC-004 point 10; [the foundations](files.md#the-foundations)).
 - **`states`** maps each state to `{colour: <family>}`, the family the state paints with, or to `{}`, which keeps the instance's family. The content names a state as `state: <name>`.
-- **An instance's family** is the family its concept maps to, where the content names one as `concept: <notation>/<concept>` ([content files](files.md#content-files)). Else it is the `colour` of the `repeat` part that draws it as an item, else its component's `colour`, else the family of the component that places it. A state with a `colour` then replaces it. A concept the piece's notations do not hold is reported, and the instance takes its family as if it named none.
+- **An instance's family** is the family its concept maps to, where the content names one as `concept: <notation>/<concept>` ([content files](files.md#content-files)). Else it is the family, or the step of an order, that the `repeat` part that draws it as an item gives its place ([Repeating over a list](#repeating-over-a-list-row-and-column)), else its component's `colour`, else the family of the component that places it. A state with a `colour` then replaces it. A concept the piece's notations do not hold is reported, and the instance takes its family as if it named none.
+- **An order's steps** (DEC-032 points 3 and 4). Under a word of an option, a pattern may give the places of a list colour steps instead of a family. Place k of the n places the list draws takes the colour (k − 1) / (n − 1) of the way from the order's first end to its last, and a list of one place the first end. Every item drawn counts, one that names its own component included, and an item left out counts for nothing. The foundations declare which roles are the ends and which the text on every step ([`roles.yaml`](files.md#rolesyaml)). A step paints as a family: `:colour.fill` and `:colour.line` paint with the step's colour, and `:colour.text` with the order's text. An item's concept, and a state with a `colour`, still come before its step, and an item passes its step on to what sits in it, as it would a family. Under foundations that declare no ends, a place takes no step, its item takes its family as if the pattern gave none, and the piece's check states it at the lock.
+- **How the engine spreads a step.** In Oklab, along the straight line between the two ends, each end's components multiplied by its alpha before the spread and divided by the step's alpha after, as CSS Color 4 interpolates. A step that falls outside sRGB, the range format 1 gives every colour in, comes back by CSS Color 4's gamut mapping: its lightness and hue stay, and its chroma is lowered until clipping it moves it by less than a difference anyone sees. The first and the last share are the ends exactly as given. Every step between is computed in one fixed order, and each component and its alpha are rounded to 1/10 000, half away from zero, as the scene's lengths are rounded, so the same ends give the same step on every machine. The engine spreads each combination's own ends: a step's value differs by mode, and its name does not ([What a scene holds](#what-a-scene-holds)).
+- **Only a place takes a step** (DEC-032 point 6). A component's `colour`, a state's and a `repeat` part's family never name `order`, the key the foundations declare the order's roles under, nor one of those roles. No part of a library's component paints with an order's role by its name, which a brand tunes for steps alone. A piece's own component, and content's `override`, may point a part at one, such as a legend's swatch of the first end. Each is found when the component is read (*checks*).
 - **A run's family.** A run of a field of runs that names a concept takes that concept's family, before its instance's own. A run that names none takes its instance's family. A state with a `colour` replaces the family of each run of the instance too, a run's concept included (DEC-012 point 3).
 - **A paint `:colour.<member>`** paints with the role the foundations map that member of the instance's family to, or, for a run, of the run's family. Where the instance has no family, its family is none the foundations declare, or the family has no such member, the part paints nothing there, and is reported.
 - **The content's `override: {<part>: <role>}`** points one part's paint at another role, never at a component token: the `fill` of a box, an ellipse, a sign or a text, every run of the text included, the `stroke` of a line.
@@ -322,7 +329,7 @@ A text part may show a fact of the export it is drawn for, where it would show a
 
 ### Switches
 
-A value may be a *switch*: `{by: <option>, <word>: <value>, ...}`. It names an option of words, and gives a value for each of its words, no more and no fewer. In a brand's drawing a switch may leave a word of its top's option out: the drawing then does not take that word ([A brand's drawing](#a-brands-drawing)). A branch may be a switch itself. A paint's branch may be `null`, which paints nothing. A switch serves wherever a part takes a formula, a paint, a style, a word of `text-anchor` or of an operator, or a placed component's option, and in `values` and `preferred`. `values.gap` of `tests/steps` above is a switch.
+A value may be a *switch*: `{by: <option>, <word>: <value>, ...}`. It names an option of words, and gives a value for each of its words, no more and no fewer. In a brand's drawing a switch may leave a word of its top's option out: the drawing then does not take that word ([A brand's drawing](#a-brands-drawing)). A branch may be a switch itself. A paint's branch may be `null`, which paints nothing. A switch serves wherever a part takes a formula, a paint, a style, a word of `text-anchor` or of an operator, or a placed component's option, and in `values` and `preferred`. A `repeat` part's `colour` takes a switch on an option of words alone, one level deep ([Repeating over a list](#repeating-over-a-list-row-and-column)). `values.gap` of `tests/steps` above is a switch.
 
 **A switch on a size,** `{by: ":<axis>", <mode>: <value>, ...}`, chooses by the mode of a size axis. It names the axis after `:`, as a formula reads `:width`. It serves wherever a switch on an option does, and as a `when` ([Parts](#parts)). `tests/steps` could space its steps closer on a phone:
 
@@ -652,7 +659,20 @@ A primitive's properties lie in its own mapping, under SVG's names.
 
 ### Repeating over a list: `row` and `column`
 
-A `repeat` part draws a component for each item of a list field, in the content's order. **What draws an item** is the component its own `use` names, else the one its list's component field names, else `draw` ([Lists](#lists)). An item that is not a mapping, repeats an id, or names no component, is reported and left out. It takes no place among the items drawn, so `:index` and `:count` do not count it, and its trace id keeps its place in the content's list. `colour` gives the items' default colour family.
+A `repeat` part draws a component for each item of a list field, in the content's order. **What draws an item** is the component its own `use` names, else the one its list's component field names, else `draw` ([Lists](#lists)). An item that is not a mapping, repeats an id, or names no component, is reported and left out. It takes no place among the items drawn, so `:index` and `:count` do not count it, and its trace id keeps its place in the content's list. `colour` gives the items' default colour family, the family of each place ([Values, states and colour](#values-states-and-colour)).
+
+**A switch of the places' families.** `colour` may switch on an option of words, naming each word, as any switch does ([Switches](#switches)). Each branch names a family, `null` for no family from the pattern, or `:steps`, the order's steps. So the steps are always a person's choice: the content's author by the word, or the pattern's owner by the option's default. `:steps` lies in a branch alone, and the switch reads no size and holds no switch again. A word that gives a list the steps names no family for any place of it, by another part over the list that may be drawn under it (*checks*). A row of cards that shows an order under `shade: steps`:
+
+```yaml
+options:
+  shade: [plain, steps]
+parts:
+  items:
+    repeat: items
+    draw: tests/card
+    colour: {by: shade, plain: blue, steps: ":steps"}
+    row: {gap: "=@space.2", sizes: equal}
+```
 
 The part's *layout operator*, `row` or `column`, lays the items along a line, across or down. Its settings take the names of CSS flexible layout:
 
@@ -829,7 +849,7 @@ An `image` adds `preserveAspectRatio` (`xMidYMid meet`), and what it shows (DEC-
 - **A picture file:** `file`, its bare name, and `library`, where it lies: `piece`, or the library's version as `<library>@<version>`. It holds no variants and no points.
 - **A picture role:** `role`, its token path. It holds no file, no variants and no points, so one scene serves every value mode.
 
-Colours stay role names. A renderer takes their values from the brand's resolved values, so one scene serves every mode of the value axes at its key (*outputs*). This is the first step's head in a scene of the figure, trimmed. Its field takes no runs, so it is one run:
+Colours stay role names. A renderer takes their values from the brand's resolved values, so one scene serves every mode of the value axes at its key (*outputs*). A paint may name a step of an order instead, by the two roles it is spread between and its place's share of the way, a fraction in lowest terms: `step(family.order.first,family.order.last,1/3)`, or `0` and `1` at the ends. Its name is the same in every mode, and no token path takes its shape. Its value in each combination comes with the scene, among the colour roles' values, by that name, and never from the document of resolved values (DEC-032 point 5). This is the first step's head in a scene of the figure, trimmed. Its field takes no runs, so it is one run:
 
 ```json
 {"type": "text", "id": "figure/body/steps[plan]/head",
