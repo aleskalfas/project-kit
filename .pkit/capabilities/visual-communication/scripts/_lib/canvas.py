@@ -53,9 +53,11 @@ says what it draws.
   moved to its square, filled by its rule in its run's paint. They name their text as
   `data-ground` and `data-sign`. A line of neither is drawn as before.
 - **A line** whose route turns, a tie's connector, is a `<polyline>` through its points,
-  and names the elements its ends meet (`data-start`, `data-end`). An arrowhead is a
-  marker the page defines once for each colour a line draws one in. A line that holds
-  neither its ends nor its points is refused, and left out.
+  or a `<path>` whose turns are arcs where it holds a radius, `rx` (`course_path`), and
+  names the elements its ends meet (`data-start`, `data-end`). An arrowhead is a marker
+  the page defines once for each colour a line draws one in, placed by its base, where the
+  line stops (`course`). A line that holds neither its ends nor its points is refused, and
+  left out. The PDF renderer draws a line's course from `course` too, so the two agree.
 - **A path**, such as a concept's sign, is a `<path>` of the outline the engine mapped into
   its frame, `d` as the scene holds it, filled by its rule, `fill-rule`, written only where
   it is `evenodd`, since SVG's default is the other. Its stroke lies on its outline, as
@@ -77,7 +79,9 @@ from __future__ import annotations
 
 import base64
 import io
+import itertools
 import logging
+import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from html import escape
@@ -105,6 +109,22 @@ ANCHORED = {"middle": 0.5, "end": 1.0}
 #: Where the control points of a quarter circle lie, drawn as one cubic Bézier curve, as a
 #: share of its radius.
 KAPPA = 0.5522847498307936
+
+#: How long an arrowhead is, from its base to its tip, in widths of its line's stroke, and
+#: how wide its base is.
+HEAD = 5.0
+
+#: The scene's own resolution, 1/100 px: the least length a line keeps of a leg its
+#: arrowhead is longer than, so the head still points along the leg, and the least radius
+#: a turn is drawn round at.
+LEAST = 0.01
+
+#: A turn whose direction changes by less than this, in radians, or by more than half a
+#: turn less this, is drawn as no arc: it goes straight on, or back on itself.
+STRAIGHT = 1e-9
+
+#: A point of a line, across and down.
+Point = tuple[float, float]
 
 #: The spans of a line, each with the run it is part of.
 Spans = list[tuple[Mapping[str, Any], Mapping[str, Any]]]
@@ -326,6 +346,159 @@ def ground_path(piece: GroundPiece, top: float) -> str:
     return " ".join([*words, "Z"])
 
 
+@dataclass(frozen=True)
+class Arc:
+    """A turn of a line drawn round: an arc of `radius` from where it leaves the leg before
+    the turn, `start`, to where it meets the leg after it, `end`, `clockwise` on the page or
+    not, and the two control points of the cubic Bézier curve that draws it."""
+
+    start: Point
+    end: Point
+    radius: float
+    clockwise: bool
+    controls: tuple[Point, Point]
+
+
+@dataclass(frozen=True)
+class Head:
+    """An arrowhead as a line's course places it: its base, where the line stops, and the
+    way its tip lies from there, a unit vector away from the line."""
+
+    base: Point
+    towards: Point
+
+
+@dataclass(frozen=True)
+class Course:
+    """A line as it is drawn: its points, each end that carries an arrowhead moved back to
+    the head's base; the arc of each turn drawn round, by the place of its point; and the
+    arrowhead at each end that carries one."""
+
+    points: tuple[Point, ...]
+    arcs: Mapping[int, Arc]
+    heads: Mapping[str, Head]
+
+
+def heads(element: Mapping[str, Any]) -> dict[str, float]:
+    """How long the arrowhead at each end of a line that carries one is: `HEAD` widths of
+    its stroke, which is 1 px wide where the line gives none, as SVG strokes it."""
+    width = float(element.get("stroke-width", 1))
+    return {which: HEAD * width for which in ENDS if element.get(f"marker-{which}") == "arrow"}
+
+
+def route(element: Mapping[str, Any]) -> list[Point]:
+    """The points a line runs through: a connector's `points` where its route turns, else
+    its two ends."""
+    points = element.get("points")
+    if points:
+        return [(float(p["x"]), float(p["y"])) for p in points]
+    x1, y1, x2, y2 = (float(element[end]) for end in ENDS_OF_LINE)
+    return [(x1, y1), (x2, y2)]
+
+
+def course(through: Sequence[Point], radius: float, heads: Mapping[str, float]) -> Course:
+    """How a line through the points `through` is drawn, its turns round at `radius` and an
+    arrowhead `heads` gives the length of at each end that carries one.
+
+    - **An end that carries an arrowhead** stops at the head's base, as far back along its
+      leg as the head is long, so the head's tip lies at the end. A leg the head is longer
+      than keeps `LEAST` of its length, so the head still points along it, and its tip
+      lies past the end. Two heads on a line of one leg share it.
+    - **A turn** is an arc of `radius` that leaves its two legs where they meet it. Its arc
+      takes at most half of the shorter of the two, so two turns on one leg never meet. A
+      leg that ends in an arrowhead counts to the head's base. A radius of 0 or less draws
+      every turn sharp, and so does a turn that goes straight on or back on itself.
+
+    A point that repeats the one before it is no turn. A line of no length draws as it
+    stands, and its heads point across, to the right at its end and to the left at its
+    start."""
+    points = [through[0]]
+    for point in through[1:]:
+        if point != points[-1]:
+            points.append(point)
+    if len(points) == 1:
+        across = {"start": (-1.0, 0.0), "end": (1.0, 0.0)}
+        placed = {which: Head(points[0], across[which]) for which in heads}
+        return Course((points[0], points[0]), {}, placed)
+    units, lengths = _legs(points)
+    shared = len(lengths) == 1 and len(heads) == 2
+    # Each end that carries a head, by the place of its point and the way the head points.
+    ends = {"start": (0, (-units[0][0], -units[0][1])), "end": (-1, units[-1])}
+    placed = {}
+    for which, length in heads.items():
+        at, away = ends[which]
+        room = lengths[at] / 2 if shared else lengths[at]
+        points[at] = _along(points[at], away, -min(length, max(room - LEAST, 0.0)))
+        placed[which] = Head(points[at], away)
+    _, drawn = _legs(points)
+    arcs = {}
+    for place in range(1, len(lengths)):
+        legs = drawn[place - 1 : place + 1]
+        arc = _arc(points[place], units[place - 1], units[place], radius, legs)
+        if arc is not None:
+            arcs[place] = arc
+    return Course(tuple(points), arcs, placed)
+
+
+def _along(point: Point, way: Point, by: float) -> Point:
+    """The point `by` along `way`, a unit vector, from `point`; back where `by` is below 0."""
+    return point[0] + by * way[0], point[1] + by * way[1]
+
+
+def _legs(points: Sequence[Point]) -> tuple[list[Point], list[float]]:
+    """The way each leg between `points` runs, a unit vector, and its length."""
+    units, lengths = [], []
+    for (x0, y0), (x1, y1) in itertools.pairwise(points):
+        length = math.hypot(x1 - x0, y1 - y0)
+        units.append(((x1 - x0) / length, (y1 - y0) / length) if length else (0.0, 0.0))
+        lengths.append(length)
+    return units, lengths
+
+
+def _arc(
+    corner: Point, before: Point, after: Point, radius: float, legs: Sequence[float]
+) -> Arc | None:
+    """The arc of the turn at `corner`, from the leg that runs `before` to the one that runs
+    `after`, each as long as `legs` gives: of `radius`, or less where that would take more
+    than half the shorter leg. None where it is drawn sharp, and where it would be less
+    than `LEAST`."""
+    cross = before[0] * after[1] - before[1] * after[0]
+    turned = math.atan2(abs(cross), before[0] * after[0] + before[1] * after[1])
+    if radius <= 0 or turned < STRAIGHT or turned > math.pi - STRAIGHT:
+        return None
+    # How far from the corner an arc leaves each leg, for each px of its radius: 1 at a
+    # right angle.
+    reach = math.tan(turned / 2)
+    leaves = min(radius * reach, min(legs) / 2)
+    fitted = leaves / reach
+    if fitted < LEAST:
+        return None
+    start, end = _along(corner, before, -leaves), _along(corner, after, leaves)
+    # A cubic Bézier curve's control points for an arc of this turn, as `KAPPA` is for a
+    # quarter of a circle.
+    pull = 4 / 3 * math.tan(turned / 4) * fitted
+    controls = (_along(start, before, pull), _along(end, after, -pull))
+    return Arc(start, end, fitted, cross > 0, controls)
+
+
+def course_path(drawn: Course) -> str:
+    """A course that turns round as SVG path data: absolute moves, lines and arcs, each turn
+    drawn round an arc of its radius (`A`), and each other turn a corner."""
+    at = [number(drawn.points[0][0]), number(drawn.points[0][1])]
+    words = ["M", *at]
+    for place, point in enumerate(drawn.points[1:], start=1):
+        arc = drawn.arcs.get(place)
+        towards = [number(each) for each in (arc.start if arc is not None else point)]
+        if towards != at:  # no line to where the path already stands
+            words += ["L", *towards]
+        if arc is not None:
+            radius, sweep = number(arc.radius), "1" if arc.clockwise else "0"
+            towards = [number(each) for each in arc.end]
+            words += ["A", radius, radius, "0", "0", sweep, *towards]
+        at = towards
+    return " ".join(words)
+
+
 def find(elements: list[Mapping[str, Any]], trace: str) -> Mapping[str, Any] | None:
     """The element of the trace id `trace`, in the tree under `elements`."""
     stack = list(reversed(elements))
@@ -513,9 +686,10 @@ class Canvas:
 
     def _line(self, element: Mapping[str, Any]) -> str:
         """A line, or a tie's connector: a `<polyline>` through its points where its route
-        turns, which names the elements its ends meet (`data-start`, `data-end`). An
-        arrowhead is a marker in the line's stroke colour. A line that holds neither its
-        ends nor its points is refused, as an element the renderer does not draw is."""
+        turns, or a `<path>` where it turns round, which names the elements its ends meet
+        (`data-start`, `data-end`). An arrowhead is a marker in the line's stroke colour,
+        and the line stops at its base (`course`). A line that holds neither its ends nor
+        its points is refused, as an element the renderer does not draw is."""
         points = element.get("points")
         if not points and any(end not in element for end in ENDS_OF_LINE):
             self._lose(
@@ -526,11 +700,18 @@ class Canvas:
             return ""
         attached = element.get("attached") or {}
         stroke = self._stroke(element)
-        shape = (
-            [("points", " ".join(f"{number(p['x'])},{number(p['y'])}" for p in points))]
-            if points
-            else [(end, number(element[end])) for end in ENDS_OF_LINE]
-        )
+        drawn = course(route(element), float(element.get("rx", 0)), heads(element))
+        if drawn.arcs:
+            kind, shape = "path", [("d", course_path(drawn))]
+        elif points:
+            kind = "polyline"
+            shape = [("points", " ".join(f"{number(x)},{number(y)}" for x, y in drawn.points))]
+        else:
+            (x1, y1), (x2, y2) = drawn.points
+            kind, shape = (
+                "line",
+                list(zip(ENDS_OF_LINE, map(number, (x1, y1, x2, y2)), strict=True)),
+            )
         attributes = attribute_text(
             [
                 ("data-id", element["id"]),
@@ -541,7 +722,7 @@ class Canvas:
                 *self._markers(element, stroke),
             ]
         )
-        return f"<polyline {attributes}/>" if points else f"<line {attributes}/>"
+        return f"<{kind} {attributes}/>"
 
     def _markers(
         self, element: Mapping[str, Any], stroke: list[tuple[str, Any]]
@@ -722,24 +903,25 @@ class Canvas:
 
     def _arrow_markers(self) -> str:
         """The arrowhead markers the page draws, in the order of their ids: a triangle as
-        long as five strokes are wide, its tip at the line's end, pointing away from the
-        line."""
+        long as five strokes are wide (`HEAD`), its base where the line stops, pointing away
+        from the line."""
         return "".join(
             self._marker(marker, which, [("fill", colour), ("fill-opacity", alpha)])
             for marker, (which, colour, alpha) in sorted(self._arrows.items())
         )
 
     def _marker(self, marker: str, which: str, paint: list[tuple[str, Any]]) -> str:
-        """The arrowhead marker `marker` at the end `which`, its triangle painted by `paint`."""
-        tip, shape = ("10", "M0,0L10,5L0,10z") if which == "end" else ("0", "M10,0L0,5L10,10z")
+        """The arrowhead marker `marker` at the end `which`, its triangle painted by `paint`.
+        It is placed by its base, at the point where the line stops."""
+        base, shape = ("0", "M0,0L10,5L0,10z") if which == "end" else ("10", "M10,0L0,5L10,10z")
         attributes = attribute_text(
             [
                 ("id", marker),
                 ("viewBox", "0 0 10 10"),
-                ("refX", tip),
+                ("refX", base),
                 ("refY", "5"),
-                ("markerWidth", "5"),
-                ("markerHeight", "5"),
+                ("markerWidth", number(HEAD)),
+                ("markerHeight", number(HEAD)),
                 ("orient", "auto"),
             ]
         )

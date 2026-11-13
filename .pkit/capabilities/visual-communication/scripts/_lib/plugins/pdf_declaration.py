@@ -35,7 +35,7 @@ IMAGE = ("preserveAspectRatio", "output", "variants", "points", "file", "library
 DECLARATION = {
     "name": "pdf",
     "kind": "renderer",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "seam": 8,
     "module": "pdf",
     "about": "A PDF file for each language and combination of modes, its pages in order.",
@@ -61,6 +61,7 @@ DECLARATION = {
                 "y2",
                 "stroke",
                 "stroke-width",
+                "rx",
                 "marker-start",
                 "marker-end",
                 "points",

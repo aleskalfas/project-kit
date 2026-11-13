@@ -1,9 +1,12 @@
 """The SVG renderer (visual-communication DEC-005 points 4, 5, 9 and 10): what it declares,
 what it draws, and what it reports it lost.
 
-The reference outputs below are pinned to the renderer's version, 1.3.0. A change that
+The reference outputs below are pinned to the renderer's version, 1.4.0. A change that
 gives another output for the same scene and values raises the version, and changes them
-with it (DEC-005 point 9). Version 1.3.0 came to draw a run's sign and ground, at seam 8
+with it (DEC-005 point 9). Version 1.4.0 came to stop a line at its arrowhead's base, and
+to draw a connector's turns round at the radius it holds, `rx`, as a path: a line with no
+arrowhead and no radius draws as 1.3.0 drew it, but for the renderer's version it names.
+Version 1.3.0 came to draw a run's sign and ground, at seam 8
 (DEC-036 point 3): a scene of neither draws as 1.2.0 drew it, but for the renderer's version
 it names. Version 1.2.0 came to draw the path, a concept's sign, at seam 7
 (DEC-036 point 1): a scene of no path draws as 1.1.0 drew it, but for the renderer's version
@@ -95,7 +98,7 @@ def draw(drawn: dict[str, Any], *, key: str = "default", pictures: Any = None) -
 HEAD = (
     '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100" '
     'data-piece="flow" data-page="figure" data-language="en" data-key="default" '
-    'data-renderer="svg 1.3.0">'
+    'data-renderer="svg 1.4.0">'
 )
 
 SHAPES = scene(
@@ -199,27 +202,29 @@ TIES = scene(
 )
 
 
-def test_a_connector_and_its_arrowheads_are_drawn_as_pinned_for_version_1_1_0() -> None:
+def test_a_connector_and_its_arrowheads_are_drawn_as_pinned_for_version_1_4_0() -> None:
     drawn = draw(TIES)
     assert drawn.losses == []
     [page] = drawn.pages
+    # Each arrowhead is placed by its base, where its line stops: the connector, of a
+    # stroke 2 px wide, ten px before its end, and the rule, of none, five px before each.
     assert page.svg == (
         HEAD + "<defs><style>text{white-space:pre}</style>"
-        '<marker id="pkit-arrow-end-000000" viewBox="0 0 10 10" refX="10" refY="5" '
+        '<marker id="pkit-arrow-end-000000" viewBox="0 0 10 10" refX="0" refY="5" '
         'markerWidth="5" markerHeight="5" orient="auto">'
         '<path d="M0,0L10,5L0,10z" fill="#000000"/></marker>'
-        '<marker id="pkit-arrow-end-000000-025" viewBox="0 0 10 10" refX="10" refY="5" '
+        '<marker id="pkit-arrow-end-000000-025" viewBox="0 0 10 10" refX="0" refY="5" '
         'markerWidth="5" markerHeight="5" orient="auto">'
         '<path d="M0,0L10,5L0,10z" fill="#000000" fill-opacity="0.25"/></marker>'
-        '<marker id="pkit-arrow-start-000000-025" viewBox="0 0 10 10" refX="0" refY="5" '
+        '<marker id="pkit-arrow-start-000000-025" viewBox="0 0 10 10" refX="10" refY="5" '
         'markerWidth="5" markerHeight="5" orient="auto">'
         '<path d="M10,0L0,5L10,10z" fill="#000000" fill-opacity="0.25"/></marker>'
         "</defs>"
         '<g data-id="figure" data-component="foundations/figure" data-version="1.0.0">'
         '<polyline data-id="figure/links[ab]/l" data-start="figure/steps[a]" '
-        'data-end="figure/steps[b]" points="10,20 60,20 60,60 110,60" fill="none" '
+        'data-end="figure/steps[b]" points="10,20 60,20 60,60 100,60" fill="none" '
         'stroke="#000000" stroke-width="2" marker-end="url(#pkit-arrow-end-000000)"/>'
-        '<line data-id="figure/rule" x1="0" y1="90" x2="200" y2="90" stroke="#000000" '
+        '<line data-id="figure/rule" x1="5" y1="90" x2="195" y2="90" stroke="#000000" '
         'stroke-opacity="0.25" marker-start="url(#pkit-arrow-start-000000-025)" '
         'marker-end="url(#pkit-arrow-end-000000-025)"/>'
         "</g></svg>\n"
@@ -227,6 +232,85 @@ def test_a_connector_and_its_arrowheads_are_drawn_as_pinned_for_version_1_1_0() 
     # The same scene gives the same file.
     assert draw(TIES).pages[0].svg == page.svg
     ElementTree.fromstring(page.svg)
+
+
+#: Two connectors with corners whose turns are round: one at a radius that fits, with an
+#: arrowhead at its end; one at a radius larger than half the legs of either turn, with an
+#: arrowhead at each end, so each turn takes half its shorter leg, counted to a head's base.
+ROUNDED = scene(
+    element(
+        "line",
+        "figure/links[ab]/l",
+        x=10,
+        y=20,
+        width=100,
+        height=40,
+        x1=10,
+        y1=20,
+        x2=110,
+        y2=60,
+        points=[{"x": 10, "y": 20}, {"x": 60, "y": 20}, {"x": 60, "y": 60}, {"x": 110, "y": 60}],
+        stroke="ink",
+        rx=8,
+        **{"stroke-width": 2, "marker-end": "arrow"},
+    ),
+    element(
+        "line",
+        "figure/links[cd]/l",
+        x=120,
+        y=10,
+        width=70,
+        height=40,
+        x1=120,
+        y1=10,
+        x2=190,
+        y2=50,
+        points=[{"x": 120, "y": 10}, {"x": 150, "y": 10}, {"x": 150, "y": 50}, {"x": 190, "y": 50}],
+        stroke="ink",
+        rx=40,
+        **{"marker-start": "arrow", "marker-end": "arrow"},
+    ),
+)
+
+
+def test_a_connectors_turns_are_drawn_round_as_pinned_for_version_1_4_0() -> None:
+    drawn = draw(ROUNDED)
+    assert drawn.losses == []
+    [page] = drawn.pages
+    # The first turns at 8 px both times. The second's legs run 30, 40 and 40 px, and its
+    # heads, five px long, leave 25 and 35 of the first and the last: its turns take half
+    # of 25 and half of 35, and leave 10 px of its middle leg straight.
+    assert page.svg == (
+        HEAD + "<defs><style>text{white-space:pre}</style>"
+        '<marker id="pkit-arrow-end-000000" viewBox="0 0 10 10" refX="0" refY="5" '
+        'markerWidth="5" markerHeight="5" orient="auto">'
+        '<path d="M0,0L10,5L0,10z" fill="#000000"/></marker>'
+        '<marker id="pkit-arrow-start-000000" viewBox="0 0 10 10" refX="10" refY="5" '
+        'markerWidth="5" markerHeight="5" orient="auto">'
+        '<path d="M10,0L0,5L10,10z" fill="#000000"/></marker>'
+        "</defs>"
+        '<g data-id="figure" data-component="foundations/figure" data-version="1.0.0">'
+        '<path data-id="figure/links[ab]/l" '
+        'd="M 10 20 L 52 20 A 8 8 0 0 1 60 28 L 60 52 A 8 8 0 0 0 68 60 L 100 60" '
+        'fill="none" stroke="#000000" stroke-width="2" marker-end="url(#pkit-arrow-end-000000)"/>'
+        '<path data-id="figure/links[cd]/l" '
+        'd="M 125 10 L 137.5 10 A 12.5 12.5 0 0 1 150 22.5 L 150 32.5 '
+        'A 17.5 17.5 0 0 0 167.5 50 L 185 50" fill="none" stroke="#000000" '
+        'marker-start="url(#pkit-arrow-start-000000)" marker-end="url(#pkit-arrow-end-000000)"/>'
+        "</g></svg>\n"
+    )
+    ElementTree.fromstring(page.svg)
+
+
+@pytest.mark.parametrize("radius", [0, None])
+def test_a_connector_of_radius_0_or_of_none_turns_on_sharp_corners(radius: float | None) -> None:
+    connector = {**ROUNDED["children"][0]["children"][0]}
+    del connector["rx"]
+    if radius is not None:
+        connector["rx"] = radius
+    [page] = draw(scene(connector)).pages
+    assert 'points="10,20 60,20 60,60 100,60"' in page.svg
+    assert "<path " not in page.svg.split("</defs>")[1]
 
 
 def test_a_line_with_no_stroke_draws_no_arrowhead() -> None:
@@ -548,11 +632,11 @@ def test_it_draws_every_primitive_it_declares_and_declares_every_one_it_draws() 
 def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
     assert seam.declaration("svg", seam.RENDERER) == svg_declaration.DECLARATION
     assert svg.NAME == "svg"
-    assert svg.VERSION == "1.3.0"
+    assert svg.VERSION == "1.4.0"
 
 
 #: Each plugin the capability ships, with its own version.
-SHIPPED = {"svg": "1.3.0", "pdf": "1.5.0", "html": "1.6.0", "css": "1.0.0", "json": "1.0.0"}
+SHIPPED = {"svg": "1.4.0", "pdf": "1.6.0", "html": "1.7.0", "css": "1.0.0", "json": "1.0.0"}
 
 
 def test_the_seam_rose_once_and_every_shipped_plugin_reads_it_at_its_own_version() -> None:

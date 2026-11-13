@@ -149,7 +149,9 @@ place. Its place is `x` and `y` (zero if absent), its
 size `width` and `height`, each a formula. A line has `x1 y1 x2 y2`; or, in a component
 that takes ends, `connect: straight` or `connect: corners`, the connector tool, which
 runs from its start to its end, straight or with corners, never around anything, and
-spreads the ends that meet one side of an item evenly (DEC-005 point 2). A line's
+spreads the ends that meet one side of an item evenly (DEC-005 point 2). A connector's
+`rx`, a length, is the radius its turns are drawn round at, and a line of its own ends,
+which turns nowhere, takes none. A line's
 `marker-start` and `marker-end` are `none`, the default, or `arrow`. A text's height is
 its measured text's, and its width, where none is given, its widest paragraph's. An
 image's height, where none is given, keeps its picture's proportions, a produced output's
@@ -263,7 +265,7 @@ PROPERTIES: Mapping[str, tuple[str, ...]] = {
     "box": ("fill", "stroke", "stroke-width", "rx"),
     "ellipse": ("fill", "stroke", "stroke-width"),
     "text": ("content", "fact", "style", "fill", "text-anchor", "sign", "ground"),
-    "line": ("stroke", "stroke-width", "marker-start", "marker-end"),
+    "line": ("stroke", "stroke-width", "rx", "marker-start", "marker-end"),
     "image": ("produced", "content", "file", "role"),
     "sign": ("fill", "stroke", "stroke-width"),
 }
@@ -1521,6 +1523,12 @@ class Component:
                 self._read_run_mark(part, key, value, runs)
             elif key in PAINTS:
                 self._switched(at, value, self._paint, nothing=True, runs=runs)
+            elif key == "rx" and part.kind == "line" and "connect" not in part.spec:
+                self._shape(
+                    at,
+                    f"the line `{part.name}` gives `rx`, the radius of a connector's turns, "
+                    "and connects no ends: a line of its own ends turns nowhere",
+                )
             elif key in LENGTHS:
                 self._number(at, value, fm.LENGTH)
             elif key in WORDS:

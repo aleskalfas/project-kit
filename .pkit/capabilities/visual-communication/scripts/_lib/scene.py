@@ -48,8 +48,9 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   turns, every point of it, `points`, its ends first and last, and `attached`: for each
   end, the trace id of the element it meets with the side it meets, or the image part
   and the point it ends at (DEC-011 point 1). Its ends' sources are the end fields that
-  name them. A connector whose route cannot be computed, such as one through a loop, is
-  left out, its finding recorded.
+  name them. Where its part gives one, it holds the radius its turns are drawn round at,
+  `rx`, as the part gives it: a renderer fits each turn to its legs. A connector whose
+  route cannot be computed, such as one through a loop, is left out, its finding recorded.
 - **Traces.** Each element's id is its trace: the path of instances, parts and items
   from the top, joined by `/`; an item is `<list>[<id>]`, or `<list>#<place>` (from 1)
   where it has no id. A page of a top whose layouts are its pages' forms is traced as an
@@ -454,7 +455,8 @@ class _Emitter:
 
     def _line(self, element: Element, instance: Instance, node: Node) -> None:
         name, spec = node.part.name, node.part.spec
-        if "connect" in spec:
+        connects = "connect" in spec
+        if connects:
             self._connector(element, instance, node)
         else:
             for end in ENDS_OF_LINE:
@@ -463,7 +465,10 @@ class _Emitter:
                     end, length(value), instance.source(f"parts.{name}.{end}", spec.get(end))
                 )
         self._paints(element, instance, node, ("stroke",))
-        self._lengths(element, instance, node, ("stroke-width",))
+        # Only a connector turns, so only a connector holds the radius of its turns.
+        self._lengths(
+            element, instance, node, ("stroke-width", "rx") if connects else ("stroke-width",)
+        )
         for prop in MARKERS:
             if prop in node.part.props:
                 where, raw = f"parts.{name}.line.{prop}", node.part.props[prop]
