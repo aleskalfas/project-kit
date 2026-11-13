@@ -1,9 +1,9 @@
 pkit_schema: visual-communication:piece
 schema_version: 1
 
-# The reference renders of the table (DEC-007 point 3): a table with a head and one
-# without, in English and in German, whose compound words stress its text, at each size
-# the test brand gives. Pinned with the test brand and the starter, so only a person moves
+# The reference renders of the table (DEC-007 point 3): a table with a head, one without,
+# and one with no inset of its own, in English and in German, whose compound words stress
+# its text, at each size the test brand gives. Pinned with the test brand and the starter, so only a person moves
 # what they draw.
 top: foundations/site
 brand: test-brand
