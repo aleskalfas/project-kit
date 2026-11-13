@@ -122,3 +122,25 @@ requirements:
   # (COR-047 point 3): a helper's tools are visible only inside a session, and
   # nobody has measured a helper withheld a tool yet (ADR-085 point 3). Only
   # whoever measures it answers it.
+  ask-reaches-person:
+    grade: at-cost
+    cost: >-
+      A session keeps a person who answers its asks. In a turn that something
+      other than a person answers, each ask is refused, and the refusal reads
+      as the person's own. In a turn nobody answers, each ask holds the turn
+      until someone answers it.
+    # The version the trial on an agent host ran: only whoever measures
+    # another version widens the range (COR-047 point 2).
+    harness_versions: ["2.1.321", "2.1.321"]
+    evidence: >-
+      Measured on 12 and 13 November 2026 with Claude Code 2.1.321, which an
+      agent host started through a protocol bridge, in auto mode, with the
+      permission hook on (#3004). The asks are the hook's: where a call may
+      hide a guardrail (ADR-025 point 7), and before a file tool writes
+      outside the session's repository (ADR-034 point 2). In a turn a message
+      in a chat channel started, the hook's ask before a `Write` outside the
+      repository was refused at once. The harness recorded the refusal as the
+      user's (`source: user_reject`), the tool returned `User refused
+      permission to run tool`, and the turn went on. In a run with nobody at
+      it, the hook's ask waited in the host's approval inbox, which expires
+      after 24 hours, and the turn stalled until it was answered.

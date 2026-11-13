@@ -112,7 +112,7 @@ DAM, which runs Claude Code in hosted machines, is the one host whose needs pkit
 | --- | --- |
 | A session running as `project-manager` lost every tool its agent did not list, a connected server's tools among them | The first question. `project-manager` keeps the session's tools, less those it is withheld, on every machine ([project-management's DEC-068](../.pkit/capabilities/project-management/decisions/DEC-068-session-agent-tools.md)). |
 | A shallow clone, whose history may fall short of what a check of pkit's reads | The second question. A check that finds the history short says so rather than answer. |
-| Whether an ask reaches anyone in a turn a chat message started | The third question, since pkit cannot read it. The requirement waits on a trial on a live host. |
+| Whether an ask reaches anyone in a turn a chat message started | The third question, since pkit cannot read it. A harness requirement reports it, with what a session must keep, as a trial on DAM measured ([the adapter's reference, "Harness support"](../.pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml)). |
 | The repository placed where DAM starts its sessions, and pkit installed where its machines find it | The fourth question. A DAM Starter Kit, DAM's own package of setup steps, would hold them, in a repository of its own. |
 | Sessions that share one checkout | A limit ("The limits pkit accepts" below). |
 
@@ -148,6 +148,7 @@ indeterminate  A process can start an agent unattended that edits and builds in 
 indeterminate  Every session holds every layer's loaded rules from its start to its end
 indeterminate  A session's agent withheld named tools has none of them and keeps the rest
 indeterminate  A helper withheld named tools has none of them
+indeterminate  An ask the harness puts to a person reaches a person who can answer it
 ```
 
 - **A result of `indeterminate`** is never counted as met (COR-047).
