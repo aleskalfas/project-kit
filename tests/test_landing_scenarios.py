@@ -47,7 +47,7 @@ from typing import Any
 import click
 import pytest
 
-from project_kit import cli, pull_request_landing, session_guard
+from project_kit import cli, pull_request_landing, release, session_guard
 from tests import hosting_fake as fake
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -2664,6 +2664,10 @@ def land(
 
     elif caller == RELEASE:
         monkeypatch.setattr(cli, "_target_kit", lambda: clone.root / ".pkit")
+        # The fake release PR lands what its release step wrote onto the
+        # commit its plan read: the predicate reads git and the remote, which
+        # `tests/test_release_landing.py` runs on real repositories (#3101).
+        monkeypatch.setattr(release, "release_pr_problem", lambda pr, repo_root: None)
 
         def once() -> str:
             return _release(["release", "merge", str(PR), *argv])
