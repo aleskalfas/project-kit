@@ -25,6 +25,7 @@
       }
     },
     "grey": {
+      "$description": "Seven steps of plain grey from near-white to near-black, for grounds, rules and text, with no hue, so they sit quietly beside any of the brand's hues; the light scheme reads them from the top and the dark scheme from the bottom.",
       "50": {
         "$value": {
           "colorSpace": "srgb",

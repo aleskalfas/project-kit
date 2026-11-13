@@ -79,6 +79,10 @@ ROLES: dict[str, Any] = {
         "lineHeight": 1.2,
     },
 }
+# The deck's title and lead, to which the test brand gives no value, so each takes the
+# shared type its default aliases, the type the deck drew it in before (DEC-035 point 4).
+ROLES["component.foundations.deck.title"] = ROLES["type.heading"]
+ROLES["component.foundations.deck.lead"] = ROLES["type.body"]
 
 
 #: The roles the tests of runs set runs in, and their fonts. Each weight is a family of its

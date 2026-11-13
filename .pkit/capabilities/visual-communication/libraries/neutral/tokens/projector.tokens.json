@@ -1,0 +1,105 @@
+{
+  "$description": "The neutral's values on a projector, where they differ from a desktop's: a slide read from across a room. The slide keeps a desktop's width, and its text grows half again: a body of 24 px, a head that differs from it by its weight alone, code a step under the body, since a monospace face sets wider, and the deck's lead at 30 and its title at 48, a 1.25 scale on the body.",
+  "type": {
+    "$description": "The types on a projector: half again a desktop's, a body of 24 px, read from the back of a room.",
+    "$type": "typography",
+    "body": {
+      "$value": {
+        "fontFamily": "{font.body}",
+        "fontSize": {
+          "value": 24,
+          "unit": "px"
+        },
+        "fontWeight": 400,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.3333
+      }
+    },
+    "heading": {
+      "$value": {
+        "fontFamily": "{font.heading}",
+        "fontSize": {
+          "value": 24,
+          "unit": "px"
+        },
+        "fontWeight": 600,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.3333
+      }
+    },
+    "strong": {
+      "$value": {
+        "fontFamily": "{font.heading}",
+        "fontSize": {
+          "value": 24,
+          "unit": "px"
+        },
+        "fontWeight": 600,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.3333
+      }
+    },
+    "code": {
+      "$value": {
+        "fontFamily": "{typeface.code}",
+        "fontSize": {
+          "value": 22,
+          "unit": "px"
+        },
+        "fontWeight": 400,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.2727
+      }
+    }
+  },
+  "component": {
+    "$description": "The deck's title at 48 px and its lead at 30, a 1.25 scale on the body, so a slide's three levels of text stay clearly apart.",
+    "foundations": {
+      "deck": {
+        "$type": "typography",
+        "title": {
+          "$value": {
+            "fontFamily": "{font.heading}",
+            "fontSize": {
+              "value": 48,
+              "unit": "px"
+            },
+            "fontWeight": 600,
+            "letterSpacing": {
+              "value": 0,
+              "unit": "px"
+            },
+            "lineHeight": 1.1667
+          }
+        },
+        "lead": {
+          "$value": {
+            "fontFamily": "{font.body}",
+            "fontSize": {
+              "value": 30,
+              "unit": "px"
+            },
+            "fontWeight": 400,
+            "letterSpacing": {
+              "value": 0,
+              "unit": "px"
+            },
+            "lineHeight": 1.2667
+          }
+        }
+      }
+    }
+  }
+}
