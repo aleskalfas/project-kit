@@ -17,7 +17,10 @@ points 1 to 6, DEC-005 points 4, 5, 9 and 10).
   reads the writer's output for. A span's colour and a shape's fill and stroke read the same
   property, so an arrowhead lies once for each role, and a colour's alpha lies in its value.
   A role with no colour in one key takes `transparent` there, so it draws nothing, and that
-  key reports the loss. A role with no colour in any key is written as no role is.
+  key reports the loss. A role with no colour in any key is written as no role is. A step of
+  an order the file paints takes a custom property of its own, `--_step-<n>`, numbered in
+  the order the file first paints it, a name no role's spelling can take, and its value in
+  each key is the one that comes with the scene among that key's colours (DEC-032 point 5).
 - **The reader's system picks a mode** (DEC-023 point 4). The plain rule holds the first
   key's values. Each other key's lie in a rule under the signals that part it from the first,
   after every rule of fewer, so a reader's signals always meet one key. The file holds no
@@ -100,6 +103,7 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from _lib import colour_steps
 from _lib.canvas import (
     ANCHORED,
     ENDS,
@@ -136,6 +140,10 @@ SCHEMES = "prefers-color-scheme"
 
 #: The paint of a role with no colour in one key: it draws nothing there.
 NOTHING = "transparent"
+
+#: The start of the custom property of a step of an order the file paints, which its number
+#: ends (DEC-023 point 3).
+STEP = "--_step-"
 
 #: The browser's own colours, CSS's system colours: its text colour and its ground colour. A
 #: fixed page's keyline and backdrop mix them (DEC-031 point 3).
@@ -330,6 +338,9 @@ class PageFile(Canvas):
         self._painted: set[str] = set()
         self._filled: set[str] = set()
         self._signed: set[str] = set()
+        # The custom property of each step of an order the file paints, by the step's name,
+        # numbered in the order the file first paints it (DEC-023 point 3, DEC-032 point 5).
+        self._steps: dict[str, str] = {}
         self._parted = {key: self._parting(key) for key in self.keys}
 
     def _parting(self, key: str) -> dict[str, str]:
@@ -380,6 +391,17 @@ class PageFile(Canvas):
     def _paint(self, element: Mapping[str, Any], prop: str) -> list[tuple[str, Any]]:
         return self._paint_attributes(prop, self._role(element["id"], prop, element.get(prop)))
 
+    def _property(self, paint: str) -> str:
+        """The custom property a paint reads: a colour role's in the CSS writer's spelling
+        (`css.name_of`), and a step's of an order its own, `--_step-<n>`, numbered in the order
+        the file first paints it. A role's spelling joins lower-case words by hyphens, so it
+        never holds `_`, and no role's property takes a step's name (DEC-023 point 3)."""
+        if not colour_steps.is_step(paint):
+            return name_of(paint)
+        if paint not in self._steps:
+            self._steps[paint] = f"{STEP}{len(self._steps) + 1}"
+        return self._steps[paint]
+
     def _paint_attributes(self, prop: str, role: str | None) -> list[tuple[str, Any]]:
         """A shape's paint: its role's custom property, so each key's value reaches it. With no
         `role`, a fill of none, and nothing for a stroke."""
@@ -387,7 +409,7 @@ class PageFile(Canvas):
             return [(prop, "none")] if prop == "fill" else []
         if prop == "fill":
             self._filled.add(role)
-        return [(prop, f"var({name_of(role)})")]
+        return [(prop, f"var({self._property(role)})")]
 
     def _markers(
         self, element: Mapping[str, Any], stroke: list[tuple[str, Any]]
@@ -400,7 +422,7 @@ class PageFile(Canvas):
         found = []
         for which in ENDS:
             if element.get(f"marker-{which}") == "arrow":
-                marker = f"pkit-arrow-{which}{name_of(element['stroke'])}"
+                marker = f"pkit-arrow-{which}{self._property(element['stroke'])}"
                 self._arrows[marker] = (which, paint["stroke"], None)
                 found.append((f"marker-{which}", f"url(#{marker})"))
         return found
@@ -467,7 +489,10 @@ class PageFile(Canvas):
     def _values(self, key: str, roles: list[str], first: list[str] | None = None) -> str:
         """A rule of the root holding `first`, then each of `roles` at its value in `key`."""
         colours = self.colours_of[key]
-        held = [*(first or []), *(f"{name_of(role)}:{_value(colours.get(role))}" for role in roles)]
+        held = [
+            *(first or []),
+            *(f"{self._property(role)}:{_value(colours.get(role))}" for role in roles),
+        ]
         return f":root{{{';'.join(held)}}}"
 
     def _schemes(self) -> list[str]:
@@ -491,7 +516,7 @@ class PageFile(Canvas):
         filled = [(layer, role) for role in sorted(self._filled)]
         filled += [(f"[{MARKS['sign']}]", role) for role in sorted(self._signed)]
         opaque = [
-            f'{within} [fill="var({name_of(role)})"]'
+            f'{within} [fill="var({self._property(role)})"]'
             for within, role in filled
             if all(_opaque(self.colours_of[key].get(role)) for key in self.keys)
         ]
@@ -625,7 +650,7 @@ class PageFile(Canvas):
         after = rounded if "end" in ground else None
         corners = [before or "0", after or "0", after or "0", before or "0"]
         return [
-            ("background", f"var({name_of(role)})" if role is not None else None),
+            ("background", f"var({self._property(role)})" if role is not None else None),
             ("padding-left", self._share(ground["start"]) if "start" in ground else None),
             ("padding-right", self._share(ground["end"]) if "end" in ground else None),
             ("border-radius", " ".join(corners) if before or after else None),
@@ -654,7 +679,7 @@ class PageFile(Canvas):
             [
                 ("d", sign["d"]),
                 ("fill-rule", rule if rule == "evenodd" else None),
-                ("fill", f"var({name_of(role)})" if role is not None else "none"),
+                ("fill", f"var({self._property(role)})" if role is not None else "none"),
             ]
         )
         style = _style(
@@ -679,7 +704,7 @@ class PageFile(Canvas):
         """The CSS colour of a run: its fill's custom property. A run with no paint is
         transparent, so it never takes the browser's own colour."""
         role = self._role(element["id"], "fill", run.get("fill"))
-        return NOTHING if role is None else f"var({name_of(role)})"
+        return NOTHING if role is None else f"var({self._property(role)})"
 
     # -- a picture
 

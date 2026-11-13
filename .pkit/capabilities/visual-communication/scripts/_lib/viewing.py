@@ -779,7 +779,7 @@ class _Made:
                 "elements": frames(page, width, height, band.region if band else None),
             }
         )
-        ground = draws_ground(page, pl.colours_at(self.document, key))
+        ground = draws_ground(page, pl.colours_at(self.document, key, scene))
         self.images.append(
             {
                 **at,
