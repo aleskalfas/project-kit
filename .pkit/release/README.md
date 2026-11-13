@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/release.py
+        - src/project_kit/cli.py
         - src/project_kit/changesets.py
         - src/project_kit/versioning.py
         - .changie.yaml
@@ -749,10 +750,16 @@ release commit, which does not exist yet when `apply` runs. The sequence:
     # release-tag.yml cuts v<new-backbone> on the push to main — or, fully manual:
     pkit version tag --push            # on main: cut v<new-backbone> (PRJ-004)
 
-**The trailer line** (ADR-092 point 6). A release consumes the changesets
-pending at the commit of the default branch its plan read, so it lands sound
-only onto that commit, holding only what `apply` wrote there. The history does
-not say which commit that was, so `apply` prints, as its last line,
+`apply --tag` is an opt-in shortcut for when HEAD is *already* the release
+commit (e.g. re-running on `main` after merge). A component-only release (no
+backbone move) cuts no tag — PRJ-004 tags the backbone `.pkit/VERSION`.
+
+### The trailer line (ADR-092 point 6)
+
+A release consumes the changesets pending at the commit of the default branch
+its plan read, so it lands sound only onto that commit, holding only what
+`apply` wrote there. The history does not say which commit that was, so
+`apply` prints, as its last line,
 `Release-plan-commit: <the commit's full 40-character id>`, naming HEAD as it
 planned: cut the release branch from the default branch's head, and run
 `apply` there. Commit the release with the line as its message's last
@@ -763,10 +770,6 @@ body. Push nothing else onto the release branch, and never amend the release
 commit: where the default branch has moved since the plan, run the release
 again from its head. An empty release commits nothing, and `apply` prints no
 line.
-
-`apply --tag` is an opt-in shortcut for when HEAD is *already* the release
-commit (e.g. re-running on `main` after merge). A component-only release (no
-backbone move) cuts no tag — PRJ-004 tags the backbone `.pkit/VERSION`.
 
 ### Merging the release PR — `pkit release merge <pr>`
 
