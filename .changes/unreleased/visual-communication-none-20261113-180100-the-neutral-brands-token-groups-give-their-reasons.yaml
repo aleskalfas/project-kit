@@ -1,6 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  Internal. Each of the neutral brand's token groups, in its version being
-  built, 1.1.0, gives its reason in its `$description`, with no value changed.
-  Nothing a piece draws changes.
