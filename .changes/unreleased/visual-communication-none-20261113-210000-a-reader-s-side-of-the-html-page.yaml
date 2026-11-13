@@ -1,0 +1,11 @@
+component: visual-communication
+kind: none
+body: >
+  Design-ahead: visual-communication DEC-040, proposed, decides what a reader
+  who does not see an HTML page gets: each word of DEC-033 in HTML's own
+  elements on the elements its texts already are, a link across a line break
+  one link, the document in its reading order, each line ending with what the
+  engine used up at its break, a picture's text an element at the picture's
+  frame, and nothing of it reported dropped. It is record text only, and
+  nothing you run changes. The Task that gives a reader the reading order and
+  the Task of links and alternative text carry the real changesets.
