@@ -1,0 +1,232 @@
+{
+  "piece": "showcase",
+  "lock": {
+    "foundations": "1.2.0",
+    "neutral": "1.1.0",
+    "pkit": "1.0.0",
+    "starter": "1.1.0"
+  },
+  "renderer": {
+    "name": "svg",
+    "version": "1.5.0"
+  },
+  "tool": {
+    "name": "resvg",
+    "version": "0.48.1",
+    "wheel": "0.5.0"
+  },
+  "images": [
+    {
+      "language": "en",
+      "key": "device.projector",
+      "page": "deck/slides[fits]",
+      "number": 1,
+      "image": "showcase.en.device.projector.1.png",
+      "frames": "showcase.en.device.projector.1.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "en",
+      "key": "device.projector",
+      "page": "deck/slides[install]",
+      "number": 2,
+      "image": "showcase.en.device.projector.2.png",
+      "frames": "showcase.en.device.projector.2.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "en",
+      "key": "device.projector",
+      "page": "deck/slides[permissions]",
+      "number": 3,
+      "image": "showcase.en.device.projector.3.png",
+      "frames": "showcase.en.device.projector.3.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "en",
+      "key": "device.projector",
+      "page": "deck/slides[connect]",
+      "number": 4,
+      "image": "showcase.en.device.projector.4.png",
+      "frames": "showcase.en.device.projector.4.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "en",
+      "key": "colour-scheme.dark+device.projector",
+      "page": "deck/slides[fits]",
+      "number": 1,
+      "image": "showcase.en.colour-scheme.dark+device.projector.1.png",
+      "frames": "showcase.en.colour-scheme.dark+device.projector.1.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "en",
+      "key": "colour-scheme.dark+device.projector",
+      "page": "deck/slides[install]",
+      "number": 2,
+      "image": "showcase.en.colour-scheme.dark+device.projector.2.png",
+      "frames": "showcase.en.colour-scheme.dark+device.projector.2.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "en",
+      "key": "colour-scheme.dark+device.projector",
+      "page": "deck/slides[permissions]",
+      "number": 3,
+      "image": "showcase.en.colour-scheme.dark+device.projector.3.png",
+      "frames": "showcase.en.colour-scheme.dark+device.projector.3.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "en",
+      "key": "colour-scheme.dark+device.projector",
+      "page": "deck/slides[connect]",
+      "number": 4,
+      "image": "showcase.en.colour-scheme.dark+device.projector.4.png",
+      "frames": "showcase.en.colour-scheme.dark+device.projector.4.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "cs",
+      "key": "device.projector",
+      "page": "deck/slides[fits]",
+      "number": 1,
+      "image": "showcase.cs.device.projector.1.png",
+      "frames": "showcase.cs.device.projector.1.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "cs",
+      "key": "device.projector",
+      "page": "deck/slides[install]",
+      "number": 2,
+      "image": "showcase.cs.device.projector.2.png",
+      "frames": "showcase.cs.device.projector.2.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "cs",
+      "key": "device.projector",
+      "page": "deck/slides[permissions]",
+      "number": 3,
+      "image": "showcase.cs.device.projector.3.png",
+      "frames": "showcase.cs.device.projector.3.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "cs",
+      "key": "device.projector",
+      "page": "deck/slides[connect]",
+      "number": 4,
+      "image": "showcase.cs.device.projector.4.png",
+      "frames": "showcase.cs.device.projector.4.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "cs",
+      "key": "colour-scheme.dark+device.projector",
+      "page": "deck/slides[fits]",
+      "number": 1,
+      "image": "showcase.cs.colour-scheme.dark+device.projector.1.png",
+      "frames": "showcase.cs.colour-scheme.dark+device.projector.1.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "cs",
+      "key": "colour-scheme.dark+device.projector",
+      "page": "deck/slides[install]",
+      "number": 2,
+      "image": "showcase.cs.colour-scheme.dark+device.projector.2.png",
+      "frames": "showcase.cs.colour-scheme.dark+device.projector.2.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "cs",
+      "key": "colour-scheme.dark+device.projector",
+      "page": "deck/slides[permissions]",
+      "number": 3,
+      "image": "showcase.cs.colour-scheme.dark+device.projector.3.png",
+      "frames": "showcase.cs.colour-scheme.dark+device.projector.3.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    },
+    {
+      "language": "cs",
+      "key": "colour-scheme.dark+device.projector",
+      "page": "deck/slides[connect]",
+      "number": 4,
+      "image": "showcase.cs.colour-scheme.dark+device.projector.4.png",
+      "frames": "showcase.cs.colour-scheme.dark+device.projector.4.frames.json",
+      "pixels": {
+        "width": 1568,
+        "height": 882
+      },
+      "on-white": false
+    }
+  ],
+  "dropped": [],
+  "losses": [],
+  "drawn-otherwise": [],
+  "profiles": []
+}

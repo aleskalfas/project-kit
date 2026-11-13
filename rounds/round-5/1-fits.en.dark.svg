@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" lang="en">
+<title>How pkit fits together</title>
+<rect width="1280" height="720" fill="#121416"/>
+<text x="80" y="96" font-size="48" letter-spacing="-0.5"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">How pkit fits together</tspan></text>
+<text x="80" y="140" font-size="30"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">In five layers, from your decisions down to your code:</tspan></text>
+<text x="80" y="178" font-size="30"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">each carries out the ones above it.</tspan></text>
+<text x="80" y="656" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#9ea2a6">In project-kit: this order is itself written down as one of its decisions.</tspan></text>
+<rect x="464" y="224" width="352" height="70" rx="8" fill="#d0e0f4"/>
+<text x="640" y="253" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#121416">Decisions</tspan></text>
+<text x="640" y="281" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#121416">What you accepted, and why.</tspan></text>
+<rect x="416" y="302" width="448" height="70" rx="8" fill="#bbcade"/>
+<text x="640" y="331" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#121416">Working rules · schemas · processes</tspan></text>
+<text x="640" y="359" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#121416">Exactly what to do, in every session.</tspan></text>
+<rect x="368" y="380" width="544" height="70" rx="8" fill="#a7b6c9"/>
+<text x="640" y="409" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#121416">Skills · agents · permissions</tspan></text>
+<text x="640" y="437" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#121416">How agents act, and with what rights.</tspan></text>
+<rect x="320" y="458" width="640" height="70" rx="8" fill="#93a1b4"/>
+<text x="640" y="487" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#121416">pkit's commands and checks</tspan></text>
+<text x="640" y="515" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#121416">Carry out decisions, and check each change.</tspan></text>
+<rect x="272" y="536" width="736" height="70" rx="8" fill="#7f8ea0"/>
+<text x="640" y="565" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#121416">Your code and documents</tspan></text>
+<text x="640" y="593" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#121416">The work itself, tied to what it depends on.</tspan></text>
+<path d="M 464 278 L 424 278 A 32 32 0 0 0 392 310 L 392 356 L 376 356 A 32 32 0 0 0 344 388 L 344 434 L 328 434 A 32 32 0 0 0 296 466 L 296 524" fill="none" stroke="#82d9b4" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 296 536 L 290.6 524 L 301.4 524 Z" fill="#82d9b4"/>
+<path d="M 984 536 L 984 466 A 32 32 0 0 0 952 434 L 936 434 L 936 388 A 32 32 0 0 0 904 356 L 888 356 L 888 310 A 32 32 0 0 0 856 278 L 828 278" fill="none" stroke="#7c8186" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 816 278 L 828 272.6 L 828 283.4 Z" fill="#7c8186"/>
+<rect x="81" y="225" width="238" height="68" rx="7" fill="none" stroke="#7c8186" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="200" y="253" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Where ideas start</tspan></text>
+<text x="200" y="281" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">In conversation.</tspan></text>
+<path d="M 320 259 L 452 259" fill="none" stroke="#7c8186" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 464 259 L 452 264.4 L 452 253.6 Z" fill="#7c8186"/>
+<text x="320" y="384" font-size="24" text-anchor="end"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Carried out</tspan></text>
+<text x="320" y="416" font-size="24" text-anchor="end"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">by each layer below</tspan></text>
+<text x="960" y="384" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Checked first</tspan></text>
+<text x="960" y="416" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">against the one above</tspan></text>
+</svg>

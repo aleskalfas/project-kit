@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" lang="en">
+<title>Install pkit</title>
+<rect width="1280" height="720" fill="#121416"/>
+<text x="80" y="96" font-size="48" letter-spacing="-0.5"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Install pkit</tspan></text>
+<text x="80" y="140" font-size="30"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">Install the tool once, then add pkit to each project with one command.</tspan></text>
+<text x="80" y="178" font-size="30"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">Upgrades replace pkit's files, never yours.</tspan></text>
+<text x="80" y="656" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#9ea2a6">In project-kit: 69 of pkit's decisions sit beside 13 of the project's own, in the same folder.</tspan></text>
+<circle cx="98" cy="242" r="18" fill="#edeff1"/>
+<text x="98" y="250" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#121416">1</tspan></text>
+<text x="132" y="250" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Once, on your machine</tspan></text>
+<rect x="80" y="272" width="1120" height="52" rx="8" fill="#1f252a"/>
+<text x="104" y="304" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#9ea2a6">$ </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">uv tool install </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#bbbec2">git+ssh://git@github.com/aleskalfas/project-kit.git@latest</tspan></text>
+<circle cx="98" cy="374" r="18" fill="#edeff1"/>
+<text x="98" y="382" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#121416">2</tspan></text>
+<text x="132" y="382" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">In each project</tspan></text>
+<rect x="80" y="404" width="448" height="80" rx="8" fill="#1f252a"/>
+<text x="104" y="436" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#9ea2a6">$ </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">cd </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#bbbec2">your-project</tspan></text>
+<text x="104" y="464" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#9ea2a6">$ </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">pkit init</tspan></text>
+<text x="80" y="533" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">To keep pkit out of your repository:</tspan></text>
+<rect x="80" y="549" width="448" height="52" rx="8" fill="#1f252a"/>
+<text x="104" y="581" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#9ea2a6">$ </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">pkit visibility </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#bbbec2">private</tspan></text>
+<rect x="656" y="356" width="544" height="245" rx="8" fill="#1c1e21"/>
+<text x="680" y="397" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Then each project holds</tspan></text>
+<text x="680" y="442" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">.pkit/</tspan></text>
+<rect x="664" y="452.72" width="528" height="32" rx="8" fill="#113124"/>
+<text x="728" y="474" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#82d9b4">decisions/core/</tspan></text>
+<text x="1040" y="474" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#82d9b4">pkit's</tspan></text>
+<path d="M 688 468.72 L 716 468.72" fill="none" stroke="#7c8186" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<text x="728" y="506" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">decisions/project/</tspan></text>
+<text x="1040" y="506" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">yours</tspan></text>
+<path d="M 688 500.72 L 716 500.72" fill="none" stroke="#7c8186" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<rect x="664" y="516.72" width="528" height="32" rx="8" fill="#113124"/>
+<text x="728" y="538" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#82d9b4">rules/core.md</tspan></text>
+<text x="1040" y="538" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#82d9b4">pkit's</tspan></text>
+<path d="M 688 532.72 L 716 532.72" fill="none" stroke="#7c8186" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<text x="728" y="570" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">rules/project.md</tspan></text>
+<text x="1040" y="570" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">yours</tspan></text>
+<path d="M 688 450 L 688 556.72 A 8 8 0 0 0 696 564.72 L 716 564.72" fill="none" stroke="#7c8186" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+</svg>

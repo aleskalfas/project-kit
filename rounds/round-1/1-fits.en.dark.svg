@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" lang="en">
+<title>How pkit fits together</title>
+<rect width="1280" height="720" fill="#121416"/>
+<text x="80" y="96" font-size="48" letter-spacing="-0.5"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">How pkit fits together</tspan></text>
+<text x="80" y="136" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">In five layers, from your decisions down to your code:</tspan></text>
+<text x="80" y="168" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">each carries out the ones above it.</tspan></text>
+<text x="80" y="688" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#9b9fa3">pkit wrote this order down as a decision of its own, COR-065.</tspan></text>
+<rect x="688" y="216" width="384" height="76" rx="8" fill="#b4e0cb"/>
+<text x="880" y="249" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#121416">Decisions</tspan></text>
+<text x="880" y="275" font-size="20" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#121416">Choices you accepted, and why.</tspan></text>
+<rect x="656" y="300" width="448" height="76" rx="8" fill="#63b895"/>
+<text x="880" y="333" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#121416">Working rules · schemas · processes</tspan></text>
+<text x="880" y="359" font-size="20" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#121416">Exactly what to do, for every session and tool.</tspan></text>
+<rect x="624" y="384" width="512" height="76" rx="8" fill="#07835e"/>
+<text x="880" y="417" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#ffffff">Skills · agents · permissions</tspan></text>
+<text x="880" y="443" font-size="20" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">How agents act, in which role, with what rights.</tspan></text>
+<rect x="592" y="468" width="576" height="76" rx="8" fill="#00593e"/>
+<text x="880" y="501" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">pkit's commands and checks</tspan></text>
+<text x="880" y="527" font-size="20" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">Carry out what is decided, and check every change.</tspan></text>
+<rect x="560" y="552" width="640" height="76" rx="8" fill="#002f1f"/>
+<text x="880" y="585" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Your code and documents</tspan></text>
+<text x="880" y="611" font-size="20" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">The work itself, tied to what it depends on.</tspan></text>
+<rect x="81" y="217" width="446" height="122" rx="8" fill="none" stroke="#9b9fa3" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="104" y="256" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Where ideas start</tspan></text>
+<text x="104" y="288" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">In conversation, and in a scratchpad note when</tspan></text>
+<text x="104" y="316" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">one needs longer.</tspan></text>
+<path d="M 530 254 L 674 254" fill="none" stroke="#bbbec2" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 686 254 L 674 260 L 674 248 Z" fill="#bbbec2"/>
+<text x="104" y="404" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Carried out</tspan></text>
+<text x="104" y="436" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">The reasons stay in one place, where an agent</tspan></text>
+<text x="104" y="464" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">reads them before it changes anything.</tspan></text>
+<path d="M 82 386 L 82 460" fill="none" stroke="#bbbec2" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 82 472 L 76 460 L 88 460 Z" fill="#bbbec2"/>
+<text x="104" y="536" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Checked</tspan></text>
+<text x="104" y="568" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">If a layer and a decision disagree, the layer is</tspan></text>
+<text x="104" y="596" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">checked first, so decisions never drift to match the</tspan></text>
+<text x="104" y="624" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">code. Only you change a decision.</tspan></text>
+<path d="M 82 632 L 82 530" fill="none" stroke="#bbbec2" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 82 518 L 88 530 L 76 530 Z" fill="#bbbec2"/>
+</svg>

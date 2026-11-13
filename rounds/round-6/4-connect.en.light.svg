@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" lang="en">
+<title>How capabilities work together</title>
+<rect width="1280" height="720" fill="#ffffff"/>
+<text x="80" y="96" font-size="48" letter-spacing="-0.5"><tspan font-family="Source Sans Pro" font-weight="600" fill="#171b20">How capabilities work together</tspan></text>
+<text x="80" y="140" font-size="30"><tspan font-family="Source Sans Pro" font-weight="400" fill="#171b20">A capability never names another, only a role.</tspan></text>
+<text x="80" y="178" font-size="30"><tspan font-family="Source Sans Pro" font-weight="400" fill="#171b20">One that needs something opens a slot, and any other can fill it.</tspan></text>
+<text x="80" y="656" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#5f646a">In project-kit: each of its 3 roles has one capability so far, so a swap is designed, not yet shown.</tspan></text>
+<rect x="560" y="224" width="640" height="268" rx="8" fill="#f3f4f6"/>
+<rect x="573" y="237" width="614" height="46" rx="7" fill="#ffffff" stroke="#767b80" stroke-width="2"/>
+<text x="584" y="268" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#171b20">doc-check</tspan></text>
+<text x="726.8" y="268" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4b5056">the docs a change must update</tspan></text>
+<rect x="573" y="293" width="614" height="46" rx="7" fill="#dcf8ea" stroke="#047554" stroke-width="2"/>
+<text x="584" y="324" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#047554">fixers</tspan></text>
+<text x="726.8" y="324" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4b5056">which agent fixes each doc</tspan></text>
+<rect x="573" y="349" width="614" height="46" rx="7" fill="#ffffff" stroke="#767b80" stroke-width="2"/>
+<text x="584" y="380" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#171b20">use-cases</tspan></text>
+<text x="726.8" y="380" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4b5056">the use cases to plan from</tspan></text>
+<rect x="572" y="408" width="352" height="72" rx="8" fill="#1e2a39"/>
+<text x="596" y="438" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">role</tspan></text>
+<text x="636.8" y="438" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#ffffff">pkit::work-tracking</tspan></text>
+<text x="596" y="466" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">project-management</tspan></text>
+<text x="948" y="466" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4b5056">opens 3 slots</tspan></text>
+<rect x="80" y="224" width="352" height="72" rx="8" fill="#1e2a39"/>
+<text x="104" y="254" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">role</tspan></text>
+<text x="144.8" y="254" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#ffffff">pkit::documentation</tspan></text>
+<text x="104" y="282" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">living-docs</tspan></text>
+<rect x="80" y="336" width="352" height="72" rx="8" fill="#1e2a39"/>
+<text x="104" y="366" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">role</tspan></text>
+<text x="144.8" y="366" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#ffffff">pkit::analysis</tspan></text>
+<text x="104" y="394" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">software-analysis</tspan></text>
+<path d="M 432 260 L 560 260" fill="none" stroke="#767b80" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 572 260 L 560 265.4 L 560 254.6 Z" fill="#767b80"/>
+<path d="M 432 260 L 476 260 A 16 16 0 0 1 492 276 L 492 290 A 16 16 0 0 0 508 306 L 560 306" fill="none" stroke="#767b80" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 572 306 L 560 311.4 L 560 300.6 Z" fill="#767b80"/>
+<path d="M 432 372 L 560 372" fill="none" stroke="#767b80" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 572 372 L 560 377.4 L 560 366.6 Z" fill="#767b80"/>
+<path d="M 432 372 L 476 372 A 16 16 0 0 0 492 356 L 492 342 A 16 16 0 0 1 508 326 L 560 326" fill="none" stroke="#767b80" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 572 326 L 560 331.4 L 560 320.6 Z" fill="#767b80"/>
+<rect x="560" y="500" width="640" height="108" rx="8" fill="#e2e9f0"/>
+<text x="584" y="532" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#5f646a">$ </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#171b20">pkit status</tspan></text>
+<text x="584" y="560" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#4b5056">bound  </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#171b20">software-analysis</tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#4b5056"> (contributes)</tspan></text>
+<text x="584" y="588" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#4b5056">bound  </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#171b20">living-docs</tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#4b5056"> (contributes)</tspan></text>
+<text x="1176" y="532" font-size="22" text-anchor="end"><tspan font-family="Source Code Pro" font-weight="400" fill="#5f646a"># pkit::work-tracking:</tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#047554">fixers</tspan></text>
+<text x="80" y="468" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#171b20">What it gives you</tspan></text>
+<text x="80" y="508" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#171b20">Swap one for another in the same role.</tspan></text>
+<text x="80" y="548" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#171b20">Install only what you need.</tspan></text>
+<text x="80" y="588" font-size="24"><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#171b20">pkit validate</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#171b20"> checks the wiring.</tspan></text>
+</svg>

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" lang="cs">
+<title>Jak je pkit poskládaný</title>
+<rect width="1280" height="720" fill="#ffffff"/>
+<text x="80" y="96" font-size="48" letter-spacing="-0.5"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Jak je pkit poskládaný</tspan></text>
+<text x="80" y="136" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">Skládá se z pěti vrstev, od vašich rozhodnutí až po váš kód.</tspan></text>
+<text x="80" y="168" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">Každá vrstva provádí to, co určují vrstvy nad ní.</tspan></text>
+<text x="80" y="656" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#65696f">V project-kitu: toto pořadí je samo zapsané jako jedno z jeho rozhodnutí.</tspan></text>
+<rect x="448" y="208" width="384" height="72" rx="8" fill="#013d2a"/>
+<text x="640" y="239" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#ffffff">Rozhodnutí</tspan></text>
+<text x="640" y="267" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">Co jste schválili a proč.</tspan></text>
+<rect x="416" y="288" width="448" height="72" rx="8" fill="#03543b"/>
+<text x="640" y="319" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#ffffff">Pracovní pravidla · schémata · procesy</tspan></text>
+<text x="640" y="347" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">Co přesně dělat, v každé session.</tspan></text>
+<rect x="384" y="368" width="512" height="72" rx="8" fill="#016c4d"/>
+<text x="640" y="399" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#ffffff">Skilly · agenti · oprávnění</tspan></text>
+<text x="640" y="427" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">Jak agenti jednají a s jakými právy.</tspan></text>
+<rect x="352" y="448" width="576" height="72" rx="8" fill="#07835e"/>
+<text x="640" y="479" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#ffffff">Příkazy a kontroly pkitu</tspan></text>
+<text x="640" y="507" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">Provádějí rozhodnutí a kontrolují změny.</tspan></text>
+<rect x="320" y="528" width="640" height="72" rx="8" fill="#47a17e"/>
+<text x="640" y="559" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Váš kód a dokumenty</tspan></text>
+<text x="640" y="587" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">Samotná práce, navázaná na to, na čem závisí.</tspan></text>
+<path d="M 413.6 296 L 296.457 588.858" fill="none" stroke="#4f5358" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 292 600 L 291.443 586.853 L 301.47 590.864 Z" fill="#4f5358"/>
+<path d="M 988 600 L 870.857 307.142" fill="none" stroke="#4f5358" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 866.4 296 L 875.87 305.136 L 865.843 309.147 Z" fill="#4f5358"/>
+<rect x="81" y="209" width="302" height="150" rx="8" fill="none" stroke="#7d8085" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="104" y="244" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Kde vznikají nápady</tspan></text>
+<text x="104" y="276" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">V rozhovoru, nebo</tspan></text>
+<text x="104" y="308" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">v poznámce ve</tspan></text>
+<text x="104" y="340" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">scratchpadu.</tspan></text>
+<path d="M 386 244 L 434 244" fill="none" stroke="#4f5358" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 446 244 L 434 249.4 L 434 238.6 Z" fill="#4f5358"/>
+<text x="80" y="424" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Provádění</tspan></text>
+<text x="80" y="456" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">Agent si nejdřív</tspan></text>
+<text x="80" y="488" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">přečte důvody.</tspan></text>
+<text x="975.2" y="424" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Kontrola</tspan></text>
+<text x="975.2" y="456" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">Rozhodnutí se nikdy</tspan></text>
+<text x="975.2" y="488" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">nepřizpůsobí kódu.</tspan></text>
+</svg>

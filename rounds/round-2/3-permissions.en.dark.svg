@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" lang="en">
+<title>Where permissions come from</title>
+<rect width="1280" height="720" fill="#121416"/>
+<text x="80" y="96" font-size="48" letter-spacing="-0.5"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Where permissions come from</tspan></text>
+<text x="80" y="136" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">From rules your project writes down as data.</tspan></text>
+<text x="80" y="168" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">Your AI tool applies them to every call, so they hold when an agent forgets them.</tspan></text>
+<text x="80" y="656" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#9b9fa3">In project-kit: Claude Code's settings, written by pkit from this data, hold 14 denies and 63 allows.</tspan></text>
+<path d="M 376 208 L 624 208 L 640 232 L 624 256 L 376 256 Q 368 256 368 248 L 368 216 Q 368 208 376 208 Z" fill="#78be9f"/>
+<text x="396" y="240" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#121416">Written as data</tspan></text>
+<path d="M 672 208 L 912 208 L 928 232 L 912 256 L 656 256 L 672 232 L 656 208 Z" fill="#55aa88"/>
+<text x="684" y="240" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#121416">Your AI tool gets</tspan></text>
+<path d="M 960 208 L 1192 208 Q 1200 208 1200 216 L 1200 248 Q 1200 256 1192 256 L 944 256 L 960 232 L 944 208 Z" fill="#329671"/>
+<text x="972" y="240" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#121416">A call meets</tspan></text>
+<line x1="80" y1="272" x2="1200" y2="272" stroke="#35383c" stroke-width="1"/>
+<text x="80" y="312" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Guardrails</tspan></text>
+<text x="80" y="340" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">for you and every agent</tspan></text>
+<text x="396" y="312" font-size="24"><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">rm -r</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">, </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">sudo</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">,</tspan></text>
+<text x="396" y="344" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">force-push: denied</tspan></text>
+<text x="684" y="312" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">a deny in its settings</tspan></text>
+<text x="972" y="312" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">refused, in every mode</tspan></text>
+<line x1="80" y1="368" x2="1200" y2="368" stroke="#35383c" stroke-width="1"/>
+<text x="80" y="408" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">An agent's own tools</tspan></text>
+<text x="80" y="436" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">in the agent's file</tspan></text>
+<text x="396" y="408" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">critic: Read, Glob,</tspan></text>
+<text x="396" y="440" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">Grep, WebFetch</tspan></text>
+<text x="684" y="408" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">its list of tools</tspan></text>
+<text x="972" y="408" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">no command run, no</tspan></text>
+<text x="972" y="440" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">file written</tspan></text>
+<line x1="80" y1="464" x2="1200" y2="464" stroke="#35383c" stroke-width="1"/>
+<text x="80" y="504" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">One agent's rule</tspan></text>
+<text x="80" y="532" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">from project-management</tspan></text>
+<text x="396" y="504" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">project-manager: no</tspan></text>
+<text x="396" y="536" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">raw </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">gh</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1"> changes</tspan></text>
+<text x="684" y="504" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">a hook, before</tspan></text>
+<text x="684" y="536" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">each call</tspan></text>
+<text x="972" y="504" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">refused, so it</tspan></text>
+<text x="972" y="536" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">uses pkit's commands</tspan></text>
+<line x1="80" y1="560" x2="1200" y2="560" stroke="#35383c" stroke-width="1"/>
+<text x="80" y="600" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Limit: </tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">a deny stops the forms of a command pkit can tell. One hidden behind another can slip past.</tspan></text>
+</svg>

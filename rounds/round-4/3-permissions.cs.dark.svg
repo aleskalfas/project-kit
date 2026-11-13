@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" lang="cs">
+<title>Odkud se berou oprávnění</title>
+<rect width="1280" height="720" fill="#121416"/>
+<text x="80" y="96" font-size="48" letter-spacing="-0.5"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Odkud se berou oprávnění</tspan></text>
+<text x="80" y="140" font-size="30"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">Z pravidel, která projekt zapíše jako data.</tspan></text>
+<text x="80" y="178" font-size="30"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">AI nástroj je uplatní při každém volání, i když na ně agent zapomene.</tspan></text>
+<text x="80" y="656" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#9b9fa3">V project-kitu: nastavení Claude Code, které z těchto dat zapsal pkit, má 14 zákazů a 62 povolení.</tspan></text>
+<text x="344" y="241" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Zapsáno jako data</tspan></text>
+<rect x="344" y="258" width="264" height="2" fill="#79bfa1"/>
+<path d="M 608 259 L 628 259" fill="none" stroke="#bbbec2" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 640 259 L 628 264.4 L 628 253.6 Z" fill="#bbbec2"/>
+<text x="640" y="241" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">AI nástroj dostane</tspan></text>
+<rect x="640" y="258" width="264" height="2" fill="#57ac89"/>
+<path d="M 904 259 L 924 259" fill="none" stroke="#bbbec2" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 936 259 L 924 264.4 L 924 253.6 Z" fill="#bbbec2"/>
+<text x="936" y="241" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Volání narazí</tspan></text>
+<rect x="936" y="258" width="264" height="2" fill="#369974"/>
+<text x="80" y="309" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Pojistky</tspan></text>
+<text x="80" y="339" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">pro vás i každého agenta</tspan></text>
+<text x="344" y="309" font-size="24"><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#edeff1">rm -r</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">, </tspan><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#edeff1">sudo</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">,</tspan></text>
+<text x="344" y="341" font-size="24"><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#edeff1">git push -f</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">: zakázané</tspan></text>
+<text x="640" y="309" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">zákaz v nastavení</tspan></text>
+<circle cx="947" cy="301" r="11" fill="#edeff1"/>
+<rect x="941" y="299.5" width="12" height="3" rx="1.5" fill="#121416"/>
+<text x="970" y="309" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">Odmítnuto</tspan></text>
+<text x="936" y="341" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#91debc">v každém režimu</tspan></text>
+<text x="80" y="397" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Nástroje agenta</tspan></text>
+<text x="80" y="427" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">v souboru agenta</tspan></text>
+<text x="344" y="397" font-size="24"><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#edeff1">critic</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">: jen </tspan><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#edeff1">Read</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">,</tspan></text>
+<text x="344" y="429" font-size="24"><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#edeff1">Glob</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">, </tspan><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#edeff1">Grep</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">, </tspan><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#edeff1">WebFetch</tspan></text>
+<text x="640" y="397" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">jeho seznam nástrojů</tspan></text>
+<circle cx="947" cy="389" r="11" fill="#edeff1"/>
+<rect x="941" y="387.5" width="12" height="3" rx="1.5" fill="#121416"/>
+<text x="970" y="397" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">Odmítnuto</tspan></text>
+<text x="936" y="429" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#91debc">nástroj mimo seznam</tspan></text>
+<text x="80" y="485" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Pravidlo agenta</tspan></text>
+<text x="80" y="515" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">z project-management</tspan></text>
+<text x="344" y="485" font-size="24"><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#edeff1">project-manager</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">:</tspan></text>
+<text x="344" y="517" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">žádné přímé změny </tspan><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#edeff1">gh</tspan></text>
+<text x="640" y="485" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">hook, před</tspan></text>
+<text x="640" y="517" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">každým voláním</tspan></text>
+<circle cx="947" cy="477" r="11" fill="#edeff1"/>
+<rect x="941" y="475.5" width="12" height="3" rx="1.5" fill="#121416"/>
+<text x="970" y="485" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">Odmítnuto</tspan></text>
+<text x="936" y="517" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#91debc">použije příkazy pkitu</tspan></text>
+<rect x="80" y="550" width="1120" height="2" fill="#3a3d41"/>
+<text x="80" y="593" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Omezení: </tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">zákaz zastaví jen podoby příkazu, které pkit pozná. Schovaný za jiným proklouzne.</tspan></text>
+</svg>

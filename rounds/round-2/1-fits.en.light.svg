@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" lang="en">
+<title>How pkit fits together</title>
+<rect width="1280" height="720" fill="#ffffff"/>
+<text x="80" y="96" font-size="48" letter-spacing="-0.5"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">How pkit fits together</tspan></text>
+<text x="80" y="136" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">In five layers, from your decisions down to your code:</tspan></text>
+<text x="80" y="168" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">each carries out the ones above it.</tspan></text>
+<text x="80" y="656" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#65696f">In project-kit: this order is itself written down as one of its decisions.</tspan></text>
+<rect x="448" y="208" width="384" height="72" rx="8" fill="#013d2a"/>
+<text x="640" y="239" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#ffffff">Decisions</tspan></text>
+<text x="640" y="267" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">Choices you accepted, and why.</tspan></text>
+<rect x="416" y="288" width="448" height="72" rx="8" fill="#03543b"/>
+<text x="640" y="319" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#ffffff">Working rules · schemas · processes</tspan></text>
+<text x="640" y="347" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">Exactly what to do, in every session.</tspan></text>
+<rect x="384" y="368" width="512" height="72" rx="8" fill="#016c4d"/>
+<text x="640" y="399" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#ffffff">Skills · agents · permissions</tspan></text>
+<text x="640" y="427" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">How agents act, and with what rights.</tspan></text>
+<rect x="352" y="448" width="576" height="72" rx="8" fill="#07835e"/>
+<text x="640" y="479" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#ffffff">pkit's commands and checks</tspan></text>
+<text x="640" y="507" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#ffffff">Carry out decisions, and check each change.</tspan></text>
+<rect x="320" y="528" width="640" height="72" rx="8" fill="#47a17e"/>
+<text x="640" y="559" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Your code and documents</tspan></text>
+<text x="640" y="587" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">The work itself, tied to what it depends on.</tspan></text>
+<path d="M 413.6 296 L 296.457 588.858" fill="none" stroke="#4f5358" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 292 600 L 291.443 586.853 L 301.47 590.864 Z" fill="#4f5358"/>
+<path d="M 988 600 L 870.857 307.142" fill="none" stroke="#4f5358" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 866.4 296 L 875.87 305.136 L 865.843 309.147 Z" fill="#4f5358"/>
+<rect x="81" y="209" width="302" height="118" rx="8" fill="none" stroke="#7d8085" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="104" y="244" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Where ideas start</tspan></text>
+<text x="104" y="276" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">In conversation, or in</tspan></text>
+<text x="104" y="308" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">a scratchpad note.</tspan></text>
+<path d="M 386 244 L 434 244" fill="none" stroke="#4f5358" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 446 244 L 434 249.4 L 434 238.6 Z" fill="#4f5358"/>
+<text x="80" y="424" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Carried out</tspan></text>
+<text x="80" y="456" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">An agent reads the</tspan></text>
+<text x="80" y="488" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">reasons first.</tspan></text>
+<text x="975.2" y="424" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Checked first</tspan></text>
+<text x="975.2" y="456" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">Decisions never drift</tspan></text>
+<text x="975.2" y="488" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">to match the code.</tspan></text>
+</svg>

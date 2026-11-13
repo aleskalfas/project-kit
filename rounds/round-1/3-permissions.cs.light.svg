@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" lang="cs">
+<title>Odkud se berou oprávnění</title>
+<rect width="1280" height="720" fill="#ffffff"/>
+<text x="80" y="96" font-size="48" letter-spacing="-0.5"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Odkud se berou oprávnění</tspan></text>
+<text x="80" y="136" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">Z pravidel, která projekt zapíše jako data.</tspan></text>
+<text x="80" y="168" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">AI nástroj je uplatní při každém volání, i když na ně agent zapomene.</tspan></text>
+<text x="80" y="688" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#65696f">V project-kitu: agent project-manager nesmí nic měnit přímým příkazem gh. Používá příkazy pkitu, které issue nejdřív ověří.</tspan></text>
+<path d="M 376 216 L 624 216 L 640 240 L 624 264 L 376 264 Q 368 264 368 256 L 368 224 Q 368 216 376 216 Z" fill="#39a37c"/>
+<text x="396" y="248" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Zapsáno jako data</tspan></text>
+<path d="M 672 216 L 912 216 L 928 240 L 912 264 L 656 264 L 672 240 L 656 216 Z" fill="#8dceb1"/>
+<text x="684" y="248" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">AI nástroj dostane</tspan></text>
+<path d="M 960 216 L 1192 216 Q 1200 216 1200 224 L 1200 256 Q 1200 264 1192 264 L 944 264 L 960 240 L 944 216 Z" fill="#d9f2e6"/>
+<text x="972" y="248" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Výsledek volání</tspan></text>
+<line x1="80" y1="280" x2="1200" y2="280" stroke="#d5d8db" stroke-width="1"/>
+<text x="80" y="323" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Pojistky</tspan></text>
+<text x="80" y="351" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">pro vás i každého agenta</tspan></text>
+<text x="396" y="323" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">rm -r, sudo a force-push,</tspan></text>
+<text x="396" y="351" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">zakázané všem</tspan></text>
+<text x="684" y="323" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">zákaz v nastavení</tspan></text>
+<text x="972" y="323" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">odmítnuto v každém</tspan></text>
+<text x="972" y="351" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">režimu</tspan></text>
+<line x1="80" y1="380" x2="1200" y2="380" stroke="#d5d8db" stroke-width="1"/>
+<text x="80" y="423" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Vlastní nástroje agenta</tspan></text>
+<text x="80" y="451" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">v souboru agenta</tspan></text>
+<text x="396" y="423" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">critic: Read, Glob, Grep,</tspan></text>
+<text x="396" y="451" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">WebFetch</tspan></text>
+<text x="684" y="423" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">seznam nástrojů</tspan></text>
+<text x="972" y="423" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">žádný příkaz, žádný zápis</tspan></text>
+<line x1="80" y1="480" x2="1200" y2="480" stroke="#d5d8db" stroke-width="1"/>
+<text x="80" y="523" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Pravidlo agenta</tspan></text>
+<text x="80" y="551" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">z </tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#904c03">project-management</tspan></text>
+<text x="396" y="523" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">project-manager: žádné</tspan></text>
+<text x="396" y="551" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">změny přímým gh</tspan></text>
+<text x="684" y="523" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">hook před voláním</tspan></text>
+<text x="972" y="523" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">odmítnuto, použije příkazy</tspan></text>
+<text x="972" y="551" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#181b1f">pkitu</tspan></text>
+<line x1="80" y1="580" x2="1200" y2="580" stroke="#d5d8db" stroke-width="1"/>
+<text x="80" y="625" font-size="20"><tspan font-family="Source Sans Pro" font-weight="600" fill="#181b1f">Omezení  </tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#4f5358">Zákaz zastaví jen ty podoby příkazu, které pkit pozná. Příkaz schovaný za jiným může proklouznout.</tspan></text>
+</svg>

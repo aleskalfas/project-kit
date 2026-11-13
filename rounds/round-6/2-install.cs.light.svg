@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" lang="cs">
+<title>Instalace pkitu</title>
+<rect width="1280" height="720" fill="#ffffff"/>
+<text x="80" y="96" font-size="48" letter-spacing="-0.5"><tspan font-family="Source Sans Pro" font-weight="600" fill="#171b20">Instalace pkitu</tspan></text>
+<text x="80" y="140" font-size="30"><tspan font-family="Source Sans Pro" font-weight="400" fill="#171b20">Nástroj nainstalujete jednou, pak pkit přidáte do každého projektu jedním příkazem.</tspan></text>
+<text x="80" y="178" font-size="30"><tspan font-family="Source Sans Pro" font-weight="400" fill="#171b20">Upgrade mění jen soubory pkitu, nikdy vaše.</tspan></text>
+<text x="80" y="656" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#5f646a">V project-kitu: 69 rozhodnutí pkitu leží ve stejné složce vedle 13 vlastních rozhodnutí projektu.</tspan></text>
+<circle cx="98" cy="242" r="18" fill="#171b20"/>
+<text x="98" y="250" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#ffffff">1</tspan></text>
+<text x="132" y="250" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#171b20">Jednou, na vašem počítači</tspan></text>
+<rect x="80" y="272" width="1120" height="52" rx="8" fill="#e2e9f0"/>
+<text x="104" y="304" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#5f646a">$ </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#171b20">uv tool install </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#4b5056">git+ssh://git@github.com/aleskalfas/project-kit.git@latest</tspan></text>
+<circle cx="98" cy="374" r="18" fill="#171b20"/>
+<text x="98" y="382" font-size="24" text-anchor="middle"><tspan font-family="Source Sans Pro" font-weight="600" fill="#ffffff">2</tspan></text>
+<text x="132" y="382" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#171b20">V každém projektu</tspan></text>
+<rect x="80" y="404" width="448" height="80" rx="8" fill="#e2e9f0"/>
+<text x="104" y="436" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#5f646a">$ </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#171b20">cd </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#4b5056">vas-projekt</tspan></text>
+<text x="104" y="464" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#5f646a">$ </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#171b20">pkit init</tspan></text>
+<text x="80" y="533" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4b5056">Když pkit v repozitáři nechcete:</tspan></text>
+<rect x="80" y="549" width="448" height="52" rx="8" fill="#e2e9f0"/>
+<text x="104" y="581" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#5f646a">$ </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#171b20">pkit visibility </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#4b5056">private</tspan></text>
+<rect x="656" y="356" width="544" height="245" rx="8" fill="#f3f4f6"/>
+<text x="680" y="397" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#171b20">Pak každý projekt obsahuje</tspan></text>
+<text x="680" y="442" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#171b20">.pkit/</tspan></text>
+<path d="M 664 452.72 L 1184 452.72 A 8 8 0 0 1 1192 460.72 L 1192 476.72 A 8 8 0 0 1 1184 484.72 L 664 484.72 L 664 452.72 Z" fill="#dcf8ea"/>
+<rect x="664" y="452.72" width="2" height="32" fill="#047554"/>
+<text x="728" y="474" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#047554">decisions/core/</tspan></text>
+<text x="1176" y="474" font-size="24" text-anchor="end"><tspan font-family="Source Sans Pro" font-weight="400" fill="#047554">pkitu</tspan></text>
+<path d="M 688 468.72 L 716 468.72" fill="none" stroke="#767b80" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<text x="728" y="506" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#171b20">decisions/project/</tspan></text>
+<text x="1176" y="506" font-size="24" text-anchor="end"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4b5056">vaše</tspan></text>
+<path d="M 688 500.72 L 716 500.72" fill="none" stroke="#767b80" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 664 516.72 L 1184 516.72 A 8 8 0 0 1 1192 524.72 L 1192 540.72 A 8 8 0 0 1 1184 548.72 L 664 548.72 L 664 516.72 Z" fill="#dcf8ea"/>
+<rect x="664" y="516.72" width="2" height="32" fill="#047554"/>
+<text x="728" y="538" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#047554">rules/core.md</tspan></text>
+<text x="1176" y="538" font-size="24" text-anchor="end"><tspan font-family="Source Sans Pro" font-weight="400" fill="#047554">pkitu</tspan></text>
+<path d="M 688 532.72 L 716 532.72" fill="none" stroke="#767b80" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<text x="728" y="570" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#171b20">rules/project.md</tspan></text>
+<text x="1176" y="570" font-size="24" text-anchor="end"><tspan font-family="Source Sans Pro" font-weight="400" fill="#4b5056">vaše</tspan></text>
+<path d="M 688 450 L 688 548.72 A 16 16 0 0 0 704 564.72 L 716 564.72" fill="none" stroke="#767b80" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<text x="1176" y="442" font-size="24" text-anchor="end"><tspan font-family="Source Sans Pro" font-weight="400" fill="#047554">pkitu</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#4b5056">: nahradí se · </tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#4b5056">vaše</tspan><tspan font-family="Source Sans Pro" font-weight="400" fill="#4b5056">: zůstanou</tspan></text>
+</svg>

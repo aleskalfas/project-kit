@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" lang="cs">
+<title>Jak capabilities spolupracují</title>
+<rect width="1280" height="720" fill="#121416"/>
+<text x="80" y="96" font-size="48" letter-spacing="-0.5"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">Jak capabilities spolupracují</tspan></text>
+<text x="80" y="140" font-size="30"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">Capability nikdy nejmenuje jinou capability, jen roli.</tspan></text>
+<text x="80" y="178" font-size="30"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">Když něco potřebuje, otevře slot. Vyplní ho kterákoli jiná.</tspan></text>
+<text x="80" y="656" font-size="20"><tspan font-family="Source Sans Pro" font-weight="400" fill="#9b9fa3">V project-kitu: každou ze 3 rolí zatím hraje jedna capability, výměna je tedy navržená, ne vyzkoušená.</tspan></text>
+<rect x="427.5" y="238.5" width="506" height="227" rx="8" fill="#212326" stroke="#35383c" stroke-width="1"/>
+<rect x="439" y="224" width="274.8" height="28" rx="14" fill="#3a3d41"/>
+<text x="451" y="245.5" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">pkit::work-tracking</tspan></text>
+<text x="451" y="278" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">project-management</tspan></text>
+<rect x="427" y="293" width="490" height="46" rx="0" fill="#121416"/>
+<path d="M 427 295 L 909 295 Q 917 295 917 303 L 917 329 Q 917 337 909 337 L 427 337" fill="none" stroke="#777b7f" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<text x="451" y="323" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">doc-check</tspan></text>
+<text x="585.8" y="323" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">které dokumenty změna upraví</tspan></text>
+<rect x="427" y="349" width="490" height="46" rx="0" fill="#18273c"/>
+<path d="M 427 351 L 909 351 Q 917 351 917 359 L 917 385 Q 917 393 909 393 L 427 393" fill="none" stroke="#74a6ef" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<text x="451" y="379" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#a4c6f8">fixers</tspan></text>
+<text x="585.8" y="379" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">který agent opraví dokument</tspan></text>
+<rect x="427" y="405" width="490" height="46" rx="0" fill="#121416"/>
+<path d="M 427 407 L 909 407 Q 917 407 917 415 L 917 441 Q 917 449 909 449 L 427 449" fill="none" stroke="#777b7f" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<text x="451" y="435" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">use-cases</tspan></text>
+<text x="585.8" y="435" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#edeff1">případy užití k plánování</tspan></text>
+<rect x="80.5" y="300.5" width="298" height="55" rx="8" fill="#212326" stroke="#35383c" stroke-width="1"/>
+<rect x="92" y="286" width="274.8" height="28" rx="14" fill="#3a3d41"/>
+<text x="104" y="307.5" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">pkit::documentation</tspan></text>
+<text x="104" y="340" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">living-docs</tspan></text>
+<rect x="80.5" y="388.5" width="298" height="55" rx="8" fill="#212326" stroke="#35383c" stroke-width="1"/>
+<rect x="92" y="374" width="208.8" height="28" rx="14" fill="#3a3d41"/>
+<text x="104" y="395.5" font-size="22"><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">pkit::analysis</tspan></text>
+<text x="104" y="428" font-size="24"><tspan font-family="Source Sans Pro" font-weight="600" fill="#edeff1">software-analysis</tspan></text>
+<path d="M 379 316 L 415 316" fill="none" stroke="#bbbec2" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 427 316 L 415 321.4 L 415 310.6 Z" fill="#bbbec2"/>
+<path d="M 379 340 L 395 340 Q 403 340 403 348 L 403 355 Q 403 361 409 361 L 415 361" fill="none" stroke="#bbbec2" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 427 361 L 415 366.4 L 415 355.6 Z" fill="#bbbec2"/>
+<path d="M 379 428 L 415 428" fill="none" stroke="#bbbec2" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 427 428 L 415 433.4 L 415 422.6 Z" fill="#bbbec2"/>
+<path d="M 379 404 L 395 404 Q 403 404 403 396 L 403 389 Q 403 383 409 383 L 415 383" fill="none" stroke="#bbbec2" stroke-width="2" stroke-linejoin="round" stroke-linecap="butt"/>
+<path d="M 427 383 L 415 388.4 L 415 377.6 Z" fill="#bbbec2"/>
+<rect x="80.5" y="490.5" width="853" height="112" rx="8" fill="#212326" stroke="#35383c" stroke-width="1"/>
+<rect x="81" y="532" width="852" height="58" rx="0" fill="#18273c"/>
+<rect x="81" y="532" width="4" height="58" rx="0" fill="#74a6ef"/>
+<text x="104" y="525" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">pkit::work-tracking:</tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#a4c6f8">fixers</tspan></text>
+<text x="104" y="553" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#bbbec2">                     bound    </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">software-analysis</tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#bbbec2"> (contributes)</tspan></text>
+<text x="104" y="581" font-size="22" xml:space="preserve"><tspan font-family="Source Code Pro" font-weight="400" fill="#bbbec2">                     bound    </tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#edeff1">living-docs</tspan><tspan font-family="Source Code Pro" font-weight="400" fill="#bbbec2"> (contributes)</tspan></text>
+<text x="966" y="240" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">Vyměňte ji za jinou</tspan></text>
+<text x="966" y="272" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">ve stejné roli.</tspan></text>
+<text x="966" y="320" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">Instalujte jen to,</tspan></text>
+<text x="966" y="352" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">co potřebujete.</tspan></text>
+<text x="966" y="400" font-size="24"><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#edeff1">pkit validate</tspan></text>
+<text x="966" y="432" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">zapojení zkontroluje.</tspan></text>
+<text x="966" y="525" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">Výpis </tspan><tspan font-family="Source Code Pro" font-weight="400" font-size="22" fill="#edeff1">pkit status</tspan></text>
+<text x="966" y="557" font-size="24"><tspan font-family="Source Sans Pro" font-weight="400" fill="#bbbec2">pro tento slot.</tspan></text>
+</svg>
