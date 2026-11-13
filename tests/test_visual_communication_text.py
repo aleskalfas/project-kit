@@ -4,8 +4,8 @@
 - each run shaped with HarfBuzz from the file a family names, the next family measuring
   what the first lacks; a missing file or an unmeasured character refused, naming it;
 - lines broken at Unicode's break opportunities and the language's own rules (Czech: a
-  one-letter word never ends a line), against the planned width less 2 % of the em, and
-  placed in the planned width;
+  one-letter word and a short preposition never end a line; #3084), against the planned
+  width less 2 % of the em, and placed in the planned width;
 - never shrunk: a long word breaks after a `/`, else the text overflows;
 - runs (DEC-012 point 4): each part of a line measured in its own run's role, lines
   broken across runs by Unicode's rules and the language's, against a margin at the
@@ -233,9 +233,18 @@ def test_a_word_that_fits_is_not_broken_at_its_slash() -> None:
 # --- the language's rules -----------------------------------------------------------------
 
 
+#: The short prepositions that never end a Czech line (#3084).
+CZECH_PREPOSITIONS = ("před", "nad", "pod", "přes", "za", "na", "do", "od", "ve")
+
+
 def test_the_language_rules_are_data_by_primary_subtag() -> None:
-    assert text.ONE_LETTER_WORD in text.LANGUAGE_RULES["cs"]
+    czech = text.LANGUAGE_RULES["cs"]
+
+    assert czech.one_letter_word
+    assert czech.short_prepositions == frozenset(CZECH_PREPOSITIONS)
     assert "en" not in text.LANGUAGE_RULES
+    assert text.rules_of("cs-CZ") is czech
+    assert text.rules_of("en") == text.LanguageRules()
 
 
 def test_a_czech_one_letter_word_does_not_end_a_line() -> None:
@@ -262,6 +271,50 @@ def test_no_czech_line_of_any_width_ends_in_a_one_letter_word() -> None:
         broken = lines(CZECH, width, "cs")
         assert not ends_with_one_letter(broken), (width, broken)
         assert " ".join(broken) == CZECH
+
+
+@pytest.mark.parametrize("preposition", CZECH_PREPOSITIONS)
+def test_a_czech_short_preposition_moves_on_with_the_word_it_opens(preposition: str) -> None:
+    words = f"aaaa {preposition} bbbb"
+    # Wide enough for "aaaa <preposition>", not for the three words.
+    width = BODY.width(f"aaaa {preposition}") + MARGIN + 1
+
+    assert lines(words, width, "en") == [f"aaaa {preposition}", "bbbb"]
+    assert lines(words, width, "cs") == ["aaaa", f"{preposition} bbbb"]
+
+
+def test_a_czech_short_preposition_is_kept_off_a_line_end_in_any_case() -> None:
+    for preposition in ("Na", "PŘED"):
+        width = BODY.width(f"aaaa {preposition}") + MARGIN + 1
+
+        assert lines(f"aaaa {preposition} bbbb", width, "cs") == ["aaaa", f"{preposition} bbbb"]
+
+
+@pytest.mark.parametrize("word", ["nadace", "zana"])
+def test_a_word_that_holds_a_preposition_is_no_preposition(word: str) -> None:
+    width = BODY.width(f"aaaa {word}") + MARGIN + 1
+
+    assert lines(f"aaaa {word} bbbb", width, "cs") == [f"aaaa {word}", "bbbb"]
+
+
+CZECH_PREPOSITIONED = (
+    "Šli jsme přes most nad řekou a pod skálou do lesa, od chaty za vodou ve stínu "
+    "na louku před domem"
+)
+
+
+def ends_with_preposition(broken: list[str]) -> bool:
+    return any(line.split(" ")[-1].lower() in CZECH_PREPOSITIONS for line in broken[:-1])
+
+
+def test_no_czech_line_of_any_width_ends_in_a_short_preposition() -> None:
+    widths = range(60, 400, 7)
+
+    assert any(ends_with_preposition(lines(CZECH_PREPOSITIONED, width, "en")) for width in widths)
+    for width in widths:
+        broken = lines(CZECH_PREPOSITIONED, width, "cs")
+        assert not ends_with_preposition(broken), (width, broken)
+        assert " ".join(broken) == CZECH_PREPOSITIONED
 
 
 # --- runs ---------------------------------------------------------------------------------
@@ -351,6 +404,16 @@ def test_a_czech_one_letter_word_moves_on_with_the_next_word_whichever_runs_hold
 
     assert list(text.break_runs(given, width, "en").lines) == ["aaaa v", "bbbb"]
     assert list(text.break_runs(given, width, "cs").lines) == ["aaaa", "v bbbb"]
+
+
+def test_a_czech_short_preposition_moves_on_with_its_word_whichever_runs_hold_them() -> None:
+    # Wide enough for "aaaa přes", not for "aaaa přes bbbb", the preposition and its space
+    # in a run of their own.
+    width = BODY.advance("aaaa ") + HEADING.advance("přes") + WIDE_MARGIN + 1
+    given = runs(("aaaa ", BODY), ("přes ", HEADING), ("bbbb", BODY))
+
+    assert list(text.break_runs(given, width, "en").lines) == ["aaaa přes", "bbbb"]
+    assert list(text.break_runs(given, width, "cs").lines) == ["aaaa", "přes bbbb"]
 
 
 def test_the_margin_is_taken_at_the_greatest_font_size_among_the_runs() -> None:
