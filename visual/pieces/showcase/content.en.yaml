@@ -28,7 +28,7 @@ slides:
         - id: down
           text: [{text: "↓ Carried out. ", style: strong}, "An agent reads the reasons before it acts."]
         - id: up
-          text: [{text: "↑ Checked. ", style: strong}, "A layer gives way, never a decision."]
+          text: [{text: "↑ Checked. ", style: strong}, "Only a person, never your AI tool, changes a decision."]
       ties:
         - id: start-decisions
           from: {item: "notes[start]"}

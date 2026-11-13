@@ -27,7 +27,7 @@ slides:
         - id: down
           text: [{text: "↓ Provádění. ", style: strong}, "Agent si přečte důvody, než začne."]
         - id: up
-          text: [{text: "↑ Kontrola. ", style: strong}, "Ustoupí vrstva, nikdy rozhodnutí."]
+          text: [{text: "↑ Kontrola. ", style: strong}, "Rozhodnutí mění jen člověk, nikdy váš AI nástroj."]
       ties:
         - id: start-decisions
           from: {item: "notes[start]"}
