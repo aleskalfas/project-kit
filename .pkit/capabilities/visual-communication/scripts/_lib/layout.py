@@ -117,10 +117,15 @@ DEC-012).
   center end`), `justify-content` (`start center end space-between`) and `sizes` (`own`,
   each item its preferred size along the line, `equal`, the line shared equally, or
   `shares`, the line shared in proportion to the shares its list's weight gives its
-  items, equally where they are all the same). An item that `stretch` makes larger
-  across than it asks for passes the rest on to the last part it draws, where that part
-  places a component and gives no size across (`passed_on`). `colour` gives
-  the items' default family. A part over a list of ties takes neither `row` nor
+  items, equally where they are all the same). `cross-size`, a formula that may switch and
+  whose branch may give none, gives each item its size across the line by its place, which
+  it alone reads as `:place` and `:places` (DEC-038 points 1 and 2). Such a *sized item* is
+  placed as one of set size, a `stretch` drawn as `start`, and the part asks across its line
+  for the greatest size the formula gives, or zero (points 3 and 4). An item that `stretch`
+  or `cross-size` makes larger across than it asks for passes the rest on to the last part
+  it draws, where that part places a component and gives no size across (`passed_on`).
+  `colour` gives the items' default family. A part whose items are pages takes no
+  `cross-size`. A part over a list of ties takes neither `row` nor
   `column`: each tie is drawn in the part's whole frame, by default the component's, and
   given its ends (`find_ends`). A tie whose component takes no ends is left out.
 
@@ -169,7 +174,16 @@ that names a concept takes that concept's family before its instance's, and a st
 that changes the instance's family replaces it too. Content's `override: {<part>:
 <role>}` points a part's paint at another role, each run's included. `:index` and
 `:count` are an item's place among the items its list draws, from 1, and how many it
-draws.
+draws. `:place` and `:places`, in a `cross-size` alone, are the same of the item that
+formula sizes.
+
+**What a `cross-size` may not read** (DEC-038 point 7) is found when the component is read,
+for each set of the options, the size axes and `:as` that its switches, its `align-items`
+and the named values it reads choose by (`_read_cross_size`): its part's size across the
+line where the part gives none, itself or through a named value, a loop; and a `stretch`
+written beside a `cross-size` that gives a size, a value with two owners. Any other loop
+through it is found when the scene is computed. A sized item that gets less across its line
+than it asks for, or zero, is short of it (`shortfalls`, point 5).
 
 **A size** reaches a component by a marked name, `:<axis>`: a switch or a `when` by it
 reads the mode of that size axis the scene's key holds, else the axis's default (DEC-021
@@ -314,6 +328,17 @@ WORDS: Mapping[str, tuple[str, ...]] = {
     "connect": ("straight", "corners"),
 }
 OPERATOR_WORDS = ("align-items", "justify-content", "sizes")
+
+#: The operator's setting that gives each item its size across the line, by a formula on
+#: the item's place (DEC-038 point 1).
+CROSS_SIZE = "cross-size"
+
+#: The measures of a frame that read its size across a line, by that size: a column's items
+#: lie across its width, a row's across its height.
+ACROSS: Mapping[str, tuple[str, ...]] = {
+    "width": ("width", "right", "center"),
+    "height": ("height", "bottom", "middle"),
+}
 
 #: The facts of its export a text part may show (DEC-006 point 7). They are no entry of
 #: `WORDS`, since a fact takes no switch.
@@ -826,6 +851,24 @@ def _may_hold(when: Any) -> bool:
     return isinstance(when, str) or (isinstance(when, Mapping) and len(when) == 1)
 
 
+def _values_read(value: Any) -> list[str]:
+    """The names of the named values the formula `value` reads; none where it is no formula
+    that can be read."""
+    try:
+        references = fm.parse(value).references()
+    except (fm.FormulaError, TypeError, AttributeError):
+        return []
+    return [ref.name for ref in references if isinstance(ref, fm.Value)]
+
+
+def _described(chosen: Mapping[str, str]) -> str:
+    """A set of chosen branches in words, for a finding: where each option, size axis or
+    `:as` takes its branch; empty where none is chosen."""
+    if not chosen:
+        return ""
+    return " where " + ", ".join(f"`{by}` is `{word}`" for by, word in chosen.items())
+
+
 def source_of_choice(chosen: Any) -> str:
     """The source of a value a switch chose: `:as`, which is a kind of its own (DEC-034
     point 7), the size axis it reads, `size:<axis>`, or the option it names,
@@ -925,6 +968,11 @@ class Part:
     def main(self) -> str:
         """The size along the line a list's items lie on."""
         return "width" if self.operator == "row" else "height"
+
+    @property
+    def cross(self) -> str:
+        """The size across the line a list's items lie on."""
+        return "height" if self.operator == "row" else "width"
 
 
 class Component:
@@ -1373,7 +1421,21 @@ class Component:
             self._read_layouts(data)
         elif any(isinstance(s, Mapping) and PAGES in s for s in self.fields.values()):
             self._shape("fields", f"marks a field `{PAGES}`, and declares no layouts")
+        self._read_paged_sizes()
         self._read_physical_size(data)
+
+    def _read_paged_sizes(self) -> None:
+        """A list whose items are pages takes no `cross-size` (DEC-038 point 1): it repeats
+        over a slot of pages, known once the layouts are read."""
+        for part in self.parts.values():
+            listed = part.spec.get("repeat")
+            if part.kind == "repeat" and CROSS_SIZE in part.settings:
+                if isinstance(listed, str) and listed in self.pages:
+                    self._shape(
+                        f"parts.{part.name}.{part.operator}.{CROSS_SIZE}",
+                        f"the list `{part.name}` repeats over pages, and takes no "
+                        f"`{CROSS_SIZE}`: a page gets its size from the top that holds it",
+                    )
 
     def _read_physical_size(self, data: Mapping[str, Any]) -> None:
         """Whether the component may declare its physical size (DEC-034 point 3): a page
@@ -1634,6 +1696,14 @@ class Component:
             at = f"{where}.{operators[0]}.{key}"
             if key == "gap":
                 self._number(at, value, fm.LENGTH)
+            elif key == CROSS_SIZE:
+                # A branch of its switch may give none (DEC-038 point 1).
+                self._switched(
+                    at,
+                    value,
+                    lambda w, text: self._formula(w, text, fm.LENGTH, by_place=True),
+                    nothing=True,
+                )
             elif key in OPERATOR_WORDS:
                 self._switched(at, value, self._words(WORDS[key]))
             else:
@@ -1645,6 +1715,120 @@ class Component:
                 f"shares the line by the weight of `{listed}`, and declares no weight for it "
                 "under `lists`",
             )
+        if CROSS_SIZE in settings:
+            self._read_cross_size(part)
+
+    def _read_cross_size(self, part: Part) -> None:
+        """What a `cross-size` may not do, judged for each set of the options, the size axes
+        and `:as` that hold together (DEC-038 point 7): read its part's size across the line
+        where the part gives none, itself or through a named value, a loop of references;
+        and give a size beside a `stretch` written in `align-items`, a value with two owners.
+        Each is reported once, at the branch that breaks it, for the first set that does."""
+        settings = part.settings
+        base = f"parts.{part.name}.{part.operator}"
+        raws = [settings[CROSS_SIZE], settings.get("align-items")]
+        reported: set[tuple[str, str]] = set()
+        for chosen in self._choices(raws):
+            at = _described(chosen)
+            where, value = self._chosen(f"{base}.{CROSS_SIZE}", settings[CROSS_SIZE], chosen)
+            if value is None:
+                continue  # it gives no size here
+            if part.cross not in part.spec and self.reads_across(part, value, chosen):
+                if ("loop", where) not in reported:
+                    reported.add(("loop", where))
+                    self._issue(
+                        "loop",
+                        where,
+                        f"a loop of references{at}: the `{CROSS_SIZE}` of the list "
+                        f"`{part.name}` reads the list's {part.cross}, which the part gives none "
+                        f"of, so it is the greatest size `{CROSS_SIZE}` gives",
+                    )
+            if "align-items" not in settings:
+                continue  # an alignment left unnamed places each item at the start
+            aligned, word = self._chosen(f"{base}.align-items", settings["align-items"], chosen)
+            if word == "stretch" and ("two-owners", aligned) not in reported:
+                reported.add(("two-owners", aligned))
+                self._issue(
+                    "two-owners",
+                    aligned,
+                    f"the {part.cross} of each item of the list `{part.name}` has two owners"
+                    f"{at}: `{CROSS_SIZE}` gives it, and `align-items: stretch` stretches it "
+                    "to the line",
+                )
+
+    def _choices(self, raws: Sequence[Any]) -> Iterator[dict[str, str]]:
+        """Each set of the branches the switches of `raws` take that hold together, and of
+        those of the named values their formulas read, at any depth: one word of each option
+        of words, one mode of each size axis a piece can name, and one value of `:as` in a
+        drawing of a layout, each by what a switch names in `by`. A switch by anything else
+        takes no branch, as it is reported apart."""
+        found: dict[str, tuple[str, ...]] = {}
+        seen: set[str] = set()
+        pending = list(raws)
+        while pending:
+            value = pending.pop()
+            if isinstance(value, Mapping) and SWITCH in value:
+                by = str(value[SWITCH])
+                found.setdefault(by, self._branches_of(by))
+                pending.extend(branch for key, branch in value.items() if key != SWITCH)
+                continue
+            for name in _values_read(value):
+                if name not in seen and name in self.values:
+                    seen.add(name)
+                    pending.append(self.values[name])
+        named = sorted(by for by, branches in found.items() if branches)
+        for branches in itertools.product(*(found[by] for by in named)):
+            yield dict(zip(named, branches, strict=True))
+
+    def _chosen(self, where: str, value: Any, chosen: Mapping[str, str]) -> tuple[str, Any]:
+        """A value through its switches, each taking the branch `chosen` gives what it
+        chooses by, with the key path of the branch taken. A switch by a size or by `:as`
+        that leaves the chosen branch out takes its default's, as `Instance.pick` does."""
+        while isinstance(value, Mapping) and SWITCH in value:
+            by = str(value[SWITCH])
+            word = chosen.get(by)
+            if by.startswith(MARKED) and word not in value:
+                axis = self._ctx.sizes.axes.get(by[len(MARKED) :])
+                word = PLACED_AS[0] if by == AS else axis.default if axis is not None else None
+            where, value = f"{where}.{word}", value.get(word)
+        return where, value
+
+    def _branches_of(self, by: str) -> tuple[str, ...]:
+        """The branches a switch by `by` may take: an option's words, a size axis's modes, or
+        the values of `:as` in a drawing of a layout; none for anything else."""
+        if by == AS:
+            return PLACED_AS if self.draws_layout else ()
+        if by.startswith(MARKED):
+            axis = self._ctx.sizes.axes.get(by[len(MARKED) :])
+            return tuple(axis.modes) if axis is not None else ()
+        option = self.options.get(by)
+        return option.words if option is not None else ()
+
+    def reads_across(
+        self, part: Part, value: Any, chosen: Mapping[str, str], seen: set[str] | None = None
+    ) -> bool:
+        """Whether the formula `value`, under the branches `chosen`, reads `part`'s own size
+        across its line, itself or through a named value, at any depth."""
+        seen = set() if seen is None else seen
+        try:
+            references = fm.parse(value).references()
+        except (fm.FormulaError, TypeError, AttributeError):
+            return False  # reported where it is read
+        for ref in references:
+            if (
+                isinstance(ref, fm.Path)
+                and ref.option is None
+                and len(ref.steps) == 1
+                and ref.steps[0] == fm.Step(part.name)
+                and ref.measure in ACROSS[part.cross]
+            ):
+                return True
+            if isinstance(ref, fm.Value) and ref.name in self.values and ref.name not in seen:
+                seen.add(ref.name)
+                _, named = self._chosen(f"values.{ref.name}", self.values[ref.name], chosen)
+                if self.reads_across(part, named, chosen, seen):
+                    return True
+        return False
 
     def _read_lists(self, data: Mapping[str, Any]) -> None:
         """What the component declares under `lists` (DEC-010 points 1 to 4, and 9, DEC-011
@@ -2242,8 +2426,11 @@ class Component:
 
     # -- formulas
 
-    def _formula(self, where: str, text: Any, expected: int | None) -> None:
-        """Reads a formula at its key path and checks it; `formulas` holds it, or `None`."""
+    def _formula(
+        self, where: str, text: Any, expected: int | None, *, by_place: bool = False
+    ) -> None:
+        """Reads a formula at its key path and checks it; `formulas` holds it, or `None`.
+        Only a `cross-size`, `by_place`, reads `:place` and `:places` (DEC-038 point 2)."""
         self.formulas[where] = None
         if not fm.is_formula(text):
             self._issue(
@@ -2260,6 +2447,11 @@ class Component:
                 self._read_role(where, ref.path)
         for ref in formula.references():
             problem = self._unreachable(ref)
+            if isinstance(ref, fm.Engine) and ref.name in fm.PLACE_NAMES and not by_place:
+                problem = (
+                    f"reads `{ref}`, which only the `{CROSS_SIZE}` of a row or a column reads: "
+                    "the place of the item it sizes, or how many its list draws"
+                )
             if problem:
                 self._issue("formula-reach", where, f"the formula `{text}` {problem}")
                 return
@@ -4056,14 +4248,16 @@ class Instance:
             return self._route(name)
         return self._arrange(name, kind)
 
-    def number(self, where: str, raw: Any) -> float:
-        """The value of the component's formula at a key path. Raises `Fault`."""
+    def number(self, where: str, raw: Any, at: tuple[int, int] | None = None) -> float:
+        """The value of the component's formula at a key path; of a `cross-size`, `at` the
+        place of the item it sizes, from 1, and how many items its list draws, which it reads
+        as `:place` and `:places` (DEC-038 point 2). Raises `Fault`."""
         where, _, _ = self.pick(where, raw)
         formula = self.component.formulas.get(where)
         if formula is None:
             raise Fault()  # recorded when the component was read
         try:
-            return fm.evaluate(formula, self._read)
+            return fm.evaluate(formula, lambda ref: self._read(ref, at))
         except fm.DivisionByZero as error:
             message = f"{self.trace}: {where} of {self.component.use}: {error}"
             raise self._fail("division-by-zero", message) from error
@@ -4077,10 +4271,14 @@ class Instance:
         only = _ONLY_ROLE.match(value) if isinstance(value, str) else None
         return f"role:{only.group(1)}" if only else f"default:{self.component.use}"
 
-    def _read(self, ref: fm.Reference) -> float:
+    def _read(self, ref: fm.Reference, at: tuple[int, int] | None = None) -> float:
         if isinstance(ref, fm.Engine):
             if ref.name in ("width", "height"):
                 return self.get("size", ref.name)
+            if ref.name in fm.PLACE_NAMES:
+                if at is None:
+                    raise Fault()  # refused when the component was read
+                return float(at[0] if ref.name == "place" else at[1])
             if not self.is_item or self.parent is None:
                 message = f"{self.trace}: {self.component.use} reads :{ref.name} but is no item"
                 raise self._fail("formula-reach", message)
@@ -4150,22 +4348,59 @@ class Instance:
         )
 
     def _stretch(self, size: str) -> float:
-        """How much more of `size` a stretch gives this instance than it asks for. An item
-        that its list's `align-items: stretch` makes larger across its line than it asks
-        for is stretched by the difference. A component its parent's last part places
-        takes the stretch its parent passes on (`passed_on`). Nothing else is stretched:
-        a size a part's formula gives is no stretch, nor is a page's or a tie's frame."""
+        """How much more of `size` its list gives this instance than it asks for. An item
+        that its list's `align-items: stretch`, or its `cross-size`, makes larger across its
+        line than it asks for is given the difference (DEC-038 point 3). A component its
+        parent's last part places takes what its parent passes on (`passed_on`). Nothing
+        else is given more: a size a part's formula gives passes nothing on, nor does a
+        page's or a tie's frame."""
         parent = self.parent
         if parent is None or self.tie is not None or self._is_forms_page:
             return 0.0
         if not self.is_item:
             return parent.passed_on(self.part_name, size)
         part = parent.nodes[self.part_name].part
-        if size == part.main or parent.setting(self.part_name, "align-items") != "stretch":
+        if size == part.main:
+            return 0.0
+        sized = parent.sized_by_place(self.part_name) is not None
+        if not sized and parent.setting(self.part_name, "align-items") != "stretch":
             return 0.0
         if not self.component.asks_for(size):
             return 0.0  # it asks for no such size, so none is more than it asks
         return max(self.get("size", size) - self.get("preferred", size), 0.0)
+
+    def sized_by_place(self, name: str) -> str | None:
+        """The key path of the formula by which the list `name` gives each of its items its
+        size across the line at this instance, through its switches (DEC-038 point 1); None
+        where it gives none."""
+        part = self.nodes[name].part
+        raw = part.settings.get(CROSS_SIZE)
+        if raw is None or self.component.ties(part) is not None:
+            return None
+        where, value, _ = self.pick(f"parts.{name}.{part.operator}.{CROSS_SIZE}", raw)
+        return where if value is not None else None
+
+    def _is_sized(self, size: str) -> bool:
+        """Whether this instance is an item its list sizes across its line by place, and
+        `size` is that size (DEC-038 point 5)."""
+        if not self.is_item or self.parent is None or self.tie is not None:
+            return False
+        part = self.parent.nodes[self.part_name].part
+        return size == part.cross and self.parent.sized_by_place(self.part_name) is not None
+
+    def chosen(self) -> dict[str, str]:
+        """The branch this instance takes of a switch by each option of words, each size axis
+        a piece can name and `:as`, by what the switch names in `by`."""
+        found = {
+            name: str(self.options[name])
+            for name, option in self.component.options.items()
+            if option.words and name in self.options
+        }
+        for axis in self.ctx.sizes.axes:
+            found[f"{MARKED}{axis}"] = self.ctx.sizes.mode(axis)
+        if self.component.draws_layout:
+            found[AS] = self.placed_as
+        return found
 
     def passed_on(self, name: str, size: str) -> float:
         """The stretch this instance passes on along `size` to its part `name`: the whole
@@ -4275,6 +4510,8 @@ class Instance:
         cross = "height" if part.main == "width" else "width"
         size = part.main if axis == "main" else cross
         given = self.get("part", name, size) if size in part.spec else None
+        if axis == "cross" and self.sized_by_place(name) is not None:
+            return self._sized_across(name, given)
         if axis == "cross":
             align = self.setting(name, "align-items")
             stretched = align == "stretch" and given is not None
@@ -4311,6 +4548,30 @@ class Instance:
             offsets.append(at)
             at += each + gap
         return Arrangement(tuple(offsets), tuple(sizes), asked)
+
+    def _sized_across(self, name: str, given: float | None) -> Arrangement:
+        """A list's items across its line, each the size its `cross-size` gives at the
+        item's place, held at zero where it gives zero or less (DEC-038 points 1 and 5). Each
+        is placed as one of set size: `align-items` left unnamed, or a `stretch` drawn,
+        places it at the line's start (point 3). The list asks for the greatest size the
+        formula gives, or zero, and for zero where it draws no item; where the part gives no
+        size across, its line is that size (point 4). A formula that reads that size where
+        the part gives none was refused when the component was read, so it gives none here
+        (point 7)."""
+        part = self.nodes[name].part
+        raw = part.settings[CROSS_SIZE]
+        where = f"parts.{name}.{part.operator}.{CROSS_SIZE}"
+        if given is None:
+            _, value, _ = self.pick(where, raw)
+            if self.component.reads_across(part, value, self.chosen()):
+                raise Fault()  # refused when the component was read
+        count = len(self.nodes[name].items)
+        given_each = [self.number(where, raw, at=(place, count)) for place in range(1, count + 1)]
+        sizes = [max(each, 0.0) for each in given_each]
+        asked = max([0.0, *given_each])
+        line = given if given is not None else asked
+        shift = {"center": 0.5, "end": 1.0}.get(self.setting(name, "align-items"), 0.0)
+        return Arrangement(tuple((line - each) * shift for each in sizes), tuple(sizes), asked)
 
     def _item_shares(self, name: str, items: list[Instance]) -> list[float]:
         """The share each item of a list takes of its line: the one its list's weight gives
@@ -4847,17 +5108,23 @@ class Instance:
             return None
         return f"its style `{run.word}`" if run.word is not None else "its part's paint"
 
-    def shortfalls(self) -> list[tuple[str, float, float]]:
-        """Each size this instance gets that is less than it asks for: size, gets, asks.
-        Raises `Fault`."""
+    def shortfalls(self) -> list[tuple[str, float, float | None]]:
+        """Each size this instance gets that is less than it asks for: size, gets, asks. An
+        item its list sizes across its line by place asks across it for more than zero
+        besides, which `asks` gives as None where it gets none (DEC-038 point 5). Raises
+        `Fault`."""
         if self.parent is None:
             return []
-        short = []
+        short: list[tuple[str, float, float | None]] = []
         for size in ("width", "height"):
-            if self.component.asks_for(size):
-                gets, asks = self.get("size", size), self.get("preferred", size)
-                if asks - gets > TOLERANCE:
-                    short.append((size, gets, asks))
+            asks = self.get("preferred", size) if self.component.asks_for(size) else None
+            gets = self.get("size", size) if asks is not None or self._is_sized(size) else None
+            if gets is None:
+                continue
+            if asks is not None and asks - gets > TOLERANCE:
+                short.append((size, gets, asks))
+            elif gets <= 0.0 and self._is_sized(size):
+                short.append((size, gets, None))
         return short
 
 

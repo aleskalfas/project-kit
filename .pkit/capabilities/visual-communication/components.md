@@ -24,6 +24,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/deck.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/site.yaml
+        - .pkit/capabilities/visual-communication/libraries/starter/components/layers.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/steps.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/card.yaml
@@ -106,6 +107,13 @@ pkit:
         - visual-communication:DEC-036#2
         - visual-communication:DEC-036#3
         - visual-communication:DEC-036#5
+        - visual-communication:DEC-038#1
+        - visual-communication:DEC-038#2
+        - visual-communication:DEC-038#3
+        - visual-communication:DEC-038#4
+        - visual-communication:DEC-038#5
+        - visual-communication:DEC-038#6
+        - visual-communication:DEC-038#7
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -566,6 +574,7 @@ A *formula* is text that starts with `=` and computes one number (DEC-005 point 
 | `@<token path>` | a role, such as `@space.2`: a length or a number |
 | `:width`, `:height` | the size the component gets |
 | `:index`, `:count` | an item's place among the items its list draws, from 1, and how many it draws |
+| `:place`, `:places` | in a `cross-size` alone, the place of the item it sizes, from 1, and how many items its list draws ([Repeating over a list](#repeating-over-a-list-row-and-column)) |
 | `<value>` | a value of the component, by its name alone, such as `gap` |
 | `<part>.<exposed>….<measure>` | a measure of a part's frame, or of a part exposed below it |
 | `{<option>}.….<measure>` | a measure of the item, or the point, an option gives |
@@ -601,11 +610,14 @@ Each term is a number with no unit or a length (a power of length). The engine c
 A formula is refused with a message that names it and says why, such as "the formula `=:width - 6` subtracts a number with no unit (`6`) from a length (`:width`)". The engine finds these when it reads the component:
 
 - **It cannot be read:** it does not start with `=`, is empty, ends too early, or holds a sign or a term where none belongs. Or it breaks a rule of the grammar: a binary minus without its spaces, an engine name that does not exist, `min` or `max` with fewer than two arguments, `round` with other than one, or a path that ends in no measure.
-- **It reads what it may not:** a value, a part or an option the component lacks, an option that names an item of a list over which not exactly one part repeats, or below where a step may reach.
+- **It reads what it may not:** a value, a part or an option the component lacks, an option that names an item of a list over which not exactly one part repeats, below where a step may reach, or `:place` or `:places` in any formula but a `cross-size`.
+- **It reads the size it gives:** a `cross-size` that reads its part's size across the line where the part gives none, itself or through a named value, as a loop (DEC-038 point 7).
 - **Its dimensions disagree,** or it gives another dimension than its key needs.
 - **It reads a role** that has no value under the brand, a length in a unit other than `px`, or a role that is neither a length nor a number. A role has none where no library the piece locks declares it, or where it is a library's role that neither the brand nor its chain of defaults gives a value ([`roles.yaml`](files.md#rolesyaml)). A part reads no value from a picture role, whether the brand gives it a file or not ([Picture roles](files.md#picture-roles)). A library's role with no value, a component token among them, is found at the piece's lock, not in the component. Where the brand, or a base below it, names the library, the part takes no finding: that brand's `library-role-missing`, or its library's own finding where a default does not hold, reports it.
 
-It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point, an item or an end that is missing, and a loop. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
+Beside a formula, it refuses then a `cross-size` on a part whose items are pages, and a `stretch` written beside a `cross-size` that gives a size, as a second writer of the size ([Repeating over a list](#repeating-over-a-list-row-and-column)). It judges that loop and that `stretch` for each set of options, sizes and `:as` that holds together, so a pair only some options would draw is found in the library's own check.
+
+It finds these when it computes the scene: a division by zero, `:index` or `:count` in a component that is no item, a path to an exposed part, a point, an item or an end that is missing, and a loop, but for the loop through a `cross-size`'s own part, which it found when it read the component. A value that cannot be computed is zero. The check reports each problem as a finding (*checks*).
 
 ## Layout operators and drawing primitives
 
@@ -661,9 +673,12 @@ The part's *layout operator*, `row` or `column`, lays the items along a line, ac
 | `gap` | a formula that gives a length | zero | the space between two items along the line |
 | `sizes` | `own`, `equal`, `shares` | `own` | `own`: each item takes the size it asks for along the line. `equal`: the items share the part's size along the line, less the gaps, equally. `shares`: they share it in proportion to the shares their list's weight gives them, and equally where every share is the same ([Lists](#lists)). With `equal` or `shares`, the part must give that size. |
 | `justify-content` | `start`, `center`, `end`, `space-between` | `start` | Where the items lie along a line longer than they ask for. `space-between` widens each gap instead. |
-| `align-items` | `stretch`, `start`, `center`, `end` | `stretch` | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. Where the stretch goes inside the item is in [What an element asks for, and what it gets](#what-an-element-asks-for-and-what-it-gets). Otherwise each item takes the size it asks for across, at the start, the centre or the end of the line. |
+| `align-items` | `stretch`, `start`, `center`, `end` | `stretch`, and `start` beside a `cross-size` that gives a size | `stretch`: each item is as large across as the line, that is the part's size across, else the largest size an item asks for. Where the stretch goes inside the item is in [What an element asks for, and what it gets](#what-an-element-asks-for-and-what-it-gets). Otherwise each item takes the size it asks for across, or the size `cross-size` gives it, at the start, the centre or the end of the line. A `stretch` written beside a `cross-size` that gives a size is refused, and drawn as `start`. |
+| `cross-size` | a formula that gives a length | none | Each item's size across the line, by its place: the formula reads `:place`, the item's place from 1, and `:places`, how many items the list draws, beside what the part's other formulas read. It reads nothing an item carries, and its part's size across the line only where the part gives one. It may switch, and a branch may give none, which leaves the list without it there ([Switches](#switches)). A part whose items are pages takes none (DEC-038 points 1 and 2). |
 
-- **The part's own size,** where it gives none, is what its items ask for: along the line, their sizes and the gaps; across, the largest.
+- **The part's own size,** where it gives none, is what its items ask for: along the line, their sizes and the gaps; across, the largest. A part that gives `cross-size` asks across for the greatest size the formula gives at any place, or zero where that is greater or its list draws no item, whether or not it gives its own size there. Where it gives less, the check reports it as a list that gets less than it asks for (DEC-038 point 4).
+- **An item that `cross-size` sizes** asks for its size as before, and the check takes it to ask across for more than zero besides. Where the formula gives it less than it asks for, zero or less included, it is reported at the content as a component that gets less than it asks for. Where it gives zero or less, the item gets zero, so its frame never inverts. Ties, references, the checks and every renderer read its frame as any item's (DEC-038 points 5 and 6).
+- **In the starter,** `layers` with `shape: steps` lays its levels with `align-items: center` and `cross-size: "=levels.width * (:places + :place) / (2 * :places)"`. In a column 400 px wide, of four levels the first is 250 px wide and the last 400 px.
 - **In the tests' figure,** where `@space.2` is 8 px, `tests/steps` lays three steps with `row: {gap: "=gap", sizes: equal, align-items: stretch}` in a row 608 px wide. Each step is 197.33 px wide, and as tall as the tallest.
 - **Over a list of ties,** the part takes neither `row` nor `column`. Each tie lies in the part's whole frame, by default the component's, and is drawn between its ends ([Ties and connectors](#ties-and-connectors)). A tie whose component takes no ends is left out.
 
@@ -750,10 +765,10 @@ links:
 
 - **Each element asks** for its `preferred` size, and **gets** one (DEC-005 point 3). It gets a size from what places it. A top component gets what it asks for. A page of a top whose layouts are its pages' forms gets the size [Layouts](#layouts) gives it.
 - **A brand's drawing writes what its instance asks for, and the top what a page gets** (DEC-034 point 2). Each size is the drawing's or the top's by the file it is written in. A page drawn by a brand's drawing asks for the height its drawing writes, and gets the top's width, and the top's height where the top asks for one. A top whose one layout is the whole top, drawn by a brand's drawing, asks for the drawing's `preferred`. A component placed by `use` or `slot` gets its part's size, else what it asks for, unless [a stretch reaches it](#what-an-element-asks-for-and-what-it-gets). An item gets what the operator gives it. A formula reads the size it gets as `:width` and `:height`.
-- **A stretch reaches the part drawn last.** An item that `stretch` makes larger across than it asks for passes the rest on to the last part it draws. That part takes it where it places a component by `use` or `slot` and gives no size across. Its component gets as much more, and passes it on the same way. So a panel that holds panels of its own ends where the row's other panels end.
+- **A stretch reaches the part drawn last** (DEC-038 point 3). An item that `stretch` or `cross-size` makes larger across than it asks for passes the rest on to the last part it draws. That part takes it where it places a component by `use` or `slot` and gives no size across. Its component gets as much more, and passes it on the same way. So a panel that holds panels of its own ends where the row's other panels end.
   - **What the item asks for is unchanged.** Its formulas still read that part at the size the part asks for.
   - **The size passed on names `engine` as its source** ([Sources](#sources)).
-  - **Only a stretch passes on.** A component that a part's formula gives more than it asks for keeps its parts as they ask.
+  - **Only a list passes on,** by a stretch or by `cross-size`, and only from an item that asks for its size across. A component that a part's formula gives more than it asks for keeps its parts as they ask.
 - **A top with a physical size asks for its height through it,** wherever it lies: the width it asks for, in the size's proportion ([A physical size](#a-physical-size)). Its height names `engine` as its source, and so does the height of a page that gets it, or of a part that places it and gives none.
 - **Each value has one owner:** a part's formula, its measured text, or its parent's layout.
 - **A component that gets less than it asks for** is reported.
@@ -869,7 +884,7 @@ Each drawn property names its source in `sources`:
 - **`:as`:** a value a switch on `:as` chose, by whether its instance is a page ([Switches](#switches)). It is a kind of its own, and names neither value.
 - **`default:<library>/<component>`:** the component's own value, such as the picture file an image names by `file`. A field that a `use` part does not pass on is the placing component's, which gives it nothing.
 - **`role:<token path>`:** a formula that reads one role and nothing else, such as `"=@space.2"`, a run's typography role, or the role whose line height a text takes. It is also the source of the picture role an image shows.
-- **`engine`:** a value the engine computed, such as a text's measured height, an item's frame or the height a top asks for through its [physical size](#a-physical-size), or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none.
+- **`engine`:** a value the engine computed, such as a text's measured height, an item's frame, but for the size across that a `cross-size` gives it, which names what a part's formula names, or the height a top asks for through its [physical size](#a-physical-size), or one the component leaves to the engine's default, such as `text-anchor` on a text that gives none.
 
 ## Text
 
