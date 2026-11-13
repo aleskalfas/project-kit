@@ -8,18 +8,24 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 4d508745417f40d0cc20396b73e1f05b2465974d4deb3360e3c4070db6b642ca
+  value: 02d8209fff96cf615a2c82bbbc727959e3d2d5a45f1069fd3cf658af813a57b6
   inputs:
     - file: components/capability.yaml
       sha256: 49ab721151fd9313be944c5458fc6137819d61fbbe1d0bed713a7f6e0c385b4a
+    - file: components/matrix.yaml
+      sha256: f24ac4b285686812f7ed666565be0bd2baa2237684cc8d5864c42232106b0bcf
+    - file: components/pyramid.yaml
+      sha256: 00024af81b28a51c2444d01eedca562c9e68741a594031e8e713e46cedeecbef
     - file: components/slot.yaml
       sha256: 58af48501e010b442380fae830e76dcaef4c748fed26239931d77d8683b9d62a
+    - file: components/step.yaml
+      sha256: 4397c53efdbf3e1423452eb64ab71e08745cd74f6491161a832cbea31a0769b6
     - file: components/wiring.yaml
-      sha256: 01315e792846339dc88b27eaefd72ada03ef68f29cac6422b864eaff999d66ec
+      sha256: 36623a694e67be519da4a4e36226e472059b220cace3806e036aad50673f4fb0
     - file: content.cs.yaml
-      sha256: 0ee406c7c024ecc6f045b997144bac9767d7326e8d441b0f1ea81ccece4e3e79
+      sha256: 8adb000f38bd5c442187eece6f69a205fef9f1840b44d28e4b7d8bc450fb2071
     - file: content.en.yaml
-      sha256: 0f50b37ca61fd90eb1a3158e993c2e477d79969e3b239552aa9882f13c7e5469
+      sha256: e8d50564ff38217922aa808209a51c51bae9738725ae81b538567fd4d123a645
     - file: piece.yaml
       sha256: 18bc7cb9651de9477c5c8e6d0572256c7507de7eb917513a63338eb5dc33fc49
     - library: foundations
@@ -73,31 +79,31 @@ key:
     - library: neutral
       version: 1.1.0
       path: tokens/base.tokens.json
-      sha256: d9fc7dd03131b4b884a719889402b55ac50163801ab41b8c75e0651040604aab
+      sha256: 40b1ecb3fc5a06fb06f3cf1d618783080da30176fd5ab98a2997f778b3c98e14
     - library: neutral
       version: 1.1.0
       path: tokens/dark.tokens.json
-      sha256: 288184af74169ab9fc00dc25c1b61ecdbc01c5a3b7029a2fccff180c89e45996
+      sha256: 7ba7bded81a68fe52436d84a7c3b14cc0a47c803c4c7de632acc9663fd682f86
     - library: neutral
       version: 1.1.0
       path: tokens/high-contrast.tokens.json
-      sha256: babc4ab4183caa0266b9811c1a69583d70f15f25ddd0c2d1bfbb894f52983799
+      sha256: 796c538b649a5b0dbfbc90a177a1422c8dc03fc379cbac7cd5b4cb38a15b014d
     - library: neutral
       version: 1.1.0
       path: tokens/palette.tokens.json
-      sha256: 1c7c09942b89937709875c44cfc3b088706bfb69817843a8149b7492d921b782
+      sha256: b6db58a5ecf985393850149facd77072e9487b36ffb90a4180e18416dd561919
     - library: neutral
       version: 1.1.0
       path: tokens/phone.tokens.json
-      sha256: 4078142648a9122a40d6d94484e072b80e2785d3520f6cfed122e3263aa81417
+      sha256: c80c9d3095df0d6eb4a20095860fa292fb94c7e611c12466e29e524ea0da068b
     - library: neutral
       version: 1.1.0
       path: tokens/projector.tokens.json
-      sha256: 0b1a08589259140b9596eb3b3ac36a028e449d122c51b5855c8c210e8151fb37
+      sha256: 9efdf88b4b8d3974ae4cde70e4b277b853a3a93e881349b7c8eb5dc95c2e77ee
     - library: neutral
       version: 1.1.0
       path: tokens/tablet.tokens.json
-      sha256: 655b8f44e09a51750d5cca02dbc0639b3eced7925c7ca1e87f6d7d3a0ae6496f
+      sha256: b364b75494770b5bf79728f4226ccad1f57c8e37306daba4336ed1726a2e5c99
     - library: pkit
       version: 1.0.0
       path: library.yaml
@@ -109,7 +115,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: c57cccf750eed71c62ea773a0f739ef9b8df8478b406622b354ec1a39f17436e
+      sha256: 7d00c8dbd1d58fdd71f3f2a0e215a6c2c1f053af1dad6e2d6e4b8df2c9d94bff
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -133,7 +139,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/connector.yaml
-      sha256: 0612b6c71bbbb2fc6cd0e023a8a60539b25c02be31d8dcc063208b73d97dcc35
+      sha256: abdc1b7f912a7eff607ea48d0d3d7b89010fd91db07ad2192068e677cb4c9a5d
     - library: starter
       version: 1.1.0
       path: components/field.yaml
@@ -209,83 +215,8 @@ key:
     - library: starter
       version: 1.1.0
       path: roles.yaml
-      sha256: 23ca8760b401f5649dc9a0da9ba42b6769a65a6c652534cb9c0799fab8e08405
+      sha256: 6f583607c22621ff8a30c63813d92968e3afc4890aa49021f02929ac751a5623
 findings:
-  - code: gets-less
-    level: fails
-    message: deck/slides[fits]/visual gets 356.0 px of height and asks for 479.99
-    file: content.cs.yaml
-    where: deck/slides[fits]/visual
-  - code: gets-less
-    level: fails
-    message: deck/slides[fits]/visual/notes[carried-out] gets 149.33 px of height and asks for 192.0
-    file: content.cs.yaml
-    where: deck/slides[fits]/visual/notes[carried-out]
-  - code: gets-less
-    level: fails
-    message: deck/slides[fits]/visual/notes[checked] gets 149.33 px of height and asks for 192.0
-    file: content.cs.yaml
-    where: deck/slides[fits]/visual/notes[checked]
-  - code: gets-less
-    level: fails
-    message: deck/slides[install]/visual gets 356.0 px of height and asks for 507.99
-    file: content.cs.yaml
-    where: deck/slides[install]/visual
-  - code: gets-less
-    level: fails
-    message: deck/slides[install]/visual/panels#1/panels#1 gets 568.0 px of width and asks for 824.0
-    file: content.cs.yaml
-    where: deck/slides[install]/visual/panels#1/panels#1
-  - code: gets-less
-    level: fails
-    message: deck/slides[install]/visual/panels#2/panels#1 gets 568.0 px of width and asks for 836.8
-    file: content.cs.yaml
-    where: deck/slides[install]/visual/panels#2/panels#1
-  - code: gets-less
-    level: fails
-    message: deck/slides[install]/visual/panels#2/under gets 568.0 px of width and asks for 621.86
-    file: content.cs.yaml
-    where: deck/slides[install]/visual/panels#2/under
-  - code: gets-less
-    level: fails
-    message: deck/slides[permissions]/visual gets 260.0 px of height and asks for 479.99
-    file: content.cs.yaml
-    where: deck/slides[permissions]/visual
-  - code: gets-less
-    level: fails
-    message: deck/slides[fits]/visual gets 394.0 px of height and asks for 479.99
-    file: content.en.yaml
-    where: deck/slides[fits]/visual
-  - code: gets-less
-    level: fails
-    message: deck/slides[fits]/visual/notes[carried-out] gets 149.33 px of height and asks for 192.0
-    file: content.en.yaml
-    where: deck/slides[fits]/visual/notes[carried-out]
-  - code: gets-less
-    level: fails
-    message: deck/slides[fits]/visual/notes[checked] gets 149.33 px of height and asks for 192.0
-    file: content.en.yaml
-    where: deck/slides[fits]/visual/notes[checked]
-  - code: gets-less
-    level: fails
-    message: deck/slides[install]/visual gets 356.0 px of height and asks for 507.99
-    file: content.en.yaml
-    where: deck/slides[install]/visual
-  - code: gets-less
-    level: fails
-    message: deck/slides[install]/visual/panels#1/panels#1 gets 568.0 px of width and asks for 824.0
-    file: content.en.yaml
-    where: deck/slides[install]/visual/panels#1/panels#1
-  - code: gets-less
-    level: fails
-    message: deck/slides[install]/visual/panels#2/panels#1 gets 568.0 px of width and asks for 836.4
-    file: content.en.yaml
-    where: deck/slides[install]/visual/panels#2/panels#1
-  - code: gets-less
-    level: fails
-    message: deck/slides[permissions]/visual gets 260.0 px of height and asks for 447.99
-    file: content.en.yaml
-    where: deck/slides[permissions]/visual
   - code: size-width
     level: attention
     message: '`device.projector`: the top is 1280 px wide, as at the default size: the brand neutral@1.1.0 gives its width no other value at this size, so its shape follows the size and its width does not'
@@ -315,19 +246,19 @@ findings:
     where: deck/slides[connect]/visual/slots[doc-check]
   - code: component-experimental
     level: fact
-    message: 'the piece uses `starter/layers`, which is experimental: its library may still change it in any release'
+    message: 'the piece uses `starter/connector`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck/slides[connect]/visual/ties[living-docs-doc-check]
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `piece/pyramid`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[fits]/visual
   - code: component-experimental
     level: fact
-    message: 'the piece uses `starter/card`, which is experimental: its library may still change it in any release'
+    message: 'the piece uses `piece/step`, which is experimental: its library may still change it in any release'
     file: piece.yaml
-    where: deck/slides[fits]/visual/notes[ideas]
-  - code: component-experimental
-    level: fact
-    message: 'the piece uses `starter/connector`, which is experimental: its library may still change it in any release'
-    file: piece.yaml
-    where: deck/slides[fits]/visual/ties[ideas-decisions]
+    where: deck/slides[fits]/visual/levels[decisions]
   - code: component-experimental
     level: fact
     message: 'the piece uses `starter/panels`, which is experimental: its library may still change it in any release'
@@ -337,29 +268,34 @@ findings:
     level: fact
     message: 'the piece uses `starter/code`, which is experimental: its library may still change it in any release'
     file: piece.yaml
-    where: deck/slides[install]/visual/panels#1/panels#1
-  - code: component-experimental
-    level: fact
-    message: 'the piece uses `starter/aside`, which is experimental: its library may still change it in any release'
-    file: piece.yaml
-    where: deck/slides[install]/visual/panels#1/under
+    where: deck/slides[install]/visual/panels#1
   - code: component-experimental
     level: fact
     message: 'the piece uses `starter/legend`, which is experimental: its library may still change it in any release'
     file: piece.yaml
-    where: deck/slides[install]/visual/panels#2/under
+    where: deck/slides[install]/visual/under/panels#2/panels#1
   - code: component-experimental
     level: fact
     message: 'the piece uses `starter/tag`, which is experimental: its library may still change it in any release'
     file: piece.yaml
-    where: deck/slides[install]/visual/panels#2/under/entries[core]
+    where: deck/slides[install]/visual/under/panels#2/panels#1/entries[core]
   - code: component-experimental
     level: fact
-    message: 'the piece uses `starter/groups`, which is experimental: its library may still change it in any release'
+    message: 'the piece uses `starter/aside`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck/slides[install]/visual/under/panels#2/under
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `piece/matrix`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[permissions]/visual
   - code: component-experimental
     level: fact
-    message: 'the piece uses `starter/group`, which is experimental: its library may still change it in any release'
+    message: 'the piece uses `starter/row`, which is experimental: its library may still change it in any release'
     file: piece.yaml
-    where: deck/slides[permissions]/visual/groups[guardrails]
+    where: deck/slides[permissions]/visual/rows[steps]
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `starter/cell`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck/slides[permissions]/visual/rows[steps]/cells[kind]

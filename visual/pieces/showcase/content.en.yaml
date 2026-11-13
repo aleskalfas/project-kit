@@ -9,34 +9,19 @@ slides:
     title: How pkit fits together
     lead: "In five layers, from your decisions down to your code: each carries out the ones above it."
     visual:
-      use: starter/layers
-      level: {use: starter/card, fill: tint}
-      note: {use: starter/card, bar: left}
+      # The lead's order runs down the pyramid: decisions at the top, each layer under it
+      # carrying out the ones above, down to your code. The talk adds where the decisions
+      # come from, which opens the page at its top left, and what runs back up.
+      use: piece/pyramid
+      start: [{text: "Where ideas start. ", style: strong}, "In conversation, and in a scratchpad note when one needs longer."]
       levels:
-        - id: decisions
-          concept: pkit/decision
-          text: [{text: "Decisions. ", style: strong}, "Choices you accepted, and why."]
-        - id: rules
-          concept: pkit/rule
-          text: [{text: "Working rules · schemas · processes. ", style: strong}, "Exactly what to do, for every session and tool."]
-        - id: skills
-          concept: pkit/skill
-          text: [{text: "Skills · agents · permissions. ", style: strong}, "How agents act, in which role, with what rights."]
-        - id: commands
-          concept: pkit/core
-          text: [{text: "pkit's commands and checks. ", style: strong}, "Carry out what is decided, and check every change."]
-        - id: work
-          concept: pkit/yours
-          text: [{text: "Your code and documents. ", style: strong}, "The work itself, tied to what it depends on."]
-      notes:
-        - id: ideas
-          text: [{text: "Where ideas start. ", style: strong}, "In conversation, and in a scratchpad note when one needs longer."]
-        - id: carried-out
-          text: [{text: "↓ Carried out. ", style: strong}, "Each layer carries out the decisions above it. The reasons stay in one place, where an agent reads them before it changes anything."]
-        - id: checked
-          text: [{text: "↑ Checked. ", style: strong}, "If a layer and a decision disagree, the layer is checked first, so decisions never drift to match the code. Only you change a decision."]
-      ties:
-        - {id: ideas-decisions, from: {item: "notes[ideas]"}, to: {item: "levels[decisions]"}}
+        - {id: decisions, label: Decisions}
+        - {id: rules, label: "Working rules · schemas · processes"}
+        - {id: skills, label: "Skills · agents · permissions"}
+        - {id: commands, label: "pkit's commands and checks"}
+        - {id: work, label: Your code and documents}
+      down: [{text: "↓ Carried out. ", style: strong}, "Each layer carries out the decisions above it. The reasons stay in one place, where an agent reads them before it changes anything."]
+      up: [{text: "↑ Checked. ", style: strong}, "If a layer and a decision disagree, the layer is checked first, so decisions never drift to match the code. Only you change a decision."]
     footer: pkit wrote this order down as a decision of its own, COR-065.
 
   - id: install
@@ -44,86 +29,84 @@ slides:
     title: Install pkit
     lead: Install the tool once, then add pkit to each project with one command. Upgrades replace pkit's files, never yours.
     visual:
+      # The lead's order runs down: the tool installed once, then pkit added to each project,
+      # then what that leaves, pkit's files beside yours. So the two commands stand first,
+      # across the page, each with a comment saying when it runs, and the project's tree
+      # under them. The legend stands beside the tree's top, where the eye leaves its first
+      # line, and the aside last, as something beside the point.
       use: starter/panels
       panels:
-        - use: starter/panels
-          panels:
-            - use: starter/code
-              text: [
-                {text: "# once, on your machine\n", style: comment},
-                {text: "$ ", style: prompt}, {text: "uv tool install \\\n", style: command},
-                {text: "    git+https://github.com/aleskalfas/project-kit.git@latest\n", style: command},
-                {text: "$ ", style: prompt}, {text: "pkit --version\n", style: command},
-                {text: "# in each project\n", style: comment},
-                {text: "$ ", style: prompt}, {text: "cd your-project\n", style: command},
-                {text: "$ ", style: prompt}, {text: "pkit init", style: command}]
-          under:
-            use: starter/aside
-            head: Don't want pkit in your repository?
-            command: $ pkit visibility private
-            text: pkit stays only in your clone, hidden by git's exclude file. Nothing of it is committed, and your agent still uses all of it.
-        - use: starter/panels
-          panels:
-            - use: starter/code
-              # A real tree of a new project, cut to what a slide holds with the legend under
-              # it, so pkit's schemas are left to the line that stands for more of pkit's.
-              # Each of pkit's files starts with its concept's sign, a full circle, and each
-              # of yours with a ring, so the two differ without their colours too, under
-              # forced colours or without colour vision. The legend says what each colour and
-              # sign stands for.
-              text: [
-                {text: "$ ", style: prompt}, {text: "tree", style: command}, " -a -L 2 your-project\n",
-                "your-project/\n",
-                "├── .pkit/", {text: "                      # the methodology\n", style: comment},
-                "│   ├── agents/ ", {text: "core/", concept: pkit/core}, " ", {text: "project/\n", concept: pkit/yours},
-                "│   ├── decisions/ ", {text: "core/", concept: pkit/core}, " ", {text: "project/\n", concept: pkit/yours},
-                "│   ├── permissions/ ", {text: "project/", concept: pkit/yours}, {text: " # what agents may do\n", style: comment},
-                "│   ├── rules/ ", {text: "core.md", concept: pkit/core}, " ", {text: "project.md\n", concept: pkit/yours},
-                "│   ├── ", {text: "scratchpad/", concept: pkit/yours}, {text: "           # your unfinished ideas\n", style: comment},
-                "│   ├── skills/ ", {text: "core/", concept: pkit/core}, " ", {text: "project/\n", concept: pkit/yours},
-                "│   ├── ", {text: "…", concept: pkit/core}, {text: "                     # and more of pkit's\n", style: comment},
-                "│   └── ", {text: "manifest.yaml", concept: pkit/core}, {text: "         # what is installed\n", style: comment},
-                "├── .claude/", {text: "                    # your Claude Code setup\n", style: comment},
-                "│   └── settings.json", {text: "           # ", style: comment}, {text: "yours", concept: pkit/yours}, {text: ", ", style: comment}, {text: "pkit's", concept: pkit/core}, {text: " merged in\n", style: comment},
-                "├── ", {text: "CLAUDE.md", concept: pkit/yours}, {text: "                 # loads the rules\n", style: comment},
-                "└── ", {text: "src/", concept: pkit/yours}, {text: "                      # your code, untouched", style: comment}]
-          under:
-            use: starter/legend
-            entries:
-              - {id: core, concept: pkit/core, label: "pkit's files, replaced by each upgrade"}
-              - {id: yours, concept: pkit/yours, label: your files}
+        - use: starter/code
+          text: [
+            {text: "$ ", style: prompt}, {text: "uv tool install git+https://github.com/aleskalfas/project-kit.git@latest", style: command}, {text: "  # once\n", style: comment},
+            {text: "$ ", style: prompt}, {text: "pkit init", style: command}, {text: "  # in each project", style: comment}]
+      under:
+        use: starter/panels
+        panels:
+          - use: starter/code
+            # A real tree of a new project, cut to what a slide holds: two of pkit's folders
+            # split into pkit's part and yours, a line for more of pkit's, and two of your
+            # files. Each of pkit's files starts with its concept's sign, a full circle, and
+            # each of yours with a ring, so the two differ without their colours too, under
+            # forced colours or without colour vision. The legend says what each stands for.
+            text: [
+              "your-project/\n",
+              "├── .pkit/", {text: "       # the methodology\n", style: comment},
+              "│   ├── decisions/ ", {text: "core/", concept: pkit/core}, " ", {text: "project/\n", concept: pkit/yours},
+              "│   ├── rules/ ", {text: "core.md", concept: pkit/core}, " ", {text: "project.md\n", concept: pkit/yours},
+              "│   └── ", {text: "…", concept: pkit/core}, {text: "      # and more of pkit's\n", style: comment},
+              "├── ", {text: "CLAUDE.md", concept: pkit/yours}, {text: "  # loads the rules\n", style: comment},
+              "└── ", {text: "src/", concept: pkit/yours}, {text: "       # your code, untouched", style: comment}]
+          - use: starter/panels
+            panels:
+              - use: starter/legend
+                entries:
+                  - {id: core, concept: pkit/core, label: "pkit's files, replaced by each upgrade"}
+                  - {id: yours, concept: pkit/yours, label: your files}
+            under:
+              use: starter/aside
+              head: Don't want pkit in your repository?
+              command: $ pkit visibility private
+              text: It stays in your clone, and your agent uses it all.
     footer: pkit status shows what pkit set up in a project. Optional parts, called capabilities, come later.
 
   - id: permissions
     layout: slide
     title: Where permissions come from
-    lead: From rules your project writes down as data. Your AI tool applies them to every call, so they hold when an agent forgets them.
+    lead: Permissions come from rules your project writes down as data. Your AI tool applies them to every call, so they hold when an agent forgets them.
     visual:
-      use: starter/groups
-      groups:
+      # The lead's order runs across: what the project writes down as data, what the AI
+      # tool gets from it, and what a call then meets. Each row is one of the three places
+      # an agent's limits come from, read in that order; the column heads number the steps,
+      # so the order holds without arrows, in either language.
+      use: piece/matrix
+      rows:
+        - id: steps
+          cells:
+            - {id: kind}
+            - {id: data, head: "1  Written as data"}
+            - {id: tool, head: "2  Your AI tool gets"}
+            - {id: call, head: "3  A call meets"}
         - id: guardrails
-          head: Guardrails
-          tag: for you and every agent
-          items:
-            - {id: data, text: [{text: "Written as data: ", style: strong}, "rm -r, sudo and force-push, denied to all"]}
-            - {id: tool, text: [{text: "Your AI tool gets: ", style: strong}, "a deny in its settings"]}
-            - {id: call, text: [{text: "A call meets: ", style: strong}, "refused, in every mode"]}
+          cells:
+            - {id: kind, head: Guardrails}
+            - {id: data, text: "rm -r, sudo and force-push, denied to all"}
+            - {id: tool, text: a deny in its settings}
+            - {id: call, text: "refused, in every mode"}
         - id: own-tools
-          head: An agent's own tools
-          tag: in the agent's file
-          items:
-            - {id: data, text: [{text: "Written as data: ", style: strong}, "critic: Read, Glob, Grep, WebFetch"]}
-            - {id: tool, text: [{text: "Your AI tool gets: ", style: strong}, "that agent's list of tools"]}
-            - {id: call, text: [{text: "A call meets: ", style: strong}, "no command run, no file written"]}
+          cells:
+            - {id: kind, head: "An agent's own tools"}
+            - {id: data, text: "the critic's file: Read, Glob, Grep, WebFetch"}
+            - {id: tool, text: "that agent's list of tools"}
+            - {id: call, text: "no command run, no file written"}
         - id: one-agent
-          head: One agent's rule
-          tag: from project-management
-          items:
-            - {id: data, text: [{text: "Written as data: ", style: strong}, "project-manager: no raw gh changes"]}
-            - {id: tool, text: [{text: "Your AI tool gets: ", style: strong}, "the hook, before each call"]}
-            - {id: call, text: [{text: "A call meets: ", style: strong}, "refused, so it uses pkit's commands"]}
+          cells:
+            - {id: kind, head: "One agent's rule"}
+            - {id: data, text: "project-manager: no raw gh changes"}
+            - {id: tool, text: "the hook, before each call"}
+            - {id: call, text: "refused, so it uses pkit's commands"}
     limit: A deny stops the forms of a command pkit can tell. A command hidden behind another can slip past.
-    footer: "In project-kit: the project-manager agent is refused raw gh changes, and uses pkit's commands, which validate the issue first."
+    footer: "In project-kit: the project-manager agent uses pkit's commands, which validate the issue first."
 
   - id: connect
     layout: slide
@@ -139,6 +122,16 @@ slides:
     # itself, which the page leaves out.
     visual:
       use: piece/wiring
+      opener:
+        - id: project-management
+          concept: pkit/capability
+          role: "role: tracking the work"
+          name: [{text: "capability: ", style: kind}, {text: project-management, style: name}]
+      opens: [{text: "pkit::work-tracking", style: code}, "\nopens 3 slots"]
+      slots:
+        - {id: doc-check, name: doc-check, text: the docs a change must update}
+        - {id: fixers, name: fixers, text: which agent fixes each doc, fill: tint, concept: pkit/proof}
+        - {id: use-cases, name: use-cases, text: the use cases to plan from}
       fillers:
         - id: living-docs
           concept: pkit/capability
@@ -148,23 +141,12 @@ slides:
           concept: pkit/capability
           role: "role: analysing the software"
           name: [{text: "capability: ", style: kind}, {text: software-analysis, style: name}]
-      slots:
-        - {id: doc-check, name: doc-check, text: the docs a change must update}
-        - {id: fixers, name: fixers, text: which agent fixes each doc, fill: tint, concept: pkit/proof}
-        - {id: use-cases, name: use-cases, text: the use cases to plan from}
-      opener:
-        - id: project-management
-          concept: pkit/capability
-          role: "role: tracking the work"
-          name: [{text: "capability: ", style: kind}, {text: project-management, style: name}]
-      opens: [{text: "pkit::work-tracking", style: code}, "\nopens 3 slots"]
       tie: {use: starter/connector, route: corners, override: {line: text-secondary}}
       ties:
         - {id: living-docs-doc-check, from: {item: "fillers[living-docs]"}, to: {item: "slots[doc-check]"}}
         - {id: living-docs-fixers, from: {item: "fillers[living-docs]"}, to: {item: "slots[fixers]"}}
         - {id: software-analysis-fixers, from: {item: "fillers[software-analysis]"}, to: {item: "slots[fixers]"}}
         - {id: software-analysis-use-cases, from: {item: "fillers[software-analysis]"}, to: {item: "slots[use-cases]"}}
-      gains: [{text: "What it gives you\n", style: strong}, "Swap a capability for one in the same role.\nInstall only what you need.\n", {text: "pkit validate", style: code}, " checks the wiring."]
       # What pkit status printed in project-kit, cut by whole lines to the slot fixers and
       # the two capabilities bound to it. The bound lines hang under the slot's line, as pkit
       # prints them, by fewer spaces, and clear of the sign that opens the slot's line.
@@ -174,4 +156,5 @@ slides:
           {text: "pkit::work-tracking:fixers", concept: pkit/proof}, {text: "  # from pkit status\n", style: comment},
           "    bound    software-analysis (contributes)\n",
           "    bound    living-docs (contributes)"]
+      gains: [{text: "What it gives you\n", style: strong}, "Swap a capability for one in its role.\nInstall only what you need.\n", {text: "pkit validate", style: code}, " checks the wiring."]
     footer: "In project-kit: each of the 3 roles has one capability so far, so a swap is designed, not yet shown."

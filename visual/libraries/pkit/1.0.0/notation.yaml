@@ -4,10 +4,9 @@ schema_version: 1
 # What project-kit's pieces tell apart by colour, and by a sign beside it, so no concept is
 # told by its colour alone (visual-communication DEC-036 point 1). A concept that shares a
 # family with another never meets it on one page, as `rule` and `capability` do not, and
-# no two concepts share a sign. Until a place in a list can take a colour of its own
-# (project-kit#2576), the layers of how pkit fits together take theirs from what each is:
-# pkit's commands and checks are `core`, your code and documents `yours`, and the three
-# layers above them each a concept here.
+# no two concepts share a sign. The layers of how pkit fits together name no concept:
+# they are places in an order, not kinds, so they take the neutral family until a place in
+# a list can take a step of a colour of its own (visual-communication DEC-032).
 concepts:
   # Whose a thing is: pkit's own files and commands, which each upgrade replaces, a full
   # circle; what belongs to you, a ring, the circle left open; and an optional part of pkit
@@ -20,9 +19,9 @@ concepts:
       fill-rule: evenodd
       square: 24
   capability: {colour: orange, shape: hexagon}
-  # The layers above pkit's commands: the choices you accepted, the working rules, schemas
-  # and processes that say exactly what to do, and the skills, agents and permissions that
-  # say how agents act.
+  # Three of pkit's kinds of thing, for a page that tells them apart: the choices you
+  # accepted, the working rules, schemas and processes that say exactly what to do, and the
+  # skills, agents and permissions that say how agents act.
   decision: {colour: green, shape: diamond}
   rule: {colour: orange, shape: square}
   skill: {colour: red, shape: star}

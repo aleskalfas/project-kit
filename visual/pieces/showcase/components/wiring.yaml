@@ -6,17 +6,19 @@ schema_version: 1
 # the width their words need, nor stand the capability that opens them in their frame,
 # nor stand evidence under it: this piece draws its own.
 #
-# The capabilities that fill slots stand in a column on the left, each as tall as two
-# thirds of the two slots its ties reach, so its first tie runs level into the first slot
-# and the last filler's last tie level into the last slot. The two ties between run with
-# two corners each, apart from each other, and none crosses another.
+# The page's story starts with the capability that opens the slots, so its frame stands
+# on the left, where the eye enters, with that capability at its top and its slots under
+# it. The capabilities that fill slots stand on the right, each as tall as two thirds of
+# the two slots its ties reach, so its first tie runs level into the first slot and the
+# last filler's last tie level into the last slot. The two ties between run with two
+# rounded turns each, apart from each other, and none crosses another.
 status: experimental
 about: >-
-  How capabilities connect through roles: on the right, the frame of the role that opens
-  slots, its slots one under another and under them the capability that plays it, with a
-  note beside it; on the left, the two capabilities that fill slots; and each fill as a tie
+  How capabilities connect through roles: on the left, the frame of the role that opens
+  slots, the capability that plays it at its top with a note beside it, and its slots one
+  under another; on the right, the two capabilities that fill slots; and each fill as a tie
   from a capability to a slot. Under the frame stands the evidence, such as what a command
-  prints, and under the fillers what follows for a project.
+  prints, and under the fillers what follows for a project, the two ending together.
 
 fields:
   type: object
@@ -69,39 +71,33 @@ lists:
   ties: {component: tie, ends: [from, to]}
 
 values:
-  # A capability's block takes a third of the width, less a gap; the frame seven twelfths;
-  # the lane between them holds the ties' corners.
-  block-width: "=:width / 3 - @space.3"
+  # Every capability's block takes a third of the width. The frame takes seven twelfths,
+  # from the left edge; the fillers stand at the right edge, and the lane between holds the
+  # ties' turns.
+  block-width: "=:width / 3"
   frame-width: "=:width * 7 / 12"
-  frame-x: "=:width - frame-width"
+  filler-x: "=:width - block-width"
   # What the frame holds stands this far in from its edges, and its slots this far apart.
   tray: "=@space.2"
 
 parts:
   # The role's frame lies on the surface, with no edge: an edge legible on a projector
-  # would cross the arrowheads in the tray and vie with the slots' outlines, so the frame
-  # holds its parts by its ground and by its narrow tray.
+  # would vie with the slots' outlines, so the frame holds its parts by its ground and by
+  # its narrow tray.
   frame:
     box: {fill: surface, rx: "=@space.1"}
-    x: "=frame-x"
     width: "=frame-width"
-    height: "=opener.bottom + tray"
-  slots:
-    repeat: slots
-    draw: piece/slot
-    x: "=frame-x + tray"
-    y: "=tray"
-    width: "=frame-width - 2 * tray"
-    column: {gap: "=tray", align-items: stretch}
+    height: "=slots.bottom + tray"
+  # The capability that opens the slots stands first, at the frame's top left, where the
+  # page's story starts.
   opener:
     repeat: opener
     draw: piece/capability
-    x: "=frame-x + tray"
-    y: "=slots.bottom + tray"
+    x: "=tray"
+    y: "=tray"
     width: "=block-width"
     column: {align-items: stretch}
-  # The note ends on the block's last line, so each of its lines stands beside a line of
-  # the block.
+  # The note stands beside the block, a line of it beside each line of the block.
   opens:
     when: opens
     text:
@@ -110,6 +106,13 @@ parts:
       fill: text-secondary
     x: "=opener.right + @space.3"
     y: "=opener.bottom - @space.1 - opens.height"
+  slots:
+    repeat: slots
+    draw: piece/slot
+    x: "=tray"
+    y: "=opener.bottom + tray"
+    width: "=frame-width - 2 * tray"
+    column: {gap: "=tray", align-items: stretch}
   # A tie leaves a block at a third of its height and at two thirds, so the first block's
   # first third lies on the first slot's middle, and the gap brings the last block's last
   # third onto the last slot's middle. Every block holds two lines, so each is as tall as
@@ -117,26 +120,28 @@ parts:
   fillers:
     repeat: fillers
     draw: piece/capability
+    x: "=filler-x"
     y: "=slots:first.middle - opener.height / 3"
     width: "=block-width"
     column:
       gap: "=slots:last.middle - slots:first.middle - 4 * opener.height / 3"
       align-items: stretch
+  # The evidence stands the third step under the frame, or lower, so that its foot stands
+  # level with the foot of what it gives a project, and the two columns end together.
   evidence:
     slot: evidence
-    x: "=frame-x"
-    y: "=frame.bottom + @space.3"
+    y: "=max(frame.bottom + @space.3, gains.bottom - evidence.height)"
     width: "=frame-width"
-  # Its last line stands level with the evidence's last line, where the column leaves
-  # room, so the two columns end together.
+  # What it gives a project closes the right column, the third step under the fillers.
   gains:
     when: gains
     text:
       content: gains
       style: {by: gains, plain: type.body, strong: type.strong, code: type.code}
       fill: text-primary
-    y: "=max(fillers.bottom + @space.4, evidence.bottom - @starter.inset - gains.height)"
-    width: "=frame-x - @space.4"
+    x: "=filler-x"
+    y: "=fillers.bottom + @space.3"
+    width: "=block-width"
   ties:
     repeat: ties
     draw: starter/connector
