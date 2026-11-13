@@ -243,9 +243,9 @@ Each kit-label check runs only where the kit's own `<axis>:*` labels are that ax
 | Check | Label |
 |---|---|
 | `git`, `gh` on PATH | tooling |
-| `gh auth` active (ambient) | auth |
+| `gh` authenticated on the project's host: `gh.host` where set, else `gh`'s default host | auth |
 | Adopter config present + parses | config |
-| `gh:` block valid; host-pinned auth works | config / DEC-023 |
+| `gh:` block valid | config / DEC-023 |
 | Repo accessible | connectivity |
 | Projects v2 board resolves (where a board is configured) | substrate |
 | The board's Status has an option for each of the five states, where it is a projection of the state (DEC-006) | substrate (advisory: warns, never fails) |
