@@ -1033,12 +1033,13 @@ def test_the_foundations_being_built_add_the_size_axis_device_which_breaks_their
 ) -> None:
     """The version being built of the foundations, compared with their release 1.0.0, adds
     the shared size axis `device`, the top `site` and its role `size.site`, the length of a
-    line, `size.line`, the shapes a notation maps a concept to, and the lengths of a run's
-    sign and ground, and changes nothing else. A brand may now hold an axis of its own,
-    whose name a new shared axis may meet, so `device` breaks their release 1.0.0 (DEC-004
-    point 5): it landed in their release 1.1.0 before brands could hold their own axes
-    (DEC-021 point 9). The rest are additions: a new component, a new role with a default
-    (DEC-003 point 1, DEC-022 point 8, DEC-036 point 3) and a new shape (DEC-036 point 7)."""
+    line, `size.line`, the shapes a notation maps a concept to, the lengths of a run's sign
+    and ground, and an order's roles with their pairs, and changes nothing else. A brand may
+    now hold an axis of its own, whose name a new shared axis may meet, so `device` breaks
+    their release 1.0.0 (DEC-004 point 5): it landed in their release 1.1.0 before brands
+    could hold their own axes (DEC-021 point 9). The rest are additions: a new component, a
+    new role with a default (DEC-003 point 1, DEC-022 point 8, DEC-036 point 3, DEC-032 point
+    8), a new shape (DEC-036 point 7) and a new pair (DEC-008 point 7)."""
     root = project(tmp_path)
     copy_library(root, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     built = str(libraries.read_library(FOUNDATIONS).version)
@@ -1052,6 +1053,9 @@ def test_the_foundations_being_built_add_the_size_axis_device_which_breaks_their
     ]
     assert said(found.additions) == [
         "`foundations/site`: is new (DEC-003 point 1)",
+        "shared role `family.order.first`: is new, with a default (DEC-004 point 5)",
+        "shared role `family.order.last`: is new, with a default (DEC-004 point 5)",
+        "shared role `family.order.text`: is new, with a default (DEC-004 point 5)",
         "shared role `size.line`: is new, with a default (DEC-004 point 5)",
         "shared role `size.site`: is new, with a default (DEC-004 point 5)",
         "shared role `space.ground-corner`: is new, with a default (DEC-004 point 5)",
@@ -1063,6 +1067,8 @@ def test_the_foundations_being_built_add_the_size_axis_device_which_breaks_their
         "shape `square`: is new (DEC-036 point 7)",
         "shape `star`: is new (DEC-036 point 7)",
         "shape `triangle`: is new (DEC-036 point 7)",
+        "pair `family.order.text` on `family.order.first`: is new (DEC-008 point 7)",
+        "pair `family.order.text` on `family.order.last`: is new (DEC-008 point 7)",
     ]
     assert found.segment == "major"
 

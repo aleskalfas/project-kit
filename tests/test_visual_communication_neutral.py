@@ -413,11 +413,11 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
     brand's release 1.0.0 on theirs, byte for byte: each preview, but for the foundations'
     version they name, and its values, but for the role `size.site` they add, which the
     brand gives as wide as its slide on a desktop, `size.line`, which no piece that names
-    no size reads, those of a run's sign and ground, at its smallest space, and their
-    deck's title and lead, which the brand gives on a desktop in the types the deck drew
-    them in before. The starter being built reads roles the foundations' release does not
-    declare, and its web parts name the sizes, which that release does not declare
-    either."""
+    no size reads, those of a run's sign and ground, at its smallest space, an order's, at
+    its neutral family's colours, and their deck's title and lead, which the brand gives on
+    a desktop in the types the deck drew them in before. The starter being built reads roles
+    the foundations' release does not declare, and its web parts name the sizes, which that
+    release does not declare either."""
     importable(monkeypatch, starter.svg)
     assert BUILT_BRAND != RELEASED_BRAND
     drawn = compared(comparison_location(project(tmp_path)))

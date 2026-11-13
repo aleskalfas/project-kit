@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit refs validate`, and `pkit validate`'s `refs` member, report a backbone
+  manifest, `.pkit/manifest.yaml`, that does not parse as one error at its
+  path, naming the parser's cause, and go on with their other checks, rather
+  than stop with a traceback that names no file. While it does not parse, what
+  it registers is not read: each agent's tool access is read with no adapter's
+  declaration, and the citations of rules, addresses and operational rules,
+  and the overlay's categories, are not checked.
