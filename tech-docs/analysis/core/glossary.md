@@ -1340,6 +1340,19 @@ TERM-release:
           - COR-059#1
           - COR-059#7
           - PRJ-004
+TERM-release-candidate:
+  name: release candidate
+  noun-forms: [release candidates]
+  status: active
+  definition: "set of versions cut to test changes before they ship, each one it raises suffixed `rcN`, which a project moves onto only on request"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - PRJ-016#3
+          - ADR-089#1
+          - ADR-089#7
+          - ADR-092#2
 TERM-release-pull-request:
   name: release pull request
   noun-forms: [release pull requests]
@@ -3100,8 +3113,19 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 - **An externally-sourced component's version:** written in the component's own [source repository](#term-source-repository--source-repository), and reached by a [project](#term-project--project)'s transition of that component ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
 - **Release pull request:** the [pull request](#term-pull-request--pull-request) that carries one release step's writes, on a `release/` branch under a `chore(release):` title. It closes no issue, so `pkit release merge` lands it.
 - **Release tag:** the annotated tag `v<version>` on the commit that lands a release's versions. Each release gets one, and a release step that moves only components gets none (PRJ-004).
+- **Release candidate:** a set of versions cut to test changes before they ship, in which each one it raises is a pre-release. It is no release, and its final release is the release at its backbone version without the suffix.
 - **Pre-release:** a version with a suffix after its patch number, such as `1.150.0rc1`. It is no release, and `pkit pin` refuses one.
 - **GitHub release:** the page the hosting service shows for a tag. Its notes are the version's changelog section, and it carries no file (PRJ-004).
+
+## TERM-release-candidate — release candidate
+
+**Example:** a major built on its branch is cut as the release candidate `3.0.0rc1`, which holds [backbone](#term-backbone--backbone) 3.0.0rc1 and, among its [components](#term-component--component), project-management 0.55.0rc1. A tester's [project](#term-project--project) moves onto it from the final [release](#term-release--release) it stood at, and the branch merges once its testing passes.
+
+**Distinctions:**
+
+- **Release:** a set of [versions](#term-version--version) shipped together. A release candidate is none, since each version it raises is a pre-release, and its versions live only in its tag ([ADR-089 point 1](../../architecture/decisions/ADR-089-release-candidates.md#1-a-candidate-is-the-final-releases-own-plan-with-the-suffix-added-where-the-step-writes)). Its final release is the release at its backbone version without the suffix, such as 3.0.0 for `3.0.0rc1`.
+- **Pre-release:** a version with a suffix after its patch number, as PEP 440 reads it. Each version a release candidate raises carries `rcN`, and sorts below the same version without the suffix. So a [version transition](#term-version-transition--version-transition) to `0.55.0rc1` runs the [migration](#term-migration--migration) folder `0.55.0/` ([ADR-089 point 5](../../architecture/decisions/ADR-089-release-candidates.md#5-a-candidate-runs-its-final-releases-migration-folders-and-has-not-finished-them)).
+- **Release tag:** a release candidate's own tag, such as `v3.0.0rc1`, is none. It names a commit no branch holds, and the lookup of the highest release skips it ([ADR-089 point 4](../../architecture/decisions/ADR-089-release-candidates.md#4-every-range-is-read-with-its-pre-releases-admitted)).
 
 ## TERM-release-pull-request — release pull request
 

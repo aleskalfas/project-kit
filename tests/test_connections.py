@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 from click.testing import CliRunner
+from packaging.specifiers import SpecifierSet
 from ruamel.yaml import YAML
 
 from project_kit import capabilities as caps
@@ -876,6 +877,14 @@ def test_a_dependency_range_naming_an_adapter_is_not_an_installed_capability(
         (">=0.1.0", "not a version", None),
         (None, "0.5.0", None),
         (">=0.1.0", None, None),
+        # Read with pre-releases admitted (ADR-089 point 4): a candidate within the
+        # bounds is admitted, and ordering keeps its exclusions.
+        (">=0.1.0,<1.0.0", "0.5.0rc1", True),
+        (">=1.149.0,<3.0.0", "2.0.0rc1", True),
+        (">=2.0.0", "2.0.0rc1", False),  # it sorts below its final release
+        ("<2.0.0", "2.0.0rc1", False),  # `<` keeps a version's own pre-releases out
+        (">=2.0.0rc2", "2.0.0rc1", False),
+        (">=2.0.0rc2", "2.0.0rc3", True),
     ],
 )
 def test_range_admits_is_the_one_comparison_of_a_version_range(
@@ -884,14 +893,27 @@ def test_range_admits_is_the_one_comparison_of_a_version_range(
     assert cx.range_admits(version_range, version) is admits
 
 
+def test_a_range_admits_a_candidate_whatever_packagings_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The reading names its pre-releases itself, so a `packaging` whose default
+    leaves them out, as its earlier releases did, admits a candidate all the same
+    (ADR-089 point 4)."""
+    monkeypatch.setattr(cx, "_specifier", lambda value: SpecifierSet(value, prereleases=False))
+    assert cx.range_admits(">=0.1.0,<1.0.0", "0.5.0rc1") is True
+    assert cx.range_admits(">=2.0.0", "2.0.0rc1") is False
+
+
 def test_the_install_gate_and_validation_compare_a_dependency_range_alike(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
-    """Both read the range through `range_admits`, so they refuse the same versions."""
+    """Both read the range through `range_admits`, so they refuse the same versions,
+    and admit the same candidates within its bounds (ADR-089 point 4)."""
     repo = make_adopter_repo()
     dependency = {"name": "evidence", "version": ">=0.2.0,<1.0.0"}
     _stage(repo, "notes", _package("notes", requires_capabilities=[dependency]))
-    for version, refused in (("0.1.0", True), ("0.2.0", False), ("1.0.0", True)):
+    candidates = (("0.2.0rc1", True), ("0.5.0rc1", False), ("1.0.0rc1", True))
+    for version, refused in (("0.1.0", True), ("0.2.0", False), ("1.0.0", True), *candidates):
         _stage(repo, "evidence", _package("evidence", version=version))
         validated = [
             f

@@ -1,4 +1,5 @@
-"""The formula and reference grammar, with dimensions (visual-communication DEC-005 points 1, 3).
+"""The formula and reference grammar, with dimensions (visual-communication DEC-005 points 1, 3,
+DEC-038 point 2).
 
 A *formula* is a string that starts with `=` and computes one number. It holds:
 
@@ -8,8 +9,10 @@ A *formula* is a string that starts with `=` and computes one number. It holds:
 - `@<token path>`: a role, such as `@space.2`; its value is a length or a number;
 - the engine's names, each marked with `:`, a mark no name holds, so the engine can add
   names later without taking any from authors: `:width` and `:height`, the size the
-  component gets, and `:index` and `:count`, an item's place among the items its list
-  draws (from 1) and how many it draws;
+  component gets, `:index` and `:count`, an item's place among the items its list
+  draws (from 1) and how many it draws, and `:place` and `:places`, which only a row's or a
+  column's `cross-size` reads: the place of the item it sizes, from 1, and how many items
+  its list draws (`PLACE_NAMES`);
 - a value of the component, by its name alone: `gap`;
 - a *path*: a part, then each exposed part below it, one name a step, then the
   measure of the frame it reads, one of `x y width height right bottom center
@@ -40,7 +43,13 @@ from functools import lru_cache
 MEASURES = ("x", "y", "width", "height", "right", "bottom", "center", "middle")
 
 #: The engine's names, without their mark.
-ENGINE_NAMES = ("width", "height", "index", "count")
+ENGINE_NAMES = ("width", "height", "index", "count", "place", "places")
+
+#: The engine's names that only the formula by which a row or a column sizes its items
+#: across their line reads, its `cross-size`: the place of the item it sizes, from 1, and how
+#: many items its list draws (DEC-038 point 2). Whoever reads a formula refuses them in any
+#: other.
+PLACE_NAMES = ("place", "places")
 
 #: The functions a formula may call, each with the least and the most arguments it takes.
 FUNCTIONS = {"min": (2, None), "max": (2, None), "round": (1, 1)}
@@ -83,7 +92,8 @@ class DivisionByZero(FormulaError):
 
 @dataclass(frozen=True)
 class Engine:
-    """One of the engine's names: `:width`, `:height`, `:index`, `:count`."""
+    """One of the engine's names: `:width`, `:height`, `:index`, `:count`, `:place`,
+    `:places`."""
 
     name: str
 

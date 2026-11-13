@@ -9,19 +9,30 @@ slides:
     title: How pkit fits together
     lead: "In five layers, from your decisions down to your code: each carries out the decisions above it."
     visual:
-      # The lead's order runs down the pyramid: decisions at the top, each layer under it
-      # carrying out the decisions above it, down to your code. The talk adds where the
-      # decisions come from, which opens the page at its top left, and what runs back up.
-      use: piece/pyramid
-      start: [{text: "Where ideas start. ", style: strong}, "In conversation, and in a scratchpad note when one needs longer."]
+      # The lead's order runs down the steps: decisions at the top, each layer under it
+      # carrying out the decisions above it, down to your code. Beside the steps, the
+      # talk's notes stand in the order it tells them: where decisions come from, tied into
+      # the top level, then what runs down and what runs back up.
+      use: starter/layers
+      shape: steps
+      level: {use: starter/card, fill: tint}
       levels:
-        - {id: decisions, label: Decisions}
-        - {id: rules, label: "Working rules · schemas · processes"}
-        - {id: skills, label: "Skills · agents · permissions"}
-        - {id: commands, label: "pkit's commands and checks"}
-        - {id: work, label: Your code and documents}
-      down: [{text: "↓ Carried out. ", style: strong}, "Each layer carries out the decisions above it. The reasons stay in one place, where an agent reads them before it changes anything."]
-      up: [{text: "↑ Checked. ", style: strong}, "If a layer and a decision disagree, the layer is checked first, so decisions never drift to match the code. Only a person, never your AI tool, changes a decision."]
+        - {id: decisions, head: Decisions}
+        - {id: rules, head: "Working rules · schemas · processes"}
+        - {id: skills, head: "Skills · agents · permissions"}
+        - {id: commands, head: "pkit's commands and checks"}
+        - {id: work, head: Your code and documents}
+      notes:
+        - id: start
+          text: [{text: "Where ideas start. ", style: strong}, "Talk, or a scratchpad note."]
+        - id: down
+          text: [{text: "↓ Carried out. ", style: strong}, "An agent reads the reasons before it acts."]
+        - id: up
+          text: [{text: "↑ Checked. ", style: strong}, "Only a person, never your AI tool, changes a decision."]
+      ties:
+        - id: start-decisions
+          from: {item: "notes[start]"}
+          to: {item: "levels[decisions]"}
     footer: pkit wrote down as a decision of its own, COR-065, that an accepted decision governs and the rest carries it out.
 
   - id: install

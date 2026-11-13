@@ -43,7 +43,6 @@ from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, Any, cast
 
 import click
-from packaging.version import InvalidVersion, Version
 from ruamel.yaml import YAML
 
 from project_kit import agent_definitions, treecopy
@@ -71,6 +70,7 @@ from project_kit.manifest import set_capability_origin as _manifest_set_capabili
 from project_kit.migrations import (
     execute_migration_scripts,
     pending_migration_scripts,
+    public_version,
     report_pending_migrations,
 )
 from project_kit.schemas_validate import CORE_SCHEMAS_OWNER
@@ -1923,7 +1923,7 @@ def migrate_copied_capability(
     """
     name = capability_source.name
     bundled = capability_source.package.version
-    recorded = _release_version(record.version)
+    recorded = _recorded_version(record.version)
     if recorded is not None:
         if dry_run:
             _report_pending_migrations(capability_source, recorded, dry_run=True)
@@ -1940,15 +1940,12 @@ def migrate_copied_capability(
     click.echo(f"    {verb:<12} capability {name!r} at {bundled} ({origin})")
 
 
-def _release_version(text: str | None) -> str | None:
-    """*text* as the `X.Y.Z` a migration window reads, or None when it is no version."""
-    if not text:
-        return None
-    try:
-        parsed = Version(text)
-    except InvalidVersion:
-        return None
-    return f"{parsed.major}.{parsed.minor}.{parsed.micro}"
+def _recorded_version(text: str | None) -> str | None:
+    """*text* as the public version a migration window reads, the pre-release kept
+    and a local segment dropped (`migrations.public_version`), or None when it is
+    no version."""
+    parsed = public_version(text)
+    return None if parsed is None else str(parsed)
 
 
 def _read_installed_capability_version(target_root: Path, name: str) -> str | None:
