@@ -97,6 +97,11 @@ board, an issue's add among them, which no other record decides.
   A command that composes the one that merges, and asks for a run again to
   write the Done, keeps that code, since a run again finds the merge made and
   merges nothing, and its message says the merge was made.
+- **Setting a field takes the broken tool's code where the board did not
+  answer for an axis,** where today it takes its refusal's code, even where it
+  wrote the other axes. Once it wrote an axis, it takes no code that reads as
+  the act not made, a refusal's among them. A caller that tells its codes
+  apart sees the change.
 - **The health check reads the board on each run, and never passes on a stored
   id.** Its failure stops what DEC-017 has it stop: every operation the
   capability's skill runs, those that touch no board among them, migrate, and a
@@ -522,8 +527,9 @@ a command that makes several takes each:
   option into another, which rewrites each card holding the one before it
   removes it. Each write made stands. A write that rests on one not made is not
   tried, such as removing an option while a card holds it. The command names
-  each write not made, and where some were made, takes no clean code, nor one
-  that reads as the act not made ("After it").
+  each write not made, and where some were made and a read or write of the
+  board failed, takes no clean code, nor one that reads as the act not made
+  ("After it").
 - **What the act sets off on another issue,** such as the forward cascade's
   reads and moves of the issue's ancestors (DEC-006), is none of these.
   "Before it" below asks no read of such an issue before the act, and whether
@@ -552,11 +558,13 @@ Two rules order these around the act:
   - **Never as not made.** No read or write of the board takes a code that
     reads as the act not made: a write the act requires, a mirror, a note on
     the act, read before the act or after it, or a read or write of another
-    issue the act set off. A refusal's code reads so. A code that asks for a
-    run again does not read so where a run again finds what the act made,
-    whole or in part, and makes none of it a second time.
-  - **Made in part.** An act of many writes made in part takes no clean code,
-    nor one that reads as the act not made (the first of these limits).
+    issue the act set off. A refusal's code reads so, whatever it asks. Any
+    other code that asks for a run again does not read so where a run again
+    finds what the act made, whole or in part, and makes none of it a second
+    time. A write that sets a value already held makes nothing a second time.
+  - **Made in part.** An act of many writes made in part, where a read or
+    write of the board failed, takes no clean code, nor one that reads as the
+    act not made (the first of these limits).
   - **A write the act requires, not made,** takes a code of the command's own
     saying the act was made and a later step failed, never a clean one, and
     the message leads with what stands, such as the filed issue. Where it
@@ -829,15 +837,15 @@ it takes the broken tool's code: a finding's would send the person to repair
 an issue. Any other read only reported, such as a value a command shows, lets
 nothing through at a severity, so it keeps the broken tool's code, where a
 clean one would read as the value seen, until the act is made. After it, that
-code would read as the act not made, so such a read, a note on the act among
+code may read as the act not made, so such a read, a note on the act among
 them, read before the act or after it, takes its code as a mirror does. A
 read that decides only how a mirror is written stops only that mirror, so it
 goes with the mirror. A write after the act cannot be the act not made. An
 act of many writes, failing part way, is an act made in part, so neither the
 code of an act not made nor a clean one fits it, and a write that rests on one
 not made would act on what never happened. A code asking for a run again fits
-it where a run again remakes none of the writes made, as it fits a merge whose
-Done is owed.
+it where a run again finds what the act made, whole or in part, and makes none
+of it a second time, as it fits a merge whose Done is owed.
 
 **Why a command whose act needs a later write to the board reads first.**
 Once the act is made, a write it requires that fails leaves the act standing
@@ -1230,12 +1238,12 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   and each command's codes are its contract (DEC-020). So an act made in part,
   whose repair is the rest of it, is held only from a clean code and one that
   reads as the act not made, and a code asking for a run again serves it
-  where a run again remakes none of the writes made. A write the act
-  requires, not made, keeps a code saying the act was made and a later step
-  failed: its repair is that write, not the act again, and a code of its own
-  tells the caller what it owes ("Why an act made keeps a code apart"), where
-  at filing, today the one command with such a write, a run again would file
-  the issue twice.
+  where a run again finds what the act made, whole or in part, and makes none
+  of it a second time. A write the act requires, not made, keeps a code
+  saying the act was made and a later step failed: its repair is that write,
+  not the act again, and a code of its own tells the caller what it owes ("Why
+  an act made keeps a code apart"), where at filing, today the one command
+  with such a write, a run again would file the issue twice.
 - **Give the code for a later step failed wherever two later steps failed,**
   the link among them. The case: one rule, whatever failed. Rejected: it would
   take DEC-048's code from a link that fails beside a hook or a mirrored
@@ -1314,11 +1322,11 @@ holds it, the lesson ADR-031 point 4 draws for writes.
       issue, nor a finding as a broken board. Where its exit codes tell a
       broken tool from a refusal, a board that will not answer takes the broken
       tool's code, but in two cases. Once the command's act (ADR-096's terms)
-      is made, whole or in part, it takes no code that, as ADR-096 point 4
-      has it, reads as the act not made, and keeps the other limits that point
-      sets after the act. A check that reports it at a severity that lets
-      through what the check gates, an issue or an operation, exits as that
-      severity does.";
+      is made, whole or in part, the command takes no code that, as ADR-096
+      point 4 has it, reads as the act not made, and keeps the other limits
+      that point sets after the act. A check that reports it at a severity
+      that lets through what the check gates, an issue or an operation, exits
+      as that severity does.";
     - **point 5, the seam's shape:** "whether the board answered, what it said
       or why it did not, and `gh`'s stderr verbatim when `gh` failed", in place
       of "whether the board answered, what it said, and `gh`'s stderr verbatim
@@ -1374,12 +1382,12 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   - **point 5, its second limit, from its sentence on the broken tool's code:**
     "Where a command's exit codes tell a broken tool from a refusal, a board
     that will not answer takes the broken tool's code, but in two cases. Once
-    the command's act (ADR-096's terms) is made, whole or in part, it takes no
-    code that, as ADR-096 point 4 has it, reads as the act not made, and keeps
-    the other limits that point sets after the act. A check that reports it at
-    a severity that lets through what the check gates, an issue or an
-    operation, exits as that severity does. ADR-053 point 2 rules this for
-    every command that reads the board, gate or not, a reach this record
+    the command's act (ADR-096's terms) is made, whole or in part, the command
+    takes no code that, as ADR-096 point 4 has it, reads as the act not made,
+    and keeps the other limits that point sets after the act. A check that
+    reports it at a severity that lets through what the check gates, an issue
+    or an operation, exits as that severity does. ADR-053 point 2 rules this
+    for every command that reads the board, gate or not, a reach this record
     gives it for the state's readers, on the same ground, and ADR-096 for the
     rest.", in place of "Where a command's exit
     codes tell a broken tool from a refusal, an unreadable board takes the
@@ -1500,8 +1508,9 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     reading as the act not made. The second is the code the check's own
     findings at that severity take, which may be the code a clean run takes,
     while its report never says the check passed. Elsewhere the broken tool's
-    code stands, for a value a command shows before its act among the rest.
-    So those sentences are refined, and ADR-074 takes no superseded line.
+    code stands: for a value a command shows, among the rest, it stands until
+    the command's act is made. So those sentences are refined, and ADR-074
+    takes no superseded line.
   - **Narrowed:** ADR-053 and ADR-074 leave to each command what an outcome
     means to it. This record keeps that choice, and holds each command's
     within point 4's limits: ADR-053's Summary on what a failure means and its
@@ -1639,11 +1648,16 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     failed beside it or not, in a project with no board too. Where the Status
     only mirrors, or a closed issue's Done is not written, the command gives
     one line, and takes no code that reads as the act not made;
-  - **an act of many writes** failing part way: the writes made stand, a write
-    resting on one not made is not tried, and the command names each write
-    not made and takes neither a clean code nor one that reads as the act not
-    made. A code asking for a run again meets this where a run again remakes
-    none of the writes made;
+  - **an act of many writes** failing part way where a read or write of the
+    board failed, among them setting several fields where the board did not
+    answer for one: the writes made stand, a write resting on one not made is
+    not tried, and the command names each write not made and takes neither a
+    clean code nor one that reads as the act not made. A code asking for a run
+    again meets this where a run again finds what the act made, whole or in
+    part, and makes none of it a second time: setting a field again to the
+    value it holds makes nothing a second time. Where no read or write of the
+    board failed, and an axis is refused for what the board answered, such as
+    no card, field or option, the command keeps its refusal's code;
   - **a card not counted:** removing or merging an option refuses while a
     withheld card, or one the walk set aside, may hold it, and counts an
     archived card that holds it. Adding or renaming one goes on, and a command
@@ -1673,9 +1687,11 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   code today where the board did not answer for an axis on it, even where it
   wrote the other axes. It takes the broken tool's code there, where its codes
   tell one, and once it wrote an axis, no code that reads as the act not
-  made, a refusal's among them (point 4). The health check's advice for a
-  board under another owner than the repository's names the owner in the
-  configuration (DEC-023), rather than a stored node alone.
+  made, a refusal's among them (point 4). Where no read or write of the board
+  failed, and an axis is refused for what the board answered, its refusal's
+  code stays. The health check's advice for a board under another owner than
+  the repository's names the owner in the configuration (DEC-023), rather
+  than a stored node alone.
 - **The post-check workflow's template gains a setting for a credential the
   board answers,** in the work, unset as it ships. Without it, the template
   runs under the workflow's own token, which by the service's documentation
