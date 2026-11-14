@@ -9,7 +9,7 @@ well-formed XML, so `ElementTree` reads it; an HTML parser reads the same elemen
 reader's signals meet is read from the file's rules (`met`), as CSS's cascade orders them, and
 so is what a reader gets around a fixed page (`around`), on screen and in print.
 
-The reference output below is pinned to the renderer's version, 1.9.0. A change that gives
+The reference output below is pinned to the renderer's version, 1.10.0. A change that gives
 another output for the same scene and values raises the version, and changes it with it
 (DEC-005 point 9). A font and a picture are pinned by what they hold, not by their bytes.
 Version 1.2.0 came with seam 5, which hands the renderer the picture each image shows, a PNG
@@ -26,7 +26,9 @@ seam 9, with a custom property of its own (DEC-032 point 5): a scene of no step 
 drew it, but for the renderer's version it names. Version 1.9.0 came to draw, under forced
 colours alone, a ground for each line of a text, beneath the lines of its run of texts, and a
 fill's edge inside the fill (DEC-039 points 1 to 4): each file holds the rules for them, and
-each text its lines' grounds.
+each text its lines' grounds. Version 1.10.0 came to draw, outside forced
+colours, each run's ground by its span's `::before`, in a stacking context of each text's own (DEC-039
+point 3): the same scene draws another file.
 """
 
 from __future__ import annotations
@@ -275,7 +277,7 @@ def said(
 def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
     assert seam.declaration("html", seam.RENDERER) == html_declaration.DECLARATION
     assert html.NAME == "html"
-    assert html.VERSION == "1.9.0"
+    assert html.VERSION == "1.10.0"
 
 
 def test_it_declares_what_it_draws_and_needs() -> None:
@@ -722,7 +724,7 @@ def test_the_file_names_its_piece_key_and_renderer() -> None:
     root = read(scene(TITLE))
     assert root.get("data-piece") == "flow"
     assert root.get("data-key") == "default"
-    assert root.get("data-renderer") == "html 1.9.0"
+    assert root.get("data-renderer") == "html 1.10.0"
 
 
 def test_pages_follow_each_other_in_the_middle_of_the_window_with_the_declared_gap() -> None:
@@ -1202,7 +1204,7 @@ REFERENCE_KEYS = {"default": LIGHT, "colour-scheme.dark": DARK}
 PINNED = (
     "<!DOCTYPE html>\n"
     '<html lang="en" data-piece="flow" data-key="default" data-renderer="html '
-    '1.9.0">\n'
+    '1.10.0">\n'
     "<head>\n"
     '<meta charset="utf-8"/>\n'
     '<meta name="viewport" content="width=device-width,initial-scale=1"/>\n'

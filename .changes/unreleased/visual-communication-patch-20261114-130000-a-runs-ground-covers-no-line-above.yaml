@@ -8,4 +8,5 @@ body: >
   the line above where the text's line step is below the run's height
   (DEC-039 point 3, #3114). Each text is a stacking context of its own, and a
   span's `::before` draws its run's ground, held in the span's `--_ground`
-  property. Under forced colours the file draws as before.
+  property. The HTML renderer rises to 1.10.0, since the file differs for the
+  same scene. Under forced colours the file draws as before.
