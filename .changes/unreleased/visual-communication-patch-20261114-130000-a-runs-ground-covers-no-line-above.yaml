@@ -1,0 +1,11 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Outside forced colours, a run's ground in the HTML renderer's file lies
+  beneath all the lines of its text, so it no longer covers the descenders of
+  the line above where the text's line step is below the run's height
+  (DEC-039 point 3, #3114). Each text is a stacking context of its own, and a
+  span's `::before` draws its run's ground, held in the span's `--_ground`
+  property. Under forced colours the file draws as before.

@@ -67,10 +67,12 @@ points 1 to 6, DEC-039 points 1 to 4, DEC-005 points 4, 5, 9 and 10).
   widths. A line's own font size and every line height are 0, so only the strut holds the
   line up.
 - **A run's sign and ground** (DEC-036 points 3 and 4) lie in the run's span, so they keep
-  to it at the browser's widths (DEC-020 point 2). The ground is the span's background in
-  its role, with the room the engine gave it as padding where the ground starts and ends,
-  and its corners rounded there. Its height is the browser's, the span's font's ascent and
-  descent. The sign is an inline `svg` before the span's text, as wide as the run's font
+  to it at the browser's widths (DEC-020 point 2). The ground is drawn by the span's
+  `::before`, over the span's box in its role, with the room the engine gave it as padding
+  where the ground starts and ends, and its corners rounded there. Each text is a stacking
+  context of its own and the ground lies beneath its lines, so no run's ground covers a line
+  of its own text above it (DEC-039 point 3). Its height is the browser's, the span's font's
+  ascent and descent. The sign is an inline `svg` before the span's text, as wide as the run's font
   size, raised as the engine placed it, with the gap as its margin, its outline in the
   run's paint. A reader's tools pass over it. The strut rises as high as a sign does.
   Under forced colours a sign takes the rules a shape's fill takes, and the run's ground
@@ -179,6 +181,10 @@ GROUND_COLOUR = "Canvas"
 INSET = "data-inset"
 CLIP = "data-clip"
 
+#: The custom property that holds a run's ground on its span. The span's own `::before` draws
+#: it, beneath all the lines of its text (DEC-039 point 3).
+RUN_GROUND = "--_ground"
+
 #: The ids of a clipped shape's geometry and of its clip, each ended by the clip's number.
 SHAPE_ID = "pkit-shape-"
 CLIP_ID = "pkit-clip-"
@@ -192,10 +198,13 @@ SHEET = "".join(
         f"[{MARKS['page']}]+[{MARKS['page']}]{{margin-top:{DECLARATION['pages']['gap']}px}}",
         f"[{MARKS['layer']}]{{position:absolute;left:0;top:0;width:100%;height:100%;"
         "pointer-events:none}",
-        f"[{MARKS['text']}]{{position:absolute}}",
+        f"[{MARKS['text']}]{{position:absolute;isolation:isolate}}",
         f"[{MARKS['line']}]{{position:absolute;left:0;width:100%;font-size:0;line-height:0;"
         "white-space:pre}",
         f"[{MARKS['strut']}]{{display:inline-block;width:0}}",
+        f"[{MARKS['span']}]{{position:relative}}",
+        f"[{MARKS['span']}]::before{{content:'';position:absolute;inset:0;z-index:-1;"
+        f"border-radius:inherit;background:var({RUN_GROUND})}}",
         f"[{MARKS['ground']}]{{position:absolute;display:none;pointer-events:none}}",
         f"[{INSET}]{{display:none}}",
     )
@@ -212,6 +221,7 @@ FORCED_SHEET = "".join(
         f"background:{DECLARATION['forced-colours']['grounds']['colour']}}}",
         f"[{MARKS['line']}]{{forced-color-adjust:none}}",
         f"[{MARKS['span']}]{{forced-color-adjust:auto;background:none!important}}",
+        f"[{MARKS['span']}]::before{{display:none}}",
         f"[{INSET}]{{display:inline;fill:{DECLARATION['forced-colours']['opaque-fills']}}}",
     )
 )
@@ -801,10 +811,11 @@ class PageFile(Canvas):
     def _ground(
         self, element: Mapping[str, Any], span: Mapping[str, Any], run: Mapping[str, Any]
     ) -> list[tuple[str, Any]]:
-        """The ground behind a span, as its background in the run's ground's role, with the
-        room the engine gave the ground before the span where it starts there, and after it
-        where it ends there, and its corners rounded at those ends alone. Nothing where the
-        span has no ground. Its height is the browser's, its font's ascent and descent."""
+        """The ground behind a span, held in the property its `::before` draws it from, in the
+        run's ground's role, with the room the engine gave the ground before the span where it
+        starts there, and after it where it ends there, and its corners rounded at those ends
+        alone. Nothing where the span has no ground. Its height is the browser's, its font's
+        ascent and descent."""
         ground = span.get("ground")
         if ground is None:
             return []
@@ -814,7 +825,7 @@ class PageFile(Canvas):
         after = rounded if "end" in ground else None
         corners = [before or "0", after or "0", after or "0", before or "0"]
         return [
-            ("background", f"var({self._property(role)})" if role is not None else None),
+            (RUN_GROUND, f"var({self._property(role)})" if role is not None else None),
             ("padding-left", self._share(ground["start"]) if "start" in ground else None),
             ("padding-right", self._share(ground["end"]) if "end" in ground else None),
             ("border-radius", " ".join(corners) if before or after else None),

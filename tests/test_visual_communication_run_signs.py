@@ -49,6 +49,7 @@ from tests.visual_engine import (
 checks, files, seam, tokens = load(
     "visual-communication", "checks", "files", "plugins.seam", "tokens"
 )
+(html_renderer,) = load("visual-communication", "plugins.html")
 svg_declaration, html_declaration, pdf_declaration = load(
     "visual-communication",
     "plugins.svg_declaration",
@@ -446,13 +447,14 @@ def test_the_svg_renderer_draws_ground_and_sign_behind_the_text_and_places_its_s
     assert outline.startswith("M ") and " C " in outline
 
 
-def test_the_html_page_draws_the_ground_as_the_spans_background_and_the_sign_within_it() -> None:
+def test_the_html_page_draws_the_ground_beneath_the_text_and_the_sign_within_the_span() -> None:
     root = ElementTree.fromstring(draw_html(drawn_scene()).document)
 
     spans = marked(root, "span")
     marked_span = next(span for span in spans if marked(span, "sign"))
     style = styled(marked_span)
-    assert style["background"] == "var(--surface)"
+    assert style[html_renderer.RUN_GROUND] == "var(--surface)"
+    assert "background" not in style
     assert style["padding-left"] == style["padding-right"] == "0.3125cqw"
     assert style["border-radius"] == "0.78125cqw 0.78125cqw 0.78125cqw 0.78125cqw"
     [sign] = marked(marked_span, "sign")
@@ -469,7 +471,9 @@ def test_the_html_page_draws_the_ground_as_the_spans_background_and_the_sign_wit
     )
     assert "".join(marked_span.itertext()) == "the store"
     others = [span for span in spans if span is not marked_span]
-    assert [("".join(span.itertext()), "background" in styled(span)) for span in others] == [
+    assert [
+        ("".join(span.itertext()), html_renderer.RUN_GROUND in styled(span)) for span in others
+    ] == [
         ("Plan", False),
         (" now", False),
     ]
