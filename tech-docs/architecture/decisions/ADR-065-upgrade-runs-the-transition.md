@@ -149,13 +149,14 @@ A transition of the backbone runs after upgrade's own checks, which depend on th
 
 A project already current returns after these checks, before step 1, and only writes or raises its pin (ADR-064 point 1). Otherwise these steps run in this order:
 
-1. **Compatibility and collisions.** Each may refuse, and none writes:
+1. **Compatibility and collisions.** Each may refuse, and none writes the project:
+   - the fetch of the content at each externally-sourced pin the transition moves, to a place outside the project, which every check below reads, and which refuses the transition where it fails ([ADR-040](ADR-040-external-source-write-path.md) points 4 and 7)
    - the refusal of a component its bundle ships older (point 7)
    - the refusal of a clash of area names (point 13), and beside it the refusal of a file at the capabilities' rules index's path that lacks its marker (refinement per [ADR-076](ADR-076-capability-rules-index.md) point 2)
    - compatibility resolution (COR-010)
    - the dependency gates and the collision flow (point 6)
 2. **The target is recorded:** `backbone_version` becomes the target. `completed_version` keeps its value, or stays missing. Then each capability manifest still at its root moves under `project/` (point 2). Each skip chosen in step 1 is recorded in its capability's manifest, and each override of another capability's agent as the project's choice for that agent's name, in the backbone manifest beside the registry (point 6).
-3. **Propagation at the target,** through the propagation step: the backbone's trees, every adapter, and every shipped capability with its skips. An adapter the target adds is registered here. Then `.pkit/.gitignore` is rendered, so a migration reads the target's render.
+3. **Propagation at the target,** through the propagation step: the backbone's trees, every adapter, and every shipped capability with its skips. An adapter the target adds is registered here. Beside the step, the content step 1 fetched for each pin the transition moves lands, with that capability's skips, and the capability's manifest records the new pin, and the version that content declares, once the content has landed (ADR-040 points 3 and 4). Then `.pkit/.gitignore` is rendered, so a migration reads the target's render.
 4. **Backbone migrations,** from `completed_version`, or every one when it is missing (point 5). The lower bound is read in PEP 440 order. Steps 5 and 6 read each component's lower bound the same way (refinement per ADR-089 point 5 and ADR-092).
 5. **Adapter migrations,** each from the version its manifest records. Their scripts are read from the bundle, as a capability's are, so the adapter copy carries no `migrations/`. Each adapter is recorded at its bundled version when its migrations finish.
 6. **Capability migrations,** dependencies first by their `requires_capabilities` (COR-030). Each capability is restamped when its migrations finish.
@@ -175,7 +176,7 @@ A project already current returns after these checks, before step 1, and only wr
 - **Where a person can answer:** standard input and standard output are both terminals, as ADR-063 point 3 tests. The collision flow and the questions use the same test.
 - **A migration that exits non-zero stops the transition.** The completion is not recorded, and the next upgrade runs the migration again.
 - **First install records the same two states.** It writes the target before it copies anything, registers the adapters after the copy, and writes `completed_version` last. The next `pkit upgrade` finishes an interrupted install, or, after an `init` run by a release candidate, the candidate's upgrade through the bypass does (refinement per ADR-089 point 7). That upgrade also pins the project by ADR-064's default, while a finished init writes no pin unless a release candidate ran it (ADR-064 point 3).
-- **A transition of one capability** (`pkit capabilities upgrade <name>`) runs in the same order for that capability alone (COR-010). It writes neither of the backbone's two keys. Its steps:
+- **A transition of one capability** (`pkit capabilities upgrade <name>`, or, for an externally-sourced capability, the transition that moves its pin) runs in the same order for that capability alone (COR-010). It writes neither of the backbone's two keys. Its steps:
   1. the guard (point 7), then step 1 for that capability. Each may refuse, and none writes.
   2. its manifest moves under `project/` where it is still at the root, each skip chosen in step 1 is recorded, and each override of another capability's agent is recorded as the project's choice for that agent's name (point 6)
   3. steps 3, 6 and 8, for that capability
@@ -228,7 +229,7 @@ The running pkit is the one that runs the transition. While the migrations run, 
 
 ### 6. A transition settles its collisions and its dependency gates before it writes
 
-- **A new collision** is a skill or agent name that a shipped capability's target version ships and another installed artefact already uses. A name the capability's installed copy holds, or its manifest records as skipped, is not new.
+- **A new collision** is a skill or agent name that a shipped capability's target version ships, or the content at an externally-sourced capability's new pin, and another installed artefact already uses. A name the capability's installed copy holds, or its manifest records as skipped, is not new.
 - **The flow is COR-017's install-time flow.** In step 1 a person chooses, for each new collision, override, skip or inspect:
   - **skip:** the copy leaves the capability's artefact out. The capability's manifest records it in `backend_state.skipped` in step 2, before the copy, so an interrupted transition does not ask again.
   - **override:** the capability's artefact replaces the project's colliding one, which git can recover (COR-017). Nothing is recorded, except for an override of another capability's agent: that removes nothing, and step 2 records the capability being moved as the project's choice for that agent's name, in the backbone manifest beside the registry, in place of any earlier choice (COR-017, "Collision prevention").
@@ -239,12 +240,12 @@ The running pkit is the one that runs the transition. While the migrations run, 
 - **What the flow covers:** COR-059 point 7's "shipped artefact" is read as a component's artefact, whose skips the component's manifest records. So the flow leaves out:
   - **a core skill or agent a release adds.** A project artefact of the same name suspends it, by deploy's name precedence (COR-001 and the agents README).
   - **a clash between two artefacts one release ships,** which is the release's to prevent
-  - **a collision with externally-sourced content,** which surfaces, as COR-041 sets
+  - **a collision with the content of an externally-sourced capability whose pin the transition does not move,** which surfaces, as COR-041 sets
   - **a core area whose name a project's own area takes.** Every project has every area, so none can be skipped (COR-011). Point 13 says how the transition meets it.
   - **a core adapter whose name an adapter of the project's own takes,** which point 13's hold keeps a release from adding until #1600
 - **A capability the target no longer ships** stays installed, with COR-017's no-longer-shipped warning.
-- **The gates run as `pkit capabilities upgrade` runs them,** over the set the transition would leave. That set holds every shipped capability at its bundled version, and every other at its installed version. A conflict therefore involves a capability that does not move: an incubated, externally-sourced or no-longer-shipped one.
-  - **A moving capability whose dependency does not move and is out of range** refuses, with a hint (COR-030). The project controls that dependency.
+- **The gates run as `pkit capabilities upgrade` runs them,** over the set the transition would leave. That set holds every shipped capability at its bundled version, each externally-sourced capability whose pin the transition moves at the content fetched at its new pin (ADR-040 point 4), and every other at its installed version. The shipped capabilities of one release agree, so a conflict involves a capability outside the release: an incubated, externally-sourced or no-longer-shipped one.
+  - **A moving capability whose dependency is out of the range it declares** refuses, with a hint (COR-030). The project controls the dependency where it does not move, or chose the pin that moves.
   - **A moving dependency whose new version falls outside the range of a dependent that does not move** warns, naming each such dependent. So does one that leaves a dependent's mandatory connection unmet (COR-053 point 6). The transition proceeds only under `pkit upgrade --force`, so neither is a hard block.
 - **`--force` on `pkit upgrade` overrides those two warnings and nothing else.** It overrides no guard, no compatibility refusal, no collision, no clash of area names and no refusal under the router's fallback. Point 9 says how it reaches a pinned project's transition.
 - **`pkit capabilities upgrade <name>`** keeps its `--interactive` and `--force` flags, and its gates.
@@ -514,4 +515,4 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
   - The install code's override copies the capability's artefact and leaves the project's in place, unlike point 6's. How the install code comes into line is an open question for a follow-up.
 - **Stands on these records, all accepted:**
   - COR-001, COR-002, COR-004, COR-010, COR-011, COR-013, COR-017, COR-030, COR-031, COR-041, COR-048, COR-053, COR-059 and COR-061
-  - ADR-009, ADR-033, ADR-039, ADR-049, ADR-057, ADR-059, ADR-063, ADR-064, PRJ-004 and PRJ-007
+  - ADR-009, ADR-033, ADR-039, ADR-040, ADR-049, ADR-057, ADR-059, ADR-063, ADR-064, PRJ-004 and PRJ-007
