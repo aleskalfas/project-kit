@@ -31,10 +31,10 @@ This record says what counts as the board's answer, under every credential:
 
 What a command does then follows what each read and write is to it. A read it
 acts on stops what rests on it. A read it only reports says the board did not
-answer, never that an issue is off the board, and never that a check passed.
-Once the act is made it stands, and a step it requires that failed gets an exit
-code saying so. Filing reads the board first where the board holds the issue's
-state. A project with no board makes no call to one.
+answer, and never reports an issue off the board or a check passed. Once the
+act is made it stands, and a step it requires that failed gets an exit code
+saying so. Filing reads the board first wherever it will add the issue's card.
+A project with no board makes no call to one.
 
 This refines the board read-path contract
 ([ADR-053](ADR-053-board-read-path-contract.md)) and the record on a
@@ -48,10 +48,12 @@ other record decides.
 
 - **ADR-053 is partly overturned.** The membership check makes one request of
   its own, in a project with a board, where it judged from the issue's own read.
-- **A command reads one page beside the issues it acts on,** where ADR-074 has
-  it read their cards and no others. A request that could find an issue with
-  no card carries a page of the repository's open issues, read only for a sign
-  that the board answered, at no extra call.
+- **A command reads a fixed page of issues beside those it acts on,** where
+  ADR-074 has it read their cards and no others, which this record widens. A
+  request that could find an issue with no card carries, for each repository
+  whose issues it reads, a hundred of that repository's issues, the most
+  recently created and the open ones most recently updated, read only for a
+  sign that the board answered, at no extra call.
 - **The health check reads the board, and its failure stops every operation the
   capability's skill runs** (DEC-017), in every project with a board, whatever
   its map binds there. It never passes on a stored id. So each run of it makes
@@ -60,13 +62,17 @@ other record decides.
   board among them. An App installation's token that gets an error or no board
   from a read of one board runs no operation through the skill, and the person
   files under their own meanwhile. One that gets the board passes the check,
-  and each later read that finds no witness reports the board unanswered. Which
-  the measured token gets is unmeasured. Narrowing the stop to the operations
-  that read or write the board is DEC-017's to decide.
-- **Filing refuses before it creates an issue** where the map binds the state to
-  the board and the board did not answer. It reads the board's Status field
-  before it creates the issue, a read filing makes for the first Status anyway,
-  so it adds no call. Elsewhere filing reads nothing first.
+  with a warning where the page shows no witness, and each later read that
+  finds none reports the board unanswered. Which the measured token gets is
+  unmeasured. With filing reading first, what the stop prevents beyond the
+  commands' own reads is at most a Status that only mirrors left behind, so
+  whether the check fails or only warns is DEC-017's to decide.
+- **Filing refuses before it creates an issue** wherever a board is configured
+  and the board did not answer, through the skill or not. Where filing writes a
+  first Status, as it does unless the map leaves the state out, it reads the
+  board's Status field first, a read it makes for that write anyway, so it adds
+  no call. Where the map leaves the state out, the read is one call more on
+  each filing.
 - **A failed add at filing exits with a code of its own,** saying the issue was
   filed and a later step failed, in every project with a board, rather than
   clean. A caller that does not know the code reads it as a failure, so the
@@ -76,7 +82,16 @@ other record decides.
   empty board and a repository's first issues on a shared board among them,
   since nothing then shows the board answered. The membership check reports the
   board unanswered there, at the drift severity, and removing a field's option
-  refuses while a card may hold it whose value the command did not count.
+  refuses while a card may hold it whose value the command did not count. A
+  stored node naming a board under another owner than the one the capability
+  resolves reads as a board that did not answer, until the configuration names
+  that owner.
+- **The post-check workflow, as its template ships, runs under a token that
+  reaches no board** by the service's documentation. It then reports the board
+  unanswered on each issue it checks, and, where the map binds an axis to the
+  board, the presence gate's raise (ADR-053 point 2), once that gate reads the
+  board, fails each issue it checks. The work gives the template a setting for
+  a credential the board answers.
 - **Four premises about the service, none measured.** Where one of the first
   three fails, its case is as it is without this record. Where a host refuses
   an argument a request carries, each read through such a request reports the
@@ -103,11 +118,16 @@ other record decides.
   an issue from the same repository as the issue whose card is absent, the
   repository told by its node id, in the same request as a read of the board
   itself (point 1).
+- **The page** a witness is sought in is a fixed page of one repository's
+  issues that the seam adds to a request: the fifty most recently created, of
+  every state, and the fifty open ones most recently updated, with up to ten of
+  each one's own cards. It is read only for a witness (point 1).
 - **A whole read** covers all that its question asks of the board, reads every
   page of it, and carries no error on the board or its cards. A walk of the
   board's cards covers every card on the board, and an issue's own cards every
   card of the issue, archived ones included in both. A read that asks for less
-  is not whole, however many pages it reads.
+  is not whole, however many pages it reads. The page is no read that must be
+  whole: what it leaves unread takes away a witness, and nothing else.
 - **A withheld card** is a card on a board the credential reads, whose issue
   lies in a repository the credential may not read. The board returns it marked
   as withheld, with nothing of its issue.
@@ -165,7 +185,7 @@ says what its failure costs:
   Point 2 lets such a change go on because of it. Were it wrong, the change
   would clear values.
 - **The host takes every argument a request carries,** such as those that ask
-  for archived cards and set the order of the page a witness is sought in.
+  for archived cards and set the orders of the page a witness is sought in.
   Every read here rests on it. Were it wrong on some host, the service there
   would refuse each request that carries the argument, whole, and each read
   through such a request would report the board unanswered, naming the
@@ -242,8 +262,8 @@ The architecturally significant pins, each against a plausible alternative:
    service, or a witness the same request carries.
 2. **Where a witness is sought, and in what order:** among the board's own
    cards, in the board's order or filtered to the repository, or among the
-   issues of the repository whose issue's card is absent, in an order the seam
-   sets.
+   issues of the repository whose issue's card is absent, in one order or two
+   that the seam sets.
 3. **Where that sign is read:** in the same request, in the same run, or from a
    stored id or an earlier answer.
 4. **Whether an answer cut short, asking for less than the whole, or holding a
@@ -265,10 +285,13 @@ that says so.**
 ### 1. An absence counts only where the same request shows the board answered
 
 - **A read of the board itself** answered where its answer names the configured
-  board, agreeing with every name the configuration gives it. An error, an
-  answer with no board or no node in it, or one naming another board, is a
-  board that did not answer. Whether the configured board answers is read only
-  so, never from an owner's list of boards.
+  board, agreeing with each of its names, the owner the capability resolves
+  among them where the configuration gives none. An error, an answer with no
+  board or no node in it, or one naming another board, is a board that did not
+  answer. Whether the configured board answers is read only so, never from an
+  owner's list of boards. The add, and every read the seam makes by number,
+  address the board by its number under that owner, so a stored node naming a
+  board under another owner names one they miss.
 - **A card found is an answer.** A card on the configured board, found among an
   issue's own cards, is the board's answer that the issue is on it.
 - **An absence needs a witness.** A filtered read says a card is absent only
@@ -279,13 +302,15 @@ that says so.**
   id. Otherwise the board did not answer, whatever the board holds, an empty
   board among them.
 - **Where the witness is sought.** Among that repository's issues the request
-  reads, and among a page of that repository's open issues, most recently
-  updated first, that the seam adds to the same request. It reads nothing more
-  to find one. The page is only a search for a witness. A card found there
-  witnesses. An error on the page, or a part of it left unread, takes away a
+  reads, and on the page of that repository's issues that the seam adds to the
+  same request, one page for each repository. It reads nothing more to find
+  one. The page is only a search for a witness. A card found there witnesses.
+  An error placed on the page, or a part of it left unread, takes away a
   witness it might have given, and nothing else: it never fails the command's
   read, never on its own makes the board unanswered, and none of the page's
-  issues is reported.
+  issues is reported. A request that fails whole, with no error placed on any
+  part of it, fails every read it carries, as any request does, and the page's
+  weight is among its possible causes.
 - **The witness is in the request.** A stored board id names a board. It was
   written under some credential at some time, and says nothing of this one.
   Another request's answer, an earlier run's or another credential's is no
@@ -303,13 +328,15 @@ that says so.**
   stopped at a page bound, by a batch that failed or by pages it did not read,
   or one that asked for less than its question covers. It is never an answer
   that lacks what it did not read. This holds ADR-074 point 6's whole-or-nothing
-  for every read of the board, the lookup of one issue's card among them. A walk
-  that leaves archived cards out is such a read, however many pages it reads.
-- **An error, placed by its path.** An error on the board, on its cards, or one
-  the seam cannot place, makes the board not answer. An error on an issue's own
-  node, outside its cards, is that issue's read failing, never the board's
-  (ADR-074 point 2). An error on the page a witness is sought in takes away a
-  witness, and nothing else (point 1).
+  for every read of the board, the lookup of one issue's card among them, and
+  the page a witness is sought in excepted (point 1). A walk that leaves
+  archived cards out is such a read, however many pages it reads.
+- **An error, placed by its path.** The page's paths are placed first: an error
+  whose path lies within the page a witness is sought in is the page's,
+  whatever it points at, and takes away a witness, and nothing else (point 1).
+  Any other error on the board, on its cards, or one the seam cannot place,
+  makes the board not answer. An error on an issue's own node, outside its
+  cards, is that issue's read failing, never the board's (ADR-074 point 2).
 - **A value the command did not count.** A walk of the board's cards that
   returns a withheld card did not read its issue, and read its values only where
   the board returned them.
@@ -350,21 +377,24 @@ a command that makes several takes each:
   gate's verdict. A board that did not answer stops what rests on it. For a
   gate's verdict on a value the map binds to the board, that stop is ADR-053
   point 2's raise, within the scope its point 3 sets. Any other stop is the
-  command's refusal, with the broken tool's code where its codes tell one, or,
+  command's own, and takes the broken tool's code where its codes tell one, or,
   choosing among many, the command takes nothing (DEC-051 point 6).
 - **Any other read is one the command reports:** a check of an issue or of the
   setup, a value a command shows, or a note after its act. A board that did not
   answer is reported as that, where the finding or the value would stand. It is
-  never a finding about the issue, never an unset value and never a check
+  never reported as a finding about the issue, an unset value or a check
   passed.
   - **A check of an issue** reports it at the severity the check gives that
     outcome, and that severity sets the command's code. Where the severity lets
-    the issue through, the command exits as that severity does. Where it stops
-    the issue, the command takes the broken tool's code where its codes tell
-    one, never the code of a finding.
-  - **The environment health check's** severity is DEC-017's: a declared board
-    that does not resolve fails it, and the capability's skill then refuses
-    each operation.
+    the issue through, the command exits as that severity does, which may be
+    the code a clean run takes, and its report says what it could not see.
+    Where it stops the issue, the command takes the broken tool's code where
+    its codes tell one, never the code of a finding.
+  - **The environment health check's** severity, and what its failure stops,
+    are DEC-017's. Beside its read of the board it carries the page, and where
+    the page shows no witness, it warns, and never fails on it. The warning
+    names both causes it can be: the repository's recent issues all off the
+    board, or a credential whose filtered reads miss it.
 - **A write that is the act,** such as setting a field, or adding a card where
   that is all the command does. Not made, it is the act not made, and the
   command says so with the board's words.
@@ -389,11 +419,12 @@ a command that makes several takes each:
 
 Two rules order these around the act:
 
-- **Before it.** Where a command's act would create an issue whose position the
-  board holds, as filing does where the map binds the state to the board, the
-  command reads the board itself first, and refuses before it acts where the
-  board did not answer. Its refusal says why the board did not answer, gives the
-  service's words, and names the way out that cause gives (point 6).
+- **Before it.** Where a command's act creates an issue, and a write to the
+  board that the act requires follows it, the command reads the board itself
+  first, and refuses before it acts where the board did not answer. Filing is
+  such a command in every project with a board, since an issue owes its card
+  from filing (DEC-019). Its refusal says why the board did not answer, gives
+  the service's words, and names the way out that cause gives (point 6).
 - **After it.** Nothing takes a code that reads as the act not made, and a write
   the act requires that was not made takes no code that reads as a clean
   success. The message leads with what stands, such as the filed issue. Where
@@ -498,7 +529,8 @@ ADR-053 stands, refined as the Implications name.
   another board where the map binds the state to the board is the capability's
   to decide.
 - **Not the health check's gate.** DEC-017 sets what its failure stops. This
-  record says only what counts as the board's answer to it.
+  record says what counts as the board's answer to it, and adds a warning
+  beside it that fails nothing.
 
 ## Rationale
 
@@ -514,7 +546,7 @@ same request, shows it for that credential, that board and that repository. The
 board's read and the witness travel in the request the command makes anyway, so
 they cost no call.
 
-**Why the witness is sought among the repository's issues, in an order the
+**Why the witness is sought among the repository's issues, in two orders the
 seam sets.** The board's own cards come in the board's order, which no command
 chooses. A board whose first cards are drafts or pull requests, or an
 organisation's board whose first cards are withheld from a credential that
@@ -522,18 +554,30 @@ reads one repository, would give no witness among them. Every issue truly off
 such a board would then read as unanswered, and DEC-019's drift would go
 unfound there. The credential reads the repository of the issue it checks, so
 none of that repository's cards is withheld from it, and the premise the
-witness rests on is about one repository. That repository's issues come in an
-order the seam asks for: open issues, most recently updated first. Those are
-the issues a project works on, so where it works through its board, the ones
-with cards on it. Issues filed before the board and never added to it sit at
-the far end. The page is a fixed size, whatever the board holds, so it is no
-bound of the kind ADR-074 rejects for a walk of the board: past a walk's bound,
-cards go unread, while past the page lies only a witness not found. What is
-left is a board on which no issue the request reads shows a card: an empty
-board, a repository's first issues on a shared board, or a repository whose
-recent open issues are all off the board. It reads as unanswered, at the drift
-severity where the membership check reads it, and its message names both
-causes it can be and their ways out.
+witness rests on is about one repository.
+
+That repository's issues come in orders the seam asks for, each covering where
+the other fails. The most recently created, of every state, are the issues
+filed since the board, which filing adds to it, finished ones included, since a
+closed issue keeps its card (ADR-074's Rationale). Automation that touches old
+issues, such as a bot marking stale ones or a migration relabelling them,
+moves when an issue was updated, never when it was created, so it cannot bury
+them. The open issues most recently updated are the work in flight, which
+finds the cards of a board adopted for work already under way, where few
+issues were filed since. Both halves ride in the request the command makes
+anyway, so the second order costs no call.
+
+The page is a fixed size, whatever the board or the repository holds, so it is
+no bound of the kind ADR-074 rejects for a walk of the board: past a walk's
+bound, cards go unread, while past the page lies only a witness not found. A
+hundred issues is the size of one batch of a listing read (ADR-074's
+alternatives), and ten cards of each covers an issue on ten boards, so the
+page's weight in a request is fixed and small. What is left is a board on
+which no issue the request reads shows a card: an empty board, a repository's
+first issues on a shared board, or a repository none of whose recent issues,
+by either order, is on it. It reads as unanswered, at the drift severity where
+the membership check reads it, and its message names both causes it can be and
+their ways out.
 
 **Why an empty board is no answer either.** With the witness drawn from the
 repository, an empty board is one case of no issue the request reads showing a
@@ -575,7 +619,13 @@ board's would turn one failed issue read into a board that did not answer, the
 mis-attribution ADR-074 point 2 refuses. The page a witness is sought in is no
 read the command needs, and its issues are none the command acts on. An error
 there takes away a witness, while a fault of the board itself shows in the
-command's own reads.
+command's own reads. So the page's paths are placed first, and an error on a
+page issue's cards is the page's, never the board's. Where the page so fails
+and no other witness is found, the issue reads as a board that did not answer,
+with the page's words. That is not the mis-attribution ADR-074 point 2
+refuses, a failed read of the issue named as the board's: the cause it names
+is the page's read, and its message names the way out of each cause the
+absence can be.
 
 **Why a value not counted decides the refusal.** Removing an option, or merging
 it into another, changes the value of every card that holds it, counted or not.
@@ -613,24 +663,25 @@ cannot be the act not made. An act of many writes, failing part way, is an act
 made in part, so neither the code of an act not made nor a clean one fits it,
 and a write that rests on one not made would act on what never happened.
 
-**Why filing reads first only where the board holds the state.** An issue filed
-where the board holds its state, and then left with no card, has no position.
-Every command that reads a position refuses or skips it, and undoing the filing
-is a destructive write. So where the board does not answer the credential,
-filing gives no command anything to act on, and refusing first loses nothing.
-Filing reads the board's Status field to write the first Status: read before
-the issue is created and carried to that write, it adds no call. The read asks
-the board itself and no witness, since a board holding none of the
-repository's issues has none to give before the repository's first filing. The
-add's own answer then shows the card made (point 3). A credential whose
-filtered reads alone miss the board passes this read, and later reads report
-the board unanswered, never an issue off it. Where only priority or
-workstream lives on the board, an issue is workable without its card. A hook
-writes those values (ADR-053 point 6), and a later add and write repair the
-card. Refusing there would stop filing for a card the issue can do without.
-Through the capability's skill, the health check stops filing sooner wherever
-the board does not answer (DEC-017). This point sets what filing does wherever
-it runs.
+**Why filing reads first wherever it will add a card.** In every project with a
+board, an issue owes its card from filing, and DEC-019 rejects at filing an
+issue with none. Filed where the board does not answer, the issue stands
+without its card, a repair filing then owes, and undoing the filing is a
+destructive write. Where the board holds the state, it also has no position,
+and every command that reads a position refuses or skips it. So refusing first
+loses nothing filing could keep, and it leaves no partial state behind. Where
+filing writes a first Status, as it does unless the map leaves the state out,
+it reads the board's Status field for that write: read before the issue is
+created and carried to that write, it adds no call.
+Where the map leaves the state out, the read is one call more, the price of
+filing no issue DEC-019 rejects. The read asks the board itself and no
+witness, since a board holding none of the repository's issues has none to
+give before the repository's first filing. The add's own answer then shows the
+card made (point 3). A credential that reads the board and may not change it
+passes this read, and its add not made is a later step failed (point 4). A
+credential whose filtered reads alone miss the board passes it too, and later
+reads report the board unanswered, never an issue off it. This point sets what
+filing does wherever it runs, through the capability's skill or not.
 
 **Why an act made keeps a code apart.** A clean success hides that a step the
 act requires is missing. A code that reads as the act not made invites a caller
@@ -652,27 +703,31 @@ operation stops before it starts in an environment it cannot finish in, rather
 than halfway through a mutation, and it rules out a check that reports a pass
 it never computed. A stored id was written under some credential at some time,
 and says nothing of this one, so a pass on it reports an environment the check
-never looked at. In a project with a board, filing owes each issue its card
-(DEC-019), whatever the map binds. So for filing, and for each operation that
-reads or writes the board, a board that does not answer is an environment the
-operation cannot finish in: filing there can only stop halfway, its issue made
-and its card not, the mid-mutation failure DEC-017 exists to prevent, even
-where the board only mirrors the labels. An operation that touches no board
-can finish there, and DEC-017's gate stops it all the same, since it stops
-every operation on any failed prerequisite. That cost, and the live call each
+never looked at. So the check reads the board, as point 1 tells it. Carrying
+the page beside that read, it also sees, at no extra call, a credential that
+gets the board while its filtered reads find no card of the repository's. It
+cannot tell that from recent issues all off the board, so it warns, naming
+both, and fails on neither.
+
+What the check's failure stops is DEC-017's gate: every operation the skill
+runs, those that touch no board among them. That cost, and the live call each
 run of the check makes, follow from DEC-017's gate meeting a check that reads
-the board, as DEC-017's check asks. Narrowing the gate to the operations that
-read or write the board is DEC-017's to decide, a record of the capability's
-own, and this record holds with the gate narrowed or as it stands.
+the board, as DEC-017's check asks. Under this record, every command meets a
+board that did not answer at its own reads, in the posture point 4 gives each,
+and filing meets it before its act. So without the gate's stop, a board that
+does not answer leaves no write an act requires unmade, and at most a Status
+that only mirrors behind, which point 4 reports with its repair. Whether the
+check fails or only warns there is DEC-017's to decide, a record of the
+capability's own. This record holds either way.
 
 ADR-053 refuses a call that fuses where an axis lives with the board's read,
 since a board outage would then become a filing outage on paths that never
-touch a board. This record fuses nothing: carriage reads no board, and no path
-that touches no board reads one. The stop such paths meet is DEC-017's gate,
-which stops each operation on a gap in the environment before any command
-reads. Through it, an outage of the service's boards stops each operation the
-skill runs in a project with a board, the harm ADR-053 names, reached through
-another layer, and the Summary's weigh list names it.
+touch a board. This record fuses nothing: carriage reads no board, and no
+command that touches no board reads one. The stop such paths meet is DEC-017's
+gate, which stops each operation on a gap in the environment before any
+command reads. Through it, an outage of the service's boards stops each
+operation the skill runs in a project with a board, the harm ADR-053 names,
+reached through another layer, and the Summary's weigh list names it.
 
 **Why membership comes under the contract.** The membership check's one read is
 a filtered read that names no board. Under a credential the board does not
@@ -693,7 +748,11 @@ which fails on any code but a clean one. ADR-053 keeps a membership that cannot
 be determined at DEC-019's drift severity, and this record keeps that, with
 the code that severity takes. It loses no stop the check makes on an existing
 issue, whose drift DEC-019 lets through, and the report says what the check
-could not see.
+could not see. A gate's verdict on a value the map binds to the board is
+another matter: its finding would stop the issue, so it keeps ADR-053 point
+2's raise, and under a credential the board does not answer, the post-check
+workflow fails each issue such a gate checks. That is a stop for the tool,
+which a credential the board answers repairs, never a finding about the issue.
 
 **Why these limits sit in this record.** They bind every command that reads or
 writes the board, as ADR-053 point 2's raise and ADR-074 point 5's limits do,
@@ -733,19 +792,31 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   by the search its card list takes. The case: no order to choose, and a card
   it finds that its issue's own cards do not list would show, in the same
   request, that the credential's filtered reads miss the board, a cause the
-  page cannot tell apart. The health check could then look for that cause too.
+  page cannot tell apart. The health check's warning could then tell it too.
   Rejected: the card list takes a search, but how it treats a filter on the
   repository is unmeasured, and a host whose service lacks the argument would
-  refuse the whole request. The page asks only for a state and an order, whose
+  refuse the whole request. The page asks only for states and orders, whose
   meanings the service's schema fixes.
 - **Take a page of the repository's issues in the service's own order.**
   Rejected: that order is unstated, and where it runs oldest first, a
   repository whose first issues predate its board gives no witness, so each
   issue truly off the board reads as unanswered.
+- **Take the page in one order only,** the open issues most recently updated,
+  or the issues most recently created. The case: one order to state and test.
+  Rejected: when an issue was updated moves whenever automation touches it, so
+  a bot marking stale issues, or a relabelling migration, can fill the first
+  order with old issues off the board. When it was created misses a board
+  adopted for work already in flight, where few issues were filed since. Each
+  order covers the other's failure, in the same request, at no call.
+- **Take a page of the largest size the service allows.** The case: more
+  issues to find a witness among. Rejected: the two orders cover different
+  failures, which no size of one covers, and a larger page weighs more in
+  every request that carries it, and with it the chance of the whole request
+  failing.
 - **Store which issue witnessed last, and test it in the next request.** The
   case: no order to choose. Rejected: it is a state each project's commands
-  must write and keep, which the first run lacks, and the page of recent open
-  issues finds a witness without it.
+  must write and keep, which the first run lacks, and the page finds a witness
+  without it.
 - **Take a whole read of the board's cards that holds none as its answer.** The
   case: an issue off a board before its first card reads as off it. Rejected:
   the witness reports that case unanswered at the drift severity, with adding
@@ -768,19 +839,20 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   credential at another time, no command takes it as the sign either, and a
   pass on it lets every operation the check gates start on a board none can
   read.
-- **Let the health check warn where the board does not hold the state,** so
-  that a project whose board only mirrors goes on. Rejected: DEC-019 owes each
-  issue its card from filing in every project with a board, so where the board
-  only mirrors the labels, filing that starts on a board that does not answer
-  can only stop halfway, its issue made and its card not, the failure DEC-017's
-  check exists to prevent.
-- **Narrow the health check's stop to the operations that read or write the
-  board.** The case: an outage of the boards, or a credential the board does
-  not answer, would stop only those operations, filing among them, and leave
-  each that touches no board running, while every command meets a board that
-  did not answer at its own reads (point 4). Not decided here: what the check's
-  failure stops is DEC-017's, and a change to it is a record of the
-  capability's own. This record holds with it or without it.
+- **Let the health check warn where the board does not answer, or narrow its
+  stop to the operations that read or write the board.** The case: an outage of
+  the boards, or a credential the board does not answer, would stop no
+  operation that touches no board, while every command meets a board that did
+  not answer at its own reads (point 4), and filing before its act. ADR-031
+  point 5 gates back-fill on the board in this way, only where a board field is
+  to be written. Not decided here: what the check's failure stops is DEC-017's,
+  and a change to it is a record of the capability's own. This record holds
+  with it or without it.
+- **Let the health check fail where the page shows no witness.** The case: the
+  measured kind of token, one that may get the board and no witness, would
+  stop at the check. Rejected: the check cannot tell that from a repository
+  whose recent issues are all off the board, an empty board among them, so it
+  would stop every operation of a project that has just set up its board.
 - **Decide membership from a walk of the board's cards.** Rejected for ADR-074
   point 6's reasons: a cost and a page bound set by the board's history, and a
   second account of which card is an issue's. A withheld card leaves the walk no
@@ -803,23 +875,29 @@ holds it, the lesson ADR-031 point 4 draws for writes.
 - **One posture for every command,** refusing wherever the board did not answer,
   or reporting and going on everywhere. Rejected: refusing everywhere would make
   a check that only reports, such as the membership check, fail every issue it
-  sees for a fault of the credential, and would stop filing on a board that
-  only mirrors the labels wherever filing runs outside the skill. Going on
-  everywhere files issues whose state lives on a board no command can reach.
+  sees for a fault of the credential, and would stop a move whose state lives
+  on labels for a Status that only mirrors it. Going on everywhere files issues
+  whose state lives on a board no command can reach.
   DEC-017's gate is no such posture: it stops each operation on a gap in the
   environment, before any command reads, and stands.
 - **Give a board that did not answer the broken tool's code in every check.**
-  Rejected: the post-check workflow fails on any code but a clean one, so under
-  a credential the board does not answer, every issue it checks would fail, for
-  something no issue can repair. ADR-053 keeps a membership that cannot be
-  determined at the drift severity.
+  Rejected: a check whose own finding there would let the issue through loses
+  no stop by reporting at that severity, while the broken tool's code would
+  fail the issue for something no issue can repair. The post-check workflow
+  fails on any code but a clean one, so under a credential the board does not
+  answer, every issue it checks would fail. ADR-053 keeps a membership that
+  cannot be determined at the drift severity. A gate whose finding would stop
+  the issue keeps the raise.
 - **Bind the broken tool's code only to the reads a command acts on.** Rejected:
   a check that stops the issue on a board that did not answer could then take a
   finding's code, and send the person to repair an issue.
-- **Refuse filing first wherever the map binds an axis to the board.** Rejected:
-  where only priority or workstream lives there, the issue is workable without
-  its card, which a later add repairs, and the read would cost a call on every
-  filing.
+- **Read first only where the board holds the state, or only where filing
+  writes a first Status.** The case: no call added where the map leaves the
+  state out, and an issue whose state lives elsewhere is workable without its
+  card, which a later add repairs. Rejected: in every project with a board,
+  DEC-019 rejects at filing an issue with no card. Filing first would leave such
+  an issue to be repaired later, and undoing it is a destructive write. Reading
+  first costs a call only where the map leaves the state out.
 - **Undo the act when a write it requires fails after it,** such as by closing
   the issue just filed. Rejected: it is destructive, it is a second write that
   can fail as the first did, and reading the board first leaves little to undo.
@@ -871,9 +949,9 @@ holds it, the lesson ADR-031 point 4 draws for writes.
       "**what a failure means** (the caller's decision)";
     - **point 1, its Layer 2:** "it returns a result object saying whether the
       board answered, as ADR-096 points 1 and 2 tell it, and what it said or
-      why it did not, with `gh`'s stderr verbatim on failure", in place of "it
-      returns a result object saying whether the board answered and what it
-      said, with `gh`'s stderr verbatim on failure";
+      why it did not, with `gh`'s stderr verbatim when `gh` failed", in place
+      of "it returns a result object saying whether the board answered and
+      what it said, with `gh`'s stderr verbatim on failure";
     - **point 2's first paragraph,** a sentence added: "A read that is not
       whole, or that lists only what the credential may see and shows no card
       of the issue on the configured board without the witness ADR-096 point 1
@@ -888,19 +966,21 @@ holds it, the lesson ADR-031 point 4 draws for writes.
       issue, nor a finding as a broken board. Where its exit codes tell a
       broken tool from a refusal, a board that will not answer takes the broken
       tool's code where it stops the command or the issue before the command's
-      act, and the code that says the act stands once the act is made. A check
-      that reports it at a severity that lets the issue through exits as that
-      severity does.";
+      act, and once the act is made, whole or in part, the code that says so. A
+      check that reports it at a severity that lets the issue through exits as
+      that severity does.";
     - **point 5, the seam's shape:** "whether the board answered, what it said
       or why it did not, and `gh`'s stderr verbatim when `gh` failed", in place
       of "whether the board answered, what it said, and `gh`'s stderr verbatim
-      when it did not".
+      when it did not";
+    - **its Implications' bullet on the field-value read:** "carrying why the
+      board did not answer on the latter, with `gh`'s stderr verbatim when `gh`
+      failed", in place of "carrying `gh`'s stderr verbatim on the latter".
   - **Standing as written,** checked to agree:
     - **point 3, the Summary's scope of the raise, and its one-line contract:**
       the raise stays where carriage said `board`. Point 4 here adds no raise
-      outside it. Its other stops are a command's refusal, or a check's stop,
-      made only in a project with a board, on a read the command makes of the
-      board;
+      outside it. Its other stops are a command's own, or a check's, made only
+      in a project with a board, on a read the command makes of the board;
     - **the rejected "Raise on any board read failure anywhere":** for the same
       reason, no project acquires a failure from a feature it does not use;
     - **the Summary's reason that a fused call would make a board outage a
@@ -912,10 +992,14 @@ holds it, the lesson ADR-031 point 4 draws for writes.
       raise. A check that lets the issue through reports a board that did not
       answer at its severity, as the Boundaries' membership bullet, standing in
       that part, has it;
-    - **the other sentences on `gh`'s stderr,** in the Context, point 2, the
-      Rationale and the Implications: each speaks of `gh`'s words where `gh`
-      failed, which the seam carries verbatim, and a cause with no such words is
-      carried as the refined Layer 2 says;
+    - **the other sentences on `gh`'s stderr:** the Context's account of the
+      surfaces "as they stand", which describes the code as it stood; point
+      2's remedy that `gh` prints in the stderr the seam carries; the
+      Rationale's raise that arrives with `gh`'s stderr as its remedy; and the
+      Implications' gate failure path, whose message carries the seam's verbatim
+      error. Each speaks of words the seam carries verbatim, `gh`'s where `gh`
+      failed, and a cause with no such words is carried as the refined Layer 2
+      says, with the way out point 6 here names;
     - **the Boundaries' "Not a change to the label read path or the substrate
       write path":** the edits reach reads only, and point 3 here decides writes
       itself, keeping ADR-031's neutrality;
@@ -938,12 +1022,13 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   - **point 5, its second limit, from its sentence on the broken tool's code:**
     "Where a command's exit codes tell a broken tool from a refusal, a board
     that will not answer takes the broken tool's code where it stops the
-    command or the issue before the command's act, and the code that says the
-    act stands once the act is made. A check that reports it at a severity that
-    lets the issue through exits as that severity does. ADR-053 point 2 rules
-    this for every command that reads the board, gate or not, the state's
-    readers among them, and this record rules it for those readers on the same
-    ground. This refines ADR-053 point 2, its reach.", in place of "Where a
+    command or the issue before the command's act, and once the act is made,
+    whole or in part, the code that says so. A check that reports it at a
+    severity that lets the issue through exits as that severity does. ADR-053
+    point 2 rules this for every command that reads the board, gate or not,
+    the state's readers among them, and this record rules it for those
+    readers on the same ground. This refines ADR-053 point 2, its reach.", in
+    place of "Where a
     command's exit codes tell a broken tool from a refusal, an unreadable board
     takes the broken tool's code. ADR-053 point 2 rules this for a gate; this
     record rules it for every command that reads the state, on the same ground.
@@ -957,27 +1042,36 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     command reads the cards of the issues it acts on, and no others";
   - **point 6, a paragraph added** after the one that gives one account of an
     issue's card: "Beside them, a request that could find an issue with no card
-    carries one page of the repository's open issues, most recently updated
-    first, whose cards the seam reads only to find a sign that the board
-    answered (ADR-096 point 1). The command acts on none of those issues, and
-    nothing on that page fails its read.";
+    carries, for each repository whose issues it reads, a fixed page of that
+    repository's issues, the most recently created and the open ones most
+    recently updated, whose cards the seam reads only to find a sign that the
+    board answered (ADR-096 point 1). The command acts on none of those issues,
+    and no error placed on that page fails its read.";
   - **its Rationale's "Why a listing reads the listed issues' cards":** "A
-    listing is bounded by what the command lists, and by one page that does not
-    grow with the board.", in place of "A listing is bounded by what the command
-    lists.";
+    listing is bounded by what the command lists, and by a fixed page for each
+    repository it reads, which does not grow with the board.", in place of "A
+    listing is bounded by what the command lists.";
   - **its Implications' bullet on a Status write, its last sentence:** "Filing
     handles a failed Status write as ADR-096 point 4 sets for a write after the
     issue is created: the issue stays filed", in place of "Filing handles a
     failed Status write as it handles every other write after the issue is
     created: the issue stays filed".
 
-  Standing as written, checked to agree: point 5's two limits' leading words,
-  which speak of a state, since point 4 here holds them for every read and
-  write itself; point 2's state's reader, which asks only the seam, since the
-  page the seam reads beside an issue's cards fails no read of the issue and
-  makes none of them the board's; point 6's whole-or-nothing, since the page is
-  no batch of a listing; and the rejected "Read every card on the board once",
-  since the page reads issues' own cards, one page whatever the board holds.
+  Standing as written, checked to agree:
+  - **point 5's two limits' leading words,** which speak of a state, since
+    point 4 here holds them for every read and write itself;
+  - **point 2's "The state's reader asks only the board",** and its Rationale's
+    reason: the reader still reads no issue of its own. The page is the seam's,
+    read beside the issue's cards in the board's request, and an error placed
+    on it takes away a witness, never fails the issue's read, and never makes
+    that read the board's;
+  - **point 6's two bounds,** a cascade's reads "bounded by the hierarchy's
+    depth" and a listing's "bounded by what it lists, not by the board": the
+    page rides in each request, and grows with neither the board nor the
+    repository, so what the reads grow with stands;
+  - **point 6's whole-or-nothing,** since the page is no batch of a listing;
+  - **the rejected "Read every card on the board once",** since the page reads
+    issues' own cards, a fixed page whatever the board holds.
 - **How the edits are sorted.** The decisions README edits a record in place
   where its decision stands, narrowed, widened or completed, and supersedes it,
   in whole or in part, where another record decides otherwise ("Refining an
@@ -992,15 +1086,17 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     a board which will not answer is a broken tool, never a missing value or a
     finding, and never takes a refusal's code. This record keeps that choice.
     It narrows where the broken tool's code itself is taken: once the act is
-    made, the code that says the act stands, and in a check that lets the
-    issue through, that severity's code, as ADR-053's Boundaries have it for
-    membership. Neither is a refusal's code or a finding's. So those sentences
-    are refined, and ADR-074 takes no superseded line.
+    made, whole or in part, the code that says so, and in a check that lets
+    the issue through, that severity's code, as ADR-053's Boundaries have it
+    for membership. Neither is a refusal's code. The second is the code the
+    check's own findings at that severity take, which may be the code a clean
+    run takes, while its report never says the check passed. So those
+    sentences are refined, and ADR-074 takes no superseded line.
   - **Widened:** ADR-074 point 6 chose the issues' own cards over a walk of
     the board, so that a listing's reads are bounded by what it lists, not by
-    the board. The page a witness is sought in reads issues' own cards too, one
-    page whatever the board holds, and the command acts on none of them. So
-    "and no others" is widened, and the choice stands.
+    the board. The page a witness is sought in reads issues' own cards too, a
+    fixed page whatever the board holds, and the command acts on none of them.
+    So "and no others" is widened, and the choice stands.
   - **The rest** widen a reach or complete a definition, and each choice
     ADR-053 and ADR-074 made among their alternatives stands.
 - **Accepting this record signs off each edit above**
@@ -1013,8 +1109,9 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     its member that the board resolves, read as point 1 here tells it, and its
     point 6's neutrality holds.
   - **DEC-017:** its board check is a live read of the declared board, and its
-    gate refuses on the check's failure. This record says only what counts as
-    the board's answer to it.
+    gate refuses on the check's failure. This record says what counts as the
+    board's answer to it, and adds a warning beside it, where the page shows no
+    witness, which fails nothing.
   - **DEC-036 point 3:** the check degrades where an axis's substrate is
     unsupported, and a declared board that does not resolve is no such axis.
   - **DEC-019:** an issue off the board keeps its severities, and the override
@@ -1027,27 +1124,35 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     through ADR-053's refined Layer 2 and point 2.
 - **Tests hold each case:**
   - **a board that does not answer,** where its own read fails, names no board
-    or another, or where a stored node and the configured number name two
-    boards: the membership check reports the board unanswered and exits as the
-    drift severity does, filing where the map binds the state to the board
-    refuses before it creates the issue, a state read reports a board that
-    cannot be read, and the health check fails, a stored id or not;
+    or another, or where a stored node names a board other than the
+    configured number under the resolved owner: the membership check
+    reports the board unanswered and exits as the drift severity does, filing
+    in a project with a board refuses before it creates the issue, a state
+    read reports a board that cannot be read, and the health check reports it
+    at DEC-017's severity, never as a pass, a stored id or not;
+  - **filing's read first:** where filing writes a first Status, the read that
+    answers is the one that Status is written from, with no call added;
+  - **the health check's page:** where the board answers and the page shows no
+    witness, the check warns, naming both causes, and does not fail;
   - **an absence with no witness,** where the board answers but no issue the
     request reads shows a card on it, an empty board among them: the board did
     not answer, and the message names both causes it can be;
   - **an absence with a witness,** among the issues the command reads or on the
     page the seam adds, an archived card among them: the membership check
     reports the drift;
-  - **the page:** it asks for the repository's open issues, most recently
-    updated first. An error on it, one on the repository's node among them, or
-    an issue on it whose cards run past a page, takes away a witness and fails
-    nothing. An issue of a repository renamed or transferred is matched by the
-    repository's node id;
+  - **the page:** for each repository whose issues the request reads, it asks
+    for the fifty issues most recently created, of every state, and the fifty
+    open issues most recently updated, with up to ten cards of each. A witness
+    found in either half witnesses. An error placed on it, one on the
+    repository's node or on a page issue's cards among them, or an issue on it
+    whose cards run past ten, takes away a witness and fails nothing. An issue
+    of a repository renamed or transferred is matched by the repository's node
+    id;
   - **a read not whole,** cut short at a page bound, asking only for cards that
     are not archived, or carrying an error on the board or its cards: the board
-    did not answer. An error whose path points at an issue's cards is the
-    board's, though it leaves the issue's node empty. An error on an issue's own
-    node alone is that issue's read failing;
+    did not answer. An error whose path points at an issue's cards, outside the
+    page, is the board's, though it leaves the issue's node empty. An error on
+    an issue's own node alone is that issue's read failing;
   - **a write not made after the act:** where filing's add, or its first Status
     where the board holds the state, fails, the issue stays filed and filing
     exits with its own code for a later step failed, apart from DEC-048's. Where
@@ -1064,13 +1169,22 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   - **the scan** of point 6.
 - **The work** is a surface change of the project-management capability. It
   needs no migration: nothing is renamed or removed, and a stored board id stays
-  where it is, read as a name. A project's copy of the post-check workflow is
-  its own (DEC-019), and makes its own add where it remediates, so point 3
-  reaches a copy made earlier only once the person copies the template again.
-  Where the board does not answer a copy's token, the workflow reports the board
-  unanswered on each issue it checks, at the drift severity, and lets the issue
-  through as it does any drift, until the person gives it a credential the
-  board answers.
+  where it is, read as a name. The health check's advice for a board under
+  another owner than the repository's names the owner in the configuration
+  (DEC-023), no longer a stored node alone.
+- **The post-check workflow's template gains a setting for a credential the
+  board answers,** in the work, used where set in place of the workflow's own
+  token. The template runs today under that token alone, which by the
+  service's documentation reaches no board. Under it, the membership check
+  reports the board unanswered on each issue the workflow checks, at the drift
+  severity, and lets the issue through. Where the map binds an axis to the
+  board, the presence gate's raise (ADR-053 point 2), once that gate reads the
+  board, fails each issue the workflow checks. The way out of both is a
+  credential the board answers, for which the template has no place, so the
+  setting ships with the work rather than after it. A project's copy of the
+  workflow is its own (DEC-019), so the setting, and point 3 for the add the
+  copy makes where it remediates, reach a copy made earlier only once the
+  person copies the template again.
 - **This change** carries this record and, on its acceptance, the edits to
   ADR-053 and ADR-074 above, and none of the work. The walks' reading of
   archived cards is project-kit#3191's.
