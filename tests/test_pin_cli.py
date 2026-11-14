@@ -25,6 +25,28 @@ from project_kit.sync import run_sync
 from tests.adopter_repo import build_adopter_repo
 
 
+class _DistributionTags:
+    """Stands in for the distribution source's tags, which `pkit pin` reads where it
+    names a release candidate, for a withdrawal (ADR-092 point 4), so no test reaches
+    the network. It lists no tag, unless a test sets `listing`; None is a lookup that
+    failed. It counts its reads."""
+
+    def __init__(self) -> None:
+        self.listing: str | None = ""
+        self.reads = 0
+
+    def __call__(self) -> str | None:
+        self.reads += 1
+        return self.listing
+
+
+@pytest.fixture(autouse=True)
+def distribution_tags(monkeypatch: pytest.MonkeyPatch) -> _DistributionTags:
+    stand_in = _DistributionTags()
+    monkeypatch.setattr(upgrade, "_distribution_tags", stand_in)
+    return stand_in
+
+
 def _git_repo(tmp_path: Path) -> Path:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     (tmp_path / ".pkit").mkdir()
@@ -273,6 +295,115 @@ def test_pin_freezes_a_project_at_its_candidate_content(
 
     assert result.exit_code == 0, result.output
     assert router.read_version_pin(tmp_path) == "2.0.0rc1"
+
+
+#: `git ls-remote --tags` output listing the candidate 2.0.0rc1's tag and its
+#: withdrawal tag, each with its peel line.
+_WITHDRAWN = "".join(
+    f"{'0' * 40}\trefs/tags/{name}\n{'0' * 40}\trefs/tags/{name}^{{}}\n"
+    for name in ("v2.0.0rc1", "withdrawn/v2.0.0rc1")
+)
+
+
+@pytest.mark.parametrize("content", ["2.0.0rc1", "1.9.0"], ids=["freeze", "raise"])
+def test_pin_warns_where_it_names_a_withdrawn_candidate_and_goes_on(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    distribution_tags: _DistributionTags,
+    content: str,
+) -> None:
+    """`pkit pin <candidate>` warns where the tag `withdrawn/v<candidate>` marks the
+    candidate withdrawn, and pins it all the same, whether it freezes the project at
+    it or raises the project to it (ADR-092 point 4)."""
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, content)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(upgrade, "run_bypassed", lambda *_a, **_k: 0)
+    distribution_tags.listing = _WITHDRAWN
+
+    result = CliRunner().invoke(main, ["pin", "2.0.0rc1"])
+
+    assert result.exit_code == 0, result.output
+    warning = " ".join(result.stderr.split())
+    assert (
+        "warning: the release candidate 2.0.0rc1 is withdrawn: the tag withdrawn/v2.0.0rc1 "
+        "marks it so, and its Release says why (ADR-092 point 4)."
+    ) in warning
+    assert "`pkit upgrade --pre` passes it by." in warning
+    assert router.read_version_pin(tmp_path) == "2.0.0rc1"
+
+
+@pytest.mark.parametrize(
+    "listing",
+    [
+        pytest.param(_WITHDRAWN.replace("v2.0.0rc1", "v2.0.0rc2"), id="another-withdrawn"),
+        pytest.param(_WITHDRAWN.replace("withdrawn/", "archive/withdrawn/"), id="tail-only"),
+    ],
+)
+def test_pin_names_a_candidate_no_withdrawal_tag_marks_without_a_warning(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    distribution_tags: _DistributionTags,
+    listing: str,
+) -> None:
+    """A candidate is withdrawn only by its own withdrawal tag, read by its full
+    reference, so the pin warns of no other (ADR-092 point 4)."""
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, "2.0.0rc1")
+    monkeypatch.chdir(tmp_path)
+    distribution_tags.listing = listing
+
+    result = CliRunner().invoke(main, ["pin", "2.0.0rc1"])
+
+    assert result.exit_code == 0, result.output
+    assert "warning" not in result.stderr
+    assert distribution_tags.reads == 1
+
+
+def test_pin_says_where_whether_a_candidate_is_withdrawn_cannot_be_checked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, distribution_tags: _DistributionTags
+) -> None:
+    """Where the source cannot be read, the pin says that it could not check for a
+    withdrawal, and goes on (ADR-092 point 4, ADR-063 point 1)."""
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, "2.0.0rc1")
+    monkeypatch.chdir(tmp_path)
+    distribution_tags.listing = None
+
+    result = CliRunner().invoke(main, ["pin", "2.0.0rc1"])
+
+    assert result.exit_code == 0, result.output
+    assert (
+        "warning: could not check whether the release candidate 2.0.0rc1 is withdrawn"
+        in " ".join(result.stderr.split())
+    )
+    assert router.read_version_pin(tmp_path) == "2.0.0rc1"
+
+
+@pytest.mark.parametrize(
+    ("content", "target"),
+    [
+        pytest.param("1.9.0", "2.0.0", id="a-final-release"),
+        pytest.param("2.0.0", "2.0.0rc1", id="an-older-candidate"),
+    ],
+)
+def test_pin_reads_no_withdrawal_for_a_final_release_or_a_refused_pin(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    distribution_tags: _DistributionTags,
+    content: str,
+    target: str,
+) -> None:
+    """A pin that names a final release names no candidate, and a candidate refused
+    as older is pinned nowhere, so neither reads the source for a withdrawal."""
+    _git_repo(tmp_path)
+    _write_manifest(tmp_path, content)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(upgrade, "run_bypassed", lambda *_a, **_k: 0)
+
+    CliRunner().invoke(main, ["pin", target])
+
+    assert distribution_tags.reads == 0
 
 
 def test_pin_version_refuses_when_manifest_absent(

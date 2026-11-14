@@ -3034,6 +3034,10 @@ def version_tag(push: bool, allow_foreign_repo: bool) -> None:
 def version_untag(push: bool, allow_foreign_repo: bool) -> None:
     """Remove the `v<version>` tag matching .pkit/VERSION (local; --push for remote).
 
+    Refuses a release candidate's tag, `v<X.Y.Z>rc<N>`, which is never moved or
+    deleted: a candidate is withdrawn by the tag `withdrawn/v<X.Y.Z>rc<N>` on its
+    commit instead (ADR-092 point 4).
+
     With `--push` the cross-repository guard runs first, before either tag is
     deleted, as for `version tag --push`.
     """
@@ -3624,6 +3628,10 @@ def release_publish_notes(version: str, dry_run: bool, allow_foreign_repo: bool)
     never a file / tarball / wheel channel. Repo is derived from the ambient
     `gh` context (no hardcoded owner/repo). A missing tag is a clear error;
     `--dry-run` prints the notes without calling `gh`.
+
+    A release candidate's notes, for a version `X.Y.ZrcN`, are read at its tag,
+    its Release is marked a pre-release (ADR-089 point 9), and they end with how
+    to try it: `pkit pin <candidate>`, beside the first hop (ADR-092 point 4).
 
     The cross-repository guard runs first, as for `release merge`: in another
     repository than the session's anchor's it asks at a terminal and refuses
@@ -5388,11 +5396,11 @@ def merge(targets: tuple[str, ...], dry_run: bool) -> None:
     "--pre",
     is_flag=True,
     default=False,
-    help="Move the project to the newest release, release candidates included. Where "
-    "that is a candidate newer than this pkit, its own upgrade runs through the "
-    "router's bypass, and the project is pinned there. Where it is a final release, "
-    "--pre hands over to none. It never installs a candidate as the tool. "
-    "Per ADR-089 point 8.",
+    help="Move the project to the newest release, release candidates included, a "
+    "withdrawn candidate passed by. Where that is a candidate newer than this pkit, its "
+    "own upgrade runs through the router's bypass, and the project is pinned there. "
+    "Where it is a final release, --pre hands over to none. It never installs a "
+    "candidate as the tool. Per ADR-089 point 8 and ADR-092 point 4.",
 )
 def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool, pre: bool) -> None:
     """Transition the project to a newer backbone (per COR-010).
@@ -5425,8 +5433,9 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool, pre:
     instead, it refuses, before it writes anything.
 
     **A release candidate only on request** (ADR-089 points 7 and 8). `--pre`
-    moves the project to the newest release, candidates included, handing over
-    to a candidate's own upgrade where that is newer than this pkit. An upgrade
+    moves the project to the newest release, candidates included, a withdrawn
+    candidate passed by (ADR-092 point 4), handing over to a candidate's own
+    upgrade where that is newer than this pkit. An upgrade
     whose target is a candidate nobody asked for, by `--pre`, by a run with
     routing bypassed, or by a pin that names it, refuses before it writes. A move
     to a candidate always pins, and `--no-pin` is refused on it.
@@ -5484,6 +5493,10 @@ def pin(version: str | None, force: bool) -> None:
     - older   → REFUSED — pkit migrations are forward-only (COR-010), so there is
                 no safe downgrade; revert the commit of each upgrade since that
                 version to roll back.
+
+    A VERSION that names a withdrawn release candidate, one the tag
+    `withdrawn/v<candidate>` marks, is warned of, and the pin goes on (ADR-092
+    point 4).
 
     Once the directive exists, the pkit router re-execs `uvx project-kit@<pin>` so
     the pinned version serves every command; a global-tool upgrade no longer moves
