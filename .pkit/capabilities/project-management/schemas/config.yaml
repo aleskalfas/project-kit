@@ -90,7 +90,7 @@ has_projects_v2_board: false
 #     granted: [living-docs:page]
 #
 # milestone_categories:               # per DEC-016 — declare before filing one
-#   milestone:
+#   milestone:                        #   written by add-milestone-category
 #     title_format: "Milestone {n}: {name}"
 #     close_trigger_default: content-based
 #     description: "Outcome bundle of related EPICs."

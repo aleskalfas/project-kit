@@ -1097,15 +1097,26 @@ pkit pm open-pr 1017 --scope pm --summary "take the issue number positionally" -
 
 `validate-pr` reads every closing reference: a PR closing several issues is valid, and its title type is cross-checked against each closing issue's type (a mix of types is a warning). `done-work <N>` reads them the same way and gates and closes every closing issue, not only `N` (see "A PR that closes several issues is closed issue by issue" above).
 
-#### Milestone lifecycle — `create-milestone` / `close-milestone` (per [project-management:DEC-016-time-bound-containers])
+#### Milestone lifecycle — `add-milestone-category` to `close-milestone` (per [project-management:DEC-016-time-bound-containers])
 
 | Command | What it does |
 |---|---|
+| `add-milestone-category <category> --title-format "<format>" --close-trigger T [--description D]` | Declare a Milestone category in `project/config.yaml`'s `milestone_categories:` block, with its title format, its default close trigger and what it means. Refuses a category already declared. |
 | `create-milestone <category> --name "<name>" [--close-trigger T] [--due-on YYYY-MM-DD] [--pool NAME]` | File a new Milestone in a declared `milestone_categories:` category. Computes the next number, composes the title from the category's `title_format`, and writes the `Close trigger:` first body line. `--pool` puts it into a pool of workers, with the person's consent. |
 | `set-pool <milestone> <pool>` or `set-pool <milestone> --clear` | Set or clear the pool of workers an open Milestone is in, by its `Pool:` line, with the person's consent, logged in its description. |
 | `close-milestone <n> [--target <M>] [--force]` | Close an open Milestone (by number or exact title) through the validated path. A date-triggered close rolls its open children forward to the next Milestone. |
 
-Both run the DEC-021 membership gate and the COR-039 foreign-repo guard at startup, route every `gh` call through the shared host/owner seam (DEC-023), and accept `--dry-run` (preview, write nothing) and `--yes` (skip the confirmation prompt).
+`create-milestone` and `close-milestone` both run the DEC-021 membership gate and the COR-039 foreign-repo guard at startup, route every `gh` call through the shared host/owner seam (DEC-023), and accept `--dry-run` (preview, write nothing) and `--yes` (skip the confirmation prompt).
+
+**A category comes first.** A project declares each category before it files the first Milestone in it, and none is declared by default. On a project with none, `create-milestone` refuses and names the command that declares the category it was given, with the title format and the close trigger left to fill. One way to run that command, for a category of two-week sprints:
+
+```
+pkit pm add-milestone-category sprint --title-format "Sprint {n}: {name}" --close-trigger date-based --description "A two-week planning window."
+```
+
+- **The checks.** The title format holds `{n}` and `{name}`, which `create-milestone` fills, and no other placeholder. The description is one line of at most 200 characters. The command refuses a value outside these rules, and a category already declared, before it writes anything.
+- **The file.** The command adds the category under `milestone_categories:`, or adds the block at the end of the file, and keeps every other byte of it, save an empty value on the `milestone_categories:` line, such as `{}` or `~`: it writes that line without the value, and keeps a comment on it. Where the file would not read back as it was with only the category added, as with a block written in flow style, it writes nothing and asks you to declare the category by hand.
+- **The declaration is the person's,** as a workstream is (#2015). The command runs the membership gate and the foreign-repo guard, asks at a terminal, and takes `--yes` as the person's word. Off a terminal without `--yes`, it refuses with exit 1 and names the command to run with `--yes`. `--dry-run` prints the plan and writes nothing.
 
 **The close is the person's** (#2015). At a terminal `close-milestone` asks before it closes, and `--yes` authorises the close. Off a terminal, without `--yes`, it refuses with exit 1 before anything is written, and names the command to run with `--yes`. A re-run that finishes a rollforward goes on without `--yes`, since the close it finishes authorised the moves.
 
