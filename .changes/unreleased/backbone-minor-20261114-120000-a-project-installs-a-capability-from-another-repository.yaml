@@ -17,7 +17,8 @@ body: >
   source that cannot be reached warns loudly and installs nothing. `pkit
   sync` now brings each externally-sourced copy to its pin's content,
   removing files the pin does not hold, and never moves the pin; where the
-  fetch fails it keeps the copy and warns. `capabilities uninstall` removes
+  fetch fails, or the content's `requires_backbone` excludes the backbone
+  the project records, it keeps the copy and warns. `capabilities uninstall` removes
   the copy and keeps the project's own files in its `project/` tier, and
   `capabilities list` and `pkit status` show the source and the ref.
   `capabilities upgrade` and `capabilities register` refuse an

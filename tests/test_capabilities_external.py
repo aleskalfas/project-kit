@@ -505,6 +505,28 @@ def test_sync_keeps_the_copy_where_its_tag_has_moved_to_another_version(
     assert "now holds v2.0.0, and the project records v1.0.0" in " ".join(captured.err.split())
 
 
+def test_sync_keeps_the_copy_whose_range_excludes_the_recorded_backbone(
+    project: Path, kit: Path, upstream: GitRepo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Sync gates what it lands as install does (ADR-040 point 4): the pin's content
+    at the recorded version, whose `requires_backbone` now excludes the backbone the
+    project records, is not landed, and the rest of sync runs."""
+    _author(upstream, "1.0.0", tag="v1.0.0")
+    _installed(upstream)
+    (_copy(project) / _SKILL).write_text("edited here\n", encoding="utf-8")
+    _author(upstream, "1.0.0", tag="v1.0.0", requires_backbone=">=99.0.0")
+
+    sync.run_sync(project)
+    captured = capsys.readouterr()
+
+    assert (_copy(project) / _SKILL).read_text(encoding="utf-8") == "edited here\n"
+    said = " ".join(captured.err.split())
+    assert "⚠ WARNING: capability 'fetched' was not brought to its pin" in said
+    assert "requires backbone >=99.0.0" in said
+    assert "kept         'fetched'" in captured.out
+    assert "Sync complete." in captured.out
+
+
 def test_sync_dry_run_fetches_nothing(
     project: Path, kit: Path, upstream: GitRepo, capsys: pytest.CaptureFixture[str]
 ) -> None:

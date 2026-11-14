@@ -549,12 +549,17 @@ def match_pins(
     (point 7), where the pin holds no capability of its name, or where that
     capability names another version than the project records: its tag has
     moved at the source, and only a person moves a version, by uninstalling and
-    installing it again. Sync runs on past each. Under ``--dry-run`` nothing is
-    fetched. Returns each externally-sourced capability's outcome, by name.
+    installing it again. So is one whose ``requires_backbone`` excludes the
+    backbone the project records, the gate install runs on the same content
+    (point 4). Sync runs on past each. Under ``--dry-run`` nothing is fetched.
+    Returns each externally-sourced capability's outcome, by name.
     """
     from project_kit import capabilities as caps
     from project_kit import capability_fetch
+    from project_kit.connections import range_admits
 
+    backbone = read_backbone_manifest(ctx.target_root)
+    backbone_version = backbone.backbone_version if backbone is not None else None
     matches: dict[str, PinMatch] = {}
     for plan in plans:
         if plan.disposition != EXTERNAL:
@@ -583,6 +588,13 @@ def match_pins(
                         f"project records v{record.version}: the pin's tag has moved at its "
                         "source, and sync moves no version. To take it, uninstall the "
                         "capability and install it again"
+                    )
+                elif range_admits(staged.package.requires_backbone, backbone_version) is False:
+                    why = (
+                        f"v{staged.package.version} at {caps.pin_text(pin)} requires backbone "
+                        f"{staged.package.requires_backbone}, and the project records backbone "
+                        f"v{backbone_version}: sync lands no content whose range excludes the "
+                        "backbone the project records (ADR-040 point 4)"
                     )
                 else:
                     caps.copy_fetched_capability(ctx.target_root, staged, record.skipped)
