@@ -43,6 +43,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py
         - .pkit/capabilities/visual-communication/schemas/findings.schema.json
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
+        - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
       record:
         - visual-communication:DEC-002#6
         - visual-communication:DEC-002#7
@@ -135,6 +136,9 @@ pkit:
         - visual-communication:DEC-038#5
         - visual-communication:DEC-038#7
         - COR-073#5
+        - visual-communication:DEC-042#3
+        - visual-communication:DEC-042#6
+        - COR-051#7
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-brands-drawing
         - .pkit/capabilities/visual-communication/components.md#a-components-file

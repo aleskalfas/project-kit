@@ -88,6 +88,8 @@ pkit:
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
         - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
+        - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
+        - .pkit/capabilities/visual-communication/schemas/config.yaml
       record:
         - visual-communication:DEC-001#3
         - visual-communication:DEC-001#5
@@ -188,6 +190,8 @@ pkit:
         - visual-communication:DEC-036#3
         - visual-communication:DEC-036#7
         - visual-communication:DEC-036#8
+        - visual-communication:DEC-042#3
+        - visual-communication:DEC-042#6
 ---
 
 # The files of the visual work
