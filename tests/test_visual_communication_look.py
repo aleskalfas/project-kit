@@ -556,7 +556,7 @@ def test_a_text_inside_moved_groups_is_found_where_it_stands(tmp_path: Path) -> 
     assert dropped_of(tmp_path, outer, width=200, height=400) == []
 
 
-# --- what the page shows of a span (DEC-040) ----------------------------------------------------
+# --- what the page shows of a span (DEC-045) ----------------------------------------------------
 
 
 def test_a_text_the_pages_edge_cuts_is_named_cut_with_the_share_of_its_ink_past_the_edge(
@@ -939,7 +939,7 @@ def test_a_real_text_with_no_colour_is_a_loss_and_a_text_dropped_both_named(tmp_
 def test_through_the_svg_renderer_the_report_no_longer_says_cover_and_cut_were_not_read(
     tmp_path: Path,
 ) -> None:
-    """The tool reads cover and cut, so a report that names neither holds none (DEC-040)."""
+    """The tool reads cover and cut, so a report that names neither holds none (DEC-045)."""
     root = parts_project(tmp_path)
     shown = run_look(root, "tags")
     assert shown.returncode == 0, shown.stderr
@@ -955,7 +955,7 @@ def test_through_the_svg_renderer_the_report_names_each_text_cut_or_covered_with
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """What the tool says a page shows in part is an entry of `dropped`, as a browser's is,
-    and the command prints it in words for its cause (DEC-040 point 2)."""
+    and the command prints it in words for its cause (DEC-045 point 2)."""
     root = parts_project(tmp_path)
     real = viewing.viewing_tool.draw
     label = "figure/body/label"

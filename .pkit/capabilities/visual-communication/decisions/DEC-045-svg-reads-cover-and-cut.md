@@ -1,5 +1,5 @@
 ---
-id: DEC-040
+id: DEC-045
 title: Through the SVG renderer, the viewing step names a text another part covers, or the page's edge cuts, as dropped
 status: proposed
 date: 2026-11-14
@@ -59,7 +59,7 @@ Terms are DEC-037's: a span's *strong ink*, a *sliver*, a text *cut* and *covere
 ## Implications
 
 - **Edits to accepted records,** made once this record is accepted, each citing it. Accepting this record accepts them (COR-066 point 5).
-  - **DEC-037 point 1, "Through a browser alone".** It comes to say that through the SVG renderer `dropped` names a cut or covered span too ([visual-communication:DEC-040-svg-reads-cover-and-cut]), its Rationale's "Why the SVG renderer waits" comes to say so, and the top line reads *Partially superseded by* this record, as DEC-003 shapes it.
+  - **DEC-037 point 1, "Through a browser alone".** It comes to say that through the SVG renderer `dropped` names a cut or covered span too ([visual-communication:DEC-045-svg-reads-cover-and-cut]), its Rationale's "Why the SVG renderer waits" comes to say so, and the top line reads *Partially superseded by* this record, as DEC-003 shapes it.
   - **DEC-015 point 3, "Each text, or run of a text, the tool dropped".** Its last sentence comes to say that through resvg too it names each text the page shows in part, in one entry for each cause with its share.
 - **The capability's page on outputs,** **the graphic-design reviewer's agent file** and **the `visual-author` skill's build loop** come to say it, in #3111's change.
 - **#3111** builds points 1 and 2, with a test that draws a page with each loss through SVG and finds it in the report. In the repository the capability is authored in, its changeset is `minor` for visual-communication.

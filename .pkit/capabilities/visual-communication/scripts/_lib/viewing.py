@@ -33,7 +33,7 @@ is read, and none is used up (DEC-016 point 5).
   and the browser's module sets them (DEC-023 point 6). Its `dropped` names too each span the
   page does not show in full, cut by its page's edge or covered on it, with the share of its
   strong ink each cause loses (DEC-037). Through the SVG renderer the tool's module reads
-  cover and cut too, and its entries take the same fields (DEC-040).
+  cover and cut too, and its entries take the same fields (DEC-045).
   The browser is the one the configuration names (`browser_named`), or else the first found
   where Chrome and Chromium install themselves. Its profile lies in the clone's local folder,
   and the module removes it.

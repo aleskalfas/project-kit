@@ -4,7 +4,7 @@ custom:
   category: Added
 body: >
   Through the SVG renderer, the look report's `dropped` names each span the
-  page does not show in full, as it does through a browser (DEC-040, #3111):
+  page does not show in full, as it does through a browser (DEC-045, #3111):
   one entry for each cause in `why`, `cut` past its page's edge or `covered`
   by a part drawn after it, each with the `share` of the span's strong ink it
   loses. A loss under 0.01 of the span's em squared, in image pixels, names

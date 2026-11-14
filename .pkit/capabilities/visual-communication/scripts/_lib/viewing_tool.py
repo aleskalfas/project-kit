@@ -79,7 +79,7 @@ TEXT = f"{{{SVG_NAMESPACE}}}text"
 SPAN = f"{{{SVG_NAMESPACE}}}tspan"
 
 #: The colours a span's letters take where its strong ink is measured, and between which they
-#: change where the page drawn whole is read (DEC-040 point 1).
+#: change where the page drawn whole is read (DEC-045 point 1).
 INKS = ("#000000", "#ffffff")
 
 #: The darkest a sample of a pixel may be for the pixel to be strong ink, drawn black on white:
@@ -127,7 +127,7 @@ class Dropped:
 @dataclass(frozen=True)
 class Lost:
     """A span the page shows in part: its trace id, its characters, its cause, `CUT` or
-    `COVERED`, and the share of its strong ink the cause loses (DEC-040 point 1)."""
+    `COVERED`, and the share of its strong ink the cause loses (DEC-045 point 1)."""
 
     element: str
     text: str
@@ -362,7 +362,7 @@ class _Page:
         element: str,
     ) -> Iterator[Lost]:
         """Each cause, `CUT` then `COVERED`, that hides at least the sliver of span `index`'s
-        strong ink, with its share (DEC-040 point 1). The span is drawn alone on a band that
+        strong ink, with its share (DEC-045 point 1). The span is drawn alone on a band that
         reaches a page's width past each side of the page, then the page whole on the same
         band, the span's letters black and then white."""
         span = line[index]
