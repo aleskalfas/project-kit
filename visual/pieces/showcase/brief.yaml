@@ -369,8 +369,8 @@ pages:
       - Say what a role is, what a slot is, and which of them a capability names.
       - Read, from the picture, which capabilities fill which slot, and see that the `fixers` slot has two.
       - Say that the capability that opens a slot works with no filler.
-      - "Say what is not yet shown: each role has one capability so far, so a swap is designed."
-      - Run `pkit status` to see who fills a slot and `pkit validate` to check the wiring.
+      - "Say that a swap is designed: a capability can be swapped for another in the same role."
+      - Run `pkit status` to see who fills a slot.
     reasons:
       - aspect: structure
         about: visual
