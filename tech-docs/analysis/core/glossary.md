@@ -1892,6 +1892,19 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
           - COR-050#12
+TERM-withdrawn-release-candidate:
+  name: withdrawn release candidate
+  noun-forms: [withdrawn release candidates]
+  status: active
+  definition: "set of versions cut to test changes before they ship whose commit also carries a second tag, pushed to mark that set unfit"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/upgrade.py
+          - src/project_kit/versioning.py
+        record:
+          - ADR-092#4
 ---
 
 # Glossary
@@ -3635,3 +3648,12 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Change check:** compares one [change](#term-change--change) with its [base](#term-base--base), and fails where the [friction mode](#term-friction-mode--friction-mode) is `enforcing` ([COR-050 point 12](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - **Debt:** what the whole-repository check reports, derived from git on each run ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
 - **Tool-written status:** the `last-check` that an after-merge job writes from the check's result. The checks never read it for [friction](#term-friction--friction) ([COR-050 point 10](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#10-a-tool-written-status-on-separate-lines)).
+
+## TERM-withdrawn-release-candidate — withdrawn release candidate
+
+**Example:** the methodology maintainer finds the [release candidate](#term-release-candidate--release-candidate) `3.0.0rc1` unfit, and pushes the tag `withdrawn/v3.0.0rc1` on its commit, beside its own tag `v3.0.0rc1`. `3.0.0rc1` is then a withdrawn release candidate: `pkit upgrade --pre` passes it by, and `pkit pin 3.0.0rc1` warns of it and pins it all the same.
+
+**Distinctions:**
+
+- **Release candidate:** a withdrawn release candidate is still one. Its own tag, such as `v3.0.0rc1`, is neither moved nor deleted, and a [version pin](#term-version-pin--version-pin) may still name it ([ADR-092 point 4](../../architecture/decisions/ADR-092-final-release-from-head.md#4-a-withdrawal-is-a-tag-which-pkit-upgrade---pre-passes-by-and-pkit-pin-warns-of)).
+- **Release tag:** the tag `withdrawn/v<candidate>` is none. It names no [install](#term-install--install), so no lookup of the highest [release](#term-release--release) takes it (ADR-092 point 4).
