@@ -91,6 +91,7 @@ The CLI command consuming the binding mechanism:
 - `pkit data validate <path>` — resolves the binding for one adopter data file, runs JSON Schema validation against the resolved schema, and reports findings.
 - The command accepts a file or a directory; directories walk for `*.yaml` recursively.
 - Returns a non-zero exit code on any validation failure or unresolved binding.
+- Reads a placed data file without the methodology's containers, which the backbone's own schema checks (refinement per COR-071). They are the container at the top of its data, or each entry's.
 
 The command is distinct from `pkit schemas validate`: the latter validates capability-side schema pairs (the spec); the former validates adopter-side data files against those schemas. Two validators, two artefacts, two surfaces — keeping them separate avoids overloading a single command with two distinct semantics.
 
