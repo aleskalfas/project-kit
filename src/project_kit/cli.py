@@ -5752,7 +5752,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         _upgrade_incubated_capability(target_root, source_kit, name, dry_run=dry_run)
         return
     # An externally-sourced capability moves by its pin, never as shipped
-    # (COR-041), and moving a pin waits on #1538. Refused before the bundle is
+    # (COR-041), and moving a pin waits on #3229. Refused before the bundle is
     # read, so a capability the bundle ships by the same name is never taken for it.
     if origin == caps.EXTERNALLY_SOURCED:
         _refuse_upgrading_externally_sourced(target_root, name)
@@ -7804,7 +7804,7 @@ def _refuse_collisions_off_terminal(
     metavar="TAG_OR_COMMIT",
     default=None,
     help="With --from: the tag, or the commit's full id, to install the capability at. "
-    "`pkit sync` keeps it there. A branch is refused until #1538.",
+    "`pkit sync` keeps it there. A branch is refused: a branch pin waits on #3229.",
 )
 @click.option(
     "--dry-run",
@@ -7860,7 +7860,7 @@ def install_capability_cmd(
     with its pin (COR-041, ADR-040). It is fetched, then gated, then installed
     or refused: a refusal writes nothing, and a source that cannot be reached
     warns and installs nothing. A branch as a ref, and moving the pin of a
-    capability already installed, wait on #1538.
+    capability already installed, wait on #3229.
     """
     refuse_inside_migration("capabilities install")
     from project_kit import capabilities as caps
@@ -7993,7 +7993,7 @@ def _install_externally_sourced(
     outside its ``project/`` tier, are reported and refused, never overwritten
     (point 6). One already installed from this pin is refused naming `pkit
     sync`, and one installed from another source or ref is refused naming
-    uninstall, since moving a pin waits on #1538.
+    uninstall, since moving a pin waits on #3229.
 
     Then point 4's order: the subtree is fetched whole at the pin
     (`capability_fetch.fetched`), its ``package.yaml`` read, and the gates every
@@ -8620,13 +8620,13 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
             return
         # An externally-sourced copy was pulled from its pinned source, not
         # authored here (COR-041): adopting it as incubated would cut it off
-        # from its pin. Refused, naming what moving it waits on.
+        # from its pin. Refused, naming the way to author it here.
         if current_origin == caps.EXTERNALLY_SOURCED:
             raise click.ClickException(
                 f"capability {name!r} is externally sourced: its copy is pulled from its "
                 "pinned source, not authored here, so it is never registered as incubated. "
-                "Changing its origin waits on #1538; to author it here, uninstall it "
-                f"(`pkit capabilities uninstall {name}`) and create it in this repository."
+                f"To author it here, uninstall it (`pkit capabilities uninstall {name}`) "
+                "and create it in this repository."
             )
         # kit-shipped / unset → adopt in place: run the applicable pre-flights
         # below, then set origin on the existing entry (no re-copy, no re-deploy —
@@ -8817,7 +8817,7 @@ def _upgrade_incubated_capability(
 def _refuse_upgrading_externally_sourced(target_root: Path, name: str) -> NoReturn:
     """Refuse `capabilities upgrade` of an externally-sourced capability (COR-041).
 
-    It moves by its pin, never as shipped, and moving the pin waits on #1538;
+    It moves by its pin, never as shipped, and moving the pin waits on #3229;
     `pkit sync` keeps its copy at the pin it has. Nothing is read or written.
     """
     from project_kit import capabilities as caps

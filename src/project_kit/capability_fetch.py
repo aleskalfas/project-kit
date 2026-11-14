@@ -14,7 +14,8 @@ copying it and registering it are the caller's (`capabilities`, the CLI, sync).
   person's answers fails at once. A URL that carries a credential is refused, so
   none is passed in an argument, recorded in a manifest or printed.
 - **A pin is a tag or a commit's full id.** A ref that names a branch is
-  refused: how a branch pin moves waits on #1538.
+  refused: a branch as a pin waits on #3229, which builds the transition that
+  moves a pin.
 - **Exactly the commit's content.** The subtree's files are read from git's
   objects, never checked out, so no filter, line-ending conversion or export
   attribute of either repository changes a byte, and no hook runs. The
@@ -45,9 +46,9 @@ from project_kit.manifest import CapabilityPin
 SOURCE_SUBTREE = ".pkit/capabilities"
 # The capability's own tier, which no fetch takes (ADR-040 point 3).
 _PROJECT_TIER = "project"
-# The issue that settles how a branch pin moves, a transition's fetch, and the
-# moving of an installed capability's pin (ADR-040, under the version transition).
-PIN_TRANSITION_ISSUE = "#1538"
+# The issue that builds the version transition that moves an installed
+# capability's pin, with its fetch of a moved pin and a branch as a pin (ADR-040).
+PIN_TRANSITION_ISSUE = "#3229"
 
 # A commit's full id, SHA-1 or SHA-256, and what may be an abbreviated one.
 _FULL_COMMIT = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
@@ -235,8 +236,8 @@ def _wanted(staging: Path, pin: CapabilityPin, where: str) -> str:
     if branch in listed:
         raise FetchRefused(
             f"{pin.ref} names a branch of {where}, not a tag or a commit. A branch as a pin "
-            f"waits on {PIN_TRANSITION_ISSUE}, which settles how such a pin moves. Pin a tag, "
-            "or a commit's full id."
+            f"waits on {PIN_TRANSITION_ISSUE}, which builds the transition that moves a pin. "
+            "Pin a tag, or a commit's full id."
         )
     if _FULL_COMMIT.fullmatch(pin.ref):
         return pin.ref

@@ -19,7 +19,7 @@ shortfalls:
     issue: "#1765"
     record: ADR-034#1
   - at: "3d"
-    issue: "#1538"
+    issue: "#3229"
     record: ADR-040#1
   - at: 13
     issue: "#1765"
@@ -128,7 +128,7 @@ pkit:
 - **3d.** The capability is authored in another repository, from which the adopter shares it, such as an organisation's own ([COR-041](../../../../../../.pkit/decisions/core/COR-041-external-source-distribution.md)). The system pulls it whole, at a ref of that repository the project pins, and checks it as steps 4 and 5 do. It settles each collision as variant 7b does, and records the capability with the [component origin](../../../glossary.md#term-component-origin--component-origin) `externally-sourced`. The path goes on at step 9.
 
 > [!WARNING]
-> **Not built yet:** the system pins a tag or a commit's full id, and refuses a branch. [ADR-040](../../../../../architecture/decisions/ADR-040-external-source-write-path.md) decides that a branch may be the ref, and #1538 tracks it.
+> **Not built yet:** the system pins a tag or a commit's full id, and refuses a branch. [ADR-040](../../../../../architecture/decisions/ADR-040-external-source-write-path.md) decides that a branch may be the ref, and #3229 tracks it.
 
 - **4a.** The [backbone](../../../glossary.md#term-backbone--backbone) lies outside the capability's [range](../../../glossary.md#term-range--range), or a capability it requires is missing or outside its range. The system refuses, naming what to install or upgrade first, and writes nothing ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-030](../../../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
 - **4b.** The capability's version lies outside a range an installed capability declares for it. The system warns, naming each such dependent and its range, and refuses unless the adopter passes `--force` ([COR-030](../../../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).

@@ -225,7 +225,7 @@ def test_install_refuses_a_branch_naming_where_a_branch_pin_waits(
 
     assert result.exit_code == 1, result.output
     assert "names a branch" in _said(result)
-    assert "#1538" in result.output
+    assert "#3229" in result.output
     _assert_nothing_installed(project)
 
 
@@ -358,7 +358,7 @@ def test_install_refuses_files_at_the_landing_path_no_registration_names(
 def test_install_again_from_its_pin_names_sync_and_from_another_names_uninstall(
     project: Path, kit: Path, upstream: GitRepo
 ) -> None:
-    """Moving an installed capability's pin waits on #1538."""
+    """Moving an installed capability's pin waits on #3229."""
     _author(upstream, "1.0.0", tag="v1.0.0")
     _author(upstream, "2.0.0", tag="v2.0.0")
     assert _install("--from", str(upstream.root), "--ref", "v1.0.0").exit_code == 0
@@ -369,7 +369,7 @@ def test_install_again_from_its_pin_names_sync_and_from_another_names_uninstall(
     assert again.exit_code == 1
     assert "`pkit sync` brings its copy to that pin" in _said(again)
     assert other.exit_code == 1
-    assert "#1538" in other.output
+    assert "#3229" in other.output
     assert "uninstall it first" in _said(other)
     assert "# v1.0.0" in (_copy(project) / _SKILL).read_text(encoding="utf-8")
 
@@ -556,7 +556,7 @@ def test_upgrade_refuses_an_externally_sourced_capability(
 
     assert result.exit_code == 1, result.output
     assert "moves by its pin" in _said(result)
-    assert "#1538" in result.output
+    assert "#3229" in result.output
 
 
 def test_a_transition_reads_its_range_from_the_copy_never_a_shipped_one_of_its_name(

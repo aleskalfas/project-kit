@@ -13,8 +13,8 @@ body: >
   and its manifest records the source and the ref as its `pin`. A name
   another capability holds, a branch as the ref, an abbreviated commit id,
   a URL that carries a credential, and a capability already installed from
-  another pin are refused; a branch pin and moving a pin wait on #1538. A
-  source that cannot be reached warns loudly and installs nothing. `pkit
+  another pin are refused; a branch pin and moving a pin are not built yet.
+  A source that cannot be reached warns loudly and installs nothing. `pkit
   sync` now brings each externally-sourced copy to its pin's content,
   removing files the pin does not hold, and never moves the pin; where the
   fetch fails, or the content's `requires_backbone` excludes the backbone
