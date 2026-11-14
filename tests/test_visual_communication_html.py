@@ -9,7 +9,7 @@ well-formed XML, so `ElementTree` reads it; an HTML parser reads the same elemen
 reader's signals meet is read from the file's rules (`met`), as CSS's cascade orders them, and
 so is what a reader gets around a fixed page (`around`), on screen and in print.
 
-The reference output below is pinned to the renderer's version, 1.9.0. A change that gives
+The reference output below is pinned to the renderer's version, 1.10.0. A change that gives
 another output for the same scene and values raises the version, and changes it with it
 (DEC-005 point 9). A font and a picture are pinned by what they hold, not by their bytes.
 Version 1.2.0 came with seam 5, which hands the renderer the picture each image shows, a PNG
@@ -26,7 +26,10 @@ seam 9, with a custom property of its own (DEC-032 point 5): a scene of no step 
 drew it, but for the renderer's version it names. Version 1.9.0 came to draw, under forced
 colours alone, a ground for each line of a text, beneath the lines of its run of texts, and a
 fill's edge inside the fill (DEC-039 points 1 to 4): each file holds the rules for them, and
-each text its lines' grounds.
+each text its lines' grounds. Version 1.10.0 came to draw, under forced colours alone, a path's
+and a sign's edge inside it by an eroded copy of its outline, where 1.9.0 clipped it
+(DEC-039 point 4): a scene of no path and no sign draws as 1.9.0 drew it, but for the
+renderer's version it names.
 """
 
 from __future__ import annotations
@@ -275,7 +278,7 @@ def said(
 def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
     assert seam.declaration("html", seam.RENDERER) == html_declaration.DECLARATION
     assert html.NAME == "html"
-    assert html.VERSION == "1.9.0"
+    assert html.VERSION == "1.10.0"
 
 
 def test_it_declares_what_it_draws_and_needs() -> None:
@@ -722,7 +725,7 @@ def test_the_file_names_its_piece_key_and_renderer() -> None:
     root = read(scene(TITLE))
     assert root.get("data-piece") == "flow"
     assert root.get("data-key") == "default"
-    assert root.get("data-renderer") == "html 1.9.0"
+    assert root.get("data-renderer") == "html 1.10.0"
 
 
 def test_pages_follow_each_other_in_the_middle_of_the_window_with_the_declared_gap() -> None:
@@ -754,7 +757,8 @@ def test_the_file_sets_no_colour_around_its_pages() -> None:
         ":root",
         f'[{MARKS["layer"]}] [fill="var(--accent)"]',
         f'[{MARKS["layer"]}] rect[fill="var(--accent)"]:not([stroke]),'
-        f'[{MARKS["layer"]}] ellipse[fill="var(--accent)"]:not([stroke])',
+        f'[{MARKS["layer"]}] ellipse[fill="var(--accent)"]:not([stroke]),'
+        f'[{MARKS["layer"]}] path[fill="var(--accent)"]:not([stroke])',
         f"[{html.INSET}]",
     }
     assert all(
@@ -1200,7 +1204,7 @@ REFERENCE_KEYS = {"default": LIGHT, "colour-scheme.dark": DARK}
 PINNED = (
     "<!DOCTYPE html>\n"
     '<html lang="en" data-piece="flow" data-key="default" data-renderer="html '
-    '1.9.0">\n'
+    '1.10.0">\n'
     "<head>\n"
     '<meta charset="utf-8"/>\n'
     '<meta name="viewport" content="width=device-width,initial-scale=1"/>\n'
@@ -1223,7 +1227,8 @@ PINNED = (
     "@media (forced-colors:active){[data-layer] [stroke]{stroke:CanvasText}"
     'marker path{fill:CanvasText}[data-layer] [fill="var(--surface)"]{fill:Canvas}'
     '[data-layer] rect[fill="var(--surface)"]:not([stroke]),'
-    '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
+    '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]),'
+    '[data-layer] path[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
     "[data-ground]{display:block;background:Canvas}[data-line]{forced-color-adjust:none}"
     "[data-span]{forced-color-adjust:auto;background:none!important}"
     "[data-inset]{display:inline;fill:Canvas}}</style>\n"
@@ -1725,7 +1730,8 @@ def test_under_forced_colours_one_rule_gives_lines_the_text_colour_and_fills_the
         "marker path{fill:CanvasText}"
         '[data-layer] [fill="var(--surface)"]{fill:Canvas}'
         '[data-layer] rect[fill="var(--surface)"]:not([stroke]),'
-        '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
+        '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]),'
+        '[data-layer] path[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
         f"{html.FORCED_SHEET}"
     )
     assert "#" not in forced(root)
@@ -1870,7 +1876,8 @@ def test_a_box_a_rounded_box_and_an_ellipse_take_the_inset_shape_and_a_hairline_
     }  # fmt: skip
     assert (
         '[data-layer] rect[fill="var(--surface)"]:not([stroke]),'
-        '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
+        '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]),'
+        '[data-layer] path[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
     ) in forced(root)
     assert "[data-inset]{display:inline;fill:Canvas}" in forced(root)
     assert "clip" not in sheet(root)
@@ -1888,36 +1895,45 @@ CLIPPED = scene(
 )  # fmt: skip
 
 
-def test_a_path_and_a_shape_with_a_hole_take_the_clip_by_their_fill_rule() -> None:
-    """Each path is a clipped shape: its geometry defined once, which a `use` draws, marked
-    with its clip's number, and the clip holds a second `use` of it, its `clip-rule` the
-    shape's `fill-rule`. Under forced colours alone the edge is twice as wide, clipped to the
-    shape, so only its inner half shows (DEC-039 point 4)."""
+def test_a_path_and_a_shape_with_a_hole_take_an_eroded_copy_by_their_fill_rule() -> None:
+    """Each path is drawn whole, and over it a copy of its outline, its `fill-rule` the
+    shape's, marked as eroded. Under forced colours alone the copy takes the reader's
+    background colour through the file's filter, which erodes by the edge's width, so the edge
+    lies inside the shape (DEC-039 point 4)."""
     root = read(CLIPPED)
 
     [layer] = marked(root, "layer")
-    by_id = {node.get("id"): node for node in layer.iter() if node.get("id")}
-    drawn = [node for node in layer if "data-id" in node.attrib]
-    assert [(node.tag, node.get("data-id"), node.get(html.CLIP)) for node in drawn] == [
-        ("use", "figure/whole", "1"),
-        ("use", "figure/holed", "2"),
+    assert insets(layer) == {
+        "figure/whole": {"tag": "path", "d": HOLED},
+        "figure/holed": {"tag": "path", "d": HOLED, "fill-rule": "evenodd"},
+    }
+    assert [node.get(html.INSET) for node in layer if html.INSET in node.attrib] == [
+        html.ERODED,
+        html.ERODED,
     ]
-    for node, rule_of in zip(drawn, (None, "evenodd"), strict=True):
-        number = node.get(html.CLIP)
-        geometry = by_id[f"pkit-shape-{number}"]
-        assert node.get("href") == f"#pkit-shape-{number}"
-        assert (geometry.get("d"), geometry.get("fill-rule")) == (HOLED, rule_of)
-        [taken] = list(by_id[f"pkit-clip-{number}"])
-        assert (taken.tag, taken.get("href")) == ("use", f"#pkit-shape-{number}")
-        assert taken.get("clip-rule") == geometry.get("fill-rule")
-        assert f'[data-clip="{number}"]{{clip-path:url(#pkit-clip-{number})}}' in forced(root)
-    assert "[data-clip]{stroke:CanvasText;stroke-width:2px}" in forced(root)
+    [filtered] = root.iter("filter")
+    [erosion] = list(filtered)
+    assert filtered.get("id") == html.ERODE_ID
+    assert (erosion.tag, erosion.get("operator"), erosion.get("radius")) == (
+        "feMorphology",
+        "erode",
+        "1",
+    )
+    assert f'[data-inset="erode"]{{filter:url(#{html.ERODE_ID})}}' in forced(root)
+    assert "clip-path" not in forced(root)
+    assert 'path[fill="var(--surface)"]:not([stroke])' in forced(root)
+
+
+def test_a_file_with_no_path_and_no_sign_defines_no_filter() -> None:
+    root = read(EDGED)
+    assert not list(root.iter("filter"))
+    assert html.ERODE_ID not in sheet(root)
 
 
 def test_a_shape_that_takes_an_edge_reports_a_stroke_no_key_gives_a_colour() -> None:
     """A path, a box and an ellipse whose fill is opaque in every key, and whose stroke's role
-    no key gives a colour, take the edge, the path as a clipped shape, and each still reports
-    its stroke left out in each key (DEC-039 point 4, DEC-023 point 8)."""
+    no key gives a colour, take the edge, the path under an eroded copy, and each still
+    reports its stroke left out in each key (DEC-039 point 4, DEC-023 point 8)."""
     look = {"fill": "surface", "stroke": "gone", "stroke-width": 1}
     drawn = draw(
         scene(
@@ -1929,8 +1945,7 @@ def test_a_shape_that_takes_an_edge_reports_a_stroke_no_key_gives_a_colour() -> 
     )
 
     [layer] = marked(ElementTree.fromstring(drawn.document), "layer")
-    assert [node.get("data-id") for node in layer if html.CLIP in node.attrib] == ["figure/path"]
-    assert set(insets(layer)) == {"figure/box", "figure/ellipse"}
+    assert set(insets(layer)) == {"figure/path", "figure/box", "figure/ellipse"}
     assert [loss.as_dict() for loss in drawn.losses] == [
         {
             "plugin": "html",
@@ -1944,16 +1959,16 @@ def test_a_shape_that_takes_an_edge_reports_a_stroke_no_key_gives_a_colour() -> 
     ]
 
 
-def test_no_clip_and_no_inset_shape_applies_outside_forced_colours() -> None:
-    """Outside forced colours the inset shape is hidden and no clip applies, so the layers
+def test_no_filter_and_no_inset_shape_applies_outside_forced_colours() -> None:
+    """Outside forced colours the inset shape is hidden and no filter applies, so the layers
     draw as the SVG renderer draws them (DEC-039 point 4, DEC-020 point 1)."""
     for drawn in (EDGED, CLIPPED):
         root = read(drawn)
-        assert "clip-path" not in plain_sheet(root)
+        assert "filter" not in plain_sheet(root)
         assert rule(root, "ground").startswith("position:absolute;display:none")
         assert re.search(rf"(?:^|\}})\[{html.INSET}\]\{{display:none\}}", plain_sheet(root))
+        assert not any("filter" in node.attrib for node in root.iter())
         assert not any("clip-path" in node.attrib for node in root.iter())
-        assert not any("stroke" in node.attrib for node in root.iter() if html.CLIP in node.attrib)
 
 
 def test_a_picture_draws_the_first_keys_variant_and_each_other_that_differs_is_a_loss(

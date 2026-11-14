@@ -33,12 +33,14 @@ points 1 to 6, DEC-039 points 1 to 4, DEC-005 points 4, 5, 9 and 10).
   lies inside the fill (DEC-039 point 4). A box or an ellipse takes the text colour, and
   over it the same shape inset by the edge's width, marked `data-inset`, in the background
   colour; one no thicker than twice the edge's width takes no inset shape, so it is drawn
-  solid. A path takes its edge twice as wide, clipped to its own shape, so only its inner
-  half shows: its geometry lies once in the file, as a definition that a `use` draws, and
-  the clip holds a second `use` of it, its `clip-rule` the shape's `fill-rule`. The `use`
-  is marked `data-clip` with the clip's number, which a rule under forced colours alone
-  clips by. A run's sign is clipped so too. Outside forced colours the inset shape is
-  hidden and no clip applies, so the layers draw as the SVG renderer draws them.
+  solid. A path, and a run's sign, takes the text colour too, and over it a copy of its own
+  outline, its `fill-rule` the shape's, marked `data-inset="erode"` and eroded by the
+  edge's width: a rule under forced colours alone applies a filter that the file defines
+  once, in an `svg` of no size, an `feMorphology` that erodes by the declared width. So the
+  copy lies inside the outline whatever its outline crosses or holds, and the outline's
+  pixel is smoothed once, as it is in the shape's own colours. Outside forced colours the
+  inset shape is hidden and no filter applies, so the layers draw as the SVG renderer
+  draws them.
 - **A line's ground** under forced colours (DEC-039 points 1 to 3). Each line takes no
   backplate, its spans the reader's colours, and lies on a ground the file draws in the
   reader's background colour, an element of its own marked `data-ground` with its text's
@@ -174,14 +176,14 @@ STEP = "--_step-"
 TEXT_COLOUR = "CanvasText"
 GROUND_COLOUR = "Canvas"
 
-#: The attribute that marks the inset shape over an opaque fill, and the `use` a clip takes
-#: under forced colours, with the clip's number (DEC-039 point 4).
+#: The attribute that marks the inset shape over an opaque fill (DEC-039 point 4), and the value
+#: it takes where the shape is a copy of a path's outline that a filter erodes.
 INSET = "data-inset"
-CLIP = "data-clip"
+ERODED = "erode"
 
-#: The ids of a clipped shape's geometry and of its clip, each ended by the clip's number.
-SHAPE_ID = "pkit-shape-"
-CLIP_ID = "pkit-clip-"
+#: The id of the filter that erodes an eroded inset shape by the edge's width, defined once in
+#: the file.
+ERODE_ID = "pkit-edge"
 
 #: The rules every page file holds, after its faces. None sets a colour or clips anything: a
 #: line's ground and the inset shape draw nothing outside forced colours (DEC-039).
@@ -217,8 +219,8 @@ FORCED_SHEET = "".join(
 )
 
 #: The shapes whose fill takes the text colour under an inset shape where it has an edge
-#: (DEC-039 point 4): a box, a rounded box among them, and an ellipse.
-INSET_SHAPES = ("rect", "ellipse")
+#: (DEC-039 point 4): a box, a rounded box among them, an ellipse, and a path.
+INSET_SHAPES = ("rect", "ellipse", "path")
 
 #: The ascent and the descent of each committed font file, in ems, by its path.
 _REACH: dict[str, tuple[float, float]] = {}
@@ -415,9 +417,9 @@ class PageFile(Canvas):
         # The custom property of each step of an order the file paints, by the step's name,
         # numbered in the order the file first paints it (DEC-023 point 3, DEC-032 point 5).
         self._steps: dict[str, str] = {}
-        # How many shapes the file clips under forced colours, each numbered in the order the
-        # file writes it (DEC-039 point 4).
-        self._clips = 0
+        # Whether the file holds an eroded inset shape, so the filter that erodes it
+        # (DEC-039 point 4).
+        self._eroded = False
         self._parted = {key: self._parting(key) for key in self.keys}
 
     def _parting(self, key: str) -> dict[str, str]:
@@ -533,7 +535,7 @@ class PageFile(Canvas):
             f"<style>{self._font_faces()}{self._modes()}{SHEET}{PRINT_SHEET}{fixed}"
             f"{self._forced()}</style>\n"
             "</head>\n"
-            f"<body>{self._arrowheads()}{pages}</body>\n"
+            f"<body>{self._arrowheads()}{self._erosion()}{pages}</body>\n"
             "</html>\n"
         ).encode()
 
@@ -587,7 +589,7 @@ class PageFile(Canvas):
         names it: each line, stroke and arrowhead the reader's text colour, and each fill opaque
         in every key the reader's background colour, with an edge inside it where it has no
         stroke of its own (DEC-039 point 4). A box or an ellipse takes the text colour under its
-        inset shape; a clipped shape takes its edge twice as wide, clipped by its number. A
+        inset shape, and a path or a sign takes it under an inset shape that a filter erodes. A
         run's sign takes what a shape's fill takes (DEC-036 point 4). Each line lies on its
         ground (`FORCED_SHEET`)."""
         forced = self.declaration["forced-colours"]
@@ -611,19 +613,13 @@ class PageFile(Canvas):
             inset = [
                 f"{within} {shape}{held}:not([stroke])"
                 for within, held in opaque
-                if within == layer
                 for shape in INSET_SHAPES
             ]
             if inset:
                 rules.append(f"{','.join(inset)}{{fill:{edge['colour']}}}")
         rules.append(FORCED_SHEET)
-        if self._clips:
-            twice = number(2 * float(edge["width"]))
-            rules.append(f"[{CLIP}]{{stroke:{edge['colour']};stroke-width:{twice}px}}")
-            rules += [
-                f'[{CLIP}="{each}"]{{clip-path:url(#{CLIP_ID}{each})}}'
-                for each in range(1, self._clips + 1)
-            ]
+        if self._eroded:
+            rules.append(f'[{INSET}="{ERODED}"]{{filter:url(#{ERODE_ID})}}')
         return f"@media (forced-colors:active){{{''.join(rules)}}}"
 
     def _opaque_in_every_key(self, role: str | None) -> bool:
@@ -832,7 +828,7 @@ class PageFile(Canvas):
         the gap after it, and its outline filled by its rule in the run's paint. It is hidden
         from a reader's tools, since a sign takes no place in the reading order (DEC-036
         points 3 and 5). A paint opaque in every key takes an edge under forced colours, so
-        the sign is then a clipped shape (DEC-039 point 4)."""
+        the sign then takes an eroded inset shape (DEC-039 point 4)."""
         sign = span["sign"]
         size = float(sign["size"])
         rise = float(line["baseline"]) - float(sign["top"]) - size
@@ -842,10 +838,9 @@ class PageFile(Canvas):
         rule = sign.get("fill-rule")
         rule = rule if rule == "evenodd" else None
         fill = [("fill", f"var({self._property(role)})" if role is not None else "none")]
+        drawn = f"<path {attribute_text([('d', sign['d']), ('fill-rule', rule), *fill])}/>"
         if self._opaque_in_every_key(role):
-            drawn = self._clipped(None, sign["d"], rule, fill)
-        else:
-            drawn = f"<path {attribute_text([('d', sign['d']), ('fill-rule', rule), *fill])}/>"
+            drawn += self._eroded_copy(sign["d"], rule)
         style = _style(
             [
                 ("width", self._share(size)),
@@ -914,35 +909,33 @@ class PageFile(Canvas):
         return f"{drawn}<ellipse {inset}/>"
 
     def _path(self, element: Mapping[str, Any]) -> str:
-        """A path, clipped to its own shape under forced colours where it takes an edge."""
+        """A path, and over it, where it takes an edge, a copy of its outline eroded by the
+        edge's width."""
+        drawn = super()._path(element)
         outline = element.get("d")
-        if not self._edged(element) or not isinstance(outline, str) or not outline:
-            return super()._path(element)
+        if not drawn or not self._edged(element) or not isinstance(outline, str):
+            return drawn
         rule = element.get("fill-rule")
-        fill = self._paint(element, "fill")
-        # No key gives the stroke a colour, so it draws nothing; asking for it still reports the
-        # stroke's role left out in each key, as the path drawn whole does.
-        self._stroke(element)
-        return self._clipped(element["id"], outline, rule if rule == "evenodd" else None, fill)
+        return drawn + self._eroded_copy(outline, rule if rule == "evenodd" else None)
 
-    def _clipped(
-        self, trace: str | None, outline: str, rule: str | None, fill: list[tuple[str, Any]]
-    ) -> str:
-        """A shape of `outline` filled by `rule` as a clipped shape: its geometry defined once,
-        a clip that holds a `use` of it, its `clip-rule` the shape's fill rule, and the `use`
-        that draws it in `fill`, marked with the clip's number, which a rule under forced
-        colours alone clips by (`_forced`)."""
-        self._clips += 1
-        shape = f"{SHAPE_ID}{self._clips}"
-        geometry = attribute_text([("id", shape), ("d", outline), ("fill-rule", rule)])
-        clip = attribute_text([("href", f"#{shape}"), ("clip-rule", rule)])
-        drawn = attribute_text(
-            [("data-id", trace), (CLIP, self._clips), ("href", f"#{shape}"), *fill]
-        )
+    def _eroded_copy(self, outline: str, rule: str | None) -> str:
+        """The inset shape of a shape with no inset of its own to draw, its `outline` filled by
+        `rule`: a copy marked as eroded, which a rule under forced colours alone draws in the
+        reader's background colour through the file's filter (`_erosion`)."""
+        self._eroded = True
+        attributes = attribute_text([(INSET, ERODED), ("d", outline), ("fill-rule", rule)])
+        return f"<path {attributes}/>"
+
+    def _erosion(self) -> str:
+        """The filter that erodes each eroded inset shape by the edge's width, in an `svg` of no
+        size, as the arrowheads are held: a layer reaches it by its id, so it is defined once.
+        Nothing where the file holds no such shape (DEC-039 point 4)."""
+        if not self._eroded:
+            return ""
+        erode = attribute_text([("operator", "erode"), ("radius", number(self._edge_width()))])
         return (
-            f"<defs><path {geometry}/>"
-            f'<clipPath id="{CLIP_ID}{self._clips}"><use {clip}/></clipPath></defs>'
-            f"<use {drawn}/>"
+            '<svg width="0" height="0" style="position:absolute" aria-hidden="true">'
+            f'<defs><filter id="{ERODE_ID}"><feMorphology {erode}/></filter></defs></svg>'
         )
 
     def _edge_width(self) -> float:

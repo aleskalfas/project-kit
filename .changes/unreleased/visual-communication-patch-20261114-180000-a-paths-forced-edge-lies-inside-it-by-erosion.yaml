@@ -1,0 +1,13 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The HTML renderer, at 1.10.0, draws under forced colours a path's edge, and
+  a run's sign's, as a copy of its outline in the reader's background colour,
+  eroded by the edge's width by one filter the file defines, over the shape in
+  the reader's text colour (DEC-039 point 4, #3122). A text that rests on a
+  path's edge no longer loses more than in its own colours, and a path that
+  crosses itself shows no edge across its inside. Where a browser drops the
+  filter, the path has no edge. Outside forced colours its files draw as
+  before.
