@@ -4,7 +4,7 @@ schema_version: 1
 slides:
   - id: stack
     layout: slide
-    title: Levels stacked one on another, the top first
+    title: Levels stacked one on another, the top first, each a step of the order
     visual:
       use: starter/layers
       levels:
@@ -23,10 +23,10 @@ slides:
 
   - id: tinted
     layout: slide
-    title: Each level tinted by the concept it names
+    title: Each level tinted by the concept it names, with no shade by its place
     visual:
       use: starter/layers
-      level: {use: starter/card, fill: tint}
+      shade: plain
       levels:
         - id: people
           concept: test-notation/person
