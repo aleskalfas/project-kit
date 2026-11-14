@@ -12,6 +12,7 @@ pkit:
         - src/project_kit/stranded_migrations.py
         - src/project_kit/release_candidate.py
         - src/project_kit/candidates.py
+        - src/project_kit/upgrade.py
         - src/project_kit/remote_refs.py
         - pyproject.toml
         - .changie.yaml
