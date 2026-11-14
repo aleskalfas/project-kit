@@ -1,0 +1,10 @@
+component: visual-communication
+kind: none
+body: >
+  Design-ahead: visual-communication DEC-043 proposes that the part that draws
+  a list of ties may declare a trunk at one of its end fields, so that the
+  ties meeting one side of an item, where they draw alike, meet it at one
+  point and branch off the tie that reaches least far, a group that cannot be
+  drawn clear being drawn spread as today. It also gives a connector two
+  measures for the middle of the stretch it alone runs. It is record text
+  only, and nothing you run changes. The build carries the real changeset.
