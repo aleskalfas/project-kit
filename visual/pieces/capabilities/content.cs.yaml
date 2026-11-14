@@ -31,7 +31,7 @@ slides:
         - id: rules
           cells:
             - {id: layer, head: "Pravidla, schémata, procesy"}
-            - {id: core, text: "rules/  schemas/  process/"}
+            - {id: core, text: "rule-sets/  schemas/  process/"}
             - {id: capability, text: "rule-sets/  schemas/"}
         - id: skills
           cells:
