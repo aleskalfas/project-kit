@@ -34,18 +34,21 @@ acts on stops what rests on it. A read it only reports says the board did not
 answer, and never reports an issue off the board or a check passed. A command
 whose act needs a later write to the board, as filing needs the issue's card,
 reads the board before it acts. Once the act is made it stands, and a step it
-requires that failed gets an exit code saying so. What the act sets off on
-other issues, such as the forward cascade, keeps its own posture. A project
-with no board makes no call to one.
+requires that failed gets an exit code saying so. A merge is landing work's
+act, and the issue's Done after it mirrors the close the merge makes. What
+the act sets off on other issues, such as the forward cascade, is the
+capability's to settle, within the same rules: the command never acts on a
+board that did not answer as though it had, and never takes a code that reads
+as the act not made. A project with no board makes no call to one.
 
 This refines the board read-path contract
 ([ADR-053](ADR-053-board-read-path-contract.md)) and the record on a
 board-carried state ([ADR-074](ADR-074-board-carried-state-read.md)) in place,
-and narrows the exit code filing takes for a failed link to a report. It
-overturns one ruling of ADR-053: that the membership check stays outside the
-contract, and judges from what the issue's own read carried. It also decides
-what counts as a write made on the board, an issue's add among them, which no
-other record decides.
+and narrows the exit code filing takes for a failed link to a report, where
+its card failed too. It overturns one ruling of ADR-053: that the membership
+check stays outside the contract, and judges from what the issue's own read
+carried. It also decides what counts as a write made on the board, an issue's
+add among them, which no other record decides.
 
 **What a person accepting this weighs:**
 
@@ -70,10 +73,12 @@ other record decides.
   board where filing writes a first Status, and is one call more on each
   filing where the map leaves the state out.
 - **A failed add at filing exits with a code of its own,** saying the issue was
-  filed and a later step failed, rather than clean. A caller that does not know
-  the code reads it as a failure, so the message leads with the filed issue.
-  Where a filing's link to a report failed too, filing takes this code rather
-  than DEC-048's, and DEC-048 is narrowed in place to say so.
+  filed and a later step failed, rather than clean, and so does a first Status
+  not written where the board holds the state. A caller that does not know the
+  code reads it as a failure, so the message leads with the filed issue. Where
+  a filing's link to a report failed beside such a write, filing takes this
+  code rather than DEC-048's, and DEC-048 gains a sentence saying so. Wherever
+  no such write failed, a failed link keeps DEC-048's code.
 - **The health check reads the board on each run, and never passes on a stored
   id.** Its failure stops what DEC-017 has it stop: every operation the
   capability's skill runs, those that touch no board among them, migrate, and a
@@ -143,13 +148,21 @@ other record decides.
   lies in a repository the credential may not read. The board returns it marked
   as withheld, with nothing of its issue.
 - **A command's act** is the change it is run to make, the one its success
-  reports: an issue filed, an issue moved, a field set, an option removed. A
-  change it makes first to prepare the act, such as the branch or the pull
-  request a command makes before it moves the issue, comes before the act, and
-  is no write that follows it. What the act sets off on another issue, such as
-  the forward cascade's moves of the issue's ancestors
+  reports: an issue filed, an issue moved, a field set, an option removed, a
+  pull request merged. Where a command makes a change that cannot be undone,
+  as a merge cannot
+  ([project-management:DEC-026](../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md),
+  its failure semantics), that change is its act, and what it does after it
+  follows the act: landing work merges, and then moves its issue to Done. A
+  change made first to prepare the act, such as the branch or the pull request
+  a command makes before it moves the issue, comes before the act, and is no
+  write that follows it. What the act sets off on another issue, such as the
+  forward cascade's moves of the issue's ancestors
   ([project-management:DEC-006](../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)),
   is no part of it (point 4).
+- **A later step** is any step a command makes after its act, on the board or
+  off it, such as filing's add of the issue's card, its link to a report, or a
+  hook.
 
 **What was measured**
 ([project-kit#3164](https://github.com/aleskalfas/project-kit/issues/3164)). An
@@ -355,8 +368,8 @@ that says so.**
   issue witnesses only where the request carrying it shows its card again.
   The request made again is the one that answers: its absences are judged from
   it alone, and nothing of the first is kept. So a request lacks a witness
-  where none of the read's requests showed one for its repository, or where
-  the issue carried into it does not show its card again. Carrying an issue
+  where nothing it reads for its repository, its own issues, its page or an
+  issue carried into it, shows a card on the board. Carrying an issue
   never takes a request past what the service lets one request ask, such as
   how many issues it may name.
 - **No sign is read from the credential's kind,** an app's, a workflow's or a
@@ -455,28 +468,36 @@ a command that makes several takes each:
   adds, since an issue belongs on the board from its filing (DEC-019), or a
   value of the same issue whose source is the board, that the command writes
   itself, such as the first Status where the map binds the state to the board.
-  Not made, the act stands, since undoing it is a write too, and a destructive
-  one. The command says what stands, gives the write not made with the board's
-  words and the remedy, and exits with a code saying the act was made and a
-  later step failed. That code is one of its own, beside filing's code for an
-  issue filed whose link failed (DEC-048 point 4), which keeps its meaning.
+  The Done of an issue the command or its act closes is none: it mirrors that
+  close (below). Not made, the act stands, since undoing it is a write too, and
+  a destructive one. The command says what stands, gives the write not made
+  with the board's words and the remedy, and exits with a code saying the act
+  was made and a later step failed. That code is one of its own, beside
+  filing's code for an issue filed whose link failed (DEC-048 point 4), which
+  keeps its meaning.
 - **Any other write that follows the act mirrors** a value another substrate
-  carries, such as the Status where labels carry the state, or a closed
-  issue's Done, since a closed issue is done whatever its card says (DEC-062
-  point 5). Not made, it is one line saying what stands and what repairs it,
-  and the command exits as its act does.
-- **An act of many writes,** such as a sync of many cards, or a merge that
-  rewrites each card holding an option before it removes the option. Each write
-  made stands. A write that rests on one not made is not tried, such as removing
-  an option while a card holds it. The command names each write not made, and
-  where some were made, exits with a code saying the act was made in part.
+  carries, such as the Status where labels carry the state, or the Done of an
+  issue that is closed, or that the command or its act closes, since a closed
+  issue is done whatever its card says (DEC-062 point 5). Landing work's Done
+  is such a write: its merge closes the issue, or the command closes it after,
+  and a merge closes its issue with no board in the loop (DEC-062's
+  Rationale). Not made, it is one line saying what stands and what repairs it,
+  and takes no code of its own: the command exits as its act does.
+- **An act of many writes,** such as a sync of many cards, or merging one
+  option into another, which rewrites each card holding the one before it
+  removes it. Each write made stands. A write that rests on one not made is not
+  tried, such as removing an option while a card holds it. The command names
+  each write not made, and where some were made, exits with a code saying the
+  act was made in part.
 - **What the act sets off on another issue,** such as the forward cascade's
-  reads and moves of the issue's ancestors (DEC-006), is none of these, and
-  "Before it" below does not reach it. The act stands whatever becomes of it.
-  What the command does where the board did not answer for such an issue, or a
-  write to it was not made, is for the project-management record that
-  ADR-074's Boundaries leave the cascade to, within the two limits above, and
-  no code it takes reads as the act not made ("After it").
+  reads and moves of the issue's ancestors (DEC-006), is none of these.
+  "Before it" below asks no read of such an issue before the act, and whether
+  the act waits on one is not decided here (Boundaries). Once the act is made,
+  it stands whatever becomes of them. What the command does where the board did
+  not answer for such an issue, or a write to it was not made, is for a
+  project-management record not yet written, which ADR-074's Boundaries leave
+  the cascade to. The two limits above hold there, and once the act is made,
+  no code the command takes for it reads as the act not made ("After it").
 
 Two rules order these around the act:
 
@@ -490,18 +511,26 @@ Two rules order these around the act:
   from filing (DEC-019), and its read asks the board the filing adds to. The
   refusal says why the board did not answer, or what its answer lacks, gives
   the service's words, and names the way out that cause gives (point 6).
-- **After it.** Nothing takes a code that reads as the act not made, and a write
-  the act requires that was not made takes no code that reads as a clean
-  success. The message leads with what stands, such as the filed issue. Where
-  more than one later step failed, the message names each, and the command
-  takes no code that names only one of them. Each of the capability's callers
-  that acts on such a code, a loop that files many issues among them, reads it
-  as the act made.
+- **After it.** Once the act is made, no read or write of the board after it
+  takes a code that reads as the act not made, whether it is a write the act
+  requires, a mirror, a note, or a read or write of another issue the act set
+  off. A write the act requires that was not made takes no code that reads as
+  a clean success. The message leads with what stands, such as the filed
+  issue. Where a write the act requires was not made, and another later step
+  that takes a code of its own failed too, such as filing's link to a report,
+  the message names each, and the command takes the code saying the act was
+  made and a later step failed, never one that names only the other. Each of
+  the capability's callers that acts on such a code, a loop that files many
+  issues among them, reads it as the act made. Where only later steps off the
+  board failed, the command takes the code it gives them, which this record
+  does not set.
 
 These are limits on every command, as ADR-053 point 2's and ADR-074 point 5's
 are. They name no code. Within them, each command's choice stays its own, and
 its codes with it (DEC-020), recorded with the command's discipline, as a seat's
-choice is (DEC-051 point 6).
+choice is (DEC-051 point 6). Where a record fixes a code they forbid, this
+record narrows that record in place, as it does DEC-048 point 4 for a link that
+fails beside a write filing requires.
 
 ### 5. Membership is read as every card is
 
@@ -584,9 +613,10 @@ ADR-053 stands, refined as the Implications name.
 - **Not what the forward cascade does at an ancestor** whose card the board did
   not answer for, or whose write was not made, nor whether a move refuses for
   it. The cascade is what a move sets off on other issues (point 4). That
-  stays with the project-management record ADR-074's Boundaries leave it to,
-  and the limits hold there: no ancestor moves on a position the cascade could
-  not read, and the move, once made, takes no code that reads as not made.
+  stays with a project-management record not yet written, which ADR-074's
+  Boundaries leave it to, and the limits hold there: no ancestor moves on a
+  position the cascade could not read, and the move, once made, takes no code
+  that reads as not made.
 - **Not one home for the add.** ADR-031 point 3 keeps the add out of the
   constructor for field values, and point 3 here binds every place an add is
   made.
@@ -656,10 +686,10 @@ an issue one request found carded is read again in the others: from the start
 in each request after it, and in each request before it that lacked a
 witness, made again once after the read's last request. It witnesses there
 only where its card shows again, since only what the request shows is in the
-request. A request then lacks a witness where none of the read's requests
-found one, or where the issue carried into it does not show its card again,
-and such a request fails the read, as any batch that cannot judge its absences
-does. Made again once, at the end, a request costs one call more however many
+request. A request then lacks a witness where nothing it reads for the
+repository, its own issues, its page or the issue carried into it, shows a
+card, and such a request fails the read, as any batch that cannot judge its
+absences does. Made again once, at the end, a request costs one call more however many
 repositories it lacks a witness for.
 
 What is left is a board on which no issue the read sees shows a card: an empty
@@ -801,19 +831,35 @@ its add not made is a later step failed (point 4). A credential whose filtered
 reads alone miss the board passes it too, and later reads report the board
 unanswered, never an issue off it.
 
-**Why what an act sets off on another issue keeps its own posture.** The
-forward cascade moves the ancestors of an issue whose move is the act, so that
-a container is never behind the work under it (DEC-006). Its writes land on
-other issues, the move needs none of them to stand, and running the move
-again finishes a cascade cut short. Taken as writes the act requires, they
-would make a move refuse for an ancestor's card, a question ADR-074's
-Boundaries leave to a project-management record. And a cascade cut short
-after a move made would take a code that the commands composing the move
-read as the issue not moved, so they would report a move that stands as
-unmade. So the cascade stays outside the write classes and the read first.
-The limits hold there, and the move's code says it was made. A closed issue's
-Done is no write the act requires either: a closed issue is done whatever its
-card says (DEC-062 point 5), so its Done mirrors the native close.
+**Why what an act sets off on another issue stays outside the write classes,
+within the limits.** The forward cascade moves the ancestors of an issue whose
+move is the act, so that a container is never behind the work under it
+(DEC-006). Its writes land on other issues, the move needs none of them to
+stand, and running the move again finishes a cascade cut short. Taken as
+writes the act requires, they would make a move refuse for an ancestor's card,
+a question ADR-074's Boundaries leave to a project-management record. And a
+cascade cut short after a move made would take a code that the commands
+composing the move read as the issue not moved, so they would report a move
+that stands as unmade. So the cascade stays outside the write classes and the
+read first, and whether a move waits on an ancestor is left open. The limits
+hold there, and once the move is made, its code says so.
+
+**Why a change that cannot be undone is the act, and a Done a close makes a
+mirror.** A code that reads as the act not made invites the act again, and
+where the change cannot be undone, it also misreports what stands for good.
+Landing work merges and then moves its issue to Done, and the merge cannot be
+undone (DEC-026). Taken as preparation for the move, as a branch is, the merge
+would read as not made wherever the move after it failed. So a change that
+cannot be undone is the act, and what follows it a later step. A branch or a
+pull request made before a move can be undone, and a code saying the move was
+not made is true of it, so it stays preparation. The Done of an issue that is
+closed, or that the command or its act closes, is no write the act requires: a
+closed issue is done whatever its card says (DEC-062 point 5), so its Done
+mirrors the close. A merge closes its issue with no board in the loop, and no
+board read stands between a merge and the closure cascade (DEC-062's
+Rationale). So this record adds no read of the board before a merge for its
+Done, and a board that did not answer after it is one line, never a code that
+reads as the merge not made.
 
 **Why an act made keeps a code apart.** A clean success hides that a step the
 act requires is missing. A code that reads as the act not made invites a caller
@@ -828,9 +874,13 @@ tells the agent that the issue exists and what it owes, as DEC-048 point 4's
 does for a link not made. Taking that code would change the one meaning DEC-048
 gives it. Where the add and the link both fail, a code that names one sends the
 caller to repair only that one, so filing names both and takes the code for a
-later step failed. A caller that knows only the earlier codes reads the new one
-as a failure, which is why the message leads with the filed issue and the
-capability's own callers read the code as filed.
+later step failed. Where the link fails beside a step that takes no code of its
+own, such as a hook or a Status that only mirrors, DEC-048's code still names
+every failure that takes one, so it stands: a project with no board, or whose
+board took each write filing requires, keeps exit 4 as DEC-048 gives it. A
+caller that knows only the earlier codes reads the new one as a failure, which
+is why the message leads with the filed issue and the capability's own callers
+read the code as filed.
 
 **Why the health check reads the board.** DEC-017's check exists so that an
 operation stops before it starts in an environment it cannot finish in, rather
@@ -907,7 +957,12 @@ capability, as DEC-051 point 6 records a seat's. They name no exit code: each
 command's codes are its contract with its callers, the capability's to set
 (DEC-020). They say only what any code may claim about a board that did not
 answer or a write not made, as ADR-053 point 2's sentence on the broken tool's
-code already does. An adopter meets them in each command's message, which names
+code already does. Where a capability's record fixes a code they forbid, as
+DEC-048 point 4 does where filing's link fails beside its card, this record
+narrows that record in place, and the code itself stays the capability's. They
+bind only where a read or write of the board failed: a later step off the
+board, failing alone, keeps the code its command gives it, which is not this
+record's subject. An adopter meets them in each command's message, which names
 the cause and the way out, and in the capability's reference for the command.
 
 **Why a scan.** The seam's ownership of every read was stated and not enforced,
@@ -1079,6 +1134,20 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   to a project-management record, and a cascade cut short after a move made
   would take a code that the commands composing the move read as the issue
   not moved.
+- **Take every change made before a move as preparation, a merge among them.**
+  The case: one test for the act, what the success reports last. Rejected: a
+  move that failed after a merge would read as the work not landed, though the
+  merge cannot be undone (DEC-026).
+- **Take the Done landing work writes as a write its merge requires,** reading
+  the board before the merge. The case: a Done never left unwritten. Rejected:
+  the merge closes the issue, which is then done whatever its card says, and a
+  merge closes its issue with no board in the loop (DEC-062 point 5 and its
+  Rationale), so the read would refuse a merge for a mirror.
+- **Give the code for a later step failed wherever two later steps failed,**
+  the link among them. The case: one rule, whatever failed. Rejected: it would
+  take DEC-048's code from a link that fails beside a hook or a mirrored
+  Status, in a project with no board among them, where no write the board owes
+  went unmade and this record has nothing to say.
 - **File, then report a first Status that cannot be written,** where the board
   holds the state and its answer lacks the Status field or the state's option.
   Rejected: the issue would stand with no position, which the read first
@@ -1150,10 +1219,10 @@ holds it, the lesson ADR-031 point 4 draws for writes.
       as that, with what the board said, and never as a finding about the
       issue, nor a finding as a broken board. Where its exit codes tell a
       broken tool from a refusal, a board that will not answer takes the broken
-      tool's code, but in two cases: once the command's act is made, whole or
-      in part, it takes the code that says so, and a check that reports it at
-      a severity that lets through what the check gates, an issue or an
-      operation, exits as that severity does.";
+      tool's code, but in two cases: once the command's act (ADR-096's terms)
+      is made, whole or in part, it takes the code that says so, and a check
+      that reports it at a severity that lets through what the check gates, an
+      issue or an operation, exits as that severity does.";
     - **point 5, the seam's shape:** "whether the board answered, what it said
       or why it did not, and `gh`'s stderr verbatim when `gh` failed", in place
       of "whether the board answered, what it said, and `gh`'s stderr verbatim
@@ -1209,12 +1278,13 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   - **point 5, its second limit, from its sentence on the broken tool's code:**
     "Where a command's exit codes tell a broken tool from a refusal, a board
     that will not answer takes the broken tool's code, but in two cases: once
-    the command's act is made, whole or in part, it takes the code that says
-    so, and a check that reports it at a severity that lets through what the
-    check gates, an issue or an operation, exits as that severity does.
-    ADR-053 point 2 rules this for every command that reads the board, gate
-    or not, a reach this record gives it for the state's readers, on the same
-    ground, and ADR-096 for the rest.", in place of "Where a command's exit
+    the command's act (ADR-096's terms) is made, whole or in part, it takes the
+    code that says so, and a check that reports it at a severity that lets
+    through what the check gates, an issue or an operation, exits as that
+    severity does. ADR-053 point 2 rules this for every command that reads
+    the board, gate or not, a reach this record gives it for the state's
+    readers, on the same ground, and ADR-096 for the rest.", in place of
+    "Where a command's exit
     codes tell a broken tool from a refusal, an unreadable board takes the
     broken tool's code. ADR-053 point 2 rules this for a gate; this record
     rules it for every command that reads the state, on the same ground. This
@@ -1268,23 +1338,18 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   - **the rejected "Read every card on the board once",** since the page reads
     issues' own cards, a fixed page whatever the board holds.
 - **DEC-048 is refined in place,** changing what it decides, with the pointer
-  "(refinement per [pkit:ADR-096])" on the sentence it rewrites:
-  - **point 4, its sentence on the exit code:** "A link failure after a
-    successful create prints the backbone's message verbatim plus the exact
-    remediation command (`pkit report link <N> <new>`), and the created issue
-    is never deleted or closed to "undo" the partial state. Where the link is
-    the only step after the create that failed, filing exits non-zero (exit
-    4). Where a write to the board that the filing requires failed too, such
-    as the add of its card, filing names each failure and exits with its code
-    for a later step failed, not exit 4 (refinement per [pkit:ADR-096]).", in
-    place of "A link failure after a successful create prints the backbone's
-    message verbatim plus the exact remediation command
-    (`pkit report link <N> <new>`) and exits non-zero (exit 4) — the created
-    issue is never deleted or closed to "undo" the partial state.".
+  "(refinement per [pkit:ADR-096])" on the sentence it adds:
+  - **point 4, a sentence added after its sentence on the exit code:** "Where
+    a write to the board that the filing requires failed too, such as the add
+    of its card, filing names each failure and exits with the code it takes
+    for that write, not exit 4 (refinement per [pkit:ADR-096])."
 
   Standing as written, checked to agree: point 4's title, warn loudly and never
-  roll back; the Rationale's warn-don't-rollback; and the Implications' "exit
-  code 4 = created-but-unlinked", the one meaning that code keeps.
+  roll back; its sentence on the exit code, whose exit 4 stands wherever no
+  write the filing requires failed, a hook, a mirrored Status or the native
+  link failing beside the link or not; the Rationale's warn-don't-rollback; and
+  the Implications' "exit code 4 = created-but-unlinked", the one meaning that
+  code keeps.
 - **ADR-031 has a fact corrected,** its decision standing, so the edit takes
   no pointer. The add is made wherever an issue is added to a board, and point
   3 here binds each place:
@@ -1299,7 +1364,9 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   - **point 3, its paragraph on the guard:** "(membership — out of scope)", in
     place of "(membership — out of scope, its own site)".
 
-  Standing as written, checked to agree: point 3 keeps the add out of the
+  Standing as written, checked to agree: its Context's enumeration of the
+  sites, whose "(single) site" for the add that enumeration gives as of its
+  authoring, as it says of itself; point 3 keeps the add out of the
   constructor, and point 3 here says what counts as an add made; point 5's
   back-fill gate keeps its member that the board resolves, read as point 1
   here tells it; and point 6's neutrality holds.
@@ -1332,9 +1399,10 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     second paragraph. ADR-074's Implications on a failed Status write at filing
     narrow with them, to point 4's code where the board holds the state.
     DEC-048 point 4 chose to warn, never roll back, and give an issue filed and
-    not linked a code of its own. This record keeps that choice, and narrows
-    the code to a link that is the only step after the create that failed.
-    Each command decides within the limits, so each choice stands.
+    not linked a code of its own. This record keeps that choice, and that code
+    wherever the link fails, save where a write to the board that the filing
+    requires failed too, where filing takes its code for that write. Each
+    command decides within the limits, so each choice stands.
   - **Widened:** ADR-074 point 6 chose the issues' own cards over a walk of
     the board, so that a listing's reads are bounded by what it lists, not by
     the board. The page a witness is sought in reads issues' own cards too, a
@@ -1373,9 +1441,13 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   - **DEC-020:** each command's exit codes stay its contract, and the health
     check no per-issue scan, as for DEC-019.
   - **DEC-024:** a hook keeps its clean exit.
-  - **DEC-006 and DEC-062 point 5:** the forward cascade keeps its posture,
-    what a move sets off on other issues (point 4), and a closed issue's Done
-    mirrors its native close.
+  - **DEC-026:** a merge is never rolled back on a later failure, and, since
+    it cannot be undone, is landing work's act (the terms).
+  - **DEC-006 and DEC-062 point 5:** the forward cascade, what a move sets off
+    on other issues, stays outside point 4's write classes and within its
+    limits, and the Done of an issue that is closed, or that the command or
+    its act closes, mirrors that close, so this record adds no read of the
+    board before a merge (DEC-062's Rationale).
   - **DEC-051 point 6:** it follows ADR-053, so its outcome that an issue has no
     card takes point 1's account here, and each command's choice its limits,
     through ADR-053's refined Layer 2 and point 2.
@@ -1398,8 +1470,14 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     before its act, and refuses there where the board does not answer;
   - **what an act sets off on another issue:** where the board does not answer
     for an ancestor the forward cascade reaches, or a write to it is not made,
-    the issue's move stands, and the command takes no code that reads as the
-    move not made;
+    after the issue's move is made, the move stands, and the command takes no
+    code that reads as the move not made;
+  - **landing work:** where, after the merge, the board does not answer for the
+    issue's Done, or its write is not made, the merge stands, the command says
+    so in one line, and the Done takes no code of its own. Where a read or
+    write of the board fails for another issue the merge closes, or for an
+    ancestor, the command takes no code that reads as the merge not made. No
+    read of the board is added before the merge for the Done;
   - **the health check's page:** where the board answers and the page shows no
     witness, the check warns, naming both causes, and does not fail;
   - **an absence with no witness,** where the board answers but no issue the
@@ -1422,8 +1500,10 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     made again once after the read's last request, carrying an issue for each
     repository it lacks one for. It witnesses there where it shows its card
     again, and the absences are judged from the request made again alone.
-    Where the carried issue does not show its card again, that request lacks a
-    witness, and the read fails whole. A full batch, at the most issues one
+    Where the carried issue does not show its card again, and none of that
+    request's own issues or its page shows one, that request lacks a witness,
+    and the read fails whole; where one of them does, it witnesses. A full
+    batch, at the most issues one
     request may name, carries a witness within what one request may ask. An
     error on a carried issue takes away a witness, and fails nothing;
   - **a read not whole,** cut short at a page bound, asking only for cards that
@@ -1435,8 +1515,11 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     where the board holds the state, fails, the issue stays filed and filing
     exits with its own code for a later step failed, apart from DEC-048's.
     Where the add and the link both fail, filing names both and takes that
-    code. Where the Status only mirrors, or a closed issue's Done is not
-    written, the command gives one line, and exits as its act does;
+    code. Where the link fails and each write filing requires was made, filing
+    takes DEC-048's code, whether a hook, a mirrored Status or the native link
+    failed beside it or not, in a project with no board too. Where the Status
+    only mirrors, or a closed issue's Done is not written, the command gives
+    one line, and exits as its act does;
   - **an act of many writes** failing part way: the writes made stand, a write
     resting on one not made is not tried, and the command exits with a code
     saying the act was made in part;
@@ -1452,9 +1535,11 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   a copy of the template being the project's own, and a stored board id stays
   where it is, read as a name. Each command whose act needs a later write to
   the board reads the board first (point 4), filing among them, and the tests
-  hold each. The health check's advice for a board under another owner than the
-  repository's names the owner in the configuration (DEC-023), rather than a
-  stored node alone.
+  hold each. Landing work, whose act is the merge, takes after it no code that
+  reads as the merge not made where a read or write of the board fails, for
+  its own issue or another the merge closes. The health check's advice for a
+  board under another owner than the repository's names the owner in the
+  configuration (DEC-023), rather than a stored node alone.
 - **The post-check workflow's template gains a setting for a credential the
   board answers,** in the work, unset as it ships. Without it, the template
   runs under the workflow's own token, which by the service's documentation
