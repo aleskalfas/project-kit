@@ -410,7 +410,7 @@ def test_each_renderer_rose_to_draw_them_at_the_seams_version() -> None:
         declaration.DECLARATION["name"]: declaration.DECLARATION["version"]
         for declaration in (svg_declaration, html_declaration, pdf_declaration)
     }
-    assert versions == {"svg": "1.5.0", "html": "1.8.0", "pdf": "1.6.0"}
+    assert versions == {"svg": "1.5.0", "html": "1.9.0", "pdf": "1.6.0"}
     scene = drawn_scene()
     for declaration in (svg_declaration, html_declaration, pdf_declaration):
         assert declaration.DECLARATION["seam"] == seam.SEAM_VERSION
@@ -458,8 +458,15 @@ def test_the_html_page_draws_the_ground_as_the_spans_background_and_the_sign_wit
     [sign] = marked(marked_span, "sign")
     assert (sign.get("viewBox"), sign.get("aria-hidden")) == ("0 0 24 24", "true")
     assert styled(sign)["margin-right"] == "0.46875cqw"
-    [path] = list(sign)
-    assert (path.get("d"), path.get("fill")) == ("M 0 0 L 24 0 L 24 24 L 0 24 Z", "var(--border)")
+    # Its paint is opaque in every key, so it is a clipped shape (DEC-039 point 4).
+    definitions, drawn = list(sign)
+    geometry, _ = list(definitions)
+    assert geometry.get("d") == "M 0 0 L 24 0 L 24 24 L 0 24 Z"
+    assert (drawn.tag, drawn.get("href"), drawn.get("fill")) == (
+        "use",
+        f"#{geometry.get('id')}",
+        "var(--border)",
+    )
     assert "".join(marked_span.itertext()) == "the store"
     others = [span for span in spans if span is not marked_span]
     assert [("".join(span.itertext()), "background" in styled(span)) for span in others] == [
@@ -468,6 +475,38 @@ def test_the_html_page_draws_the_ground_as_the_spans_background_and_the_sign_wit
     ]
     assert not any(marked(span, "sign") for span in others)
     # Under forced colours a sign takes the shapes' rules: its fill the ground's colour.
+    assert '[data-sign] [fill="var(--border)"]{fill:Canvas}' in forced(root)
+
+
+def test_under_forced_colours_a_runs_ground_lies_in_its_lines_and_its_sign_is_clipped() -> None:
+    """Under forced colours a run's ground lies in its line's ground, and its span draws none
+    of its own; the line's ground covers the sign's square; and a sign, here one that does
+    not fill its square, takes the shapes' fill and is clipped to its own shape, by its fill
+    rule (DEC-039 points 1, 3 and 4)."""
+    scene = drawn_scene()
+    shown = scene["children"][0]["children"][0]
+    _, marked_line = shown["lines"]
+    [sign_at] = [span["sign"] for span in marked_line["spans"] if "sign" in span]
+    sign_at.update({"d": "M 12 0 L 24 12 L 12 24 L 0 12 Z", "fill-rule": "evenodd"})
+
+    root = ElementTree.fromstring(draw_html(scene).document)
+
+    assert "[data-span]{forced-color-adjust:auto;background:none!important}" in forced(root)
+    _, ground = marked(root, "ground")
+    top, height = (float(styled(ground)[name].removesuffix("cqw")) for name in ("top", "height"))
+    page_width = float(scene["children"][0]["width"])
+    sign_top = float(shown["y"]) + float(sign_at["top"]) + float(shown["line-height"])
+    assert top * page_width / 100 <= sign_top + 0.01
+    assert (top + height) * page_width / 100 >= sign_top + float(sign_at["size"]) - 0.01
+    [sign] = marked(root, "sign")
+    definitions, drawn = list(sign)
+    geometry, clip = list(definitions)
+    assert (drawn.tag, drawn.get("href")) == ("use", f"#{geometry.get('id')}")
+    assert geometry.get("fill-rule") == "evenodd"
+    [taken] = list(clip)
+    assert (taken.get("href"), taken.get("clip-rule")) == (f"#{geometry.get('id')}", "evenodd")
+    number = drawn.get("data-clip")
+    assert f'[data-clip="{number}"]{{clip-path:url(#{clip.get("id")})}}' in forced(root)
     assert '[data-sign] [fill="var(--border)"]{fill:Canvas}' in forced(root)
 
 

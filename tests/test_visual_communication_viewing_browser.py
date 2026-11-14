@@ -1,9 +1,10 @@
 """The viewing step's browser (`_lib/viewing_browser.py`, visual-communication DEC-020 points 6
-to 9, DEC-031 point 5, DEC-027 points 2 to 4): how it finds a browser, what one start asks of
-it, the window that holds each page at its own size with its gutters, the four reads, the first
-read of a page with planted faults, its bounds, what a stop says, and the start that forces its
-colours. The step's browser also prints the renderer's page file here, as DEC-026 point 7 lets
-a test do and no step.
+to 9, DEC-031 point 5, DEC-027 points 2 to 4, DEC-037, DEC-039 point 5): how it finds a browser,
+what one start asks of it, the window that holds each page at its own size with its gutters,
+the four reads, what the page shows of each span, the first read of a file with planted
+faults, its bounds, what a stop says, and the start that forces its colours. The step's
+browser also prints the renderer's page file here, as DEC-026 point 7 lets a test do and no
+step.
 
 A stand-in program speaks the pipe in the browser's place (`visual_communication_browser`), so
 these tests need no browser. The ones that start a real browser skip where none is found, or
@@ -29,12 +30,15 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from fontTools.pens.boundsPen import BoundsPen
+from fontTools.pens.recordingPen import DecomposingRecordingPen
 from fontTools.ttLib import TTFont
 
 from tests.in_process import load
 from tests.visual_communication_browser import (
     COLOURS,
     HELD_FONT,
+    STRONG,
     VERSION,
     called,
     logged,
@@ -60,6 +64,9 @@ FUNCTIONS = {
     "unground": viewing_browser.UNGROUND,
     "settle": viewing_browser.SETTLE,
     "colours": viewing_browser.COLOURS,
+    "style": viewing_browser.STYLE,
+    "marked": viewing_browser.MARKED,
+    "tally": viewing_browser.TALLY,
 }
 
 #: What a sandbox's stop has made browsers say: Chrome and Chromium in a sandbox around them,
@@ -73,7 +80,8 @@ SANDBOX_WORDS = (
 
 
 def span(text: str, index: int, **held: Any) -> dict[str, Any]:
-    """A span as `READ` gives it, on the page's first rows, with what a stand-in adds."""
+    """A span as `READ` gives it, on the page's first rows, painted in the document's order,
+    with what a stand-in adds."""
     return {
         "x": 10.0,
         "y": 10.0 + 20 * index,
@@ -84,13 +92,23 @@ def span(text: str, index: int, **held: Any) -> dict[str, Any]:
         "family": "Held",
         "weight": "400",
         "face": True,
+        "em": 16.0,
+        "order": [0, index],
         "ink": DARK,
         **held,
     }
 
 
 def page(id: str, width: float, height: float, *texts: Mapping[str, Any]) -> dict[str, Any]:
-    return {"id": id, "x": 0.0, "y": 0.0, "width": width, "height": height, "texts": list(texts)}
+    return {
+        "id": id,
+        "x": 0.0,
+        "y": 0.0,
+        "width": width,
+        "height": height,
+        "texts": list(texts),
+        "parts": [],
+    }
 
 
 def text(id: str, *lines: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -126,55 +144,73 @@ def clean() -> dict[str, Any]:
     return one_page(span("hello", 0), span("world", 1))
 
 
+#: The share of its strong ink each plant the reads name as cut or covered loses, by its trace
+#: id, as a stand-in draws the planted file.
+PLANTED_LOSSES = {
+    finding[1]: {finding[0]: 0.5}
+    for finding in viewing_browser.PLANTED_FINDINGS
+    if finding[0] in (viewing_browser.CUT, viewing_browser.COVERED)
+}
+
+
 def planted(forced: bool = False) -> dict[str, Any]:
-    """The planted page as a browser reads it: each fault where the module planted it. Where
-    `forced`, as a start that forces its colours writes it, its span left to forcing showing
-    ink."""
+    """The planted file as a browser reads it: each fault where the module planted it, its
+    page of its own below its first. Where `forced`, as a start that forces its colours writes
+    it, its text left to forcing showing ink."""
     index = 0
-    texts = []
-    held_texts = {
-        **viewing_browser.PLANTED_TEXTS,
-        **(viewing_browser.FORCED_TEXTS if forced else {}),
-    }
-    for element, lines in held_texts.items():
-        drawn = []
-        for line in lines:
-            spans = []
-            for planted_span in line:
-                held = planted_span.family == viewing_browser.HELD and planted_span.weight == 400
-                machine = planted_span.family != viewing_browser.HELD
-                spans.append(
-                    span(
-                        planted_span.text,
-                        index,
-                        family=planted_span.family,
-                        weight=str(planted_span.weight),
-                        face=held,
-                        x=float(planted_span.left),
-                        fonts=[MACHINE_FONT if machine else HELD_FONT],
-                        ink=(
-                            ()
-                            if planted_span.colour == viewing_browser.UNPAINTED
-                            and not planted_span.forced
-                            else DARK
-                        ),
+    pages = []
+    top = 0.0
+    held_pages = (
+        (
+            viewing_browser.PLANTED_ID,
+            viewing_browser.PLANTED_HEIGHT,
+            {
+                **viewing_browser.PLANTED_TEXTS,
+                **(viewing_browser.FORCED_TEXTS if forced else {}),
+            },
+        ),
+        (viewing_browser.RAISED_ID, viewing_browser.RAISED_HEIGHT, viewing_browser.RAISED_TEXTS),
+    )
+    for trace, height, held_texts in held_pages:
+        texts = []
+        for row, (element, lines) in enumerate(held_texts.items()):
+            drawn = []
+            for line in lines:
+                spans = []
+                for planted_span in line:
+                    held = (
+                        planted_span.family == viewing_browser.HELD and planted_span.weight == 400
                     )
-                )
-                index += 1
-            drawn.append(spans)
-        texts.append(text(element, *drawn))
+                    machine = planted_span.family != viewing_browser.HELD
+                    spans.append(
+                        span(
+                            planted_span.text,
+                            index,
+                            family=planted_span.family,
+                            weight=str(planted_span.weight),
+                            face=held,
+                            x=float(planted_span.left),
+                            y=top + 10.0 + 20 * row,
+                            fonts=[MACHINE_FONT if machine else HELD_FONT],
+                            ink=(
+                                ()
+                                if planted_span.colour == viewing_browser.UNPAINTED
+                                and not planted_span.forced
+                                else DARK
+                            ),
+                            lost=PLANTED_LOSSES.get(element, {}),
+                        )
+                    )
+                    index += 1
+                drawn.append(spans)
+            texts.append(text(element, *drawn))
+        pages.append({**page(trace, viewing_browser.PLANTED_WIDTH, height, *texts), "y": top})
+        top += height + 24
     document = {
-        "pages": [
-            page(
-                viewing_browser.PLANTED_ID,
-                viewing_browser.PLANTED_WIDTH,
-                viewing_browser.PLANTED_HEIGHT,
-                *texts,
-            )
-        ],
+        "pages": pages,
         "requests": [viewing_browser.NETWORK, f"file:///folder/{viewing_browser.BESIDE}"],
     }
-    by_text = {each["id"]: each for each in texts}
+    by_text = {each["id"]: each for held in pages for each in held["texts"]}
     by_text[viewing_browser.LACKED_FINDING[1]]["lines"][0][0]["fonts"] = [HELD_FONT, MACHINE_FONT]
     by_text["run-swallowed"]["lines"][0][0]["text"] = "swal"
     by_text["colour-of-its-ground"]["lines"][0][0]["ink"] = (BLACK,)
@@ -188,18 +224,28 @@ def cured(document: dict[str, Any], finding: tuple[str, ...]) -> dict[str, Any]:
     if kind == viewing_browser.REFUSED:
         mended["requests"] = [each for each in mended["requests"] if not each.endswith(about)]
         return mended
-    held = next(each for each in mended["pages"][0]["texts"] if each["id"] == about)
+    on = next(each for each in mended["pages"] if any(t["id"] == about for t in each["texts"]))
+    held = next(each for each in on["texts"] if each["id"] == about)
     spans = [each for line in held["lines"] for each in line]
     if kind == viewing_browser.WORDS:
-        scene = next(each for each in viewing_browser.PLANTED_PAGE.texts if each.element == about)
-        mended["pages"][0]["texts"].remove(held)
-        mended["pages"][0]["texts"].append(
-            text(about, *[[span(each, 0) for each in line] for line in scene.lines])
+        [scene] = [
+            each
+            for page in viewing_browser.PLANTED_PAGES
+            for each in page.texts
+            if each.element == about
+        ]
+        # In the place of the span it holds, so no other span's place is taken.
+        place = {side: spans[0][side] for side in ("index", "y")}
+        on["texts"].remove(held)
+        on["texts"].append(
+            text(about, *[[span(each, **place) for each in line] for line in scene.lines])
         )
     elif kind == viewing_browser.NO_INK:
         next(each for each in spans if each["text"] == finding[2])["ink"] = DARK
     elif kind == viewing_browser.OFF_THE_PAGE:
         spans[0]["x"] = 8.0
+    elif kind in (viewing_browser.CUT, viewing_browser.COVERED):
+        spans[0]["lost"] = {}
     elif kind == viewing_browser.NO_FACE:
         spans[0]["face"] = True
     else:
@@ -415,20 +461,20 @@ def test_it_draws_each_page_by_a_clip_as_the_file_stands(tmp_path: Path) -> None
 
 def file_clips(program: Path) -> list[dict[str, Any]]:
     """The clips the file's images were drawn by, in its first mode: those taken after the
-    file opened, and before the first read for ink."""
+    file opened, and before the reads of what the page shows of each span."""
     messages = logged(program)
     methods = [each.get("method") for each in messages]
     file_opened = len(methods) - 1 - methods[::-1].index("Page.navigate")
     after = messages[file_opened:]
-    first_ground = next(
+    first_style = next(
         index
         for index, each in enumerate(after)
         if each.get("method") == "Runtime.evaluate"
-        and each["params"]["expression"].startswith(f"({viewing_browser.GROUND})")
+        and each["params"]["expression"].startswith(f"({viewing_browser.STYLE})")
     )
     return [
         each["params"]["clip"]
-        for each in after[:first_ground]
+        for each in after[:first_style]
         if each.get("method") == "Page.captureScreenshot"
     ]
 
@@ -615,13 +661,240 @@ def test_each_band_is_compared_with_itself_empty(tmp_path: Path) -> None:
     )
 
 
-def test_a_band_stays_on_its_page(tmp_path: Path) -> None:
-    held = page("page", 400.0, 100.0, text("a", [span("low", 0, y=90.0, height=16.0)]))
+def test_a_band_reaches_as_far_as_its_pages_room(tmp_path: Path) -> None:
+    """The span crosses its page's foot, so the read gives the page room past each edge as far
+    as the span's box, widened by its em, reaches: 22 px. Its band spans the page and that
+    room, and the span's height either way (DEC-037 point 3)."""
+    held = page("page", 400.0, 100.0, text("a", [span("low", 0)]))
     held["x"], held["y"] = 240.5, 50.0
     held["texts"][0]["lines"][0][0].update({"x": 300.0, "y": 140.0})
     _, program = drawn(tmp_path, documents={FILE: {"pages": [held]}})
     clip = called(program, "Page.captureScreenshot")[-1]["clip"]
-    assert clip == {"x": 240.5, "y": 124, "width": 400.0, "height": 26, "scale": 1}
+    assert clip == {"x": 218.5, "y": 124, "width": 444.0, "height": 48, "scale": 1}
+
+
+def test_a_band_and_a_clip_start_no_earlier_than_the_document() -> None:
+    """A browser takes no clip before the document's start, so a page at its left edge has its
+    room on the right alone, as a probe at a scale of 1.225 found."""
+    held = {**page("page", 400.0, 100.0), "x": -1.9e-06}
+    low = span("low", 0, x=2.0, y=2.0)
+    assert viewing_browser._band(low, held, 22) == {
+        "x": 0.0,
+        "y": 0,
+        "width": pytest.approx(422.0),
+        "height": 34,
+    }
+    widened = viewing_browser._widened(low, low["em"])
+    assert viewing_browser._clip([widened], held, 22) == {
+        "x": 0,
+        "y": 0,
+        "width": 78,
+        "height": 34,
+    }
+
+
+# What the page shows of a span (DEC-037).
+
+
+def evaluated(program: Path, function: str) -> list[list[Any]]:
+    """The arguments of each call of the module's JavaScript `function` the stand-in received,
+    after the file opened."""
+    messages = logged(program)
+    methods = [each.get("method") for each in messages]
+    after = messages[len(methods) - 1 - methods[::-1].index("Page.navigate") :]
+    found = []
+    for each in after:
+        expression = each.get("params", {}).get("expression", "")
+        if each.get("method") == "Runtime.evaluate" and expression.startswith(f"({function})"):
+            found.append(json.loads(expression[len(function) + 2 :].strip("().")))
+    return found
+
+
+def tallied(program: Path) -> list[list[int]]:
+    """The spans, by their places in the document, of each batch whose strong ink was read."""
+    return [[each["index"] for each in asked] for _, _, asked in evaluated(program, TALLY)]
+
+
+TALLY = viewing_browser.TALLY
+
+#: A span alone in the middle of its page, which the pre-filter passes over, unless what a
+#: test adds meets it.
+APART = {"x": 600.0, "y": 300.0}
+
+
+def test_a_span_cut_or_covered_is_an_entry_of_dropped_with_the_share_its_cause_loses(
+    tmp_path: Path,
+) -> None:
+    """One entry for each cause, in the document's order, each cause's after a span's earlier
+    ones: a span both cut and covered gives two (DEC-037 points 1 and 2)."""
+    found = dropped(
+        tmp_path,
+        span("cut", 0, lost={"cut": 0.25}),
+        span("covered", 1, lost={"covered": 0.5}),
+        span("both", 2, lost={"covered": 0.125, "cut": 0.375}),
+        span("shown", 3),
+    )
+    assert found == (
+        viewing_browser.Dropped("page", "text-0", "cut", viewing_browser.CUT, 0.25),
+        viewing_browser.Dropped("page", "text-1", "covered", viewing_browser.COVERED, 0.5),
+        viewing_browser.Dropped("page", "text-2", "both", viewing_browser.CUT, 0.375),
+        viewing_browser.Dropped("page", "text-2", "both", viewing_browser.COVERED, 0.125),
+    )
+
+
+def test_a_span_wholly_off_its_page_is_named_off_the_page_alone_and_its_ink_not_read(
+    tmp_path: Path,
+) -> None:
+    held, program = drawn(
+        tmp_path, documents={FILE: one_page(span("away", 0, x=4000.0, lost={"cut": 1.0}))}
+    )
+    assert held.shown[0].read.dropped == (
+        viewing_browser.Dropped("page", "text-0", "away", viewing_browser.OFF_THE_PAGE),
+    )
+    assert tallied(program) == []
+
+
+@pytest.mark.parametrize(
+    ("em", "lost", "named"),
+    [(16.0, 10, False), (16.0, 11, True), (32.0, 40, False), (32.0, 41, True)],
+    ids=["below", "above", "below-at-twice-the-em", "above-at-twice-the-em"],
+)
+def test_a_loss_smaller_than_the_sliver_in_the_spans_em_names_no_entry(
+    tmp_path: Path, em: float, lost: int, named: bool
+) -> None:
+    """At a device scale of 2, the sliver of a span of 16 px is 10.24 device px, and of one of
+    32 px four times that. Each cause is judged alone (DEC-037 point 1)."""
+    assert viewing_browser.SLIVER * (em * 2) ** 2 == pytest.approx(10.24 * (em / 16) ** 2)
+    share = lost / STRONG
+    found = dropped(tmp_path, span("graze", 0, em=em, lost={"covered": share, "cut": 1 / STRONG}))
+    assert [(each.why, each.share) for each in found] == (
+        [(viewing_browser.COVERED, share)] if named else []
+    )
+
+
+def test_the_pre_filter_passes_over_a_span_that_can_lose_nothing(tmp_path: Path) -> None:
+    """Its box, widened by its em, stays on its page, with no other text near it and no part
+    painted after it, so its strong ink is not read (DEC-037 point 3)."""
+    document = one_page(span("apart", 0, **APART, lost={"covered": 0.5}))
+    document["pages"][0]["parts"] = [
+        {"x": 600.0, "y": 0.0, "width": 60.0, "height": 16.0, "order": [0, 9]},
+        {"x": 0.0, "y": 300.0, "width": 1280.0, "height": 16.0, "order": [0, -1]},
+        {"x": 0.0, "y": 300.0, "width": 1280.0, "height": 16.0, "order": [-1, 9]},
+    ]
+    held, program = drawn(tmp_path, documents={FILE: document})
+    assert held.shown[0].read.dropped == ()
+    assert tallied(program) == []
+
+
+@pytest.mark.parametrize(
+    "near",
+    [
+        {"span": {"x": 4.0}},
+        {"span": {"y": 712.0}},
+        {"other": {"x": 650.0, "y": 300.0}},
+        {"part": {"order": [0, 1]}},
+        {"part": {"order": [1, -1]}},
+    ],
+    ids=[
+        "near-its-pages-left",
+        "near-its-pages-foot",
+        "another-text",
+        "a-part-later-in-the-document",
+        "a-part-earlier-raised-by-z-index",
+    ],
+)
+def test_the_pre_filter_reads_a_span_that_something_may_cover_or_cut(
+    tmp_path: Path, near: dict[str, Any]
+) -> None:
+    """A span whose widened box nears its page's edge, meets another text, or meets a part the
+    browser paints after it, by its z-index and then the document's order, is read, never
+    passed over by the document's order alone (DEC-037 point 3)."""
+    held = span("near", 0, **{**APART, **near.get("span", {})}, lost={"covered": 0.5})
+    spans = [held]
+    if "other" in near:
+        spans.append(span("other", 1, **near["other"]))
+    document = one_page(*spans)
+    if "part" in near:
+        box = {"x": 590.0, "y": 290.0, "width": 10.0, "height": 10.0}
+        document["pages"][0]["parts"] = [{**box, **near["part"]}]
+    found, program = drawn(tmp_path, documents={FILE: document})
+    assert [(each.text, each.why) for each in found.shown[0].read.dropped] == [
+        ("near", viewing_browser.COVERED)
+    ]
+    assert [0] in tallied(program)
+
+
+def test_spans_whose_widened_boxes_do_not_meet_are_drawn_alone_at_once(tmp_path: Path) -> None:
+    """The first two spans' boxes, widened by their em, meet, so they lie in two batches; the
+    third meets neither, and joins the first. Each batch is marked at once, and read from four
+    draws, each the same clip (DEC-037 point 3)."""
+    document = one_page(span("one", 0), span("two", 1), span("three", 2, y=400.0))
+    _, program = drawn(tmp_path, documents={FILE: document})
+    assert tallied(program) == [[0, 2], [1]]
+    measured = [
+        indices
+        for _, mark, indices in evaluated(program, viewing_browser.MARKED)
+        if mark == viewing_browser.MEASURED_MARK
+    ]
+    assert measured == [[0, 2], [1], []]
+    assert [len(images) for images, _, _ in evaluated(program, TALLY)] == [4, 4]
+
+
+def test_each_batch_is_read_in_its_letters_alone_then_in_the_page_drawn_whole(
+    tmp_path: Path,
+) -> None:
+    """Its letters in `CanvasText`, then `Canvas`, drawn alone with no other text, no text's
+    ground and no sign, on `Canvas`; then the page drawn whole, its letters in each colour
+    again. The read's styles go once it is done (DEC-037 point 3)."""
+    _, program = drawn(tmp_path, documents={FILE: one_page(span("one", 0))})
+    draws = [
+        css for held, css in evaluated(program, viewing_browser.STYLE)
+        if held == viewing_browser.DRAW_STYLE
+    ]  # fmt: skip
+    marked = f"[{viewing_browser.MEASURED_MARK}]"
+    alone = f"[{viewing_browser.MARKS['page']}] *{{visibility:hidden!important}}"
+    *read, cleared = draws
+    assert cleared == ""
+    colours = ("CanvasText", "Canvas") * 2
+    for number, (each, colour) in enumerate(zip(read, colours, strict=True)):
+        assert each.endswith(f"{marked}{{color:{colour}!important}}")
+        assert (alone in each) == (number < 2)
+    assert f"[{viewing_browser.MARKS['sign']}]{{visibility:hidden!important}}" in draws[0]
+    assert f"[{viewing_browser.MARKS['span']}]{{background:none!important}}" in draws[0]
+    assert "{background:Canvas!important}" in draws[0]
+    [unground] = evaluated(program, viewing_browser.UNGROUND)
+    assert unground == [list(viewing_browser.READ_STYLES), list(viewing_browser.READ_MARKS)]
+
+
+def test_the_read_gives_each_page_room_past_its_edges_and_keeps_its_size(tmp_path: Path) -> None:
+    """As far as a span's box, widened by its em, reaches past an edge: here 56 px past the
+    right edge of a page 400 px wide. The keyline is hidden there, and the pages lie apart by
+    their room (DEC-037 point 3, DEC-031 point 5)."""
+    held = page("page", 400.0, 300.0, text("a", [span("past", 0, x=380.0, y=100.0)]))
+    _, program = drawn(tmp_path, documents={FILE: {"pages": [held]}})
+    [room] = [
+        css for named, css in evaluated(program, viewing_browser.STYLE)
+        if named == viewing_browser.ROOM_STYLE
+    ]  # fmt: skip
+    page_mark = f"[{viewing_browser.MARKS['page']}]"
+    assert room == (
+        "body{width:400.0px!important;padding:56px!important;margin:0!important}"
+        f"{page_mark}{{margin:0 auto!important;outline:none!important}}"
+        f"{page_mark}+{page_mark}{{margin-top:112px!important}}"
+    )
+
+
+def test_a_page_with_no_span_near_an_edge_takes_no_room() -> None:
+    held = page("page", 1280.0, 720.0, text("a", [span("apart", 0, **APART)]))
+    assert viewing_browser._room([held]) == 0
+
+
+def test_the_cut_and_the_cover_are_read_in_each_mode_alone(tmp_path: Path) -> None:
+    """A span covered in the dark key alone, as a key may paint a part over it."""
+    dim = span("dim", 1, **{"lost-when": {"prefers-color-scheme:dark": {"covered": 1}}})
+    drawing, _ = in_modes(tmp_path, documents={FILE: one_page(span("hello", 0), dim)})
+    covered = (viewing_browser.Dropped("page", "text-1", "dim", viewing_browser.COVERED, 1.0),)
+    assert [each.read.dropped for each in drawing.shown] == [(), (), covered, covered]
 
 
 # The font.
@@ -697,7 +970,58 @@ def test_the_planted_page_holds_each_row_of_the_records_table() -> None:
     }
     assert {"network.png", viewing_browser.BESIDE} <= named
     unnamed = set(viewing_browser.PLANTED_TEXTS) - named
-    assert unnamed == {"clean", "under-a-later-box", "colour-of-its-ground"}
+    assert unnamed == {"clean", "colour-of-its-ground"} | LEFT_UNNAMED
+
+
+#: The plants of what the page shows of a span that the reads leave unnamed (DEC-037 point 5).
+LEFT_UNNAMED = {
+    viewing_browser.OVER_ANOTHER,
+    viewing_browser.UNDER_A_TRANSLUCENT_FILL,
+    viewing_browser.EDGE_CONTROL,
+}
+
+
+def test_the_planted_file_plants_each_loss_of_what_the_page_shows() -> None:
+    """A span cut past its page's top edge, and as covered: the text under a later box, the
+    háček plant, a span wholly under another text, never named as one with no ink, and the
+    text a part covers by z-index, on a page of its own (DEC-037 point 5)."""
+    named = {
+        finding[:2]
+        for finding in viewing_browser.PLANTED_FINDINGS
+        if finding[0] in (viewing_browser.CUT, viewing_browser.COVERED)
+    }
+    assert named == {
+        (viewing_browser.CUT, viewing_browser.CUT_PAST_THE_TOP),
+        (viewing_browser.COVERED, viewing_browser.UNDER_A_BOX),
+        (viewing_browser.COVERED, viewing_browser.HACEK),
+        (viewing_browser.COVERED, viewing_browser.UNDER_ANOTHER),
+        (viewing_browser.COVERED, viewing_browser.RAISED),
+    }
+    assert not {
+        finding
+        for finding in viewing_browser.PLANTED_FINDINGS
+        if finding[1] in (viewing_browser.UNDER_ANOTHER, viewing_browser.RAISED)
+        and finding[0] != viewing_browser.COVERED
+    }
+    first, own = viewing_browser.PLANTED_PAGES
+    assert [each.element for each in own.texts] == [viewing_browser.RAISED]
+    assert viewing_browser.RAISED not in {each.element for each in first.texts}
+
+
+def test_the_span_under_another_text_is_covered_by_that_texts_run_ground() -> None:
+    """The plant of a span wholly under another text relies on the text over it, on its row and
+    later in the tree, drawing its run's ground (DEC-037 point 5). A change to grounds that
+    stops that text drawing one fails here by name, rather than leave the plant to its
+    letters."""
+    page = viewing_browser._first_page(1.0, False)
+    laid = [each for each in page if isinstance(each, viewing_browser._Laid)]
+    by_element = {each.element: each for each in laid}
+    under = by_element[viewing_browser.UNDER_ANOTHER]
+    over = by_element[viewing_browser.OVER_ANOTHER]
+    assert laid.index(under) < laid.index(over)
+    assert over.baseline == under.baseline
+    assert all(span.grounded for line in over.lines for span in line)
+    assert ";background:" in viewing_browser._planted_text(over, False)
 
 
 def test_the_planted_page_is_in_the_renderers_form() -> None:
@@ -716,6 +1040,59 @@ def test_the_planted_face_lacks_the_planted_character_and_holds_the_rest_of_its_
     text = viewing_browser.LACKED_FINDING[2]
     assert ord(viewing_browser.LACKED) not in cmap
     assert all(ord(each) in cmap for each in text.replace(viewing_browser.LACKED, ""))
+
+
+def _bounds(glyphs: Any, name: str) -> tuple[float, float, float, float]:
+    """The bounds of the glyph `name` of `glyphs`, in its face's units."""
+    pen = BoundsPen(glyphs)
+    glyphs[name].draw(pen)
+    assert pen.bounds is not None
+    return pen.bounds
+
+
+def _contours(glyphs: Any, name: str) -> list[tuple[float, float]]:
+    """The lowest and the highest point of each contour of the glyph `name` of `glyphs`, its
+    components drawn out, in its face's units."""
+    pen = DecomposingRecordingPen(glyphs)
+    glyphs[name].draw(pen)
+    found, points = [], []
+    for operator, arguments in pen.value:
+        if operator == "moveTo":
+            points = list(arguments)
+        elif operator in ("lineTo", "curveTo", "qCurveTo"):
+            points += arguments
+        elif points:
+            found.append((min(y for _, y in points), max(y for _, y in points)))
+            points = []
+    return found
+
+
+def test_the_planted_files_measures_of_its_face_are_the_faces() -> None:
+    """A line's ground reaches as far as the face does, as the renderer reads it (DEC-039 point
+    2). The edge control's box starts at its word's lowest descender, and the háček plant's
+    ends between the top of a `z` and the foot of the háček over it, so it covers the háček
+    alone (DEC-037 point 5)."""
+    (html,) = load("visual-communication", "plugins.html")
+    reach = html.face_reach(viewing_browser.PLANTED_FACE)
+    assert pytest.approx(reach) == (viewing_browser.ASCENT, viewing_browser.DESCENT)
+    [[control]] = viewing_browser.PLANTED_TEXTS[viewing_browser.EDGE_CONTROL]
+    [[hacek]] = viewing_browser.PLANTED_TEXTS[viewing_browser.HACEK]
+    with TTFont(viewing_browser.PLANTED_FACE) as font:
+        cmap, glyphs = font.getBestCmap(), font.getGlyphSet()
+        assert cmap is not None
+        upem = font["head"].unitsPerEm  # pyright: ignore[reportAttributeAccessIssue] fontTools types no table's fields
+        foot = -min(_bounds(glyphs, cmap[ord(each)])[1] for each in control.text) / upem
+        top = _bounds(glyphs, cmap[ord("z")])[3] / upem
+        over = [low for low, _ in _contours(glyphs, cmap[ord(hacek.text)]) if low > top * upem]
+    assert foot == pytest.approx(viewing_browser.FOOT)
+    assert top < viewing_browser.UNDER_THE_HACEK < min(over) / upem
+
+
+def test_the_hacek_plant_is_set_at_the_commands_text_floor() -> None:
+    """In device pixels, as the viewing step keeps a page's text (DEC-037 point 5, DEC-015
+    point 5)."""
+    (viewing,) = load("visual-communication", "viewing")
+    assert viewing_browser.TEXT_FLOOR == viewing.SMALLEST_TEXT
 
 
 @pytest.mark.parametrize(
@@ -756,8 +1133,24 @@ def test_a_planted_span_of_the_machine_named_with_no_font_stops_the_start(
         ("colour-of-its-ground", {"ink": ()}),
         ("clean", {"face": False}),
         ("clean", {"fonts": [MACHINE_FONT]}),
+        ("under-another-text", {"ink": ()}),
+        ("over-another-text", {"lost": {"covered": 0.5}}),
+        ("under-a-translucent-fill", {"lost": {"covered": 0.5}}),
+        ("edge-control", {"lost": {"covered": 0.5}}),
+        ("clean", {"lost": {"cut": 0.5}}),
     ],
-    ids=["clean-ink", "under-a-box", "ground", "clean-face", "clean-font"],
+    ids=[
+        "clean-ink",
+        "under-a-box",
+        "ground",
+        "clean-face",
+        "clean-font",
+        "under-another-as-no-ink",
+        "over-another",
+        "translucent",
+        "edge-control",
+        "clean-cut",
+    ],
 )
 def test_a_read_that_names_what_is_clean_stops_the_start(
     tmp_path: Path, element: str, change: dict[str, Any]
@@ -767,7 +1160,7 @@ def test_a_read_that_names_what_is_clean_stops_the_start(
     held["lines"][0][0].update(change)
     stop, _ = stopped(tmp_path, documents={viewing_browser.PLANTED_FILE: document})
     assert "which the page does not plant" in stop.what
-    assert element in stop.what
+    assert element in stop.what.split("named")[-1]
 
 
 def test_a_first_read_with_no_face_to_embed_stops_the_start(
@@ -1197,8 +1590,9 @@ def test_the_first_read_judges_each_signal_by_its_own_mode_box(tmp_path: Path) -
         for each in messages[:file_opened]
         if each.get("method") == "Page.captureScreenshot"
     ]
+    top = float(viewing_browser.MODE_TOP)
     first, second = (
-        {"x": float(left), "y": 440.0, "width": 24.0, "height": 24.0} for left in (8, 56)
+        {"x": float(left), "y": top, "width": 24.0, "height": 24.0} for left in (8, 56)
     )
     assert clips[:4] == [first, second, first, second]
 
@@ -1207,7 +1601,7 @@ def test_a_mode_box_is_clipped_where_a_narrower_window_shrinks_the_planted_page(
     page = {"x": 10.0, "y": 20.0, "width": 240.0, "height": 240.0}
     assert viewing_browser._mode_box(page, 1) == {
         "x": 10.0 + 28.0,
-        "y": 20.0 + 220.0,
+        "y": 20.0 + viewing_browser.MODE_TOP / 2,
         "width": 12.0,
         "height": 12.0,
     }
@@ -1454,32 +1848,98 @@ def test_the_forced_planted_page_keeps_its_mode_boxes_and_its_spans_with_no_pain
     tmp_path: Path,
 ) -> None:
     """Out of forcing, so each box repaints by its own signal and each span with no paint
-    stays a planted fault; the span left to forcing is the one that is not kept out."""
+    stays a planted fault; the text left to forcing is the one that is not kept out."""
     face = viewing_browser.PLANTED_FACE.read_bytes()
     page = viewing_browser._planted_html(face, SIGNALS, forced=True)
     kept = viewing_browser.KEPT_OUT
     assert page.count(f"background:var(--pkit-mode-0);{kept}") == 1
     assert page.count(f"background:var(--pkit-mode-1);{kept}") == 1
     assert page.count(f"color:{viewing_browser.UNPAINTED};{kept}") == 3
-    assert page.count(f'color:{viewing_browser.UNPAINTED}"') == 1
-    forced_line = page.split(f'="{viewing_browser.FORCED_TEXT}"')[1].split("</div></div>")[0]
-    assert f">{viewing_browser.FORCED_SPAN}</span>" in forced_line
-    assert kept not in forced_line
+    assert page.count(f'color:{viewing_browser.UNPAINTED}"') == 2
+    held = f'{viewing_browser.MARKS["text"]}="{viewing_browser.FORCED_TEXT}"'
+    forced_text = page.split(held)[1].split("</div></div>")[0]
+    for each in (viewing_browser.FORCED_FIRST, viewing_browser.FORCED_SPAN):
+        assert f">{each}</span>" in forced_text
+    assert kept not in forced_text
     assert f"{viewing_browser.GROUND_MARK} " in page
     assert f"background:{viewing_browser.GROUND_COLOUR}" in page
 
 
-def test_the_forced_planted_pages_layer_takes_the_renderers_rule_under_forced_colours() -> None:
-    """The browser forces no colour a shape's attribute holds, so the page mirrors the rule the
-    renderer writes for an opaque fill with no stroke, from the declaration."""
+def test_the_text_left_to_forcing_is_two_lines_on_their_grounds_closer_than_their_height() -> None:
+    """Its first line with descenders, at a step below its font's height, each on a ground of
+    its own beneath both lines, which no backplate covers (DEC-039 point 5)."""
+    face = viewing_browser.PLANTED_FACE.read_bytes()
+    page = viewing_browser._planted_html(face, SIGNALS, forced=True)
+    lines = viewing_browser.FORCED_TEXTS[viewing_browser.FORCED_TEXT]
+    assert [[each.text for each in line] for line in lines] == [
+        [viewing_browser.FORCED_FIRST],
+        [viewing_browser.FORCED_SPAN],
+    ]
+    cmap = TTFont(viewing_browser.PLANTED_FACE).getBestCmap()
+    assert cmap is not None
+    with TTFont(viewing_browser.PLANTED_FACE) as font:
+        glyphs = font.getGlyphSet()
+        upem = font["head"].unitsPerEm  # pyright: ignore[reportAttributeAccessIssue] fontTools types no table's fields
+        foot = min(_bounds(glyphs, cmap[ord(each)])[1] for each in viewing_browser.FORCED_FIRST)
+    assert foot < -0.15 * upem
+    height = (viewing_browser.ASCENT + viewing_browser.DESCENT) * viewing_browser.SIZE
+    assert height > viewing_browser.FORCED_STEP
+    ground = f'{viewing_browser.MARKS["ground"]}="{viewing_browser.FORCED_TEXT}"'
+    assert page.count(ground) == 2
+    assert page.rindex(ground) < page.index(
+        f'{viewing_browser.MARKS["text"]}="{viewing_browser.FORCED_TEXT}"'
+    )
+
+
+def test_the_forced_planted_files_layers_take_the_renderers_rules_under_forced_colours() -> None:
+    """The browser forces no colour a shape's attribute holds, so the file mirrors the rules the
+    renderer writes for a box opaque in every key with no stroke, from the declaration: its fill
+    in the reader's text colour under its inset shape, in the reader's background colour, an
+    edge's width inside it. The translucent box takes neither (DEC-037 point 5, DEC-039 point
+    4)."""
     (html_declaration,) = load("visual-communication", "plugins.html_declaration")
     forced = html_declaration.DECLARATION["forced-colours"]
     face = viewing_browser.PLANTED_FACE.read_bytes()
     page = viewing_browser._planted_html(face, SIGNALS, forced=True)
+    box = f'[data-layer] rect[fill="{viewing_browser.BOX}"]'
     assert (
-        f"@media (forced-colors:active){{[data-layer] rect{{fill:{forced['opaque-fills']};"
-        f"stroke:{forced['edge']['colour']};stroke-width:{forced['edge']['width']}px}}}}"
+        f"@media (forced-colors:active){{{box}{{fill:{forced['opaque-fills']}}}"
+        f"{box}:not([stroke]){{fill:{forced['edge']['colour']}}}"
+        f"{viewing_browser.PLANTED_FORCED_SHEET}}}"
     ) in page
+    assert viewing_browser.TRANSLUCENT not in page.split("<style>")[1].split("</style>")[0]
+    edge = forced["edge"]["width"]
+    for shape, inset in re.findall(
+        r'(<rect data-id="[^"]+"[^>]*/>)(<rect data-inset[^>]*/>)?', page
+    ):
+        geometry = {
+            name: float(value) for name, value in re.findall(r'(x|y|width|height)="([^"]+)"', shape)
+        }
+        if (
+            f'fill="{viewing_browser.BOX}"' in shape
+            and min(geometry["width"], geometry["height"]) > 2 * edge
+        ):
+            held = {
+                name: float(value)
+                for name, value in re.findall(r'(x|y|width|height)="([^"]+)"', inset)
+            }
+            assert held == pytest.approx(
+                {
+                    "x": geometry["x"] + edge,
+                    "y": geometry["y"] + edge,
+                    "width": geometry["width"] - 2 * edge,
+                    "height": geometry["height"] - 2 * edge,
+                }
+            )
+        else:
+            assert not inset
+
+
+def test_the_planted_files_forced_rules_are_the_renderers() -> None:
+    """What each of the renderer's files holds under forced colours, whatever it draws, the
+    planted file holds too, so its grounds and its spans are forced as a piece's are."""
+    (html,) = load("visual-communication", "plugins.html")
+    assert viewing_browser.PLANTED_FORCED_SHEET == html.FORCED_SHEET
 
 
 def test_the_plain_planted_page_holds_nothing_of_forcing() -> None:
@@ -1490,13 +1950,20 @@ def test_the_plain_planted_page_holds_nothing_of_forcing() -> None:
     assert viewing_browser.GROUND_MARK not in page
 
 
-def test_the_forced_planted_page_as_the_scene_holds_it_adds_the_span_left_to_forcing() -> None:
-    plain, forced = viewing_browser.PLANTED_PAGE, viewing_browser.PLANTED_FORCED_PAGE
+def test_the_forced_planted_file_as_the_scene_holds_it_adds_the_text_left_to_forcing() -> None:
+    (plain, own), (forced, forced_own) = (
+        viewing_browser.PLANTED_PAGES,
+        viewing_browser.PLANTED_FORCED_PAGES,
+    )
     assert forced.texts == (
         *plain.texts,
-        viewing_browser.Text(viewing_browser.FORCED_TEXT, ((viewing_browser.FORCED_SPAN,),)),
+        viewing_browser.Text(
+            viewing_browser.FORCED_TEXT,
+            ((viewing_browser.FORCED_FIRST,), (viewing_browser.FORCED_SPAN,)),
+        ),
     )
-    assert viewing_browser.FORCED_FINDING not in viewing_browser.PLANTED_FINDINGS
+    assert forced_own == own
+    assert not viewing_browser.FORCED_FINDINGS & viewing_browser.PLANTED_FINDINGS
 
 
 @pytest.mark.parametrize(
@@ -1528,48 +1995,65 @@ real_browser = pytest.mark.skipif(found_browser() is None, reason="no browser on
 
 
 @real_browser
-def test_a_real_browser_names_each_planted_fault_of_a_file(tmp_path: Path) -> None:
-    """Each start reads the planted page. Read as a file too, it shows what the reads give.
-    What drew the page, and how it looks, this test leaves to the machine."""
+@pytest.mark.parametrize("scale", [0.625, 1.225, 2.0])
+def test_a_real_browser_draws_each_loss_and_names_each_planted_fault_of_a_file(
+    tmp_path: Path, scale: float
+) -> None:
+    """Each start reads the planted file. Read as a file too, at the smallest device scale a
+    start draws at, at one between whole pixels and at the step's own, it shows what the reads
+    give: each loss of what the page shows among it, with the share its cause loses, and the
+    plants on either side of the sliver. What drew the page, and how it looks, this test
+    leaves to the machine (DEC-037 point 5)."""
     file = tmp_path / "planted.html"
-    file.write_text(
-        viewing_browser._planted_html(viewing_browser.PLANTED_FACE.read_bytes()),
-        encoding="utf-8",
-    )
-    page = viewing_browser.PLANTED_PAGE
+    face = viewing_browser.PLANTED_FACE.read_bytes()
+    file.write_text(viewing_browser._planted_html(face, device=scale), encoding="utf-8")
+    pages = list(viewing_browser.PLANTED_PAGES)
     browser = found_browser()
     assert browser is not None
     try:
-        drawing = viewing_browser.draw(file, [page], 2.0, browser, tmp_path / "local")
+        drawing = viewing_browser.draw(file, pages, scale, browser, tmp_path / "local")
     except viewing_browser.Stopped as stop:
         if stop.sandbox:
             pytest.skip(f"a sandbox stopped the browser: {stop}")
         raise
-    assert viewing_browser._named(drawing.shown[0].read) == viewing_browser.PLANTED_FINDINGS
+    read = drawing.shown[0].read
+    assert viewing_browser._named(read) == viewing_browser.PLANTED_FINDINGS
+    lost = {
+        each.element: each.share
+        for each in read.dropped
+        if each.why in (viewing_browser.CUT, viewing_browser.COVERED)
+    }
+    assert all(share is not None and 0 < share <= 1 for share in lost.values())
+    assert lost[viewing_browser.HACEK] < 1
     assert drawing.browser
-    (image,) = drawing.shown[0].images
-    assert (image.width, image.height) == (page.width * 2, page.height * 2)
-    assert all(each.fonts for each in drawing.shown[0].read.machine_fonts)
+    images = drawing.shown[0].images
+    assert [each.page for each in images] == [page.id for page in pages]
+    for image, page in zip(images, pages, strict=True):
+        assert abs(image.width - page.width * scale) <= 1
+        assert abs(image.height - page.height * scale) <= 1
+    assert all(each.fonts for each in read.machine_fonts)
     assert list((tmp_path / "local").iterdir()) == []
 
 
 @real_browser
 def test_a_real_browser_draws_each_region_of_a_page_as_wide_as_the_page(tmp_path: Path) -> None:
-    """Two bands of the planted page, which overlap, at a scale of 2: the reads still read it
-    whole, once."""
+    """Two bands of the planted file's first page, which overlap, at a scale of 2: the reads
+    still read it whole, once."""
     file = tmp_path / "planted.html"
-    file.write_text(
-        viewing_browser._planted_html(viewing_browser.PLANTED_FACE.read_bytes()),
-        encoding="utf-8",
-    )
-    page = viewing_browser.PLANTED_PAGE
+    face = viewing_browser.PLANTED_FACE.read_bytes()
+    file.write_text(viewing_browser._planted_html(face, device=2.0), encoding="utf-8")
+    page, own = viewing_browser.PLANTED_PAGES
     half = page.height / 2
     regions = ((0.0, half + 10), (half - 10, page.height - half + 10))
     browser = found_browser()
     assert browser is not None
     try:
         drawing = viewing_browser.draw(
-            file, [dataclasses.replace(page, regions=regions)], 2.0, browser, tmp_path / "local"
+            file,
+            [dataclasses.replace(page, regions=regions), own],
+            2.0,
+            browser,
+            tmp_path / "local",
         )
     except viewing_browser.Stopped as stop:
         if stop.sandbox:
@@ -1577,7 +2061,8 @@ def test_a_real_browser_draws_each_region_of_a_page_as_wide_as_the_page(tmp_path
         raise
     assert viewing_browser._named(drawing.shown[0].read) == viewing_browser.PLANTED_FINDINGS
     assert [(each.band, each.width, each.height) for each in drawing.shown[0].images] == [
-        (number, page.width * 2, height * 2) for number, (_, height) in enumerate(regions, 1)
+        *((number, page.width * 2, height * 2) for number, (_, height) in enumerate(regions, 1)),
+        (0, own.width * 2, own.height * 2),
     ]
 
 
@@ -1654,6 +2139,39 @@ def test_a_real_browser_draws_the_reference_file_in_each_of_its_modes_clean(
     assert [each.image for each in light.images] != [each.image for each in dark.images]
 
 
+@real_browser
+@pytest.mark.parametrize("scale", [1.0, 2.0])
+def test_a_real_browser_finds_each_loss_of_a_page_the_renderer_wrote(
+    tmp_path: Path, scale: float
+) -> None:
+    """A text that runs past its page's right edge, and a text under a box drawn after it, as
+    the renderer writes them: the read names the first as cut and the second as covered, each
+    with the share it loses, and the text clear of both not at all (DEC-037 points 1 to 3)."""
+    from tests.test_visual_communication_html import draw, element, of_pages, page_of, said
+
+    losses = of_pages(
+        page_of(
+            "losses",
+            200,
+            100,
+            {**said("losses/cut", "Spills"), "x": 170},
+            {**said("losses/covered", "Under"), "y": 40},
+            element("box", "losses/over", x=0, y=40, width=80, height=20, fill="surface"),
+            {**said("losses/clear", "Clear"), "x": 100, "y": 70},
+        )
+    )
+    file = tmp_path / "losses.html"
+    file.write_bytes(draw(losses).document)
+    read = drawn_by_a_real_browser(file, scene_pages(losses), scale, tmp_path).shown[0].read
+    assert [(each.element, each.why) for each in read.dropped] == [
+        ("losses/cut", viewing_browser.CUT),
+        ("losses/covered", viewing_browser.COVERED),
+    ]
+    cut, covered = (each.share for each in read.dropped)
+    assert cut is not None and 0 < cut < 1
+    assert covered is not None and 0 < covered <= 1
+
+
 def REFERENCE_SCENE() -> Mapping[str, Any]:
     from tests.test_visual_communication_html import REFERENCE
 
@@ -1664,17 +2182,20 @@ def REFERENCE_SCENE() -> Mapping[str, Any]:
 def test_a_real_browser_under_forced_colours_names_each_planted_fault_in_each_palette(
     tmp_path: Path,
 ) -> None:
-    """The forced start reads its own planted page first; read as a file too, each palette's
-    reads name each planted fault, and the span left to forcing shows ink in each."""
+    """The forced start reads its own planted file first; read as a file too, each palette's
+    reads name each planted fault, each loss of what the page shows among it, and each line of
+    the text left to forcing shows ink in each, unnamed (DEC-037 point 5, DEC-039 point 5)."""
     file = tmp_path / "planted.html"
     face = viewing_browser.PLANTED_FACE.read_bytes()
-    file.write_text(viewing_browser._planted_html(face, SIGNALS, forced=True), encoding="utf-8")
+    file.write_text(
+        viewing_browser._planted_html(face, SIGNALS, forced=True, device=2.0), encoding="utf-8"
+    )
     browser = found_browser()
     assert browser is not None
     try:
         drawing = viewing_browser.draw_forced(
             file,
-            [viewing_browser.PLANTED_FORCED_PAGE],
+            list(viewing_browser.PLANTED_FORCED_PAGES),
             2.0,
             browser,
             tmp_path / "local",
@@ -1729,13 +2250,15 @@ class EmulationAlone:
 @pytest.fixture(scope="module")
 def emulation_alone(tmp_path_factory: pytest.TempPathFactory) -> EmulationAlone:
     """The forced start's first read's probe, in a start without the flag that forces the
-    browser's colours: the planted page as that read writes it, read in each forced palette's
-    emulation, and whether the span left to forcing left ink (DEC-027 point 4). Some browsers
+    browser's colours: the planted file as that read writes it, read in each forced palette's
+    emulation, and whether the text left to forcing left ink (DEC-027 point 4). Some browsers
     force the text under the emulation alone, and some leave it in the file's colours."""
     place = tmp_path_factory.mktemp("emulation-alone")
     file = place / viewing_browser.PLANTED_FORCED_FILE
     face = viewing_browser.PLANTED_FACE.read_bytes()
-    file.write_text(viewing_browser._planted_html(face, SIGNALS, forced=True), encoding="utf-8")
+    file.write_text(
+        viewing_browser._planted_html(face, SIGNALS, forced=True, device=2.0), encoding="utf-8"
+    )
     program = found_browser()
     assert program is not None
     modes = [
@@ -1745,7 +2268,7 @@ def emulation_alone(tmp_path_factory: pytest.TempPathFactory) -> EmulationAlone:
     try:
         drawing = viewing_browser._start(
             file,
-            [viewing_browser.PLANTED_FORCED_PAGE],
+            list(viewing_browser.PLANTED_FORCED_PAGES),
             2.0,
             program,
             place / "local",
@@ -1759,27 +2282,26 @@ def emulation_alone(tmp_path_factory: pytest.TempPathFactory) -> EmulationAlone:
     unreached = tuple(
         shown.palette
         for shown in drawing.shown
-        if viewing_browser.FORCED_FINDING in viewing_browser._named(shown.read)
+        if viewing_browser.FORCED_FINDINGS & viewing_browser._named(shown.read)
     )
     return EmulationAlone(f"{drawing.browser} ({program})", unreached)
 
 
 def forced_without_the_flag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
-    """The planted page drawn by the forced start of the browser found, its flag that forces
+    """The planted file drawn by the forced start of the browser found, its flag that forces
     the browser's colours swapped for one that changes nothing, so the emulation alone forces
     them: the drawing, or the stop its first read raised. The test skips where a sandbox stopped
     the browser."""
     monkeypatch.setattr(viewing_browser, "FORCING", "--no-first-run")
     file = tmp_path / "planted.html"
-    file.write_text(
-        viewing_browser._planted_html(viewing_browser.PLANTED_FACE.read_bytes()), encoding="utf-8"
-    )
+    face = viewing_browser.PLANTED_FACE.read_bytes()
+    file.write_text(viewing_browser._planted_html(face, device=2.0), encoding="utf-8")
     browser = found_browser()
     assert browser is not None
     try:
         return viewing_browser.draw_forced(
             file,
-            [viewing_browser.PLANTED_PAGE],
+            list(viewing_browser.PLANTED_PAGES),
             2.0,
             browser,
             tmp_path / "local",
@@ -1847,18 +2369,19 @@ def drawn_by_a_real_browser(file: Path, pages: Sequence[Any], scale: float, tmp_
 def test_a_real_browser_draws_each_fixed_page_alone_at_its_own_size_and_clean(
     tmp_path: Path,
 ) -> None:
-    """The reference file, its pages fixed pages (DEC-031 point 5): the window holds each at its
-    own size with its gutters, so none stops the drawing, each image is its page alone, and
-    the reads read clean. What lies around a page is the file's tests' to read: no test holds
-    a pixel (DEC-015 point 6)."""
+    """The reference file, its pages fixed pages (DEC-031 point 5), its arrow clear of the text
+    it crosses: the window holds each at its own size with its gutters, so none stops the
+    drawing, each image is its page alone, and the reads read clean. What lies around a page
+    is the file's tests' to read: no test holds a pixel (DEC-015 point 6)."""
     from tests.test_visual_communication_html import REFERENCE, draw, reference_picture, seam
 
     shown = seam.Shown(reference_picture(tmp_path), seam.PNG)
     file = tmp_path / "fixed.html"
+    clear = clear_of_its_text(REFERENCE)
     file.write_bytes(
-        draw({**REFERENCE, "fixed-pages": True}, pictures={"first/picture": shown}).document
+        draw({**clear, "fixed-pages": True}, pictures={"first/picture": shown}).document
     )
-    pages = scene_pages(REFERENCE)
+    pages = scene_pages(clear)
 
     drawn = drawn_by_a_real_browser(file, pages, 2.0, tmp_path).shown[0]
 
@@ -1867,6 +2390,22 @@ def test_a_real_browser_draws_each_fixed_page_alone_at_its_own_size_and_clean(
     assert [(each.width, each.height) for each in drawn.images] == [
         (page.width * 2, page.height * 2) for page in pages
     ]
+
+
+def clear_of_its_text(scene: Mapping[str, Any]) -> dict[str, Any]:
+    """The reference scene with its second page's arrow below the text it crosses. Its line
+    runs over the text's first letters, so at a device scale of 2, where it fills its device
+    rows, it hides some of their strong ink, which the read names as covered (DEC-037 point
+    1)."""
+    clear = copy.deepcopy(dict(scene))
+    [arrow] = [
+        each
+        for page in clear["children"]
+        for each in page["children"]
+        if each.get("id") == "second/arrow"
+    ]
+    arrow.update(y=40, y1=40, y2=40)
+    return clear
 
 
 #: What the browser holds of the document's first page and of the window.
