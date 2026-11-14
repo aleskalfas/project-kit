@@ -120,3 +120,22 @@ requirements:
       "Invocation pattern"), and ADR-085 words what it requires of the
       harness. A helper's tools are visible only inside the session that
       dispatches it.
+  ask-reaches-person:
+    title: An ask the harness puts to a person reaches a person who can answer it
+    behaviour: >-
+      When the harness asks a person whether a call may run, the ask reaches
+      a person who can answer it, and that person's answer decides the call.
+      Nothing answers the ask in the person's place.
+    observation_point: in-session
+    evidence: >-
+      A design dependency (COR-047 point 9): an adapter's permission hook asks
+      the person where a call may hide a guardrail (ADR-025 point 7), and
+      before a file tool writes outside the session's repository, whether
+      into another repository (ADR-034 point 2) or to any other path (the
+      maintainer's ruling on #2004). ADR-091 point 6 words what it requires
+      of the harness, and a trial on an agent host (#3004) saw one ask
+      refused at once in a person's place, and another wait with nobody to
+      answer it. The requirement's truth is visible only inside a session,
+      where the answer arrives, and only where the harness tells the session
+      who gave the answer. Until it does, even a pass there would resolve it
+      indeterminate (COR-047 point 4).

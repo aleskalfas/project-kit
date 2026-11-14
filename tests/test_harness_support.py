@@ -5,6 +5,7 @@ and the report of what the project's harness leaves unmet.
   measured on its harness yet, and its declaration passes its schema; the Claude Code
   adapter's version bound on the confined run is the runner's tested range, and it answers
   a session's agent withheld tools from the measurement and leaves a helper unanswered;
+  it answers that an ask reaches a person at a cost, for the version the trial measured;
 - each requirement resolves to exactly one of satisfied, unsatisfied or indeterminate.
   The pass reads files only, so it confirms nothing: silence, an answer for no version or
   for versions it cannot check, and a `supported` or `at-cost` answer are indeterminate,
@@ -144,6 +145,22 @@ def test_a_session_agent_withheld_tools_is_answered_and_a_helper_left_indetermin
     (result,) = [r for r in report.results if r.requirement.id == "helper-withheld-tools"]
     assert result.result == harness_support.INDETERMINATE
     assert "no declaration" in result.reason
+
+
+def test_that_an_ask_reaches_a_person_is_answered_at_cost_for_the_version_measured() -> None:
+    """The requirement is observed only inside a session, where the answer arrives, and
+    only where the harness tells the session who gave it (COR-047 point 4). Claude Code's
+    answer rests on the trial on an agent host, bounded to the version it ran (ADR-091
+    point 6, #3004), so the report resolves it indeterminate."""
+    (requirement,) = [r for r in harness_support.requirements(REPO) if r.id == "ask-reaches-person"]
+    assert requirement.observation_point == "in-session"
+    document = harness_support.load_declaration(REPO, "claude-code")
+    assert document is not None
+    answer = document["requirements"]["ask-reaches-person"]
+    assert (answer["grade"], answer["harness_versions"]) == ("at-cost", ["2.1.321", "2.1.321"])
+    (report,) = harness_support.report(REPO, ["claude-code"])
+    (result,) = [r for r in report.results if r.requirement.id == "ask-reaches-person"]
+    assert (result.result, result.grade) == (INDETERMINATE, AT_COST)
 
 
 # --- resolution -------------------------------------------------------------------------

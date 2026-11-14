@@ -507,6 +507,10 @@ The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harnes
 - **A process can start an agent unattended that edits and builds in a folder the process names** (`unattended-working-run`): `at-cost`, for 2.1.303, the version the probe ran on. It holds on Linux with bubblewrap, and only where the run leaves the scrub of sign-in variables off, so a sign-in variable reaches every command the run starts. macOS is not probed ("The probe of a working run" above).
 - **A session's agent withheld named tools has none of them, and keeps every other tool its session holds** (`session-agent-withheld-tools`): `at-cost`, for 2.1.319, the version measured on macOS. An agent named only `disallowedTools`, given on the command line, named by the `agent` setting, and with agent teams on, kept every other tool, a connected MCP server's included, and lacked the withheld ones, in the report a session gives at its start (ADR-085). Only a whole built-in tool, named without an argument, was measured, so the adapter refuses any other withheld entry ("Tool access" under `deploy-agents.sh` above).
 - **A helper withheld named tools has none of them** (`helper-withheld-tools`): unanswered, so it reports `indeterminate`. A helper's tools are visible only inside a session, and nobody has measured them yet.
+- **An ask the harness puts to a person reaches a person who can answer it** (`ask-reaches-person`): `at-cost`, for 2.1.321, the version a trial on an agent host ran (#3004).
+  - **The cost.** A session keeps a person who answers its asks. In a turn that something other than a person answers, each ask is refused, and the refusal reads as the person's own. In a turn nobody answers, each ask holds the turn until someone answers it.
+  - **The asks** are the permission hook's ("When the hook asks" above).
+  - **What the trial saw,** in auto mode. In a turn a message in a chat channel started, the hook's ask was refused at once, and the tool returned `User refused permission to run tool`. In a run with nobody at it, the ask waited in the host's approval inbox, which expires after 24 hours.
 
 ### `permission-enforcement.yaml`
 
