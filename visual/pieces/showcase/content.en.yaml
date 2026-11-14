@@ -15,7 +15,7 @@ slides:
       # the top level, then what runs down and what runs back up. Each level takes a step of
       # the order, layers' default, from the brand's first end at the top to its last at the
       # foot, so its shade runs down with the lead's order.
-      use: starter/layers
+      use: piece/layers
       shape: steps
       levels:
         - {id: decisions, head: Decisions}
@@ -102,28 +102,28 @@ slides:
       rows:
         - id: steps
           cells:
-            - {id: kind}
-            - {id: data, head: "1  Written as data"}
-            - {id: tool, head: "2  Your AI tool gets"}
-            - {id: call, head: "3  A call meets"}
+            - {id: kind, use: piece/cell}
+            - {id: data, use: piece/cell, head: "1  Written as data"}
+            - {id: tool, use: piece/cell, head: "2  Your AI tool gets"}
+            - {id: call, use: piece/cell, head: "3  A call meets"}
         - id: guardrails
           cells:
-            - {id: kind, head: Guardrails}
-            - {id: data, text: "rm -r, sudo and force-push, denied to all"}
-            - {id: tool, text: a deny in its settings}
-            - {id: call, text: "refused, in every mode"}
+            - {id: kind, use: piece/cell, head: Guardrails}
+            - {id: data, use: piece/cell, text: "rm -r, sudo and force-push, denied to all"}
+            - {id: tool, use: piece/cell, text: a deny in its settings}
+            - {id: call, use: piece/cell, text: "refused, in every mode"}
         - id: own-tools
           cells:
-            - {id: kind, head: "An agent's own tools"}
-            - {id: data, text: "the critic's file: Read, Glob, Grep, WebFetch"}
-            - {id: tool, text: "that agent's list of tools"}
-            - {id: call, text: "no command run, no file written"}
+            - {id: kind, use: piece/cell, head: "An agent's own tools"}
+            - {id: data, use: piece/cell, text: "the critic's file: Read, Glob, Grep, WebFetch"}
+            - {id: tool, use: piece/cell, text: "that agent's list of tools"}
+            - {id: call, use: piece/cell, text: "no command run, no file written"}
         - id: one-agent
           cells:
-            - {id: kind, head: "One agent's rule"}
-            - {id: data, text: "project-manager: no raw gh changes"}
-            - {id: tool, text: "pkit's hook, before each call"}
-            - {id: call, text: "refused, so it uses pkit's commands"}
+            - {id: kind, use: piece/cell, head: "One agent's rule"}
+            - {id: data, use: piece/cell, text: "project-manager: no raw gh changes"}
+            - {id: tool, use: piece/cell, text: "pkit's hook, before each call"}
+            - {id: call, use: piece/cell, text: "refused, so it uses pkit's commands"}
     limit: A deny stops the forms of a command pkit can tell. A command hidden behind another can slip past, so the real gates are inside pkit's commands.
     footer: "In project-kit: the project-manager agent uses pkit's commands, which validate the issue first."
 

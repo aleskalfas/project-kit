@@ -129,12 +129,14 @@ pages:
       - aspect: space
         about: visual
         text: >-
-          The notes take a third of the width and the steps the rest, as layers lays
-          them. The levels stand the starter's gap apart, close enough to read as one
-          figure, and the notes share the steps' height the same gap apart, so they read
-          as one column. Beside the narrower levels the steps leave a wider space before
-          the notes, so the two columns read apart, though the widest level stands only
-          the gap from them.
+          The notes take two fifths of the width and the steps the rest, as the piece's
+          layers lays them: the lead now carries the page's whole point, so the longest
+          note needs the wider column to keep to three lines. The levels stand one small
+          space apart, close enough to read as one figure, and the notes, each as tall as
+          its words, stand the starter's gap apart, a step wider than the levels', since
+          each is a box of its own, so they read as one column. Beside the narrower levels
+          the steps leave a wider space before the notes, so the two columns read apart,
+          though the widest level stands only the gap from them.
         principle:
           name: Space inside a group smaller than between groups
           source: Robin Williams, The Non-Designer's Design Book
