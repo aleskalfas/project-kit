@@ -1,7 +1,7 @@
 ---
 id: ADR-093
 title: A write outside the repository asks, except in folders a person names for the checkout
-status: proposed
+status: accepted
 date: 2026-11-13
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
