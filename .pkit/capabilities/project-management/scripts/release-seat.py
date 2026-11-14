@@ -73,6 +73,7 @@ from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
+    format_unresolved,
     members_path,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -138,26 +139,35 @@ def main() -> int:
             name=args.name,
             reason=args.reason or "",
             login=invoker.github_login,
+            login_cause=invoker.unresolved_cause,
             gh=gh,
             yes=args.yes,
             dry_run=args.dry_run,
         )
     return release_own(
-        capability_root, name=args.name, login=invoker.github_login, gh=gh, dry_run=args.dry_run
+        capability_root,
+        name=args.name,
+        login=invoker.github_login,
+        login_cause=invoker.unresolved_cause,
+        gh=gh,
+        dry_run=args.dry_run,
     )
 
 
 def _snapshot(
     capability_root: Path,
     login: str | None,
+    login_cause: str | None,
     gh: state_issues.Gh,
     run: Callable[..., Any],
     git: topology.Git | None,
     versions: Any,
 ) -> tuple[topology.Snapshot | None, int | None]:
-    """This run's snapshot, or the exit code that ends the run."""
+    """This run's snapshot, or the exit code that ends the run. ``login`` is
+    the account acting, and ``login_cause`` why it could not be resolved, where
+    it could not (#3162)."""
     if not login:
-        return None, _refuse("this clone's GitHub account could not be resolved.")
+        return None, _refuse(f"{format_unresolved(login_cause)}.")
     key = instance_identity.read_clone_key(capability_root)
     try:
         snap = topology.snapshot(
@@ -178,13 +188,16 @@ def release_own(
     name: str | None,
     login: str | None,
     gh: state_issues.Gh,
+    login_cause: str | None = None,
     dry_run: bool = False,
     run: Callable[..., Any] = subprocess.run,
     git: topology.Git | None = None,
     versions: Any = None,
 ) -> int:
-    """Release the seat this clone holds, ``name`` where given. Returns the exit code."""
-    snap, code = _snapshot(capability_root, login, gh, run, git, versions)
+    """Release the seat this clone holds, ``name`` where given. ``login_cause``
+    is why ``login`` could not be resolved, where it could not. Returns the exit
+    code."""
+    snap, code = _snapshot(capability_root, login, login_cause, gh, run, git, versions)
     if snap is None:
         return code if code is not None else 0
     if name is not None and snap.topology.seat(name) is None:
@@ -254,6 +267,7 @@ def release_by_force(
     reason: str,
     login: str | None,
     gh: state_issues.Gh,
+    login_cause: str | None = None,
     yes: bool = False,
     dry_run: bool = False,
     run: Callable[..., Any] = subprocess.run,
@@ -261,13 +275,14 @@ def release_by_force(
     versions: Any = None,
 ) -> int:
     """Release the seat ``name`` by force, with ``reason``, from the organizer
-    seat's clone or on a person's authorisation. Returns the exit code."""
+    seat's clone or on a person's authorisation. ``login_cause`` is why
+    ``login`` could not be resolved, where it could not. Returns the exit code."""
     if not reason.strip():
         return _refuse(
             "a release by force carries its reason, which the seat's state issue logs: "
             '--reason "<why>".'
         )
-    snap, code = _snapshot(capability_root, login, gh, run, git, versions)
+    snap, code = _snapshot(capability_root, login, login_cause, gh, run, git, versions)
     if snap is None:
         return code if code is not None else 0
     # A release by force uses the authority the topology grants, so code that

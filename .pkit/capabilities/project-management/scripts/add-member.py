@@ -43,6 +43,7 @@ from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
+    format_unresolved,
     members_path,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -141,13 +142,18 @@ def main() -> int:
     name = args.name or ""
 
     if not github_login:
+        # --me names the account acting, which pkit could not tell (#3162).
+        if args.me:
+            print(
+                "[note] --me names the account acting, and "
+                f"{format_unresolved(invoker.unresolved_cause)}.",
+                file=sys.stderr,
+            )
         if sys.stdin.isatty():
             github_login = input("github_login: ").strip()
         if not github_login:
-            print(
-                "error: --github-login is required (or pass --me to self-add).",
-                file=sys.stderr,
-            )
+            or_me = "" if args.me else " (or pass --me to self-add)"
+            print(f"error: --github-login is required{or_me}.", file=sys.stderr)
             return 2
 
     # Duplicate check.

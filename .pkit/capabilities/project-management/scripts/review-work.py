@@ -152,6 +152,7 @@ from _lib.membership import (
     CAPABILITY_NAME,
     Identity,
     check_membership,
+    format_unresolved,
     resolve_capability_root,
     resolve_invoker_identity,
 )
@@ -412,7 +413,11 @@ def main() -> int:
     owner_bypass: str | None = None
     try:
         clone = instance_claims.this_clone(
-            capability_root, invoker.github_login, config, dry_run=args.dry_run
+            capability_root,
+            invoker.github_login,
+            config,
+            dry_run=args.dry_run,
+            login_cause=invoker.unresolved_cause,
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("review-work", args.issue_number, exc)
@@ -542,6 +547,14 @@ def main() -> int:
         members = _read_members(capability_root, yaml_loader)
         role = reviewer_role_from_config(config)
         if role:
+            # The account acting stands for the author, whom no review is asked
+            # of; where pkit cannot tell it, no member is left out (#3162).
+            if not invoker.github_login:
+                print(
+                    f"  [warn] {format_unresolved(invoker.unresolved_cause)}, so the author "
+                    f"is not left out of the reviewers of role={role!r}.",
+                    file=sys.stderr,
+                )
             candidates = role_based_reviewers(
                 members,
                 role,

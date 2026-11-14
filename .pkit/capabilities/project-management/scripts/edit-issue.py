@@ -466,7 +466,11 @@ def main() -> int:
     # A seat is confirmed on its state issue first (DEC-059 point 6).
     try:
         clone = instance_claims.this_clone(
-            capability_root, invoker.github_login, config, dry_run=args.dry_run
+            capability_root,
+            invoker.github_login,
+            config,
+            dry_run=args.dry_run,
+            login_cause=invoker.unresolved_cause,
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("edit-issue", args.issue_number, exc)

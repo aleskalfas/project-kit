@@ -303,7 +303,9 @@ def _pass_gates(monkeypatch: pytest.MonkeyPatch, mod: ModuleType, verb: str) -> 
     monkeypatch.setattr(mod, "load_adopter_config", lambda _root: {})
     monkeypatch.setattr(mod, "_read_members", lambda *a: [])
     monkeypatch.setattr(
-        mod, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+        mod,
+        "resolve_invoker_identity",
+        lambda **k: SimpleNamespace(github_login="me", unresolved_cause=None),
     )
     monkeypatch.setattr(
         mod, "check_membership", lambda *a: SimpleNamespace(allowed=True, refusal_message="")

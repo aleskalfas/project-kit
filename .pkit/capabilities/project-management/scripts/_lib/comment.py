@@ -454,7 +454,11 @@ def run_comment_verb(subject: str) -> int:
 
     try:
         clone = instance_claims.this_clone(
-            capability_root, invoker.github_login, config, dry_run=args.dry_run
+            capability_root,
+            invoker.github_login,
+            config,
+            dry_run=args.dry_run,
+            login_cause=invoker.unresolved_cause,
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed(f"comment-{subject}", args.number, exc)

@@ -27,14 +27,22 @@ from pathlib import Path
 
 CAPABILITY_NAME = "project-management"
 MEMBERS_RELATIVE = "project/members.yaml"
+#: The seconds `gh api user` is given to name the account acting.
+GH_USER_TIMEOUT = 10
 
 
 @dataclass(frozen=True)
 class Identity:
-    """Resolved identity for the user invoking a pm script."""
+    """Resolved identity for the user invoking a pm script.
+
+    ``unresolved_cause`` says why ``github_login`` could not be resolved, such
+    as `gh api user`'s refusal, where it could not. A command that acts on an
+    account it cannot tell words its message from it, through
+    :func:`format_unresolved`."""
 
     github_login: str | None
     email: str | None
+    unresolved_cause: str | None = None
 
     def label(self) -> str:
         """A single human-readable label for refusal / log lines."""
@@ -65,10 +73,15 @@ def resolve_invoker_identity(
          lands on the host declared in `config['gh']['host']` when set.
     The email comes from `git config user.email` when available.
 
+    A login that cannot be resolved is reported here, with its cause, as the
+    identity's `unresolved_cause` (#3162).
+
     `config` is the adopter's parsed `project/config.yaml`. When omitted,
     the gh call uses ambient state (equivalent to single-org github.com).
-    `gh_login_provider` and `email_provider` are testing seams —
-    callables returning a string-or-None. Production uses subprocess.
+    `gh_login_provider` and `email_provider` are testing seams.
+    `gh_login_provider` returns `(login, None)`, or `(None, cause)` where
+    the login could not be resolved; `email_provider` returns a
+    string-or-None. Production uses subprocess.
     """
     if gh_login_provider is None:
 
@@ -79,9 +92,17 @@ def resolve_invoker_identity(
         email_provider = _email_via_subprocess
 
     env_login = os.environ.get("PM_INVOKER_LOGIN")
-    login = env_login.strip() if env_login else gh_login_provider()
+    if env_login:
+        login = env_login.strip() or None
+        cause = None if login else "PM_INVOKER_LOGIN holds only blanks"
+    else:
+        login, cause = gh_login_provider()
     email = email_provider()
-    return Identity(github_login=login or None, email=email or None)
+    return Identity(
+        github_login=login or None,
+        email=email or None,
+        unresolved_cause=None if login else cause,
+    )
 
 
 def check_membership(
@@ -117,7 +138,11 @@ def check_membership(
 
 
 def format_refusal(invoker: Identity) -> str:
-    """Standard refusal message per DEC-021's structured refusal."""
+    """Standard refusal message per DEC-021's structured refusal. Where the
+    invoker's login could not be resolved, it says so, and why."""
+    unresolved = ""
+    if not invoker.github_login:
+        unresolved = f"          → {format_unresolved(invoker.unresolved_cause)}.\n"
     return (
         "[refused] Membership required for this operation\n"
         f"          → This repository is in closed mode "
@@ -125,9 +150,19 @@ def format_refusal(invoker: Identity) -> str:
         "has ≥1 entry).\n"
         f"          → Your identity ({invoker.label()}) is not in the "
         "member list.\n"
+        f"{unresolved}"
         "          → Remediation: ask an existing member to add you via "
         f"`pkit {CAPABILITY_NAME} add-member`."
     )
+
+
+def format_unresolved(cause: str | None) -> str:
+    """The report of an account pkit cannot tell: that it cannot tell which
+    account is acting, and why, where the cause is known (#3162). A command
+    that acts on such an account words its message from this one sentence,
+    whose cause is an identity's `unresolved_cause`."""
+    because = f", since {cause}" if cause else ""
+    return f"pkit cannot tell which account is acting{because}"
 
 
 def members_path(capability_root: Path) -> Path:
@@ -155,8 +190,9 @@ def resolve_capability_root(explicit: Path | None) -> Path | None:
 # ---- subprocess helpers (testing seams) ----------------------------
 
 
-def _gh_login_via_subprocess(config: dict | None = None) -> str | None:
-    """Resolve `gh api user --jq .login` through the gh helper.
+def _gh_login_via_subprocess(config: dict | None = None) -> tuple[str | None, str | None]:
+    """Resolve `gh api user --jq .login` through the gh helper: `(login,
+    None)`, or `(None, cause)` where it could not, the cause in words.
 
     Routes the call through `_lib.gh.gh_run` so the adopter's pinned host
     (per DEC-023) determines which GitHub instance answers. Without
@@ -167,6 +203,7 @@ def _gh_login_via_subprocess(config: dict | None = None) -> str | None:
     that the caller has `scripts/` on sys.path, which every pm script
     ensures via `sys.path.insert(0, str(_HERE))` before importing.
     """
+    from _lib.comment_log import said  # deferred, as gh_run is
     from _lib.gh import gh_run  # deferred to avoid circular import at module load
 
     try:
@@ -174,13 +211,16 @@ def _gh_login_via_subprocess(config: dict | None = None) -> str | None:
             ["gh", "api", "user", "--jq", ".login"],
             config or {},
             check=False,
-            timeout=10,
+            timeout=GH_USER_TIMEOUT,
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return None
+    except FileNotFoundError:
+        return None, "`gh` is not on PATH"
+    except subprocess.TimeoutExpired:
+        return None, f"`gh api user` did not answer within {GH_USER_TIMEOUT} seconds"
     if proc.returncode != 0:
-        return None
-    return proc.stdout.strip() or None
+        return None, f"`gh api user` failed: {said(proc)}"
+    login = proc.stdout.strip()
+    return (login, None) if login else (None, "`gh api user` answered no login")
 
 
 def _email_via_subprocess() -> str | None:
