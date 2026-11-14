@@ -8,5 +8,6 @@ body: >
   or whose declaration would add a crossing, is drawn spread with the side's
   other ends. It also gives a line two measures for the middle of the stretch
   it alone runs, and has the check find a part a tie's component draws on a
-  stretch the tie shares. It is record text only, and nothing you run
-  changes. The build carries the real changeset.
+  stretch the tie shares, or centred on another line of its group. It is
+  record text only, and nothing you run changes. The build carries the real
+  changeset.
