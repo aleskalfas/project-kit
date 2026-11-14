@@ -1,0 +1,9 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit pm sync-board` reports a board Status field it cannot read, and exits
+  with the code its help gives, instead of ending in a traceback. A board with
+  no Status field, or one whose Status is not a single-select, exits 2; a
+  Status field `gh` failed to read exits 3, with what `gh` said.
