@@ -1,0 +1,19 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit pm add-milestone-category <category> --title-format "<format>"
+  --close-trigger <trigger> [--description D]` declares a Milestone category in
+  `project/config.yaml`'s `milestone_categories:` block, so filing the first
+  Milestone needs no hand edit of the file (DEC-016). It refuses a category
+  already declared, a title format without both `{n}` and `{name}` or with any
+  other placeholder, and a description over one line of 200 characters. It
+  adds the category under the block, or the block at the end of the file, and
+  keeps every other byte; where the file would not read back with only the
+  category added, it writes nothing. Declaring is the person's act: asked at a
+  terminal, or `--yes` on their word, and refused off a terminal without it.
+  `create-milestone`'s refusal of a category not declared, on a project that
+  declares none or another one, now names the command, and it refuses a title
+  format with a placeholder other than `{n}` and `{name}` where it used to
+  fail with a traceback on some.

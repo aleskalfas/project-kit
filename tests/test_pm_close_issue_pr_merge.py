@@ -87,7 +87,9 @@ def _run(
     monkeypatch.setattr(ci, "load_adopter_config", lambda _root: {})
     monkeypatch.setattr(ci, "_read_members", lambda *a: [])
     monkeypatch.setattr(
-        ci, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+        ci,
+        "resolve_invoker_identity",
+        lambda **k: SimpleNamespace(github_login="me", unresolved_cause=None),
     )
     monkeypatch.setattr(ci, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(ci.axis_labels, "load_substrate_map", lambda *_a, **_k: None)

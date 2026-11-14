@@ -22,6 +22,7 @@ pkit:
         - COR-001
         - COR-002
         - COR-048#5
+        - ADR-064#3
         - ADR-065#11
       artefact:
         - ACT-adopter
@@ -33,4 +34,4 @@ pkit:
 
 **Rationale:** The adopter keeps their own files beside the [methodology](../../glossary.md#term-methodology--methodology)'s, and the [system](../../glossary.md#term-system--system) must never break anything they wrote. [COR-001](../../../../../.pkit/decisions/core/COR-001-content-mechanisms.md) decides that "the core layer writes project-owned paths only through the writers that records name, and [sync](../../glossary.md#term-sync--sync) writes them only through [merge delivery](../../glossary.md#term-merge-delivery--merge-delivery)". Merge delivery adds the methodology's entries, and never removes an entry the [project](../../glossary.md#term-project--project) wrote ([COR-002](../../../../../.pkit/decisions/core/COR-002-merge-delivery.md)).
 
-[ADR-065 point 11](../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#11-each-writer-of-a-project-owned-path-is-named-and-each-owner-of-derivable-state) names the writers of first [install](../../glossary.md#term-install--install), sync and the [version transition](../../glossary.md#term-version-transition--version-transition). Other writers are named by their own records, such as [COR-048 point 5](../../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#5-written-only-with-consent) for the keys of the [backbone configuration](../../glossary.md#term-backbone-configuration--backbone-configuration).
+[ADR-065 point 11](../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#11-each-writer-of-a-project-owned-path-is-named-and-each-owner-of-derivable-state) names the writers of first [install](../../glossary.md#term-install--install), sync and the [version transition](../../glossary.md#term-version-transition--version-transition). Other writers are named by their own records, such as [COR-048 point 5](../../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#5-written-only-with-consent) for the keys of the [backbone configuration](../../glossary.md#term-backbone-configuration--backbone-configuration). [ADR-064 point 3](../../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#3-what-the-default-does-not-reach) names one more writer of first install: run by a [release candidate](../../glossary.md#term-release-candidate--release-candidate), it writes the [version pin](../../glossary.md#term-version-pin--version-pin).

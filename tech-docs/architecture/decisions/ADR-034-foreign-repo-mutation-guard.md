@@ -28,8 +28,8 @@ cd-defeat that breaks command-string inspection does **not** recur one layer
 down, because the anchor is the env var, not a second cwd-walk.
 
 **Decision in one line:** the mutating program self-checks anchor-vs-target and
-operator-gates on divergence; the intent-layer hook adds one honest catch (an
-Edit/Write to an absolute foreign path may prompt); and session-root
+operator-gates on divergence; the intent-layer hook adds one honest catch (a
+file tool's write to an absolute foreign path may prompt); and session-root
 write-scoping is **explicitly not** introduced as a foreign-repo boundary,
 because on macOS the mutating tools (`uv`/`pkit`, `gh`) run *outside* the box by
 necessity ([ADR-014](ADR-014-macos-sandbox-platform-stance.md) /
@@ -130,7 +130,7 @@ the foundational-re-authorisation gesture, given before any implementation cites
 **The Claude Code realization of COR-039 is a pkit self-guard: the mutating
 program compares the cd-invariant session anchor against the cd-derived mutation
 target and operator-gates on divergence. The intent-layer hook adds one honest
-Edit/Write catch. Session-root write-scoping is not introduced as a foreign-repo
+catch on the file tools that write a file. Session-root write-scoping is not introduced as a foreign-repo
 boundary. The mechanism is an interlock against accidental handoff, not a
 security boundary, and its residual gap is declared.** Each point below is
 load-bearing.
@@ -164,12 +164,13 @@ in it.)
 
 ### 2. One detectable corner at the intent layer — a small honest catch, not the lever
 
-The PreToolUse hook MAY **prompt** on an `Edit`/`Write` whose
-`tool_input` carries an absolute path under a foreign repo. Edit/Write carry
-the literal target path in their tool input (unlike a bash command, whose
+The PreToolUse hook MAY **prompt** on a call of a built-in file tool that
+writes a file, such as `Edit` or `Write`, whose `tool_input` carries an
+absolute path under a foreign repo (refinement per ADR-093). Such a tool
+carries the literal target path in its tool input (unlike a bash command, whose
 target is buried in argv the dumb segmenter does not parse —
 [ADR-025](ADR-025-segment-conservative-bash-allow.md)), so this one surface is
-honestly inspectable. It is a small catch covering only the Edit/Write
+honestly inspectable. It is a small catch covering only the file tools'
 surface; it does **not** cover bash / `uv` / `gh`, so it is explicitly **not**
 the lever — the self-guard (point 1) is. Naming it as a corner, not a wall,
 keeps the honesty discipline intact.
@@ -225,8 +226,9 @@ The shared decision core
 [ADR-002](ADR-002-permission-realizer-ownership.md) /
 [ADR-003](ADR-003-permission-core-code-home.md) same-code invariant (hook and
 `pkit permissions` decide identically from one `decide()`) stands. The only
-hook change is the additive Edit/Write foreign-path prompt (point 2); the
-self-guard (point 1) lives in the mutating program, not the decision core.
+hook change is the additive foreign-path prompt on the file tools that write a
+file (point 2); the self-guard (point 1) lives in the mutating program, not the
+decision core.
 
 ## Rationale
 
@@ -283,8 +285,8 @@ load-bearing claim about what is *not* protected.
   Rejected as the lever — command inspection is defeated by `cd` and
   absolute/relative path redirection, and on bash the target lives in argv the
   dumb segmenter does not parse ([ADR-025](ADR-025-segment-conservative-bash-allow.md)).
-  The hook keeps only the one honestly-inspectable corner (Edit/Write absolute
-  foreign path, point 2), as a prompt, not a deny.
+  The hook keeps only the one honestly-inspectable corner (a file tool's write
+  to an absolute foreign path, point 2), as a prompt, not a deny.
 
 - **Session-root `filesystem.allowWrite` fence as the foreign-repo boundary.**
   Rejected on macOS — `uv`/`pkit` and `gh` run unconfined as required exclusions
@@ -340,7 +342,8 @@ load-bearing claim about what is *not* protected.
   and its bash path are unchanged
   ([ADR-002](ADR-002-permission-realizer-ownership.md) /
   [ADR-003](ADR-003-permission-core-code-home.md)). The only hook-side change is
-  the additive Edit/Write foreign-path prompt; the self-guard lives in the
+  the additive foreign-path prompt on the file tools that write a file; the
+  self-guard lives in the
   mutating program. The fail-open hook + fail-closed native double-lock and the
   speed-bump-not-boundary posture of
   [ADR-004](ADR-004-autonomy-intent-confinement.md) /
@@ -363,7 +366,7 @@ load-bearing claim about what is *not* protected.
 - **Cross-platform / cross-harness.** The self-guard is the portable core — any
   harness that supplies a cd-invariant session anchor (Claude Code's
   `CLAUDE_PROJECT_DIR` here; another adapter names its own) can carry it. The
-  Edit/Write hook corner is Claude-Code-specific (it depends on the harness's
+  file tools' hook corner is Claude-Code-specific (it depends on the harness's
   tool-input shape). The write-scoping reinforcement is per-platform (it applies
   only where the box confines the mutating tools — e.g. Linux/WSL2 bubblewrap,
   not macOS). Each future adapter declares its own anchor signal and its own
@@ -386,10 +389,12 @@ load-bearing claim about what is *not* protected.
 
 - **Implementation is separate follow-on work, not this ADR.** This record
   specifies the *contract* — the self-guard's anchor-vs-target comparison, the
-  operator-gate behaviour, the Edit/Write hook corner, the not-a-boundary
+  operator-gate behaviour, the file tools' hook corner, the not-a-boundary
   declaration. The self-guard code (the extracted check in the capability lib /
   `pkit`, the hook's Edit/Write prompt, the status/apply surfacing of the
-  residual gap) lands in the implementing issue. This ADR sanctions building it
+  residual gap) lands in the implementing issue. The build that follows ADR-093
+  widens that prompt to the other built-in file tools that write a file
+  (refinement per ADR-093). This ADR sanctions building it
   on acceptance.
 
 - **Versioning + migration.** This change-set authors the ADR record only (no

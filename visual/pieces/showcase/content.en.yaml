@@ -12,10 +12,11 @@ slides:
       # The lead's order runs down the steps: decisions at the top, each layer under it
       # carrying out the decisions above it, down to your code. Beside the steps, the
       # talk's notes stand in the order it tells them: where decisions come from, tied into
-      # the top level, then what runs down and what runs back up.
+      # the top level, then what runs down and what runs back up. Each level takes a step of
+      # the order, layers' default, from the brand's first end at the top to its last at the
+      # foot, so its shade runs down with the lead's order.
       use: starter/layers
       shape: steps
-      level: {use: starter/card, fill: tint}
       levels:
         - {id: decisions, head: Decisions}
         - {id: rules, head: "Working rules · schemas · processes"}

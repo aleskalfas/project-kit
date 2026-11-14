@@ -27,6 +27,7 @@ pkit:
         - src/project_kit/provisioning.py
         - src/project_kit/workspace.py
         - src/project_kit/session_guard.py
+        - src/project_kit/router.py
         - .pkit/adapters/claude-code/merge-settings.sh
         - .pkit/adapters/claude-code/merge-claude-md.sh
       record:
@@ -41,6 +42,8 @@ pkit:
         - ADR-059
         - ADR-009
         - ADR-034#1
+        - ADR-089#6
+        - ADR-092#7
       artefact:
         - ACT-operator
         - REQ-002
@@ -90,11 +93,13 @@ pkit:
 - **1b.** The clone holds no `.pkit/`, as where the adopter kept the system private ([ADR-009 point 3](../../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#3-private--make-the-whole-footprint-git-invisible-via-gitinfoexclude)). The system refuses with `<root>/.pkit/ does not exist. Run 'pkit init' first.`, and the use case ends.
 - **1c.** The operator passes `--force`. The system says that it ignores the flag, and goes on ([ADR-065 point 10](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#10-sync---force-is-ignored-for-one-release-then-removed)).
 - **1d.** The [project](../../../glossary.md#term-project--project) pins a [release](../../../glossary.md#term-release--release) other than the installed CLI's. The [router](../../../glossary.md#term-router--router) runs the command at the [version pin](../../../glossary.md#term-version-pin--version-pin) ([UC-052](UC-052-run-at-pin.md)).
+- **1e.** On the path of 1d, the version pin names a [release candidate](../../../glossary.md#term-release-candidate--release-candidate), as a tester's project does. The router runs the command at that candidate, fetched from the candidate's own tag, as it runs a release ([ADR-089 point 6](../../../../../architecture/decisions/ADR-089-release-candidates.md#6-a-pin-may-name-a-candidate-and-a-pin-that-names-one-asks-for-candidates)).
 - **3a.** The project is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), run by its own code. The system copies nothing, regenerates the derived state, and prints `Self-host sync complete (deploy primitives re-run).` ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)).
 - **3b.** The running CLI is newer than the project's [recorded version](../../../glossary.md#term-recorded-version--recorded-version), and the project pins no [version](../../../glossary.md#term-version--version). The system stops and writes nothing ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)). Its message names `pkit upgrade` to move, `pkit pin` to stay, and in a pipeline a committed version pin or the project's version installed.
 - **3c.** The running CLI is older than the project's content or its version pin. The system stops, writes nothing, and names the remedies for that state (REQ-010).
 - **3d.** The last [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete. The system stops, writes nothing, and names `pkit upgrade`, which finishes the transition (REQ-010).
 - **3e.** The router could not fetch the project's version pin, and runs the installed CLI instead (UC-052). The system stops only where its check finds another version, naming the remedies of the fallback ([ADR-065 point 8](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#8-each-stop-names-the-remedy-for-the-state-it-finds)).
+- **3f.** The project's recorded version is a release candidate above the running CLI, as a move onto it cut short leaves it. The system stops, writes nothing, and names `pkit upgrade --pre`, which hands over to that candidate, whose own upgrade finishes the move. No other release finishes it, since a project on a release candidate moves to no other release ([ADR-065 point 8](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#8-each-stop-names-the-remedy-for-the-state-it-finds) and [ADR-092 point 7](../../../../../architecture/decisions/ADR-092-final-release-from-head.md#7-a-project-on-a-candidate-moves-to-no-other-release)).
 - **4a.** A [capability](../../../glossary.md#term-capability--capability) the project records is shipped newer, older or not at all, or has no recorded version. The system copies none of these, and reports each ([ADR-065 point 1](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#1-syncs-propagation-step-has-two-callers)).
 - **4b.** A folder of the project's own sits at `.pkit/lifecycle/`, where the core [area](../../../glossary.md#term-area--area) of that name would be copied. The system stops before it writes, and names how to move the project's area ([ADR-065 point 13](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#13-a-transition-and-sync-stop-on-a-clash-of-area-names-and-no-core-area-but-rule-sets-is-added-until-1600)).
 - **6a.** The [session anchor](../../../glossary.md#term-session-anchor--session-anchor) is not the clone's root, as where the clone lies in a folder below the session anchor. The system then warns that the [harness](../../../glossary.md#term-harness--harness) will not load what [sync](../../../glossary.md#term-sync--sync) wrote until a session starts at the root. On the path of 3a, it warns the same.

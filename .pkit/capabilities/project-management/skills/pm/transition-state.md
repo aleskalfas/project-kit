@@ -5,6 +5,7 @@ Sub-procedure of the pm composite skill (`pm.md` in this folder). Per [project-m
 ## When to use this operation
 
 - The user wants to **move** an issue forward through the lifecycle (Todo → Backlog → In Progress → Review).
+- The user wants to **start work** on an issue, or a session starts several Tasks at once, each in a worktree of its own (the start-work block below).
 - The user wants to **move back** an issue In Progress that nobody is working on, to Backlog or Todo ([project-management:DEC-006-state-machine-and-cascade], "Moving back from In Progress").
 - The user wants to **close** an issue (PR-merge-driven closure, a Task whose work was not a pull request closed as completed, or explicit won't-do gesture per [project-management:DEC-006-state-machine-and-cascade]).
 - The user wants to **reopen** a closed issue (e.g., it regressed).
@@ -37,6 +38,19 @@ Dispatch to the script via the kit-level capability-command dispatcher (per [pki
 pkit project-management move-issue <N> --to <todo|backlog|in-progress|review|done> \
   [--bypass --bypass-reason "<text>"] [--no-cascade] [--dry-run] [--yes]
 ```
+
+**Start work** on an issue in Backlog: `start-work` cuts its branch, `<type>/<N>-<slug>`, from the default branch, or the integration branch its `Integration:` marker names, and checks it out, assigns the issue to your account, and moves it to In Progress ([project-management:DEC-026-work-ownership-lifecycle]). Starting is the agent's own move, which no person authorises (`workflow.yaml`), so `--yes` is yours to pass.
+```
+pkit project-management start-work <N> [--dry-run] [--yes]
+```
+
+**Start several Tasks at once, in a project with no topology of seats.** `start-work` checks the branch out in the checkout it runs in. Run in the session's own clone, it takes the clone off its branch, and the clone must go back to it before a worktree can take the Task's branch. So start each Task in a git worktree of its own, and the session's clone stays on its branch:
+
+1. **Make the worktree under the project's root, detached at the default branch:** `git worktree add --detach <path> origin/<default branch>`, with a path such as `.claude/worktrees/<name>`. Detached, since a branch is checked out in one worktree at a time, and the clone may hold the default branch. Under the root, since each write outside the session's repository meets the permission hook's ask, and where nobody is there to answer, the ask refuses the write or holds the turn. Where version control does not ignore the folder, the clone lists the worktree as untracked: leave it out of every commit.
+2. **Run `start-work <N> --yes` inside the worktree.** It cuts the Task's branch and checks it out there. Where the Task's branch exists already, it cuts none and checks none out, so check it out in the worktree yourself.
+3. **Build the Task in its worktree, and run its commands there,** since `pkit` reads the project from the folder it runs in.
+
+With a topology, a seat takes its Tasks through [work-loop](work-loop.md).
 
 **Move back** an issue In Progress that nobody is working on — only on the user's authorisation for that issue, with the reason the work stopped in the user's words. Ask before running it: whether work has stopped is the user's judgement, never one to make from an issue's inactivity alone (DEC-006).
 ```
@@ -132,7 +146,7 @@ Direct-path is equivalent for adopters whose kit predates the dispatcher:
 
 Three judgments belong to the LLM before invoking the script — these are interpretation, not deterministic:
 
-1. **Pick the operation.** Map the user's natural-language intent to `move`, `close`, or `reopen`. "Start work on #42" → move-issue --to in-progress; "nobody is working on #42, put it back" → move-issue --to backlog (or todo) --reason; "won't fix this" → close-issue --mode wont-do; "the audit is done, its findings are #908" → close-issue --mode completed --result; "this regressed" → reopen-issue.
+1. **Pick the operation.** Map the user's natural-language intent to `start`, `move`, `close`, or `reopen`. "Start work on #42" → start-work; "nobody is working on #42, put it back" → move-issue --to backlog (or todo) --reason; "won't fix this" → close-issue --mode wont-do; "the audit is done, its findings are #908" → close-issue --mode completed --result; "this regressed" → reopen-issue.
 2. **Pick the target state for `move`.** Default to the next-forward state from the issue's current state unless the user names a specific target. For a move back, pick Backlog where the issue is in a milestone and Todo where it is in none; the script's refusal names the right one where that differs.
 3. **Resolve authorisation prompts.** When the script returns a refusal mentioning `--yes` or `--bypass`, surface the prompt to the user; re-invoke once the user has authorised.
 

@@ -21,7 +21,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import cli, release, session_guard
+from project_kit import candidates, cli, release, session_guard
 from tests import sessions
 
 # --- CHANGELOG-section extraction (pure) -----------------------------
@@ -311,6 +311,176 @@ def test_the_2_0_0_section_of_this_repo_is_published_short() -> None:
     assert len(notes) <= release.RELEASE_BODY_LIMIT
     assert f"]({url}#200--2026-10-30)" in notes
     assert "- backbone 1.149.0 → 2.0.0\n" in notes
+
+
+# --- a release candidate's notes (ADR-089 point 9) -----------------------
+
+
+# A candidate's changelog, which only its tag holds: the section is headed by the
+# candidate's version, and each component's entry is tagged with its own.
+_CANDIDATE_CHANGELOG = """# Changelog
+
+## 2.3.0rc4 — 2026-11-13
+
+### Added
+- A candidate's change.
+- **pm 0.60.1rc4** — A component's change.
+
+## 2.2.0 — 2026-11-01
+
+### Fixed
+- **pm 0.60.0** — An older change.
+"""
+
+
+def _fake_run_at_tag(release_exists: bool, calls: list[dict]):
+    """As `_fake_run_factory`, and `git show` reads the candidate's changelog at its tag."""
+    fallback = _fake_run_factory(release_exists, calls)
+
+    def fake_run(cmd: list[str], **kwargs: object) -> _FakeCompleted:
+        if cmd == ["git", "show", "refs/tags/v2.3.0rc4:CHANGELOG.md"]:
+            calls.append({"cmd": cmd, "kwargs": kwargs})
+            return _FakeCompleted(stdout=_CANDIDATE_CHANGELOG)
+        return fallback(cmd, **kwargs)
+
+    return fake_run
+
+
+@pytest.mark.parametrize("exists", [False, True], ids=["create", "edit"])
+def test_a_candidate_s_notes_are_read_at_its_tag_and_published_as_a_pre_release(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, exists: bool
+) -> None:
+    # The working tree's changelog has no section for the candidate: only its tag does.
+    repo_root = _write_changelog(tmp_path)
+    calls: list[dict] = []
+    monkeypatch.setattr(release.subprocess, "run", _fake_run_at_tag(exists, calls))
+
+    message = release.publish_release_notes(repo_root, "2.3.0rc4", clearance=_cleared(repo_root))
+
+    section = release.extract_changelog_section(_CANDIDATE_CHANGELOG, "2.3.0rc4")
+    notes = f"{section}\n{candidates.way_in_notes('2.3.0rc4')}"
+    assert notes.startswith("## 2.3.0rc4 — 2026-11-13\n")
+    assert "2.2.0" not in notes
+    if exists:
+        edit = _gh_call(calls, "edit")
+        assert edit["cmd"] == [
+            "gh",
+            "release",
+            "edit",
+            "v2.3.0rc4",
+            "--notes-file",
+            "-",
+            "--prerelease",
+        ]
+        assert edit["kwargs"]["input"] == notes
+        assert "Updated notes-only GitHub pre-release v2.3.0rc4" in message
+    else:
+        assert _create_cmd(calls) == [
+            "gh",
+            "release",
+            "create",
+            "v2.3.0rc4",
+            "--title",
+            "v2.3.0rc4",
+            "--notes-file",
+            "-",
+            "--verify-tag",
+            "--prerelease",
+        ]
+        assert _gh_call(calls, "create")["kwargs"]["input"] == notes
+        assert "Published notes-only GitHub pre-release v2.3.0rc4" in message
+
+
+def test_a_candidate_s_notes_name_pkit_pin_as_the_way_in_beside_the_first_hop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A candidate's notes end with how to try it: on a branch, by `pkit pin
+    <candidate>`, or by the first hop where `pkit pin` takes no candidate, either
+    run again where it was cut short (ADR-092 point 4, ADR-089 point 8). `pkit
+    upgrade --pre` is not named: it takes the newest candidate, which may be
+    another."""
+    repo_root = _write_changelog(tmp_path)
+    monkeypatch.setattr(release.subprocess, "run", _fake_run_at_tag(False, []))
+
+    message = release.publish_release_notes(
+        repo_root, "2.3.0rc4", clearance=_cleared(repo_root), dry_run=True
+    )
+
+    way_in = message[message.index("### Trying this candidate") :]
+    flat = " ".join(way_in.split())
+    assert "Try it on a branch of your project, and go back by leaving that branch." in flat
+    assert "Move the project onto it with `pkit pin 2.3.0rc4`." in flat
+    assert f"\n```\n{candidates.first_hop('2.3.0rc4')}\n```\n" in way_in
+    assert "A move cut short goes on with the command that started it, run again." in flat
+    assert "--pre" not in way_in
+    assert "its whole changelog section, then how to try the candidate" in message
+
+
+def test_a_long_candidate_section_is_shortened_and_still_names_the_way_in(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Where the section and the way in are past what a Release keeps, the short
+    notes stand for the section, and the way in follows them (ADR-092 point 4)."""
+    text = _long_changelog().replace("## 2.0.0 — ", "## 2.0.0rc1 — ", 1)
+    repo_root = _write_changelog(tmp_path)
+    calls: list[dict] = []
+    fallback = _fake_run_factory(False, calls)
+
+    def fake_run(cmd: list[str], **kwargs: object) -> _FakeCompleted:
+        if cmd == ["git", "show", "refs/tags/v2.0.0rc1:CHANGELOG.md"]:
+            return _FakeCompleted(stdout=text)
+        return fallback(cmd, **kwargs)
+
+    monkeypatch.setattr(release.subprocess, "run", fake_run)
+
+    message = release.publish_release_notes(repo_root, "2.0.0rc1", clearance=_cleared(repo_root))
+
+    notes = _gh_call(calls, "create")["kwargs"]["input"]
+    short = release.short_release_notes(
+        text, "2.0.0rc1", changelog_url="https://github.com/owner/repo/blob/v2.0.0rc1/CHANGELOG.md"
+    )
+    assert notes == f"{short}\n{candidates.way_in_notes('2.0.0rc1')}"
+    assert len(notes) <= release.RELEASE_BODY_LIMIT
+    assert "with how to try the candidate, past the 125,000 a GitHub Release keeps" in message
+
+
+def test_a_final_release_s_notes_name_no_way_into_a_candidate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo_root = _write_changelog(tmp_path)
+    monkeypatch.setattr(release.subprocess, "run", _fake_run_factory(False, []))
+
+    message = release.publish_release_notes(
+        repo_root, "1.141.0", clearance=_cleared(repo_root), dry_run=True
+    )
+
+    assert "Trying this candidate" not in message
+    assert "pkit pin" not in message
+
+
+def test_a_candidate_s_section_names_each_bump_from_the_one_recorded_before() -> None:
+    releases = release.changelog_section_releases(_CANDIDATE_CHANGELOG, "2.3.0rc4")
+
+    assert releases == [("backbone", "2.2.0", "2.3.0rc4"), ("pm", "0.60.0", "0.60.1rc4")]
+
+
+def test_a_candidate_s_notes_unread_at_its_tag_say_how_to_fetch_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo_root = _write_changelog(tmp_path)
+
+    def fake_run(cmd: list[str], **kwargs: object) -> _FakeCompleted:
+        if cmd[:2] == ["git", "show"]:
+            return _FakeCompleted(returncode=128, stderr="fatal: invalid object name")
+        return pytest.fail(f"must not run {cmd}")
+
+    monkeypatch.setattr(release.subprocess, "run", fake_run)
+
+    with pytest.raises(click.ClickException) as exc:
+        release.publish_release_notes(repo_root, "2.3.0rc4", clearance=_cleared(repo_root))
+
+    assert "CHANGELOG.md cannot be read at the tag v2.3.0rc4" in exc.value.message
+    assert "`git fetch origin tag v2.3.0rc4`" in exc.value.message
 
 
 def test_publish_missing_version_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

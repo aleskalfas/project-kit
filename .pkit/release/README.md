@@ -10,14 +10,20 @@ pkit:
         - src/project_kit/changesets.py
         - src/project_kit/versioning.py
         - src/project_kit/stranded_migrations.py
+        - src/project_kit/release_candidate.py
+        - src/project_kit/candidates.py
+        - src/project_kit/upgrade.py
+        - src/project_kit/remote_refs.py
+        - pyproject.toml
         - .changie.yaml
+        - .github/workflows/checks.yml
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
         - scripts/latest_tag.py
         - scripts/release_pr.py
         - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
-      record: [COR-010, COR-030, COR-041, "COR-054#2", PRJ-002, PRJ-004, ADR-040, "ADR-061#5", "ADR-061#8", "ADR-092#6", "ADR-092#8"]
+      record: [COR-010, COR-030, COR-041, "COR-054#2", PRJ-002, PRJ-004, PRJ-016, ADR-040, "ADR-059#3", "ADR-061#5", "ADR-061#8", "ADR-089#1", "ADR-089#2", "ADR-089#3", "ADR-089#9", "ADR-092#2", "ADR-092#3", "ADR-092#5", "ADR-092#6", "ADR-092#8", "ADR-092#9", "ADR-092#10", "ADR-092#4", "ADR-092#7", "ADR-089#8", "ADR-063#1"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/upgrade-flow.md#the-replay-a-missing-completion
@@ -519,9 +525,9 @@ PR** a human merges — it is *not* auto-run on every merge.
 
 | Command | Writes? | What |
 |---|---|---|
-| `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). Refuses a release `apply` would refuse. |
-| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → widen declared upper bounds on capabilities → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Prints, last, the trailer line naming the commit its plan read, for the release commit and the PR's body (below). Tagging is a separate step after the merge (below), and `--tag` is refused before anything is written. |
-| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR that lands only what `apply` wrote and the answer files it adds, onto the commit its plan read, as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
+| `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). Refuses a release `apply` would refuse. With `--pre`, the release candidate a cut at HEAD would write, with its number and base (below). |
+| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → widen declared upper bounds on capabilities → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Prints, last, the trailer line naming the commit its plan read, for the release commit and the PR's body (below). Tagging is a separate step after the merge (below), and `--tag` without `--pre` is refused before anything is written. With `--pre`, it cuts a release candidate from HEAD instead, committed on no branch, and `--tag` tags it (below). |
+| `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR that lands only what `apply` wrote and the answer files it adds, onto the commit its plan read, and in project-kit's own source records no pre-release version, as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
 | `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section, or short notes pointing to it when it is longer than a Release keeps (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes, and which of the two forms they take, without calling `gh`. Runs the cross-repository guard first; `--allow-foreign-repo` confirms publishing in another repository than the session's anchor's. |
 | `pkit release check` | no | The CI guard (below). |
 | `pkit release check-queue` | no | The queue's check: fails where a release a squashing merge queue's merge holds would not land what `apply` wrote and the answer files it adds, onto the commit its plan read (below). |
@@ -770,10 +776,11 @@ It refuses in other cases too, such as in a shallow clone.
 [The CLI reference's `version tag`](../cli/README.md#version-tag---push--version-untag---push) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
 lists every case.
 
-`apply --tag` is refused before anything is written, naming `pkit version tag`
-after the merge: the release commit does not exist yet when `apply` runs. A
-component-only release (no backbone move) cuts no tag — PRJ-004 tags the
-backbone `.pkit/VERSION`.
+`apply --tag` without `--pre` is refused before anything is written, naming
+`pkit version tag` after the merge: the release commit does not exist yet when
+`apply` runs. A component-only release (no backbone move) cuts no tag — PRJ-004
+tags the backbone `.pkit/VERSION`. A release candidate's tag is cut by `apply
+--pre --tag`, on the commit its cut makes (below).
 
 ### The trailer line (ADR-092 point 6)
 
@@ -791,6 +798,111 @@ body. Push nothing else onto the release branch, and never amend the release
 commit: where the default branch has moved since the plan, run the release
 again from its head. An empty release commits nothing, and `apply` prints no
 line.
+
+### A release candidate — `plan --pre` and `apply --pre`
+
+A release candidate tests a change before it merges
+([PRJ-016](../decisions/project/PRJ-016-candidates-hold-no-release.md)). It is
+cut from the head of the branch that holds the change, once that branch has
+taken in the default branch's head, or from the default branch's head to try
+the next release. `pkit release plan --pre` and `apply --pre` plan it from the
+commit they run at: the versions it records and the changesets pending in its
+tree, the default branch's and the branch's own (ADR-092 point 2). The plan is
+the one a final release would make there, at release versions, so every check
+reads it as it reads a final release's. Only the writes add the suffix `rcN`
+(ADR-089 point 1).
+
+**The refusals.** A cut refuses before it writes anything (ADR-089 point 2),
+and
+[the CLI reference's `release plan` and `release apply` rows](../cli/README.md#surface) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
+list each refusal with its message, and give the prompt and `--json` keys of a
+cut.
+
+**The number.** `N` is one past the highest number any release candidate's
+tag on `origin` carries, whatever its version, and 1 where there is none
+(ADR-092 point 3). The cut counts a tag whose full reference is
+`refs/tags/v<X.Y.Z>rc<N>`. A `withdrawn/` tag, a final release's tag and
+`latest` count for none, and nor does a tag only the clone holds.
+
+**What it writes**, on top of the commit:
+
+- each version the release moves, with the suffix and one `N` for all:
+  `.pkit/VERSION`, the self-host manifest's `backbone_version:` and
+  `completed_version:` lines, and each moved component's `version:` line.
+- the broaden and each declared upper bound on a capability, as the final
+  release writes them, at release versions, so the candidate's own components
+  admit it. It raises no floor, on the backbone or on a capability, and
+  consumes no changeset (PRJ-002 D4 and D5).
+- the changelog section, headed by the candidate's version, each component's
+  entry tagged with its candidate version. The changelog lint reads such a
+  heading.
+- the cut's base, in `src/project_kit/candidate_base.json`: the commit the cut
+  is made from, and the version the backbone and each component record there
+  (ADR-092 point 9). It sits in the package, so the wheel built from the
+  candidate's commit carries it.
+
+The wheel's version pattern in `pyproject.toml` reads PEP 440's pre-release
+form, so a candidate's tree builds (ADR-089 point 9).
+
+**Where it commits.** `apply --pre` commits the writes as `chore(release):
+v<candidate>` on no branch: it detaches HEAD first, so the branch stays where
+it was. `--tag` tags that commit `v<candidate>`, annotated, and only the tag
+then holds it. The tag is pushed alone, and only once the wheel built from the
+commit is checked (ADR-089 point 9). `apply --pre` prints no trailer line: a
+candidate has no pull request. By hand:
+
+    pkit release apply --pre --tag            # at the branch's head: write, commit on no branch, tag
+    uv build --wheel                          # from the candidate's commit; install it, check `pkit --version`
+    git push origin refs/tags/v<candidate>    # the tag alone, never forced
+    pkit release publish-notes <candidate>    # a pre-release Release, its notes read at the tag
+    git switch <branch>                       # back to the branch
+
+No candidate's tag is moved or deleted (PRJ-016 point 5). The cut's checks
+are an interlock against a mistake, not a defence: a run on a branch runs
+that branch's `pkit` (ADR-092 point 10). Git refuses a push that would move a
+tag `origin` holds, whatever code runs, and nothing here forces a push.
+
+### Withdrawing a candidate
+
+A candidate found unfit is withdrawn by a tag of its own, never by deleting
+its tag (ADR-092 point 4). A dropped branch's candidate may otherwise stay the
+newest for good, and `pkit upgrade --pre` would keep finding it. A person
+pushes the tag `withdrawn/v<candidate>` on the candidate's commit, and says on
+its Release that it is withdrawn, and why:
+
+    git tag -a withdrawn/v<candidate> -m "<why>" 'v<candidate>^{commit}'
+    git push origin refs/tags/withdrawn/v<candidate>    # the tag alone, never forced
+
+Neither tag is moved or deleted afterwards (PRJ-016 point 5). `pkit version
+untag` refuses a candidate's tag, and its refusal names the withdrawal in its
+place. A deletion by hand lies outside, as any act write access allows. A
+later `pkit release publish-notes <candidate>` writes the notes from the
+changelog afresh, so say so on the Release again after one.
+
+What the withdrawal changes:
+
+- **`pkit upgrade --pre` passes it by,** and takes the newest release left,
+  an older candidate or a final release. A project already on the candidate
+  stays on it, since a project on a candidate moves to no other release, and
+  leaves it by leaving the testers' branch (ADR-092 point 7).
+- **`pkit pin <candidate>` warns of it,** and pins it all the same, since
+  whoever names a withdrawn candidate asked for that one.
+- **It names no install** (PRJ-004 as PRJ-016 refines it). Every reader of
+  release and candidate tags matches a tag by its full reference,
+  `refs/tags/v…`, so none takes a tag under `withdrawn/` for either: the tool
+  update's lookup of the latest release and `--pre`'s, the cut's counter, the
+  stranded-script guard's fixed version, `scripts/latest_tag.py`, which keeps
+  `latest` on the highest release, and the release workflow's search for notes
+  left unpublished. A `v*` pattern would match the tail of `withdrawn/v…` too.
+  `--pre` and `pkit pin` match a withdrawal tag the same way, by
+  `refs/tags/withdrawn/v…`, so a tag whose tail alone reads as one withdraws
+  nothing.
+
+The withdrawal is project-kit's, and the reading of it binds every project
+that tests a candidate.
+[The CLI reference's `upgrade`](../cli/README.md#upgrade) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
+gives `--pre`'s reading, and its `pin` and `version untag` give their
+messages.
 
 ### Merging the release PR — `pkit release merge <pr>`
 
@@ -850,6 +962,18 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   the base, and run again. A push to the base in the moments between this
   check and the request is not seen on a base without a queue; on one with a
   queue, the queue's check below judges the merge the queue makes.
+- **Lands no pre-release version, in project-kit's own source** (ADR-089
+  point 3). The default branch holds release versions alone, and a
+  candidate's versions live only in its tag. The check above reads which files
+  and lines a release changes, not which versions they record, so it can pass
+  one. So, right after that check, in the repository the marker test
+  finds (ADR-059 point 3), it reads the versions the PR's head records, as
+  `pkit release check` reads HEAD's (below), and refuses where any is a
+  pre-release. A release PR is never a candidate's own commit, which no pull
+  request carries. Elsewhere it reads nothing, since candidates are cut only
+  in project-kit's own source (ADR-089 point 2).
+  [The CLI reference's `release merge` row](../cli/README.md#surface) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
+  gives the refusal and its message.
 - **Is first in the queue, or waits.** On a base with a merge queue it
   enqueues the release only where the queue holds no other PR ahead of it,
   since each would land first and the release would land on another commit
@@ -1084,6 +1208,19 @@ publishes it as the body of a GitHub Release for tag `v<version>`.
   erroring; it creates the Release the first time and edits it thereafter. A
   **missing tag is a clear error** (the create path passes `--verify-tag`, so
   `gh` refuses to publish notes for a tag that does not exist).
+- **A candidate's notes** (a version `X.Y.ZrcN`) are read from `CHANGELOG.md`
+  at its tag, since only the tag holds the commit that records them, and its
+  Release is marked a pre-release (`--prerelease`). So GitHub never shows a
+  candidate as its latest release (ADR-089 point 9). Where the clone lacks the
+  tag, it says to fetch it.
+- **A candidate's notes end with how to try it,** after its section or its
+  short notes (ADR-092 point 4): on a branch of the project, left to go back;
+  by `pkit pin <candidate>`, which reaches the candidate the notes describe,
+  where `pkit upgrade --pre` takes the newest, which may be another branch's;
+  or, where `pkit pin` refuses a candidate, as a release from before
+  candidates does, by the first hop, the candidate's own upgrade through the
+  router's bypass. A move cut short goes on with the command that started it,
+  run again (ADR-089 point 8).
 - **`--dry-run`** prints the notes it would publish, and whether they are the
   whole section or the short notes, without calling `gh`.
 - **Project-neutral.** The repo is derived from the ambient `gh` context (the
@@ -1112,8 +1249,24 @@ human-gated automation. They **never auto-merge** — a human reviews the releas
 PR and merges it with `pkit release merge <pr>` (the sanctioned path above); the
 automation only proposes and, post-merge, tags.
 
-**1. `release-pr.yml` — open the release PR.** Started by hand only
-(`workflow_dispatch`): a release is cut when the maintainer starts it. It:
+**1. `release-pr.yml` — open the release PR, or cut a candidate.** Started by
+hand only (`workflow_dispatch`): a release is cut when the maintainer starts
+it. One concurrency group, `release`, keeps two runs apart (ADR-089 point 9).
+Every run starts in the job `start`, which:
+
+- **Refuses** a run started without the input `pre-release` on any branch but
+  the default branch, the one `pkit repository base` names (ADR-092 point 5).
+- **Finishes the notes an earlier run left unpublished.** A tag on `origin`, of
+  a final release or a candidate, with no GitHub Release lacks its notes: the
+  run that pushed it stopped before it published them. The job lists the tags
+  with `git ls-remote` and the Releases with `gh api`, and
+  `scripts/release_pr.py unpublished` names each such version, oldest first.
+  It passes by a tag below the oldest tag that has a Release, since that tag
+  predates the notes. It runs `pkit release publish-notes` for each version it
+  names. Where one fails, or the listing does, it warns and goes on, and the
+  next run tries again.
+
+Started without the input, the job `release-pr` then:
 
 - Computes the release from the pending changesets (`pkit release plan --json`)
   and **no-ops cleanly** when nothing moves a version (an empty release, or only
@@ -1147,6 +1300,26 @@ automation only proposes and, post-merge, tags.
   from, and opens the release planned from that head.
 - Does **not** tag — the tag must point at the *merged* release commit (PRJ-004),
   which does not exist until the human merges. Tagging is workflow 2.
+
+Started with the input `pre-release`, on any branch, the job `pre-release`
+cuts a candidate from that branch's head instead (ADR-092 point 2; ADR-089
+point 9). It opens no pull request and merges nothing, so `release-tag.yml`
+does not run. In order, it:
+
+- runs `pkit release check --base <default branch>`, so no candidate carries a
+  surface change no changeset moves. It reads no label, so a branch whose pull
+  request passes by `skip-changeset` is cut only once it carries a `none`
+  changeset. It runs before the cut, so it reads the branch's tree, never the
+  candidate's, and fails where the branch records a pre-release version
+  (ADR-089 point 3; "The surface-without-changeset CI guard" below).
+- runs `pkit release apply --pre --tag --yes`, which commits the candidate on
+  no branch and tags it, or refuses before it writes anything (above).
+- builds the wheel from the candidate's commit, installs it apart from the
+  checkout, and checks that its `pkit --version` names the candidate. Where it
+  does not, the run stops before the tag is pushed.
+- pushes the tag alone, never forced, and publishes the candidate's notes as a
+  pre-release Release. Where the notes fail, the next run's `start` finishes
+  them.
 
 **2. `release-tag.yml` — tag + notes post-merge.** Runs on `push` to `main`.
 Detection is **VERSION-driven, not message-driven** (a release PR may land as a
@@ -1218,7 +1391,8 @@ rule a PR it opens does **not** trigger `on: pull_request` workflows — so
   covers that case if one is added.
 
 Workflow permissions are minimal: `release-pr.yml` gets `contents: write`
-(branch) + `pull-requests: write` (the PR); `release-tag.yml` gets `contents:
+(the branch, a candidate's tag, and the notes it finishes or publishes) +
+`pull-requests: write` (the PR); `release-tag.yml` gets `contents:
 write` (the tag, `latest` **and** the notes-only Release — all are `contents`).
 Neither has merge authority.
 
@@ -1326,6 +1500,29 @@ correction D1 allows, and a release's own writes ("Correcting a range that
 excludes a carried version" above). Ranges are compared as version ranges,
 so a re-quoting or a respelling of the same range is no edit. No escape
 hatch waives this check either.
+
+**The default branch holds release versions alone (ADR-089 point 3).** In
+project-kit's own source, the repository the marker test finds (ADR-059
+point 3), the guard also fails where HEAD's tree records a pre-release
+version, PEP 440's: the backbone's in `.pkit/VERSION`, or a component's in its
+`package.yaml`. A candidate's versions live only in its tag, on a commit no
+branch holds (ADR-089 point 1), so a tree bound for the default branch that
+records one took in a candidate's commit, by hand or by a mistaken run. The
+guard reads the tree, not the diff, and committed work only.
+
+- **A candidate's own commit passes:** HEAD where the backbone records a
+  candidate's version, `X.Y.ZrcN`, and the clone's tag `vX.Y.ZrcN` names
+  HEAD, as a cut leaves it. A commit made on top of it, or a merge that takes
+  it in, is no candidate's own commit. CI checks a pull request on the merge
+  GitHub makes, which no tag names, so the pass never reaches a pull request.
+- **Elsewhere it binds nothing.** Candidates are cut only in project-kit's own
+  source (ADR-089 point 2). In another repository, an adopter's own component,
+  or a default branch a tester moved to a candidate, may record a pre-release.
+- **No escape hatch waives it,** the `skip-changeset` label included.
+  [The CLI reference's `release check` row](../cli/README.md#surface) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
+  gives its message.
+
+`pkit release merge` holds the same rule at the merge (above).
 
 **Escape hatches for the surface check** (so trivia / docs PRs aren't forced
 into ceremony):

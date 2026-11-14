@@ -660,7 +660,9 @@ def test_main_refuses_a_retitle_that_breaks_a_hard_reject_rule(ei, monkeypatch, 
     monkeypatch.setattr(ei, "load_adopter_config", lambda _root: {})
     monkeypatch.setattr(ei, "_read_members", lambda *a: [])
     monkeypatch.setattr(
-        ei, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+        ei,
+        "resolve_invoker_identity",
+        lambda **k: SimpleNamespace(github_login="me", unresolved_cause=None),
     )
     monkeypatch.setattr(ei, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(ei, "_gh_get_issue", lambda _n, _config: issue)
@@ -701,7 +703,9 @@ def _retitle_an_issue_instance_3_owns(ei, monkeypatch, *extra: str):
     monkeypatch.setattr(ei, "load_adopter_config", lambda _root: {})
     monkeypatch.setattr(ei, "_read_members", lambda *a: [])
     monkeypatch.setattr(
-        ei, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+        ei,
+        "resolve_invoker_identity",
+        lambda **k: SimpleNamespace(github_login="me", unresolved_cause=None),
     )
     monkeypatch.setattr(ei, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(ei, "_gh_get_issue", lambda _n, _config: issue)

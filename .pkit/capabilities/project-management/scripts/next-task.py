@@ -39,7 +39,9 @@ Steps:
     A seat that names no pool takes nothing. Where no pool is declared, no
     milestone is read, and every seat takes from the one shared pool.
   - One listing of the open issues of work (`_lib/issue_list`), which leaves
-    state issues out. The ready Tasks are ranked from it.
+    state issues out. The ready Tasks are ranked from it. Where pkit cannot
+    tell which account is acting, every Task with an assignee is left out, as
+    `start-work` would refuse it, and a note says so, and why (#3162).
   - Where the substrate map binds the state to the board, each Task's state is
     its card's Status (DEC-062 point 5), read for every card at once and joined
     to the listing by the issue's node id (`_lib/board_status`). A Task whose
@@ -97,6 +99,7 @@ from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
+    format_unresolved,
     resolve_capability_root,
     resolve_invoker_identity,
 )
@@ -164,7 +167,13 @@ def main() -> int:
 
     # The seat is confirmed on its state issue before the pool is read.
     try:
-        taker = task_pool.taker(capability_root, invoker.github_login, config, dry_run=args.dry_run)
+        taker = task_pool.taker(
+            capability_root,
+            invoker.github_login,
+            config,
+            dry_run=args.dry_run,
+            login_cause=invoker.unresolved_cause,
+        )
     except instance_claims.Unconfirmed as exc:
         instance_claims.say_unconfirmed("next-task", None, exc)
         return 2
@@ -226,6 +235,12 @@ def main() -> int:
         substrate_map=substrate_map,
         statuses=statuses,
     )
+    if not invoker.github_login:
+        print(
+            f"[note] next-task: {format_unresolved(invoker.unresolved_cause)}, so every "
+            "Task with an assignee is left out.",
+            file=sys.stderr,
+        )
     ready = task_pool.candidates(
         listing.rows or (),
         open_numbers=_numbers(listing),

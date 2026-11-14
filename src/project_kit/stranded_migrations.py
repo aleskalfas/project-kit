@@ -44,8 +44,6 @@ the move passes both.
 
 from __future__ import annotations
 
-import shlex
-import subprocess
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -53,23 +51,16 @@ from pathlib import Path, PurePosixPath
 import click
 from packaging.version import Version
 
-from project_kit import default_branch, lifecycle_ownership, migrations, working_tree
+from project_kit import default_branch, lifecycle_ownership, migrations, remote_refs, working_tree
 from project_kit.friction_git import SHORT, BlobReader, CommitTree, commit_of, run_git
 from project_kit.router import is_source_checkout
 from project_kit.versioning import is_release_version
 
 #: The remote whose tags are read: the one `pkit version tag --push` pushes a tag to.
-REMOTE = default_branch.REMOTE
-
-#: How long the read of the remote's tags may take before it counts as unread.
-_TAGS_TIMEOUT_SECONDS = 60
+REMOTE = remote_refs.REMOTE
 
 #: How the remote lists a final release tag's reference: `refs/tags/v<X.Y.Z>`.
-_TAG_PREFIX = "refs/tags/"
-_FINAL_TAG_PREFIX = f"{_TAG_PREFIX}v"
-
-#: The suffix of the line the remote adds for an annotated tag, naming its commit.
-_PEELED = "^{}"
+_FINAL_TAG_PREFIX = f"{remote_refs.TAG_PREFIX}v"
 
 #: What a refusal says of the scripts it names.
 _STRANDED = (
@@ -191,46 +182,16 @@ def _fixed_by_tags(target_root: Path, tiers: Iterable[TierKey]) -> dict[TierKey,
 def _final_tags(target_root: Path) -> list[tuple[str, str]]:
     """Each final release tag the remote holds, `v<X.Y.Z>`, with the commit it names,
     the newest first. Refuses where the remote's tags cannot be read."""
-    command = ["git", "ls-remote", "--tags", REMOTE]
-    shown = shlex.join(command)
     try:
-        completed = subprocess.run(
-            command,
-            cwd=target_root,
-            capture_output=True,
-            text=True,
-            timeout=_TAGS_TIMEOUT_SECONDS,
-            check=False,
-        )
-    except subprocess.TimeoutExpired:
-        raise _cannot_tell(
-            f"the remote's tags cannot be read: `{shown}` gave no answer within "
-            f"{_TAGS_TIMEOUT_SECONDS} seconds. Reach the remote, and run again."
-        ) from None
-    except (OSError, subprocess.SubprocessError) as exc:
-        raise _cannot_tell(
-            f"the remote's tags cannot be read: `{shown}` could not run ({exc})."
-        ) from None
-    if completed.returncode != 0:
-        said = [line.strip() for line in completed.stderr.splitlines() if line.strip()]
-        detail = said[0] if said else f"exit status {completed.returncode}"
-        raise _cannot_tell(
-            f"the remote's tags cannot be read: `{shown}` failed (git says: {detail}). "
-            "Reach the remote, and run again."
-        )
-    named: dict[str, str] = {}
-    peeled: dict[str, str] = {}
-    for line in completed.stdout.splitlines():
-        commit, _, ref = line.partition("\t")
-        if not ref.startswith(_FINAL_TAG_PREFIX):
-            continue
-        name = ref.removeprefix(_TAG_PREFIX)
-        if name.endswith(_PEELED):
-            peeled[name.removesuffix(_PEELED)] = commit.strip()
-        else:
-            named[name] = commit.strip()
-    named.update(peeled)
-    finals = [(name, commit) for name, commit in named.items() if is_release_version(name[1:])]
+        tags = remote_refs.tags(target_root)
+    except remote_refs.Unread as exc:
+        raise _cannot_tell(str(exc)) from None
+    finals = [
+        (ref.removeprefix(remote_refs.TAG_PREFIX), commit)
+        for ref, commit in tags.items()
+        if ref.startswith(_FINAL_TAG_PREFIX)
+        and is_release_version(ref.removeprefix(_FINAL_TAG_PREFIX))
+    ]
     return sorted(finals, key=lambda tag: Version(tag[0][1:]), reverse=True)
 
 

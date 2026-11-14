@@ -1,0 +1,19 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  When pkit cannot tell which account is acting, as when `gh api user` refuses
+  a GitHub App installation's token, the project-management commands say so,
+  and why, instead of acting as though the account were someone else.
+  `start-work` no longer calls a Task's assignee another account and sends you
+  to `handoff-issue`, which could not tell either: it says it cannot tell who
+  is acting, with `gh api user`'s refusal. It also warns when it leaves a Task
+  with no assignee. Closed mode's membership refusal, `create-issue`'s default
+  assignee, `--me` on `assign-issue`, `add-member` and `remove-member`,
+  `next-task`, `review-work`'s human reviewers, `take-seat`, `release-seat`
+  and `show-members` give the same reason. So does instance ownership, in
+  each command that acts as an instance: a seat that cannot be confirmed, a
+  claim not made, and a claim the clash guard, a close or a move back takes
+  for another account's, since the account may be this clone's own. Exit
+  codes, and what each command writes, are unchanged.

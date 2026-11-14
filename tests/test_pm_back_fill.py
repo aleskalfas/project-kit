@@ -44,6 +44,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.pm_board_archive import reads_archived
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 LIB_DIR = SCRIPTS_DIR / "_lib"
@@ -406,6 +408,38 @@ def test_board_item_ids_leave_a_state_issues_card_out(bf, monkeypatch) -> None:
     item_ids = bf._resolve_board_item_ids({}, "PROJ_NODE", [{"number": 7}, {"number": 8}])
     assert item_ids == {(TARGET_REPO, 8): "ITEM_WORK"}
     assert "number body repository" in queries[0]
+
+
+def test_an_issue_whose_only_card_is_archived_is_on_the_board(bf, monkeypatch) -> None:
+    """An archived card is its issue's card, as any other (#3191). The board gives
+    a walk its archived cards only where the walk asks for them, so the field
+    write for the issue goes to that card, not to a membership the issue has."""
+
+    def fake_gh_run(args, config, **kwargs):
+        query = args[args.index("-f") + 1]
+        archived = {
+            "id": "ITEM_ARCHIVED_42",
+            "content": {"number": 42, "body": "", "repository": {"nameWithOwner": TARGET_REPO}},
+        }
+        nodes = [archived] if reads_archived(query) else []
+        page = {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": nodes}
+        return subprocess.CompletedProcess(
+            args, 0, stdout=json.dumps({"data": {"node": {"items": page}}}), stderr=""
+        )
+
+    monkeypatch.setattr(bf, "gh_run", fake_gh_run)
+    issues = [{"number": 42, "title": "forty-two", "milestone": None}]
+    item_ids = bf._resolve_board_item_ids({}, "PROJ_NODE", issues)
+    assert item_ids == {(TARGET_REPO, 42): "ITEM_ARCHIVED_42"}
+
+    intent = bf.BackFillIntent(
+        kind="set-board-field", citation="c", field_id="F", single_select_option_id="O"
+    )
+    [change] = bf._build_proposed_changes(
+        [intent], issues, item_ids, project_id="PROJ", target_repo=TARGET_REPO
+    )
+    assert change.prediction == "would-write"
+    assert "ITEM_ARCHIVED_42" in change.argv
 
 
 def test_field_value_resolves_target_repo_item_not_a_colliding_one(bf) -> None:

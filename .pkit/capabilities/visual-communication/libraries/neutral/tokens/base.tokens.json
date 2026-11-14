@@ -33,6 +33,15 @@
     "strong-accent": {
       "$value": "{palette.blue.800}"
     },
+    "order": {
+      "$description": "The two ends of an order's steps: in the light scheme, a mid grey whose dark text still holds 5 to 1, and the pale grey of a rule, which stands 1.4 to 1 off the page.",
+      "first": {
+        "$value": "{palette.grey.500}"
+      },
+      "last": {
+        "$value": "{palette.grey.200}"
+      }
+    },
     "blue": {
       "fill": {
         "$value": "{palette.blue.50}"
@@ -150,7 +159,7 @@
     "$value": "{scheme.rule}"
   },
   "family": {
-    "$description": "The members of the foundations' colour families: the neutral family paints with the surface, the line and the primary text, and each hue with what the colour scheme gives it.",
+    "$description": "The members of the foundations' colour families: the neutral family paints with the surface, the line and the primary text, and each hue with what the colour scheme gives it. Beside them lie an order's roles, which form no family.",
     "$type": "color",
     "neutral": {
       "fill": {
@@ -216,6 +225,18 @@
       },
       "text": {
         "$value": "{scheme.red.text}"
+      }
+    },
+    "order": {
+      "$description": "An order's two ends and the text on every step between them: greys, so the steps vary in lightness alone, which the eye reads as an order, and in no hue, which it would read as kinds (Jacques Bertin, the visual variables; Cynthia Brewer, a sequential scheme). The first end lies furthest from the page, so the order's source stands out most, and the last stays far enough from it that a level's shape shows without an edge. The text is the primary text, darker than both ends in light and lighter than both in dark, and at least 5 to 1 on each, so every step between keeps it legible and high contrast strengthens it with the rest of the text.",
+      "first": {
+        "$value": "{scheme.order.first}"
+      },
+      "last": {
+        "$value": "{scheme.order.last}"
+      },
+      "text": {
+        "$value": "{text-primary}"
       }
     }
   },

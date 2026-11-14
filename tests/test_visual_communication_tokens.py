@@ -2250,14 +2250,8 @@ def test_the_foundations_declare_an_orders_roles_apart_from_the_families(
     assert foundations.roles[ORDER.ground] == tokens.Role("background", "color")
 
 
-#: The neutral brand being built, which gives an order no value.
-NEUTRAL = FOUNDATIONS.parent / "neutral"
-
-
 @pytest.mark.parametrize(
-    "folder",
-    [TEST_BRAND, NEUTRAL, RELEASED_NEUTRAL],
-    ids=["test-brand", "neutral", "neutral-1.0.0"],
+    "folder", [TEST_BRAND, RELEASED_NEUTRAL], ids=["test-brand", "neutral-1.0.0"]
 )
 def test_a_brand_that_gives_an_order_no_value_draws_it_as_the_neutral_family(
     folder: Path, foundations: Any

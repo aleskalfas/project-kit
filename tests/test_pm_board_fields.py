@@ -26,6 +26,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.pm_board_archive import reads_archived
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 MODULE_PATH = SCRIPTS / "_lib" / "board_fields.py"
@@ -552,6 +554,30 @@ def test_read_items_names_the_issue_each_card_holds_by_its_node_id(bf) -> None:
         gh_call=_runner(_page([card, pull])),
     )
     assert [i.issue_id for i in read.items] == ["I_kwDO1", ""]
+
+
+def test_read_items_reads_an_archived_card_as_any_other(bf) -> None:
+    """The board gives a walk its archived cards only where the walk asks for them
+    (#3191), so the walk asks, and an archived card is read with the others."""
+    archived = _issue_card("I2", 2, option=("opt_cli", "cli"))
+
+    def run(args, config, *, fallback_owner=None, check=False):
+        query = next(arg for arg in args if arg.startswith("query="))
+        cards = [_issue_card("I1", 1)] + ([archived] if reads_archived(query) else [])
+        return subprocess.CompletedProcess(args, 0, stdout=_page(cards), stderr="")
+
+    read = bf.read_items(
+        BOARD_CONFIG, project_node_id="PVT_1", field_name="Workstream", gh_call=run
+    )
+    assert [i.item_id for i in read.items] == ["I1", "I2"]
+    with_option = bf.read_items_with_option(
+        BOARD_CONFIG,
+        project_node_id="PVT_1",
+        field_name="Workstream",
+        option_id="opt_cli",
+        gh_call=run,
+    )
+    assert [i.item_id for i in with_option.items] == ["I2"]
 
 
 # --- one issue's card, and the option it holds (#2271) --------------------------

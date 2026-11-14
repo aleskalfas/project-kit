@@ -1,0 +1,53 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: parts
+    layout: slide
+    title: Eine Ebene hält eine Überschrift und einen Text, jedes wo gegeben
+    visual:
+      use: starter/list
+      item: {use: starter/level}
+      items:
+        - id: head
+          head: Nur eine Überschrift
+        - id: both
+          head: Beides
+          text: Der Text steht unter der Überschrift, im Text der Familie.
+        - id: text
+          text: Nur ein Text, über dem nichts steht.
+
+  - id: concepts
+    layout: slide
+    title: Sie liegt auf der Füllung ihrer Familie, das Zeichen eines Begriffs am Ende ihrer Überschrift
+    visual:
+      use: starter/list
+      item: {use: starter/level}
+      items:
+        - id: neutral
+          head: Neutral
+          text: Ihre eigene Familie, die keine Art kennzeichnet.
+        - id: person
+          concept: test-notation/person
+          head: Eine Benutzerin
+          text: Die Familie des Begriffs, und sein Zeichen.
+        - id: runs
+          concept: test-notation/service
+          text:
+            - {text: Hervorgehoben, style: strong}
+            - " wo es zählt, und schlicht für den Rest, beides im Text der Familie."
+
+  - id: steps
+    layout: slide
+    title: Als Ebenen von Schichten nimmt jede eine Stufe der Reihenfolge
+    visual:
+      use: starter/layers
+      levels:
+        - id: decisions
+          head: Entscheidungen
+        - id: rules
+          head: Arbeitsregeln
+        - id: commands
+          head: Befehle und Prüfungen
+        - id: work
+          head: Quellcode und Dokumente

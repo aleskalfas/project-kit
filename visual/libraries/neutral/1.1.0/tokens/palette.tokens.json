@@ -25,7 +25,7 @@
       }
     },
     "grey": {
-      "$description": "Seven steps of cool grey from near-white to near-black, for grounds, rules and text. Each tilts a plain grey a touch toward the accent's blue at the same luminance: the page reads calm and professional, of a piece with the accent, every contrast stays as it was, and the greys still sit quietly beside any of the brand's hues. The light scheme reads them from the top, the dark scheme from the bottom.",
+      "$description": "Ten steps of cool grey from near-white to near-black, for grounds, rules, text and the ends of an order's steps. Each tilts a plain grey a touch toward the accent's blue at the same luminance: the page reads calm and professional, of a piece with the accent, every contrast stays as it was, and the greys still sit quietly beside any of the brand's hues. The light scheme reads them from the top, the dark scheme from the bottom. Steps 500, 550 and 750 stand where an order's ends need them, as the colour scheme says.",
       "50": {
         "$value": {
           "colorSpace": "srgb",
@@ -59,6 +59,28 @@
           "hex": "#a3aab0"
         }
       },
+      "500": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.502,
+            0.5294,
+            0.5647
+          ],
+          "hex": "#808790"
+        }
+      },
+      "550": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.3961,
+            0.4196,
+            0.4549
+          ],
+          "hex": "#656b74"
+        }
+      },
       "600": {
         "$value": {
           "colorSpace": "srgb",
@@ -79,6 +101,17 @@
             0.2706
           ],
           "hex": "#353d45"
+        }
+      },
+      "750": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.1686,
+            0.1843,
+            0.2118
+          ],
+          "hex": "#2b2f36"
         }
       },
       "800": {
