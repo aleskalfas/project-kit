@@ -84,10 +84,11 @@ pages:
       - aspect: form
         about: visual.notes
         text: >-
-          Each note holds its head and one short clause, two lines at a third of the
-          width, so the three share the steps' height at a projector's type. The talk's
-          longer notes, on where the reasons stay and on who may change a decision, are
-          said aloud, and the footer keeps the record that decides it.
+          Each note holds its head and a clause or two, no more than three lines at two
+          fifths of the width, each as tall as its words. The note that runs back up says
+          on the page who may change a decision, since the lead now names it. The talk's
+          longer note, on where the reasons stay, is said aloud, and the footer keeps the
+          record that decides it.
         principle:
           name: Words that cue what is essential, and nothing extraneous
           source: Richard Mayer, Multimedia Learning, the coherence principle
@@ -502,8 +503,7 @@ pages:
           opening role's, are set in the code type, as pkit prints them, so the terminal's
           words look like the drawing's. A role's job is set in the body type, as the plain
           words it is. A capability's name is set in the strong type, the one bold level
-          under the lead, and the head of what it gives you takes it too. A command inside
-          a line of what it gives you keeps the code type.
+          under the lead, and the head of what it gives you takes it too.
         principle:
           name: Texts of one kind share face, size and weight, and texts of different kinds differ clearly
           source: Robert Bringhurst, The Elements of Typographic Style; Robin Williams, The Non-Designer's Design Book

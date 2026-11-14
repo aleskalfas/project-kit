@@ -126,7 +126,7 @@ parts:
     column:
       gap: "=slots:last.middle - slots:first.middle - 4 * opener.height / 3"
       align-items: stretch
-  # The evidence stands the third step under the frame, or lower, so that its foot stands
+  # The evidence stands the first step under the frame, or lower, so that its foot stands
   # level with the foot of what it gives a project, and the two columns end together.
   evidence:
     slot: evidence
