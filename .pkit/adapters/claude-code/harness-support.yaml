@@ -137,10 +137,12 @@ requirements:
       agent host started through a protocol bridge, in auto mode, with the
       permission hook on (#3004). The asks are the hook's: where a call may
       hide a guardrail (ADR-025 point 7), and before a file tool writes
-      outside the session's repository (ADR-034 point 2). In a turn a message
-      in a chat channel started, the hook's ask before a `Write` outside the
-      repository was refused at once. The harness recorded the refusal as the
-      user's (`source: user_reject`), the tool returned `User refused
-      permission to run tool`, and the turn went on. In a run with nobody at
-      it, the hook's ask waited in the host's approval inbox, which expires
-      after 24 hours, and the turn stalled until it was answered.
+      outside the session's repository, whether into another repository
+      (ADR-034 point 2) or to any other path (the maintainer's ruling
+      on #2004). In a turn a message in a chat channel started, the hook's
+      ask before a `Write` outside the repository was refused at once. The
+      harness recorded the refusal as the user's (`source: user_reject`), the
+      tool returned `User refused permission to run tool`, and the turn went
+      on. In a run with nobody at it, the hook's ask waited in the host's
+      approval inbox, which expires after 24 hours, and the turn stalled
+      until it was answered.
