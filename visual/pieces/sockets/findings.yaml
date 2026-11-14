@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: ce7fb6dd6c91e760e7b04d870cffd04de9c8add8d9f9e772afd66b766a3a4722
+  value: 26e0dd155c0fb5e6e06487df39c3048f4346aa59037f06b39e4662f9152e13c7
   inputs:
     - file: content.cs.yaml
       sha256: 151dbbc838ad85baf0f8703cafe19def90ec17fc6641c7f79ebdffe2cf01cdf9
@@ -35,7 +35,7 @@ key:
     - library: foundations
       version: 1.2.0
       path: roles.yaml
-      sha256: 5c3b630db1003fa945b4830dedf17d1eeb711e19a79d7456abb6705c7061ec08
+      sha256: d4b2b89578fe6e0da82ac82a47d565be0ce24569de76fcd301c69ff598036c72
     - library: neutral
       version: 1.1.0
       path: fonts/LICENSE-Source-Code-Pro.txt
@@ -67,11 +67,11 @@ key:
     - library: neutral
       version: 1.1.0
       path: tokens/base.tokens.json
-      sha256: 40b1ecb3fc5a06fb06f3cf1d618783080da30176fd5ab98a2997f778b3c98e14
+      sha256: 8ece0918ad3b3e357e6f50adc0f0403ccf837601a26cced9168a982b0a63b4d5
     - library: neutral
       version: 1.1.0
       path: tokens/dark.tokens.json
-      sha256: 7ba7bded81a68fe52436d84a7c3b14cc0a47c803c4c7de632acc9663fd682f86
+      sha256: f7f8159c3aa612a3ccefab4dc1c8fcb226a3ce25f6e21d59d190805edefa3601
     - library: neutral
       version: 1.1.0
       path: tokens/high-contrast.tokens.json
@@ -79,7 +79,7 @@ key:
     - library: neutral
       version: 1.1.0
       path: tokens/palette.tokens.json
-      sha256: 2fe92db15d1a1dec76ffbd5e9802db556fe39e6e80d4f1358f7b06c8109fe627
+      sha256: 1ba2d4fbdc3807df10d8c5a3beae7bc7783c4b48272eeb4fb26cf6e6f421b65e
     - library: neutral
       version: 1.1.0
       path: tokens/phone.tokens.json
@@ -103,7 +103,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: f8ba7b9ee4073ed2fe8cdcaf887e77e8c0bd41408c4f8e64a2acf03ccf22086f
+      sha256: 617a18adeed285318d34448749d5b266b1fc8f2ec02726a2b1d048b039a2e47d
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -151,11 +151,15 @@ key:
     - library: starter
       version: 1.1.0
       path: components/layers.yaml
-      sha256: c624dab9df2bb9dadc488241899b595f20bf7f2ce16ef88a0ff4da39479cd609
+      sha256: 4c6fb8dbfce7148faaecbe18ba69609682d4cb73d6ca802dfbcd9f8036d3edc3
     - library: starter
       version: 1.1.0
       path: components/legend.yaml
       sha256: 04a839254a5548115b1a7ee69f3184b7c4e434ffe7650c5584ddcc26f1c6307d
+    - library: starter
+      version: 1.1.0
+      path: components/level.yaml
+      sha256: d37170a88b1a29821b426b6bd54b8accc6f7f90f2d721d35a89cb234a4dab20e
     - library: starter
       version: 1.1.0
       path: components/link.yaml

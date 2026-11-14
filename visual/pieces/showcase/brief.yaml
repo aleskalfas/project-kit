@@ -27,8 +27,8 @@ pages:
           for simplicity. The order among the four
           lower levels, from the working rules down to your code, is the talk's framing,
           from the general to the specific, and no source states it. The order is told by
-          place and by width, the top narrowest, and by no colour, since the levels name
-          no concept.
+          place and by width, the top narrowest, and by shade, the top furthest from the
+          page. The levels name no concept, so no hue tells them apart as kinds.
         relates:
           - visual.levels
       - text: >-
@@ -98,7 +98,8 @@ pages:
         about: visual
         text: >-
           Under the title and the lead, the steps are noticed first, the page's only
-          tinted shapes and its largest. Where ideas start, level with the top level and
+          shaded shapes and its largest, and among them the top level, the darkest in
+          light and the lightest in dark. Where ideas start, level with the top level and
           tied to it, is read with the top level as one step, and the eye then runs down
           the levels. Beside the steps, the heads of the notes on direction come next, in
           the strong type, and their text last. The tie is a thin line, so it leads
@@ -109,8 +110,8 @@ pages:
       - aspect: type
         about: visual
         text: >-
-          The brand's projector type: a level's name in the card's head, at the start of
-          its step, and the notes in the body's size, each head in the strong type within
+          The brand's projector type: a level's name in its head, at the start of its
+          step, and the notes in the body's size, each head in the strong type within
           its line, so a note reads as one sentence.
         principle:
           name: Texts of one kind share face, size and weight, and texts of different kinds differ clearly
@@ -118,15 +119,16 @@ pages:
       - aspect: colour
         about: visual.levels
         text: >-
-          The levels take the neutral family's tint, its fill as their ground and its
-          text as their words, the pair the brand keeps legible, and the notes lie on the
-          surface. The levels name no concept, so they take no hue, and no hue of the
-          deck's concepts is spent on them. Shading each level by its place waits on the
-          ordered steps of a colour family (DEC-032), which the engine does not draw yet;
-          until then width and place carry the order alone.
+          Each level takes a step of the order, layers' default: a grey spread evenly
+          from the brand's first end at the top, the furthest from the page, to its last
+          at the foot, just off it, with the primary text on every step, which the brand
+          keeps at 5 to 1 or more on each. So the shade runs down with the order, a
+          third sign of it beside place and width, and the notes lie on the surface. The
+          levels name no concept, so they take no hue, and no hue of the deck's concepts
+          is spent on them: an order shown in hues would read as kinds.
         principle:
-          name: Colour that means nothing is noise; the same meaning looks the same everywhere
-          source: Edward Tufte, Envisioning Information; Jakob Nielsen, 10 Usability Heuristics, consistency and standards
+          name: Map an order to lightness, a sequential scheme, never to hue; colour that means nothing is noise
+          source: Jacques Bertin, Semiology of Graphics; Cynthia Brewer, Designing Better Maps; Edward Tufte, Envisioning Information
       - aspect: space
         about: visual
         text: >-

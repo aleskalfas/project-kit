@@ -11,10 +11,11 @@ slides:
       # Pořadí perexu běží po stupních dolů: rozhodnutí nahoře, každá vrstva pod nimi
       # provádí rozhodnutí nad sebou, až po váš kód. Vedle stupňů stojí poznámky přednášky
       # v pořadí, v jakém je vypráví: odkud rozhodnutí přicházejí, spojené s horní vrstvou,
-      # pak co běží dolů a co zpátky nahoru.
+      # pak co běží dolů a co zpátky nahoru. Každá vrstva má stupeň pořadí, výchozí volbu
+      # layers, od prvního konce značky nahoře po poslední dole, takže její odstín běží dolů
+      # s pořadím perexu.
       use: starter/layers
       shape: steps
-      level: {use: starter/card, fill: tint}
       levels:
         - {id: decisions, head: Rozhodnutí}
         - {id: rules, head: "Pracovní pravidla · schémata · procesy"}
