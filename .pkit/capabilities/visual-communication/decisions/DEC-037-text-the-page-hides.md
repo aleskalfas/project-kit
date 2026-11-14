@@ -6,6 +6,8 @@ date: 2026-11-13
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [visual-communication:DEC-040-svg-reads-cover-and-cut].** Overturned: point 1's last bullet, that the SVG renderer's report says cover and cut were not read, and the Rationale's "Why the SVG renderer waits". The rest stands.
+
 **In plain terms:** when the viewing step draws a page through a browser, its report lists in `dropped` every text the page does not show in full. That is a text that drew no ink or lies wholly off its page, a text that runs past the page's edge, and a text another part covers, whether it loses all of its letters or only some. Each entry names one cause, and the share of the text's ink that cause loses. The step finds each one in what the browser drew, never in the scene's frames. How well a text that does show reads stays the check's and the reviewer's. For example, where a later box covers a note's last three words, the report lists that note in `dropped`, as covered, with the share of its ink it lost.
 
 ## Context
@@ -77,7 +79,7 @@ Each row gives the share of the span's strong ink lost, at a scale of 2. Where i
 - **What is named.** A span that left no ink, or lies wholly off its page, is named (DEC-020 point 6). So is a span that is cut or covered. A span is *cut* where part of its strong ink lies past its page's edge. A span is *covered* where the page drawn whole hides part of its strong ink on the page, under a part drawn after it: a shape, a line of text, or under forced colours a text's ground.
 - **A sliver does not count.** A loss smaller than an area the outputs page states, in the span's em², names no entry. Each cause is judged alone.
 - **A fault mended where it arises.** A cut or covered span is mended where its cause lies: in the piece's layout or content, or in the spacing a component or a brand sets between lines and between texts. No such loss is accepted.
-- **Through a browser alone.** Through the SVG renderer, `dropped` keeps its meaning: what resvg drew nothing of ([visual-communication:DEC-015-viewing-step-and-reviewer] point 3). That report says that cover and cut were not read.
+- **Through a browser.** Through the SVG renderer, `dropped` keeps what resvg drew nothing of ([visual-communication:DEC-015-viewing-step-and-reviewer] point 3), and names a cut or covered span too, as [visual-communication:DEC-040-svg-reads-cover-and-cut] sets.
 
 ### 2. Each cause is an entry of `dropped`, with its share
 
@@ -131,7 +133,7 @@ Each row gives the share of the span's strong ink lost, at a scale of 2. Where i
 
 **Why no such loss is accepted.** A covered or cut text still reaches a reader's tools as words the page does not show. So type meant to be partly hidden is drawn as a shape or a picture, not a text.
 
-**Why the SVG renderer waits.** Through resvg the page's frame clips a cut text, so it is gone for every reader. Its read needs a canvas past the page and a read of cover of its own, a change of resvg's module, which [project-kit#3111](https://github.com/aleskalfas/project-kit/issues/3111) builds. Until then its report says what it did not read, so an empty list never reads as clean.
+**Why the SVG renderer waited.** Through resvg the page's frame clips a cut text, so it is gone for every reader. Its read needs a canvas past the page and a read of cover of its own, a change of resvg's module, which [visual-communication:DEC-040-svg-reads-cover-and-cut] sets and [project-kit#3111](https://github.com/aleskalfas/project-kit/issues/3111) builds. Until then its report said what it did not read, so an empty list never read as clean.
 
 **The cost, accepted.** These reads add about 0.22 s for each span in each key or forced palette to the 0.08 s DEC-020 point 6's four reads take without them, so the looks of the showcase deck of the repository the capability is authored in take two and a half to three times as long (Context). The build loop a designer works looks at a page after each change, and a look of a piece the deck's size stays under a minute, which keeps that pace. A larger piece's look grows with its spans, so the cost is revisited where a look comes to hold up a build loop. The look at every page before the designer stops (DEC-030 point 2) runs once in a round, beside the reviewer's read of every image, so a few more minutes there slow no step that repeats. In that repository's CI, the run stays well inside its job's 30 minutes, with room for a slower runner and more pieces. So the cost is accepted as the price of a report that names every lost text. Point 3 leaves the build room to make the read cheaper.
 
