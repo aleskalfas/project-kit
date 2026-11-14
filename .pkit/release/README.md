@@ -591,10 +591,10 @@ a lower bound; that moves only on declaration (the floor raise, below):
   backbone (`.pkit/VERSION`) — the version the author is releasing under and
   tested against. Releasing a capability under backbone X asserts compatibility
   with X, so its declared range comes to include X. This is #494's author-side
-  auto-broaden, closing the gap [COR-041](../decisions/core/COR-041-external-source-distribution.md)
-  and [ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md)
-  flagged: the author owns an externally-sourced capability's compatibility
-  claim, and this keeps it current on release rather than by hand.
+  auto-broaden, the follow-up [COR-041](../decisions/core/COR-041-external-source-distribution.md)
+  names and [ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md)
+  point 5 relies on: the author owns an externally-sourced capability's
+  compatibility claim, and this keeps it current on release rather than by hand.
 
 The broaden is **keyed on "a component moved under backbone X"**, not on being
 project-kit — so it fires the same way in an adopter's own repo releasing its

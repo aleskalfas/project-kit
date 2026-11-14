@@ -2391,7 +2391,7 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 
 **Distinctions:**
 
-- **A moving capability out of range:** refused outright, since the project controls the dependency that does not move ([ADR-065 point 6](../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
+- **A moving capability whose range excludes its dependency:** refused, since whoever runs the command controls its version. The one exception is a capability the target [release](#term-release--release) ships whose new range admits the version the dependency moves from: the dependency's move breaks the pair, so it is only warned of ([ADR-065 point 6](../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
 - **A dependent left out of range:** warned of. The transition proceeds only under `pkit upgrade --force` (ADR-065 point 6).
 - **Acceptance gate:** a condition on what work builds on. It shares only the word.
 

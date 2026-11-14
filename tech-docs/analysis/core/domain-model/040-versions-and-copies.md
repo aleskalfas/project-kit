@@ -324,7 +324,7 @@ Defined in [TERM-dependency-gate](../glossary.md#term-dependency-gate--dependenc
 
 **Why:** A dependency whose interface changed in a way that breaks a [capability](../glossary.md#term-capability--capability) fails silently when that capability runs, at no step of the lifecycle ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)). A check at [install](../glossary.md#term-install--install) and at a [version transition](../glossary.md#term-version-transition--version-transition) makes that failure loud there instead (COR-030).
 
-A dependency gate is a check made before an install or a version transition writes anything. The gate checks that the capabilities the install or the transition would leave meet each other's ranges and mandatory [connections](../glossary.md#term-connection--connection). A capability that moves against a dependency outside its [range](../glossary.md#term-range--range) is refused. A dependency that moves outside a dependent's range is warned of, and the write goes on only under `--force`.
+A dependency gate is a check made before an install or a version transition writes anything. The gate checks that the capabilities the install or the transition would leave meet each other's ranges and mandatory [connections](../glossary.md#term-connection--connection). A capability that moves against a dependency outside its [range](../glossary.md#term-range--range) is refused, unless the target [release](../glossary.md#term-release--release) ships it and its new range admits the version the dependency moves from. Any other pair a moving dependency takes out of range is warned of, and the write goes on only under `--force`.
 
 **Attributes:** None.
 
@@ -337,9 +337,10 @@ A dependency gate is a check made before an install or a version transition writ
 
 **Always true:**
 
-- A dependent that moves against a dependency outside its range is refused, since whoever runs the command controls the dependent's [version](../glossary.md#term-version--version) (COR-030).
-- A dependency that moves outside a dependent's range warns, naming each dependent. It goes on only under an explicit `--force`, never as a hard block (COR-030).
+- A dependent that moves against a dependency outside its range is refused, since whoever runs the command controls the dependent's [version](../glossary.md#term-version--version) (COR-030). The one exception is a capability the target release ships whose new range admits the version the dependency moves from: the dependency's move breaks the pair (ADR-065 point 6).
+- A dependency that moves outside the range of a dependent that does not move, or of that exception, warns, naming each dependent. It goes on only under an explicit `--force`, never as a hard block (COR-030).
 - A dependency that leaves a dependent's mandatory connection unmet warns in the same way (ADR-065 point 6).
+- A pair out of range neither side of which moves, such as one an earlier `--force` left, neither refuses nor warns. Validation reports it (COR-030, ADR-065 point 6).
 - `--force` on `pkit upgrade` overrides those warnings, and nothing else (ADR-065 point 6).
 - A range is read with its pre-releases admitted, so it admits a [release candidate](../glossary.md#term-release-candidate--release-candidate)'s version within its bounds ([ADR-089 point 4](../../../architecture/decisions/ADR-089-release-candidates.md#4-every-range-is-read-with-its-pre-releases-admitted)).
 
