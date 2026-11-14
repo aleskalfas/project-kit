@@ -344,7 +344,7 @@ def write_options(
 def board_carriers(
     field: BoardField, slug: str, config: dict[str, Any], *, board_call: GhCall | None = None
 ) -> CarriersRead:
-    """Every card whose `Workstream` value is the option `slug`."""
+    """Every card whose `Workstream` value is the option `slug`, an archived card included."""
     option = find_option(field, slug)
     if option is None:
         return CarriersRead(ok=True)
