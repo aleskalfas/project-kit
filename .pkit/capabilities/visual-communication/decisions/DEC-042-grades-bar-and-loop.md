@@ -1,7 +1,7 @@
 ---
 id: DEC-042
 title: The review grades each rule in words, and a project's bar ends the designer's loop where an accepted calibration reaches
-status: proposed
+status: accepted
 date: 2026-11-14
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
