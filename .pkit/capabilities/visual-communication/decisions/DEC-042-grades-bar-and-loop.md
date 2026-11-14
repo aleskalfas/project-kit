@@ -1,12 +1,12 @@
 ---
 id: DEC-042
-title: The review grades each rule in words, and a project's bar ends the designer's loop once a calibration is accepted
+title: The review grades each rule in words, and a project's bar ends the designer's loop where an accepted calibration reaches
 status: proposed
 date: 2026-11-14
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** the review grades each rule of the capability's rule sets in words, from *below competent* to *excellent*, against professional work. A project may set a *bar* in the capability's configuration, and a command reads from the grades whether a piece meets it. Once whoever maintains the capability accepts a calibration of the review, the designer's loop runs until the piece meets the bar, polishes it within a bound, and hands the person what still blocks it. Until then the grades only inform. The designer changes alone every word that is not the asker's.
+**In plain terms:** the review grades each rule of the capability's rule sets in words, from *below competent* to *excellent*, against professional work. A project may set a *bar* in the capability's configuration, and a command reads from the grades whether a piece meets it. Once whoever maintains the capability accepts a calibration of the review, and where the bar covers only rules that calibration gave evidence for, the designer's loop runs until the piece meets the bar, polishes it within a bound, and hands the person what still blocks it. Until then the grades only inform. The designer changes alone every word that is not the asker's.
 
 ## Context
 
