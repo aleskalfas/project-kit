@@ -26,7 +26,6 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/foundations/components/deck.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/site.yaml
         - .pkit/capabilities/visual-communication/libraries/starter/components/layers.yaml
-        - .pkit/capabilities/visual-communication/libraries/starter/components/level.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/steps.yaml
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/card.yaml
@@ -690,7 +689,7 @@ parts:
     row: {gap: "=@space.2", sizes: equal}
 ```
 
-In the starter, `layers` declares `shade: [steps, plain]`, its first word the option's default, gives its levels' places `colour: {by: shade, steps: ":steps", plain: null}`, and draws them with `starter/level`, whose box takes `fill: ":colour.fill"` (DEC-032 point 3). What it draws by default is in the starter's README, under [*An order's steps*](libraries/starter/README.md#an-orders-steps) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->.
+In the starter, `layers` gives its levels' places `colour: {by: shade, steps: ":steps", plain: null}`. What it draws by default is in the starter's README, under [*An order's steps*](libraries/starter/README.md#an-orders-steps) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->.
 
 The part's *layout operator*, `row` or `column`, lays the items along a line, across or down. Its settings take the names of CSS flexible layout:
 
