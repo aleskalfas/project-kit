@@ -326,6 +326,58 @@ def test_the_foreign_repo_guard_refuses_before_any_write(
     assert board.edits == [] and board.adds == []
 
 
+@pytest.mark.parametrize(
+    ("field_name", "field_type", "said"),
+    [
+        pytest.param(
+            "Stage",
+            "ProjectV2SingleSelectField",
+            "the board has no `Status` field (its fields: Title, Stage)",
+            id="no-status-field",
+        ),
+        pytest.param(
+            "Status",
+            "ProjectV2Field",
+            "the board's `Status` field is a ProjectV2Field, not a single-select",
+            id="a-status-field-not-single-select",
+        ),
+    ],
+)
+def test_a_board_with_no_single_select_status_stops_it_as_a_usage_fault(
+    sb: ModuleType,
+    board: BoardTracker,
+    capsys: pytest.CaptureFixture[str],
+    field_name: str,
+    field_type: str,
+    said: str,
+) -> None:
+    """A Status field the board answered without is a fault the read names, so
+    the run exits 2, as its help says (#3188)."""
+    _a_board_out_of_step(board)
+    board.field_name, board.field_type = field_name, field_type
+
+    assert _sync(sb, "--yes") == 2
+
+    assert board.edits == [] and board.adds == []
+    assert f"error: the board's Status could not be read: {said}" in capsys.readouterr().err
+
+
+def test_a_status_field_gh_could_not_read_stops_it_as_a_gh_failure(
+    sb: ModuleType, board: BoardTracker, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A Status field `gh` failed to read is a `gh` failure, so the run exits 3,
+    with what `gh` said (#3188)."""
+    _a_board_out_of_step(board)
+    board.fail_reads.add("fields")
+
+    assert _sync(sb, "--yes") == 3
+
+    assert board.edits == [] and board.adds == []
+    assert (
+        "error: the board's Status could not be read: missing required scopes [read:project]"
+    ) in capsys.readouterr().err
+
+
 def test_an_unreadable_board_stops_it_with_what_gh_said(
     sb: ModuleType, board: BoardTracker, capsys: pytest.CaptureFixture[str]
 ) -> None:

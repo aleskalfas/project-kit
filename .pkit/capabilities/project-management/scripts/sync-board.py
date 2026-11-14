@@ -173,7 +173,7 @@ def main() -> int:
     read = status.field()
     if read.field is None:
         print(f"error: the board's Status could not be read: {read.error}", file=sys.stderr)
-        return 2 if read.answered else 3
+        return 2 if read.named else 3
     for name in board_status.missing_options(read.field, workflow):
         print(
             f"[warn] the board's Status field has no option for {name}: add it to the field "
