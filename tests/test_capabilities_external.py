@@ -17,7 +17,7 @@ import pytest
 from click.testing import CliRunner, Result
 
 from project_kit import capabilities as caps
-from project_kit import capability_fetch, install, router, status, sync
+from project_kit import capability_fetch, install, router, status, sync, upgrade
 from project_kit.cli import main
 from project_kit.manifest import (
     ORIGIN_EXTERNALLY_SOURCED,
@@ -557,6 +557,29 @@ def test_upgrade_refuses_an_externally_sourced_capability(
     assert result.exit_code == 1, result.output
     assert "moves by its pin" in _said(result)
     assert "#1538" in result.output
+
+
+def test_a_transition_reads_its_range_from_the_copy_never_a_shipped_one_of_its_name(
+    project: Path, kit: Path, upstream: GitRepo
+) -> None:
+    """The compatibility check reads an externally-sourced capability's installed
+    copy, never the `package.yaml` of a capability the bundle ships by its name,
+    which would refuse here (ADR-065 point 1)."""
+    _author(upstream, tag="v1.0.0")
+    _installed(upstream)
+    shipped = kit / "capabilities" / _NAME
+    shipped.mkdir(parents=True)
+    (shipped / "package.yaml").write_text(
+        _package("9.0.0", requires_backbone=">=99.0.0"), encoding="utf-8"
+    )
+    manifest = read_backbone_manifest(project)
+    assert manifest is not None
+    entries = [entry for entry in manifest.components if entry.name == _NAME]
+
+    assert upgrade._resolve_package_yaml(project, kit, entries[0]) == (
+        _copy(project) / "package.yaml"
+    )
+    upgrade._resolve_compatibility(entries, project, kit, _RECORDED)
 
 
 def test_register_refuses_an_externally_sourced_capability(

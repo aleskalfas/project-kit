@@ -18,7 +18,9 @@ body: >
   sync` now brings each externally-sourced copy to its pin's content,
   removing files the pin does not hold, and never moves the pin; where the
   fetch fails, or the content's `requires_backbone` excludes the backbone
-  the project records, it keeps the copy and warns. `capabilities uninstall` removes
+  the project records, it keeps the copy and warns. `pkit upgrade` reads an
+  externally-sourced capability's range from its installed copy, never from
+  a capability the bundle ships by its name. `capabilities uninstall` removes
   the copy and keeps the project's own files in its `project/` tier, and
   `capabilities list` and `pkit status` show the source and the ref.
   `capabilities upgrade` and `capabilities register` refuse an
