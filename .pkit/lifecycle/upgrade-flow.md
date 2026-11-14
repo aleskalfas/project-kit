@@ -348,7 +348,7 @@ Sync's guard runs at the command's entry, before the origin is read. So this re-
 
 In the methodology's source repository, run by its own code, a `kit-shipped` capability's kit source *is* its subtree. So its upgrade re-applies deploy in place the same way: the deploy primitives re-run and its query commands are provisioned. Nothing is copied, no receipt is restamped and no migration is run. It is sync's self-host path for one capability.
 
-An `externally-sourced` capability moves by its pin, never as shipped (COR-041). `pkit capabilities upgrade` refuses it and writes nothing, since moving a pin waits on #1538. `pkit upgrade` leaves it, and sync keeps its copy at its pin ([the lifecycle README, "The externally-sourced origin: match the pin"](README.md#the-externally-sourced-origin-match-the-pin) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
+An `externally-sourced` capability moves by its pin, never as shipped (COR-041). `pkit capabilities upgrade` refuses it and writes nothing, since moving a pin is not built yet. `pkit upgrade` leaves it, and sync keeps its copy at its pin ([the lifecycle README, "The externally-sourced origin: match the pin"](README.md#the-externally-sourced-origin-match-the-pin) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 
 For capabilities, a **direction-split dependency check (COR-030)** runs before collision detection:
 

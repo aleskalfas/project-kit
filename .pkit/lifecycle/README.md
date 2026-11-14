@@ -18,6 +18,7 @@ pkit:
         - src/project_kit/sync.py
         - src/project_kit/install.py
         - src/project_kit/upgrade.py
+        - src/project_kit/cli.py
         - src/project_kit/capabilities.py
         - src/project_kit/visibility.py
         - src/project_kit/loaded_rules.py
@@ -350,7 +351,7 @@ Either way, the kit-side spec at the recorded version is the source of truth for
 
 ### What sync writes
 
-`pkit sync` reconciles a project at the release it records, and moves no version (COR-059 point 2). Among the project's files it writes three kinds of thing, and no other:
+`pkit sync` reconciles a project at the release it records, and moves no version (COR-059 point 2). Among the project's files it writes four kinds of thing, and no other:
 
 - **The methodology's content** at the recorded release: its trees, adapters included, and each installed capability the running pkit ships at the version the project records ("The downgrade guard on capability refresh", below). A project-owned path is never overwritten.
 - **Each externally-sourced capability's copy, at its pin:** the content of the source and ref its manifest records, outside its `project/` tier ("The externally-sourced origin: match the pin", below).

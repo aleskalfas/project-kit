@@ -30,6 +30,7 @@ pkit:
       path:
         - src/project_kit/cli.py
         - src/project_kit/capabilities.py
+        - src/project_kit/capability_fetch.py
         - src/project_kit/agents_overlay.py
         - src/project_kit/write_categories.py
         - src/project_kit/declared_rule_sets.py
