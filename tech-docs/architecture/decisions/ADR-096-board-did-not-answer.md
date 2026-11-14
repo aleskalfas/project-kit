@@ -35,9 +35,10 @@ answer, and never reports an issue off the board or a check passed. A command
 whose act needs a later write to the board, as filing needs the issue's card,
 reads the board before it acts. Once the act is made it stands, no exit code
 reads it as not made, and a write to the board it requires that failed gets a
-code saying the act was made and a later step failed. In landing work, merging an issue's pull request and then
-moving the issue to Done, the merge is the act, and the Done after it mirrors
-the issue's close, which the merge makes, or which the command makes after it.
+code saying the act was made and a later step failed. In landing work,
+merging an issue's pull request and then moving the issue to Done, the merge
+is the act, and the Done after it mirrors the issue's close, which the merge
+makes, or which the command makes after it.
 What the act sets off on other issues, such as the forward cascade, is the
 capability's to settle, within the same rules: the command never acts on a
 board that did not answer as though it had, and never takes a code that reads
@@ -85,15 +86,17 @@ board, an issue's add among them, which no other record decides.
 - **Landing work, once the merge is made, takes no code that reads as the
   merge not made** where a read or write of the board fails after it, for the
   issue's Done, another issue the merge closes, or an ancestor. That changes
-  what the command that merges exits with after the merge, where it hands on
-  the code a move or a close returned, one its own codes read as a failed
-  merge or a gate that refused. Those codes do not tell a board's failure from another's, so
-  the change may reach every failure after the merge, such as by a code that
-  says the merge was made, whatever failed, as
+  what the command that merges and then moves the issue to Done exits with
+  after the merge, where it hands on the code a move or a close returned, one
+  its own codes read as a failed merge or a gate that refused. Those codes do
+  not tell a board's failure from another's, so the change may reach every
+  failure after the merge, such as by a code that says the merge was made,
+  whatever failed, as
   [project-kit#3207](https://github.com/aleskalfas/project-kit/issues/3207)
-  proposes. A Done not written is one line, and its code stays the command's:
-  a command that composes it and asks for a run again to finish it keeps that
-  code, since a run again finds the merge made, and its message says so.
+  proposes. A Done not written is one line, and its code stays the command's.
+  A command that composes the one that merges, and asks for a run again to
+  write the Done, keeps that code, since a run again finds the merge made and
+  merges nothing, and its message says the merge was made.
 - **The health check reads the board on each run, and never passes on a stored
   id.** Its failure stops what DEC-017 has it stop: every operation the
   capability's skill runs, those that touch no board among them, migrate, and a
@@ -185,9 +188,10 @@ board, an issue's add among them, which no other record decides.
   hook.
 - **Landing work** is merging an issue's pull request and then moving the
   issue to Done. Its act is the merge, and each move of the issue after it a
-  later step. The command that merges lands work, and so does each command
-  that composes it, whether its run makes the merge or finds the pull request
-  merged and finishes the steps after it.
+  later step. The command that merges the pull request and then moves the
+  issue to Done lands work, and so does each command that composes it,
+  whether its run makes the merge or finds the pull request merged and
+  finishes the steps after it.
 
 **What was measured**
 ([project-kit#3164](https://github.com/aleskalfas/project-kit/issues/3164)). An
@@ -489,7 +493,8 @@ a command that makes several takes each:
     tool's code where the command's codes tell one, save a note on the
     command's act: a read made only to report the act, before it or after,
     such as where an issue stood before a close, which a journal records. Once
-    the act is made, a note takes its code as a mirror does (below).
+    the act is made, each such read, a note among them, read before the act or
+    after it, takes its code as a mirror does (below).
 - **A write that is the act,** such as setting a field, or adding a card where
   that is all the command does. Not made, it is the act not made, and the
   command says so with the board's words.
@@ -517,8 +522,8 @@ a command that makes several takes each:
   option into another, which rewrites each card holding the one before it
   removes it. Each write made stands. A write that rests on one not made is not
   tried, such as removing an option while a card holds it. The command names
-  each write not made, and where some were made, exits with a code saying the
-  act was made in part.
+  each write not made, and where some were made, takes no clean code, nor one
+  that reads as the act not made ("After it").
 - **What the act sets off on another issue,** such as the forward cascade's
   reads and moves of the issue's ancestors (DEC-006), is none of these.
   "Before it" below asks no read of such an issue before the act, and whether
@@ -547,10 +552,11 @@ Two rules order these around the act:
   - **Never as not made.** No read or write of the board takes a code that
     reads as the act not made: a write the act requires, a mirror, a note on
     the act, read before the act or after it, or a read or write of another
-    issue the act set off. A code that asks for a run again does not read so
-    where a run again finds the act made and makes only what is owed.
-  - **Made in part.** An act of many writes made in part takes a code saying
-    so (above), never a clean one.
+    issue the act set off. A refusal's code reads so. A code that asks for a
+    run again does not read so where a run again finds what the act made,
+    whole or in part, and makes none of it a second time.
+  - **Made in part.** An act of many writes made in part takes no clean code,
+    nor one that reads as the act not made (the first of these limits).
   - **A write the act requires, not made,** takes a code of the command's own
     saying the act was made and a later step failed, never a clean one, and
     the message leads with what stands, such as the filed issue. Where it
@@ -728,8 +734,8 @@ only where its card shows again, since only what the request shows is in the
 request. A request then lacks a witness where nothing it reads for the
 repository, its own issues, its page or the issue carried into it, shows a
 card, and such a request fails the read, as any batch that cannot judge its
-absences does. Made again once, at the end, a request costs one call more however many
-repositories it lacks a witness for.
+absences does. Made again once, at the end, a request costs one call more
+however many repositories it lacks a witness for.
 
 What is left is a board on which no issue the read sees shows a card: an empty
 board, a repository's first issues on a shared board, or a repository none of
@@ -822,12 +828,16 @@ severity's code. A check that stops what it gates on it stops for the tool, so
 it takes the broken tool's code: a finding's would send the person to repair
 an issue. Any other read only reported, such as a value a command shows, lets
 nothing through at a severity, so it keeps the broken tool's code, where a
-clean one would read as the value seen. A note on the act, read before it or
-after, is part of an act made. A read that decides only how a mirror is
-written stops only that mirror, so it goes with the mirror. A write after the
-act cannot be the act not made. An act of many writes, failing part way, is an act made in part, so
-neither the code of an act not made nor a clean one fits it, and a write that
-rests on one not made would act on what never happened.
+clean one would read as the value seen, until the act is made. After it, that
+code would read as the act not made, so such a read, a note on the act among
+them, read before the act or after it, takes its code as a mirror does. A
+read that decides only how a mirror is written stops only that mirror, so it
+goes with the mirror. A write after the act cannot be the act not made. An
+act of many writes, failing part way, is an act made in part, so neither the
+code of an act not made nor a clean one fits it, and a write that rests on one
+not made would act on what never happened. A code asking for a run again fits
+it where a run again remakes none of the writes made, as it fits a merge whose
+Done is owed.
 
 **Why a command whose act needs a later write to the board reads first.**
 Once the act is made, a write it requires that fails leaves the act standing
@@ -894,26 +904,27 @@ is run to make more than one change, as its success reports, and one cannot
 be undone, that one is the act, and what follows it a later step. It is so
 whoever made it: a queue that merges once the command hands it the pull
 request, a person, or an earlier run made the change the command's success
-reports, and a code reading it as not made misreports it all the same. Only a change a success reports is
-so taken: a comment or a notice posted beside it, such as an audit comment, is
-never the act. Merging one option into another removes the option once the
-cards holding it are rewritten, and the removal cannot be undone, yet the
-success reports one change, so it stays an act of many writes, made in part
-where one fails. A branch or a pull request made before a move can be
-undone, and a code saying the move was not made is true of it, so it stays
-preparation. The Done of an issue that is closed, or that the command or its
-act closes, and each move that leads the issue there, is no write the act
-requires: a closed issue is done whatever its card says (DEC-062 point 5), so
-its Done mirrors the close. A merge closes its issue with no board in the
-loop, and no board read stands between a merge and the closure cascade
-(DEC-062's Rationale). So this record adds no read of the board before a merge
-for its Done, and a board that did not answer after it is one line, never a
-code that reads as the merge not made. Which code it takes otherwise, a clean
-one or one asking for a run again, its message saying the merge was made,
-stays the command's (DEC-020). The limits say what a code may claim, and a
-code asking for a run again claims nothing of the merge: a run again finds the
-merge made and writes only what is owed, so the code invites no second merge,
-as a code reading the merge as not made would.
+reports, and a code reading it as not made misreports it all the same. Only
+a change a success reports is so taken: a comment or a notice posted beside
+it, such as an audit comment, is never the act. Merging one option into
+another removes the option once the cards holding it are rewritten, and the
+removal cannot be undone, yet the success reports one change, so it stays an
+act of many writes, made in part where one fails. A branch or a pull request
+made before a move can be undone, and a code saying the move was not made is
+true of it, so it stays preparation. The Done of an issue that is closed, or
+that the command or its act closes, and each move after the act that leads
+the issue there, is no write the act requires: a closed issue is done
+whatever its card says (DEC-062 point 5), so its Done mirrors the close. A
+merge closes its issue with no board in the loop, and no board read stands
+between a merge and the closure cascade (DEC-062's Rationale). So this record
+adds no read of the board before a merge for its Done, and a board that did
+not answer after it is one line, never a code that reads as the merge not
+made. Which code it takes otherwise, a clean one or one asking for a run
+again, its message saying the merge was made, stays the command's (DEC-020).
+The limits say what a code may claim, and a code asking for a run again
+claims nothing of the merge: a run again finds the merge made and merges
+nothing, so the code invites no second merge, as a code reading the merge as
+not made would.
 
 **Why an act made keeps a code apart.** A clean success hides that a step the
 act requires is missing. A code that reads as the act not made invites a caller
@@ -1208,16 +1219,23 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   where the act was made. The case: one code for each such step, in every
   command. Rejected: the limits say what a code may claim, and a code that
   asks for a run again to write a Done claims nothing false, since a run again
-  finds the merge made. Each command's codes are its contract (DEC-020), and
-  this rule would take a documented one from a command that lands work by
-  composing the one that merges.
+  finds the merge made and merges nothing. Each command's codes are its
+  contract (DEC-020), and this rule would take a documented one from a
+  command that lands work by composing the one that merges and then moves the
+  issue to Done.
 - **Have every code after the act say that the act was made.** The case: a
   caller tells from the code alone what stands. Rejected: a code a command
   gives both to an act made with a step owed and to one not made, asking for a
   run again in each, would have to split, though a run again is right in both,
-  and each command's codes are its contract (DEC-020). A write the act
-  requires keeps such a code, since a run again there would make the act
-  twice.
+  and each command's codes are its contract (DEC-020). So an act made in part,
+  whose repair is the rest of it, is held only from a clean code and one that
+  reads as the act not made, and a code asking for a run again serves it
+  where a run again remakes none of the writes made. A write the act
+  requires, not made, keeps a code saying the act was made and a later step
+  failed: its repair is that write, not the act again, and a code of its own
+  tells the caller what it owes ("Why an act made keeps a code apart"), where
+  at filing, today the one command with such a write, a run again would file
+  the issue twice.
 - **Give the code for a later step failed wherever two later steps failed,**
   the link among them. The case: one rule, whatever failed. Rejected: it would
   take DEC-048's code from a link that fails beside a hook or a mirrored
@@ -1296,10 +1314,11 @@ holds it, the lesson ADR-031 point 4 draws for writes.
       issue, nor a finding as a broken board. Where its exit codes tell a
       broken tool from a refusal, a board that will not answer takes the broken
       tool's code, but in two cases. Once the command's act (ADR-096's terms)
-      is made, whole or in part, it takes no code that reads as the act not
-      made, and keeps the other limits ADR-096 point 4 sets after the act. A
-      check that reports it at a severity that lets through what the check
-      gates, an issue or an operation, exits as that severity does.";
+      is made, whole or in part, it takes no code that, as ADR-096 point 4
+      has it, reads as the act not made, and keeps the other limits that point
+      sets after the act. A check that reports it at a severity that lets
+      through what the check gates, an issue or an operation, exits as that
+      severity does.";
     - **point 5, the seam's shape:** "whether the board answered, what it said
       or why it did not, and `gh`'s stderr verbatim when `gh` failed", in place
       of "whether the board answered, what it said, and `gh`'s stderr verbatim
@@ -1356,13 +1375,13 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     "Where a command's exit codes tell a broken tool from a refusal, a board
     that will not answer takes the broken tool's code, but in two cases. Once
     the command's act (ADR-096's terms) is made, whole or in part, it takes no
-    code that reads as the act not made, and keeps the other limits ADR-096
-    point 4 sets after the act. A check that reports it at a severity that lets
-    through what the check gates, an issue or an operation, exits as that
-    severity does. ADR-053 point 2 rules this for every command that reads
-    the board, gate or not, a reach this record gives it for the state's
-    readers, on the same ground, and ADR-096 for the rest.", in place of
-    "Where a command's exit
+    code that, as ADR-096 point 4 has it, reads as the act not made, and keeps
+    the other limits that point sets after the act. A check that reports it at
+    a severity that lets through what the check gates, an issue or an
+    operation, exits as that severity does. ADR-053 point 2 rules this for
+    every command that reads the board, gate or not, a reach this record
+    gives it for the state's readers, on the same ground, and ADR-096 for the
+    rest.", in place of "Where a command's exit
     codes tell a broken tool from a refusal, an unreadable board takes the
     broken tool's code. ADR-053 point 2 rules this for a gate; this record
     rules it for every command that reads the state, on the same ground. This
@@ -1477,12 +1496,12 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     not made, within the limits point 4 here sets after the act, and in a
     check that lets through what it gates, where it takes that severity's
     code, as ADR-053's Boundaries have it for membership. Neither takes a
-    refusal's code. The second is the code the check's own findings at that
-    severity take, which may be the code a clean run takes, while its report
-    never says the check passed.
-    Elsewhere the broken tool's code stands, for a value a command shows among
-    the rest. So those sentences are refined, and ADR-074 takes no superseded
-    line.
+    refusal's code. The first cannot, since point 4 counts a refusal's code as
+    reading as the act not made. The second is the code the check's own
+    findings at that severity take, which may be the code a clean run takes,
+    while its report never says the check passed. Elsewhere the broken tool's
+    code stands, for a value a command shows before its act among the rest.
+    So those sentences are refined, and ADR-074 takes no superseded line.
   - **Narrowed:** ADR-053 and ADR-074 leave to each command what an outcome
     means to it. This record keeps that choice, and holds each command's
     within point 4's limits: ADR-053's Summary on what a failure means and its
@@ -1537,9 +1556,9 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   - **DEC-006 and DEC-062 point 5:** the forward cascade, what a move sets off
     on other issues, stays outside point 4's write classes and within its
     limits, and the Done of an issue that is closed, or that the command or
-    its act closes, and each move that leads it there, mirrors that close, so
-    this record adds no read of the board before a merge (DEC-062's
-    Rationale).
+    its act closes, and each move after the act that leads it there, mirrors
+    that close, so this record adds no read of the board before a merge
+    (DEC-062's Rationale).
   - **DEC-051 point 6:** it follows ADR-053, so its outcome that an issue has no
     card takes point 1's account here, and each command's choice its limits,
     through ADR-053's refined Layer 2 and point 2.
@@ -1572,8 +1591,8 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     a read or write of the board fails for another issue the merge closes, or
     for an ancestor, and where a queue, a person or an earlier run made the
     merge and this run finishes the steps after it. A code asking for a run
-    again meets this where a run again finds the merge made. No read of the
-    board is added before the merge for the Done;
+    again meets this where a run again finds the merge made and merges
+    nothing. No read of the board is added before the merge for the Done;
   - **a note on the act read before it:** where a command reads the board only
     to report its act, such as where an issue stood before a close, and the
     board does not answer, the act goes on, the command says so in one line,
@@ -1621,8 +1640,10 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     only mirrors, or a closed issue's Done is not written, the command gives
     one line, and takes no code that reads as the act not made;
   - **an act of many writes** failing part way: the writes made stand, a write
-    resting on one not made is not tried, and the command exits with a code
-    saying the act was made in part;
+    resting on one not made is not tried, and the command names each write
+    not made and takes neither a clean code nor one that reads as the act not
+    made. A code asking for a run again meets this where a run again remakes
+    none of the writes made;
   - **a card not counted:** removing or merging an option refuses while a
     withheld card, or one the walk set aside, may hold it, and counts an
     archived card that holds it. Adding or renaming one goes on, and a command
@@ -1640,15 +1661,19 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   its code for a later step failed as the issue filed. Each command that lands
   work takes after the merge no code that reads as the merge not made where a
   read or write of the board fails, for its own issue, another the merge
-  closes, or an ancestor. That reaches the command that merges, which exits
-  with the code of a move or a close it ran after the merge, where that step
-  failed. Those codes do not tell a board's failure from another's, so the
-  work cannot keep that command's codes after a merge as they stand: it gives
-  the command a code after a merge that says the merge was made, whatever
-  failed, as
+  closes, or an ancestor. That reaches the command that merges and then moves
+  the issue to Done, which exits with the code of a move or a close it ran
+  after the merge, where that step failed. Those codes do not tell a board's
+  failure from another's, so the work cannot keep that command's codes after
+  a merge as they stand: it gives the command a code after a merge that says
+  the merge was made, whatever failed, as
   [project-kit#3207](https://github.com/aleskalfas/project-kit/issues/3207)
   proposes, or another way by which no failure of the board after the merge
-  reaches its exit as the merge not made. The health check's advice for a
+  reaches its exit as the merge not made. Setting a field gives its refusal's
+  code today where the board did not answer for an axis on it, even where it
+  wrote the other axes. It takes the broken tool's code there, where its codes
+  tell one, and once it wrote an axis, no code that reads as the act not
+  made, a refusal's among them (point 4). The health check's advice for a
   board under another owner than the repository's names the owner in the
   configuration (DEC-023), rather than a stored node alone.
 - **The post-check workflow's template gains a setting for a credential the
