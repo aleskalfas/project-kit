@@ -132,11 +132,12 @@ def _stamp(nt, instance: int, event: str = "claim") -> str:
 @pytest.fixture
 def run(nt, monkeypatch: pytest.MonkeyPatch):
     """Returns `run(pool, instance=None, extra=(), start=None, seated=None,
-    yes=True) -> (rc, starts)`. `instance` is this clone's instance id (none by
-    default). `start` stands in for `start-work`; by default it records each
-    start and answers 0. `seated` is the run's snapshot of the topology and the
-    seat this clone took, where it took one. `yes` passes `--yes`. `starts` holds
-    `(number, dry_run)` for each start."""
+    yes=True, invoker=None) -> (rc, starts)`. `instance` is this clone's instance
+    id (none by default). `start` stands in for `start-work`; by default it
+    records each start and answers 0. `seated` is the run's snapshot of the
+    topology and the seat this clone took, where it took one. `yes` passes
+    `--yes`. `invoker` is the identity resolved, by default `me`'s. `starts`
+    holds `(number, dry_run)` for each start."""
 
     def go(
         pool: Pool,
@@ -147,6 +148,7 @@ def run(nt, monkeypatch: pytest.MonkeyPatch):
         yes: bool = True,
         config: dict | None = None,
         axes: dict | None = None,
+        invoker: object = None,
     ) -> tuple[int, list[tuple[int, bool]]]:
         starts: list[tuple[int, bool]] = []
 
@@ -166,9 +168,12 @@ def run(nt, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setattr(nt.session_guard, "enforce", lambda **k: True)
         monkeypatch.setattr(nt, "load_adopter_config", lambda _r: dict(config or {}))
         monkeypatch.setattr(nt, "_read_members", lambda *a: [])
-        monkeypatch.setattr(
-            nt, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+        resolved = (
+            SimpleNamespace(github_login="me", unresolved_cause=None)
+            if invoker is None
+            else invoker
         )
+        monkeypatch.setattr(nt, "resolve_invoker_identity", lambda **k: resolved)
         monkeypatch.setattr(nt, "check_membership", lambda *a: SimpleNamespace(allowed=True))
         substrate_map = None if axes is None else nt.axis_labels.SubstrateMap(axes=axes)
         monkeypatch.setattr(nt.axis_labels, "load_substrate_map", lambda _r: substrate_map)
@@ -273,6 +278,33 @@ def test_a_task_assigned_to_another_account_is_skipped(run) -> None:
     pool.add(11, priority="Low")
     rc, starts = run(pool)
     assert (rc, starts) == (0, [(11, False)])
+
+
+def test_where_pkit_cannot_tell_the_account_it_says_why_assigned_tasks_are_left_out(
+    run, nt, capsys
+) -> None:
+    """Under an account `gh api user` refuses, every assignee counts as another
+    account, as `start-work` counts it: a note says so, and why (#3162)."""
+    from _lib.membership import Identity
+
+    forbidden = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+    pool = Pool()
+    pool.add(10, priority="High", assignees=("me",))
+    pool.add(11, priority="Low")
+    unresolved = Identity(github_login=None, email=None, unresolved_cause=forbidden)
+    rc, starts = run(pool, invoker=unresolved)
+    assert (rc, starts) == (0, [(11, False)])
+    assert (
+        f"[note] next-task: pkit cannot tell which account is acting, since {forbidden}, so "
+        "every Task with an assignee is left out."
+    ) in capsys.readouterr().err
+
+
+def test_where_the_account_is_told_no_note_is_given(run, capsys) -> None:
+    pool = Pool()
+    pool.add(10)
+    run(pool)
+    assert "cannot tell" not in capsys.readouterr().err
 
 
 def test_with_nothing_ready_it_starts_nothing(run, nt, capsys) -> None:
@@ -654,7 +686,7 @@ class StartWorkInProcess:
         self.pool = pool
         self.moved: list[int] = []
         self.branches: list[str] = []
-        invoker = SimpleNamespace(github_login="me")
+        invoker = SimpleNamespace(github_login="me", unresolved_cause=None)
         monkeypatch.setattr(sw, "resolve_capability_root", lambda _e: CAP_ROOT)
         monkeypatch.setattr(sw.bootstrap_gate, "enforce", lambda *a, **k: True)
         monkeypatch.setattr(sw.session_guard, "enforce", lambda **k: True)

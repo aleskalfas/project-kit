@@ -92,7 +92,9 @@ def _run(
     monkeypatch.setattr(ei, "load_adopter_config", lambda _root: {})
     monkeypatch.setattr(ei, "_read_members", lambda *a: [])
     monkeypatch.setattr(
-        ei, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+        ei,
+        "resolve_invoker_identity",
+        lambda **k: SimpleNamespace(github_login="me", unresolved_cause=None),
     )
     monkeypatch.setattr(ei, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(ei.axis_labels, "load_substrate_map", lambda *_a, **_k: None)

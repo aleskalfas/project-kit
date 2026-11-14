@@ -196,7 +196,12 @@ class Taker:
 
 
 def taker(
-    capability_root: Path, login: str | None, config: dict, *, dry_run: bool = False
+    capability_root: Path,
+    login: str | None,
+    config: dict,
+    *,
+    dry_run: bool = False,
+    login_cause: str | None = None,
 ) -> Taker:
     """This clone as a taker from the pool, and the scope of its seat.
 
@@ -207,10 +212,13 @@ def taker(
     a project with a topology, a clone takes only from the seat it holds: one
     that holds none may not take, nor may a planner's seat, which builds none of
     the work (DEC-059 point 2). Code that cannot read the topology in full takes
-    nothing (DEC-061 point 9)."""
-    reading = instance_claims.read_topology(capability_root, config, login=login, dry_run=dry_run)
+    nothing (DEC-061 point 9). ``login_cause`` is why ``login`` could not be
+    resolved, where it could not (#3162)."""
+    reading = instance_claims.read_topology(
+        capability_root, config, login=login, login_cause=login_cause, dry_run=dry_run
+    )
     if reading is None:
-        return Taker(instance_claims.numbered_clone(capability_root, login))
+        return Taker(instance_claims.numbered_clone(capability_root, login, login_cause))
     if reading.refusal is not None:
         return Taker(None, refusal=reading.refusal)
     clone = instance_claims.seat_clone(reading, capability_root, login)

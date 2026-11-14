@@ -42,6 +42,7 @@ from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
+    format_unresolved,
     members_path,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -116,6 +117,14 @@ def main() -> int:
         return 1
 
     target = invoker.github_login if args.me else args.github_login
+    if not target and args.me:
+        # --me names the account acting, which pkit could not tell (#3162).
+        print(
+            "error: --me names the account acting, and "
+            f"{format_unresolved(invoker.unresolved_cause)}. Pass the login to remove.",
+            file=sys.stderr,
+        )
+        return 2
     if not target:
         print(
             "error: github_login is required (or pass --me to self-remove).",
