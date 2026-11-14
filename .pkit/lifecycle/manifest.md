@@ -18,6 +18,7 @@ pkit:
         - src/project_kit/sync.py
         - src/project_kit/release.py
         - src/project_kit/capabilities.py
+        - src/project_kit/capability_fetch.py
         - src/project_kit/scaffolds.py
         - src/project_kit/package_validate.py
         - src/project_kit/write_categories.py
@@ -48,7 +49,7 @@ pkit:
         - src/project_kit/router.py
         - .pkit/capabilities/living-docs/scripts/validate.py
         - .pkit/capabilities/living-docs/scripts/resolve-source.py
-      record: [COR-010, COR-013, COR-017, COR-019, COR-021, COR-030, COR-031, "COR-033#P7", COR-036, COR-038, COR-041, COR-049, COR-050, COR-051, COR-052, COR-053, "COR-054#2", COR-055, COR-056, COR-061, "COR-062#2", "COR-070#2", COR-073, ADR-009, ADR-050, ADR-056, ADR-057, ADR-058, ADR-059, ADR-065, ADR-066, ADR-076, ADR-088]
+      record: [COR-010, COR-013, COR-017, COR-019, COR-021, COR-030, COR-031, "COR-033#P7", COR-036, COR-038, COR-041, COR-049, COR-050, COR-051, COR-052, COR-053, "COR-054#2", COR-055, COR-056, COR-061, "COR-062#2", "COR-070#2", COR-073, ADR-009, ADR-050, ADR-056, ADR-057, ADR-058, ADR-059, ADR-065, ADR-066, ADR-076, ADR-088, ADR-040]
 ---
 
 # Manifest schema
@@ -107,6 +108,7 @@ A capability-kind registry entry may carry an **`origin`** field recording where
 - **`kit-shipped`** (the default): the capability ships in the kit source and was copied into the adopter on `capabilities install`. This is the status quo COR-017 describes.
   - **The field is omitted when it holds this default.** An absent `origin` reads as `kit-shipped`, so every registration written before this field existed keeps its behaviour with no re-tagging. The change is purely additive, with no migration (COR-031 D2).
 - **`incubated-in-repo`:** the capability was authored in the adopter's *own* repo and registered in place via `capabilities register`, with no copy. Its subtree is adopter-owned content, not a copy of anything the kit ships.
+- **`externally-sourced`:** the capability is authored in another git repository, and `capabilities install <name> --from <git URL> --ref <tag or commit>` copied it in whole. Its per-component manifest records the pin it was copied at (COR-041, ADR-040 point 3). Its subtree outside `project/` is a copy of that pin's content, which `sync` brings back to the pin and never reads as kit-shipped.
 
 Origin lives **here, in lifecycle-owned install-state, never inside the capability's own subtree** (COR-031 D2). An incubated capability's subtree, its authored `package.yaml` included, is entirely adopter-owned. For an incubated capability, no kit-written per-component `manifest.yaml` is stamped at all. Its version of record is its authored `package.yaml`, and dependency gating reads from there.
 
@@ -130,11 +132,20 @@ backend_state:
     name: adopter-kit
 ```
 
+An externally-sourced capability's manifest records its pin beside its version, the source and the ref it was installed from:
+
+```yaml
+pin:
+  source: git@github.com:example/capabilities.git
+  ref: v1.4.0               # a tag, or a commit's full id
+```
+
 Its sections:
 
 - **`schema_version`:** the version of *this* component-manifest schema. Bumping it triggers a component manifest-schema migration.
 - **`component`:** kind, name, recorded version, install timestamp.
 - **`requires_backbone`:** a semver range pinned to this version of the component. It is recorded into the manifest at install and upgrade, so the next upgrade run can verify compatibility.
+- **`pin`:** the git source and the ref an externally-sourced capability's install fetched, a tag or a commit's full id ([ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md) point 3). Install writes it, and `sync` reads it to bring the copy to the pin, writing no manifest. Moving a pin waits on #1538. A source that carries a credential is refused at install, so none is recorded here.
 - **`backend_state`:** opaque backend identifiers the kit cannot rederive, such as board UUIDs and webhook IDs. It is empty, `{}`, for components that have none.
   - **`backend_state.skipped`:** in a capability's manifest, the skills and agents the project chose to skip on a naming collision (COR-017), each as a `{kind, name}` entry. A refresh reads them back from here, and leaves those artefacts out of its copy. A skip chosen in a transition is recorded here before the copy, so a transition a migration stops does not ask again. A name recorded here is never a new collision ([`upgrade-flow.md`, "A new collision"](upgrade-flow.md#a-new-collision) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
   - **A restamp** changes the version, the timestamp and the range. It replaces `skipped` with the skips in force, and keeps every other key of `backend_state`. It reads the manifest after the capability's migrations, so a key a migration wrote stays. A manifest that does not parse, such as one left with merge-conflict markers, is replaced by a new one, and the refresh says so.

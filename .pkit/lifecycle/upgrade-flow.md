@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/upgrade.py
+        - src/project_kit/cli.py
         - src/project_kit/candidates.py
         - src/project_kit/sync.py
         - src/project_kit/install.py
@@ -262,6 +263,7 @@ The comparison vouches for content only under a tagged install, the one the CLI 
   - `completed_version` differs from `backbone_version`, or is missing
   - the pin is newer than the running pkit
 - **`capabilities install` and `capabilities upgrade` call it in both directions too,** at their entry, before they read or write anything ([`component-registry.md`, "Install pre-flight checks"](component-registry.md#install-pre-flight-checks)). Each copies the capability the running pkit's bundle ships. So each stops in sync's states, with sync's remedies, the command named as the operator would run it again.
+  - **`capabilities install --from`** calls it too. It copies a capability it fetched from another repository, and gates and deploys it with the running pkit's code against the backbone the project records.
   - **So every shipped file a project holds comes from the release its backbone records,** wherever a version names one content. A version names one content under a tagged install, the one the CLI README recommends ("Installing pkit on PATH").
   - **`capabilities register`** copies nothing and does not call the guard.
 - **`upgrade` calls it in the older direction only,** before it writes anything. It refuses a running pkit older than the newest of `backbone_version`, `completed_version` and the pin. It calls the propagation step, never the sync command, so the sync command's guard never stops it.
@@ -345,6 +347,8 @@ Instead, "upgrade" for an incubated capability **re-applies deploy from the in-r
 Sync's guard runs at the command's entry, before the origin is read. So this re-deploy stops under another pkit too, as `pkit sync`'s re-deploy of it does. A `kit-shipped` capability's upgrade path is the transition of one capability above.
 
 In the methodology's source repository, run by its own code, a `kit-shipped` capability's kit source *is* its subtree. So its upgrade re-applies deploy in place the same way: the deploy primitives re-run and its query commands are provisioned. Nothing is copied, no receipt is restamped and no migration is run. It is sync's self-host path for one capability.
+
+An `externally-sourced` capability moves by its pin, never as shipped (COR-041). `pkit capabilities upgrade` refuses it and writes nothing, since moving a pin waits on #1538. `pkit upgrade` leaves it, and sync keeps its copy at its pin ([the lifecycle README, "The externally-sourced origin: match the pin"](README.md#the-externally-sourced-origin-match-the-pin) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 
 For capabilities, a **direction-split dependency check (COR-030)** runs before collision detection:
 

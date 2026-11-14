@@ -92,6 +92,7 @@ if TYPE_CHECKING:
     from project_kit.changesets import Changeset
     from project_kit.decisions import stamp_decision
     from project_kit.loaded_rules import SetReading
+    from project_kit.manifest import CapabilityPin
     from project_kit.merge import run_merge
     from project_kit.migrations import refuse_inside_migration
     from project_kit.process import ProcessEngine
@@ -5746,9 +5747,15 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     # "no longer ships" and steer the adopter toward the destructive uninstall).
     # "Upgrade" for it means re-applying deploy from the in-repo tree, mirroring
     # the sync skip-branch.
-    if caps.read_capability_origin(target_root, name) == caps.INCUBATED_IN_REPO:
+    origin = caps.read_capability_origin(target_root, name)
+    if origin == caps.INCUBATED_IN_REPO:
         _upgrade_incubated_capability(target_root, source_kit, name, dry_run=dry_run)
         return
+    # An externally-sourced capability moves by its pin, never as shipped
+    # (COR-041), and moving a pin waits on #1538. Refused before the bundle is
+    # read, so a capability the bundle ships by the same name is never taken for it.
+    if origin == caps.EXTERNALLY_SOURCED:
+        _refuse_upgrading_externally_sourced(target_root, name)
     # The methodology's source run by its own code (ADR-059 point 2): the tree a
     # kit-shipped capability is refreshed from is its own subtree, so there is
     # nothing to copy and no migration to run — re-deploy it in place (#1107).
@@ -7784,6 +7791,22 @@ def _refuse_collisions_off_terminal(
 @capabilities.command("install")
 @click.argument("name")
 @click.option(
+    "--from",
+    "source_url",
+    metavar="GIT_URL",
+    default=None,
+    help="Install the capability another git repository incubates at "
+    ".pkit/capabilities/<name>/, fetched whole with your own git credentials "
+    "(COR-041, ADR-040). Pass it with --ref.",
+)
+@click.option(
+    "--ref",
+    metavar="TAG_OR_COMMIT",
+    default=None,
+    help="With --from: the tag, or the commit's full id, to install the capability at. "
+    "`pkit sync` keeps it there. A branch is refused until #1538.",
+)
+@click.option(
     "--dry-run",
     is_flag=True,
     default=False,
@@ -7809,7 +7832,13 @@ def _refuse_collisions_off_terminal(
     "dependent is still printed (COR-030).",
 )
 def install_capability_cmd(
-    name: str, dry_run: bool, plan: bool, as_json: bool, force: bool
+    name: str,
+    source_url: str | None,
+    ref: str | None,
+    dry_run: bool,
+    plan: bool,
+    as_json: bool,
+    force: bool,
 ) -> None:
     """Install a capability: copy subtree into adopter, register in manifest, re-deploy.
 
@@ -7824,11 +7853,20 @@ def install_capability_cmd(
     A capability whose rule set takes a name a project rule set declares is
     refused, naming the set and both files, and nothing is installed (COR-051
     point 3).
+
+    With --from and --ref, the capability is the one another git repository
+    incubates at `.pkit/capabilities/<name>/`, fetched whole at that tag or
+    commit with your own git credentials, and registered externally-sourced
+    with its pin (COR-041, ADR-040). It is fetched, then gated, then installed
+    or refused: a refusal writes nothing, and a source that cannot be reached
+    warns and installs nothing. A branch as a ref, and moving the pin of a
+    capability already installed, wait on #1538.
     """
     refuse_inside_migration("capabilities install")
     from project_kit import capabilities as caps
 
     _plan_flags(plan, as_json)
+    pin = _install_pin(source_url, ref)
 
     target_root = find_target_root()
     if target_root is None:
@@ -7837,11 +7875,12 @@ def install_capability_cmd(
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
 
     source_kit = find_source_kit()
+    command = f"capabilities install {name}{_pin_arguments(pin)}"
     # Sync's guard first (ADR-065 point 7): it stops wherever `pkit sync` stops,
     # before anything is read or written, and lets the methodology's source
     # pass. It stops `--dry-run` and `--plan` too: under another pkit, both would
     # preview the install of another release's capability, which would refuse.
-    refuse_version_mismatch(target_root, source_kit, command=f"capabilities install {name}")
+    refuse_version_mismatch(target_root, source_kit, command=command)
     # The methodology's source repository run by code that is not its own (the
     # gap, ADR-059): the install would copy the running code's capability
     # subtree into the tree it is built from. Refuse before any other pre-flight
@@ -7850,8 +7889,13 @@ def install_capability_cmd(
     refuse_propagation_into_source(
         target_root,
         source_kit,
-        command=f"capabilities install {name}",
-        would="copy the capability's subtree from that tree into the one it is built from",
+        command=command,
+        would=(
+            "copy the capability's subtree from that tree into the one it is built from"
+            if pin is None
+            else "land a fetched capability in the tree it is built from, registered by "
+            "code that is not its own"
+        ),
         own_code_does=None,
     )
 
@@ -7860,6 +7904,19 @@ def install_capability_cmd(
     # an adapter holds, which no capability may share.
     caps.refuse_reserved_capability_name(name)
     caps.refuse_name_held_by_other_kind(target_root, "capability", name)
+
+    if pin is not None:
+        _install_externally_sourced(
+            target_root,
+            source_kit,
+            name,
+            pin,
+            dry_run=dry_run,
+            plan=plan,
+            as_json=as_json,
+            force=force,
+        )
+        return
 
     capability_source = caps.find_capability_in_source(source_kit, name)
     if capability_source is None:
@@ -7875,13 +7932,207 @@ def install_capability_cmd(
             f"Use `pkit capabilities upgrade {name}` to refresh."
         )
 
+    _install_from(
+        target_root,
+        source_kit,
+        capability_source,
+        None,
+        dry_run=dry_run,
+        plan=plan,
+        as_json=as_json,
+        force=force,
+    )
+
+
+def _install_pin(source_url: str | None, ref: str | None) -> CapabilityPin | None:
+    """The pin `--from` and `--ref` name, or None for a capability the running pkit ships.
+
+    The two go together. A pin pkit does not take is refused here, before any
+    other check reads the project (`capability_fetch.refuse_pin`): a source that
+    carries a credential is never passed on, recorded or printed (ADR-040 point 2).
+    """
+    from project_kit import capability_fetch
+    from project_kit.manifest import CapabilityPin
+
+    if source_url is None and ref is None:
+        return None
+    if source_url is None or ref is None:
+        raise click.UsageError(
+            "--from and --ref go together: the git source, and the tag or commit to install at."
+        )
+    pin = CapabilityPin(source=source_url, ref=ref)
+    try:
+        capability_fetch.refuse_pin(pin)
+    except capability_fetch.FetchRefused as exc:
+        raise click.ClickException(f"{_sentence(exc)} Nothing was installed.") from exc
+    return pin
+
+
+def _pin_arguments(pin: CapabilityPin | None) -> str:
+    """`--from` and `--ref` as a command that re-runs the install names them."""
+    if pin is None:
+        return ""
+    return f" --from {shlex.quote(pin.source)} --ref {shlex.quote(pin.ref)}"
+
+
+def _install_externally_sourced(
+    target_root: Path,
+    source_kit: Path,
+    name: str,
+    pin: CapabilityPin,
+    *,
+    dry_run: bool,
+    plan: bool,
+    as_json: bool,
+    force: bool,
+) -> None:
+    """Install capability *name* from another git repository, at *pin* (COR-041, ADR-040).
+
+    The name is checked first, before anything is fetched: a capability of the
+    name already registered, whatever its origin, or files at its landing path
+    outside its ``project/`` tier, are reported and refused, never overwritten
+    (point 6). One already installed from this pin is refused naming `pkit
+    sync`, and one installed from another source or ref is refused naming
+    uninstall, since moving a pin waits on #1538.
+
+    Then point 4's order: the subtree is fetched whole at the pin
+    (`capability_fetch.fetched`), its ``package.yaml`` read, and the gates every
+    install runs judge it (`_install_from`), before anything is written. A
+    source that cannot be reached, a ref it does not hold or a credential it
+    refuses warns loudly and installs nothing, and the command ends without
+    failing: a fetch that fails degrades, never refuses (point 7). The staged
+    copy is removed whatever the outcome. Under `--plan --json` the lines about
+    the fetch go to standard error, so the plan alone reaches standard output.
+    """
+    from project_kit import capabilities as caps
+    from project_kit import capability_fetch
+
+    _refuse_landing_held(target_root, name, pin)
+    # The methodology's source run by its own code (ADR-059 point 2): every
+    # subtree at `.pkit/capabilities/` is authored there and bundled from there,
+    # and install there copies nothing, so a fetched copy has nowhere to land.
+    if caps.authored_in_source(target_root, source_kit, name):
+        raise click.ClickException(
+            f"refusing to install {name!r} from {caps.pin_text(pin)}: this is the "
+            "methodology's source repository, where every capability at "
+            ".pkit/capabilities/ is authored and bundled from, and install copies nothing "
+            "there (ADR-059). A fetched copy would ship in its releases. Nothing was fetched "
+            "or written. Install it in a project instead."
+        )
+    shipped = caps.find_capability_in_source(source_kit, name)
+    if shipped is not None:
+        click.echo(
+            f"note: the running pkit ships a capability named {name!r} too "
+            f"(v{shipped.package.version}). This install makes {name!r} the one fetched from "
+            f"{caps.pin_text(pin)}, and neither sync nor upgrade reads the shipped one as it.",
+            err=as_json,
+        )
+    click.echo(f"Fetching capability {name!r} from {caps.pin_text(pin)}", err=as_json)
+    try:
+        with capability_fetch.fetched(pin, name) as got:
+            capability_source = caps.fetched_capability(got.path, name)
+            if capability_source is None:
+                raise click.ClickException(
+                    f"{caps.pin_text(pin)} holds .pkit/capabilities/{name}/, but no package.yaml "
+                    f"there names the capability {name!r}. Nothing was installed."
+                )
+            click.echo(
+                f"  fetched v{capability_source.package.version}, commit {got.commit}",
+                err=as_json,
+            )
+            _install_from(
+                target_root,
+                source_kit,
+                capability_source,
+                pin,
+                dry_run=dry_run,
+                plan=plan,
+                as_json=as_json,
+                force=force,
+            )
+    except capability_fetch.FetchRefused as exc:
+        raise click.ClickException(f"{_sentence(exc)} Nothing was installed.") from exc
+    except capability_fetch.FetchFailed as exc:
+        click.echo(
+            f"⚠ WARNING: capability {name!r} could not be fetched from {caps.pin_text(pin)}: "
+            f"{_sentence(exc)} Nothing was installed or activated (ADR-040 point 7).",
+            err=True,
+        )
+
+
+def _sentence(exc: Exception) -> str:
+    """An exception's message as one sentence, ending in a full stop."""
+    return str(exc).rstrip(".") + "."
+
+
+def _refuse_landing_held(target_root: Path, name: str, pin: CapabilityPin) -> None:
+    """Refuse an externally-sourced install whose name is held, before anything is
+    fetched (ADR-040 point 6), naming what holds it and the way on."""
+    from project_kit import capabilities as caps
+    from project_kit import capability_fetch
+
+    wanted = caps.pin_text(pin)
+    if caps.installed_capability_origins(target_root).get(name) == caps.EXTERNALLY_SOURCED:
+        recorded = caps.read_capability_pin(target_root, name)
+        if recorded == pin:
+            raise click.ClickException(
+                f"capability {name!r} is already installed from {wanted}. `pkit sync` brings "
+                "its copy to that pin."
+            )
+        installed_from = (
+            caps.pin_text(recorded)
+            if recorded is not None
+            else "a pin its manifest does not record"
+        )
+        raise click.ClickException(
+            f"capability {name!r} is already installed from {installed_from}. Moving it to "
+            f"another source or ref waits on {capability_fetch.PIN_TRANSITION_ISSUE}: uninstall "
+            f"it first (`pkit capabilities uninstall {name}`), then install it from {wanted}. "
+            "Nothing was fetched or written."
+        )
+    held = caps.landing_held(target_root, name)
+    if held is not None:
+        raise click.ClickException(
+            f"capability {name!r} cannot be installed from {wanted}: the name is held by "
+            f"{held}. A fetched capability never lands over another (ADR-040 point 6). "
+            "Nothing was fetched or written."
+        )
+
+
+def _install_from(
+    target_root: Path,
+    source_kit: Path,
+    capability_source: CapabilitySource,
+    pin: CapabilityPin | None,
+    *,
+    dry_run: bool,
+    plan: bool,
+    as_json: bool,
+    force: bool,
+) -> None:
+    """Gate, then install, *capability_source*: the tail every install runs.
+
+    The source is the running pkit's capability where *pin* is None, and one a
+    fetch staged from another repository otherwise, which is registered
+    externally-sourced with its pin. The plan, or the gates — the backbone, the
+    capability's dependencies, the ranges installed capabilities declare on it,
+    its mandatory upstreams and its rule-set names — then the collisions, the
+    copy and registration, the rule set, the write categories' defaults, the
+    deploy and the points' questions. Nothing is written before every gate has
+    passed.
+    """
+    from project_kit import capabilities as caps
+
+    name = capability_source.name
+    origin = caps.KIT_SHIPPED if pin is None else caps.EXTERNALLY_SOURCED
+
     if plan:
         # The plan runs before the gates: what the gates refuse on — the backbone
         # and dependency ranges — is among what the plan reports it needs, and a
         # range an installed capability declares on it among the findings it adds.
         from project_kit import capability_plans as plans
 
-        candidate = plans.candidate_of(capability_source, caps.KIT_SHIPPED, installed=False)
+        candidate = plans.candidate_of(capability_source, origin, installed=False)
         if candidate is None:
             raise click.ClickException(f"capability {name!r}'s package.yaml does not read.")
         install_plan = plans.plan_install(target_root, candidate)
@@ -7945,8 +8196,9 @@ def install_capability_cmd(
 
     # The methodology's source run by its own code (ADR-059 point 2): the tree the
     # capability would be copied from is its destination. Register it in place —
-    # a copy would put the tree onto itself (#1107).
-    if caps.authored_in_source(target_root, source_kit, name):
+    # a copy would put the tree onto itself (#1107). A fetched capability never
+    # gets here in the source: `_install_externally_sourced` refuses it there.
+    if pin is None and caps.authored_in_source(target_root, source_kit, name):
         _install_capability_in_source(target_root, source_kit, capability_source, dry_run=dry_run)
         return
 
@@ -7964,7 +8216,9 @@ def install_capability_cmd(
             + "\n"
         )
         _refuse_collisions_off_terminal(
-            target_root, collisions, f"pkit capabilities install {shlex.quote(name)}"
+            target_root,
+            collisions,
+            f"pkit capabilities install {shlex.quote(name)}{_pin_arguments(pin)}",
         )
         for finding in collisions:
             choice = caps.resolve_collision_interactive(target_root, finding, capability=name)
@@ -7983,6 +8237,7 @@ def install_capability_cmd(
         capability_source,
         skipped_artifacts=tuple(skipped),
         dry_run=dry_run,
+        pin=pin,
     )
     caps.apply_overrides(target_root, overridden, dry_run=dry_run)
     # An override of an agent another capability ships records the project's
@@ -8002,12 +8257,13 @@ def install_capability_cmd(
 
     verb = "Would install" if dry_run else "Installed"
     skip_note = f" ({len(skipped)} artifact(s) skipped)" if skipped else ""
+    pinned = f", externally sourced from {caps.pin_text(pin)}" if pin is not None else ""
     click.echo(
         "\n  "
         + cli_render.style(
             "strong",
             f"{verb} capability {name!r} v{capability_source.package.version} "
-            f"at {installed_path.relative_to(target_root)}/{skip_note}",
+            f"at {installed_path.relative_to(target_root)}/{pinned}{skip_note}",
         )
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
@@ -8362,6 +8618,16 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
                 )
             )
             return
+        # An externally-sourced copy was pulled from its pinned source, not
+        # authored here (COR-041): adopting it as incubated would cut it off
+        # from its pin. Refused, naming what moving it waits on.
+        if current_origin == caps.EXTERNALLY_SOURCED:
+            raise click.ClickException(
+                f"capability {name!r} is externally sourced: its copy is pulled from its "
+                "pinned source, not authored here, so it is never registered as incubated. "
+                "Changing its origin waits on #1538; to author it here, uninstall it "
+                f"(`pkit capabilities uninstall {name}`) and create it in this repository."
+            )
         # kit-shipped / unset → adopt in place: run the applicable pre-flights
         # below, then set origin on the existing entry (no re-copy, no re-deploy —
         # the subtree is already installed; this is an origin-state upgrade).
@@ -8546,6 +8812,25 @@ def _upgrade_incubated_capability(
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
     _ask_point_questions(target_root, name, dry_run=dry_run)
+
+
+def _refuse_upgrading_externally_sourced(target_root: Path, name: str) -> NoReturn:
+    """Refuse `capabilities upgrade` of an externally-sourced capability (COR-041).
+
+    It moves by its pin, never as shipped, and moving the pin waits on #1538;
+    `pkit sync` keeps its copy at the pin it has. Nothing is read or written.
+    """
+    from project_kit import capabilities as caps
+    from project_kit import capability_fetch
+
+    pin = caps.read_capability_pin(target_root, name)
+    pinned = f" from {caps.pin_text(pin)}" if pin is not None else ""
+    raise click.ClickException(
+        f"capability {name!r} is externally sourced{pinned}: it moves by its pin, never as "
+        f"shipped, and moving the pin waits on {capability_fetch.PIN_TRANSITION_ISSUE}. "
+        "`pkit sync` keeps its copy at its pin. To take another tag or commit, uninstall it "
+        f"(`pkit capabilities uninstall {name}`) and install it again with --from and --ref."
+    )
 
 
 def _upgrade_capability_in_source(
@@ -9118,6 +9403,18 @@ def uninstall_capability_cmd(
                 f"{verb} capability {name!r} from {outcome.cap_dir.relative_to(target_root)}",
             )
         )
+        # An externally-sourced copy goes, and its `project/` tier, the project's
+        # own, stays (ADR-040 point 3).
+        if origin == caps.EXTERNALLY_SOURCED and dry_run:
+            click.echo(
+                f"  (its copy from its pinned source would go; the project's own files under "
+                f"{subtree}project/ would stay.)"
+            )
+        elif outcome.project_tier_kept is not None:
+            click.echo(
+                f"  (its copy from its pinned source is gone; the project's own files stay at "
+                f"{outcome.project_tier_kept.relative_to(target_root)}/.)"
+            )
     elif outcome.in_source and not incubated:
         verb, deleted = ("Would unregister", "would be") if dry_run else ("Unregistered", "was")
         click.echo(
@@ -9176,6 +9473,7 @@ def uninstall_capability_cmd(
 def list_capabilities_cmd() -> None:
     """List capabilities available in the kit source and which are installed."""
     from project_kit import capabilities as caps
+    from project_kit.capability_fetch import shown as shown_source
 
     target_root = find_target_root()
     if target_root is None:
@@ -9211,11 +9509,19 @@ def list_capabilities_cmd() -> None:
             if n in installed
             else ""
         )
+        # An externally-sourced one's pin, beside its origin (ADR-040 point 3).
+        pin = (
+            caps.read_capability_pin(target_root, n)
+            if origins.get(n) == caps.EXTERNALLY_SOURCED
+            else None
+        )
         rows.append(
             {
                 "name": n,
                 "status": "installed" if n in installed else "",
                 "origin": origin_label,
+                "source": shown_source(pin.source) if pin is not None else "",
+                "ref": pin.ref if pin is not None else "",
             }
         )
     click.echo(
@@ -9225,9 +9531,15 @@ def list_capabilities_cmd() -> None:
                 f"{len(names)} known",
                 gloss="install with `pkit capabilities install <name>`",
             ),
-            sections=[cli_render.section(rows=rows, columns=["name", "status", "origin"])],
+            sections=[
+                cli_render.section(rows=rows, columns=["name", "status", "origin", "source", "ref"])
+            ],
             commands=[
                 ("pkit capabilities install <name>", "install a kit-shipped one into this project"),
+                (
+                    "pkit capabilities install <name> --from <git URL> --ref <tag or commit>",
+                    "install one another repository keeps",
+                ),
                 ("pkit capabilities register <name>", "register an in-repo (incubated) one"),
             ],
         ),
