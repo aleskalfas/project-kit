@@ -17,6 +17,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from tests.pm_board_archive import reads_archived
+
 
 def _proc(cmd, stdout: str = "", *, returncode: int = 0, stderr: str = ""):
     return subprocess.CompletedProcess(cmd, returncode, stdout=stdout, stderr=stderr)
@@ -184,7 +186,11 @@ _OPTION = re.compile(
 class FakeBoard:
     """A Projects-v2 board with a `Workstream` single-select field.
 
-    `cards` maps an item id to `(issue number, option name or None)`.
+    `cards` maps an item id to `(issue number, option name or None)`, and
+    `archived` names the item ids of the cards archived. A walk of the cards
+    reads an archived card only where it asks for one
+    (`tests/pm_board_archive.py`), and a write of the option list clears the
+    value of every card whose option it drops, an archived card's too.
     """
 
     def __init__(
@@ -192,6 +198,7 @@ class FakeBoard:
         options=(),
         cards=None,
         *,
+        archived=(),
         field_type: str = "ProjectV2SingleSelectField",
         has_field: bool = True,
         fail_reads: bool = False,
@@ -204,6 +211,7 @@ class FakeBoard:
             item: {"number": number, "option_id": f"opt_{name}" if name else None}
             for item, (number, name) in (cards or {}).items()
         }
+        self.archived = set(archived)
         self.field_type = field_type
         self.has_field = has_field
         self.fail_reads = fail_reads
@@ -255,6 +263,7 @@ class FakeBoard:
                     else None,
                 }
                 for item, card in self.cards.items()
+                if reads_archived(query) or item not in self.archived
             ]
             payload = {
                 "data": {

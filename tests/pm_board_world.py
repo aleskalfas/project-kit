@@ -25,6 +25,7 @@ import json
 import subprocess
 from typing import Any
 
+from tests.pm_board_archive import reads_archived
 from tests.pm_lifecycle_world import Tracker
 
 PROJECT_ID = "PVT_board4"
@@ -85,7 +86,8 @@ class BoardTracker(Tracker):
     """The tracker, and board #4 with a single-select Status of `options`.
 
     `cards` maps an issue to its card: `{"id": <item id>, "status": <option name
-    or None>}`. `edits` lists each Status written, `(issue, option name)`.
+    or None>, "archived": <bool>}`. `edits` lists each Status written, `(issue,
+    option name)`.
     `fail_reads` names the board reads that fail (`fields`, `items`, `card`),
     `fail_edits` the issues whose Status write fails, and `fail_adds` those whose
     card cannot be added. `repository` is this repository's `owner/name`, and
@@ -108,9 +110,11 @@ class BoardTracker(Tracker):
 
     # --- what a test sets up ------------------------------------------------
 
-    def card(self, number: int, status: str | None = None) -> None:
-        """Put the issue on the board, its card's Status `status`."""
-        self.cards[number] = {"id": f"PVTI_{number}", "status": status}
+    def card(self, number: int, status: str | None = None, *, archived: bool = False) -> None:
+        """Put the issue on the board, its card's Status `status`, the card
+        archived where `archived` is set. A walk of the board's cards reads an
+        archived card only where it asks for one (`tests/pm_board_archive.py`)."""
+        self.cards[number] = {"id": f"PVTI_{number}", "status": status, "archived": archived}
 
     def status(self, number: int) -> str | None:
         return self.cards[number]["status"] if number in self.cards else None
@@ -215,7 +219,12 @@ class BoardTracker(Tracker):
         if "items(first" in query:
             if "items" in self.fail_reads:
                 return _done(argv, 1, stderr="missing required scopes [read:project]")
-            nodes = [self._card_node(n) for n in sorted(self.cards)] + self.foreign_cards
+            walked = [
+                number
+                for number in sorted(self.cards)
+                if reads_archived(query) or not self.cards[number]["archived"]
+            ]
+            nodes = [self._card_node(n) for n in walked] + self.foreign_cards
             page = {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": nodes}
             return _done(argv, stdout=json.dumps({"data": {"node": {"items": page}}}))
         raise AssertionError(f"unexpected gh api graphql call: {argv}")

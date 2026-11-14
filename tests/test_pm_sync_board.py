@@ -158,6 +158,23 @@ def test_a_board_in_step_writes_nothing(
     )
 
 
+def test_an_issue_whose_only_card_is_archived_has_a_card(
+    sb: ModuleType, board: BoardTracker, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An archived card is its issue's card, as any other (#3191): no card is
+    added for its issue, and its Status is kept in step with the issue's state."""
+    in_review = _issue(board, "type:task", "state:review")
+    started = _issue(board, "type:task", "state:in-progress")
+    board.card(in_review, "Review", archived=True)
+    board.card(started, "Todo", archived=True)
+
+    assert _sync(sb, "--yes") == 0
+
+    assert board.adds == []
+    assert board.edits == [(started, "In Progress")]
+    assert "plan: 1 card to set, 0 cards to add, 1 card already right" in capsys.readouterr().out
+
+
 def test_with_nobody_to_ask_and_no_yes_it_refuses_and_writes_nothing(
     sb: ModuleType, board: BoardTracker, capsys: pytest.CaptureFixture[str]
 ) -> None:

@@ -52,6 +52,7 @@ Exports:
     IssueCardsRead                  — the listed issues' cards, each as an ItemValueRead
     FieldOptionsRead / ItemsRead / BoardItem — the workstream mutators' reads
     NO_BOARD                        — why a read is refused with no board configured
+    EVERY_ARCHIVED_STATE            — the argument by which a walk of the cards reads them all
     board_number(config)            — the configured board NUMBER, or None
     default_owner(config)           — `gh.default_owner`, or None
     board_owner(config, ...)        — the board's owner: `gh.default_owner`, else the repo's
@@ -593,6 +594,14 @@ class ItemsRead:
 # cards must not take a partial count for the whole.
 _MAX_ITEM_PAGES = 100
 
+#: The argument by which a walk of the board's cards reads every card, archived
+#: or not. Unasked, the board's card list leaves archived cards out, since its
+#: `archivedStates` defaults to `[NOT_ARCHIVED]`. A board's own workflow archives
+#: cards as a matter of course, so a walk that left them out would take an issue
+#: whose only card is archived for one with no card, and an option only archived
+#: cards hold for one no card holds (#3191).
+EVERY_ARCHIVED_STATE = "archivedStates: [ARCHIVED, NOT_ARCHIVED]"
+
 
 def read_field_options(
     config: dict[str, Any],
@@ -653,7 +662,7 @@ def read_items_with_option(
 
     The cards :func:`read_items` reads, kept where their single-select value is
     that option. Cards from every repository on the board count, since the field
-    and its options are the board's.
+    and its options are the board's, and so does an archived card.
     """
     read = read_items(
         config, project_node_id=project_node_id, field_name=field_name, gh_call=gh_call
@@ -663,11 +672,12 @@ def read_items_with_option(
     return ItemsRead(ok=True, items=tuple(i for i in read.items if i.option_id == option_id))
 
 
-# The page query of :func:`read_items`: each card, what it holds, and the
-# single-select option it holds in one field.
+# The page query of :func:`read_items`: each card, an archived one included, what
+# it holds, and the single-select option it holds in one field.
 _ITEMS_QUERY = (
     "query($project: ID!, $field: String!, $after: String) { node(id: $project) "
-    "{ ... on ProjectV2 { items(first: 100, after: $after) { pageInfo "
+    "{ ... on ProjectV2 { items(first: 100, after: $after, "
+    f"{EVERY_ARCHIVED_STATE}) {{ pageInfo "
     "{ hasNextPage endCursor } nodes { id content { __typename "
     "... on Issue { id number title body state repository { nameWithOwner } } "
     "... on PullRequest { number title } ... on DraftIssue { title } } "
@@ -686,7 +696,8 @@ def read_items(
     """Every card on the board, with the single-select option it holds in `field_name`.
 
     Reads the board's cards a page at a time through GraphQL, the whole board or
-    an error: a board read in part is never returned as the whole. A card that
+    an error: a board read in part is never returned as the whole. An archived
+    card is read as any other, so it still places its issue. A card that
     holds a state issue is left out, by its marker, since a state issue holds no
     work ([project-management:DEC-058-state-issues] point 3).
     """

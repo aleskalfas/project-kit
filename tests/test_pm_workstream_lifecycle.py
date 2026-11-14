@@ -449,6 +449,22 @@ def test_merge_adds_the_survivor_option_the_board_lacks(mw, tmp_path, monkeypatc
     assert board.card_option("I1") == "cli"
 
 
+def test_merge_moves_an_archived_card_before_it_drops_the_loser_option(
+    mw, tmp_path, monkeypatch, seams
+) -> None:
+    """An archived card that holds the loser counts as any other (#3191). Left
+    uncounted, the loser's option was dropped with the card still on it, and the
+    card's value cleared unread."""
+    stage_project(tmp_path, TWO, board=True)
+    board = FakeBoard(["cli", "old"], {"I1": (1, "old")}, archived={"I1"})
+    board.install(monkeypatch, *seams)
+    monkeypatch.setattr(mw, "gh_run", FakeRepo())
+    rc = _run(mw, monkeypatch, tmp_path, *MERGE_OLD, "--skip-references")
+    assert rc == 0
+    assert board.card_option("I1") == "cli"
+    assert board.option_names() == ["cli"]
+
+
 # --- split -----------------------------------------------------------------
 
 
@@ -621,6 +637,19 @@ def test_remove_refuses_while_board_cards_carry_it(rw, tmp_path, monkeypatch, se
     monkeypatch.setattr(rw, "gh_run", FakeRepo())
     assert _run(rw, monkeypatch, tmp_path, "remove-workstream", "cli") == 1
     assert _file(tmp_path) == ONE
+
+
+def test_remove_refuses_while_only_an_archived_card_carries_it(
+    rw, tmp_path, monkeypatch, seams
+) -> None:
+    """An archived card that holds the option is a carrier as any other (#3191)."""
+    stage_project(tmp_path, ONE, board=True)
+    board = FakeBoard(["cli"], {"I1": (1, "cli")}, archived={"I1"})
+    board.install(monkeypatch, *seams)
+    monkeypatch.setattr(rw, "gh_run", FakeRepo())
+    assert _run(rw, monkeypatch, tmp_path, "remove-workstream", "cli") == 1
+    assert _file(tmp_path) == ONE
+    assert board.card_option("I1") == "cli"
 
 
 def test_remove_refuses_when_the_count_cannot_be_read(rw, tmp_path, monkeypatch, seams) -> None:
