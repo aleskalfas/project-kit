@@ -396,6 +396,16 @@ Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 - **Writes** nothing.
 - **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold. It exits 1 too where the configuration's `browser` names no path ([The browser](files.md#the-browser)).
 
+### `pkit visual intent <piece>`
+
+Prints what a piece's brief hands the review first: the intent, without the reasons ([visual-communication:DEC-042-grades-bar-and-loop] point 4).
+
+- **Prints** the goals, relations and takeaways of the piece's part and of each page's part, in the order the brief gives them. A relation is printed with the parts of the content it relates. A part that states none is named as stating none. `--json` prints it as one document.
+- **Leaves out** every reason, and each aspect and principle a reason holds. The review grades each page against what this prints, and reads the brief's file only once its grades are written.
+- **Reads** the brief alone: no lock, no drawing, no content. A piece with no brief, or whose brief cannot be read, is said to keep none.
+- **Writes** nothing.
+- **Exits** 0 when it printed; 1 when the project holds no visual work, the piece is not in the location or its `piece.yaml` cannot be read, or the configuration cannot be read ([Commands](#commands)).
+
 ### `pkit visual before-after <piece>`
 
 Draws each of a piece's pages under two locks, and prints each page that differs. You ask for one of two looks.
