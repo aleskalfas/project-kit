@@ -894,6 +894,9 @@ What the withdrawal changes:
   stranded-script guard's fixed version, `scripts/latest_tag.py`, which keeps
   `latest` on the highest release, and the release workflow's search for notes
   left unpublished. A `v*` pattern would match the tail of `withdrawn/v…` too.
+  `--pre` and `pkit pin` match a withdrawal tag the same way, by
+  `refs/tags/withdrawn/v…`, so a tag whose tail alone reads as one withdraws
+  nothing.
 
 The withdrawal is project-kit's, and the reading of it binds every project
 that tests a candidate.
