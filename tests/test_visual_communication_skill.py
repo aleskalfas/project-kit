@@ -218,9 +218,7 @@ def test_each_report_entry_the_loop_names_is_one_a_run_writes() -> None:
     for row in entries:
         (entry,) = _LABEL.findall(row[0])
         assert (
-            f'["{entry}"]' in reader
-            or f'.get("{entry}")' in reader
-            or f' = "{entry}"' in named
+            f'["{entry}"]' in reader or f'.get("{entry}")' in reader or f' = "{entry}"' in named
         ), entry
         assert row[2], entry
 
