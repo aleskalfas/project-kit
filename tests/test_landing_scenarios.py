@@ -2515,7 +2515,7 @@ class _Allowed:
 
 #: The invoker, in the shape `resolve_invoker_identity` returns: an identity
 #: with a login and an email, which done-work's clash guard reads the login of.
-_INVOKER = SimpleNamespace(github_login="octocat", email=None)
+_INVOKER = SimpleNamespace(github_login="octocat", email=None, unresolved_cause=None)
 
 
 def _stub_gates(monkeypatch: pytest.MonkeyPatch, module: ModuleType, cap: Path) -> None:

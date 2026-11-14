@@ -45,6 +45,7 @@ from packaging.version import InvalidVersion, Version
 
 from project_kit import (
     answer_files,
+    candidates,
     command_runner,
     default_branch,
     pull_request_landing,
@@ -4826,7 +4827,9 @@ def publish_release_notes(
     A candidate's notes, for a version `X.Y.ZrcN`, are read from `CHANGELOG.md` at
     its tag, since only the tag holds the commit that records them, and its Release
     is marked a pre-release, so GitHub never shows a candidate as its latest
-    release (ADR-089 point 9).
+    release (ADR-089 point 9). They end with the way into the candidate,
+    `pkit pin <candidate>` beside the first hop (`candidates.way_in_notes`;
+    ADR-092 point 4), after the section or its short notes alike.
 
     `clearance` is the cross-repository guard's for `repo_root`, cleared at the
     entry (`session_guard.clear`), before `gh` is asked anything (ADR-061
@@ -4837,15 +4840,22 @@ def publish_release_notes(
     candidate = versioning.is_candidate_version(version)
     text = _changelog_at_tag(repo_root, tag) if candidate else _changelog_here(repo_root)
     notes = extract_changelog_section(text, version)
+    way_in = f"\n{candidates.way_in_notes(version)}" if candidate else ""
     form = "its whole changelog section"
-    if len(notes) > RELEASE_BODY_LIMIT:
+    if len(notes) + len(way_in) > RELEASE_BODY_LIMIT:
+        size = f"{len(notes):,} characters"
+        if way_in:
+            size += f", {len(notes) + len(way_in):,} with how to try the candidate"
         form = (
-            f"short notes, as its changelog section is {len(notes):,} characters, past "
-            f"the {RELEASE_BODY_LIMIT:,} a GitHub Release keeps"
+            f"short notes, as its changelog section is {size}, past the "
+            f"{RELEASE_BODY_LIMIT:,} a GitHub Release keeps"
         )
         repository_url = origin_repository_url(repo_root)
         changelog_url = f"{repository_url}/blob/{tag}/{CHANGELOG_NAME}" if repository_url else None
         notes = short_release_notes(text, version, changelog_url=changelog_url)
+    if candidate:
+        form += ", then how to try the candidate"
+    notes += way_in
 
     kind = "notes-only GitHub pre-release" if candidate else "notes-only GitHub Release"
     if dry_run:

@@ -1400,15 +1400,18 @@ def _resolve_board_item_ids(
 
     Returns ``{}`` when no board node id resolves or the read fails — every field
     intent then reports as blocked (needs membership) rather than guessing. Best-
-    effort and bounded: a single paginated read. A card that holds a state issue
-    is left out by its marker, since a state issue holds no work (DEC-058 point 3).
+    effort and bounded: a single paginated read. An archived card is mapped as any
+    other, so an issue whose only card is archived is on the board, not one that
+    needs membership. A card that holds a state issue is left out by its marker,
+    since a state issue holds no work (DEC-058 point 3).
     """
     if not isinstance(project_node_id, str) or not project_node_id:
         return {}
 
     query = (
         "query($project: ID!, $cursor: String) { node(id: $project) { "
-        "... on ProjectV2 { items(first: 100, after: $cursor) { "
+        "... on ProjectV2 { items(first: 100, after: $cursor, "
+        f"{board_fields.EVERY_ARCHIVED_STATE}) {{ "
         "pageInfo { hasNextPage endCursor } nodes { id content { "
         "... on Issue { number body repository { nameWithOwner } } } } } } } }"
     )

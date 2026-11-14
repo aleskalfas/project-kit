@@ -39,6 +39,7 @@ from _lib.membership import (
     CAPABILITY_NAME,
     MEMBERS_RELATIVE,
     check_membership,
+    format_unresolved,
     members_path,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -89,6 +90,8 @@ def main() -> int:
     print(f"invoker:      {invoker.label()}")
     if invoker.github_login:
         print(f"  github_login: {invoker.github_login}")
+    else:
+        print(f"  github_login: none: {format_unresolved(invoker.unresolved_cause)}")
     if invoker.email:
         print(f"  email:        {invoker.email}")
     print(f"allowed:      {'yes' if result.allowed else 'no'}")

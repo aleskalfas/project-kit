@@ -217,6 +217,12 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
         )
     for each in report["dropped"]:
         print(f"dropped: {_at(each)}: {_dropped(each)}")
+    if report.get(viewing.NOT_READ):
+        print(
+            f"dropped: through the SVG renderer, no span is read as "
+            f"{' or '.join(report[viewing.NOT_READ])}, so a text another part covers, or the "
+            f"page's edge cuts, is not named: read the images for it"
+        )
     for each in report["losses"]:
         accepted = " (accepted)" if each["accepted"] else ""
         print(f"loss{accepted}: {_at(each)}: `{each['what']}` {each['did']}: {each['why']}")
@@ -270,11 +276,30 @@ def _print_lock_and_renderer(report: Mapping[str, Any], to: Any = None) -> None:
 
 
 def _dropped(each: Mapping[str, Any]) -> str:
-    """What the report says of a text or a span left with nothing on its page."""
+    """What the report says of a text or a span its page does not show in full, in words for
+    its cause, with the share of its ink the cause loses where it gives one (DEC-037 point
+    2)."""
     if "whole" in each:
         what = "text" if each["whole"] else "part of the text"
         return f"the tool drew nothing of the {what} `{each['element']}`: {each['text']!r}"
-    return f"a span of the text `{each['element']}` left {each['why']}: {each['text']!r}"
+    span, text, why = f"a span of the text `{each['element']}`", each["text"], each["why"]
+    if why == viewing.viewing_browser.CUT:
+        return (
+            f"{span} is cut by its page's edge, past which {_share(each)} of its ink lies: {text!r}"
+        )
+    if why == viewing.viewing_browser.COVERED:
+        return (
+            f"{span} is covered by a part over it, which hides {_share(each)} of its ink: {text!r}"
+        )
+    if why == viewing.viewing_browser.OFF_THE_PAGE:
+        return f"{span} lies off its page: {text!r}"
+    return f"{span} left {why}: {text!r}"
+
+
+def _share(each: Mapping[str, Any]) -> str:
+    """The share of a span's ink a cause loses, in whole percent, and never as none."""
+    percent = round(each["share"] * 100)
+    return f"{percent}%" if percent else "under 1%"
 
 
 def _otherwise(each: Mapping[str, Any]) -> str:

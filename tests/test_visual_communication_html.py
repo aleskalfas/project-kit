@@ -9,7 +9,7 @@ well-formed XML, so `ElementTree` reads it; an HTML parser reads the same elemen
 reader's signals meet is read from the file's rules (`met`), as CSS's cascade orders them, and
 so is what a reader gets around a fixed page (`around`), on screen and in print.
 
-The reference output below is pinned to the renderer's version, 1.8.0. A change that gives
+The reference output below is pinned to the renderer's version, 1.9.0. A change that gives
 another output for the same scene and values raises the version, and changes it with it
 (DEC-005 point 9). A font and a picture are pinned by what they hold, not by their bytes.
 Version 1.2.0 came with seam 5, which hands the renderer the picture each image shows, a PNG
@@ -23,7 +23,10 @@ stop a line at its arrowhead's base, and to draw a connector's turns round at th
 holds, as the canvas draws them: a line with no arrowhead and no radius draws as 1.6.0 drew it,
 but for the renderer's version it names. Version 1.8.0 came to paint a step of an order, at
 seam 9, with a custom property of its own (DEC-032 point 5): a scene of no step draws as 1.7.0
-drew it, but for the renderer's version it names.
+drew it, but for the renderer's version it names. Version 1.9.0 came to draw, under forced
+colours alone, a ground for each line of a text, beneath the lines of its run of texts, and a
+fill's edge inside the fill (DEC-039 points 1 to 4): each file holds the rules for them, and
+each text its lines' grounds.
 """
 
 from __future__ import annotations
@@ -31,6 +34,7 @@ from __future__ import annotations
 import ast
 import base64
 import io
+import itertools
 import re
 from collections.abc import Iterator, Mapping
 from html.parser import HTMLParser
@@ -271,7 +275,7 @@ def said(
 def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
     assert seam.declaration("html", seam.RENDERER) == html_declaration.DECLARATION
     assert html.NAME == "html"
-    assert html.VERSION == "1.8.0"
+    assert html.VERSION == "1.9.0"
 
 
 def test_it_declares_what_it_draws_and_needs() -> None:
@@ -312,6 +316,7 @@ def test_its_module_holds_the_marks_as_data() -> None:
         "strut": "data-strut",
         "span": "data-span",
         "sign": "data-sign",
+        "ground": "data-ground",
     }
     assert html_declaration.DECLARATION["marks"] == html_declaration.MARKS
 
@@ -571,7 +576,8 @@ def test_a_shape_keeps_the_moves_of_its_groups_and_no_group_is_an_element() -> N
 
     [layer] = marked(root, "layer")
     assert [
-        (node.get("transform"), [shape.get("data-id") for shape in node]) for node in layer
+        (node.get("transform"), [shape.get("data-id") for shape in node if parts(shape)])
+        for node in layer
     ] == [
         ("translate(11.5,22)", ["figure/outer/inner/dot"]),
         ("translate(10,20)", ["figure/outer/back"]),
@@ -581,7 +587,7 @@ def test_a_shape_keeps_the_moves_of_its_groups_and_no_group_is_an_element() -> N
 
 def test_a_shape_with_no_move_takes_no_group_around_it() -> None:
     [layer] = marked(read(scene(box("figure/plain"))), "layer")
-    assert [node.tag for node in layer] == ["rect"]
+    assert [node.tag for node in layer if parts(node)] == ["rect"]
 
 
 # --- layers and the tree's order ----------------------------------------------------------------
@@ -596,10 +602,18 @@ def leaves(elements: list[dict[str, Any]]) -> Iterator[str]:
             yield child["id"]
 
 
+def parts(node: ElementTree.Element) -> bool:
+    """Whether a node of a layer is a shape of the scene: neither the inset shape over an
+    opaque fill nor a clipped shape's definition, which draw under forced colours alone."""
+    return html.INSET not in node.attrib and node.tag != "defs"
+
+
 def document_order(page: ElementTree.Element) -> list[str]:
-    """Each text and shape of a page, in the document's order."""
+    """Each text and shape of a page, in the document's order. A line's ground is no part."""
     found = []
     for child in page:
+        if MARKS["ground"] in child.attrib:
+            continue
         if MARKS["text"] in child.attrib:
             found.append(str(child.get(MARKS["text"])))
         else:
@@ -637,7 +651,12 @@ def test_the_documents_order_is_the_trees_order() -> None:
     [page] = marked(read(ORDERED), "page")
 
     assert document_order(page) == list(leaves(ORDERED["children"]))
-    assert [node.tag for node in page] == ["div", "svg", "div", "svg"]
+    assert [node.tag for node in page if MARKS["ground"] not in node.attrib] == [
+        "div",
+        "svg",
+        "div",
+        "svg",
+    ]
 
 
 def test_a_layer_out_of_the_trees_order_fails() -> None:
@@ -703,7 +722,7 @@ def test_the_file_names_its_piece_key_and_renderer() -> None:
     root = read(scene(TITLE))
     assert root.get("data-piece") == "flow"
     assert root.get("data-key") == "default"
-    assert root.get("data-renderer") == "html 1.8.0"
+    assert root.get("data-renderer") == "html 1.9.0"
 
 
 def test_pages_follow_each_other_in_the_middle_of_the_window_with_the_declared_gap() -> None:
@@ -721,12 +740,23 @@ def test_the_file_sets_no_colour_around_its_pages() -> None:
     (DEC-026 point 5), and nothing lies around it."""
     root = read(scene(box("figure/back"), TITLE))
     rules = re.sub(r"@font-face\{[^}]*\}", "", sheet(root))
-    assert re.findall(r"background[^:]*:[^;}]*", rules) == [f"background:{html.GROUND_COLOUR}"]
+    # Print's page, and under forced colours a line's ground and a span's, which is none.
+    assert re.findall(r"background[^:]*:[^;}]*", rules) == [
+        f"background:{html.GROUND_COLOUR}",
+        f"background:{html.GROUND_COLOUR}",
+        "background:none!important",
+    ]
     assert "background" not in kept(root)[PAGE]
     assert kept(root, PRINT)[PAGE]["background"] == html.GROUND_COLOUR
     held = re.findall(r"(?:^|\})([^{}@]+)\{([^{}]*)\}", re.sub(r"@media[^{]*\{", "}", rules))
     painting = {selector for selector, said in held if re.search(r"(?<!-)color:|fill:", said)}
-    assert painting <= {":root", f'[{MARKS["layer"]}] [fill="var(--accent)"]'}
+    assert painting <= {
+        ":root",
+        f'[{MARKS["layer"]}] [fill="var(--accent)"]',
+        f'[{MARKS["layer"]}] rect[fill="var(--accent)"]:not([stroke]),'
+        f'[{MARKS["layer"]}] ellipse[fill="var(--accent)"]:not([stroke])',
+        f"[{html.INSET}]",
+    }
     assert all(
         name.startswith("--") for name, _ in properties(root, ":root") if name != "color-scheme"
     )
@@ -1170,7 +1200,7 @@ REFERENCE_KEYS = {"default": LIGHT, "colour-scheme.dark": DARK}
 PINNED = (
     "<!DOCTYPE html>\n"
     '<html lang="en" data-piece="flow" data-key="default" data-renderer="html '
-    '1.8.0">\n'
+    '1.9.0">\n'
     "<head>\n"
     '<meta charset="utf-8"/>\n'
     '<meta name="viewport" content="width=device-width,initial-scale=1"/>\n'
@@ -1187,12 +1217,16 @@ PINNED = (
     "left:0;top:0;width:100%;height:100%;pointer-events:none}"
     "[data-text]{position:absolute}[data-line]{position:absolute;left:0;width:100%;"
     "font-size:0;line-height:0;white-space:pre}[data-strut]{display:inline-block;"
-    "width:0}@media print{[data-page]{break-inside:avoid;background:Canvas;"
+    "width:0}[data-ground]{position:absolute;display:none;pointer-events:none}"
+    "[data-inset]{display:none}@media print{[data-page]{break-inside:avoid;background:Canvas;"
     "-webkit-print-color-adjust:exact;print-color-adjust:exact}}"
     "@media (forced-colors:active){[data-layer] [stroke]{stroke:CanvasText}"
     'marker path{fill:CanvasText}[data-layer] [fill="var(--surface)"]{fill:Canvas}'
-    '[data-layer] [fill="var(--surface)"]:not([stroke]){stroke:CanvasText;'
-    "stroke-width:1px}}</style>\n"
+    '[data-layer] rect[fill="var(--surface)"]:not([stroke]),'
+    '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
+    "[data-ground]{display:block;background:Canvas}[data-line]{forced-color-adjust:none}"
+    "[data-span]{forced-color-adjust:auto;background:none!important}"
+    "[data-inset]{display:inline;fill:Canvas}}</style>\n"
     "</head>\n"
     '<body><svg width="0" height="0" style="position:absolute"><defs><marker '
     'id="pkit-arrow-end--ink" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="5" '
@@ -1205,6 +1239,8 @@ PINNED = (
     'height="40" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,…"/>'
     '<g transform="translate(10.5,20)"><ellipse data-id="first/mark/dot" cx="25" '
     'cy="15" rx="25" ry="15" fill="var(--accent)"/></g></svg><div '
+    'data-ground="first/mark/both" style="left:19.75cqw;top:24.628cqw;width:21cqw;'
+    'height:10.056cqw"></div><div '
     'data-text="first/mark/both" style="left:5.25cqw;top:25cqw;width:50cqw;'
     'text-align:center"><div data-line="" style="top:-0.5cqw"><span data-strut="" '
     'style="height:8cqw"></span><span data-span="" style="font-family:&quot;Source '
@@ -1215,6 +1251,8 @@ PINNED = (
     'marker-end="url(#pkit-arrow-end--ink)"/></g><rect data-id="first/over" x="20" '
     'y="50" width="30" height="10" fill="var(--shade)"/></svg></div><div '
     'data-page="second" style="width:min(100%,120px);aspect-ratio:120/60"><div '
+    'data-ground="second/said" style="left:-0.83333cqw;top:-0.62cqw;width:35cqw;'
+    'height:16.76cqw"></div><div '
     'data-text="second/said" style="left:0cqw;top:0cqw;width:50cqw"><div '
     'data-line="" style="top:-0.83333cqw"><span data-strut="" '
     'style="height:13.33333cqw"></span><span data-span="" style="font-family:&quot;'
@@ -1455,6 +1493,7 @@ def test_it_declares_what_its_shapes_take_under_forced_colours() -> None:
         "opaque-fills": "Canvas",
         "edge": {"colour": "CanvasText", "width": 1},
         "translucent-fills": "as drawn",
+        "grounds": {"colour": "Canvas", "margin": 1},
     }
 
 
@@ -1685,7 +1724,9 @@ def test_under_forced_colours_one_rule_gives_lines_the_text_colour_and_fills_the
         "[data-layer] [stroke]{stroke:CanvasText}"
         "marker path{fill:CanvasText}"
         '[data-layer] [fill="var(--surface)"]{fill:Canvas}'
-        '[data-layer] [fill="var(--surface)"]:not([stroke]){stroke:CanvasText;stroke-width:1px}'
+        '[data-layer] rect[fill="var(--surface)"]:not([stroke]),'
+        '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
+        f"{html.FORCED_SHEET}"
     )
     assert "#" not in forced(root)
 
@@ -1698,6 +1739,221 @@ def test_a_fill_opaque_in_every_key_takes_the_ground_and_one_translucent_in_none
     translucent["contrast.high"]["accent"] = {"components": [0, 0, 0], "alpha": 0.5}
     root = ElementTree.fromstring(draw(scene(tile), keys=EVERY, colours=translucent).document)
     assert "accent" not in forced(root)
+
+
+# --- under forced colours: a line's ground, and a fill's edge inside the fill (DEC-039) --------
+
+
+def reach_of(path: Path) -> tuple[float, float]:
+    """How far a font file's face reaches above its baseline and below it, in ems, as the
+    engine reads it: its `hhea` ascent and descent over its units per em."""
+    with TTFont(str(path), lazy=True) as font:
+        upem = font["head"].unitsPerEm  # pyright: ignore[reportAttributeAccessIssue] fontTools types no table's fields
+        return font["hhea"].ascent / upem, -font["hhea"].descent / upem
+
+
+def placed(node: ElementTree.Element, width: float) -> tuple[float, float, float, float]:
+    """An element's left, top, width and height, in px of a page `width` px wide."""
+    style = styled(node)
+    left, top, wide, high = (px(style[name], width) for name in ("left", "top", "width", "height"))
+    return left, top, wide, high
+
+
+def kinds(page: ElementTree.Element) -> list[tuple[str, str]]:
+    """Each child of a page, as a ground, a text or a layer, with its trace id where it has one."""
+    found = []
+    for node in page:
+        if MARKS["ground"] in node.attrib:
+            found.append(("ground", str(node.get(MARKS["ground"]))))
+        elif MARKS["text"] in node.attrib:
+            found.append(("text", str(node.get(MARKS["text"]))))
+        else:
+            found.append(("layer", ""))
+    return found
+
+
+def test_the_grounds_of_a_run_of_texts_lie_beneath_its_lines_and_over_a_part_after_it() -> None:
+    """Each line's ground lies before the first text of its run of texts, so beneath all the
+    run's lines; a part between two texts ends the run, so the later text's grounds lie over
+    it (DEC-039 point 1)."""
+    later = {**said("figure/later", "Ab"), "y": 60}
+    drawn = scene(TITLE, {**said("figure/lead", "Under"), "y": 40}, box("figure/between"), later)
+
+    [page] = marked(read(drawn), "page")
+
+    assert kinds(page) == [
+        ("ground", "figure/title"),
+        ("ground", "figure/title"),
+        ("ground", "figure/lead"),
+        ("text", "figure/title"),
+        ("text", "figure/lead"),
+        ("layer", ""),
+        ("ground", "figure/later"),
+        ("text", "figure/later"),
+    ]
+
+
+def test_a_ground_covers_its_line_as_the_engine_measured_it_widened_by_the_margin() -> None:
+    """From the line's start to its end, as the engine measured it and its anchor places it,
+    widened at each end by the declared margin, and from the highest ascent to the lowest
+    descent of its runs' faces (DEC-039 point 2). `TITLE` is anchored at its middle, 100 px
+    wide at (10, 5), its lines 80 px and 9 px wide, their baselines 15.2 px below each
+    line's top, 20 px apart, in 16 px of Source Sans Pro."""
+    margin = html_declaration.DECLARATION["forced-colours"]["grounds"]["margin"]
+    ascent, descent = reach_of(FONT)
+
+    grounds = marked(read(scene(TITLE)), "ground")
+
+    expected = [
+        (10 + (100 - width) / 2 - margin, baseline - 16 * ascent, width + 2 * margin)
+        for width, baseline in ((80, 5 + 15.2), (9, 5 + 15.2 + 20))
+    ]
+    for ground, (left, top, width) in zip(grounds, expected, strict=True):
+        assert ground.get(MARKS["ground"]) == "figure/title"
+        assert placed(ground, 200) == pytest.approx(
+            (left, top, width, 16 * (ascent + descent)), abs=WITHIN
+        )
+
+
+def test_a_ground_takes_no_pointer_and_draws_only_under_forced_colours() -> None:
+    root = read(scene(TITLE))
+    assert rule(root, "ground") == "position:absolute;display:none;pointer-events:none"
+    assert "[data-ground]{display:block;background:Canvas}" in forced(root)
+    # The lines are kept out of the browser's backplate, and their spans left to forcing,
+    # with no ground of their own.
+    assert "[data-line]{forced-color-adjust:none}" in forced(root)
+    assert "[data-span]{forced-color-adjust:auto;background:none!important}" in forced(root)
+
+
+#: Shapes filled in a colour opaque in every key, with no stroke: a box, a rounded box, an
+#: ellipse, a hairline, and two boxes that share an edge; and a box with a stroke of its own.
+EDGED = scene(
+    element("box", "figure/plain", x=10, y=10, width=40, height=20, fill="surface"),
+    element("box", "figure/rounded", x=60, y=10, width=40, height=20, fill="surface", rx=6),
+    element("ellipse", "figure/round", x=110, y=10, width=40, height=20, fill="surface"),
+    element("box", "figure/hairline", x=10, y=40, width=100, height=2, fill="surface"),
+    element("box", "figure/left", x=10, y=60, width=20, height=20, fill="surface"),
+    element("box", "figure/right", x=30, y=60, width=20, height=20, fill="surface"),
+    element("box", "figure/framed", x=60, y=60, width=20, height=20, fill="surface", stroke="ink"),
+    height=100,
+)
+
+
+def insets(layer: ElementTree.Element) -> dict[str, dict[str, str]]:
+    """The inset shape over each shape of a layer that has one, by the shape's trace id: its
+    tag and its geometry."""
+    found = {}
+    nodes = list(layer)
+    for shape, after in itertools.pairwise(nodes):
+        if html.INSET in after.attrib:
+            geometry = {name: value for name, value in after.attrib.items() if name != html.INSET}
+            found[str(shape.get("data-id"))] = {"tag": after.tag, **geometry}
+    return found
+
+
+def test_a_box_a_rounded_box_and_an_ellipse_take_the_inset_shape_and_a_hairline_none() -> None:
+    """Under the inset shape, in the reader's background colour, the fill takes their text
+    colour, so the edge lies inside the fill. Two boxes that share an edge each take their
+    own; a hairline, no thicker than twice the edge, takes none, and is drawn solid; a box
+    with a stroke of its own takes no edge (DEC-039 point 4)."""
+    root = read(EDGED)
+
+    [layer] = marked(root, "layer")
+    assert insets(layer) == {
+        "figure/plain": {"tag": "rect", "x": "11", "y": "11", "width": "38", "height": "18"},
+        "figure/rounded": {
+            "tag": "rect", "x": "61", "y": "11", "width": "38", "height": "18", "rx": "5",
+        },
+        "figure/round": {"tag": "ellipse", "cx": "130", "cy": "20", "rx": "19", "ry": "9"},
+        "figure/left": {"tag": "rect", "x": "11", "y": "61", "width": "18", "height": "18"},
+        "figure/right": {"tag": "rect", "x": "31", "y": "61", "width": "18", "height": "18"},
+    }  # fmt: skip
+    assert (
+        '[data-layer] rect[fill="var(--surface)"]:not([stroke]),'
+        '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
+    ) in forced(root)
+    assert "[data-inset]{display:inline;fill:Canvas}" in forced(root)
+    assert "clip" not in sheet(root)
+
+
+#: Paths filled in a colour opaque in every key, with no stroke: one by the non-zero rule,
+#: and a shape with a hole, by the even-odd rule.
+HOLED = "M 0 0 L 30 0 L 30 30 L 0 30 Z M 10 10 L 20 10 L 20 20 L 10 20 Z"
+CLIPPED = scene(
+    element("path", "figure/whole", x=0, y=0, width=30, height=30, d=HOLED, fill="surface"),
+    element(
+        "path", "figure/holed", x=40, y=0, width=30, height=30, d=HOLED, fill="accent",
+        **{"fill-rule": "evenodd"},
+    ),
+)  # fmt: skip
+
+
+def test_a_path_and_a_shape_with_a_hole_take_the_clip_by_their_fill_rule() -> None:
+    """Each path is a clipped shape: its geometry defined once, which a `use` draws, marked
+    with its clip's number, and the clip holds a second `use` of it, its `clip-rule` the
+    shape's `fill-rule`. Under forced colours alone the edge is twice as wide, clipped to the
+    shape, so only its inner half shows (DEC-039 point 4)."""
+    root = read(CLIPPED)
+
+    [layer] = marked(root, "layer")
+    by_id = {node.get("id"): node for node in layer.iter() if node.get("id")}
+    drawn = [node for node in layer if "data-id" in node.attrib]
+    assert [(node.tag, node.get("data-id"), node.get(html.CLIP)) for node in drawn] == [
+        ("use", "figure/whole", "1"),
+        ("use", "figure/holed", "2"),
+    ]
+    for node, rule_of in zip(drawn, (None, "evenodd"), strict=True):
+        number = node.get(html.CLIP)
+        geometry = by_id[f"pkit-shape-{number}"]
+        assert node.get("href") == f"#pkit-shape-{number}"
+        assert (geometry.get("d"), geometry.get("fill-rule")) == (HOLED, rule_of)
+        [taken] = list(by_id[f"pkit-clip-{number}"])
+        assert (taken.tag, taken.get("href")) == ("use", f"#pkit-shape-{number}")
+        assert taken.get("clip-rule") == geometry.get("fill-rule")
+        assert f'[data-clip="{number}"]{{clip-path:url(#pkit-clip-{number})}}' in forced(root)
+    assert "[data-clip]{stroke:CanvasText;stroke-width:2px}" in forced(root)
+
+
+def test_a_shape_that_takes_an_edge_reports_a_stroke_no_key_gives_a_colour() -> None:
+    """A path, a box and an ellipse whose fill is opaque in every key, and whose stroke's role
+    no key gives a colour, take the edge, the path as a clipped shape, and each still reports
+    its stroke left out in each key (DEC-039 point 4, DEC-023 point 8)."""
+    look = {"fill": "surface", "stroke": "gone", "stroke-width": 1}
+    drawn = draw(
+        scene(
+            element("path", "figure/path", x=0, y=0, width=30, height=30, d=HOLED, **look),
+            element("box", "figure/box", x=40, y=0, width=30, height=30, **look),
+            element("ellipse", "figure/ellipse", x=80, y=0, width=30, height=30, **look),
+        ),
+        keys=EVERY,
+    )
+
+    [layer] = marked(ElementTree.fromstring(drawn.document), "layer")
+    assert [node.get("data-id") for node in layer if html.CLIP in node.attrib] == ["figure/path"]
+    assert set(insets(layer)) == {"figure/box", "figure/ellipse"}
+    assert [loss.as_dict() for loss in drawn.losses] == [
+        {
+            "plugin": "html",
+            "what": trace,
+            "did": "left-out",
+            "why": f"the brand gives the role `gone` of its stroke no colour in `{key}`",
+            "key": key,
+        }
+        for trace in ("figure/path", "figure/box", "figure/ellipse")
+        for key in EVERY
+    ]
+
+
+def test_no_clip_and_no_inset_shape_applies_outside_forced_colours() -> None:
+    """Outside forced colours the inset shape is hidden and no clip applies, so the layers
+    draw as the SVG renderer draws them (DEC-039 point 4, DEC-020 point 1)."""
+    for drawn in (EDGED, CLIPPED):
+        root = read(drawn)
+        assert "clip-path" not in plain_sheet(root)
+        assert rule(root, "ground").startswith("position:absolute;display:none")
+        assert re.search(rf"(?:^|\}})\[{html.INSET}\]\{{display:none\}}", plain_sheet(root))
+        assert not any("clip-path" in node.attrib for node in root.iter())
+        assert not any("stroke" in node.attrib for node in root.iter() if html.CLIP in node.attrib)
 
 
 def test_a_picture_draws_the_first_keys_variant_and_each_other_that_differs_is_a_loss(

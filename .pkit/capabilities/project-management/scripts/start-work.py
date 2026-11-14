@@ -15,6 +15,9 @@ branch + setting the assignee. Per DEC-026:
 Gates per DEC-026:
   - Current user is a team member (DEC-021); open-mode degrades to no-op.
   - Issue not assigned to someone else (hard refusal points at handoff-issue).
+    Where pkit cannot tell which account is acting, every assignee counts as
+    someone else, and the refusal says pkit cannot tell, and why, pointing at
+    no handoff (#3162).
   - Issue's current state can move to In Progress per workflow.yaml (or is
     already there). Checked before any mutation, so a refused move leaves no
     branch or assignee behind (#942). From Todo, move to Backlog first. The
@@ -44,7 +47,8 @@ Gates per DEC-026:
 Side-effects:
   - Creates branch `<type>/<N>-<kebab-slug>` (type from issue's type:*
     label; slug from the issue title).
-  - Sets assignee to the current invoker.
+  - Sets assignee to the current invoker. Where pkit cannot tell which account
+    is acting, it writes none, and says so, and why (#3162).
   - With an instance id set (`set-instance`, DEC-035 point 1), claims the
     issue for this clone once the assignee is set, where no instance owns it
     (DEC-035 point 3), through `_lib/instance_claims`. The claim re-reads the
@@ -107,7 +111,9 @@ from _lib import lifecycle_inference as infer
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
+    Identity,
     check_membership,
+    format_unresolved,
     resolve_capability_root,
     resolve_invoker_identity,
 )
@@ -194,7 +200,8 @@ def main() -> int:
     if issue is None:
         return 2
 
-    # Gate: not assigned to someone else.
+    # Gate: not assigned to someone else. Where the account acting cannot be
+    # told, every assignee counts as another, and the refusal says why (#3162).
     assignees = issue.get("assignees") or []
     other_assignees = [
         a.get("login")
@@ -202,12 +209,7 @@ def main() -> int:
         if isinstance(a, dict) and a.get("login") and a.get("login") != invoker.github_login
     ]
     if other_assignees:
-        print(
-            f"error: issue #{args.issue_number} is assigned to "
-            f"{', '.join('@' + a for a in other_assignees)}. "
-            f"Use `handoff-issue {args.issue_number}` to take ownership.",
-            file=sys.stderr,
-        )
+        print(_assigned_refusal(args.issue_number, other_assignees, invoker), file=sys.stderr)
         return 2
 
     title = str(issue.get("title", ""))
@@ -299,7 +301,11 @@ def main() -> int:
     # A seat is confirmed on its state issue before anything is written.
     try:
         clone = instance_claims.this_clone(
-            capability_root, invoker.github_login, config, dry_run=args.dry_run
+            capability_root,
+            invoker.github_login,
+            config,
+            dry_run=args.dry_run,
+            login_cause=invoker.unresolved_cause,
         )
     except instance_claims.Unconfirmed as exc:
         instance_claims.say_unconfirmed("start-work", args.issue_number, exc)
@@ -337,18 +343,24 @@ def main() -> int:
         if decision.bypassed:
             owner_bypass = args.bypass
 
+    # Where the account acting cannot be told, no assignee is written (#3162).
+    unassigned = None if invoker.github_login else format_unresolved(invoker.unresolved_cause)
+    assignee = invoker.github_login or f"none: {unassigned}"
     print(f"start-work: #{args.issue_number}")
     print(f"  branch:    {branch_name}")
     print(f"  base:      {base}")
-    print(f"  assignee:  {invoker.github_login or '(unknown invoker)'}")
+    print(f"  assignee:  {assignee}")
     if clone is not None and owner_bypass is not None:
         print("  ownership: not claimed, since --bypass starts the work unclaimed")
     elif clone is not None:
-        print(f"  ownership: {instance_claims.claim_plan(clone)}, where no instance owns it")
+        # A clone whose account cannot be told claims nothing, and its plan says why.
+        where = ", where no instance owns it" if unassigned is None else ""
+        print(f"  ownership: {instance_claims.claim_plan(clone)}{where}")
 
     if args.dry_run:
+        assigning = " set assignee," if unassigned is None else ""
         print(
-            f"(dry-run: would create branch off {base}, set assignee, and call move-issue --to "
+            f"(dry-run: would create branch off {base},{assigning} and call move-issue --to "
             "in-progress.)"
         )
         return 0
@@ -375,7 +387,12 @@ def main() -> int:
         isinstance(a, dict) and a.get("login") == invoker.github_login for a in assignees
     )
     assignee_written = False
-    if invoker.github_login and not already_assigned:
+    if unassigned is not None:
+        print(
+            f"[warn] start-work #{args.issue_number} is left with no assignee: {unassigned}.",
+            file=sys.stderr,
+        )
+    elif invoker.github_login and not already_assigned:
         if _set_assignee(args.issue_number, invoker.github_login, config):
             assignee_written = True
         else:
@@ -452,6 +469,24 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     (`issue_position.ISSUE_FIELDS`)."""
     fields = f"title,labels,assignees,state,body,milestone,{issue_position.ISSUE_FIELDS}"
     return gh_get_issue(issue_number, config, fields=fields)
+
+
+def _assigned_refusal(issue_number: int, others: list[str], invoker: Identity) -> str:
+    """The refusal of an issue assigned to ``others``, accounts other than the
+    one acting, pointing at `handoff-issue` (DEC-026). Where pkit cannot tell
+    which account is acting, it names no assignee someone else and points at
+    no handoff, which could not tell either: it says so, and why (#3162)."""
+    named = ", ".join(f"@{login}" for login in others)
+    if invoker.github_login:
+        return (
+            f"error: issue #{issue_number} is assigned to {named}. "
+            f"Use `handoff-issue {issue_number}` to take ownership."
+        )
+    return (
+        f"error: issue #{issue_number} is assigned to {named}, and "
+        f"{format_unresolved(invoker.unresolved_cause)}, so whether that is another "
+        "account cannot be told. Nothing was written."
+    )
 
 
 def _claim_lost_message(

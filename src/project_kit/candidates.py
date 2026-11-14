@@ -15,6 +15,8 @@ only when someone asks, and such a move always pins (ADR-089 point 7):
 - **The first hop,** from a final release whose pkit has no `--pre`, is the
   candidate's own upgrade, run through the router's bypass (`first_hop`;
   ADR-089 point 8).
+- **Its notes name the way into it,** `pkit pin <candidate>` beside the first
+  hop (`way_in_notes`; ADR-092 point 4).
 
 A project on a candidate moves to no other release, and leaves it only by the
 ways off PRJ-016 point 4 sets (`ways_off`):
@@ -64,6 +66,32 @@ def first_hop(candidate: str) -> str:
     distribution URL compiled into the tool at the candidate's tag (ADR-089 point
     8). Typing the bypass is the operator's consent."""
     return f"PKIT_NO_ROUTE=1 uvx --from {DISTRIBUTION_GIT_URL}@v{candidate} project-kit upgrade"
+
+
+def way_in_notes(candidate: str) -> str:
+    """The passage each of *candidate*'s notes end with: a tester works on a branch
+    and goes back by leaving it, and moves a project onto this candidate by `pkit pin
+    <candidate>`, or by the first hop where `pkit pin` takes no candidate, either run
+    again where it was cut short (ADR-092 point 4; ADR-089 point 8). `pkit upgrade
+    --pre` is not named, since it takes the newest candidate, which may be another."""
+    return "\n".join(
+        [
+            "### Trying this candidate",
+            "",
+            "Try it on a branch of your project, and go back by leaving that branch.",
+            "",
+            f"Move the project onto it with `pkit pin {candidate}`. Where `pkit pin` "
+            "refuses a candidate, as a release from before candidates does, take the "
+            "first hop instead, this candidate's own upgrade through the router's bypass:",
+            "",
+            "```",
+            first_hop(candidate),
+            "```",
+            "",
+            "A move cut short goes on with the command that started it, run again.",
+            "",
+        ]
+    )
 
 
 def latest_tool_install() -> str:

@@ -126,6 +126,7 @@ from _lib.hooks import fire_hooks
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
+    format_unresolved,
     resolve_capability_root,
     resolve_invoker_identity,
 )
@@ -703,12 +704,13 @@ def main() -> int:
     # never refused. The backbone is asked only for a body that cites one.
     _warn_decision_ids(body, body_format)
 
-    # Resolve assignee.
+    # Resolve assignee: the account acting, by default. Where pkit cannot tell
+    # which that is, the refusal says why (#3162).
     assignee = args.assignee or invoker.github_login
     if not assignee:
         print(
-            "error: could not resolve assignee. Pass --assignee explicitly "
-            "or ensure `gh api user` works (sets the default).",
+            "error: could not resolve the default assignee: "
+            f"{format_unresolved(invoker.unresolved_cause)}. Pass --assignee explicitly.",
             file=sys.stderr,
         )
         return 2
@@ -766,7 +768,11 @@ def main() -> int:
     # A seat is confirmed on its state issue before anything is written.
     try:
         clone = instance_claims.this_clone(
-            capability_root, invoker.github_login, config, dry_run=args.dry_run
+            capability_root,
+            invoker.github_login,
+            config,
+            dry_run=args.dry_run,
+            login_cause=invoker.unresolved_cause,
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("create-issue", None, exc)

@@ -79,7 +79,9 @@ def _stub_gates(
     _backbone_answers(monkeypatch, mod.infer.default_branch)
     monkeypatch.setattr(mod, "_read_members", lambda *a: [])
     monkeypatch.setattr(
-        mod, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+        mod,
+        "resolve_invoker_identity",
+        lambda **k: SimpleNamespace(github_login="me", unresolved_cause=None),
     )
     monkeypatch.setattr(mod, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(mod, "_gh_get_issue", lambda _n, _config: issue)

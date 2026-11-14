@@ -404,15 +404,16 @@ def test_start_work_refuses_a_base_that_resolves_nowhere(
 @pytest.fixture
 def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
     """Returns `run(issue, move_rc=0, engine=None, config=None, move=None,
-    dry_run=False, instance=None, github=None, extra=()) -> (rc, mutations)`
-    over stubbed seams. `engine` is the process engine, a `FakeEngine` (by
-    default one that gives no answer); `config` adds to the adopter config.
-    `move` runs the composed move-issue in process; without it the move is
-    recorded and answers `move_rc`, and a clash-guard bypass it is handed is
-    recorded as `("move-bypass", <reason>)`. `instance` is this clone's instance
-    id (none by default), and `github` the in-memory GitHub its ownership calls
-    reach; each ownership write is recorded as `("ownership", <gh verb>)`.
-    `extra` adds to the command line."""
+    dry_run=False, instance=None, github=None, extra=(), invoker=None) -> (rc,
+    mutations)` over stubbed seams. `engine` is the process engine, a
+    `FakeEngine` (by default one that gives no answer); `config` adds to the
+    adopter config. `move` runs the composed move-issue in process; without it
+    the move is recorded and answers `move_rc`, and a clash-guard bypass it is
+    handed is recorded as `("move-bypass", <reason>)`. `instance` is this clone's
+    instance id (none by default), and `github` the in-memory GitHub its
+    ownership calls reach; each ownership write is recorded as `("ownership",
+    <gh verb>)`. `extra` adds to the command line. `invoker` is the identity
+    resolved, by default `me`'s."""
     from types import SimpleNamespace
 
     def run(
@@ -425,6 +426,7 @@ def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
         instance: int | None = None,
         github: FakeGitHub | None = None,
         extra: tuple[str, ...] = (),
+        invoker: object = None,
     ):
         mutations: list[tuple] = []
         fake = github if github is not None else FakeGitHub()
@@ -446,9 +448,12 @@ def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
         )
         (engine or FakeEngine()).install(monkeypatch)
         monkeypatch.setattr(sw, "_read_members", lambda *a: [])
-        monkeypatch.setattr(
-            sw, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+        resolved = (
+            SimpleNamespace(github_login="me", unresolved_cause=None)
+            if invoker is None
+            else invoker
         )
+        monkeypatch.setattr(sw, "resolve_invoker_identity", lambda **k: resolved)
         monkeypatch.setattr(sw, "check_membership", lambda *a: SimpleNamespace(allowed=True))
         monkeypatch.setattr(sw.axis_labels, "load_substrate_map", lambda _r: None)
         monkeypatch.setattr(sw, "_gh_get_issue", lambda _n, _c: issue)
@@ -542,6 +547,78 @@ def test_late_move_failure_omits_an_assignee_it_did_not_write(run_main, capsys) 
     err = capsys.readouterr().err
     assert "fix/42-do-the-thing" in err
     assert "@me" not in err
+
+
+# ---- an account pkit cannot tell (#3162) ---------------------------------------
+#
+# Under an account that cannot look itself up, such as a GitHub App
+# installation's token, `gh api user` refuses (#3004). start-work says it cannot
+# tell which account is acting, and why. What it writes, and its exit codes, are
+# as they were.
+
+FORBIDDEN = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+CANNOT_TELL = f"pkit cannot tell which account is acting, since {FORBIDDEN}"
+
+
+def _unresolved(sw: Any) -> Any:
+    """The identity `resolve_invoker_identity` gives when `gh api user` refuses."""
+    return sw.Identity(github_login=None, email=None, unresolved_cause=FORBIDDEN)
+
+
+def test_an_issue_assigned_to_another_account_points_at_handoff(run_main, capsys) -> None:
+    issue = _task(["type:bug", "state:backlog"], assignees=[{"login": "alice"}])
+    rc, mutations = run_main(issue)
+    assert rc == 2
+    assert mutations == []
+    assert (
+        "error: issue #42 is assigned to @alice. Use `handoff-issue 42` to take ownership."
+    ) in capsys.readouterr().err
+
+
+def test_an_assignee_is_not_named_another_account_where_pkit_cannot_tell(
+    run_main, sw, capsys
+) -> None:
+    issue = _task(["type:bug", "state:backlog"], assignees=[{"login": "alice"}])
+    rc, mutations = run_main(issue, invoker=_unresolved(sw))
+    assert rc == 2
+    assert mutations == []
+    err = capsys.readouterr().err
+    assert (
+        f"error: issue #42 is assigned to @alice, and {CANNOT_TELL}, so whether that is "
+        "another account cannot be told. Nothing was written."
+    ) in err
+    assert "handoff-issue" not in err
+
+
+def test_a_task_left_with_no_assignee_says_so_and_why(run_main, sw, capsys) -> None:
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), invoker=_unresolved(sw))
+    assert rc == 0
+    assert mutations == [("branch", "fix/42-do-the-thing"), ("move", "in-progress")]
+    captured = capsys.readouterr()
+    assert f"  assignee:  none: {CANNOT_TELL}\n" in captured.out
+    assert f"[warn] start-work #42 is left with no assignee: {CANNOT_TELL}.\n" in captured.err
+
+
+def test_a_dry_run_where_pkit_cannot_tell_plans_no_assignee(run_main, sw, capsys) -> None:
+    issue = _task(["type:bug", "state:backlog"])
+    rc, mutations = run_main(issue, invoker=_unresolved(sw), dry_run=True)
+    assert rc == 0
+    assert mutations == []
+    out = capsys.readouterr().out
+    assert f"  assignee:  none: {CANNOT_TELL}\n" in out
+    assert "(dry-run: would create branch off main, and call move-issue --to in-progress.)" in out
+
+
+def test_a_clone_with_an_instance_id_says_why_it_claims_nothing(run_main, sw, capsys) -> None:
+    github = FakeGitHub()
+    github.add(42)
+    issue = _task(["type:bug", "state:backlog"])
+    rc, mutations = run_main(issue, invoker=_unresolved(sw), instance=2, github=github)
+    assert rc == 0
+    assert mutations == [("branch", "fix/42-do-the-thing"), ("move", "in-progress")]
+    out = capsys.readouterr().out
+    assert f"  ownership: not claimed: {CANNOT_TELL}\n" in out
+    assert f"[note] ownership: #42 is not claimed: {CANNOT_TELL}.\n" in out
 
 
 # ---- the early check reads the issue's own fields (#1242) --------------
@@ -760,7 +837,7 @@ def test_the_composed_move_finds_the_bypass_posted(run_main, sw, monkeypatch, ca
     at_move = {**_task(["type:bug", "state:in-progress"]), "body": "## What\nx"}
     move = MoveIssueInProcess(monkeypatch, at_move)
     # The child runs as the same person as start-work, as a real child does.
-    me = SimpleNamespace(github_login="me")
+    me = SimpleNamespace(github_login="me", unresolved_cause=None)
     monkeypatch.setattr(move.module, "resolve_invoker_identity", lambda config=None: me)
     rc, _mutations = run_main(
         _task(["type:bug", "state:backlog"]),

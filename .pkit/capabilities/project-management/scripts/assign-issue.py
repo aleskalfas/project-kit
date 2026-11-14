@@ -48,6 +48,7 @@ from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
+    format_unresolved,
     resolve_capability_root,
     resolve_invoker_identity,
 )
@@ -152,8 +153,8 @@ def main() -> int:
     if args.me:
         if not invoker.github_login:
             print(
-                "error: --me requested but the invoker's github_login could "
-                "not be resolved (gh auth not configured?).",
+                "error: --me names the account acting, and "
+                f"{format_unresolved(invoker.unresolved_cause)}.",
                 file=sys.stderr,
             )
             return 2

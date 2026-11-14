@@ -88,6 +88,7 @@ from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
+    format_unresolved,
     members_path,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -152,6 +153,7 @@ def main() -> int:
         role=args.role,
         agent=agent,
         login=invoker.github_login,
+        login_cause=invoker.unresolved_cause,
         gh=state_issues.runner(config),
         dry_run=args.dry_run,
     )
@@ -181,6 +183,7 @@ def take_seat(
     agent: str,
     login: str | None,
     gh: state_issues.Gh,
+    login_cause: str | None = None,
     dry_run: bool = False,
     run: Callable[..., Any] = subprocess.run,
     git: topology.Git | None = None,
@@ -188,11 +191,12 @@ def take_seat(
 ) -> int:
     """Take the seat ``name``, or the first free one of ``role``, for this clone.
 
-    ``gh`` runs each call of the state-issue seam, ``run`` the backbone's
-    reading of the default branch, and ``git`` the reads at its commit. Returns
-    the exit code."""
+    ``login`` is the account acting, and ``login_cause`` why it could not be
+    resolved, where it could not (#3162). ``gh`` runs each call of the
+    state-issue seam, ``run`` the backbone's reading of the default branch, and
+    ``git`` the reads at its commit. Returns the exit code."""
     if not login:
-        return _refuse("this clone's GitHub account could not be resolved, so no seat is taken.")
+        return _refuse(f"{format_unresolved(login_cause)}, so no seat is taken.")
     key = instance_identity.read_clone_key(capability_root)
     try:
         snap = topology.snapshot(

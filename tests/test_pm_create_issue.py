@@ -579,6 +579,26 @@ def test_filing_a_clean_title_raises_no_title_finding(ci, tmp_path, monkeypatch,
     assert "title." not in capsys.readouterr().err
 
 
+def test_no_default_assignee_says_why_pkit_cannot_tell_the_account(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """Under an account `gh api user` refuses, the default assignee, the account
+    acting, cannot be told: the refusal says so, and why (#3162)."""
+    from _lib.membership import Identity
+
+    forbidden = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+    unresolved = Identity(github_login=None, email=None, unresolved_cause=forbidden)
+    monkeypatch.setattr(ci, "resolve_invoker_identity", lambda **_k: unresolved)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE)
+
+    assert rc == 2
+    assert not _issue_created(calls)
+    assert (
+        "error: could not resolve the default assignee: pkit cannot tell which account is "
+        f"acting, since {forbidden}. Pass --assignee explicitly."
+    ) in capsys.readouterr().err
+
+
 # --- parent-requiredness gate under hierarchy mode (DEC-036 D4, #272) -----
 
 

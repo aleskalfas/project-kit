@@ -25,9 +25,9 @@ capability writes no Status for it, so the command refuses too, saying so
 
 What it does:
 
-  * reads every card on the board with its Status, and every open issue of
-    this repository, through the capability's one read of its issues (state
-    issues are left out, DEC-058 point 3);
+  * reads every card on the board with its Status, an archived card included,
+    and every open issue of this repository, through the capability's one read
+    of its issues (state issues are left out, DEC-058 point 3);
   * reads each issue's state as `_lib/lifecycle_inference` does: closed is
     Done; else its state label, its milestone (Backlog) or neither (Todo);
   * names each card whose Status differs, the issue's state winning, and each
@@ -173,7 +173,7 @@ def main() -> int:
     read = status.field()
     if read.field is None:
         print(f"error: the board's Status could not be read: {read.error}", file=sys.stderr)
-        return 2 if read.answered else 3
+        return 2 if read.named else 3
     for name in board_status.missing_options(read.field, workflow):
         print(
             f"[warn] the board's Status field has no option for {name}: add it to the field "

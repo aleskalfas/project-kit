@@ -513,7 +513,9 @@ def _allow_member(module, monkeypatch) -> None:
     monkeypatch.setattr(
         module,
         "resolve_invoker_identity",
-        lambda config=None: SimpleNamespace(github_login="octocat", email="o@e.com"),
+        lambda config=None: SimpleNamespace(
+            github_login="octocat", email="o@e.com", unresolved_cause=None
+        ),
     )
     monkeypatch.setattr(
         module,
