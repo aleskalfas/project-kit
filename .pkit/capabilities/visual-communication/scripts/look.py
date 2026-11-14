@@ -273,10 +273,13 @@ def _dropped(each: Mapping[str, Any]) -> str:
     """What the report says of a text or a span its page does not show in full, in words for
     its cause, with the share of its ink the cause loses where it gives one (DEC-037 point
     2)."""
+    span, text, why = f"a span of the text `{each['element']}`", each["text"], each["why"]
     if "whole" in each:
         what = "text" if each["whole"] else "part of the text"
-        return f"the tool drew nothing of the {what} `{each['element']}`: {each['text']!r}"
-    span, text, why = f"a span of the text `{each['element']}`", each["text"], each["why"]
+        subject = f"the {what} `{each['element']}`"
+        if why == viewing.viewing_browser.OFF_THE_PAGE:
+            return f"{subject} lies off its page: {text!r}"
+        return f"the tool drew nothing of {subject}: {text!r}"
     if why == viewing.viewing_browser.CUT:
         return (
             f"{span} is cut by its page's edge, past which {_share(each)} of its ink lies: {text!r}"

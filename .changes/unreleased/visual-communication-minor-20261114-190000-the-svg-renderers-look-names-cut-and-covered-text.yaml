@@ -7,7 +7,12 @@ body: >
   page does not show in full, as it does through a browser (DEC-045, #3111):
   one entry for each cause in `why`, `cut` past its page's edge or `covered`
   by a part drawn after it, each with the `share` of the span's strong ink it
-  loses. A loss under 0.01 of the span's em squared, in image pixels, names
-  none. The report no longer holds `dropped-not-read`, and the command no
-  longer says that cover and cut were not read. A look may now name a text
-  that a part covers, or the page's edge cuts, where it named none before.
+  loses. A loss under 0.0125 of the span's em squared, in image pixels, and
+  never a single pixel, names none. Each text or run the tool drew nothing of
+  now carries a `why` too, `no ink` or `off the page`, beside its `whole`. The
+  report no longer holds `dropped-not-read`, which no release holds yet, and
+  the command no longer says that cover and cut were not read. A look names
+  a text that a part covers, or the page's edge cuts, where it named none
+  before, and takes about two and a half times as long. A page whose group
+  carries a clip, a mask, an opacity or a transform other than a move fails
+  the look, naming the group.

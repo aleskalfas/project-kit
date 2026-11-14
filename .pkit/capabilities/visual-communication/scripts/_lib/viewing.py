@@ -658,7 +658,13 @@ class _Made:
                 scene, language, key, number, each.image, each.width, each.height, band, narrow
             )
         self.dropped.extend(
-            {**at, "element": each.element, "text": each.text, "whole": each.whole}
+            {
+                **at,
+                "element": each.element,
+                "text": each.text,
+                "why": each.why,
+                "whole": each.whole,
+            }
             for each in image.dropped
         )
         self.dropped.extend(

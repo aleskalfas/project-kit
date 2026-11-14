@@ -25,8 +25,16 @@ step works today, not what the step is, so nothing else of the step reads an SVG
   sets it, the line's other spans unpainted, so nothing moves, on a band of the page around
   its baseline. A span whose band comes back as the same band empty left no ink. That
   holds whatever the cause: a font the tool could not match, no paint, a colour with no
-  opacity, a line off the page. Over the page's other elements it asks nothing: a text
-  under a later box, or in the colour of what lies beneath it, was drawn.
+  opacity. A span with no strong ink on the page, all of it past an edge, is off the page,
+  and any other is dropped for no ink, one cause to an entry (DEC-045 point 2). Over the
+  page's other elements this draw asks nothing: a text in the colour of what lies beneath it
+  was drawn.
+- **What the page shows of a span.** Each span that drew ink is drawn alone, its letters
+  opaque black, on a band with room past the page, and read for strong ink: what lies past
+  the page's edge is cut. The page is then drawn whole twice, the span's letters black and
+  then white, cropped to the span's ink: what the two draws show alike is covered. A cause
+  that hides under the sliver names nothing (DEC-045 point 1). The reads follow a group's
+  move alone, so a page whose group does more fails (`_move_of`).
 - **Regions.** The caller hands it the bands of a page too tall for one image, each a top
   and a height in the page's px, and it draws each as an image as wide as the page, at the
   one scale the caller gives (DEC-022 point 7). Handed none, it draws the page whole. What
@@ -45,7 +53,7 @@ import re
 import struct
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -53,7 +61,7 @@ import resvg_py
 from fontTools.ttLib import TTFont
 
 from _lib import png
-from _lib.viewing_browser import COVERED, CUT, SLIVER
+from _lib.viewing_browser import COVERED, CUT, NO_INK, OFF_THE_PAGE
 
 #: The tool and what it reaches the capability through, as a report names them.
 TOOL = {"name": "resvg", "version": resvg_py.__resvg_version__, "wheel": resvg_py.__version__}
@@ -89,6 +97,21 @@ STRONG = 127
 #: The attributes that make a span's letters less than opaque.
 OPACITIES = ("opacity", "fill-opacity")
 
+#: The least a cut or a cover must lose of a span's strong ink to be named, in the span's em²,
+#: both in image pixels (DEC-045 point 1). It is not DEC-037's number, which resvg's drawing
+#: does not meet: a graze of a box's edge hides whole device rows here, and a háček at the
+#: command's text floor loses one to three pixels.
+SLIVER = 0.0125
+
+#: The least a cause must hide to be named, whatever the em, in pixels: more than one. On a page
+#: too wide for its smallest text to read, the sliver comes under one pixel, and a single pixel
+#: is noise.
+FEWEST = 1.5
+
+#: A group's attributes that leave a text where its moves put it: the renderer's own marks,
+#: and its move (DEC-045 point 1).
+GROUP_MARKS = "data-"
+
 #: A CSS string as the canvas (`canvas.py`) writes one.
 CSS_STRING = r'"(?:[^"\\]|\\.)*"'
 
@@ -116,12 +139,14 @@ class ToolFailed(Exception):
 
 @dataclass(frozen=True)
 class Dropped:
-    """What the tool drew nothing of in one text: its trace id, the characters, and whether
-    they are the whole text or one span of it, the part of a run on one line."""
+    """What the tool drew nothing of in one text: its trace id, the characters, whether
+    they are the whole text or one span of it, the part of a run on one line, and why:
+    `NO_INK` or `OFF_THE_PAGE` (DEC-045 point 2)."""
 
     element: str
     text: str
     whole: bool
+    why: str
 
 
 @dataclass(frozen=True)
@@ -133,6 +158,25 @@ class Lost:
     text: str
     why: str
     share: float
+
+
+@dataclass(frozen=True)
+class _Strong:
+    """A span's strong ink on its band: how many pixels of it, how many lie past the page's
+    edge, where on the page those on it lie (a row of the band and a column of the page), the
+    page's width in columns, the band's place and rows, its pixels' samples, whether the ink
+    comes near the band's sides, and the span's em in image pixels."""
+
+    found: int
+    past: int
+    on_page: list[tuple[int, int]]
+    columns: int
+    top: float
+    reach: float
+    rows: int
+    step: int
+    spills: bool = False
+    em: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -286,36 +330,61 @@ class _Page:
         lost: list[Lost] = []
         for text, x, y in self._texts(self.root, 0.0, 0.0):
             element = text.get("data-id", "")
-            nothing: list[str] = []
+            nothing: list[tuple[str, str]] = []
             shown = False
             lines = text.findall(SPAN)
             for line in lines:
                 for index, span in enumerate(line):
-                    if (span.text or "").strip():
-                        if self._drew(text, line, index, (x, y), scale):
-                            shown = True
-                            lost.extend(self._partly(text, line, index, (x, y), scale, element))
-                        else:
-                            nothing.append(span.text or "")
-            if nothing and not shown:
+                    if not (span.text or "").strip():
+                        continue
+                    strong = self._strong(text, line, index, (x, y), scale)
+                    if strong.found and not strong.on_page:
+                        nothing.append((span.text or "", OFF_THE_PAGE))
+                    elif not self._drew(text, line, index, (x, y), scale):
+                        nothing.append((span.text or "", NO_INK))
+                    else:
+                        shown = True
+                        lost.extend(self._partly(span, strong, element))
+            if nothing and not shown and len({why for _, why in nothing}) == 1:
                 whole = " ".join("".join(each.itertext()) for each in lines)
-                dropped.append(Dropped(element, whole, True))
+                dropped.append(Dropped(element, whole, True, nothing[0][1]))
             else:
-                dropped.extend(Dropped(element, part, False) for part in nothing)
+                dropped.extend(Dropped(element, part, False, why) for part, why in nothing)
         return dropped, lost
 
     def _texts(
         self, node: ET.Element, x: float, y: float
     ) -> Iterator[tuple[ET.Element, float, float]]:
         """Each text under `node`, with where it stands in the page: the sum of its groups'
-        moves."""
+        moves. A group that does more than move its texts and name itself raises ToolFailed:
+        the reads of cover and cut draw a text alone at its place, so a clip, a mask, an
+        opacity or another transform on a group would read as a cover (DEC-045 point 1)."""
         for child in node:
             if child.tag == TEXT:
                 yield child, x, y
             elif child.tag == GROUP:
-                moved = MOVE.fullmatch(child.get("transform", ""))
-                dx, dy = (float(moved[1]), float(moved[2])) if moved else (0.0, 0.0)
+                dx, dy = self._move_of(child)
                 yield from self._texts(child, x + dx, y + dy)
+
+    def _move_of(self, group: ET.Element) -> tuple[float, float]:
+        """How far `group` moves what it holds. Raises ToolFailed for a group that does
+        anything else to it."""
+        for name in group.attrib:
+            if name != "transform" and not name.startswith(GROUP_MARKS):
+                raise ToolFailed(
+                    f"the group `{group.get('data-id', '')}` carries `{name}`, which the read of "
+                    f"cover and cut does not follow: it follows a group's move alone"
+                )
+        if "transform" not in group.attrib:
+            return 0.0, 0.0
+        moved = MOVE.fullmatch(group.attrib["transform"])
+        if moved is None:
+            raise ToolFailed(
+                f"the group `{group.get('data-id', '')}` carries the transform "
+                f"`{group.attrib['transform']}`, which the read of cover and cut does not "
+                f"follow: it follows a move alone"
+            )
+        return float(moved[1]), float(moved[2])
 
     def _drew(
         self,
@@ -325,8 +394,9 @@ class _Page:
         at: tuple[float, float],
         scale: float,
     ) -> bool:
-        """Whether span `index` of `line` leaves any ink: drawn alone, its line kept whole
-        and every other span unpainted, on the band of the page around the line."""
+        """Whether span `index` of `line` leaves any ink on the page in its own paint: drawn
+        alone, its line kept whole and every other span unpainted, on the band of the page
+        around the line."""
         sizes = [float(each.get("font-size", "0")) for each in (text, *line)]
         reach = BAND * max(sizes)
         baseline = at[1] + float(line.get("y", "0"))
@@ -352,32 +422,60 @@ class _Page:
         alone.append(drawn)
         return self._tool(ET.tostring(band, encoding="unicode")) != self._blank(size)
 
-    def _partly(
+    def _strong(
         self,
         text: ET.Element,
         line: ET.Element,
         index: int,
         at: tuple[float, float],
         scale: float,
-        element: str,
-    ) -> Iterator[Lost]:
-        """Each cause, `CUT` then `COVERED`, that hides at least the sliver of span `index`'s
-        strong ink, with its share (DEC-045 point 1). The span is drawn alone on a band that
-        reaches a page's width past each side of the page, then the page whole on the same
-        band, the span's letters black and then white."""
-        span = line[index]
-        em = float(span.get("font-size") or line.get("font-size") or text.get("font-size") or 0)
-        reach = BAND * max(float(each.get("font-size", "0")) for each in (text, *line))
+    ) -> _Strong:
+        """The strong ink of span `index` of `line` (DEC-045 point 1): the span drawn alone,
+        its letters opaque black, on a band that reaches a page's width past each side of the
+        page, and two of the span's largest font sizes either way of its baseline, past the
+        page's top and foot too. The band is first drawn with room for two of the span's
+        largest font sizes past each side, and drawn again with a page's width where it shows
+        no strong ink, or the ink comes within one such size of the band's side, since the draw
+        is the more costly the wider the band."""
+        em = float(
+            line[index].get("font-size") or line.get("font-size") or text.get("font-size") or 0
+        )
+        size = max(float(each.get("font-size", "0")) for each in (text, *line))
+        columns, rows = math.ceil(self.width * scale), math.ceil(2 * BAND * size * scale)
+        if em <= 0 or rows <= 0:
+            return _Strong(0, 0, [], columns, 0.0, 0.0, 0, 0)
+        tight = min(math.ceil(BAND * size * scale), columns)
+        found = self._band(text, line, index, at, scale, tight, size)
+        if tight < columns and (found.spills or not found.found):
+            found = self._band(text, line, index, at, scale, columns, size)
+        return replace(found, em=em * scale)
+
+    def _band(
+        self,
+        text: ET.Element,
+        line: ET.Element,
+        index: int,
+        at: tuple[float, float],
+        scale: float,
+        lead: int,
+        size: float,
+    ) -> _Strong:
+        """The strong ink of the span on a band with `lead` pixels of room past each side of
+        the page."""
+        reach = BAND * size
         top = at[1] + float(line.get("y", "0")) - reach
         columns, rows = math.ceil(self.width * scale), math.ceil(2 * reach * scale)
-        if em <= 0 or rows <= 0:
-            return
-        size = {"width": str(3 * columns), "height": str(rows), "preserveAspectRatio": "none"}
+        to_page = self.width / columns
         band = ET.Element(
             f"{{{SVG_NAMESPACE}}}svg",
             {
-                **size,
-                "viewBox": f"{-at[0] - self.width} {top - at[1]} {3 * self.width} {2 * reach}",
+                "width": str(columns + 2 * lead),
+                "height": str(rows),
+                "preserveAspectRatio": "none",
+                "viewBox": (
+                    f"{-at[0] - lead * to_page} {top - at[1]} "
+                    f"{(columns + 2 * lead) * to_page} {2 * reach}"
+                ),
             },
         )
         attributes = {name: value for name, value in text.attrib.items() if name not in OPACITIES}
@@ -391,8 +489,10 @@ class _Page:
         picture = png.read(self._tool(ET.tostring(band, encoding="unicode"), background=GROUND))
         samples = png.samples(picture)
         step = picture.channels
+        near = math.ceil(size * scale)
         found = past = 0
-        on_page: list[int] = []
+        spills = False
+        on_page: list[tuple[int, int]] = []
         for row in range(rows):
             y = top + (row + 0.5) * 2 * reach / rows
             outside = not 0 <= y < self.height
@@ -405,22 +505,45 @@ class _Page:
                 if min(stretch[at_pixel : at_pixel + 3]) > STRONG:
                     continue
                 found += 1
-                if outside or not columns <= column < 2 * columns:
+                spills = spills or column < near or column >= picture.width - near
+                if outside or not lead <= column < lead + columns:
                     past += 1
                 else:
-                    on_page.append(start + at_pixel)
-        if not found:
+                    on_page.append((row, column - lead))
+        return _Strong(found, past, on_page, columns, top, reach, rows, step, spills)
+
+    def _partly(self, span: ET.Element, strong: _Strong, element: str) -> Iterator[Lost]:
+        """Each cause, `CUT` then `COVERED`, that hides at least the sliver of `span`'s
+        strong ink, with its share (DEC-045 point 1). The page is drawn whole on the same
+        band, the span's letters black and then white."""
+        if not strong.found:
             return
-        least = SLIVER * (em * scale) ** 2
-        if past >= least:
-            yield Lost(element, span.text or "", CUT, past / found)
-        if len(on_page) < least:
+        least = max(SLIVER * strong.em**2, FEWEST)
+        if strong.past >= least:
+            yield Lost(element, span.text or "", CUT, strong.past / strong.found)
+        if len(strong.on_page) < least:
             return
-        view = {**size, "viewBox": f"{-self.width} {top} {3 * self.width} {2 * reach}"}
+        rows, columns = zip(*strong.on_page, strict=True)
+        top, left = min(rows), min(columns)
+        height, width = max(rows) - top + 1, max(columns) - left + 1
+        to_page = self.width / strong.columns
+        to_band = 2 * strong.reach / strong.rows
+        view = {
+            "width": str(width),
+            "height": str(height),
+            "preserveAspectRatio": "none",
+            "viewBox": (
+                f"{left * to_page} {strong.top + top * to_band} "
+                f"{width * to_page} {height * to_band}"
+            ),
+        }
         shown, unshown = (self._with_ink(span, ink, view) for ink in INKS)
-        hidden = sum(1 for each in on_page if shown[each : each + 3] == unshown[each : each + 3])
+        hidden = 0
+        for row, column in strong.on_page:
+            each = ((row - top) * width + column - left) * strong.step
+            hidden += shown[each : each + 3] == unshown[each : each + 3]
         if hidden >= least:
-            yield Lost(element, span.text or "", COVERED, hidden / found)
+            yield Lost(element, span.text or "", COVERED, hidden / strong.found)
 
     def _with_ink(self, span: ET.Element, ink: str, view: Mapping[str, str]) -> bytes:
         """The samples of the page drawn whole as `view` gives it, `span`'s letters in `ink`

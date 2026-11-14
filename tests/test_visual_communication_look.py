@@ -21,7 +21,7 @@ import struct
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -198,9 +198,40 @@ def tool(tmp_path: Path, *children: dict[str, Any], long_edge: int = 800, **size
     """The page of `children` drawn whole, at the scale that sets its long edge `long_edge`
     pixels long."""
     [page] = viewing.pages_of(scene(*children, **sizes))
-    drawn = drawn_page(*children, **sizes)
     edge = max(float(page["width"]), float(page["height"])) or 1.0
-    return viewing_tool.draw(drawn, long_edge / edge, tmp_path, viewing.line_widths(page))
+    return tool_at(tmp_path, long_edge / edge, *children, **sizes)
+
+
+def tool_at(tmp_path: Path, scale: float, *children: dict[str, Any], **sizes: Any) -> Any:
+    """The page of `children` drawn whole, at `scale` image pixels to a px."""
+    [page] = viewing.pages_of(scene(*children, **sizes))
+    drawn = drawn_page(*children, **sizes)
+    return viewing_tool.draw(drawn, scale, tmp_path, viewing.line_widths(page))
+
+
+def set_at(
+    tmp_path: Path,
+    words: str,
+    em: float,
+    scale: float,
+    over: Callable[[float, float], dict[str, Any]] | None = None,
+) -> list[tuple[str, float]]:
+    """What the page shows of `words` set `em` image pixels high at `scale`, as the cause and
+    the share of its strong ink each loses. `over` gives the box drawn after the text, from
+    where the text's baseline lies and its font size in px, as the box's fields."""
+    size = em / scale
+    baseline = max(46.0, 0.85 * size)  # the line's baseline lies 16 px below its text's top
+    said = text_element(
+        "figure/said",
+        run(words, fill="ink", **{"font-size": size}),
+        y=baseline - 16,
+        width=11 * size,
+    )
+    children = [said]
+    if over is not None:
+        children.append(element("box", "figure/over", fill="surface", **over(baseline, size)))
+    drawing = tool_at(tmp_path, scale, *children, width=12 * size, height=baseline + 0.6 * size)
+    return [(each.why, each.share) for each in drawing.lost]
 
 
 def dropped_of(
@@ -610,6 +641,177 @@ def test_a_line_that_lies_off_the_page_drew_nothing(tmp_path: Path) -> None:
     assert dropped_of(tmp_path, said) == [("figure/said", "Below it", True)]
 
 
+# --- why the tool dropped a text (DEC-045 point 2) ---------------------------------------------
+
+
+def whys_of(tmp_path: Path, *children: dict[str, Any], **sizes: Any) -> list[str]:
+    return [each.why for each in tool(tmp_path, *children, **sizes).dropped]
+
+
+def test_a_text_with_no_ink_in_its_paint_is_dropped_for_no_ink(tmp_path: Path) -> None:
+    gone = text_element("figure/gone", run("Lost", fill="no-such-role"))
+    assert whys_of(tmp_path, gone) == [viewing_tool.NO_INK]
+
+
+def test_a_text_wholly_below_its_page_is_dropped_off_the_page_and_never_for_no_ink(
+    tmp_path: Path,
+) -> None:
+    said = text_element("figure/said", run("Below it", fill="ink"), y=500)
+    assert whys_of(tmp_path, said) == [viewing_tool.OFF_THE_PAGE]
+    assert tool(tmp_path, said).lost == ()
+
+
+def test_a_text_wholly_past_a_side_is_dropped_off_the_page_alone(tmp_path: Path) -> None:
+    said = text_element("figure/said", run("Beyond", fill="ink"), x=260, y=30)
+    drawing = tool(tmp_path, said, width=200, height=100)
+    assert [(each.element, each.why) for each in drawing.dropped] == [
+        ("figure/said", viewing_tool.OFF_THE_PAGE)
+    ]
+    assert drawing.lost == ()
+
+
+def test_a_text_past_a_side_all_but_a_little_is_cut_and_not_dropped(tmp_path: Path) -> None:
+    said = text_element("figure/said", run("Beyond", fill="ink"), x=198, y=30)
+    drawing = tool(tmp_path, said, width=200, height=100)
+    assert drawing.dropped == ()
+    [(why, share)] = [(each.why, each.share) for each in drawing.lost]
+    assert why == viewing_tool.CUT
+    assert 0.9 < share < 1
+
+
+def test_a_text_wholly_under_a_later_box_is_covered_with_all_its_ink_and_never_dropped(
+    tmp_path: Path,
+) -> None:
+    said = text_element("figure/said", run("Under it", fill="ink"), y=30)
+    over = element("box", "figure/over", x=0, y=0, width=200, height=100, fill="surface")
+    drawing = tool(tmp_path, said, over)
+    assert drawing.dropped == ()
+    assert [(each.why, round(each.share, 2)) for each in drawing.lost] == [
+        (viewing_tool.COVERED, 1.0)
+    ]
+
+
+def test_a_text_whose_runs_left_for_two_causes_is_dropped_run_by_run(tmp_path: Path) -> None:
+    first = run("One ", fill="no-such-role")
+    second = run("two", fill="ink")
+    said = text_element("figure/said", first, second, x=190, y=30)
+    drawing = tool(tmp_path, said, width=200, height=100)
+    assert [(each.text, each.whole, each.why) for each in drawing.dropped] == [
+        ("One ", False, viewing_tool.NO_INK),
+        ("two", False, viewing_tool.OFF_THE_PAGE),
+    ]
+
+
+# --- what stands round a text (DEC-045 point 1) ------------------------------------------------
+
+
+def test_a_group_that_clips_what_it_holds_fails_the_read_naming_it(tmp_path: Path) -> None:
+    said = text_element("figure/group/said", run("Say it", fill="ink"), x=0, y=0)
+    inner = element("group", "figure/group", x=20, y=30, width=50, height=30, children=[said])
+    page = drawn_page(inner).replace(
+        '<g data-id="figure/group"', '<g clip-path="url(#c)" data-id="figure/group"'
+    )
+    assert "clip-path" in page
+    with pytest.raises(viewing_tool.ToolFailed, match=r"figure/group.*clip-path"):
+        viewing_tool.draw(page, 2.0, tmp_path, {})
+
+
+def test_a_group_that_turns_what_it_holds_fails_the_read_naming_it(tmp_path: Path) -> None:
+    said = text_element("figure/group/said", run("Say it", fill="ink"), x=0, y=0)
+    inner = element("group", "figure/group", x=20, y=30, width=50, height=30, children=[said])
+    page = drawn_page(inner).replace("translate(20,30)", "rotate(10)")
+    assert "rotate(10)" in page
+    with pytest.raises(viewing_tool.ToolFailed, match=r"figure/group.*rotate"):
+        viewing_tool.draw(page, 2.0, tmp_path, {})
+
+
+def test_the_groups_the_renderer_writes_hold_a_move_and_marks_alone(tmp_path: Path) -> None:
+    """The reads follow a group's move alone (DEC-045 point 1), so this fails if the renderer
+    comes to write anything else round a text."""
+    said = text_element("figure/group/said", run("Say it", fill="ink"), x=0, y=0)
+    inner = element("group", "figure/group", x=20, y=30, width=50, height=30, children=[said])
+    outer = element("group", "figure/outer", x=5, y=60, width=50, height=30, children=[inner])
+    root = ET.fromstring(drawn_page(outer, width=200, height=400))
+    groups = [each for each in root.iter() if each.tag == viewing_tool.GROUP]
+    assert len(groups) == 3
+    assert {name for each in groups for name in each.attrib} <= {
+        "data-id",
+        "data-component",
+        "data-version",
+        "transform",
+    }
+    texts = [each for each in root.iter() if each.tag == viewing_tool.TEXT]
+    assert {name for each in texts for name in each.attrib}.isdisjoint(
+        {"transform", "clip-path", "mask", "opacity", "filter"}
+    )
+
+
+# --- what a graze and a háček lose (DEC-045 point 1) -------------------------------------------
+
+FLOOR = 10
+CONTROL = 40
+SCALES = (0.5, 1.0, 1.225, 2.0)
+
+
+@pytest.mark.parametrize("scale", SCALES)
+def test_a_háček_under_a_box_at_the_text_floor_is_named_at_each_scale(
+    tmp_path: Path, scale: float
+) -> None:
+    """The háček of a ž set at the floor of 10 device pixels, a later box over it alone."""
+    found = set_at(
+        tmp_path,
+        "ž",
+        FLOOR,
+        scale,
+        over=lambda base, size: {
+            "x": 0,
+            "y": 0,
+            "width": 12 * size,
+            "height": base - 0.56 * size,
+        },
+    )
+    assert [why for why, _ in found] == [viewing_tool.COVERED]
+
+
+@pytest.mark.parametrize("scale", SCALES)
+def test_a_box_edge_grazing_the_descenders_foot_of_the_control_is_named_at_no_scale(
+    tmp_path: Path, scale: float, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The control is a text of descenders set at 40 device pixels, a later box whose top
+    edge steps by a quarter of a device pixel across their foot. resvg hides whole rows, so
+    the box hides the last row, then more: the last row is a graze and stays unnamed, and the
+    row above it is named."""
+
+    def edge(step: int) -> Callable[[float, float], dict[str, Any]]:
+        return lambda base, size: {
+            "x": 0,
+            "y": base + 0.2 * size + step / 4 / scale,
+            "width": 12 * size,
+            "height": 0.5 * size + 10,
+        }
+
+    steps = range(-12, 13)
+    with monkeypatch.context() as unbound:
+        unbound.setattr(viewing_tool, "SLIVER", 0.0)
+        unbound.setattr(viewing_tool, "FEWEST", 0.0)
+        hides = {
+            step: sum(
+                share
+                for why, share in set_at(tmp_path, "Typography gypsy", CONTROL, scale, edge(step))
+                if why == viewing_tool.COVERED
+            )
+            for step in steps
+        }
+    levels = sorted({hidden for hidden in hides.values() if hidden})
+    graze, more = levels[0], levels[1]
+    for step in steps:
+        named = [why for why, _ in set_at(tmp_path, "Typography gypsy", CONTROL, scale, edge(step))]
+        if hides[step] == graze:
+            assert named == [], step
+        if hides[step] == more:
+            assert named == [viewing_tool.COVERED], step
+
+
 # --- what a run draws (DEC-015 point 5) ---------------------------------------------------------
 
 
@@ -914,7 +1116,13 @@ def test_a_real_text_with_no_colour_is_a_loss_and_a_text_dropped_both_named(tmp_
     report = report_of(root, "tags")
     place = {"language": "en", "key": "default", "page": "figure"}
     assert report["dropped"] == [
-        {**place, "element": "figure/body/label", "text": "Ready", "whole": True}
+        {
+            **place,
+            "element": "figure/body/label",
+            "text": "Ready",
+            "why": viewing_tool.NO_INK,
+            "whole": True,
+        }
     ]
     assert report["losses"] == [
         {
