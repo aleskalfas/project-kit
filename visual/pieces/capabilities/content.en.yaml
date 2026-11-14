@@ -1,0 +1,100 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+# The deck's pages: a cover and three of the talk's slides on what capabilities add, each
+# rewritten to be read alone, as a PDF or a web page. Each page's footer names the document
+# behind it by its path in the repository. The Czech file has the same ids.
+slides:
+  - id: cover
+    layout: cover
+    title: What pkit's capabilities add
+    subtitle: "project-kit: the optional parts you choose, and what two of them bring to a project"
+    author: Aleš Kalfas
+    link: github.com/aleskalfas/project-kit
+
+  - id: why
+    layout: slide
+    title: Why some parts of pkit are capabilities
+    lead: Core pkit holds what every project needs, so no project carries what it does not use. The rest comes as capabilities you choose.
+    visual:
+      use: starter/table
+      inset: none
+      rows:
+        - id: heads
+          cells:
+            - {id: layer}
+            - {id: core, head: "Core pkit: in every project", text: ".pkit/"}
+            - {id: capability, head: "A capability: one folder you install", text: ".pkit/capabilities/<name>/"}
+        - id: decisions
+          cells:
+            - {id: layer, head: Decisions}
+            - {id: core, text: decisions/}
+            - {id: capability, text: decisions/}
+        - id: rules
+          cells:
+            - {id: layer, head: "Rules, schemas, processes"}
+            - {id: core, text: "rules/  schemas/  process/"}
+            - {id: capability, text: "rule-sets/  schemas/"}
+        - id: skills
+          cells:
+            - {id: layer, head: "Skills, agents, permissions"}
+            - {id: core, text: "skills/  agents/  permissions/"}
+            - {id: capability, text: "skills/  agents/  permissions/"}
+        - id: commands
+          cells:
+            - {id: layer, head: Commands and checks}
+            - {id: core, text: cli/}
+            - {id: capability, text: "scripts/  package.yaml"}
+    limit: "Within dependencies: software-engineering installs only after project-management."
+    footer: "Source: .pkit/decisions/core/COR-017-capability-pattern.md"
+
+  - id: pm
+    layout: slide
+    title: What project-management adds
+    lead: One agent that files the work, plans it and starts a builder for each Task. You approve the plan and each merge.
+    visual:
+      use: starter/network
+      columns: three
+      left:
+        - {id: you-plan, head: You, text: "Approve the plan once.", bar: left}
+        - {id: manager, head: project-manager, text: "Plans and files the work."}
+      middle:
+        - {id: builder-a, head: "Builder: Task A"}
+        - {id: builder-b, head: "Builder: Task B"}
+        - {id: builder-c, head: "Builder: Task C"}
+      right:
+        - {id: reviewers, head: Reviewers, text: All must approve.}
+        - {id: you-merge, head: You, text: "Say yes. It merges.", bar: left}
+      ties:
+        - {from: {item: "left[you-plan]"}, to: {item: "left[manager]"}}
+        - {from: {item: "left[manager]"}, to: {item: "middle[builder-a]"}}
+        - {from: {item: "left[manager]"}, to: {item: "middle[builder-b]"}}
+        - {from: {item: "left[manager]"}, to: {item: "middle[builder-c]"}}
+        - {from: {item: "middle[builder-a]"}, to: {item: "right[reviewers]"}}
+        - {from: {item: "middle[builder-b]"}, to: {item: "right[reviewers]"}}
+        - {from: {item: "middle[builder-c]"}, to: {item: "right[reviewers]"}}
+        - {from: {item: "right[reviewers]"}, to: {item: "right[you-merge]"}}
+    limit: It works on GitHub only; parallel builders need a topology of seats.
+    footer: "Source: .pkit/capabilities/project-management/decisions/DEC-057-purpose.md"
+
+  - id: se
+    layout: slide
+    title: What software-engineering adds
+    lead: A builder that follows your conventions, and three reviewers that check its code.
+    visual:
+      use: starter/network
+      columns: three
+      left:
+        - {id: conventions, head: Your conventions, text: "Written down once. With none, the agents use good practice."}
+      middle:
+        - {id: builder, head: software-engineer, text: "Builds the code by them."}
+      right:
+        - {id: code, head: code-reviewer, text: "Is the code correct?"}
+        - {id: security, head: security-reviewer, text: "Secrets and injection?"}
+        - {id: docs, head: docs-reviewer, text: "Do the docs still hold?"}
+      ties:
+        - {from: {item: "left[conventions]"}, to: {item: "middle[builder]"}}
+        - {from: {item: "middle[builder]"}, to: {item: "right[code]"}}
+        - {from: {item: "middle[builder]"}, to: {item: "right[security]"}}
+        - {from: {item: "middle[builder]"}, to: {item: "right[docs]"}}
+    footer: "Source: .pkit/capabilities/software-engineering/decisions/DEC-003-purpose.md"

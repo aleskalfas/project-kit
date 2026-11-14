@@ -1,0 +1,253 @@
+# The findings record of the piece (visual-communication DEC-005 point 13): what
+# computing its scenes found, keyed by a fingerprint of every file they were computed
+# from. `pkit visual render` rewrites it; commit it, so the check reads it.
+
+pkit_schema: visual-communication:findings
+schema_version: 1
+key:
+  form: 1
+  hash: sha256
+  format: 1
+  value: 40ed6c83bd0e2186ad3e47400703f8290bb1f5bfb4911a1f0dbd37adfb242c86
+  inputs:
+    - file: content.cs.yaml
+      sha256: 8e1075bec83a56d900bd0c7f0ad09a7b3f0104bfa422fe8e7cad9ce30d199c56
+    - file: content.en.yaml
+      sha256: 59f61208a906c05c00b4dd953f65b5f67f302a0ed37a1e72433215634f2ffb21
+    - file: piece.yaml
+      sha256: 560c352a9e70b17fc68e88ef0cca31f2d62e9b74961d24f4951dc138e040445b
+    - library: foundations
+      version: 1.2.0
+      path: components/deck.yaml
+      sha256: e6e21ae70cee4abd54e0122e1e161b7c6225a4bec1798ade5847cfb2fedfca57
+    - library: foundations
+      version: 1.2.0
+      path: components/figure.yaml
+      sha256: 6fe389ad65196cf8d16ee4f09231ae2719608f9487e6418bba6d803eb09dc6a4
+    - library: foundations
+      version: 1.2.0
+      path: components/site.yaml
+      sha256: 1fe15655fb6ad6f4ea37004e63c7eeb5c884118ce07dc1eee27861cdb4c5c79b
+    - library: foundations
+      version: 1.2.0
+      path: library.yaml
+      sha256: 5cc6876906d13ece00cefc7accaed17dcc5a5fac52dd88b8a71a16f666cf22ca
+    - library: foundations
+      version: 1.2.0
+      path: roles.yaml
+      sha256: d4b2b89578fe6e0da82ac82a47d565be0ce24569de76fcd301c69ff598036c72
+    - library: neutral
+      version: 1.1.0
+      path: fonts/LICENSE-Source-Code-Pro.txt
+      sha256: 1036668c56392d012c81aa1c84cd8aacea3e767c52190f789d14857b3d0a5765
+    - library: neutral
+      version: 1.1.0
+      path: fonts/LICENSE-Source-Sans-Pro.txt
+      sha256: 653aaf9819e33cf1e2b3523c5d4d6c3dae925d770cb4563030f96655321ca2e9
+    - library: neutral
+      version: 1.1.0
+      path: fonts/SourceCodePro-Regular.ttf
+      sha256: f144137f557805c7327fc4b14d1d730f6e1822e0124170251ff1bcd723a693f1
+    - library: neutral
+      version: 1.1.0
+      path: fonts/SourceSansPro-Regular.otf
+      sha256: 6b096b47206d8f78a2c49af2f2ae46b35d93b0e3cf105a9febef59144aa2eae2
+    - library: neutral
+      version: 1.1.0
+      path: fonts/SourceSansPro-Semibold.otf
+      sha256: ee3ba5c88400b22b880d85202ce82143dc5e19861bf7880b7f4c32d4263e96d5
+    - library: neutral
+      version: 1.1.0
+      path: library.yaml
+      sha256: f5d31a7f46e55253df6eb265f99a4ef71349196fa63df5f11308f643829c60c6
+    - library: neutral
+      version: 1.1.0
+      path: neutral.resolver.json
+      sha256: c525ca751d872eada9edd46e2ffee1788deeb7e00128ffc9e4cc9528e03e1cce
+    - library: neutral
+      version: 1.1.0
+      path: tokens/base.tokens.json
+      sha256: 8ece0918ad3b3e357e6f50adc0f0403ccf837601a26cced9168a982b0a63b4d5
+    - library: neutral
+      version: 1.1.0
+      path: tokens/dark.tokens.json
+      sha256: f7f8159c3aa612a3ccefab4dc1c8fcb226a3ce25f6e21d59d190805edefa3601
+    - library: neutral
+      version: 1.1.0
+      path: tokens/high-contrast.tokens.json
+      sha256: 796c538b649a5b0dbfbc90a177a1422c8dc03fc379cbac7cd5b4cb38a15b014d
+    - library: neutral
+      version: 1.1.0
+      path: tokens/palette.tokens.json
+      sha256: 1ba2d4fbdc3807df10d8c5a3beae7bc7783c4b48272eeb4fb26cf6e6f421b65e
+    - library: neutral
+      version: 1.1.0
+      path: tokens/phone.tokens.json
+      sha256: c80c9d3095df0d6eb4a20095860fa292fb94c7e611c12466e29e524ea0da068b
+    - library: neutral
+      version: 1.1.0
+      path: tokens/projector.tokens.json
+      sha256: 9efdf88b4b8d3974ae4cde70e4b277b853a3a93e881349b7c8eb5dc95c2e77ee
+    - library: neutral
+      version: 1.1.0
+      path: tokens/tablet.tokens.json
+      sha256: b364b75494770b5bf79728f4226ccad1f57c8e37306daba4336ed1726a2e5c99
+    - library: pkit
+      version: 1.0.0
+      path: library.yaml
+      sha256: 35fa0fd64c692720c8fa2e3e597fd59c0af3d28c1691e0444209195ce2b292f6
+    - library: pkit
+      version: 1.0.0
+      path: notation.yaml
+      sha256: 827cf3018d7fafc3341621d526ae410531ec2df5e4edd7969d1616a27d309665
+    - library: starter
+      version: 1.1.0
+      path: README.md
+      sha256: 2fb53cfecc1fc302a8738744cc4c848c40979f4273889f7c6616e4b97d6f21fb
+    - library: starter
+      version: 1.1.0
+      path: components/aside.yaml
+      sha256: 9afac3ed065da2f3a20ecc6d88cec592e460555712a62503102344c9a6743339
+    - library: starter
+      version: 1.1.0
+      path: components/button.yaml
+      sha256: b0ca039fcda87ce1b7bc6e5f475aa192d5c02ebd9adb7dd50461a6c6f1aef8fd
+    - library: starter
+      version: 1.1.0
+      path: components/card.yaml
+      sha256: 5e6ebf5aaa8762d7a0de4eb4eda333d005a451d2f7c11ea38cfefaa16830a9b9
+    - library: starter
+      version: 1.1.0
+      path: components/cell.yaml
+      sha256: 54b5836023e1c4ab9eb8c4da54af4d0fbb14a167a0ae29465fc4bd660b22a824
+    - library: starter
+      version: 1.1.0
+      path: components/code.yaml
+      sha256: e0ac757ab6d7ef35ebc0c0c523cf9fc260eb09c66e6a97224ecaba90ad6d973a
+    - library: starter
+      version: 1.1.0
+      path: components/connector.yaml
+      sha256: abdc1b7f912a7eff607ea48d0d3d7b89010fd91db07ad2192068e677cb4c9a5d
+    - library: starter
+      version: 1.1.0
+      path: components/field.yaml
+      sha256: f8f793968a2ad26dac7ef1001bcb712a55a5756a953dc5e19435b83207c0ec47
+    - library: starter
+      version: 1.1.0
+      path: components/form.yaml
+      sha256: 1527833e38694cc6c0ba70ab022c045432996561bbdc05689bffe90803177027
+    - library: starter
+      version: 1.1.0
+      path: components/group.yaml
+      sha256: fb69bbb14c6c4f102a4a476d379e4fae332d4ac5dda478e4f895aa608064a736
+    - library: starter
+      version: 1.1.0
+      path: components/groups.yaml
+      sha256: 37debaaaaf13cdcbc1f298bbdd4062adf92f586c6a996a0397d6be96da99aa36
+    - library: starter
+      version: 1.1.0
+      path: components/header.yaml
+      sha256: 52d3e5738ee391eb095cd483168c6c4b21cca4259c7feb1939462a80c7acf085
+    - library: starter
+      version: 1.1.0
+      path: components/layers.yaml
+      sha256: 4c6fb8dbfce7148faaecbe18ba69609682d4cb73d6ca802dfbcd9f8036d3edc3
+    - library: starter
+      version: 1.1.0
+      path: components/legend.yaml
+      sha256: 04a839254a5548115b1a7ee69f3184b7c4e434ffe7650c5584ddcc26f1c6307d
+    - library: starter
+      version: 1.1.0
+      path: components/level.yaml
+      sha256: d37170a88b1a29821b426b6bd54b8accc6f7f90f2d721d35a89cb234a4dab20e
+    - library: starter
+      version: 1.1.0
+      path: components/link.yaml
+      sha256: bb5a52162987ea7af9ae4ffbdd1dd0a2900bbe753e4fbb3aefd2d63c95998e79
+    - library: starter
+      version: 1.1.0
+      path: components/list.yaml
+      sha256: edde107e8f1600bdea6dccab77ec2e0e20f4da1e746441319b2fd46c3cdb91f7
+    - library: starter
+      version: 1.1.0
+      path: components/navigation.yaml
+      sha256: a4631213b1569855d284b2e8e9628754530139f3cebd961cf3cd068c56dea454
+    - library: starter
+      version: 1.1.0
+      path: components/network.yaml
+      sha256: 574d764434208251df9d59f6a0bb1215722603debb0c7f21c222ab4ba0db47f0
+    - library: starter
+      version: 1.1.0
+      path: components/panels.yaml
+      sha256: e69eacf30582338572ac3329e1c9bf433f479960982f85380a8821e5ebc6e35a
+    - library: starter
+      version: 1.1.0
+      path: components/row.yaml
+      sha256: 5a6256d45d86913f296f325c260de04adff1f75af4a37f30c8b4b41281a857ef
+    - library: starter
+      version: 1.1.0
+      path: components/section.yaml
+      sha256: 653d0f6cadf02fb120175f22c8bcd5a94e8e57d08740f17855870ddb5feee1dc
+    - library: starter
+      version: 1.1.0
+      path: components/sections.yaml
+      sha256: e170684f6819f0ea993065a127ca9784274ae51dac764d7efa8d48301acb4ea1
+    - library: starter
+      version: 1.1.0
+      path: components/table.yaml
+      sha256: dca1cef275ae4826bec65697c9707bdd885a3ff685691e9c4f3fe0dc83045d5a
+    - library: starter
+      version: 1.1.0
+      path: components/tag.yaml
+      sha256: 869eebf4dd39a3cdda0523d2d21d801a0885d6b3810c50f40bad20ff7f73bf3f
+    - library: starter
+      version: 1.1.0
+      path: library.yaml
+      sha256: f0199e2c8f8f78046a1f9a46cb95be0588555afc42ff3b3fe5e17b1da29364f7
+    - library: starter
+      version: 1.1.0
+      path: roles.yaml
+      sha256: 6f583607c22621ff8a30c63813d92968e3afc4890aa49021f02929ac751a5623
+findings:
+  - code: size-width
+    level: attention
+    message: '`device.projector`: the top is 1280 px wide, as at the default size: the brand neutral@1.1.0 gives its width no other value at this size, so its shape follows the size and its width does not'
+    file: piece.yaml
+    where: brand
+    fix: draw the piece in a brand that gives the top's width at each size it names, or ask the brand's owner to; where the piece means one width at every size, leave it
+    who: the piece's author
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `foundations/deck`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `starter/network`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck/slides[pm]/visual
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `starter/card`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck/slides[pm]/visual/left[you-plan]
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `starter/connector`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck/slides[pm]/visual/ties#1
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `starter/table`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck/slides[why]/visual
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `starter/row`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck/slides[why]/visual/rows[heads]
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `starter/cell`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck/slides[why]/visual/rows[heads]/cells[layer]
