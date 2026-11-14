@@ -175,5 +175,5 @@ slides:
           {text: "pkit::work-tracking:fixers", concept: pkit/proof}, {text: "  # from pkit status\n", style: comment},
           "    bound    software-analysis (contributes)\n",
           "    bound    living-docs (contributes)"]
-      gains: [{text: "What it gives you\n", style: strong}, "Designed: swap a capability for another in the same role.\nInstall only what you need.\n", {text: "pkit validate", style: code}, " checks the wiring."]
-    footer: "Each capability adds to several layers: its own rules, skills, agents and commands. In project-kit: each of the 3 roles has one capability so far, so a swap is designed, not yet shown."
+      gains: [{text: "What it gives you\n", style: strong}, "Designed: swap a capability for another in the same role."]
+    footer: "Each capability adds to several layers: its own rules, skills, agents and commands."

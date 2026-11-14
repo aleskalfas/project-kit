@@ -163,5 +163,5 @@ slides:
           {text: "pkit::work-tracking:fixers", concept: pkit/proof}, {text: "  # z pkit status\n", style: comment},
           "    bound    software-analysis (contributes)\n",
           "    bound    living-docs (contributes)"]
-      gains: [{text: "Co vám to dá\n", style: strong}, "Navrženo: capability vyměníte za jinou v téže roli.\nInstalujete jen to, co potřebujete.\n", {text: "pkit validate", style: code}, " ověří zapojení."]
-    footer: "Každá capability přidává do několika vrstev: vlastní pravidla, skilly, agenty a příkazy. V project-kitu: každou ze 3 rolí zatím hraje jedna capability, výměna je tedy navržená, ne vyzkoušená."
+      gains: [{text: "Co vám to dá\n", style: strong}, "Navrženo: capability vyměníte za jinou v téže roli."]
+    footer: "Každá capability přidává do několika vrstev: vlastní pravidla, skilly, agenty a příkazy."

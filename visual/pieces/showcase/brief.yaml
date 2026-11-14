@@ -472,10 +472,10 @@ pages:
       - aspect: form
         about: footer
         text: >-
-          The limit of the page's claim is a fact of project-kit, that each of its 3 roles
-          has one capability so far, so a swap is designed and not yet shown. The page
-          states it once, in its source line, rather than in the deck's limit line as well,
-          and gives that line's room to the picture.
+          The footer says once, in the secondary text, that a capability adds to several
+          layers of the order the first page shows, and nothing more, so the picture and
+          the terminal keep the slide's room. The swap is stated once, in what the page
+          gives, as designed.
         principle:
           name: Leave out what repeats; every mark earns its ink
           source: Edward Tufte, The Visual Display of Quantitative Information
@@ -535,16 +535,17 @@ pages:
         about: visual
         text: >-
           The frame holds its capability and its slots by its ground and by space: the
-          brand's second step in, and its slots stand the same step apart; the terminal
-          stands at least the third step under the frame, further than anything inside it, so it
-          reads as the frame's report and not as one more row. A slot holds its words the
+          brand's first step in, and its slots stand the same step apart, so the slide
+          keeps room for the terminal under it. The terminal stands the first step under
+          the frame, and its code type, its own ground and its check tell it from a slot,
+          so it reads as pkit's report on the frame. A slot holds its words the
           third step in, as a block does, so the slots' names and the opening capability's
           lines start on one edge. Every block takes a third of the width and the frame
           seven twelfths, so the lane between them holds the arrows' turns. The filling
           blocks are as tall as the opening one, and stand so that each arrow that can run
           level does. What it gives you stands the third step under the filling blocks, and
-          the terminal's foot stands level with its last line's, so the two columns end
-          together. The frame takes no edge: one that a
+          where it reaches lower, the terminal's foot stands level with its last line's, so
+          the two columns end together. The frame takes no edge: one that a
           projector keeps would have to hold 3:1, as a slot's outline does, and would then
           vie with the slots it holds.
         principle:

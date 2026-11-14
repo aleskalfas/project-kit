@@ -77,8 +77,8 @@ values:
   block-width: "=:width / 3"
   frame-width: "=:width * 7 / 12"
   filler-x: "=:width - block-width"
-  # What the frame holds stands this far in from its edges, and its slots this far apart.
-  tray: "=@space.2"
+  # What the frame holds stands this far in from its edges, and its slots this far apart: the first step, so the slide keeps room for the terminal.
+  tray: "=@space.1"
 
 parts:
   # The role's frame lies on the surface, with no edge: an edge legible on a projector
@@ -130,7 +130,7 @@ parts:
   # level with the foot of what it gives a project, and the two columns end together.
   evidence:
     slot: evidence
-    y: "=max(frame.bottom + @space.3, gains.bottom - evidence.height)"
+    y: "=max(frame.bottom + @space.1, gains.bottom - evidence.height)"
     width: "=frame-width"
   # What it gives a project closes the right column, the third step under the fillers.
   gains:
