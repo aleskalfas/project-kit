@@ -1,0 +1,98 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+# The Czech file has the same ids as the English one. A capability keeps its English name.
+slides:
+  - id: cover
+    layout: cover
+    title: Co přinášejí capabilities pkitu
+    subtitle: "project-kit: volitelné části, které si vybíráte, a co do projektu přinášejí dvě z nich"
+    author: Aleš Kalfas
+    link: github.com/aleskalfas/project-kit
+
+  - id: why
+    layout: slide
+    title: Proč má pkit capabilities
+    lead: Jádro pkitu obsahuje jen to, co potřebuje každý projekt, takže žádný projekt nenese, co nepoužívá. Zbytek tvoří capabilities, které si vyberete.
+    visual:
+      use: starter/table
+      inset: none
+      rows:
+        - id: heads
+          cells:
+            - {id: layer}
+            - {id: core, head: "Jádro pkitu: v každém projektu", text: ".pkit/"}
+            - {id: capability, head: "Capability: jedna složka k instalaci", text: ".pkit/capabilities/<name>/"}
+        - id: decisions
+          cells:
+            - {id: layer, head: Rozhodnutí}
+            - {id: core, text: decisions/}
+            - {id: capability, text: decisions/}
+        - id: rules
+          cells:
+            - {id: layer, head: "Pravidla, schémata, procesy"}
+            - {id: core, text: "rules/  schemas/  process/"}
+            - {id: capability, text: "rule-sets/  schemas/"}
+        - id: skills
+          cells:
+            - {id: layer, head: "Skilly, agenti, oprávnění"}
+            - {id: core, text: "skills/  agents/  permissions/"}
+            - {id: capability, text: "skills/  agents/  permissions/"}
+        - id: commands
+          cells:
+            - {id: layer, head: Příkazy a kontroly}
+            - {id: core, text: cli/}
+            - {id: capability, text: "scripts/  package.yaml"}
+    limit: "V rámci závislostí: software-engineering se nainstaluje až po project-management."
+    footer: "Zdroj: .pkit/decisions/core/COR-017-capability-pattern.md"
+
+  - id: pm
+    layout: slide
+    title: Co přináší project-management
+    lead: Jeden agent, který založí práci, naplánuje ji a pro každý Task spustí builder. Vy schválíte plán a každý merge.
+    visual:
+      use: starter/network
+      columns: three
+      left:
+        - {id: you-plan, head: Vy, text: "Plán schválíte jednou.", bar: left}
+        - {id: manager, head: project-manager, text: "Naplánuje a založí práci."}
+      middle:
+        - {id: builder-a, head: "Builder: Task A"}
+        - {id: builder-b, head: "Builder: Task B"}
+        - {id: builder-c, head: "Builder: Task C"}
+      right:
+        - {id: reviewers, head: Reviewery, text: "Musí schválit všichni."}
+        - {id: you-merge, head: Vy, text: "Řeknete ano. Pak proběhne merge.", bar: left}
+      ties:
+        - {from: {item: "left[you-plan]"}, to: {item: "left[manager]"}}
+        - {from: {item: "left[manager]"}, to: {item: "middle[builder-a]"}}
+        - {from: {item: "left[manager]"}, to: {item: "middle[builder-b]"}}
+        - {from: {item: "left[manager]"}, to: {item: "middle[builder-c]"}}
+        - {from: {item: "middle[builder-a]"}, to: {item: "right[reviewers]"}}
+        - {from: {item: "middle[builder-b]"}, to: {item: "right[reviewers]"}}
+        - {from: {item: "middle[builder-c]"}, to: {item: "right[reviewers]"}}
+        - {from: {item: "right[reviewers]"}, to: {item: "right[you-merge]"}}
+    limit: Funguje jen na GitHubu; souběžné buildery potřebují topologii seatů.
+    footer: "Zdroj: .pkit/capabilities/project-management/decisions/DEC-057-purpose.md"
+
+  - id: se
+    layout: slide
+    title: Co přináší software-engineering
+    lead: Builder, který dodržuje vaše konvence, a tři reviewery, kteří kontrolují jeho kód.
+    visual:
+      use: starter/network
+      columns: three
+      left:
+        - {id: conventions, head: Vaše konvence, text: "Zapíšete je jednou. Bez nich agenti použijí obecnou dobrou praxi."}
+      middle:
+        - {id: builder, head: software-engineer, text: "Staví kód podle nich."}
+      right:
+        - {id: code, head: code-reviewer, text: "Je kód v pořádku?"}
+        - {id: security, head: security-reviewer, text: "Tajné klíče, injekce?"}
+        - {id: docs, head: docs-reviewer, text: "Platí dokumentace?"}
+      ties:
+        - {from: {item: "left[conventions]"}, to: {item: "middle[builder]"}}
+        - {from: {item: "middle[builder]"}, to: {item: "right[code]"}}
+        - {from: {item: "middle[builder]"}, to: {item: "right[security]"}}
+        - {from: {item: "middle[builder]"}, to: {item: "right[docs]"}}
+    footer: "Zdroj: .pkit/capabilities/software-engineering/decisions/DEC-003-purpose.md"
