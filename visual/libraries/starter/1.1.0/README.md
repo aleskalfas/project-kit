@@ -10,6 +10,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/starter/components/*.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/scripts/add.py
+        - .pkit/capabilities/visual-communication/design-knowledge/colour.md
         - tests/test_visual_communication_neutral.py
       record:
         - visual-communication:DEC-003#6
@@ -333,9 +334,9 @@ A connector's line takes its family's text, not its line. Nothing beside the lin
 
 - **What does not show a step.** A part painted from its family's line over its own fill takes the fill's colour there, so a tinted card's and a level's edge, a card's bar on a tinted card, and an aside's bar do not show it. A card with `fill: plain` lies on the surface, so only its bars show it. A component that declares its own family keeps it inside a level, as on any family's fill: a card's or a group's tag, a group's items, and an aside's code block.
 - **What may fail on one.** A step may lie far in lightness from every family's fill, so a part that keeps its contrast on every family may fall below it on a step, measured as drawn (the capability's `components.md`, under *Values, states and colour*). The starter's owner audited each component that paints from its family on the steps, for the two kinds of part that may fail:
-  - **A part painted with a shared role over the step.** A code block's prompts and comments, in `text-secondary`, and its commands, in `accent`, and a tinted header's links, in `accent`. Under the neutral brand ([`files.md`, *The neutral brand*](../../files.md#the-neutral-brand)) each falls below its contrast on the darker steps, so a code block or a tinted header drawn as a level fails there.
+  - **A part painted with a shared role over the step.** A code block's prompts and comments, in `text-secondary`, and its commands, in `accent`, and a tinted header's links, in `accent`. Under the neutral brand (the capability's `files.md`, under *The neutral brand*) each falls below its contrast, so a code block or a tinted header drawn as a level fails there.
   - **A part painted with the order's text over a fill outside its family,** such as a card's text on the surface. None of the starter's components draws one on a step: a plain card's texts take shared roles, and the parts that paint their family's text off its fill, a sign and a field's edge, are drawn on a step only within the step's own fill, or, for a sign, only for a concept, which a step never names.
-- **The default passes.** The `level`, which draws the levels, and a `card` with `fill: tint`, a `tag`, a `group`, an `aside`, a `button`, a `field` and a `section` with `fill: tint` paint each text and sign that lies on the step itself in the order's text, which the brand keeps legible on every step. The check finds what falls below its contrast where it is drawn, as for any family (the capability's `checks.md`, `contrast-drawn`).
+- **The default passes.** The `level`, which draws the levels, and a `card` with `fill: tint`, a `tag`, a `group`, an `aside`, a `button`, a `field` and a `section` with `fill: tint` paint each text and sign that lies on the step itself in the order's text, which the neutral brand keeps legible on every step. The check finds what falls below its contrast where it is drawn, as for any family (the capability's `checks.md`, `contrast-drawn`).
 
 ## Signs
 
