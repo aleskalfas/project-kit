@@ -25,6 +25,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/upgrade.py
         - .pkit/capabilities/visual-communication/scripts/outdated.py
         - .pkit/capabilities/visual-communication/scripts/take-up.py
+        - .pkit/capabilities/visual-communication/scripts/intent.py
         - .pkit/capabilities/visual-communication/scripts/new.py
         - .pkit/capabilities/visual-communication/scripts/prune.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
@@ -42,6 +43,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/grant.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/intent.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
         - .pkit/capabilities/visual-communication/rule-sets/vis.md
         - .pkit/capabilities/visual-communication/rule-sets/comm.md
@@ -78,6 +80,7 @@ pkit:
         - visual-communication:DEC-030#4
         - visual-communication:DEC-030#5
         - visual-communication:DEC-030#8
+        - visual-communication:DEC-042#4
         - COR-017
         - COR-070#1
         - COR-073#3
