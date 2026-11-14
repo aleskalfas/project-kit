@@ -211,6 +211,16 @@ def dropped_of(
     ]
 
 
+def lost_of(
+    tmp_path: Path, *children: dict[str, Any], **sizes: Any
+) -> list[tuple[str, str, str, float]]:
+    """Each span the page shows in part, as the tool reports it, its share to a percent."""
+    return [
+        (each.element, each.text, each.why, round(each.share, 2))
+        for each in tool(tmp_path, *children, **sizes).lost
+    ]
+
+
 # --- the tool: an image, and the faces handed over ----------------------------------------------
 
 
@@ -546,6 +556,55 @@ def test_a_text_inside_moved_groups_is_found_where_it_stands(tmp_path: Path) -> 
     assert dropped_of(tmp_path, outer, width=200, height=400) == []
 
 
+# --- what the page shows of a span (DEC-040) ----------------------------------------------------
+
+
+def test_a_text_the_pages_edge_cuts_is_named_cut_with_the_share_of_its_ink_past_the_edge(
+    tmp_path: Path,
+) -> None:
+    said = text_element("figure/said", run("Cut by the edge", fill="ink"), x=170, y=30)
+    found = lost_of(tmp_path, said, width=200, height=100)
+    [(element_, text, why, share)] = found
+    assert (element_, text, why) == ("figure/said", "Cut by the edge", viewing_tool.CUT)
+    assert 0.5 < share < 1
+
+
+def test_a_text_a_later_part_covers_is_named_covered_with_the_share_it_hides(
+    tmp_path: Path,
+) -> None:
+    said = text_element("figure/said", run("Under a box", fill="ink"), y=30)
+    over = element("box", "figure/over", x=0, y=0, width=60, height=100, fill="surface")
+    [(_, text, why, share)] = lost_of(tmp_path, said, over)
+    assert (text, why) == ("Under a box", viewing_tool.COVERED)
+    assert 0.2 < share < 0.9
+
+
+def test_a_box_drawn_before_a_text_covers_none_of_it(tmp_path: Path) -> None:
+    under = element("box", "figure/under", x=0, y=0, width=200, height=100, fill="surface")
+    said = text_element("figure/said", run("On a box", fill="ink"), y=30)
+    assert lost_of(tmp_path, under, said) == []
+
+
+def test_a_text_inside_its_page_and_uncovered_is_named_neither_cut_nor_covered(
+    tmp_path: Path,
+) -> None:
+    said = text_element("figure/said", run("Whole", fill="ink"), y=30)
+    assert lost_of(tmp_path, said) == []
+
+
+def test_a_span_both_cut_and_covered_gives_two_entries(tmp_path: Path) -> None:
+    said = text_element("figure/said", run("Cut and covered", fill="ink"), x=150, y=30)
+    over = element("box", "figure/over", x=140, y=0, width=30, height=100, fill="surface")
+    found = lost_of(tmp_path, said, over, width=200, height=100)
+    assert [why for _, _, why, _ in found] == [viewing_tool.CUT, viewing_tool.COVERED]
+
+
+def test_a_graze_under_the_sliver_is_named_neither(tmp_path: Path) -> None:
+    said = text_element("figure/said", run("Edge", fill="ink"), x=10, y=30)
+    over = element("box", "figure/over", x=0, y=0, width=10.3, height=100, fill="surface")
+    assert lost_of(tmp_path, said, over) == []
+
+
 def test_a_line_that_lies_off_the_page_drew_nothing(tmp_path: Path) -> None:
     said = text_element("figure/said", run("Below it", fill="ink"), y=500)
     assert dropped_of(tmp_path, said) == [("figure/said", "Below it", True)]
@@ -877,21 +936,50 @@ def test_a_real_text_with_no_colour_is_a_loss_and_a_text_dropped_both_named(tmp_
     )
 
 
-def test_through_the_svg_renderer_the_report_says_that_cover_and_cut_were_not_read(
+def test_through_the_svg_renderer_the_report_no_longer_says_cover_and_cut_were_not_read(
     tmp_path: Path,
 ) -> None:
-    """resvg's read reaches no cover and no cut, so an empty `dropped` never reads as clean
-    (DEC-037 point 1)."""
+    """The tool reads cover and cut, so a report that names neither holds none (DEC-040)."""
     root = parts_project(tmp_path)
     shown = run_look(root, "tags")
     assert shown.returncode == 0, shown.stderr
     report = report_of(root, "tags")
     assert report["dropped"] == []
-    assert report[viewing.NOT_READ] == [viewing_browser.CUT, viewing_browser.COVERED]
-    assert (
-        "dropped: through the SVG renderer, no span is read as cut or covered, so a text another "
-        "part covers, or the page's edge cuts, is not named: read the images for it"
-    ) in shown.stdout.splitlines()
+    assert "dropped-not-read" not in report
+    assert not any(
+        "is not named: read the images for it" in each for each in shown.stdout.splitlines()
+    )
+
+
+def test_through_the_svg_renderer_the_report_names_each_text_cut_or_covered_with_its_share(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """What the tool says a page shows in part is an entry of `dropped`, as a browser's is,
+    and the command prints it in words for its cause (DEC-040 point 2)."""
+    root = parts_project(tmp_path)
+    real = viewing.viewing_tool.draw
+    label = "figure/body/label"
+
+    def drawing(*given: Any, **regions: Any) -> Any:
+        drawn = real(*given, **regions)
+        found = (
+            viewing_tool.Lost(label, "Go", viewing_tool.CUT, 0.36322869955),
+            viewing_tool.Lost(label, "Go", viewing_tool.COVERED, 0.5),
+        )
+        return viewing_tool.Drawing(drawn.images, drawn.dropped, found)
+
+    monkeypatch.setattr(viewing.viewing_tool, "draw", drawing)
+    shown = run_look(root, "tags")
+    assert shown.returncode == 0, shown.stderr
+    place = {"language": "en", "key": "default", "page": "figure", "element": label}
+    assert report_of(root, "tags")["dropped"] == [
+        {**place, "text": "Go", "why": "cut", "share": 0.363},
+        {**place, "text": "Go", "why": "covered", "share": 0.5},
+    ]
+    lines = shown.stdout.splitlines()
+    span = f"dropped: figure (en, default): a span of the text `{label}`"
+    assert f"{span} is cut by its page's edge, past which 36% of its ink lies: 'Go'" in lines
+    assert f"{span} is covered by a part over it, which hides 50% of its ink: 'Go'" in lines
 
 
 def test_a_loss_the_piece_accepted_is_still_reported_and_so_is_the_text_it_drops(
@@ -2091,7 +2179,6 @@ def test_the_report_holds_each_read_of_the_browser_and_each_loss_of_the_renderer
         {**place, "text": "Go", "why": "cut", "share": 0.363},
         {**place, "text": "Go", "why": "covered", "share": 0.004},
     ]
-    assert viewing.NOT_READ not in report
     assert report["drawn-otherwise"] == [
         {**place, "text": "Ready", "why": "no face", "family": "Held", "weight": "700"},
         {**place, "text": "Ready", "why": "font of the machine", "fonts": ["Times"]},
@@ -2963,9 +3050,8 @@ def test_a_final_pieces_look_takes_the_stand_ins_and_says_so_after_the_report(
     shown = run_look(root, PIECE)
     assert shown.returncode == 0, shown.stderr
     assert taken == [pl.read_piece_file(root, "visual", PIECE).stand_ins]
-    *_, reported, not_read, said, report = shown.stdout.splitlines()
+    *_, reported, said, report = shown.stdout.splitlines()
     assert reported.startswith("on white: ")
-    assert not_read.startswith("dropped: through the SVG renderer, no span is read as ")
     assert said == (
         "look: a final piece has no next export, so a stand-in shows: `date` at `figure/body/date`"
     )

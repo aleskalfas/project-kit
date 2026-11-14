@@ -217,12 +217,6 @@ def _print(folder: str, report: Mapping[str, Any], stand_ins: str) -> None:
         )
     for each in report["dropped"]:
         print(f"dropped: {_at(each)}: {_dropped(each)}")
-    if report.get(viewing.NOT_READ):
-        print(
-            f"dropped: through the SVG renderer, no span is read as "
-            f"{' or '.join(report[viewing.NOT_READ])}, so a text another part covers, or the "
-            f"page's edge cuts, is not named: read the images for it"
-        )
     for each in report["losses"]:
         accepted = " (accepted)" if each["accepted"] else ""
         print(f"loss{accepted}: {_at(each)}: `{each['what']}` {each['did']}: {each['why']}")

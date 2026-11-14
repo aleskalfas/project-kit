@@ -32,8 +32,8 @@ is read, and none is used up (DEC-016 point 5).
   reload: the step takes each key's signals from the renderer's declaration (`signals_of`)
   and the browser's module sets them (DEC-023 point 6). Its `dropped` names too each span the
   page does not show in full, cut by its page's edge or covered on it, with the share of its
-  strong ink each cause loses (DEC-037). Through the SVG renderer the report says that cover
-  and cut were not read (`NOT_READ`).
+  strong ink each cause loses (DEC-037). Through the SVG renderer the tool's module reads
+  cover and cut too, and its entries take the same fields (DEC-040).
   The browser is the one the configuration names (`browser_named`), or else the first found
   where Chrome and Chromium install themselves. Its profile lies in the clone's local folder,
   and the module removes it.
@@ -138,9 +138,6 @@ FORCED_UNSHOWN = (
     "image shows"
 )
 
-#: The field of the SVG renderer's report that names the causes of `dropped` its run did not
-#: read: resvg's read reaches no cover and no cut (DEC-037 point 1).
-NOT_READ = "dropped-not-read"
 
 #: How many decimals the share of a span's strong ink that a cause loses keeps in the report.
 SHARE_PLACES = 3
@@ -664,6 +661,16 @@ class _Made:
             {**at, "element": each.element, "text": each.text, "whole": each.whole}
             for each in image.dropped
         )
+        self.dropped.extend(
+            {
+                **at,
+                "element": each.element,
+                "text": each.text,
+                "why": each.why,
+                "share": round(each.share, SHARE_PLACES),
+            }
+            for each in image.lost
+        )
         self.otherwise.extend({**at, **each} for each in drawn_otherwise(page))
         self.profiles.extend({**at, **each} for each in with_profiles(page, handed))
 
@@ -873,7 +880,6 @@ class _Made:
         }
         if self.renderer == SVG:
             report.update(images=self.images, dropped=self.dropped)
-            report[NOT_READ] = [viewing_browser.CUT, viewing_browser.COVERED]
             report["losses"] = self.losses
             report["drawn-otherwise"] = self.otherwise
             report["profiles"] = self.profiles

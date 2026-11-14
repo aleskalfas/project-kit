@@ -52,6 +52,9 @@ from typing import Any
 import resvg_py
 from fontTools.ttLib import TTFont
 
+from _lib import png
+from _lib.viewing_browser import COVERED, CUT, SLIVER
+
 #: The tool and what it reaches the capability through, as a report names them.
 TOOL = {"name": "resvg", "version": resvg_py.__resvg_version__, "wheel": resvg_py.__version__}
 
@@ -74,6 +77,17 @@ GROUP = f"{{{SVG_NAMESPACE}}}g"
 STYLE = f"{{{SVG_NAMESPACE}}}style"
 TEXT = f"{{{SVG_NAMESPACE}}}text"
 SPAN = f"{{{SVG_NAMESPACE}}}tspan"
+
+#: The colours a span's letters take where its strong ink is measured, and between which they
+#: change where the page drawn whole is read (DEC-040 point 1).
+INKS = ("#000000", "#ffffff")
+
+#: The darkest a sample of a pixel may be for the pixel to be strong ink, drawn black on white:
+#: the pixel lies nearer black than white.
+STRONG = 127
+
+#: The attributes that make a span's letters less than opaque.
+OPACITIES = ("opacity", "fill-opacity")
 
 #: A CSS string as the canvas (`canvas.py`) writes one.
 CSS_STRING = r'"(?:[^"\\]|\\.)*"'
@@ -111,6 +125,17 @@ class Dropped:
 
 
 @dataclass(frozen=True)
+class Lost:
+    """A span the page shows in part: its trace id, its characters, its cause, `CUT` or
+    `COVERED`, and the share of its strong ink the cause loses (DEC-040 point 1)."""
+
+    element: str
+    text: str
+    why: str
+    share: float
+
+
+@dataclass(frozen=True)
 class Image:
     """A page drawn whole, or one of its bands: the PNG file's bytes, and its size in pixels."""
 
@@ -122,10 +147,11 @@ class Image:
 @dataclass(frozen=True)
 class Drawing:
     """A page drawn: an image of the whole page, or of each region handed, in order, and what
-    the tool dropped on the page."""
+    the tool dropped on the page, and each span it drew in part."""
 
     images: tuple[Image, ...]
     dropped: tuple[Dropped, ...]
+    lost: tuple[Lost, ...] = ()
 
 
 def draw(
@@ -149,7 +175,8 @@ def draw(
         )
     else:
         images = (page.image(scale),)
-    return Drawing(images, tuple(page.dropped(images[0].width / page.width)))
+    dropped, lost = page.read(images[0].width / page.width)
+    return Drawing(images, tuple(dropped), tuple(lost))
 
 
 def _pixels(length: float, scale: float) -> int:
@@ -225,33 +252,41 @@ class _Page:
                 f"at {scale:g} pixels to a px band {number} of the page takes more than "
                 f"{MOST_PIXELS}"
             )
-        view = {
-            "width": str(size[0]),
-            "height": str(size[1]),
-            "viewBox": f"0 {top!r} {self.width!r} {height!r}",
-            "preserveAspectRatio": "none",
-        }
-        held = {name: self.root.get(name) for name in view}
-        self.root.attrib.update(view)
-        try:
-            svg = ET.tostring(self.root, encoding="unicode")
-        finally:
-            for name, value in held.items():
-                if value is None:
-                    self.root.attrib.pop(name, None)
-                else:
-                    self.root.set(name, value)
+        svg = self._svg_of(
+            {
+                "width": str(size[0]),
+                "height": str(size[1]),
+                "viewBox": f"0 {top!r} {self.width!r} {height!r}",
+                "preserveAspectRatio": "none",
+            }
+        )
         return _image(self._tool(svg, background=GROUND))
 
     def _sized(self) -> None:
         if min(self.width, self.height) <= 0:
             raise ToolFailed(f"the page measures {self.width:g} by {self.height:g} px")
 
-    def dropped(self, scale: float) -> Iterator[Dropped]:
-        """What the tool drew nothing of on this page, at `scale` image pixels to a px."""
+    def _svg_of(self, view: Mapping[str, str]) -> str:
+        """The page as text, its root's size and view set to `view` and set back after."""
+        held = {name: self.root.get(name) for name in view}
+        self.root.attrib.update(view)
+        try:
+            return ET.tostring(self.root, encoding="unicode")
+        finally:
+            for name, value in held.items():
+                if value is None:
+                    self.root.attrib.pop(name, None)
+                else:
+                    self.root.set(name, value)
+
+    def read(self, scale: float) -> tuple[list[Dropped], list[Lost]]:
+        """What the tool drew nothing of on this page, and each span it drew in part, at
+        `scale` image pixels to a px."""
+        dropped: list[Dropped] = []
+        lost: list[Lost] = []
         for text, x, y in self._texts(self.root, 0.0, 0.0):
             element = text.get("data-id", "")
-            lost: list[str] = []
+            nothing: list[str] = []
             shown = False
             lines = text.findall(SPAN)
             for line in lines:
@@ -259,12 +294,15 @@ class _Page:
                     if (span.text or "").strip():
                         if self._drew(text, line, index, (x, y), scale):
                             shown = True
+                            lost.extend(self._partly(text, line, index, (x, y), scale, element))
                         else:
-                            lost.append(span.text or "")
-            if lost and not shown:
-                yield Dropped(element, " ".join("".join(each.itertext()) for each in lines), True)
+                            nothing.append(span.text or "")
+            if nothing and not shown:
+                whole = " ".join("".join(each.itertext()) for each in lines)
+                dropped.append(Dropped(element, whole, True))
             else:
-                yield from (Dropped(element, part, False) for part in lost)
+                dropped.extend(Dropped(element, part, False) for part in nothing)
+        return dropped, lost
 
     def _texts(
         self, node: ET.Element, x: float, y: float
@@ -313,6 +351,92 @@ class _Page:
                 span.attrib.pop("fill-opacity", None)
         alone.append(drawn)
         return self._tool(ET.tostring(band, encoding="unicode")) != self._blank(size)
+
+    def _partly(
+        self,
+        text: ET.Element,
+        line: ET.Element,
+        index: int,
+        at: tuple[float, float],
+        scale: float,
+        element: str,
+    ) -> Iterator[Lost]:
+        """Each cause, `CUT` then `COVERED`, that hides at least the sliver of span `index`'s
+        strong ink, with its share (DEC-040 point 1). The span is drawn alone on a band that
+        reaches a page's width past each side of the page, then the page whole on the same
+        band, the span's letters black and then white."""
+        span = line[index]
+        em = float(span.get("font-size") or line.get("font-size") or text.get("font-size") or 0)
+        reach = BAND * max(float(each.get("font-size", "0")) for each in (text, *line))
+        top = at[1] + float(line.get("y", "0")) - reach
+        columns, rows = math.ceil(self.width * scale), math.ceil(2 * reach * scale)
+        if em <= 0 or rows <= 0:
+            return
+        size = {"width": str(3 * columns), "height": str(rows), "preserveAspectRatio": "none"}
+        band = ET.Element(
+            f"{{{SVG_NAMESPACE}}}svg",
+            {
+                **size,
+                "viewBox": f"{-at[0] - self.width} {top - at[1]} {3 * self.width} {2 * reach}",
+            },
+        )
+        attributes = {name: value for name, value in text.attrib.items() if name not in OPACITIES}
+        alone = ET.SubElement(band, TEXT, attributes)
+        drawn = copy.deepcopy(line)
+        for place, each in enumerate(drawn):
+            for name in OPACITIES:
+                each.attrib.pop(name, None)
+            each.set("fill", INKS[0] if place == index else "none")
+        alone.append(drawn)
+        picture = png.read(self._tool(ET.tostring(band, encoding="unicode"), background=GROUND))
+        samples = png.samples(picture)
+        step = picture.channels
+        found = past = 0
+        on_page: list[int] = []
+        for row in range(rows):
+            y = top + (row + 0.5) * 2 * reach / rows
+            outside = not 0 <= y < self.height
+            start = row * picture.width * step
+            stretch = samples[start : start + picture.width * step]
+            first = (len(stretch) - len(stretch.lstrip(b"\xff"))) // step
+            last = len(stretch.rstrip(b"\xff")) // step
+            for column in range(first, last + 1):
+                at_pixel = column * step
+                if min(stretch[at_pixel : at_pixel + 3]) > STRONG:
+                    continue
+                found += 1
+                if outside or not columns <= column < 2 * columns:
+                    past += 1
+                else:
+                    on_page.append(start + at_pixel)
+        if not found:
+            return
+        least = SLIVER * (em * scale) ** 2
+        if past >= least:
+            yield Lost(element, span.text or "", CUT, past / found)
+        if len(on_page) < least:
+            return
+        view = {**size, "viewBox": f"{-self.width} {top} {3 * self.width} {2 * reach}"}
+        shown, unshown = (self._with_ink(span, ink, view) for ink in INKS)
+        hidden = sum(1 for each in on_page if shown[each : each + 3] == unshown[each : each + 3])
+        if hidden >= least:
+            yield Lost(element, span.text or "", COVERED, hidden / found)
+
+    def _with_ink(self, span: ET.Element, ink: str, view: Mapping[str, str]) -> bytes:
+        """The samples of the page drawn whole as `view` gives it, `span`'s letters in `ink`
+        and all else as it stands."""
+        held = {name: span.get(name) for name in ("fill", *OPACITIES)}
+        for name in OPACITIES:
+            span.attrib.pop(name, None)
+        span.set("fill", ink)
+        try:
+            return png.samples(png.read(self._tool(self._svg_of(view), background=GROUND)))
+        finally:
+            for name, value in held.items():
+                if value is None:
+                    span.attrib.pop(name, None)
+                else:
+                    span.set(name, value)
 
     def _blank(self, size: tuple[int, int]) -> bytes:
         """The band of `size` pixels with nothing drawn on it."""
