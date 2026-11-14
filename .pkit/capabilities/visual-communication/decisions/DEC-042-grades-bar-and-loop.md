@@ -18,7 +18,7 @@ The Feature [project-kit#3148](https://github.com/aleskalfas/project-kit/issues/
 - **No design passed,** in either arm and in any run, the critic's professional designs included. So the conditions the Task set before the review may hold the loop were not all met (point 9).
 - **The canon alone did not order the ladder as it was ordered with the critic's measures beside it.** It could not tell the last design from the first. On pages that were the same image in two designs, its page verdicts split from run to run. With the measures beside it, they agreed.
 - **The rules on words failed pages across the whole ladder alike.** The ladder held its words nearly fixed, so those rules told no design from another. Graded on the `GRAPHIC` rules alone, the canon ordered the ladder much as the critic had. Where a design did change its words, the rule on sources graded the change.
-- **Four of the critic's measures had no counterpart among the rules, or only a weak one:** craft, typography, legibility at the medium's size, and colour. One fault the critic blocked on judges design, and no rule names it.
+- **Four things the critic's measures judge had no counterpart among the rules, or only a weak one:** craft, typography, legibility at the medium's size, and colour. One fault the critic blocked on judges design, and no rule names it.
 - **Each review's verdict followed from its own grades,** read by the bar's text, in every run.
 
 **Convergence on one page.** A page outside that deck was designed twice from the same starting page, by the same designer and reviewer agents. In both, the designer could change every word but the page's lead. The two loops differ only in how a failing finding states its fix:
@@ -66,7 +66,7 @@ Each loop ran once, so the second experiment shows a direction, not a measure.
 
 ### 5. A failing finding names where its fix belongs, and prescribes no fix
 
-A failing finding names what fails, where, what it rests on and where its fix belongs, and never what the fix is, as DEC-030 point 7 decides. The convergence experiment points the same way (Context): the loop whose findings named where the fix belongs converged in one round of mending, and the loop whose findings prescribed the fix in three. Each prescription that missed did so for a reason only the designer could see: a word the asker had fixed, a relation of the brief, or the engine's own measure of a text. Each loop ran once, so this is a direction, which agrees with the reason DEC-030 gives: a reviewer that redesigns becomes a second designer.
+A failing finding names what fails, where, what it rests on and where its fix belongs, and never what the fix is, as DEC-030 point 7 decides. The convergence experiment points the same way (Context): the loop whose findings named where the fix belongs converged in one round of mending, and the loop whose findings prescribed the fix in three. Each prescription that missed met a limit the designer weighs and the review did not: a word the asker had fixed, a relation of the brief, or the engine's own measure of a text. Each loop ran once, so this is a direction, which agrees with the reason DEC-030 gives: a reviewer that redesigns becomes a second designer.
 
 ### 6. The loop runs to the bar, into polish, within a bound
 
@@ -92,7 +92,7 @@ This is the capability's default until the core decides how much agents decide w
 - **Nowhere else.** Elsewhere the reviewer's findings inform their owner, who decides, and a verdict holds nothing. That covers the starter's entry review ([visual-communication:DEC-007-starter-library] point 3), a role's default as a fair stand-in ([visual-communication:DEC-008-library-role-defaults] point 2), a picture with the piece's words drawn into it ([visual-communication:DEC-006-work-outside-the-engine-and-outputs] point 2), and a review a person asks for outside a loop.
 - **No validation, no merge.** The verdict joins no validation, since a reading of taste never fails ([visual-communication:DEC-002-files-and-validation] point 7), and holds no merge. Whether the review is required at the merge is [project-kit#2676](https://github.com/aleskalfas/project-kit/issues/2676)'s.
 
-### 9. The verdict holds the loop once a calibration meets its issue's conditions
+### 9. The verdict holds the loop once a calibration meets the conditions set for it
 
 - **The conditions.** The Task that calibrated the review let it hold the designer's loop only where four conditions all hold on the ladder ([project-kit#3151](https://github.com/aleskalfas/project-kit/issues/3151)). The grades order the ladder as the critic ordered it. The last design the critic failed fails, and the first it passed passes. The verdict is stable across runs. The deck as the default branch draws it fails.
 - **Not met yet.** The first calibration did not meet them. No design passed, the first the critic passed included, and the canon alone did not tell the last design from the first (Context). The conditions that held, held only because every verdict was a fail. So the verdict holds no loop yet.
@@ -109,7 +109,7 @@ This is the capability's default until the core decides how much agents decide w
 
 **Why a blocking fault on design is a rule at the bottom.** The reviewer's faults stay facts about the drawing, which is why a fault never judges design (DEC-030 point 6). A fault of design is a reading. As a rule graded at the bottom, it blocks the bar while it keeps the citation, the source and the acceptance of every rule.
 
-**Why the bar is the project's own rule.** How good is good enough is a project's taste (DEC-028 point 1). As a rule of its own set, it has an id, a status and a person's acceptance, and the review reads it as it reads every rule, from its file. A shipped bar would carry one project's taste to every project (COR-014). The trials of [project-kit#3150](https://github.com/aleskalfas/project-kit/issues/3150) show whether a default would serve.
+**Why the bar is the project's own rule.** How good is good enough is a project's taste (DEC-028 point 1). As a rule of its own set, it has an id, a status and a person's acceptance, and the review reads it as it reads every rule, from its file. A shipped bar would carry one project's taste to every project (COR-014). Whether a default would serve waits for the trials of [project-kit#3150](https://github.com/aleskalfas/project-kit/issues/3150).
 
 **Why the review sees its earlier verdicts, and not the designer's account.** In the calibration, the canon's page verdicts on the same images split from run to run. A review that sees what it said before can hold its grades across rounds, or say why it moved one. An account of what the designer changed would show the review the page through the designer's eyes, as reading the reasons first would (DEC-030, "Why the reasons are read last").
 
@@ -119,7 +119,7 @@ This is the capability's default until the core decides how much agents decide w
 
 **Why polish, and why within a bound.** A loop that stopped at the first pass would hand over work just at the bar. Polish spends a few rounds on what the review still grades below excellent. The review varies from run to run, so a loop with no bound could chase that variation for ever. A bound ends it, and the person gets what still blocks.
 
-**Why every other word is the designer's.** The brief's goals and relations, and a page's lead, say what the piece is for, so they are the asker's (DEC-029 points 2 and 4). The other words carry that intent, as the form does, and the designer shapes them as it shapes the form. In both loops of the convergence experiment, the designer changed titles, cut facts with no source and reworded parts in nearly every round, and neither loop needed the person. A designer that asked before each such change would converge only as fast as the person answers.
+**Why every other word is the designer's.** The brief's goals and relations, and a page's lead, say what the piece is for, so they are the asker's (DEC-029 points 2 and 4). The other words carry that intent, as the form does, and the designer shapes them as it shapes the form. In both loops of the convergence experiment, the designer changed titles, cut facts with no source and reworded parts in most rounds of mending, and neither loop needed the person. A designer that asked before each such change would converge only as fast as the person answers.
 
 **Why the verdict binds only the loop.** A grade is a reading, which never fails validation (DEC-002 point 7). Elsewhere, an owner judges by a bar of their own, such as the starter's bar for entry, and the review informs that owner.
 
@@ -128,7 +128,7 @@ This is the capability's default until the core decides how much agents decide w
 ### Alternatives considered
 
 - **The critic's measures beside the canon, as the calibration graded them.** Rejected: they were one critic's, written for one deck, and no source of the canon's names them (DEC-028 point 1). The gaps they showed close through the canon instead (point 2).
-- **The `GRAPHIC` rules alone as the measure.** Rejected: the ladder held its words, so the calibration cannot show that the rules on words grade badly, only that they told those designs apart by nothing. The one change of words the ladder made, `RS-COMM-005` caught. A project that wants a bar on `GRAPHIC` alone writes its bar so.
+- **The `GRAPHIC` rules alone as the measure.** Rejected: the ladder held its words, so the calibration cannot show that the rules on words grade badly, only that they told those designs apart by nothing. A change of words the ladder did make, `RS-COMM-005` caught. A project that wants a bar on `GRAPHIC` alone writes its bar so.
 - **A pass or a fail on each rule, with no grade.** Rejected: polish would have nothing to aim at, and nobody could tell a page near the bar from one far below it.
 - **Grades as numbers.** Rejected: a sum or a mean lets a strong rule hide a weak one, and no rule says what a mean means.
 - **A bar the capability ships.** Not taken now: it waits for the trials ([project-kit#3150](https://github.com/aleskalfas/project-kit/issues/3150)).
@@ -136,7 +136,7 @@ This is the capability's default until the core decides how much agents decide w
 - **Findings that prescribe their fix.** Rejected: in the convergence experiment, prescribing slowed the loop, and one prescription was wrong where only the engine's measure could tell.
 - **The verdict holding the loop at once, on the canon as it is.** Rejected: the calibration did not meet its Task's conditions, and the canon alone did not tell the last design from the first.
 - **A loop with no bound, until the bar.** Rejected: the review varies from run to run, and a loop could chase that variation for ever.
-- **The designer asking before any change of words.** Rejected: no loop would converge alone, since the convergence experiment changed words in nearly every round.
+- **The designer asking before any change of words.** Rejected: no loop would converge alone, since the convergence experiment changed words in most of its rounds.
 
 ## Implications
 
