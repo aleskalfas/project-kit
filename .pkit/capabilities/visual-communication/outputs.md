@@ -1010,7 +1010,7 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 `pkit visual verdict <piece>` gives the *verdict* against the project's bar from a round's review report, and says whether it ends the designer's loop (DEC-042 point 1). The verdict needs no judgement, so a command gives it, and anyone gives the same verdict again from the same report. The reviewer runs no command, so whoever reads its report runs this one.
 
 - **What it reads.** The document the round's report opens with, kept alone as `round-<n>.yaml` ([Where the review's reports are kept](#where-the-reviews-reports-are-kept)): the highest round kept, or the one `--round` names. The bar, from the capability's configuration alone ([The bar and the bounds](files.md#the-bar-and-the-bounds)), and the rule sets it covers. And, to tell whether the verdict ends the loop, what [When it ends the loop](#when-it-ends-the-loop) compares.
-- **The rules the bar covers.** Each rule of a set it covers that the review grades, and each single rule it covers.
+- **The rules the bar covers.** Each rule of a set it covers that the capability's check finds graded, and each single rule it covers.
 - **A page meets the bar** where each of its unmarked grades on those rules reaches the bar's grade. **The piece meets it** where every page does, and each unmarked grade it takes as a whole does. A grade of a rule the bar does not cover counts for nothing.
 - **A marked grade is left out,** a need or the asker's, and named apart with its mark (DEC-042 point 4).
 - **What it prints.** The report it read, the bar and the rules it covers. Then whether the piece meets the bar, each page with whether it meets it, the piece as a whole, and each grade that fails the bar, with its evidence, and each marked grade left out. Last, whether the verdict ends the loop, and each reason it does not. `--json` prints the same as one document, with the reading the hold was compared on, under `reading` ([The accepted calibration's data](#the-accepted-calibrations-data)).
@@ -1020,7 +1020,7 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 
 - **No bar.** Where the configuration holds no bar, no verdict is given, and the designer's loop ends as DEC-030 point 2 says (DEC-042 point 3).
 - **A covered rule the report leaves out.** Where the report neither grades a rule the bar covers nor lists it as not graded, no verdict is given, since one that passed would rest on no grade of that rule. The command names each such rule.
-- **Refused.** The command prints `error: …` and exits 1 where no report of the piece is kept, the report or the configuration cannot be read, the report's schema refuses it, or the report is of another piece or round than it is kept as. So does a bar the configuration's schema refuses, or one the capability's check fails, such as a bar over what the review does not grade.
+- **Refused.** The command prints `error: …` and exits 1 where no report of the piece is kept, the report or the configuration cannot be read, the report's schema refuses it, or the report is of another piece or round than it is kept as. So does a bar the configuration's schema refuses, or one the capability's check fails, such as a bar over what the check does not find graded.
 
 Otherwise it exits 0, whatever the verdict, and 2 on a usage error.
 
