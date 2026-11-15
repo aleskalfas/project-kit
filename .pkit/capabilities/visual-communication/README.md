@@ -108,6 +108,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#how-a-command-finds-it
         - .pkit/capabilities/visual-communication/files.md#the-lock
+        - .pkit/capabilities/visual-communication/files.md#the-makers-record-of-drafts
         - .pkit/capabilities/visual-communication/files.md#what-a-release-compares
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#the-browser
@@ -402,10 +403,10 @@ Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 
 Gives the digest of a draft's text, and says whether a text still matches the digest the piece's brief records ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
 
-- **Names the draft** by `--kind` (`lead`, `title` or `takeaway`), `--language` and, for a piece of more than one page, `--page <id>`. It reads the text from the piece, so no one hashes text by hand: a takeaway from the brief's part, and a lead or a title from the content in that language, at the key path `--at` names from the page ([The brief](files.md#the-brief)).
+- **Names the draft** by `--kind` (`lead`, `title` or `takeaway`), `--language` and, for a piece of more than one page, `--page <id>`. It reads the text from the piece, so no one hashes text by hand: a takeaway from the brief's part, and a lead or a title from the content in that language, at the key path `--at` names from the page ([The brief](files.md#the-brief)). It finds the page under the piece's lock, or, before the piece's first render, under the versions that render would lock ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
 - **Prints** the entry for the part's `drafts`, its digest taken over the text normalised as the record says, for whoever designs the piece to write into the brief ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
 - **`--check`** says whether the text still matches the entry the brief records for it, and so whose the text is ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
-- **Writes** nothing, the brief included ([The makers' record of drafts](files.md#the-makers-record-of-drafts)). It needs no lock.
+- **Writes** nothing, the brief included ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
 - **Refuses** a piece, a page, a field or a takeaway it cannot read.
 - **Exits** 0 when it printed the entry, or `--check` found a match; 1 when it refused ([Commands](#commands)); 2 on a usage error; 3 when `--check` found the text the asker's.
 
@@ -498,7 +499,7 @@ To use it:
 2. **Let it build.** Where no library draws the design, it extends the project's own library, makes a component for the piece alone, or stops and says what is missing ([visual-communication:DEC-030-design-agents] point 4). It never changes what the piece says to fit what a library draws.
 3. **Read what it hands back.** Before it stops, [the reviewer](#the-reviewer) reads every page in every language, mode and size. Where the designer can start agents, it dispatches the reviewer itself. Otherwise it asks you to, and says the piece is not reviewed. It mends what it judges right, then tells you what it changed and why, with the reviewer's report as written.
 
-In mending, it asks you in three cases only: where a fix would change the asker's words ([The makers' record of drafts](files.md#the-makers-record-of-drafts)), or cut a fact a goal or a relation rests on; where a fix needs a write it may not make, such as to a library the capability ships; and where two rounds of mending did not clear a finding. You answer, and it makes the change.
+In mending, it asks you only where a fix would change what the piece says, needs a write it may not make, such as to a library the capability ships, or two rounds of mending did not clear a finding. You answer, and it makes the change.
 
 ## The reviewer
 

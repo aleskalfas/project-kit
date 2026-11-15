@@ -18,6 +18,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/new.py
         - .pkit/capabilities/visual-communication/scripts/prune.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
+        - .pkit/capabilities/visual-communication/scripts/draft.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/grant.py
@@ -629,9 +630,9 @@ cover:
 
 - **A digest, never the text.** An entry has no field for a text, and the schema refuses one. The page is the part the entry lies in.
 - **The text normalised.** The digest is taken over the text put in Unicode normalisation form C, then each run of white space, a line break among them, made one space, then the ends trimmed. So a text reflowed or re-indented keeps its digest, and a changed word, letter case or mark changes it.
-- **Written by whoever designs the piece,** as it drafts the text, and cleared once the asker has seen it. `pkit visual draft` gives the entry, its digest included, and writes nothing in the brief ([`pkit visual draft`](README.md#pkit-visual-draft-piece)).
+- **Written by whoever designs the piece,** as it drafts the text, and cleared once the asker has seen it. `pkit visual draft` gives the entry, its digest included, and writes nothing in the brief ([`pkit visual draft`](README.md#pkit-visual-draft-piece)). It finds a page where the piece's top declares its pages, the top read under the piece's lock or, before the piece's first render, under the versions that render would lock ([The lock](#the-lock)). So a draft is recorded as it is written. Where that render's search for a lock refuses, such as for a pinned draft with no lock, the command refuses too.
 - **What follows.** A lead, title or takeaway whose text no longer matches the digest recorded for its page, kind and language, or that the record lists nothing for, is the asker's. A piece with no brief has no record, so its leads, titles and takeaways are the asker's. `pkit visual draft --check` says which: the text *matches* the entry, *differs* from it, or has *no entry*, and only a match leaves it the designer's.
-- **No capability check and no renderer reads it.** Its shape alone is validated, by the core's data validation.
+- **Neither `pkit visual check` nor any renderer reads it.** Its shape alone is validated, by the core's data validation.
 
 ## Picture files
 
