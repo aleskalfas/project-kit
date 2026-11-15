@@ -370,14 +370,14 @@ One boundary case (COR-031): if a same-named capability *now* also ships from ki
 
 ### The externally-sourced origin: match the pin
 
-An `externally-sourced` capability is authored in another git repository and installed at a pin, a tag or a commit's full id, which its per-component manifest records with the source (COR-041; [ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md) point 3; [`manifest.md`, "Per-component manifest"](manifest.md#per-component-manifest-one-per-installed-component)). Its kit-side spec is the pin's content, never the running pkit's bundle. So `sync` never reads it as shipped, and propagation for it is matching the pin (COR-059 point 2):
+An `externally-sourced` capability is authored in another git repository and installed at a pin, a tag or a commit's full id, which its per-component manifest records with the source (COR-041; [`manifest.md`, "Per-component manifest"](manifest.md#per-component-manifest-one-per-installed-component)). Its kit-side spec is the pin's content, never the running pkit's bundle. So `sync` never reads it as shipped, and propagation for it is matching the pin (COR-059 point 2):
 
-- **Each run fetches the pin again,** whole, with the person's own git credentials and none of pkit's ([ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md) points 1 and 2).
+- **Each run fetches the pin again,** whole, with the person's own git credentials and none of pkit's.
 - **The copy is brought to that content.** A file the pin holds is restored, one it does not hold is removed, and the artefacts the project skipped stay out. The `project/` tier is left as it is.
 - **The pin never moves.** Sync writes no manifest, so the recorded pin and version stay. A transition that moves a pin is not built yet, and `pkit upgrade` leaves the capability as it is.
-- **It degrades loudly** ([ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md) point 7). Where the source cannot be reached, holds no such ref, refuses the credential, or holds no capability of the name, the copy is kept as it is, a `⚠ WARNING` line names why, and the rest of sync runs. So does a pin whose tag now holds another version than the project records: only a person moves a version, by uninstalling the capability and installing it again. So does content whose `requires_backbone` excludes the backbone the project records, since sync gates what it lands as install does ([ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md) point 4).
+- **It degrades loudly.** Where the source cannot be reached, holds no such ref, refuses the credential, or holds no capability of the name, the copy is kept as it is, a `⚠ WARNING` line names why, and the rest of sync runs. So does a pin whose tag now holds another version than the project records: only a person moves a version, by uninstalling the capability and installing it again. So does content whose `requires_backbone` excludes the backbone the project records, since sync gates what it lands as install does.
 - **`--dry-run` fetches nothing,** and reports `would match`.
-- **A capability of the same name in the running pkit's bundle** is named in the report, and never copied over it (ADR-040 point 6).
+- **A capability of the same name in the running pkit's bundle** is named in the report, and never copied over it.
 
 In the methodology's own source repository, sync's self-host path matches no pin, as it copies nothing, and install from another repository is refused there.
 
