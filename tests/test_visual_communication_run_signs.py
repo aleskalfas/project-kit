@@ -410,7 +410,7 @@ def test_each_renderer_rose_to_draw_them_at_the_seams_version() -> None:
         declaration.DECLARATION["name"]: declaration.DECLARATION["version"]
         for declaration in (svg_declaration, html_declaration, pdf_declaration)
     }
-    assert versions == {"svg": "1.5.0", "html": "1.9.0", "pdf": "1.6.0"}
+    assert versions == {"svg": "1.5.0", "html": "1.10.0", "pdf": "1.6.0"}
     scene = drawn_scene()
     for declaration in (svg_declaration, html_declaration, pdf_declaration):
         assert declaration.DECLARATION["seam"] == seam.SEAM_VERSION
@@ -493,7 +493,10 @@ def test_under_forced_colours_a_runs_ground_lies_in_its_lines_and_its_sign_is_cl
 
     assert "[data-span]{forced-color-adjust:auto;background:none!important}" in forced(root)
     _, ground = marked(root, "ground")
-    top, height = (float(styled(ground)[name].removesuffix("cqw")) for name in ("top", "height"))
+    # A ground's top is a top margin and its height a top padding, shares of the page's width.
+    top, height = (
+        float(styled(ground)[name].removesuffix("%")) for name in ("margin-top", "padding-top")
+    )
     page_width = float(scene["children"][0]["width"])
     sign_top = float(shown["y"]) + float(sign_at["top"]) + float(shown["line-height"])
     assert top * page_width / 100 <= sign_top + 0.01

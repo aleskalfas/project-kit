@@ -9,7 +9,7 @@ well-formed XML, so `ElementTree` reads it; an HTML parser reads the same elemen
 reader's signals meet is read from the file's rules (`met`), as CSS's cascade orders them, and
 so is what a reader gets around a fixed page (`around`), on screen and in print.
 
-The reference output below is pinned to the renderer's version, 1.9.0. A change that gives
+The reference output below is pinned to the renderer's version, 1.10.0. A change that gives
 another output for the same scene and values raises the version, and changes it with it
 (DEC-005 point 9). A font and a picture are pinned by what they hold, not by their bytes.
 Version 1.2.0 came with seam 5, which hands the renderer the picture each image shows, a PNG
@@ -26,7 +26,9 @@ seam 9, with a custom property of its own (DEC-032 point 5): a scene of no step 
 drew it, but for the renderer's version it names. Version 1.9.0 came to draw, under forced
 colours alone, a ground for each line of a text, beneath the lines of its run of texts, and a
 fill's edge inside the fill (DEC-039 points 1 to 4): each file holds the rules for them, and
-each text its lines' grounds.
+each text its lines' grounds. Version 1.10.0 came to write a text's frame, a line's ground and
+a line's strut as percentages of the box each lies in, not in `cqw`, which Firefox's print
+took from the sheet's area (project-kit#3012): every file's lengths are written so.
 """
 
 from __future__ import annotations
@@ -145,7 +147,10 @@ def styled(node: ElementTree.Element) -> dict[str, str]:
 
 
 def px(share: str, width: float) -> float:
-    """A share of a page `width` px wide, in px of that page."""
+    """A share of a box `width` px wide, in px of the page: a length in `cqw` of a page that
+    wide, or a percentage of a box that wide, the page or a line (DEC-020 point 2)."""
+    if share.endswith("%"):
+        return float(share.removesuffix("%")) * width / 100
     assert share.endswith("cqw")
     return float(share.removesuffix("cqw")) * width / 100
 
@@ -275,7 +280,7 @@ def said(
 def test_it_is_shipped_through_the_seam_as_plain_data() -> None:
     assert seam.declaration("html", seam.RENDERER) == html_declaration.DECLARATION
     assert html.NAME == "html"
-    assert html.VERSION == "1.9.0"
+    assert html.VERSION == "1.10.0"
 
 
 def test_it_declares_what_it_draws_and_needs() -> None:
@@ -333,9 +338,9 @@ def test_each_text_is_one_element_at_its_frame_and_none_lies_in_svg() -> None:
     assert text.get(MARKS["text"]) == "figure/title"
     frame = styled(text)
     assert px(frame["left"], 200) == pytest.approx(10, abs=WITHIN)
-    assert px(frame["top"], 200) == pytest.approx(5, abs=WITHIN)
+    assert px(frame["margin-top"], 200) == pytest.approx(5, abs=WITHIN)
     assert px(frame["width"], 200) == pytest.approx(100, abs=WITHIN)
-    assert rule(root, "text") == "position:absolute"
+    assert rule(root, "text") == "position:absolute;top:0"
 
 
 def test_each_line_is_a_child_placed_alone_that_never_wraps() -> None:
@@ -361,7 +366,8 @@ def test_a_strut_opens_each_line_and_the_lines_top_is_its_baseline_less_its_heig
         strut = node[0]
         assert MARKS["strut"] in strut.attrib
         assert strut.tag == "span" and strut.text is None and len(strut) == 0
-        height = px(styled(strut)["height"], 200)
+        # The strut's height is a top padding, a share of its line, as wide as the frame.
+        height = px(styled(strut)["padding-top"], TITLE["width"])
         assert height == pytest.approx(16, abs=WITHIN)
         baseline = 15.2 + index * 20
         assert px(styled(node)["top"], 200) == pytest.approx(baseline - 16, abs=WITHIN)
@@ -392,13 +398,13 @@ def test_a_strut_is_a_whole_number_of_page_px_taller_than_any_run_rises(
 
     [found] = marked(read(scene(text)), "strut")
 
-    assert px(styled(found)["height"], 200) == pytest.approx(strut, abs=WITHIN)
+    assert px(styled(found)["padding-top"], 100) == pytest.approx(strut, abs=WITHIN)
 
 
 def test_a_line_of_no_span_still_stands_on_a_strut() -> None:
     blank = {**TITLE, "lines": [line(0, 15)]}
     [found] = marked(read(scene(blank)), "strut")
-    assert px(styled(found)["height"], 200) == pytest.approx(1, abs=WITHIN)
+    assert px(styled(found)["padding-top"], TITLE["width"]) == pytest.approx(1, abs=WITHIN)
 
 
 @pytest.mark.parametrize(
@@ -420,7 +426,9 @@ def test_a_line_wider_than_its_frame_keeps_the_place_its_anchor_gives_it(
     wide = {**said("figure/wide", "Antidisestablishment"), "text-anchor": anchor, "width": 100}
     wide["lines"] = [line(0, 15, (0, "Antidisestablishment", 140))]
 
-    [found] = marked(read(scene(wide)), "line")
+    root = read(scene(wide))
+    [found] = marked(root, "line")
+    [strut] = marked(root, "strut")
 
     place = styled(found)
     if left is None:
@@ -428,6 +436,9 @@ def test_a_line_wider_than_its_frame_keeps_the_place_its_anchor_gives_it(
     else:
         assert px(place["left"], 200) == pytest.approx(left, abs=WITHIN)
         assert px(place["width"], 200) == pytest.approx(width, abs=WITHIN)
+    # The strut's padding is a share of the line's box: the frame, or the box grown to hold it.
+    box = 100 if width is None else width
+    assert px(styled(strut)["padding-top"], box) == pytest.approx(16, abs=WITHIN)
 
 
 def test_runs_follow_each_other_and_no_span_takes_a_place_of_its_own() -> None:
@@ -487,18 +498,20 @@ def test_every_length_of_a_text_lies_within_a_hundredth_of_a_px_at_the_pages_own
     [row] = marked(root, "line")
     [strut] = marked(root, "strut")
     [span] = marked(root, "span")
-    for share, length in (
-        (styled(text)["left"], 1033.46),
-        (styled(text)["top"], 571.57),
-        (styled(text)["width"], 401.771),
-        (styled(strut)["height"], 18),
-        (styled(row)["top"], 19.391 - 18),
-        (styled(span)["font-size"], 17.333),
+    for share, length, whole in (
+        (styled(text)["left"], 1033.46, 1280),
+        (styled(text)["margin-top"], 571.57, 1280),
+        (styled(text)["width"], 401.771, 1280),
+        (styled(strut)["padding-top"], 18, 401.771),
+        (styled(row)["top"], 19.391 - 18, 1280),
+        (styled(span)["font-size"], 17.333, 1280),
     ):
-        assert px(share, 1280) == pytest.approx(length, abs=WITHIN)
+        assert px(share, whole) == pytest.approx(length, abs=WITHIN)
 
 
 def test_a_page_writes_no_length_but_a_share_of_its_width() -> None:
+    """A share is in `cqw`, but for a box laid on the page, a text's frame or a line's ground,
+    and for a line's strut, which are percentages of the box they lie in (the test below)."""
     root = read(scene(SAID, TITLE))
 
     [page] = marked(root, "page")
@@ -509,8 +522,53 @@ def test_a_page_writes_no_length_but_a_share_of_its_width() -> None:
         for prop, value in styled(node).items()
         if prop not in ("font-family", "font-weight", "color", "text-align")
     ]
-    assert {prop for prop, _ in declared} == {"left", "top", "width", "height", "font-size"}
-    assert all(value.endswith("cqw") for _, value in declared)
+    assert {prop for prop, _ in declared} == {
+        "left",
+        "margin-top",
+        "top",
+        "width",
+        "padding-top",
+        "font-size",
+    }
+    assert all(value.endswith(("cqw", "%")) for _, value in declared)
+
+
+#: What a box laid on the page and a line's strut hold: the place of a text's frame and of a
+#: line's ground, and the height of a ground and of a strut.
+LAID = {
+    "text": ("left", "margin-top", "width"),
+    "ground": ("left", "margin-top", "width", "padding-top"),
+    "strut": ("padding-top",),
+}
+
+
+def test_a_box_laid_on_the_page_and_a_strut_are_percentages_of_the_box_they_lie_in() -> None:
+    """Firefox's print takes the sheet's area for the page's width in a length of `cqw` there,
+    so a text left its shapes on a page that printed narrower or wider than the area
+    (project-kit#3012). Every other length on the page stays in `cqw`."""
+    root = read(scene(SAID, TITLE))
+
+    for what, held in LAID.items():
+        nodes = marked(root, what)
+        assert nodes
+        for node in nodes:
+            assert set(styled(node)) - {"text-align"} == set(held)
+            assert all(styled(node)[prop].endswith("%") for prop in held)
+    others = [
+        value
+        for what in ("line", "span")
+        for node in marked(root, what)
+        for prop, value in styled(node).items()
+        if prop in ("top", "left", "width", "font-size")
+    ]
+    assert others and all(value.endswith("cqw") for value in others)
+
+
+def test_a_strut_whose_line_has_no_width_keeps_a_share_of_the_pages_width() -> None:
+    """A percentage of no width is none, so such a strut is the page's share."""
+    narrow = {**TITLE, "width": 0, "lines": [line(0, 15, (0, "Plan", 0))]}
+    [strut] = marked(read(scene(narrow)), "strut")
+    assert styled(strut) == {"height": "8cqw"}
 
 
 # --- shapes -------------------------------------------------------------------------------------
@@ -722,7 +780,7 @@ def test_the_file_names_its_piece_key_and_renderer() -> None:
     root = read(scene(TITLE))
     assert root.get("data-piece") == "flow"
     assert root.get("data-key") == "default"
-    assert root.get("data-renderer") == "html 1.9.0"
+    assert root.get("data-renderer") == "html 1.10.0"
 
 
 def test_pages_follow_each_other_in_the_middle_of_the_window_with_the_declared_gap() -> None:
@@ -787,7 +845,7 @@ def test_pages_of_two_sizes_each_keep_their_own_size_and_their_own_shares() -> N
         {"width": "min(100%,400px)", "aspect-ratio": "400/100"},
         {"width": "min(100%,200px)", "aspect-ratio": "200/200"},
     ]
-    assert [styled(text)["width"] for text in marked(root, "text")] == ["25cqw", "50cqw"]
+    assert [styled(text)["width"] for text in marked(root, "text")] == ["25%", "50%"]
 
 
 def test_drawn_says_which_pages_the_file_holds_in_order() -> None:
@@ -1200,7 +1258,7 @@ REFERENCE_KEYS = {"default": LIGHT, "colour-scheme.dark": DARK}
 PINNED = (
     "<!DOCTYPE html>\n"
     '<html lang="en" data-piece="flow" data-key="default" data-renderer="html '
-    '1.9.0">\n'
+    '1.10.0">\n'
     "<head>\n"
     '<meta charset="utf-8"/>\n'
     '<meta name="viewport" content="width=device-width,initial-scale=1"/>\n'
@@ -1215,9 +1273,9 @@ PINNED = (
     "body{margin:0}[data-page]{position:relative;container-type:inline-size;margin:0 "
     "auto}[data-page]+[data-page]{margin-top:24px}[data-layer]{position:absolute;"
     "left:0;top:0;width:100%;height:100%;pointer-events:none}"
-    "[data-text]{position:absolute}[data-line]{position:absolute;left:0;width:100%;"
+    "[data-text]{position:absolute;top:0}[data-line]{position:absolute;left:0;width:100%;"
     "font-size:0;line-height:0;white-space:pre}[data-strut]{display:inline-block;"
-    "width:0}[data-ground]{position:absolute;display:none;pointer-events:none}"
+    "width:0}[data-ground]{position:absolute;top:0;display:none;pointer-events:none}"
     "[data-inset]{display:none}@media print{[data-page]{break-inside:avoid;background:Canvas;"
     "-webkit-print-color-adjust:exact;print-color-adjust:exact}}"
     "@media (forced-colors:active){[data-layer] [stroke]{stroke:CanvasText}"
@@ -1239,11 +1297,11 @@ PINNED = (
     'height="40" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,…"/>'
     '<g transform="translate(10.5,20)"><ellipse data-id="first/mark/dot" cx="25" '
     'cy="15" rx="25" ry="15" fill="var(--accent)"/></g></svg><div '
-    'data-ground="first/mark/both" style="left:19.75cqw;top:24.628cqw;width:21cqw;'
-    'height:10.056cqw"></div><div '
-    'data-text="first/mark/both" style="left:5.25cqw;top:25cqw;width:50cqw;'
+    'data-ground="first/mark/both" style="left:19.75%;margin-top:24.628%;width:21%;'
+    'padding-top:10.056%"></div><div '
+    'data-text="first/mark/both" style="left:5.25%;margin-top:25%;width:50%;'
     'text-align:center"><div data-line="" style="top:-0.5cqw"><span data-strut="" '
-    'style="height:8cqw"></span><span data-span="" style="font-family:&quot;Source '
+    'style="padding-top:16%"></span><span data-span="" style="font-family:&quot;Source '
     "Sans Pro&quot;, &quot;Source Sans Pro Semibold&quot;;font-size:8cqw;"
     'color:var(--ink)">Aé</span></div></div><svg data-layer="" viewBox="0 0 200 100">'
     '<g transform="translate(10.5,20)"><line data-id="first/mark/arrow" x1="0" '
@@ -1251,11 +1309,11 @@ PINNED = (
     'marker-end="url(#pkit-arrow-end--ink)"/></g><rect data-id="first/over" x="20" '
     'y="50" width="30" height="10" fill="var(--shade)"/></svg></div><div '
     'data-page="second" style="width:min(100%,120px);aspect-ratio:120/60"><div '
-    'data-ground="second/said" style="left:-0.83333cqw;top:-0.62cqw;width:35cqw;'
-    'height:16.76cqw"></div><div '
-    'data-text="second/said" style="left:0cqw;top:0cqw;width:50cqw"><div '
+    'data-ground="second/said" style="left:-0.83333%;margin-top:-0.62%;width:35%;'
+    'padding-top:16.76%"></div><div '
+    'data-text="second/said" style="left:0%;margin-top:0%;width:50%"><div '
     'data-line="" style="top:-0.83333cqw"><span data-strut="" '
-    'style="height:13.33333cqw"></span><span data-span="" style="font-family:&quot;'
+    'style="padding-top:26.66667%"></span><span data-span="" style="font-family:&quot;'
     'Source Sans Pro&quot;;font-size:13.33333cqw;color:var(--ink)">Ab &lt;c&gt;'
     '</span></div></div><svg data-layer="" viewBox="0 0 120 60"><line '
     'data-id="second/arrow" x1="0" y1="5" x2="45" y2="5" stroke="var(--ink)" '
@@ -1753,9 +1811,12 @@ def reach_of(path: Path) -> tuple[float, float]:
 
 
 def placed(node: ElementTree.Element, width: float) -> tuple[float, float, float, float]:
-    """An element's left, top, width and height, in px of a page `width` px wide."""
+    """A box laid on a page `width` px wide, its left, top, width and height in px of the page:
+    its top a top margin and its height a top padding, each a share of the page's width."""
     style = styled(node)
-    left, top, wide, high = (px(style[name], width) for name in ("left", "top", "width", "height"))
+    left, top, wide, high = (
+        px(style[name], width) for name in ("left", "margin-top", "width", "padding-top")
+    )
     return left, top, wide, high
 
 
@@ -1817,7 +1878,7 @@ def test_a_ground_covers_its_line_as_the_engine_measured_it_widened_by_the_margi
 
 def test_a_ground_takes_no_pointer_and_draws_only_under_forced_colours() -> None:
     root = read(scene(TITLE))
-    assert rule(root, "ground") == "position:absolute;display:none;pointer-events:none"
+    assert rule(root, "ground") == "position:absolute;top:0;display:none;pointer-events:none"
     assert "[data-ground]{display:block;background:Canvas}" in forced(root)
     # The lines are kept out of the browser's backplate, and their spans left to forcing,
     # with no ground of their own.
@@ -1950,7 +2011,7 @@ def test_no_clip_and_no_inset_shape_applies_outside_forced_colours() -> None:
     for drawn in (EDGED, CLIPPED):
         root = read(drawn)
         assert "clip-path" not in plain_sheet(root)
-        assert rule(root, "ground").startswith("position:absolute;display:none")
+        assert rule(root, "ground").startswith("position:absolute;top:0;display:none")
         assert re.search(rf"(?:^|\}})\[{html.INSET}\]\{{display:none\}}", plain_sheet(root))
         assert not any("clip-path" in node.attrib for node in root.iter())
         assert not any("stroke" in node.attrib for node in root.iter() if html.CLIP in node.attrib)
