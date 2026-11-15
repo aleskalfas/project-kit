@@ -9,7 +9,8 @@ Held here:
   the methodology's container kept free in each; and no bar, no value and no number but the
   format's and the round's;
 - **the reviewer's body** lists a place for each rule the capability ships, and the places
-  match what the rule-set files say they judge;
+  match what the rule-set files say they judge; its report opens with the document, then
+  says what it looked at, then gives its findings;
 - **where the reports are kept**: the agent's body, the pages of the capability and the
   schema name one folder, in the clone's local folder.
 
@@ -257,10 +258,15 @@ def body() -> str:
     return REVIEWER.read_text(encoding="utf-8")
 
 
-def grades_section() -> str:
+def section(heading: str) -> str:
+    """The body's section under `## <heading>`, up to the next of its level."""
     text = body()
-    start = text.index("## Grades")
+    start = text.index(f"## {heading}")
     return text[start : text.index("\n## ", start + 1)]
+
+
+def grades_section() -> str:
+    return section("Grades")
 
 
 def rule_ids(path: str) -> list[str]:
@@ -305,6 +311,15 @@ def test_the_body_reads_the_briefs_file_and_the_earlier_reports_only_after_the_g
     )
     assert grading < reading_last
     assert f"step {reading_last}" in steps[4]
+
+
+def test_the_report_opens_with_its_document_then_what_was_looked_at_then_the_findings() -> None:
+    report = section("Your report")
+    document = report.index("bound to `visual-communication:review`")
+    looked_at = report.index("Looked at: <piece>")
+    findings = report.index("FAULT <number")
+    assert document < looked_at < findings
+    assert "Its report opens with a document of a fixed form" in body()
 
 
 def test_the_body_keeps_the_reports_where_the_pages_of_the_capability_say() -> None:
