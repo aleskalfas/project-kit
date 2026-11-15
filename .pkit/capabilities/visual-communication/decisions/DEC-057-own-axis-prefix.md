@@ -12,9 +12,9 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 A brand that builds on no other may hold axes of its own, from the first release of the capability that carries them ([project-kit#2983](https://github.com/aleskalfas/project-kit/issues/2983)). The record of brands then counts a new shared axis of the foundations as a break, since its name may meet an axis a brand holds of its own, and that brand then fails ([visual-communication:DEC-004-brands-and-notations] point 5). So each new shared axis would need a major of the foundations. Moving to a new major of a base breaks ([visual-communication:DEC-003-change-over-time] point 6), so every brand and component library built on them would follow in a major of its own, and every lock with them.
 
-The record of brands makes a brand's font profiles the modes of one shared axis (DEC-004 point 2), which the record of font profiles, drafted under [project-kit#3275](https://github.com/aleskalfas/project-kit/issues/3275), declares.
+The record of brands makes a brand's font profiles the modes of one shared axis (DEC-004 point 2), which the record of font profiles, drafted under [project-kit#3275](https://github.com/aleskalfas/project-kit/issues/3275), declares. It is the first new shared axis due once brands can hold axes of their own, which the first two alternatives below answer.
 
-The capability keeps apart the names a library adds and the shared ones. A library's own roles lie under a group named after the library, and no library takes the name of a top group of the shared roles (DEC-004 point 7). An axis's name has no group to lie under: it is one segment of a key, beside its mode (DEC-004 point 3), and holds no path mark ([visual-communication:DEC-002-files-and-validation] point 4).
+The capability keeps apart the names a library adds and the shared ones. A library's own roles lie under a group named after the library, and no library takes the name of a top group of the shared roles (DEC-004 point 7). An axis's name has no group to lie under: it is one segment of a key, beside its mode (DEC-004 points 3 and 4), and holds no path mark ([visual-communication:DEC-002-files-and-validation] point 4).
 
 ## Decision
 
