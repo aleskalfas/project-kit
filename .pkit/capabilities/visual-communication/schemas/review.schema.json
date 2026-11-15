@@ -1,0 +1,291 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "review.schema.json",
+  "title": "A round's review report — visual-communication capability",
+  "description": "Formal shape of the document `graphic-design-reviewer` opens its grades with, one for each round of a piece's review (DEC-042 points 1 and 4; DEC-015 point 7). It holds what a command reads to give the verdict, and what the report says it read before grading and the model it ran on. The report's findings stay prose, as the agent's body words them. It holds no bar, no number a rule's text does not give, and no look of a piece: the bar lies in the capability's configuration, and the review grades by none (DEC-042 point 3). The reviewer writes it as its reply; whoever dispatched it keeps it as written, in the clone's local folder. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "piece",
+    "round",
+    "model",
+    "read-before-grading",
+    "grades"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:review`.",
+      "const": "visual-communication:review"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "pkit": {
+      "$ref": "#/$defs/container"
+    },
+    "piece": {
+      "description": "The piece the round reviewed, by its name.",
+      "$ref": "defs.schema.json#/$defs/name"
+    },
+    "lock": {
+      "description": "The lock the images were drawn under, as the frames name it. Absent where the images were handed over without one.",
+      "$ref": "defs.schema.json#/$defs/lock"
+    },
+    "round": {
+      "description": "The number of the round of the designer's loop this review is of, from 1. A review outside a loop is round 1.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "model": {
+      "description": "The model the review ran on (DEC-042 points 4 and 9).",
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "name": {
+          "description": "The model's full name, as the harness gives it, never an alias that moves to a newer model.",
+          "$ref": "defs.schema.json#/$defs/text"
+        },
+        "effort": {
+          "description": "The effort the review ran at, where the harness has one. Absent where it has none.",
+          "$ref": "defs.schema.json#/$defs/text"
+        }
+      }
+    },
+    "read-before-grading": {
+      "description": "What the review had read when it wrote its grades (DEC-042 point 4). The brief's file and its reports of earlier rounds belong in `read-after-grading` alone: one listed here is a breach of the order, and shows.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/read"
+      },
+      "minItems": 1
+    },
+    "read-after-grading": {
+      "description": "What the review read once its grades were written: the brief's file, and its reports of the loop's earlier rounds, as they were written.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/read"
+      }
+    },
+    "grades": {
+      "description": "A grade for each rule the review read, on each page it takes one, and once for the piece where it takes one (DEC-042 point 1).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/grade"
+      },
+      "minItems": 1
+    },
+    "not-graded": {
+      "description": "Each rule the review read that takes no grade on a page, or for the piece, because the rule's text leaves it out, with why (DEC-042 point 1).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/not-graded"
+      }
+    }
+  },
+  "$defs": {
+    "container": {
+      "description": "The methodology's container (COR-053 point 10), which the capability never reads.",
+      "type": "object"
+    },
+    "grade-word": {
+      "description": "A grade, lowest first (DEC-042 point 1). Professional is the work a professional designer hands over for that audience and medium.",
+      "enum": [
+        "below competent",
+        "competent",
+        "professional",
+        "excellent"
+      ]
+    },
+    "rule-id": {
+      "description": "A rule's id, as the rule-set file that holds it gives it, such as `RS-COMM-001`.",
+      "type": "string",
+      "pattern": "^RS-[A-Z]+-[0-9]{3}$"
+    },
+    "place": {
+      "description": "What a grade is of: a page, by the id the page carries in the content, or the piece as a whole. Exactly one of `page` and `piece`.",
+      "type": "object",
+      "oneOf": [
+        {
+          "required": [
+            "page"
+          ],
+          "not": {
+            "required": [
+              "piece"
+            ]
+          }
+        },
+        {
+          "required": [
+            "piece"
+          ],
+          "not": {
+            "required": [
+              "page"
+            ]
+          }
+        }
+      ],
+      "properties": {
+        "page": {
+          "description": "The page the grade is of, by its id.",
+          "$ref": "defs.schema.json#/$defs/id"
+        },
+        "piece": {
+          "description": "True where the grade is of the piece as a whole, for a rule that judges the pages together.",
+          "const": true
+        }
+      }
+    },
+    "read": {
+      "description": "One thing the review read, by its kind, and what exactly.",
+      "type": "object",
+      "required": [
+        "kind",
+        "what"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "kind": {
+          "description": "What kind of thing it is. `intent` is the brief's goals, relations and takeaways a command hands the review, without their reasons. `brief-file` is the brief's file, and `earlier-reports` the reports of the loop's earlier rounds.",
+          "enum": [
+            "images",
+            "frames",
+            "report",
+            "piece",
+            "brand",
+            "intent",
+            "rule-sets",
+            "design-knowledge",
+            "sources",
+            "brief-file",
+            "earlier-reports"
+          ]
+        },
+        "what": {
+          "description": "What was read, in words: the files, or that nothing of the kind was handed.",
+          "$ref": "defs.schema.json#/$defs/text"
+        }
+      }
+    },
+    "mark": {
+      "description": "A mark the review alone sets on a grade, where no fix the designer may make would raise it (DEC-042 point 4). The verdict leaves a marked grade out.",
+      "type": "object",
+      "required": [
+        "kind",
+        "names"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "kind": {
+          "description": "`need`: only a tool the engine lacks would raise the grade. `asker`: only the asker's words would raise it.",
+          "enum": [
+            "need",
+            "asker"
+          ]
+        },
+        "names": {
+          "description": "For a need, the tool, and what the design needs of it. For the asker's, the words.",
+          "$ref": "defs.schema.json#/$defs/text"
+        }
+      }
+    },
+    "grade": {
+      "description": "One rule's grade, on one page or for the piece, with its evidence (DEC-042 point 1).",
+      "type": "object",
+      "required": [
+        "rule",
+        "on",
+        "grade",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "rule": {
+          "$ref": "#/$defs/rule-id"
+        },
+        "on": {
+          "$ref": "#/$defs/place"
+        },
+        "grade": {
+          "$ref": "#/$defs/grade-word"
+        },
+        "evidence": {
+          "description": "What the drawn page, or the pages, show that gives the grade, in a line.",
+          "$ref": "defs.schema.json#/$defs/text"
+        },
+        "mark": {
+          "$ref": "#/$defs/mark"
+        },
+        "other-cause": {
+          "description": "On a grade below professional that carries no mark, the cause the review names apart where something besides a fix the designer may make weighs on it (DEC-042 point 4).",
+          "$ref": "defs.schema.json#/$defs/text"
+        },
+        "since-last-round": {
+          "description": "Where the grade differs from the one the review gave the round before: that grade, and why it differs, higher or lower. Written once the review has read its earlier reports.",
+          "type": "object",
+          "required": [
+            "was",
+            "why"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "pkit": {
+              "$ref": "#/$defs/container"
+            },
+            "was": {
+              "$ref": "#/$defs/grade-word"
+            },
+            "why": {
+              "$ref": "defs.schema.json#/$defs/text"
+            }
+          }
+        }
+      }
+    },
+    "not-graded": {
+      "description": "A rule that takes no grade where its text leaves the place out.",
+      "type": "object",
+      "required": [
+        "rule",
+        "on",
+        "why"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "rule": {
+          "$ref": "#/$defs/rule-id"
+        },
+        "on": {
+          "$ref": "#/$defs/place"
+        },
+        "why": {
+          "description": "The passage of the rule's text that leaves it out.",
+          "$ref": "defs.schema.json#/$defs/text"
+        }
+      }
+    }
+  }
+}
