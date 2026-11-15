@@ -39,6 +39,13 @@ the configured Projects v2 board as the final step of filing. The
 default assignee is the resolved invoker identity per DEC-019's
 default_at_filing: filer.
 
+`--board` files the issue onto the board it names in place of the configured
+one (DEC-019), except where the substrate map binds the state to the board.
+There every command reads an open issue's position from its card on the
+configured board alone, so a `--board` naming another board is refused, with
+exit 2, before anything is written or asked, `--dry-run` included (DEC-070).
+One naming the configured board's own number goes on.
+
 With an instance id set (`set-instance`, DEC-035 point 1), the new issue is
 claimed for this clone right after it is filed, so the clone owns the arc it
 files from birth (DEC-035 point 3), through `_lib/instance_claims`. An issue
@@ -103,6 +110,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import (
     axis_carriage,
     axis_labels,
+    board_fields,
     board_status,
     body_parent_ref,
     body_rules,
@@ -243,8 +251,11 @@ def main() -> int:
         type=int,
         default=None,
         help=(
-            "Projects v2 board ID. Overrides the adopter's "
-            "`projects_v2_board_id` config for this invocation."
+            "Projects v2 board number to file the issue onto, in place of the "
+            "configured `projects_v2_board_id`. Where the substrate map binds the "
+            "state to the board, refused unless it names the configured board, "
+            "since every command reads an open issue's position from that board "
+            "([project-management:DEC-070-filing-another-board])."
         ),
     )
     parser.add_argument(
@@ -308,6 +319,20 @@ def main() -> int:
     if not membership.allowed:
         print(membership.refusal_message, file=sys.stderr)
         return 1
+
+    # The adopter's optional substrate-map (ADR-026 / DEC-036). None ⇒
+    # greenfield. Loaded before anything is asked, since the board a filing
+    # names is judged against it first.
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+
+    # A board other than the configured one, where the board holds the state
+    # (DEC-070): refused before anything is written or asked, the foreign-repo
+    # question below included, and before any read of a board. It needs only
+    # the configuration, the map and the option, so `--dry-run` meets it too.
+    board_refusal = _foreign_board_refusal(args.board, config, substrate_map)
+    if board_refusal is not None:
+        print(board_refusal, file=sys.stderr)
+        return 2
 
     # Foreign-repo mutation guard (COR-039 / ADR-034). Compares the cwd-derived
     # mutation target against the cd-invariant session anchor (CLAUDE_PROJECT_DIR);
@@ -387,11 +412,8 @@ def main() -> int:
             )
         return 2
 
-    # The adopter's optional substrate-map (ADR-026 / DEC-036). None ⇒
-    # greenfield. Loaded here (not just for label resolution below) because the
-    # hierarchy MODE it declares governs whether the parent-requiredness check
-    # just below gates or merely advises.
-    substrate_map = axis_labels.load_substrate_map(capability_root)
+    # The hierarchy MODE the substrate-map declares (loaded above) governs
+    # whether the parent-requiredness check just below gates or merely advises.
     hierarchy = axis_labels.hierarchy_disposition(substrate_map)
 
     # Validate parent type (if --parent given) / parent-REQUIREDNESS.
@@ -1013,6 +1035,61 @@ def main() -> int:
         return _link_from_report(args.from_report, new_issue_number)
 
     return 0
+
+
+def _foreign_board_refusal(
+    board: int | None,
+    config: dict[str, Any],
+    substrate_map: axis_labels.SubstrateMap | None,
+) -> str | None:
+    """Why a filing whose `--board` is ``board`` is refused, or None where it
+    goes on ([project-management:DEC-070-filing-another-board]).
+
+    Where the map binds the state to the board, every command reads an open
+    issue's position from its card on the configured board alone (DEC-051 point
+    6), so an issue filed onto another board would have a position no command
+    reads. ``board`` names another board where it differs, as a number, from the
+    configured board's number, and wherever the configuration gives none.
+    Anywhere else the option goes on, as DEC-019 has it. No I/O.
+    """
+    if board is None or board_status.role(config, substrate_map) != "source":
+        return None
+    configured = _configured_board_number(config)
+    if configured == board:
+        return None
+    reason = (
+        "the substrate map binds the state to the board, so every command reads an "
+        "open issue's position from its card on the configured board, and an issue "
+        f"filed onto board {board} would have a position no command reads "
+        "([project-management:DEC-070-filing-another-board]). Nothing was filed."
+    )
+    if configured is None:
+        return (
+            f"error: --board {board} is refused: {reason}\n"
+            "  project/config.yaml gives no board number (`projects_v2_board_id`, under "
+            "`has_projects_v2_board: true`), so there is no configured board to file "
+            "onto. Set it there; `pkit pm pre-check` checks it."
+        )
+    return (
+        f"error: --board {board} names a board other than the configured one, "
+        f"board {configured}, and is refused: {reason}\n"
+        f"  → To file the issue onto board {configured}, leave --board out.\n"
+        f"  → To have it on board {board} too, file it, then add a card there by "
+        f"GitHub's own means: `gh project item-add {board} --owner <owner> --url "
+        "<the issue's url>`. That card carries no position."
+    )
+
+
+def _configured_board_number(config: dict[str, Any]) -> int | None:
+    """The configured board's number, read as a number, so `7` and `'7'` are one
+    board; None where the configuration gives none, or one that is no number."""
+    number = board_fields.board_number(config)
+    if number is None:
+        return None
+    try:
+        return int(number)
+    except ValueError:
+        return None
 
 
 def _link_from_report(report_n: int, new_issue_number: int | None) -> int:

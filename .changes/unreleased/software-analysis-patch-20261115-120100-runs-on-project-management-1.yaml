@@ -1,0 +1,8 @@
+component: software-analysis
+kind: patch
+body: >
+  The analysis and its fixer run on project-management 1.0.0. Its breaking
+  change, filing refusing another board where the board holds the state
+  (#3254), reaches nothing this capability calls.
+runs_on_capabilities:
+  project-management: release
