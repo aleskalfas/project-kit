@@ -1,0 +1,7 @@
+component: project-management
+kind: none
+body: >
+  DEC-070, to be accepted with this change (#3204), decides what the forward
+  cascade does at an ancestor it cannot place, and refines DEC-006 in place.
+  The move command is unchanged until the change that builds it (#2305), so
+  no surface moves.
