@@ -33,7 +33,7 @@ As the provider of the work-tracking role, this capability accepts `<methodology
 - **It has no default.** This capability holds no use cases of its own.
 - **Its inert policy is `fallback`**: its consumers only report, and a consumer that only reports may declare `fallback` (COR-052 point 6). The policy holds on three conditions, and they are part of this decision:
   - nothing refuses on the point, and nothing fails on it;
-  - no finding is drawn from an id the point lacks unless the point resolved with no inert filler (point 3);
+  - no finding is drawn from an id the point lacks unless the point resolved with its fillers listed and each `taken` or `passed over` (point 3; refinement per [pkit:ADR-097]);
   - raising the rule of point 4 above a warning reopens the policy.
 
 ### 2. The filler's contract
@@ -55,10 +55,10 @@ This capability reads the point through the backbone's document for one point (`
 - **Could not check**: `no-answer`, `inert-fail`, `collision`, `selection-needed`, `selection-unmatched`, `definer-defect`, or a value this version does not know. There is no set to judge against. The same holds where the command returns no document, or one whose version this capability does not know.
   - One notice says the citations were not checked, and why. It is a notice about the check, not a finding against the body, and no citation is reported as unknown. It is reported at warning severity.
   - This point's own declaration cannot produce two of these values: `collision` under `single`, and `inert-fail` under `fallback`. They are read the same way all the same, so the consumer does not depend on the declaration staying as it is.
-- **Partly checked**: `resolved`, with a filler whose state is `inert`. The point answered without a filler that was meant to answer.
+- **Partly checked**: `resolved`, with a filler whose state is neither `taken` nor `passed over`, such as `inert` or a state this capability does not know, or without the `fillers` key (refinement per [pkit:ADR-097]). The point answered, and a filler meant to answer may not have.
   - An id the point holds passes. The ids it lacks are named as not checked, never as unknown, in one notice that lists them, at warning severity.
-  - Under `single` with no default, this state arises only where more than one filler is declared and one that was asked gives no answer while another answers.
-- **Empty** and **has entries**: `resolved`, with no inert filler. The value is the whole set, and the rule and the planning step apply to it.
+  - Under `single` with no default, an inert filler makes this state only where more than one filler is declared and one that was asked gives no answer while another answers (refinement per [pkit:ADR-097]).
+- **Empty** and **has entries**: `resolved`, with its fillers listed and each `taken` or `passed over` (refinement per [pkit:ADR-097]). The value is the whole set, and the rule and the planning step apply to it.
 
 ### 4. The rule
 
@@ -79,7 +79,7 @@ Batch planning reads the point before it proposes a slicing. The step is active 
   - Each proposed Feature and Task names the use cases it satisfies in its `## Use cases` section. An issue that serves none, such as an internal refactor, has no such section.
   - The plan shown at the single approval gate ([project-management:DEC-029-project-manager-agent-shape]) surfaces both kinds of gap. One is a use case the plan leaves out: the intent touches it, but no planned issue names it. The other is behaviour the plan builds that no use case describes.
   - Where entries carry `path`, the agent may read those documents. Otherwise it maps the intent from titles alone, and the plan says so.
-- **Partly checked:** the agent walks the entries the point holds. The plan says that the set may be incomplete, and which filler did not answer.
+- **Partly checked:** the agent walks the entries the point holds. The plan says that the set may be incomplete, and which filler did not answer or is in a state the agent does not know, or that the document has no `fillers` key (refinement per [pkit:ADR-097]).
   - Behaviour that no held use case describes is shown as a possible gap, since the missing filler may describe it.
   - An empty value read in this state does not lead to the prerequisite Task below.
 - **With an empty set**, the plan includes a prerequisite Task to author the use cases when the planned work touches what users do, unless the Task was declined earlier the same day in the checkout (the clone's folder, or a worktree's) where the plan is made.
