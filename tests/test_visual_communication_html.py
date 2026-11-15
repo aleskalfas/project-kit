@@ -26,9 +26,9 @@ seam 9, with a custom property of its own (DEC-032 point 5): a scene of no step 
 drew it, but for the renderer's version it names. Version 1.9.0 came to draw, under forced
 colours alone, a ground for each line of a text, beneath the lines of its run of texts, and a
 fill's edge inside the fill (DEC-039 points 1 to 4): each file holds the rules for them, and
-each text its lines' grounds. Version 1.10.0 came to draw, outside forced
-colours, each run's ground by its span's `::before`, in a stacking context of each text's own (DEC-039
-point 3): the same scene draws another file.
+each text its lines' grounds. Version 1.10.0 came to draw, outside forced colours, each run's
+ground by its span's `::before`, in a stacking context of each text's own (DEC-039 point 3):
+the same scene draws another file.
 """
 
 from __future__ import annotations
