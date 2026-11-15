@@ -44,6 +44,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/intent.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/briefs.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
         - .pkit/capabilities/visual-communication/rule-sets/vis.md
         - .pkit/capabilities/visual-communication/rule-sets/comm.md
@@ -404,7 +405,7 @@ Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 
 Prints what a piece's brief hands the review first: the intent, without the reasons ([visual-communication:DEC-042-grades-bar-and-loop] point 4).
 
-- **Prints** the goals, relations and takeaways of the piece's part and of each page's part, in the order the brief gives them ([The brief](files.md#the-brief)). A relation is printed with the parts of the content it relates. A part that states none is named as stating none. `--json` prints it as one document.
+- **Prints** the goals, relations and takeaways of the piece's part and of each page's part ([The brief](files.md#the-brief)): the pages and the items of each list in the brief's order, and within a part its goals, then its relations, then its takeaway. A relation is printed with the parts of the content it relates. A part that states none is named as stating none. `--json` prints it as one document.
 - **Leaves out** every reason, and each aspect and principle a reason holds ([The brief](files.md#the-brief)).
 - **Reads** the piece's `piece.yaml` and its brief: no lock, no drawing, no content. A piece with no brief, or whose brief cannot be read, is said to keep none.
 - **Writes** nothing.
