@@ -1,8 +1,9 @@
 """`scripts/visual_html_reads.py`: the maintainer's measure of the HTML renderer's read of cover
-through a browser (visual-communication DEC-037, project-kit#3262). It lays each dot of the SVG
-probe at each em on pages the renderer writes, reads each tally the read makes from the tally's
-own images, lays a box over each dot, and says what the read names. The tests here read its
-parts in this process, and one draws through a real browser where the machine has one."""
+and cut through a browser (visual-communication DEC-037, project-kit#3262). It lays plants at
+each em on pages the renderer writes, in a light key, a dark key or the forced palettes, reads
+each tally the read makes from the tally's own images, lays a box over each plant, and says
+what the read names and what DEC-045's measure of islands would. The tests here read its parts
+in this process, and one draws through a real browser where the machine has one."""
 
 from __future__ import annotations
 
@@ -15,19 +16,33 @@ import pytest
 from scripts import visual_html_reads as reads
 from scripts import visual_svg_reads as svg_reads
 
+from tests.in_process import load
 from tests.test_visual_communication_viewing_browser import real_browser
 
-#: A tally's clip, drawn at two device pixels to a px, and the page it lies on, in px of the
-#: document.
+viewing_tool, viewing_browser = load("visual-communication", "viewing_tool", "viewing_browser")
+
+#: A tally's clip, drawn at two device pixels to a px, its images' size, and the page it lies
+#: on, in px of the document. A pixel's centre lies on the page from row 2 and column 2.
 CLIP = {"x": 4.0, "y": 6.0, "width": 10.0, "height": 10.0}
+SIZE = (20, 20)
 PAGE = {"x": 5.0, "y": 7.0, "width": 100.0, "height": 50.0}
 
 
 def spot(
-    pixels: Mapping[tuple[int, int], tuple[int, int]], counted: Mapping[str, int] | None = None
+    pixels: Mapping[tuple[int, int], tuple[int, int]],
+    counted: Mapping[str, int] | None = None,
+    em: float = 10.0,
 ) -> reads.Spot:
     return reads.Spot(
-        0, 10.0, PAGE, CLIP, 2.0, 255.0, pixels, counted or {"strong": 0, "hidden": 0}
+        0,
+        em,
+        PAGE,
+        CLIP,
+        2.0,
+        255.0,
+        pixels,
+        counted or {"strong": 0, "past": 0, "hidden": 0},
+        SIZE,
     )
 
 
@@ -45,7 +60,7 @@ def test_each_dot_at_each_em_lies_in_a_cell_of_its_own_on_a_page_that_holds_it()
             assert plant.page == page.id
             assert plant.text.startswith(f"{page.id}/")
             assert plant.size == plant.em / 0.5
-            right = plant.left + reads.CELL_WIDTH * plant.size
+            right = plant.left + reads.cell_width(plant.dot) * plant.size
             bottom = plant.top + reads.CELL_HEIGHT * plant.size
             assert right <= page.width + 1e-9
             assert bottom <= page.height + 1e-9
@@ -54,6 +69,17 @@ def test_each_dot_at_each_em_lies_in_a_cell_of_its_own_on_a_page_that_holds_it()
             assert (
                 one[2] <= other[0] or other[2] <= one[0] or one[3] <= other[1] or other[3] <= one[1]
             )
+
+
+def test_each_step_of_a_graze_is_a_plant_of_its_own_in_a_cell_as_wide_as_its_words() -> None:
+    words = reads.Words("descenders", (reads.GRAZED["descenders"],))
+    pages = reads.laid((words,), (10.0, 20.0), 1.0, reads.GRAZE_STEPS)
+    plants = [plant for page in pages for plant in page.plants]
+    assert [(plant.em, plant.step) for plant in plants] == list(
+        itertools.product((10.0, 20.0), reads.GRAZE_STEPS)
+    )
+    assert reads.cell_width(words) == 2 * reads.TEXT_LEFT + reads.ADVANCE * 16
+    assert reads.cell_width(svg_reads.DOTS[0]) == reads.CELL_WIDTH
 
 
 def test_a_row_and_a_page_stay_within_what_a_browser_draws_at_once() -> None:
@@ -66,21 +92,45 @@ def test_a_row_and_a_page_stay_within_what_a_browser_draws_at_once() -> None:
         assert page.height * scale <= reads.PAGE_PIXELS
 
 
+def test_a_palette_is_light_where_its_ground_is_lighter_than_its_text_and_forced_where_so() -> None:
+    black, white = (0, 0, 0), (255, 255, 255)
+    assert reads.palette_of(black, white, False) == "light"
+    assert reads.palette_of(white, black, False) == "dark"
+    assert reads.palette_of(white, black, True) == "forced dark"
+    assert reads.palette_shown(viewing_browser.Shown({}, (), _empty_read(), "light"), "dark") == (
+        "forced light"
+    )
+    assert reads.palette_shown(viewing_browser.Shown({}, (), _empty_read()), "dark") == "dark"
+
+
+def _empty_read() -> Any:
+    return viewing_browser.Read((), (), (), (), ())
+
+
 def test_a_pixel_is_strong_where_the_letters_alone_change_it_by_more_than_half() -> None:
-    found = spot({(0, 0): (255, 0), (0, 1): (128, 128), (0, 2): (127, 0)})
+    found = spot({(2, 2): (255, 0), (2, 3): (128, 128), (2, 4): (127, 0)})
     assert [found.is_strong(pixel) for pixel in sorted(found.pixels)] == [True, True, False]
-    assert found.ink == {(0, 0): 0, (0, 1): 127, (0, 2): 128}
-    assert found.shows == {(0, 0): 0, (0, 1): 128, (0, 2): 0}
-    assert found.hidden == [(0, 0), (0, 2)]
+    assert found.ink == {(2, 2): 0, (2, 3): 127, (2, 4): 128}
+    assert found.shows == {(2, 2): 0, (2, 3): 128, (2, 4): 0}
+    assert found.hidden == [(2, 2), (2, 4)]
 
 
-def test_the_probe_agrees_with_the_tally_where_it_counts_strong_ink_and_what_is_hidden_alike() -> (
-    None
-):
-    pixels = {(0, 0): (255, 0), (0, 1): (200, 50), (0, 2): (40, 0)}
-    assert spot(pixels, {"strong": 2, "past": 0, "hidden": 1}).agrees()
-    assert not spot(pixels, {"strong": 2, "past": 0, "hidden": 2}).agrees()
+def test_a_pixel_past_the_page_is_cut_and_neither_hidden_nor_shown() -> None:
+    """Rows 0 and 1, and columns 0 and 1, lie before the page's edges: their centres fall at
+    6.25 and 6.75 px, against the page's top at 7, and at 4.25 and 4.75, against its left at
+    5."""
+    found = spot({(1, 2): (255, 0), (2, 1): (255, 0), (2, 2): (255, 0), (3, 3): (255, 255)})
+    assert found.beyond == [(1, 2), (2, 1)]
+    assert found.hidden == [(2, 2)]
+    assert found.shows == {(2, 2): 0, (3, 3): 255}
+
+
+def test_the_probe_agrees_with_the_tally_where_it_counts_strong_ink_past_and_hidden_alike() -> None:
+    pixels = {(1, 2): (255, 0), (2, 2): (255, 0), (2, 3): (200, 50), (2, 4): (40, 0)}
+    assert spot(pixels, {"strong": 3, "past": 1, "hidden": 1}).agrees()
     assert not spot(pixels, {"strong": 3, "past": 0, "hidden": 1}).agrees()
+    assert not spot(pixels, {"strong": 3, "past": 1, "hidden": 2}).agrees()
+    assert not spot(pixels, {"strong": 4, "past": 1, "hidden": 1}).agrees()
 
 
 def test_a_box_over_pixels_lies_a_pixel_past_them_in_px_of_their_page() -> None:
@@ -89,6 +139,7 @@ def test_a_box_over_pixels_lies_a_pixel_past_them_in_px_of_their_page() -> None:
     found = spot({(2, 3): (255, 0), (3, 4): (255, 0)})
     assert found.page_box([(2, 3), (3, 4)], 1) == {"x": 0.0, "y": -0.5, "width": 2.0, "height": 2.0}
     assert found.page_box([(2, 3)]) == {"x": 0.5, "y": 0.0, "width": 0.5, "height": 0.5}
+    assert found.row_on_page(4) == 1.0
 
 
 def test_a_picture_starts_at_the_device_pixel_nearest_its_clip_a_half_rounding_up() -> None:
@@ -108,7 +159,7 @@ def test_a_box_over_pixels_starts_where_the_picture_does_not_where_its_clip_does
     device pixel 1176, px 2352: its first pixel lies a px past the clip's start, and each
     pixel runs two px."""
     clip = {"x": 2351.0, "y": 2351.0, "width": 2205.0, "height": 2205.0}
-    found = reads.Spot(0, 10.0, {"x": 0.0, "y": 0.0}, clip, 0.5, 255.0, {}, {})
+    found = reads.Spot(0, 10.0, {"x": 0.0, "y": 0.0}, clip, 0.5, 255.0, {}, {}, (1103, 1103))
     assert found.page_box([(0, 0), (1100, 1100)]) == {
         "x": 2352.0,
         "y": 2352.0,
@@ -117,18 +168,76 @@ def test_a_box_over_pixels_starts_where_the_picture_does_not_where_its_clip_does
     }
 
 
+def test_a_graze_box_lies_its_steps_in_eighths_of_a_device_pixel_above_the_counted_foot() -> None:
+    """The counted ink's lowest row is row 3, the faint pixel of row 4 aside, so its foot lies
+    at row 4: a px down the page, two device pixels to a px. Step 8 lies a device pixel, half a
+    px, above it, step -4 half a device pixel below it, and the box runs an em of 5 px below
+    the foot, from a pixel left of the ink to a pixel right of it."""
+    found = spot({(2, 3): (255, 0), (3, 5): (128, 128), (4, 4): (20, 20)})
+    assert found.ink[(4, 4)] > viewing_tool.FAINT
+    assert reads.graze_box(found, 0, 5.0, viewing_tool.FAINT) == {
+        "x": 0.0,
+        "y": 1.0,
+        "width": 2.5,
+        "height": 5.0,
+    }
+    assert reads.graze_box(found, 8, 5.0, viewing_tool.FAINT)["y"] == 0.5
+    assert reads.graze_box(found, -4, 5.0, viewing_tool.FAINT)["y"] == 1.25
+
+
+def test_a_graze_box_drawn_in_two_palettes_takes_the_lowest_foot_and_the_widest_reach() -> None:
+    words = reads.Words("descenders", ("gy",))
+    [page] = reads.laid((words,), (10.0,), 2.0, (0,))
+    [plant] = page.plants
+    capture = reads.Capture()
+    for palette, pixels in (("light", {(2, 3): (255, 0)}), ("dark", {(3, 5): (255, 0)})):
+        capture.emulated = {"forced-colors": "active", "palette": palette}
+        capture.read(reads.FILE, [_document_of(plant.text, ("gy",))])
+        held = {"apart": 255, "width": 20, "height": 20, "spans": [_inked(4, pixels)]}
+        held.update(_colours(palette))
+        capture.tallied(reads.FILE, CLIP, 2.0, [_asked(4)], [COUNTED[0]], held)
+    first = reads.Drawn(capture, {})
+    [(text, box)] = reads.graze_boxes([page], first, viewing_tool.FAINT).items()
+    assert text == plant.text
+    assert box == {"x": 0.0, "y": 1.0, "width": 2.5, "height": 5.0}
+
+
 def document() -> list[dict[str, Any]]:
     """A document of one page, holding one text of a line of two spans, "end" and "."."""
     spans = [{"index": 4, "text": "end", "em": 20.0}, {"index": 5, "text": ".", "em": 20.0}]
-    return [{"id": "dots-0", "texts": [{"id": "dots-0/0-0", "lines": [spans]}]}]
+    return [{"id": "probe-0", "texts": [{"id": "probe-0/0-0", "lines": [spans]}]}]
+
+
+def _document_of(text: str, runs: tuple[str, ...]) -> dict[str, Any]:
+    spans = [{"index": 4 + at, "text": words, "em": 5.0} for at, words in enumerate(runs)]
+    return {"id": "probe-0", "texts": [{"id": text, "lines": [spans]}]}
+
+
+def _inked(index: int, pixels: Mapping[tuple[int, int], tuple[int, int]]) -> dict[str, Any]:
+    return {"index": index, "pixels": [[*pixel, *values] for pixel, values in pixels.items()]}
+
+
+def _asked(index: int) -> dict[str, Any]:
+    return {"index": index, "box": dict(CLIP), "page": dict(PAGE)}
+
+
+def _colours(palette: str) -> dict[str, list[int]]:
+    black, white = [0, 0, 0], [255, 255, 255]
+    return (
+        {"text": black, "behind": white} if palette == "light" else {"text": white, "behind": black}
+    )
 
 
 #: What the probe's own reading of a tally gives of the span "." of `document`.
 INKED = {
     "apart": 255,
-    "spans": [{"index": 5, "pixels": [[1, 2, 255, 0]]}],
+    "text": [0, 0, 0],
+    "behind": [255, 255, 255],
+    "width": 20,
+    "height": 20,
+    "spans": [_inked(5, {(3, 2): (255, 0)})],
 }
-ASKED = [{"index": 5, "box": dict(CLIP), "page": dict(PAGE)}]
+ASKED = [_asked(5)]
 COUNTED = [{"strong": 1, "past": 0, "hidden": 1}]
 
 
@@ -136,35 +245,61 @@ def test_a_capture_finds_a_tallied_span_by_its_file_its_text_its_line_and_its_pl
     capture = reads.Capture()
     capture.read(reads.FILE, document())
     capture.tallied(reads.FILE, CLIP, 2.0, ASKED, COUNTED, INKED)
-    found = capture.spot(reads.FILE, "dots-0/0-0", 0, 1)
+    [reading] = capture.of(reads.FILE)
+    assert reading.palette == "light"
+    found = reading.spot("probe-0/0-0", 0, 1)
     assert found is not None
     assert (found.index, found.em, found.pixels, found.page, found.clip, found.scale) == (
         5,
         20.0,
-        {(1, 2): (255, 0)},
+        {(3, 2): (255, 0)},
         PAGE,
         CLIP,
         2.0,
     )
     assert found.agrees()
-    assert capture.spot(reads.FILE, "dots-0/0-0", 0, 0) is None
-    assert capture.spot("planted.html", "dots-0/0-0", 0, 1) is None
+    assert reading.spot("probe-0/0-0", 0, 0) is None
+    assert capture.of("planted.html") == []
+    assert capture.files() == [reads.FILE]
+
+
+def test_a_capture_keeps_a_reading_for_each_emulation_named_by_the_colours_it_read_in() -> None:
+    capture = reads.Capture()
+    for palette in ("light", "dark"):
+        capture.emulated = {"forced-colors": "active", "prefers-color-scheme": palette}
+        capture.read(reads.FILE, document())
+        capture.tallied(reads.FILE, CLIP, 2.0, ASKED, COUNTED, {**INKED, **_colours(palette)})
+    assert [reading.palette for reading in capture.of(reads.FILE)] == [
+        "forced light",
+        "forced dark",
+    ]
 
 
 def fake_browser() -> ModuleType:
     """A module of the browser module's shape, whose reads give `document`, its tally and the
-    probe's own reading of it, and whose pre-filter passes over every span."""
+    probe's own reading of it, whose pre-filter passes over every span, and whose read of ink
+    finds none."""
     module = ModuleType("fake_browser")
 
     class Started:
         def __init__(self, own: str) -> None:
             self._own = own
             self.scale = 2.0
+            self.emulated: dict[str, str] = {}
 
         def ask(self, function: str, *arguments: Any) -> Any:
             return {"read": document(), "tally": COUNTED, reads.INKED: INKED}[function]
 
-    vars(module).update(READ="read", TALLY="tally", _Started=Started, _passed_over=lambda *_: True)
+        def emulate(self, signals: Mapping[str, str]) -> None:
+            self.emulated = dict(signals)
+
+    vars(module).update(
+        READ="read",
+        TALLY="tally",
+        _Started=Started,
+        _passed_over=lambda *_: True,
+        _left_ink=lambda *_: False,
+    )
     return module
 
 
@@ -173,18 +308,25 @@ def test_while_captured_each_read_and_tally_of_a_file_is_kept_and_the_module_lef
 ):
     module = fake_browser()
     names = vars(module)
-    ask, passed_over = names["_Started"].ask, names["_passed_over"]
+    held = (names["_Started"].ask, names["_Started"].emulate)
+    passed_over, left_ink = names["_passed_over"], names["_left_ink"]
     with reads.captured(module, every=True) as capture:
         started = names["_Started"](f"file:///somewhere/{reads.FILE}")
+        started.emulate({"forced-colors": "active"})
+        assert started.emulated == {"forced-colors": "active"}
         started.ask("read")
         started.ask("tally", ["strong", "ground", "shown", "unshown"], CLIP, ASKED)
-        assert not names["_passed_over"]({"id": "dots-0"}, {}, [])
+        assert not names["_passed_over"]({"id": "probe-0"}, {}, [])
         assert names["_passed_over"]({"id": "planted"}, {}, [])
-    assert names["_Started"].ask is ask
-    assert names["_passed_over"] is passed_over
-    assert capture.spot(reads.FILE, "dots-0/0-0", 0, 1) is not None
+        assert names["_left_ink"](started, {"id": "probe-0"}, {}, {}, 0)
+        assert not names["_left_ink"](started, {"id": "planted"}, {}, {}, 0)
+    assert (names["_Started"].ask, names["_Started"].emulate) == held
+    assert (names["_passed_over"], names["_left_ink"]) == (passed_over, left_ink)
+    [reading] = capture.of(reads.FILE)
+    assert reading.palette == "forced light"
+    assert reading.spot("probe-0/0-0", 0, 1) is not None
     with reads.captured(module, every=False):
-        assert names["_passed_over"]({"id": "dots-0"}, {}, [])
+        assert names["_passed_over"]({"id": "probe-0"}, {}, [])
 
 
 def hidden(dot: Any, em: float, **found: Any) -> reads.Hidden:
@@ -215,6 +357,81 @@ def test_the_summary_counts_the_dots_the_read_leaves_unnamed_and_what_dec_045_wo
         "draws at which a box hid a neighbour's strong ink: 0",
     ]
     assert hidden(stop, 20.0).sliver == pytest.approx(4.0)
+    assert reads.palettes_of([*every, hidden(stop, 10.0, palette="dark")]) == ["light", "dark"]
+
+
+def grazed(step: int, lost: int, **found: Any) -> reads.Grazed:
+    return reads.Grazed(12.0, 1.0, step, "light", strong=200, lost=lost, **found)
+
+
+def test_the_graze_summary_lists_each_step_whose_island_the_read_leaves_unnamed() -> None:
+    every = [
+        grazed(0, 0),
+        grazed(8, 0, counted=9),
+        grazed(9, 1, counted=11, island=True, level=127),
+        grazed(16, 23, counted=30, named=True, island=True, level=127),
+        grazed(17, 23, counted=30, named=True),
+    ]
+    lines = reads.graze_summary(every)
+    assert lines[0] == (
+        "5 steps at 1 draws (ems 12.0 to 12.0): hiding nothing wholly at 1, counted ink alone"
+        " at 1, strong ink at 3"
+    )
+    assert lines[1] == "  named by the read at 2 (ems 12.0 to 12.0)"
+    assert lines[2] == (
+        "  the measure takes an island at 2 (ems 12.0 to 12.0); the read leaves unnamed 1 of"
+        " those (ems 12.0 to 12.0)"
+    )
+    assert lines[3] == (
+        "    em 12.000, scale 1, step 9: hid 1 of 200 strong against a sliver of 1.44 px,"
+        " 11 counted wholly, an island at 127"
+    )
+    assert lines[4] == "    by scale: 1 1"
+    assert lines[5] == (
+        "  the least graze, at 1 of 1 draws: named by the read at 0, an island taken at 1, by"
+        " the measure alone at 1"
+    )
+    assert reads.graze_line(12.0, 1.0, every).endswith("steps 0..17: 0 0 1! 23* 23*")
+
+
+def test_island_level_asks_the_measure_at_each_level_alone_and_leaves_its_levels_as_they_were() -> (
+    None
+):
+    """A strong pixel whose neighbours are faint is an island at 127 of its own, and at 159
+    meets them, so a cause that hides it alone takes an island first at 127."""
+    ink = {(0, 0): 100, (0, 1): 150, (1, 0): 150}
+    shows = {(0, 1): 255, (1, 0): 255}
+    levels = viewing_tool.LEVELS
+    assert reads.island_level(viewing_tool, ink, [(0, 0)], shows) == 127
+    assert reads.island_level(viewing_tool, ink, [(0, 0)], {**shows, (0, 0): 0}) == 127
+    assert reads.island_level(viewing_tool, {(0, 0): 100, (0, 1): 100}, [(0, 0)], shows) == 0
+    assert levels == viewing_tool.LEVELS
+
+
+def test_the_deck_names_a_cause_by_the_sliver_or_by_an_island_the_cause_takes() -> None:
+    """At an em of 5.5 px, two device pixels to a px, the sliver is an area of 1.21 device
+    pixels. One strong pixel past the page, an island of its own, is cut by the measure alone;
+    two hidden on the page reach the sliver, and a stroke's pixel hidden with the rest of it
+    showing takes no island."""
+    pixels = {(1, 5): (255, 0), (5, 5): (255, 0), (8, 8): (255, 0), (8, 9): (255, 255)}
+    counted = {"strong": 4, "past": 1, "hidden": 2}
+    found = spot(pixels, counted, em=5.5)
+    entries = reads.entries_of(viewing_tool, viewing_browser, found, "a.")
+    assert [(entry.why, entry.sliver, entry.island) for entry in entries] == [
+        ("cut", False, True),
+        ("covered", True, True),
+    ]
+    assert entries[1].share == 0.5
+    stroke = spot({(5, 5): (255, 0), (5, 6): (255, 255)}, {"strong": 2, "past": 0, "hidden": 1})
+    assert reads.entries_of(viewing_tool, viewing_browser, stroke, "l") == []
+
+
+def test_the_planted_file_in_a_dark_key_names_the_dark_scheme_alone() -> None:
+    written = reads.planted_dark(viewing_browser, 1.0)
+    assert "<style>:root{color-scheme:dark}" in written
+    assert written.replace(":root{color-scheme:dark}", "", 1) == viewing_browser._planted_html(
+        viewing_browser.PLANTED_FACE.read_bytes(), device=1.0
+    )
 
 
 @real_browser
@@ -235,7 +452,13 @@ def test_a_real_browser_names_a_dot_hidden_whole_where_its_loss_reaches_the_sliv
         if stop.sandbox:
             pytest.skip(f"a sandbox stopped the browser: {stop}")
         raise
-    read = [reads.hidden_of(found, plant, 1.0, second) for page in pages for plant in page.plants]
+    [reading] = second.capture.of(reads.FILE)
+    named = second.named[reading.palette]
+    read = [
+        reads.hidden_of(found, plant, 1.0, reading, named)
+        for page in pages
+        for plant in page.plants
+    ]
     assert len(read) == len(found.reads.DOTS)
     for each in read:
         assert each.ink and each.whole and each.agrees and not each.neighbours
