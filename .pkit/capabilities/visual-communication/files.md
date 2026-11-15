@@ -282,7 +282,7 @@ bounds:
 - **One bar.** A project keeps one bar. The capability ships none.
 - **`to-the-bar`** is the most rounds the loop runs to the bar, and **`polish`** the most rounds of polish once it meets it. Absent, the schema's default holds: 5 rounds to the bar and 2 of polish. Whoever dispatches the designer may lower either for one run, and never raise it.
 - **Only here.** No flag, no agent and no dispatcher hands anyone a bar, so the choice lies in a file the project reviews. No command writes it.
-- **Checked** by the core's data validation against the schema, which refuses another shape. The capability's check fails a bar that covers what the review does not grade, and one whose major for a set differs from the major the project pins for it, or from the set's own where it pins none ([`bar-ungraded` and `bar-major`](checks.md#files-and-binding)). The project corrects either in the configuration.
+- **Checked** by the core's data validation against the schema, which refuses another shape. The capability's check fails a bar that covers what it does not find graded, and one whose major for a set differs from the major the project's sets in `rule-sets/` under its internal documentation root pin for it, or from the set's own where none of them pins it ([`bar-ungraded` and `bar-major`](checks.md#files-and-binding)). The project corrects either in the configuration.
 
 ## What the location holds
 
