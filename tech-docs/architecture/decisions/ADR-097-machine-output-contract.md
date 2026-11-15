@@ -1,7 +1,7 @@
 ---
 id: ADR-097
 title: A command's machine-readable output may gain keys, loses one only in a declared break, and never changes what one means
-status: proposed
+status: accepted
 date: 2026-11-15
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
