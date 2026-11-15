@@ -1,7 +1,7 @@
 ---
 id: DEC-045
 title: Through the SVG renderer, the viewing step names a text another part covers, or the page's edge cuts, as dropped
-status: proposed
+status: accepted
 date: 2026-11-14
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
