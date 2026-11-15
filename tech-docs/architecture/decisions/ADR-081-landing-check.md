@@ -115,7 +115,7 @@ No answer is never an empty list, and never the refusal off. A caller holds the 
 
 As the reading of the base is for any component (COR-054 point 5):
 - **The caller names the base and the head.** The check fetches nothing, so the caller fetches the base and the change's history before the run.
-- **One document of its own.** With `--json`, the check prints one document whether it answers or gives no answer. Its version is its own, raised when a key a reader relies on changes its meaning or goes, never for a key added. It gives:
+- **One document of its own.** With `--json`, the check prints one document whether it answers or gives no answer. Its version is its own, raised when one of its own keys, or a value of one of its sets, goes, never for one added, and no key or value comes to mean anything else (refinement per [ADR-097](ADR-097-machine-output-contract.md)). It gives:
   - the base as named, the tip it judged, the head, and the landing state's tree, which a caller can use rather than build again
   - whether the base is the default branch, the key's value with any warning, whether the refusal is on, and any change to the key
   - each proposal point 2 above reports, whether the check refuses on them, and the two lists of point 4 above
