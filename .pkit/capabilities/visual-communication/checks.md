@@ -171,6 +171,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
         - .pkit/capabilities/visual-communication/files.md#the-libraries-the-capability-ships
         - .pkit/capabilities/visual-communication/files.md#the-location
+        - .pkit/capabilities/visual-communication/files.md#the-bar-and-the-bounds
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/files.md#signs
