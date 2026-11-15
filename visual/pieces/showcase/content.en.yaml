@@ -7,7 +7,7 @@ slides:
   - id: fits
     layout: slide
     title: How pkit fits together
-    lead: "In five layers, from your decisions down to your code: each carries out the decisions above it."
+    lead: "pkit is five layers, from your decisions down to your code and documents, and each carries out the decisions above it; only a person changes a decision."
     visual:
       # The lead's order runs down the steps: decisions at the top, each layer under it
       # carrying out the decisions above it, down to your code. Beside the steps, the
@@ -15,7 +15,7 @@ slides:
       # the top level, then what runs down and what runs back up. Each level takes a step of
       # the order, layers' default, from the brand's first end at the top to its last at the
       # foot, so its shade runs down with the lead's order.
-      use: starter/layers
+      use: piece/layers
       shape: steps
       levels:
         - {id: decisions, head: Decisions}
@@ -29,7 +29,7 @@ slides:
         - id: down
           text: [{text: "↓ Carried out. ", style: strong}, "An agent reads the reasons before it acts."]
         - id: up
-          text: [{text: "↑ Checked. ", style: strong}, "Only a person, never your AI tool, changes a decision."]
+          text: [{text: "↑ Checked. ", style: strong}, "A layer that disagrees with a decision is fixed, or you accept a new decision. Only you change a decision."]
       ties:
         - id: start-decisions
           from: {item: "notes[start]"}
@@ -39,7 +39,7 @@ slides:
   - id: install
     layout: slide
     title: Install pkit
-    lead: Install the tool once, then add pkit to each project with one command. Upgrades replace pkit's files, never yours.
+    lead: Install the tool once, then add pkit to each project with one command.
     visual:
       # The lead's order runs down: the tool installed once, then pkit added to each project,
       # then what that leaves, pkit's files beside yours. So the two commands stand first,
@@ -48,14 +48,17 @@ slides:
       # line, and the aside last, as something beside the point.
       use: starter/panels
       panels:
-        - use: starter/code
+        - id: commands
+          use: starter/code
           text: [
             {text: "$ ", style: prompt}, {text: "uv tool install git+https://github.com/aleskalfas/project-kit.git@latest", style: command}, {text: "  # once\n", style: comment},
             {text: "$ ", style: prompt}, {text: "pkit init", style: command}, {text: "  # in each project", style: comment}]
       under:
         use: starter/panels
         panels:
-          - use: starter/code
+          - id: tree
+            use: starter/code
+            head: Upgrades replace pkit's files, never yours.
             # A real tree of a new project, cut to what a slide holds: two of pkit's folders
             # split into pkit's part and yours, a line for more of pkit's, and two of your
             # files. Each of pkit's files starts with its concept's sign, a full circle, and
@@ -69,9 +72,11 @@ slides:
               "│   └── ", {text: "…", concept: pkit/core}, {text: "      # and more of pkit's\n", style: comment},
               "├── ", {text: "CLAUDE.md", concept: pkit/yours}, {text: "  # loads the rules\n", style: comment},
               "└── ", {text: "src/", concept: pkit/yours}, {text: "       # your code, untouched", style: comment}]
-          - use: starter/panels
+          - id: side
+            use: starter/panels
             panels:
-              - use: starter/legend
+              - id: legend
+                use: starter/legend
                 entries:
                   - {id: core, concept: pkit/core, label: "pkit's files, replaced by each upgrade"}
                   - {id: yours, concept: pkit/yours, label: your files}
@@ -85,7 +90,7 @@ slides:
   - id: permissions
     layout: slide
     title: Where permissions come from
-    lead: Permissions come from rules your project writes down as data. Your AI tool applies them to every call, so they hold when an agent forgets them.
+    lead: Permissions come from rules kept as data in your project. Your AI tool applies them to every command it can recognise, so they hold when an agent forgets them.
     visual:
       # The lead's order runs across: what the project writes down as data, what the AI
       # tool gets from it, and what a call then meets. Each row is one of the three places
@@ -97,35 +102,35 @@ slides:
       rows:
         - id: steps
           cells:
-            - {id: kind}
-            - {id: data, head: "1  Written as data"}
-            - {id: tool, head: "2  Your AI tool gets"}
-            - {id: call, head: "3  A call meets"}
+            - {id: kind, use: piece/cell}
+            - {id: data, use: piece/cell, head: "1  Written as data"}
+            - {id: tool, use: piece/cell, head: "2  Your AI tool gets"}
+            - {id: call, use: piece/cell, head: "3  A call meets"}
         - id: guardrails
           cells:
-            - {id: kind, head: Guardrails}
-            - {id: data, text: "rm -r, sudo and force-push, denied to all"}
-            - {id: tool, text: a deny in its settings}
-            - {id: call, text: "refused, in every mode"}
+            - {id: kind, use: piece/cell, head: Guardrails}
+            - {id: data, use: piece/cell, text: "rm -r, sudo and force-push, denied to all"}
+            - {id: tool, use: piece/cell, text: a deny in its settings}
+            - {id: call, use: piece/cell, text: "refused, in every mode"}
         - id: own-tools
           cells:
-            - {id: kind, head: "An agent's own tools"}
-            - {id: data, text: "the critic's file: Read, Glob, Grep, WebFetch"}
-            - {id: tool, text: "that agent's list of tools"}
-            - {id: call, text: "no command run, no file written"}
+            - {id: kind, use: piece/cell, head: "An agent's own tools"}
+            - {id: data, use: piece/cell, text: "the critic's file: Read, Glob, Grep, WebFetch"}
+            - {id: tool, use: piece/cell, text: "that agent's list of tools"}
+            - {id: call, use: piece/cell, text: "no command run, no file written"}
         - id: one-agent
           cells:
-            - {id: kind, head: "One agent's rule"}
-            - {id: data, text: "project-manager: no raw gh changes"}
-            - {id: tool, text: "the hook, before each call"}
-            - {id: call, text: "refused, so it uses pkit's commands"}
-    limit: A deny stops the forms of a command pkit can tell. A command hidden behind another can slip past.
+            - {id: kind, use: piece/cell, head: "One agent's rule"}
+            - {id: data, use: piece/cell, text: "project-manager: no raw gh changes"}
+            - {id: tool, use: piece/cell, text: "pkit's hook, before each call"}
+            - {id: call, use: piece/cell, text: "refused, so it uses pkit's commands"}
+    limit: A deny stops the forms of a command pkit can tell. A command hidden behind another can slip past, so the real gates are inside pkit's commands.
     footer: "In project-kit: the project-manager agent uses pkit's commands, which validate the issue first."
 
   - id: connect
     layout: slide
     title: How capabilities work together
-    lead: "Capabilities meet through roles: one that needs something opens a slot any other can fill."
+    lead: "Capabilities meet through roles: a role that needs something opens a slot any capability can fill."
     # Each capability is one block, the role it plays on its first line, by its job in
     # plain words. The slots are those pkit::work-tracking opens, in the frame of
     # project-management, which plays it now; every tie ends at a slot, never at
@@ -170,5 +175,5 @@ slides:
           {text: "pkit::work-tracking:fixers", concept: pkit/proof}, {text: "  # from pkit status\n", style: comment},
           "    bound    software-analysis (contributes)\n",
           "    bound    living-docs (contributes)"]
-      gains: [{text: "What it gives you\n", style: strong}, "Swap a capability for one in its role.\nInstall only what you need.\n", {text: "pkit validate", style: code}, " checks the wiring."]
-    footer: "In project-kit: each of the 3 roles has one capability so far, so a swap is designed, not yet shown."
+      gains: [{text: "What it gives you\n", style: strong}, "Designed: swap a capability for another in the same role."]
+    footer: "Each capability adds to several layers: its own rules, skills, agents and commands."

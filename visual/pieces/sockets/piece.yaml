@@ -6,7 +6,7 @@ top: foundations/figure
 brand: neutral
 notations: [pkit]
 languages: [en, cs]
-audience: Readers of pkit's documentation.
+audience: A developer who works with an AI coding tool and is new to pkit, as the showcase deck's reader is.
 shown: Nowhere yet. A documentation page takes it once a piece can be published.
 explains: true
 exports: [svg]

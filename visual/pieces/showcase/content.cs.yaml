@@ -6,7 +6,7 @@ slides:
   - id: fits
     layout: slide
     title: Jak je pkit poskládaný
-    lead: "Pět vrstev, od vašich rozhodnutí po váš kód: každá provádí rozhodnutí nad sebou."
+    lead: "pkit tvoří pět vrstev, od vašich rozhodnutí po váš kód a dokumenty, a každá provádí rozhodnutí nad sebou; rozhodnutí mění jen člověk."
     visual:
       # Pořadí perexu běží po stupních dolů: rozhodnutí nahoře, každá vrstva pod nimi
       # provádí rozhodnutí nad sebou, až po váš kód. Vedle stupňů stojí poznámky přednášky
@@ -14,7 +14,7 @@ slides:
       # pak co běží dolů a co zpátky nahoru. Každá vrstva má stupeň pořadí, výchozí volbu
       # layers, od prvního konce značky nahoře po poslední dole, takže její odstín běží dolů
       # s pořadím perexu.
-      use: starter/layers
+      use: piece/layers
       shape: steps
       levels:
         - {id: decisions, head: Rozhodnutí}
@@ -28,7 +28,7 @@ slides:
         - id: down
           text: [{text: "↓ Provádění. ", style: strong}, "Agent si přečte důvody, než začne."]
         - id: up
-          text: [{text: "↑ Kontrola. ", style: strong}, "Rozhodnutí mění jen člověk, nikdy váš AI nástroj."]
+          text: [{text: "↑ Kontrola. ", style: strong}, "Vrstva, která s rozhodnutím nesouhlasí, se opraví, nebo přijmete nové rozhodnutí. Rozhodnutí měníte jen vy."]
       ties:
         - id: start-decisions
           from: {item: "notes[start]"}
@@ -38,7 +38,7 @@ slides:
   - id: install
     layout: slide
     title: Instalace pkitu
-    lead: Nástroj nainstalujete jednou, pak pkit přidáte do každého projektu jedním příkazem. Upgrade mění jen soubory pkitu.
+    lead: Nástroj nainstalujete jednou, pak pkit přidáte do každého projektu jedním příkazem.
     visual:
       # Pořadí perexu běží shora dolů: nástroj nainstalovaný jednou, pak pkit přidaný do
       # každého projektu, pak co po něm zůstane, soubory pkitu vedle vašich. Oba příkazy
@@ -47,14 +47,17 @@ slides:
       # prvního řádku, a odbočka poslední, jako něco vedle hlavní myšlenky.
       use: starter/panels
       panels:
-        - use: starter/code
+        - id: commands
+          use: starter/code
           text: [
             {text: "$ ", style: prompt}, {text: "uv tool install git+https://github.com/aleskalfas/project-kit.git@latest", style: command}, {text: "  # jednou\n", style: comment},
             {text: "$ ", style: prompt}, {text: "pkit init", style: command}, {text: "  # v každém projektu", style: comment}]
       under:
         use: starter/panels
         panels:
-          - use: starter/code
+          - id: tree
+            use: starter/code
+            head: Upgrade nahradí jen soubory pkitu, vaše nikdy.
             # Skutečný strom nového projektu, zkrácený na to, co se na slajd vejde: dvě složky
             # pkitu rozdělené na část pkitu a vaši, řádek s dalšími částmi pkitu a dva vaše
             # soubory. Každý soubor pkitu začíná znakem svého konceptu, plným kruhem, a každý
@@ -68,9 +71,11 @@ slides:
               "│   └── ", {text: "…", concept: pkit/core}, {text: "      # a další části pkitu\n", style: comment},
               "├── ", {text: "CLAUDE.md", concept: pkit/yours}, {text: "  # načte pravidla\n", style: comment},
               "└── ", {text: "src/", concept: pkit/yours}, {text: "       # váš kód, nedotčený", style: comment}]
-          - use: starter/panels
+          - id: side
+            use: starter/panels
             panels:
-              - use: starter/legend
+              - id: legend
+                use: starter/legend
                 entries:
                   - {id: core, concept: pkit/core, label: "soubory pkitu, upgrade je nahradí"}
                   - {id: yours, concept: pkit/yours, label: vaše soubory}
@@ -84,7 +89,7 @@ slides:
   - id: permissions
     layout: slide
     title: Odkud se berou oprávnění
-    lead: Oprávnění pocházejí z pravidel, která projekt zapíše jako data. AI nástroj je uplatní při každém volání, i když na ně agent zapomene.
+    lead: Oprávnění pocházejí z pravidel uložených jako data ve vašem projektu. AI nástroj je uplatní na každý příkaz, který rozpozná, takže platí, i když na ně agent zapomene.
     visual:
       # Pořadí perexu běží napříč: co projekt zapíše jako data, co z toho dostane AI
       # nástroj a co pak potká volání. Každý řádek je jedno ze tří míst, odkud agent
@@ -96,35 +101,35 @@ slides:
       rows:
         - id: steps
           cells:
-            - {id: kind}
-            - {id: data, head: "1  Zapsáno jako data"}
-            - {id: tool, head: "2  AI nástroj dostane"}
-            - {id: call, head: "3  Volání narazí na"}
+            - {id: kind, use: piece/cell}
+            - {id: data, use: piece/cell, head: "1  Zapsáno jako data"}
+            - {id: tool, use: piece/cell, head: "2  AI nástroj dostane"}
+            - {id: call, use: piece/cell, head: "3  Volání narazí na"}
         - id: guardrails
           cells:
-            - {id: kind, head: Pojistky}
-            - {id: data, text: "rm -r, sudo a force-push, zakázané všem"}
-            - {id: tool, text: zákaz v nastavení}
-            - {id: call, text: odmítnutí v každém režimu}
+            - {id: kind, use: piece/cell, head: Pojistky}
+            - {id: data, use: piece/cell, text: "rm -r, sudo a force-push, zakázané všem"}
+            - {id: tool, use: piece/cell, text: zákaz v nastavení}
+            - {id: call, use: piece/cell, text: odmítnutí v každém režimu}
         - id: own-tools
           cells:
-            - {id: kind, head: Vlastní nástroje agenta}
-            - {id: data, text: "soubor criticu: Read, Glob, Grep, WebFetch"}
-            - {id: tool, text: seznam nástrojů agenta}
-            - {id: call, text: "žádný příkaz, žádný zápis"}
+            - {id: kind, use: piece/cell, head: Vlastní nástroje agenta}
+            - {id: data, use: piece/cell, text: "soubor criticu: Read, Glob, Grep, WebFetch"}
+            - {id: tool, use: piece/cell, text: seznam nástrojů agenta}
+            - {id: call, use: piece/cell, text: "žádný příkaz, žádný zápis"}
         - id: one-agent
           cells:
-            - {id: kind, head: Pravidlo jednoho agenta}
-            - {id: data, text: "project-manager: žádné změny přímým gh"}
-            - {id: tool, text: hook před každým voláním}
-            - {id: call, text: "odmítnutí, použije příkazy pkitu"}
-    limit: Zákaz zastaví jen ty podoby příkazu, které pkit pozná. Příkaz schovaný za jiným může proklouznout.
+            - {id: kind, use: piece/cell, head: Pravidlo jednoho agenta}
+            - {id: data, use: piece/cell, text: "project-manager: žádné změny přímým gh"}
+            - {id: tool, use: piece/cell, text: hook pkitu před každým voláním}
+            - {id: call, use: piece/cell, text: "odmítnutí, použije příkazy pkitu"}
+    limit: Zákaz zastaví jen ty podoby příkazu, které pkit pozná. Příkaz schovaný za jiným může proklouznout, takže skutečné kontroly jsou uvnitř příkazů pkitu.
     footer: "V project-kitu: agent project-manager používá příkazy pkitu, které issue nejdřív ověří."
 
   - id: connect
     layout: slide
     title: Jak capability spolupracují
-    lead: "Capability se propojují přes role: která něco potřebuje, otevře slot, kterákoli jiná ho vyplní."
+    lead: "Capability se potkávají přes role: role, která něco potřebuje, otevře slot, který může vyplnit kterákoli capability."
     visual:
       use: piece/wiring
       opener:
@@ -158,5 +163,5 @@ slides:
           {text: "pkit::work-tracking:fixers", concept: pkit/proof}, {text: "  # z pkit status\n", style: comment},
           "    bound    software-analysis (contributes)\n",
           "    bound    living-docs (contributes)"]
-      gains: [{text: "Co vám to dá\n", style: strong}, "Capability vyměníte v téže roli.\nInstalujete jen to, co potřebujete.\n", {text: "pkit validate", style: code}, " ověří zapojení."]
-    footer: "V project-kitu: každou ze 3 rolí zatím hraje jedna capability, výměna je tedy navržená, ne vyzkoušená."
+      gains: [{text: "Co vám to dá\n", style: strong}, "Navrženo: capability vyměníte za jinou v téže roli."]
+    footer: "Každá capability přidává do několika vrstev: vlastní pravidla, skilly, agenty a příkazy."

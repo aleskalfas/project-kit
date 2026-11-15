@@ -2,41 +2,38 @@ pkit_schema: visual-communication:brief
 schema_version: 1
 
 pages:
-  # Each slide states its point in its lead, so no part holds a takeaway. The goals of the
-  # first three pages are the asker's to give, and the brief holds none for them yet.
+  # Each slide states its point in its lead, so no part holds a takeaway.
   fits:
     relations:
       - text: >-
-          The order of explanation, from the lead, which is the maintainer's: decisions
-          at the top, each layer under it carrying out the decisions above it, down to
-          your code. The talk's notes add where decisions come from, tied into the top
-          level, and then what runs down and what runs back up. So the page opens on the
-          top of the steps and where ideas start beside it, joined by one tie as one
-          step, runs down the levels, and the notes beside them then tell what runs down
-          and what runs back up.
-        relates:
-          - visual.notes[start]
-          - visual.levels
-          - visual.notes[down]
-          - visual.notes[up]
-      - text: >-
-          The levels are in order, the decisions on top and your code at the foot. The
-          decisions govern every level under them (COR-065). The second level names the
-          working rules by what most of them do. A rule whose origin states its own
-          choice counts as a decision too (COR-065 point 1), which the talk leaves out
-          for simplicity. The order among the four
-          lower levels, from the working rules down to your code, is the talk's framing,
-          from the general to the specific, and no source states it. The order is told by
-          place and by width, the top narrowest, and by shade, the top furthest from the
-          page. The levels name no concept, so no hue tells them apart as kinds.
+          An order, top to bottom: decisions, then working rules, schemas and processes,
+          then skills, agents and permissions, then pkit's commands and checks, then your
+          code and documents. Each layer rests on the one above and carries it out.
         relates:
           - visual.levels
       - text: >-
-          Ideas become decisions: where ideas start leads into the top level, and into no
-          other.
+          A flow into the top: ideas start in a conversation or a scratchpad note and end
+          in a decision.
         relates:
           - visual.notes[start]
           - visual.levels[decisions]
+          - visual.ties[start-decisions]
+      - text: >-
+          A direction of authority: carrying out runs down, checking runs up, and only a
+          person changes the decision at the top.
+        relates:
+          - visual.notes[down]
+          - visual.notes[up]
+          - visual.levels
+      - text: >-
+          A whole and its parts: pkit is the five layers.
+        relates:
+          - visual.levels
+    goals:
+      - Name the five layers in order and say which governs the others.
+      - Say where an idea starts and what it must become to bind.
+      - Say who changes a decision, and that no layer below can.
+      - Place each later page of the deck on the layers, because each later page says which layer it opens.
     reasons:
       - aspect: structure
         about: visual
@@ -87,10 +84,11 @@ pages:
       - aspect: form
         about: visual.notes
         text: >-
-          Each note holds its head and one short clause, two lines at a third of the
-          width, so the three share the steps' height at a projector's type. The talk's
-          longer notes, on where the reasons stay and on who may change a decision, are
-          said aloud, and the footer keeps the record that decides it.
+          Each note holds its head and a clause or two, no more than three lines at two
+          fifths of the width, each as tall as its words. The note that runs back up says
+          on the page who may change a decision, since the lead now names it. The talk's
+          longer note, on where the reasons stay, is said aloud, and the footer keeps the
+          record that decides it.
         principle:
           name: Words that cue what is essential, and nothing extraneous
           source: Richard Mayer, Multimedia Learning, the coherence principle
@@ -132,30 +130,46 @@ pages:
       - aspect: space
         about: visual
         text: >-
-          The notes take a third of the width and the steps the rest, as layers lays
-          them. The levels stand the starter's gap apart, close enough to read as one
-          figure, and the notes share the steps' height the same gap apart, so they read
-          as one column. Beside the narrower levels the steps leave a wider space before
-          the notes, so the two columns read apart, though the widest level stands only
-          the gap from them.
+          The notes take two fifths of the width and the steps the rest, as the piece's
+          layers lays them: the lead now carries the page's whole point, so the longest
+          note needs the wider column to keep to three lines. The levels stand one small
+          space apart, close enough to read as one figure, and the notes, each as tall as
+          its words, stand the starter's gap apart, a step wider than the levels', since
+          each is a box of its own, so they read as one column. Beside the narrower levels
+          the steps leave a wider space before the notes, so the two columns read apart,
+          though the widest level stands only the gap from them.
         principle:
           name: Space inside a group smaller than between groups
           source: Robin Williams, The Non-Designer's Design Book
   install:
     relations:
       - text: >-
-          The order of explanation, from the lead, which is the maintainer's: the tool is
-          installed once, then pkit is added to each project with one command, and what
-          that leaves in a project is pkit's files beside yours, of which an upgrade
-          replaces only pkit's.
+          An order, two steps: the tool once, then pkit into each project. The first is
+          done once for a machine, the second once for each project.
         relates:
-          - visual.panels
-          - visual.under
+          - visual.panels[commands]
       - text: >-
-          Each file in the tree is pkit's or yours, and the two are told apart by more
-          than colour.
+          A whole and its parts: the project's tree, with `.pkit/` and what sits beside
+          it.
         relates:
-          - visual.under
+          - visual.under.panels[tree]
+      - text: >-
+          A contrast between two kinds of file in one tree: pkit's files, which each
+          upgrade replaces, and the reader's own, which it never does. The tree's caption
+          says so.
+        relates:
+          - visual.under.panels[tree]
+          - visual.under.panels[side].panels[legend]
+      - text: >-
+          A choice, set aside from the main path: keep pkit out of the repository with
+          `pkit visibility private`.
+        relates:
+          - visual.under.panels[side].under
+    goals:
+      - Run the two commands, in order, and say which is for the machine and which for a project.
+      - Point in the tree to what pkit added and to what is theirs, and say that an upgrade replaces only the first.
+      - Say how to keep pkit out of the repository.
+      - Run `pkit status` to see what pkit set up.
     reasons:
       - aspect: structure
         about: visual
@@ -227,16 +241,40 @@ pages:
   permissions:
     relations:
       - text: >-
-          The order of explanation, from the lead, which is the maintainer's: what the
-          project writes down as data, what the AI tool gets from it, and what a call then
-          meets. The column heads number the three steps, left to right.
+          A flow in three steps, read left to right: a rule written as data, then what
+          your AI tool gets from it, then what a call meets.
         relates:
           - visual.rows[steps]
       - text: >-
-          Each of the three places an agent's limits come from runs through the same three
-          steps, so a reader compares them along a row and across a column.
+          Three kinds of limit, kept apart, from the widest to the narrowest: guardrails
+          that bind everyone, an agent's own tools, one agent's rule.
         relates:
-          - visual.rows
+          - visual.rows[guardrails]
+          - visual.rows[own-tools]
+          - visual.rows[one-agent]
+      - text: >-
+          A contrast: the first two kinds are enforced by settings the AI tool already
+          reads. The third needs pkit's hook.
+        relates:
+          - visual.rows[own-tools]
+          - visual.rows[guardrails]
+          - visual.rows[one-agent].cells[tool]
+      - text: >-
+          A choice made by the agent's role: the `project-manager` is refused raw `gh`
+          changes and so uses pkit's commands, which validate the issue first.
+        relates:
+          - visual.rows[one-agent]
+          - footer
+      - text: >-
+          A limit, set apart from the table: a deny is a speed bump, and the real gates
+          are inside pkit's commands.
+        relates:
+          - limit
+    goals:
+      - "Say where a permission comes from: rules kept as data in the project, which the AI tool applies."
+      - Name the three places a limit sits, tell which of them reaches every agent, and which of them needs pkit's hook.
+      - Say why the `project-manager` uses pkit's commands and not raw `gh`.
+      - "Say what a deny does not stop: a command hidden behind another can slip past, and that pkit's own commands hold the real gates."
     reasons:
       - aspect: structure
         about: visual
@@ -296,72 +334,44 @@ pages:
   connect:
     relations:
       - text: >-
-          The order of explanation, in the maintainer's words: capability 1 opens slots,
-          and capabilities 2 and 3 connect to it. So the page opens on the capability that
-          opens the slots, under the role it plays, and then on the two capabilities that
-          connect to it. Each of their arrows leads back to one of its slots, which stand
-          under it as its parts.
+          A whole and its parts: a role is played by one capability, and that role opens
+          slots. Here `pkit::work-tracking` is played by `project-management` and opens
+          three.
         relates:
           - visual.opener[project-management]
+          - visual.opens
           - visual.slots
-          - visual.fillers
-          - visual.ties
       - text: >-
-          Capabilities are wired only through a role. Each link from a capability that
-          fills a slot ends at a slot of the role pkit::work-tracking, not at
-          project-management, which is shown as the capability that plays that role now.
-          So a reader sees that another capability in the same role would keep every link.
+          A many-to-many flow from filler to slot: `living-docs` fills `doc-check` and
+          `fixers`; `software-analysis` fills `fixers` and `use-cases`. The `fixers` slot
+          has two fillers.
         relates:
           - visual.fillers
           - visual.ties
           - visual.slots
-          - visual.opener[project-management]
       - text: >-
-          The slots belong to the side that needs something. The three slots are opened
-          by the capability that plays pkit::work-tracking, and read as its parts, not as
-          things of their own.
+          A contrast: the capability that opens a slot never names who fills it, and a
+          filler never names the capability it serves. Both name only the role.
         relates:
-          - visual.slots
           - visual.opener[project-management]
-      - text: >-
-          Filling runs one way, from the capability that fills to the slot it fills. Any
-          capability may fill a slot: one slot takes more than one filler, as fixers takes
-          both, and one capability fills more than one slot.
-        relates:
-          - visual.ties
           - visual.fillers
-          - visual.slots
+          - visual.ties
       - text: >-
-          The status output is the evidence for what the diagram shows, not a second
-          point: the slot fixers of pkit::work-tracking with the same two capabilities
-          bound to it, as pkit reports them in project-kit.
+          A proof, kept apart from the picture of the idea: what `pkit status` reports
+          for the `fixers` slot.
         relates:
           - visual.slots[fixers]
-          - visual.fillers
           - visual.evidence
+      - text: >-
+          The capabilities add to several layers of the order the first page shows.
+        relates:
+          - footer
     goals:
-      - >-
-        A developer who has never used pkit can say how one capability gets what it
-        needs from another: the one that needs it opens a slot under its role, and any
-        other fills that slot, naming only the role.
-      - >-
-        They can tell a role from a capability at first sight. A role is a job, such as
-        tracking the work; a capability is a package they install, such as
-        project-management, which does that job now. Each label says which of the two it
-        names, and the role's job reads in plain words, not only as pkit's id for it.
-      - >-
-        They know what each slot asks for without knowing its name: doc-check, the
-        documents a change must update; fixers, which agent mends each kind of document
-        a merge left out of date; use-cases, the use cases to plan work from. The slot's
-        name stays, as the label pkit prints.
-      - >-
-        They can say what follows for their own project: they install only the
-        capabilities they need, and a capability can be swapped for another that plays
-        the same role without changing those connected to it.
-      - >-
-        Projected, the point reads at a glance while the speaker talks. On the PDF and
-        the web page, a reader can follow each link from the capability that fills to the
-        slot it fills, and find the same wiring in what pkit status shows.
+      - Say what a role is, what a slot is, and which of them a capability names.
+      - Read, from the picture, which capabilities fill which slot, and see that the `fixers` slot has two.
+      - Say that the capability that opens a slot works with no filler.
+      - "Say that a swap is designed: a capability can be swapped for another in the same role."
+      - Run `pkit status` to see who fills a slot.
     reasons:
       - aspect: structure
         about: visual
@@ -463,10 +473,10 @@ pages:
       - aspect: form
         about: footer
         text: >-
-          The limit of the page's claim is a fact of project-kit, that each of its 3 roles
-          has one capability so far, so a swap is designed and not yet shown. The page
-          states it once, in its source line, rather than in the deck's limit line as well,
-          and gives that line's room to the picture.
+          The footer says once, in the secondary text, that a capability adds to several
+          layers of the order the first page shows, and nothing more, so the picture and
+          the terminal keep the slide's room. The swap is stated once, in what the page
+          gives, as designed.
         principle:
           name: Leave out what repeats; every mark earns its ink
           source: Edward Tufte, The Visual Display of Quantitative Information
@@ -493,8 +503,7 @@ pages:
           opening role's, are set in the code type, as pkit prints them, so the terminal's
           words look like the drawing's. A role's job is set in the body type, as the plain
           words it is. A capability's name is set in the strong type, the one bold level
-          under the lead, and the head of what it gives you takes it too. A command inside
-          a line of what it gives you keeps the code type.
+          under the lead, and the head of what it gives you takes it too.
         principle:
           name: Texts of one kind share face, size and weight, and texts of different kinds differ clearly
           source: Robert Bringhurst, The Elements of Typographic Style; Robin Williams, The Non-Designer's Design Book
@@ -526,16 +535,17 @@ pages:
         about: visual
         text: >-
           The frame holds its capability and its slots by its ground and by space: the
-          brand's second step in, and its slots stand the same step apart; the terminal
-          stands at least the third step under the frame, further than anything inside it, so it
-          reads as the frame's report and not as one more row. A slot holds its words the
+          brand's first step in, and its slots stand the same step apart, so the slide
+          keeps room for the terminal under it. The terminal stands the first step under
+          the frame, and its code type, its own ground and its check tell it from a slot,
+          so it reads as pkit's report on the frame. A slot holds its words the
           third step in, as a block does, so the slots' names and the opening capability's
           lines start on one edge. Every block takes a third of the width and the frame
           seven twelfths, so the lane between them holds the arrows' turns. The filling
           blocks are as tall as the opening one, and stand so that each arrow that can run
           level does. What it gives you stands the third step under the filling blocks, and
-          the terminal's foot stands level with its last line's, so the two columns end
-          together. The frame takes no edge: one that a
+          where it reaches lower, the terminal's foot stands level with its last line's, so
+          the two columns end together. The frame takes no edge: one that a
           projector keeps would have to hold 3:1, as a slot's outline does, and would then
           vie with the slots it holds.
         principle:
