@@ -212,8 +212,13 @@ def main() -> int:
     elif n:
         print(f"[warn] --force: {n} issue(s) still carry {args.slug!r}.", file=sys.stderr)
     # A card on the board may hold the option whose value the walk did not
-    # count ([pkit:ADR-096] point 2): removing the option would clear it unseen.
-    uncounted = workstream_sync.uncounted_refusal(args.slug, read) if read.ok else None
+    # count ([pkit:ADR-096] point 2): the count above leaves that card out. The
+    # board's option stays, so no card's value is cleared.
+    uncounted = (
+        workstream_sync.uncounted_refusal(args.slug, read, removes_option=False)
+        if read.ok
+        else None
+    )
     if uncounted is not None and not args.force:
         print(
             f"[refused] nothing was removed: {uncounted}\n"

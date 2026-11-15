@@ -297,7 +297,7 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 3
-        uncounted = workstream_sync.uncounted_refusal(args.source, read)
+        uncounted = workstream_sync.uncounted_refusal(args.source, read, removes_option=True)
         if uncounted is not None:
             print(f"[refused] nothing was changed: {uncounted}", file=sys.stderr)
             return 1

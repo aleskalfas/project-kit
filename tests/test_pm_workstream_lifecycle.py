@@ -490,6 +490,7 @@ def test_merge_refuses_while_a_card_it_did_not_count_may_hold_the_loser(
     assert _file(tmp_path) == TWO
     err = capsys.readouterr().err
     assert says in err and "'old'" in err
+    assert "removing the option would clear their value unseen" in err
 
 
 def test_merge_goes_on_where_a_set_aside_card_holds_another_option(
@@ -676,8 +677,10 @@ def test_split_on_a_board_moves_each_card_to_its_answer(sw, tmp_path, monkeypatc
 
 
 def test_split_refuses_while_a_withheld_card_may_hold_the_source(
-    sw, tmp_path, monkeypatch, seams
+    sw, tmp_path, monkeypatch, seams, capsys
 ) -> None:
+    """Splitting drops the source's option, so a card the walk did not count
+    would have its value cleared unseen ([pkit:ADR-096] point 2)."""
     stage_project(tmp_path, ONE, board=True)
     board = FakeBoard(["cli"], {"I1": (1, "cli"), "I9": (9, "cli")}, withheld={"I9"})
     board.install(monkeypatch, *seams)
@@ -689,6 +692,7 @@ def test_split_refuses_while_a_withheld_card_may_hold_the_source(
     assert rc == 1
     assert board.writes == []
     assert _file(tmp_path) == ONE
+    assert "removing the option would clear their value unseen" in capsys.readouterr().err
 
 
 # --- remove ----------------------------------------------------------------
@@ -732,8 +736,9 @@ def test_remove_refuses_while_a_withheld_card_may_hold_it(
     rw, tmp_path, monkeypatch, seams, capsys
 ) -> None:
     """No counted card holds the option, but the board withheld one whose value
-    it did not return: removing the option could clear it unseen
-    ([pkit:ADR-096] point 2)."""
+    it did not return: the count of the issues that carry the workstream leaves
+    that card out ([pkit:ADR-096] point 2). The command removes no option, so the
+    refusal does not say it would clear the card's value."""
     stage_project(tmp_path, ONE, board=True)
     board = FakeBoard(["cli"], {"I9": (9, "cli")}, withheld={"I9"})
     board.install(monkeypatch, *seams)
@@ -741,7 +746,10 @@ def test_remove_refuses_while_a_withheld_card_may_hold_it(
     assert _run(rw, monkeypatch, tmp_path, "remove-workstream", "cli") == 1
     assert _file(tmp_path) == ONE
     assert board.writes == []
-    assert "repositories this credential may not read" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "repositories this credential may not read" in err
+    assert "the count of the issues that carry the workstream leaves them out" in err
+    assert "removing the option" not in err
 
 
 def test_rename_goes_on_while_a_withheld_card_holds_the_option(

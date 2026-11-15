@@ -19,9 +19,11 @@ body: >
   exits 3 where the board did not answer for an axis it carries, even where it
   wrote the others. `validate-issue` reports a board that did not answer as
   `board_membership.unverified`, never as an issue off the board.
-  `merge-workstream`, `split-workstream` and `remove-workstream` refuse, exit
-  1, while a card the credential may not read, or one holding a state issue,
-  may hold the option they would remove. The post-check workflow template
+  `merge-workstream` and `split-workstream` refuse, exit 1, while a card the
+  credential may not read, or one holding a state issue, may hold the option
+  they would remove. `remove-workstream` refuses, exit 1 unless `--force` is
+  given, while such a card may hold the workstream, since its count of the
+  issues that carry it leaves that card out. The post-check workflow template
   gains a credential the board answers, unset as it ships: `PM_BOARD_TOKEN`,
   or a GitHub App's `PM_BOARD_APP_ID` and `PM_BOARD_APP_KEY`. Its add keeps
   one owner, and its `PM_PROJECT_BOARD_OWNER` setting is gone. A copy made

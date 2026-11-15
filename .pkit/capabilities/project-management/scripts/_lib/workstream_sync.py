@@ -12,8 +12,9 @@ step with the file:
   refuses while any issue carries the slug, whatever the carriage. On the board,
   a card the walk did not count may hold the option: one the board withheld, or
   one that holds a state issue. Each command that removes the option, or merges
-  it into another, refuses while one may (`uncounted_refusal`, [pkit:ADR-096]
-  point 2).
+  it into another, refuses while one may, since it would clear that card's value
+  unseen; `remove-workstream` does too, since its count leaves that card out
+  (`uncounted_refusal`, [pkit:ADR-096] point 2).
 * **Labels.** The repository's label names, and the move of one issue from one
   label to another.
 * **The board.** The board's `Workstream` single-select field with its options in
@@ -83,11 +84,15 @@ class CarriersRead:
     set_aside: int = 0
 
 
-def uncounted_refusal(slug: str, read: CarriersRead) -> str | None:
-    """Why a command that would remove the option `slug`, or merge it into
-    another, refuses: a card on the board may hold it whose value the read did
-    not count ([pkit:ADR-096] point 2). None where every card that may hold it
-    was counted."""
+def uncounted_refusal(slug: str, read: CarriersRead, *, removes_option: bool) -> str | None:
+    """Why a command refuses while a card on the board may hold `slug` whose
+    value the read did not count ([pkit:ADR-096] point 2). None where every card
+    that may hold it was counted.
+
+    `removes_option` says what the command does with the option. One that
+    removes it, or merges it into another, would clear such a card's value
+    unseen. One that leaves it, as `remove-workstream` does, refuses because its
+    count of the issues that carry the workstream leaves such a card out."""
     if not read.withheld and not read.set_aside:
         return None
     parts = []
@@ -98,11 +103,15 @@ def uncounted_refusal(slug: str, read: CarriersRead) -> str | None:
         )
     if read.set_aside:
         parts.append(f"{read.set_aside} card(s) holding a state issue")
+    why = (
+        "removing the option would clear their value unseen"
+        if removes_option
+        else "the count of the issues that carry the workstream leaves them out"
+    )
     return (
-        f"the board holds {' and '.join(parts)}, which may hold {slug!r}; removing the "
-        "option would clear their value unseen. Use a credential that reads every "
-        "repository whose issues the board holds, or set those cards' values on the "
-        "board first."
+        f"the board holds {' and '.join(parts)}, which may hold {slug!r}; {why}. Use a "
+        "credential that reads every repository whose issues the board holds, or set "
+        "those cards' values on the board first."
     )
 
 
