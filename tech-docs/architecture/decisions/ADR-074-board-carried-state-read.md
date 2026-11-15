@@ -16,11 +16,15 @@ three layers that the board read-path contract
 
 - *where does the state live* is answered from the map alone, and cannot fail;
 - the board read seam reads the Status and reports what happened;
-- the command decides what a failed or empty read means to it.
+- the command decides what a failed or empty read means to it, within limits
+  every command keeps (refinement per
+  [ADR-096](ADR-096-board-did-not-answer.md)).
 
 The part of the engine that works out an issue's state stays pure: the Status is
 one more input to it, read before it is called. A command reads the cards of the
-issues it acts on and no others, and never takes part of a listing for the whole.
+issues it acts on, and others only to find a sign that the board answered, and
+never takes part of a listing for the whole (refinement per
+[ADR-096](ADR-096-board-did-not-answer.md)).
 
 The board flag carries no axis
 ([project-management:DEC-062](../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md)),
@@ -86,8 +90,9 @@ The architecturally significant pins, each against a plausible alternative:
 **In plain terms:** the state reads from the board's Status field, through the
 same seam as every other board read. Where the state lives is answered from the
 map alone. The command reads the Status, hands it to a pure inference, and
-decides itself what each outcome means. A command reads only the cards of the
-issues it acts on.
+decides itself what each outcome means. A command reads the cards of the issues
+it acts on, and others only to find a sign that the board answered (refinement
+per [ADR-096](ADR-096-board-did-not-answer.md)).
 
 ### 1. The state reads from the board's Status field
 
@@ -192,18 +197,26 @@ outcome means. The command decides, at its own boundary, within two limits:
 - **It keeps a broken board apart from a finding.** A board that would not answer
   is reported as that, with what the board said, and never as one of the three
   findings about the issue; a finding is never reported as a broken board. Where
-  a command's exit codes tell a broken tool from a refusal, an unreadable board
-  takes the broken tool's code. ADR-053 point 2 rules this for a gate; this
-  record rules it for every command that reads the state, on the same ground.
-  This refines ADR-053 point 2, its reach.
+  a command's exit codes tell a broken tool from a refusal, a board that will not
+  answer takes the broken tool's code, but in two cases (refinement per
+  [ADR-096](ADR-096-board-did-not-answer.md)). Once the command's act
+  (ADR-096's terms) is made, whole or in part, the command takes no code that, as
+  ADR-096 point 4 has it, reads as the act not made, and keeps the other limits
+  that point sets after the act. A check that reports it at a severity that lets
+  through what the check gates, an issue or an operation, exits as that severity
+  does. ADR-053 point 2 rules this for every command that reads the board, gate
+  or not, a reach this record gives it for the state's readers, on the same
+  ground, and ADR-096 for the rest.
 
 DEC-051 point 6 fixes one posture: a seat choosing work skips, with a warning, a
 Task whose position is undetermined, and takes nothing where the board cannot be
-read. Each other command chooses its own within the limits. For example, a
+read. Each other command chooses its own within the limits, and within those
+ADR-096 point 4 sets for every read and write of the board (refinement per
+[ADR-096](ADR-096-board-did-not-answer.md)). For example, a
 command that moves one issue cannot check the move from a position it does not
 know, so it refuses and names the outcome.
 
-### 6. A command reads the cards of the issues it acts on, and no others
+### 6. A command reads the cards of the issues it acts on, and others only to find a sign that the board answered (refinement per ADR-096)
 
 A command acting on one issue reads that issue's card. Where its forward cascade
 walks the hierarchy, it reads each ancestor's card in turn, so its reads are
@@ -216,6 +229,18 @@ bounded by what it lists, not by the board.
 
 Both reads give one account of which card is an issue's: the issue's card on the
 configured board, found among the issue's own cards, an archived card included.
+
+Beside them, a request that could find an issue with no card carries, for each
+repository whose issues it reads, a fixed page of that repository's issues, the
+most recently created and the open ones most recently updated, whose cards the
+seam reads only to find a sign that the board answered (ADR-096 point 1)
+(refinement per [ADR-096](ADR-096-board-did-not-answer.md)). An issue the
+command acts on that also lies on that page is judged from the command's own
+read of it. A listing read in several batches carries an issue whose card one
+batch found into each batch after it, and into each batch before it that found
+no such sign, made again once after the last. The issue is a sign there only
+where that batch's request shows its card again. No error placed on the page, or
+on an issue so carried, fails the command's read.
 
 A listing read is whole or nothing. A batch that fails makes the board one that
 could not be read, for the whole listing. A listing never takes the issues of a
@@ -292,11 +317,13 @@ organisation's board holds the cards of many repositories. A read of every card
 makes a listing's cost grow with the board's history and with other
 repositories' work, and any bound on the pages it reads becomes a size past which
 choosing work takes nothing on every run. A listing is bounded by what the command
-lists. Reading the issues' own cards also gives one account of which card is an
-issue's, for one issue and for many. A read of the whole board is a second
-account, and the two part on a card one counts and the other does not, such as an
-archived one: an issue the move command places would then have no card for a
-seat choosing work.
+lists, and by a fixed page for each repository each of its requests reads, which
+grows with neither the board nor any repository's issues (refinement per
+[ADR-096](ADR-096-board-did-not-answer.md)). Reading the issues' own cards also
+gives one account of which card is an issue's, for one issue and for many. A
+read of the whole board is a second account, and the two part on a card one
+counts and the other does not, such as an archived one: an issue the move
+command places would then have no card for a seat choosing work.
 
 **Why whole or nothing.** A batch silently missing from a listing would make
 every issue in it look as if it had no card. That turns a tooling fault into a
@@ -379,8 +406,9 @@ finding about issues: the mis-attribution ADR-053 point 2 exists to prevent.
   reports what happened and decides nothing. A command handles a failed Status
   write as it handles a failed write of the substrate that carries the state, or,
   where the Status only projects the state, as it handles any projection left
-  behind (DEC-006). Filing handles a failed Status write as it handles every
-  other write after the issue is created: the issue stays filed.
+  behind (DEC-006). Filing handles a failed Status write as ADR-096 point 4 sets
+  for a write after the issue is created: the issue stays filed (refinement per
+  [ADR-096](ADR-096-board-did-not-answer.md)).
 - **No migration is owed by this record.** It renames, removes and restructures
   nothing an adopter holds. The configuration migration that writes each
   project's map is DEC-062 point 6's.
