@@ -1,0 +1,66 @@
+name: scratch 3235 loop
+
+# Scratch only, never for main: runs the look's real-browser test at device
+# scale 0.625 twenty times on GitHub's runner, on #3235's fix and on main's
+# code before it, each alone and under a busy CPU (project-kit#3235).
+
+on:
+  push:
+    branches: [test/3235-ci-loop]
+
+jobs:
+  loop:
+    name: ${{ matrix.code }} / ${{ matrix.load }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        code: [fixed, unfixed]
+        load: [idle, busy]
+        include:
+          - code: fixed
+            ref: 2ac21dd2b14318778143479a39fd1288d76ea11c
+          - code: unfixed
+            ref: a5c806dd2381f45b265348927a831f6b6001dad9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: astral-sh/setup-uv@v3
+
+      - run: uv sync
+
+      - run: uv run pkit sync
+
+      - name: Run the test twenty times
+        env:
+          LOAD: ${{ matrix.load }}
+        run: |
+          set -u
+          if [ "$LOAD" = busy ]; then
+            for c in $(seq 1 "$(nproc)"); do
+              python3 -c "while True: pass" &
+            done
+          fi
+          ok=0; bad=0; skip=0
+          for i in $(seq 1 20); do
+            uv run pytest tests/test_visual_communication_viewing_browser.py -k "planted_fault and 0.625" -q -rs -p no:cacheprovider > out.txt 2>&1 || true
+            if grep -q "SKIPPED" out.txt; then
+              skip=$((skip+1)); grep -m1 "SKIPPED" out.txt | cut -c1-300
+            elif grep -qE "[0-9]+ passed" out.txt && ! grep -q "failed" out.txt; then
+              ok=$((ok+1))
+            else
+              bad=$((bad+1)); echo "run $i failed:"; grep -m5 -E "Error|assert|Stopped|no-paint" out.txt | cut -c1-300
+            fi
+          done
+          echo "ok=$ok bad=$bad skip=$skip" | tee -a "$GITHUB_STEP_SUMMARY"
