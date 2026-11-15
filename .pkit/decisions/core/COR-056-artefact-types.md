@@ -46,6 +46,7 @@ The backbone takes an artefact's type from the places that match its file. It fi
 - **A tie fails validation, where the project can mend it.** Two typed places that match one file, rank equal and give it different types are a *tie*. A tie between places that only components declare is reported and does not fail. The project cannot mend it in its own files (COR-055 point 1).
 - **One component's place over another's.** One component's typed place may outrank another component's own place that is not root-wide, and give a file of it a type. That is reported, and the type stands. Within one component, nothing is reported.
 - **An untyped place gives no type.** Apart from keeping project places off a component's files, it takes no part: it shadows no other place.
+- **A placed data file** takes its type only from the places that read it as data. A place that reads documents only takes no part in its type (refinement per COR-071).
 - **A tie counts as each type in contention.** While a tie stands, the artefact counts as each of the tied types. A type with a kind field counts only where the artefact declares its kind (point 4). So every rule set whose scope selects one of them still reaches it.
 - **What a type that fails validation gives.** A value the configuration's schema refuses gives no type, and readers warn, as COR-048 point 4 says. A component's type that a project place or a scope names, and that no installed component's type registry declares, gives no type either. Its kind field is unknown, and validation fails. Any other type that fails validation still counts until the declaration is mended. So nothing a scope selects drops out of it without a word.
 
@@ -53,7 +54,7 @@ The backbone takes an artefact's type from the places that match its file. It fi
 
 A kind field (point 2) is one of the artefact's own fields, outside the methodology's container (COR-050 point 1).
 - **The declaration decides.** Where the winning place (point 3) gives a type with a kind field, an artefact takes the type only when it declares its kind there. Otherwise it has no type. A less specific place does not type it instead.
-- **Documents and entries alike.** A document declares its kind in its front matter, or in the sidecar that holds it (refinement per COR-063), and an entry among its own fields.
+- **Documents and entries alike.** A document declares its kind in its front matter, or in the sidecar that holds it (refinement per COR-063), and an entry among its own fields. A placed data file declares it at the top of its data (refinement per COR-071).
 - **The kinds are the owner's.** The backbone reads only whether the field is present and not empty, never which kind it names.
 
 ### 5. Limits

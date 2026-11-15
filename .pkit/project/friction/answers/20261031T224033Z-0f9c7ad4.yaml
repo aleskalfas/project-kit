@@ -1,0 +1,251 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-10-31T22:40:33Z
+      outcome: unchanged
+      unchanged-because: "COR-057 point 2 and its Rationale add that a change owns a value it newly marks as prose in a placed data file, for each rule on prose. Steps 9 and 10 hold: the listing names each artefact the change alters or brings under a rule, and the reviewer judges the text the change owns there. No schema marks prose until the backbone builds the mark (#2416)."
+  - artefact: .pkit/rule-sets/ops.md#RS-OPS-024
+    revalidated:
+      at: 2026-10-31T22:40:49Z
+      outcome: unchanged
+      unchanged-because: COR-057 point 2 adds that a change owns a value it newly marks as prose in a placed data file, for each rule on prose. The rule still asks a session to follow the rules that bind on what its change owns, as `pkit rule-sets altered` lists them, so it holds. No schema marks prose until the backbone builds the mark (#2416).
+  - artefact: tech-docs/analysis/core/domain-model/060-changes-review-and-releases.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044308Z-41eae20f.yaml
+      - 20261031T215245Z-02b4b47b.yaml
+    revalidated:
+      at: 2026-10-31T22:40:52Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains pointers to COR-071 on placed data files. COR-057 point 2 and its Rationale add that a change owns a value it newly marks as prose, for each rule on prose. The view's reviewers still judge what a change alters or brings under a rule, with the same three kinds of finding, so it holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261031T215245Z-02b4b47b.yaml
+    revalidated:
+      at: 2026-10-31T22:40:56Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-062 gain pointers to COR-071 on placed data files, which an answer names by path. COR-057 point 2 adds that a change newly marking a value as prose brings its artefact under each rule on prose. The backbone still answers which artefacts a change alters or brings under a rule, so reviewing and landing a change holds.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261031T215245Z-02b4b47b.yaml
+    revalidated:
+      at: 2026-10-31T22:40:59Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-062 point 1 gain pointers on placed data files, which an answer names by path. COR-057 point 2 adds that a change owns a value it newly marks as prose in one. The panel's reviewers, the rule-set reviewer's place in the stack and the list of what changed in each updated document read the same, so the page holds.
+  - artefact: .pkit/agents/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T215245Z-02b4b47b.yaml
+    revalidated:
+      at: 2026-10-31T22:41:03Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-062 gain pointers on placed data files, which an answer names by path. COR-057 point 2 adds that a change owns a value it newly marks as prose in one. The agents' shape, their deployment and the answer writers they use read the same, so the page holds.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T214052Z-d9e0c8d3.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T224420Z-150fbc32.yaml
+      - 20261028T231033Z-db617c30.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261031T215245Z-02b4b47b.yaml
+    revalidated:
+      at: 2026-10-31T22:41:06Z
+      outcome: unchanged
+      unchanged-because: COR-023 now says `pkit data validate` reads a placed data file without containers, and COR-053 point 10 that its container sits at its top. COR-057 point 2 adds that a change newly marking a value as prose brings its artefact under each rule on prose. The capability's `config.yaml` lies in no place, and the merge gate's reviewers read the same, so the page holds.
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T215245Z-02b4b47b.yaml
+    revalidated:
+      at: 2026-10-31T22:41:10Z
+      outcome: unchanged
+      unchanged-because: COR-023, COR-050, COR-053 and COR-062 point 1 gain pointers on placed data files, and COR-057 point 2 adds that a change owns a value it newly marks as prose in one. The capability's eight places read Markdown documents only, and `structures.yaml` lies in no place. So what the page says of places, artefacts, validation and the rule-set reviewer holds.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261031T215245Z-02b4b47b.yaml
+    revalidated:
+      at: 2026-10-31T22:41:13Z
+      outcome: unchanged
+      unchanged-because: COR-050 and COR-062 point 1 gain pointers on placed data files, and COR-057 point 2 adds that a change owns a value it newly marks as prose in one. The agent proposes changes to pages, which are Markdown documents, and its reviewer contribution still covers what a change alters or brings under a rule, so the page holds.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023128Z-752860d8.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T155551Z-be632892.yaml
+      - 20261030T161257Z-5352f58f.yaml
+      - 20261030T164324Z-d7667894.yaml
+      - 20261030T231942Z-8fe86054.yaml
+      - 20261030T235059Z-0bb410f6.yaml
+      - 20261031T003126Z-7b1634e4.yaml
+      - 20261031T015915Z-872f0e80.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261031T215245Z-02b4b47b.yaml
+    revalidated:
+      at: 2026-10-31T22:41:17Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains pointers on placed data files, and COR-057 point 2 adds that a change owns a value it newly marks as prose in one. The README's friction example anchors a Markdown document under `docs/`, and its rule-set reviewer still judges a change against the accepted rules, so it holds.
+  - artefact: docs/capabilities/living-docs/README.md
+    read:
+      - 20261031T215245Z-02b4b47b.yaml
+    revalidated:
+      at: 2026-10-31T22:41:20Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains pointers on placed data files, and COR-057 point 2 adds that a change owns a value it newly marks as prose in one. A page is still a Markdown file of a space with its anchors in its friction block, and the rule-set reviewer still judges each change that alters a page, so the guide holds.

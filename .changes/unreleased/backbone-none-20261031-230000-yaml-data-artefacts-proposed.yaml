@@ -1,0 +1,9 @@
+component: backbone
+kind: none
+body: >
+  COR-071 decides that a YAML data file in a place that says it reads data
+  files becomes an artefact, and that a rule on prose reads only the fields
+  its schema marks as prose (#2417). Seven accepted records gain pointers to
+  it or are refined by it: COR-023, COR-050, COR-053, COR-056, COR-057,
+  COR-062 and COR-063. The decision is ahead of its build (#2416), so no
+  command, path or format changes, and no surface moves.
