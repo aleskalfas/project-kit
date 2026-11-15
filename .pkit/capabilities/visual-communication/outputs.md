@@ -974,3 +974,11 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 - **A folder of its own.** Never fetch them into `look/`, where a look replaces its renderer's folder ([What a run writes](#what-a-run-writes)). Read the fetched folder as a look's folder, `report.json` first.
 - **The hosts it reaches.** In a session's sandbox, each host the fetch needs is the project's own allowance to add. The capability declares none.
 - **A run the permission model confines,** such as a builder's, reaches no such host. Only the SVG renderer's pages remain in it.
+
+### Where the review's reports are kept
+
+[The reviewer](README.md#the-reviewer) writes a report for each round, whose first part is a document of a fixed form, held by the schema `review.schema.json` ([Its grades](README.md#its-grades)). The reviewer writes no file: it replies with the report, and whoever dispatched it keeps the report as it was written (DEC-042 point 4).
+
+- **Where.** `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/round-<n>.yaml`, with `<n>` the round's number from 1. It lies in the clone's local folder, as the look's images do ([The clone's local folder](files.md#the-clones-local-folder); DEC-015 point 4), so no file of it is committed.
+- **Kept as written.** Nobody summarises, filters or answers a report before it is kept, and a later round's review reads the reports of the rounds before it only once it has written its grades.
+- **One folder for each piece,** which a later round adds to and no run replaces. A look replaces its own folder and leaves this one.

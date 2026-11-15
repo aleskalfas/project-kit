@@ -324,7 +324,8 @@ It removes each folder whole, then takes each entry out of the list as text ([Th
 - `exports/<piece>/`: the files `pkit visual export` and `pkit visual upgrade` make, but for the version `pkit visual mark-final` moved into the piece's folder;
 - `before-after/<piece>/`: a piece's scenes drawn around a change to its lock's versions, in `before/` without the change and in `after/` with it;
 - `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder;
-- `look/<piece>/`: the images, the frames and the report `pkit visual look` writes.
+- `look/<piece>/`: the images, the frames and the report `pkit visual look` writes;
+- `reviews/<piece>/`: the reports of the reviewer's rounds, one `round-<n>.yaml` for each, as whoever dispatched the reviewer kept them ([Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept)).
 
 *What is made from a piece* names the files in each. While `pkit visual look` runs, the folder also holds a temporary folder of the fonts it hands its tool, which the run removes.
 
@@ -362,7 +363,7 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 ```
 
-The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `brief`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports` and `code`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
+The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `brief`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports`, `code` and `review`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
 
 No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks each bound file's shape against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
 

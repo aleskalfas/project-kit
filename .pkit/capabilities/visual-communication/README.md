@@ -489,7 +489,7 @@ In mending, it asks you only where a fix would change what the piece says, needs
 
 ## The reviewer
 
-`graphic-design-reviewer` is the capability's reviewer. It looks at a piece's pages as they were drawn, and reports what no check measures, such as a text over a picture. It also judges whether the pages keep the capability's rules, and show what the piece's brief asks. The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+`graphic-design-reviewer` is the capability's reviewer. It looks at a piece's pages as they were drawn, and reports what no check measures, such as a text over a picture. It also judges whether the pages keep the capability's rules, and show what the piece's brief asks, and it grades each rule in words ([Its grades](#its-grades)). The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
 
 To use it:
 
@@ -504,13 +504,25 @@ You may hand it a build pipeline's drawings instead, fetched into a folder of th
 Each finding names the page, the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)), and where its fix belongs. A finding is one of four kinds, kept apart by what it cites:
 
 - **A fault,** which the agent's list names: a part missing or blank, a wrong font, text over text, a text that does not read over a picture, a wrong picture, an overlap, a fault of alignment, or a drawing that disagrees with a passing check.
-- **A rule finding,** which cites a rule by its id. Today it only informs, since no rule binds on a piece's files yet.
+- **A rule finding,** which cites a rule by its id, and carries its grade where the grade is below `professional`. Today it only informs, since no rule binds on a piece's files yet.
 - **A brief finding,** which cites the part of the piece's brief that the drawing does not show.
 - **A note,** anything else worth a look. A note of taste names the practice it draws on, from the design knowledge. A note never fails.
 
 One observation makes one finding, of the first kind in this list that applies, and it cites each ground it rests on. A page whose path, traced from where the eye enters, does not follow the order its relations and its lead or takeaway give is such an observation. It may break a rule as well as the brief. Where the piece keeps no brief, it is a rule finding where a rule applies, and otherwise a note.
 
 Its findings are advice. They join no validation and hold no merge.
+
+### Its grades
+
+Beside its findings, the reviewer grades each rule it reads, in one of four words: *below competent*, *competent*, *professional* or *excellent*. *Professional* is the work a professional designer hands over for that audience and medium. It never weighs effort, what the engine can draw, or progress.
+
+- **On each page, or once for the piece.** A rule that judges the pages together, such as the rule that the pages tell the story in order, takes one grade for the piece. Two rules take both, and the others take one on each page. The reviewer's body holds which. It lists a rule whose text leaves a page or the piece out as not graded, with why.
+- **A rule's text settles the exact grade only where it names one.** Every other grade is the reviewer's reading, so a finding on it is for a person once its rule binds.
+- **Its marks.** A grade that only a tool the engine lacks would raise is marked a *need*, and one that only the asker's words would raise is marked as the asker's. Each goes to you as a question. The reviewer alone marks a grade.
+- **What it reads, in order.** It grades from the drawn pages and the brief's intent, which a command hands it. It reads the brief's file, and its reports of the loop's earlier rounds, only once its grades are written, and then says why each grade differs from the round before.
+- **Its report** opens with a document of a fixed form, held by the schema [`review.schema.json`](schemas/review.schema.json). It holds the grades and their marks, what the reviewer read before grading, and the full name of the model it ran on, with its effort where the harness has one. A command gives the verdict from it. The loop keeps each round's report in the clone's local folder ([Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept)).
+
+The reviewer grades by no bar.
 
 It needs a harness that reads images. Where the harness reads none, it stops and says so, and reports nothing as looked at.
 
