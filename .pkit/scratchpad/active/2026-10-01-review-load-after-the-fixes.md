@@ -98,6 +98,45 @@ Once #1179 and #1011 have been in place for a week of normal (non-collision) wor
 4. Hours from PR open to merge, which the treadmill dominated today.
 5. Whether stamp conflicts still occur with the queue (they should not: the queue serialises landings, and a PR's revalidation answer is written against the base the queue merges onto).
 
+## Re-measured on 4 November 2026, with a committed script (#2633)
+
+The baseline for EPIC #2630. Window: the last 40 merged pull requests whose title contains `visual-communication`. Only 38 exist, all of EPIC #2423, merged from 1 to 4 November. Measured on 4 November at 11:21 UTC:
+
+    uv run python scripts/pr_flow.py --since 2026-11-01 --search "visual-communication in:title" --limit 40
+
+The script replaces `.agent-workspace/stats/collect.py` above (COR-007), and counts by its own rules. A round is a distinct head that received a verdict, not verdicts within 20 minutes. A merge of `main` is made again with `git merge-tree` to tell whether it conflicted. Its docstring says how each measure is read. So compare a later run of the script with this one, not with the tables above.
+
+| Measure | Total | Per pull request (mean / median) | Pull requests with any |
+|---|---|---|---|
+| Merges of the base | 27 | 0.7 / 0 | 17 |
+| … conflicting | 8 |  | 8 |
+| Review rounds | 59 | 1.6 / 1 | 38 |
+| … pull requests with two or more |  |  | 13 |
+| Verdicts | 221 | 5.8 / 5 | 38 |
+| Blocking findings | 25 | 0.7 / 0 | 11 |
+| Answers added | 698 | 18.4 / 10.5 | 29 |
+| … in answer files | 50 |  |  |
+| Failed CI runs | 17 | 0.4 / 0 | 12 |
+| … with the doc check's timeout (#2410) | 8 |  | 7 |
+| Hours open |  | 1.4 / 0.7 |  |
+
+- **Merges of `main`.** 19 of the 27 merged cleanly, and 9 pull requests merged `main` only cleanly. The 8 conflicts were in `files.md` (5), `checks.md` (3), `components.md` (3), `_lib/checks.py` (3), and six other files once or twice. No merge conflicted in an answer file.
+- **Rounds.** 13 pull requests took two rounds or more. 10 of them answered a blocking finding; #2452, #2527 and #2615 had none.
+- **Blocking findings.** 25, in 11 pull requests. The rule-set-reviewer raised 15: RS-LDOC-002 9 times, RS-LDOC-001 3 times, RS-WRITE-011 3 times. The docs-reviewer raised 7, citing DEC-055 twice, COR-062 once, and no rule 4 times. The code-reviewer raised 3, each a defect citing no rule.
+- **Answers.** The glossary's 26 terms took 424 of the 698 answers, in 16 pull requests. The five pages took 207: the README 45, `checks.md` 44, `files.md` 44, `components.md` 42, `outputs.md` 32.
+- **Failed CI runs.** Each attempt counts, so a failure a re-run passed is one. The 8 with the doc check's timeout each failed the `validate` line. The other 9 were test failures in slice 2 (4, all in #2452), the changeset guard (2), the prose lint (1), the types (1), and a slice whose log could not be read (1).
+- **Hours open.** The median is 0.4 hours for the 27 pull requests without a blocking finding, and 1.6 hours for the 11 with one.
+
+Against "What to measure next":
+
+1. **One round where a merge of `main` was clean: holds.** Each pull request whose merges of `main` were all clean took an extra round only to answer a blocking finding.
+2. **Reviewer re-runs after a docs-only fix:** not measured; the script does not tell a fix's kind.
+3. **No merges of `main` once the queue merges: does not hold.** 17 of 38 pull requests merged `main`, and no landing went through the queue: the repository has no `merge_group` run.
+4. **Hours open:** a median of 0.7 hours, against 1.3 hours on 30 September.
+5. **Stamp conflicts:** gone. Answers live in answer files of their own (COR-062), and no merge conflicted in one. The conflicts are now in the pages and the code they describe.
+
+Next: run the script again over the pull requests merged after EPIC #2630's Tasks land, with `--since` set to the day they landed.
+
 ## Status
 
 Active. Re-measure after a week; if the expected values hold, fold the result into the done note's successor and retire this one.

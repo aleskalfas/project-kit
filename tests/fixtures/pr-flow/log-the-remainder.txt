@@ -1,0 +1,43 @@
+2026-11-03T15:38:46.9169329Z       pkit::work-tracking:fixers (data v1, project-management) ← software-analysis (contributes, bound); living-docs (contributes, bound)
+2026-11-03T15:38:46.9170949Z       pkit::work-tracking:use-cases (data v1, project-management) ← software-analysis (contributes, bound)
+2026-11-03T15:38:46.9171861Z     6 data point(s): 3 resolved, 3 unresolved; 0 project filler file(s).
+2026-11-03T15:38:46.9172795Z     pkit::work-tracking:doc-check: living-docs (command 'fill-doc-check') reads history (HEAD 0152ff59d1de)
+2026-11-03T15:38:46.9174135Z     pkit::work-tracking:use-cases: software-analysis (command 'fill-use-cases') reads the default branch (origin/main at 267300c9d890)
+2026-11-03T15:38:46.9175455Z     error    .pkit/capabilities/living-docs/package.yaml:/connections/extensions/contributes/0
+2026-11-03T15:38:46.9178112Z       → the contribution of 'living-docs' to 'pkit::work-tracking:doc-check' is inert: command 'fill-doc-check' did not answer within 30 s; the point's inert policy is `fail`, so it is unresolved (COR-052 point 6).
+2026-11-03T15:38:46.9180099Z 
+2026-11-03T15:38:46.9180243Z   versions
+2026-11-03T15:38:46.9181230Z     checked: 7 backbone range(s), 4 capability dependency range(s), 6 point version(s), 0 process interface version(s), 0 project filler version(s), 8 rule-set pin(s); 0 error(s), 0 warning(s).
+2026-11-03T15:38:46.9181918Z 
+2026-11-03T15:38:46.9181997Z   decisions
+2026-11-03T15:38:46.9182343Z     256 decision record(s) and 89 rule(s) checked; 0 error(s), 39 warning(s).
+2026-11-03T15:38:46.9684880Z     No visual work: .pkit/capabilities/visual-communication/project/config.yaml records no location, and `visual/` holds none.
+2026-11-03T15:38:46.9685367Z 
+2026-11-03T15:38:46.9685554Z   17 validator(s) ran; 1 error(s), 52 warning(s), 0 info(s), 134 report(s).
+2026-11-03T15:38:46.9685947Z   1 error(s) found.
+2026-11-03T15:38:46.9739186Z -- validate: FAILED
+2026-11-03T15:38:46.9739471Z 
+2026-11-03T15:38:46.9739639Z == deployed agents ==
+2026-11-03T15:50:57.6025544Z numbers: this branch contains 267300c9d890bd454b0ca957f65d8597fca3bc38 (267300c9d890); nothing to collide with.
+2026-11-03T15:50:57.6026823Z numbering: 6107ae77e537 frees JRN-001, JRN-002, UC-001, UC-002, UC-003, UC-004, UC-005, UC-006, UC-007, UC-008, UC-009 and UC-010, as the project's numbering setting names (DEC-001 point 3).
+2026-11-03T15:50:57.6028483Z steps (RS-SAN-002, accepted): 95 use case(s) where the rule binds, compared with 267300c9d890bd454b0ca957f65d8597fca3bc38 where this branch left it (267300c9d890); 0 new in this change, and 0 renumbering or removing a step or a variant.
+2026-11-03T15:50:57.6572748Z -- analysis numbers: ok
+2026-11-03T15:50:57.6573062Z 
+2026-11-03T15:50:57.6573250Z == analysis pointers ==
+2026-11-03T15:51:03.9042855Z pointers: 11 commits named by 11 planned records, placed on origin/main (267300c9d890): 11 held, 0 not held, 0 unknown.
+2026-11-03T15:51:03.9043812Z pointers: this change adds 0 of those records, read against 267300c9d890bd454b0ca957f65d8597fca3bc38, which this branch left at 267300c9d890.
+2026-11-03T15:51:03.9044572Z pointers: not placed: 12 sources outside this repository.
+2026-11-03T15:51:03.9469567Z -- analysis pointers: ok
+2026-11-03T15:51:03.9471448Z 
+2026-11-03T15:51:03.9471636Z == doc check ==
+2026-11-03T15:51:04.3521052Z Installed 2 packages in 1ms
+2026-11-03T15:51:35.9055585Z [unresolved] the pkit::work-tracking:doc-check point does not resolve: a filler meant to answer is inert, and the point's inert policy is `fail`. The check cannot see every obligation it should, so it fails rather than pass on fewer (DEC-053).
+2026-11-03T15:51:35.9057096Z   inert: living-docs (command 'fill-doc-check'): command 'fill-doc-check' did not answer within 30 s
+2026-11-03T15:51:35.9057726Z   fix: update living-docs, pin it, or uninstall it.
+2026-11-03T15:51:35.9438505Z -- doc check: FAILED
+2026-11-03T15:51:35.9439131Z 
+2026-11-03T15:51:35.9439326Z == changelog lint ==
+2026-11-03T15:51:36.7398403Z changelog lint: changesets + CHANGELOG.md are well-formed — ok.
+2026-11-03T15:51:36.7785917Z -- changelog lint: ok
+2026-11-03T15:51:36.7788094Z 
+2026-11-03T15:51:36.7788555Z ✗ checks FAILED
