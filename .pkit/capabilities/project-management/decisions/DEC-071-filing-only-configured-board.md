@@ -1,7 +1,7 @@
 ---
 id: DEC-071
 title: Filing refuses a board other than the configured one in every project
-status: proposed
+status: accepted
 date: 2026-11-15
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
