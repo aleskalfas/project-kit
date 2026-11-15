@@ -24,7 +24,7 @@ agent references **only** through `reads.patterns` (never `owns` / `needs` /
 resolves to *dropped item, agent deploys*; defined resolves to *the path,
 substituted in*. `reads.patterns` becomes the designated optional read channel;
 `reads.paths` and `reads.records` stay hard reads. The agents return to the
-angle-bracket form ADR-013 D1 always specified. Nothing names
+angle-bracket form ADR-013 point 1 always specified. Nothing names
 `project-conventions` in backbone code — the property is inferred from the
 reference site, so any capability's read-only category inherits it for free.
 This composes ADR-013 and ADR-051; it is not a new principle, so an ADR, not a
@@ -34,7 +34,7 @@ COR.
 
 ADR-013 fixed the conventions-discovery seam: an agent reads a project's
 conventions through the overlay-resolved `<project-conventions>` category, and
-an empty or absent corpus is a **normal early state, not an error** (ADR-013 D1,
+an empty or absent corpus is a **normal early state, not an error** (ADR-013 point 1,
 Implications). ADR-051 fixed the *write* twin: a core agent's `owns:` carries an
 overlay category placeholder, and a category tolerant of absence ships as an
 explicit `[]` so the agent deploys **inert** rather than being skipped.
@@ -42,13 +42,13 @@ explicit `[]` so the agent deploys **inert** rather than being skipped.
 Between them sat an unhandled case the `software-engineering` capability walked
 straight into. Its four agents (`software-engineer` and the three-agent
 code-review panel) *read* `<project-conventions>` and nothing else through it —
-no `owns:` entry, because they do not write the corpus (ADR-013 D2: no capability
+no `owns:` entry, because they do not write the corpus (ADR-013 point 2: no capability
 owns it). At the time they were authored, the deploy resolver had exactly one
 behaviour for an undefined angle-bracket placeholder: fail the deploy loudly and
 skip the agent. That is correct for a *hard* reference and correct for a
 *write-carrying* one under ADR-051's explicit-`[]` opt-in — but wrong for an
 *optional read*, where undefined is the expected early state and skipping the
-agent is the opposite of what ADR-013 D1 promised.
+agent is the opposite of what ADR-013 point 1 promised.
 
 The authoring-time workaround was to drop the angle brackets: declare
 `reads.patterns: [project-conventions]` as a **bare literal**. That sidestepped
@@ -64,13 +64,13 @@ once:
 2. **Discovery.** The scanner never sees the category, so `pkit agents
    reconcile` reports "overlay is complete" and cannot stub it — contradicting
    ADR-013 Implications and the capability's own README.
-3. **Its own contract.** ADR-013 D1 specifies the consumer declares
+3. **Its own contract.** ADR-013 point 1 specifies the consumer declares
    `<project-conventions>` — angle-bracket — in `reads.patterns`. The shipped
    agents violate the ADR they stand on.
 
 The scanner and resolver are mirror-guarded (a parity test), so both stayed
 consistently wrong. This record supplies the missing behaviour so the agents can
-return to the form ADR-013 D1 always specified.
+return to the form ADR-013 point 1 always specified.
 
 ## Decision
 
@@ -106,7 +106,7 @@ label.
 Where a
 hard undefined placeholder makes the resolver exit non-zero, an optional
 undefined placeholder is simply omitted from the resolved list — the deployed
-`reads.patterns` may shrink to `[]`. This restores ADR-013 D1's zero-config
+`reads.patterns` may shrink to `[]`. This restores ADR-013 point 1's zero-config
 empty-is-normal without an overlay entry of any kind. It is deliberately
 *unlike* ADR-051's inert-deploy, which requires an explicit `[]` in the
 overlay as its auditable opt-in gesture: an optional read needs no gesture,
@@ -120,7 +120,7 @@ Unlike ADR-051's
 *core-introduced* write category with deliberate, auditable opt-in — read
 optionality is derived from the reference site alone. The backbone never
 learns `project-conventions` (or any capability's read category). This is the
-maximal expression of ADR-013 D2 ("owned by no single capability") and of
+maximal expression of ADR-013 point 2 ("owned by no single capability") and of
 COR-014 universal applicability: any capability's read-only category inherits
 the behaviour with zero backbone edits.
 
@@ -139,7 +139,7 @@ is extended to pin the channel split across the two implementations.
 
 `software-engineer`,
 `code-reviewer`, `security-reviewer`, and `docs-reviewer` declare
-`reads.patterns: [<project-conventions>]` — the form ADR-013 D1 specified —
+`reads.patterns: [<project-conventions>]` — the form ADR-013 point 1 specified —
 and now receive the resolved path when the adopter defines it, and deploy
 cleanly (as generalists) when they do not.
 
@@ -181,13 +181,13 @@ ADR-013's discovery seam and empty-is-normal, ADR-051's referenced-category
 absence-tolerance and its single-consumer/structural-inference discipline,
 COR-013 rule 5's deploy-time resolution, COR-007's don't-duplicate — into the
 architectural realization of an *optional* overlay read. It introduces no new
-universal principle; it repairs the seam so ADR-013 D1's already-decided contract
+universal principle; it repairs the seam so ADR-013 point 1's already-decided contract
 actually holds. It matches the ADR-013/ADR-051 family.
 
 ### Alternatives considered
 
 - **Keep the bare literal.** Rejected — it is the bug: no delivery, no
-  discovery, and a standing violation of ADR-013 D1.
+  discovery, and a standing violation of ADR-013 point 1.
 - **A new `optional_reads:` frontmatter key.** Rejected — a second declaration
   surface for what the `paths`/`patterns` split already expresses; new parsing in
   both mirror-guarded implementations for no capability the existing channel
@@ -197,7 +197,7 @@ actually holds. It matches the ADR-013/ADR-051 family.
   parity guard exists to prevent.
 - **Add `project-conventions` to a read-side allowlist mirroring
   `WRITE_CARRYING_CATEGORIES`.** Rejected — names a capability's category in
-  backbone code (against ADR-013 D2), and runs safe-default the wrong way for a
+  backbone code (against ADR-013 point 2), and runs safe-default the wrong way for a
   read (a new capability's category would skip until registered).
 - **Generalize `WRITE_CARRYING_CATEGORIES` to cover both.** Rejected — collapses
   two opposite safe-defaults; regresses one of ADR-013 or ADR-051 whichever way
@@ -213,7 +213,7 @@ actually holds. It matches the ADR-013/ADR-051 family.
   whose only undefined categories are optional now reports **deployable**, not
   SKIPPED, matching what the resolver does. `reconcile` surfaces the optional
   category with optional framing and can stub it; it never blocks.
-- **ADR-013 D1 is realized, not amended.** The four agents move from bare literal
+- **ADR-013 point 1 is realized, not amended.** The four agents move from bare literal
   to `<project-conventions>`. This makes the corpus path actually reach the agent
   and makes `reconcile` see the category — the two behaviours ADR-013 promised.
 - **ADR-051 is untouched.** `process-authoring-targets` stays write-carrying and

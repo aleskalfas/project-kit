@@ -1,0 +1,6 @@
+component: software-engineering
+kind: none
+body: >
+  The code-reviewer, docs-reviewer and security-reviewer cite DEC-002's block
+  threshold and knowledge split as points 3 and 4, the ids its headings carry.
+  No decision changes, and the agents' behaviour is unchanged.
