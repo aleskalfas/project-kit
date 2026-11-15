@@ -636,6 +636,35 @@ def test_a_graze_under_the_sliver_is_named_neither(tmp_path: Path) -> None:
     assert lost_of(tmp_path, said, over) == []
 
 
+def test_a_text_of_double_spaces_keeps_its_ink_where_the_page_puts_it_in_the_bands(
+    tmp_path: Path,
+) -> None:
+    """The bands carry the page's rules, `text{white-space:pre}` among them, so the advance and
+    the spaces of a text in a band are the page's. resvg 0.48 reads that rule in neither, and
+    collapses the spaces alike. Were the bands' ink to lie elsewhere than the page's, the cover
+    read would find the page's pixels alike in both draws and name the text covered with
+    nothing over it."""
+    said = text_element("figure/said", run("A   B   C   D", fill="ink"), y=30)
+    assert "white-space:pre" in drawn_page(said)
+    assert lost_of(tmp_path, said) == []
+
+
+def test_the_pages_root_carries_nothing_a_text_inherits_and_one_that_does_fails_the_read(
+    tmp_path: Path,
+) -> None:
+    said = text_element("figure/said", run("Say it", fill="ink"))
+    page = drawn_page(said)
+    root = ET.fromstring(page)
+    assert {name for name in root.attrib if not name.startswith("data-")} <= {
+        "width",
+        "height",
+        "viewBox",
+    }
+    inherited = page.replace("<svg ", '<svg font-size="99" ', 1)
+    with pytest.raises(viewing_tool.ToolFailed, match="font-size"):
+        viewing_tool.draw(inherited, 2.0, tmp_path, {})
+
+
 def test_a_line_that_lies_off_the_page_drew_nothing(tmp_path: Path) -> None:
     said = text_element("figure/said", run("Below it", fill="ink"), y=500)
     assert dropped_of(tmp_path, said) == [("figure/said", "Below it", True)]
@@ -666,6 +695,21 @@ def test_a_text_wholly_past_a_side_is_dropped_off_the_page_alone(tmp_path: Path)
     drawing = tool(tmp_path, said, width=200, height=100)
     assert [(each.element, each.why) for each in drawing.dropped] == [
         ("figure/said", viewing_tool.OFF_THE_PAGE)
+    ]
+    assert drawing.lost == ()
+
+
+@pytest.mark.parametrize("x", (700, -900))
+def test_a_text_that_starts_further_past_a_side_than_the_room_is_dropped_off_the_page(
+    tmp_path: Path, x: float
+) -> None:
+    """The bands reach a page's width past each side, and a text further past finds no ink in
+    them. It is told from a text with no ink by the engine's own geometry of its line, so the
+    cure goes to the layout and not to the paint."""
+    said = text_element("figure/said", run("Beyond", fill="ink"), x=x, y=30)
+    drawing = tool(tmp_path, said, width=200, height=100)
+    assert [(each.why, each.whole) for each in drawing.dropped] == [
+        (viewing_tool.OFF_THE_PAGE, True)
     ]
     assert drawing.lost == ()
 
@@ -750,18 +794,19 @@ def test_the_groups_the_renderer_writes_hold_a_move_and_marks_alone(tmp_path: Pa
 
 FLOOR = 10
 CONTROL = 40
-SCALES = (0.5, 1.0, 1.225, 2.0)
+SCALES = (0.5, 0.8167, 1.225, 2.0)
+#: The ems, in image pixels, the probe drew both a háček and a graze at (DEC-045).
+EMS = (10, 12, 16, 24, 30, 40)
+#: The ems below the one where a graze's smallest row costs less than the sliver.
+ROW_COSTS_A_HACEK = (10, 12, 16, 24)
 
 
-@pytest.mark.parametrize("scale", SCALES)
-def test_a_háček_under_a_box_at_the_text_floor_is_named_at_each_scale(
-    tmp_path: Path, scale: float
-) -> None:
-    """The háček of a ž set at the floor of 10 device pixels, a later box over it alone."""
-    found = set_at(
+def háček_at(tmp_path: Path, em: float, scale: float) -> list[tuple[str, float]]:
+    """The háček of a ž set `em` image pixels high, a later box over it alone."""
+    return set_at(
         tmp_path,
         "ž",
-        FLOOR,
+        em,
         scale,
         over=lambda base, size: {
             "x": 0,
@@ -770,46 +815,81 @@ def test_a_háček_under_a_box_at_the_text_floor_is_named_at_each_scale(
             "height": base - 0.56 * size,
         },
     )
-    assert [why for why, _ in found] == [viewing_tool.COVERED]
 
 
-@pytest.mark.parametrize("scale", SCALES)
-def test_a_box_edge_grazing_the_descenders_foot_of_the_control_is_named_at_no_scale(
-    tmp_path: Path, scale: float, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """The control is a text of descenders set at 40 device pixels, a later box whose top
-    edge steps by a quarter of a device pixel across their foot. resvg hides whole rows, so
-    the box hides the last row, then more: the last row is a graze and stays unnamed, and the
-    row above it is named."""
+def graze_rows(
+    tmp_path: Path, em: float, scale: float, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Callable[[int], list[str]], dict[int, float]]:
+    """A later box whose top edge steps by half an image pixel across the foot of the
+    descenders of "Typography gypsy" set `em` image pixels high: what each step hides of the
+    text with nothing unnamed, as a share of its ink, and the causes a step names as it is."""
 
     def edge(step: int) -> Callable[[float, float], dict[str, Any]]:
         return lambda base, size: {
             "x": 0,
-            "y": base + 0.2 * size + step / 4 / scale,
+            "y": base + 0.2 * size + step / 2 / scale,
             "width": 12 * size,
             "height": 0.5 * size + 10,
         }
 
-    steps = range(-12, 13)
     with monkeypatch.context() as unbound:
         unbound.setattr(viewing_tool, "SLIVER", 0.0)
         unbound.setattr(viewing_tool, "FEWEST", 0.0)
         hides = {
             step: sum(
                 share
-                for why, share in set_at(tmp_path, "Typography gypsy", CONTROL, scale, edge(step))
+                for why, share in set_at(tmp_path, "Typography gypsy", em, scale, edge(step))
                 if why == viewing_tool.COVERED
             )
-            for step in steps
+            for step in range(-6, 7)
         }
+
+    def named(step: int) -> list[str]:
+        return [why for why, _ in set_at(tmp_path, "Typography gypsy", em, scale, edge(step))]
+
+    return named, hides
+
+
+@pytest.mark.parametrize("em", EMS)
+@pytest.mark.parametrize("scale", SCALES)
+def test_a_háček_under_a_box_is_named_at_every_em_and_scale(
+    tmp_path: Path, em: float, scale: float
+) -> None:
+    """The háček loses at least 0.0139 of the em squared at any em from the floor to 40, over
+    the sliver."""
+    assert [why for why, _ in háček_at(tmp_path, em, scale)] == [viewing_tool.COVERED]
+
+
+@pytest.mark.parametrize("scale", (0.5, 1.225))
+def test_a_box_edge_grazing_the_descenders_foot_of_the_control_is_named_at_no_scale(
+    tmp_path: Path, scale: float, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The control is a text of descenders set at 40 image pixels, a later box whose top edge
+    steps across their foot. resvg hides whole rows, so the box hides the last row, then more:
+    the last row is a graze and stays unnamed, and the row above it is named."""
+    named, hides = graze_rows(tmp_path, CONTROL, scale, monkeypatch)
     levels = sorted({hidden for hidden in hides.values() if hidden})
     graze, more = levels[0], levels[1]
-    for step in steps:
-        named = [why for why, _ in set_at(tmp_path, "Typography gypsy", CONTROL, scale, edge(step))]
-        if hides[step] == graze:
-            assert named == [], step
-        if hides[step] == more:
-            assert named == [viewing_tool.COVERED], step
+    for step, hidden in hides.items():
+        if hidden == graze:
+            assert named(step) == [], step
+        if hidden == more:
+            assert named(step) == [viewing_tool.COVERED], step
+
+
+@pytest.mark.parametrize("scale", (0.5, 0.8167))
+@pytest.mark.parametrize("em", ROW_COSTS_A_HACEK)
+def test_a_graze_below_the_em_a_row_costs_less_than_the_sliver_is_named(
+    tmp_path: Path, em: float, scale: float, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Below an em of about 20 image pixels a single row of the descenders' foot hides 0.0156
+    to 0.13 of the em squared, as much as a háček and over the sliver, so the smallest graze is
+    named there. This is the rule DEC-045 states: a graze is spared only where its row is thin,
+    seen from an em of 20, and never where a row costs a háček's worth."""
+    named, hides = graze_rows(tmp_path, em, scale, monkeypatch)
+    smallest = min(hidden for hidden in hides.values() if hidden)
+    step = next(step for step, hidden in hides.items() if hidden == smallest)
+    assert named(step) == [viewing_tool.COVERED]
 
 
 # --- what a run draws (DEC-015 point 5) ---------------------------------------------------------

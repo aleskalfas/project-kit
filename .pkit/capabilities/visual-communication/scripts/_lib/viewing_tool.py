@@ -99,8 +99,9 @@ OPACITIES = ("opacity", "fill-opacity")
 
 #: The least a cut or a cover must lose of a span's strong ink to be named, in the span's em²,
 #: both in image pixels (DEC-045 point 1). It is not DEC-037's number, which resvg's drawing
-#: does not meet: a graze of a box's edge hides whole device rows here, and a háček at the
-#: command's text floor loses one to three pixels.
+#: does not meet: a graze of a box's edge hides whole rows here. It lies under every háček
+#: probed, 0.0139 at the least, and over the thinnest last row of a graze at an em of 20 or
+#: more. Below that a graze's row costs as much as a háček, and is named.
 SLIVER = 0.0125
 
 #: The least a cause must hide to be named, whatever the em, in pixels: more than one. On a page
@@ -111,6 +112,11 @@ FEWEST = 1.5
 #: A group's attributes that leave a text where its moves put it: the renderer's own marks,
 #: and its move (DEC-045 point 1).
 GROUP_MARKS = "data-"
+
+#: The attributes the page's root may carry: its size and view, and its marks. None is a
+#: presentation attribute a text inherits, so a band drawn of one text inherits nothing it lacks
+#: (DEC-045 point 1).
+ROOT_ATTRIBUTES = ("width", "height", "viewBox")
 
 #: A CSS string as the canvas (`canvas.py`) writes one.
 CSS_STRING = r'"(?:[^"\\]|\\.)*"'
@@ -236,7 +242,15 @@ class _Page:
         self.root = ET.fromstring(svg)
         self.width = float(self.root.attrib["width"])
         self.height = float(self.root.attrib["height"])
+        for name in self.root.attrib:
+            if name not in ROOT_ATTRIBUTES and not name.startswith(GROUP_MARKS):
+                raise ToolFailed(
+                    f"the page's root carries `{name}`, which a band drawn of one text does not "
+                    f"inherit: the bands carry the page's rules and no root attribute"
+                )
         self.fonts: list[str] = []
+        self.style = ""
+        self.widths = widths
         self._blanks: dict[tuple[int, int], bytes] = {}
         self._hand_over_faces(folder)
         self._set_spans_apart(widths)
@@ -252,6 +266,7 @@ class _Page:
             _save_as(base64.b64decode(face["data"]), name, int(face["weight"]), path)
             self.fonts.append(str(path))
         style.text = FACE.sub("", style.text or "")
+        self.style = style.text
         for element in self.root.iter():
             family = element.get("font-family")
             if family:
@@ -333,7 +348,7 @@ class _Page:
             nothing: list[tuple[str, str]] = []
             shown = False
             lines = text.findall(SPAN)
-            for line in lines:
+            for place, line in enumerate(lines):
                 for index, span in enumerate(line):
                     if not (span.text or "").strip():
                         continue
@@ -341,7 +356,8 @@ class _Page:
                     if strong.found and not strong.on_page:
                         nothing.append((span.text or "", OFF_THE_PAGE))
                     elif not self._drew(text, line, index, (x, y), scale):
-                        nothing.append((span.text or "", NO_INK))
+                        far = not strong.found and self._beyond(text, line, place, x)
+                        nothing.append((span.text or "", OFF_THE_PAGE if far else NO_INK))
                     else:
                         shown = True
                         lost.extend(self._partly(span, strong, element))
@@ -413,6 +429,7 @@ class _Page:
                 "viewBox": f"{-at[0]} {top - at[1]} {self.width} {height}",
             },
         )
+        self._carry_style(band)
         alone = ET.SubElement(band, TEXT, text.attrib)
         drawn = copy.deepcopy(line)
         for place, span in enumerate(drawn):
@@ -479,6 +496,7 @@ class _Page:
             },
         )
         attributes = {name: value for name, value in text.attrib.items() if name not in OPACITIES}
+        self._carry_style(band)
         alone = ET.SubElement(band, TEXT, attributes)
         drawn = copy.deepcopy(line)
         for place, each in enumerate(drawn):
@@ -560,6 +578,25 @@ class _Page:
                     span.attrib.pop(name, None)
                 else:
                     span.set(name, value)
+
+    def _carry_style(self, band: ET.Element) -> None:
+        """Give a band the page's own rules, `text{white-space:pre}` among them, so a text on
+        it keeps the advance and the spaces it has on the page (DEC-045 point 1). resvg 0.48
+        reads that rule in neither the page nor a band, so this changes no pixel today; it holds
+        the bands to the page's if resvg comes to read it. The page's root carries no
+        presentation attribute for a band to inherit: `_Page.__init__` fails a root that does."""
+        if self.style:
+            ET.SubElement(ET.SubElement(band, f"{{{SVG_NAMESPACE}}}defs"), STYLE).text = self.style
+
+    def _beyond(self, text: ET.Element, line: ET.Element, place: int, at: float) -> bool:
+        """Whether the engine's own geometry puts the whole of `line` past a side of the page:
+        where the read of ink finds none because the line starts further past a side than the
+        room the draw holds (DEC-045 point 2)."""
+        measured = self.widths.get(text.get("data-id", ""), ())
+        width = measured[place] if place < len(measured) else 0.0
+        anchor = line.get("text-anchor") or text.get("text-anchor") or "start"
+        start = at + float(line.get("x", "0")) - ANCHORED.get(anchor, 0.0) * width
+        return start >= self.width or start + width <= 0
 
     def _blank(self, size: tuple[int, int]) -> bytes:
         """The band of `size` pixels with nothing drawn on it."""
