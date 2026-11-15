@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/visual-communication/package.yaml
+        - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
         - .pkit/capabilities/visual-communication/scripts/status.py
         - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/release.py
@@ -369,7 +370,7 @@ schema_version: 1
 
 The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `brief`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports`, `code` and `review`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
 
-No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks each bound file's shape against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). The documents of the reviewer's kept reports name `visual-communication:review`, yet `pkit validate` checks none of them. They lie in the clone's local folder, which git ignores ([The clone's local folder](#the-clones-local-folder)), and the core's data validation reads only the files git sees (ADR-057 point 2). Nor does the check read them. Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
+No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks the shape of each bound file it reads against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). The documents of the reviewer's kept reports name `visual-communication:review`, yet `pkit validate` checks none of them. They lie in the clone's local folder, which git ignores ([The clone's local folder](#the-clones-local-folder)), and the core's data validation reads only the files git sees (ADR-057 point 2). Nor does the check read them. Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
 
 ### How the files are read
 
