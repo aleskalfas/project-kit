@@ -1,0 +1,10 @@
+component: visual-communication
+kind: minor
+body: >
+  A piece's brief may keep its makers' record of drafts, a `drafts` list in a
+  part: for each lead, title or takeaway the designer drafted and the asker has
+  not seen, its kind, its language and a digest of its text, never the text
+  (DEC-042 point 7). `pkit visual draft` gives the digest, under a
+  normalisation its documentation states, and says whether a text still matches
+  its recorded digest. A text that differs or has no entry is the asker's. A
+  brief without the record reads as before.
