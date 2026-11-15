@@ -890,7 +890,7 @@ def test_a_step_after_the_merge_failing_is_owed_not_refused(dw, monkeypatch) -> 
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     monkeypatch.setattr(dw, "_invoke_move_issue", lambda *a, **k: 1)
     run = dw.run(["42", "--yes"])
-    assert (run.kind, run.exit_code) == (dw.FOLLOW_UP_OWED, 1)
+    assert (run.kind, run.exit_code) == (dw.FOLLOW_UP_OWED, dw.EXIT_MERGED_MOVE_OWED)
     assert run.reason.startswith("[warn] PR merged but move-issue exited 1")
     assert calls["merged"] is True
 
@@ -2258,7 +2258,7 @@ def test_a_branch_kept_on_github_keeps_the_local_one_and_says_so(dw, monkeypatch
 
 
 def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
-    """A move-issue failure is reported and returned, but does not skip the
+    """A move-issue failure is reported and owed, but does not skip the
     branch cleanup — the two are independent after the merge."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
 
@@ -2268,7 +2268,7 @@ def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
 
     monkeypatch.setattr(dw, "_invoke_move_issue", failing_move)
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
-    assert rc == 1
+    assert rc == dw.EXIT_MERGED_MOVE_OWED == 5
     assert "[warn] PR merged but move-issue exited 1" in capsys.readouterr().err
     assert [kind for kind, _ in calls["order"]] == [
         "merged",
@@ -2416,8 +2416,8 @@ def test_a_failed_close_warns_with_the_rerun_and_the_rest_still_run(
     capsys,
 ):
     """The merge is durable: one close failing is reported with its re-run, the
-    other closing issues are still closed, cleanup runs, and the exit is the
-    failure's."""
+    other closing issues are still closed, cleanup runs, and the exit says a
+    close is owed, not the close's own code (#3207)."""
     calls = _wire_main_seams(
         dw,
         monkeypatch,
@@ -2432,7 +2432,7 @@ def test_a_failed_close_warns_with_the_rerun_and_the_rest_still_run(
 
     monkeypatch.setattr(dw, "_invoke_close_issue", flaky_close)
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
-    assert rc == 3
+    assert rc == dw.EXIT_MERGED_CLOSE_OWED == 6
     err = capsys.readouterr().err
     assert "close-issue exited 3 for #42" in err
     assert "`close-issue 42 --mode pr-merge --pr 496`" in err
@@ -4228,3 +4228,103 @@ def test_a_later_run_closes_and_cascades_with_the_real_verbs(
     assert "[cascade] parents to check for eligibility: #7" in run.out
     assert "[warn]" not in run.err
     assert not any(c[:2] == ["pr", "merge"] for c in run.calls)
+
+
+# ---- a step after the merge that fails (#3207) -----------------------------
+#
+# The merge cannot be undone (DEC-026), so a step after it that fails is owed,
+# never refused. The run exits with the code that names the step, whatever the
+# step's own code, and never with 1, 2 or 3, which say that nothing merged. The
+# same holds however the merge was made: by this run, by the queue this run
+# waited for, or found made by an earlier one. The failing step exits 3 here,
+# the code of a failed merge; the tests above have it exit 1 and 2.
+
+
+def _merged_by_the_run(
+    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, Any]:
+    return _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+
+
+def _merged_by_the_queue(
+    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, Any]:
+    return _wire_queue(dw, tmp_path, monkeypatch, queue=[_QUEUE_MERGED]).calls
+
+
+def _found_merged(
+    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, Any]:
+    issues = {42: _CLOSED_BY_THE_MERGE, 43: _CLOSED_BEFORE}
+    return _wire_second_run(dw, tmp_path, monkeypatch, issues=issues).calls
+
+
+_MERGES = {
+    "merged-by-the-run": _merged_by_the_run,
+    "merged-by-the-queue": _merged_by_the_queue,
+    "found-merged": _found_merged,
+}
+
+
+@pytest.mark.parametrize("merge", list(_MERGES))
+@pytest.mark.parametrize(
+    ("failing", "owed", "warning"),
+    [
+        ("_invoke_move_issue", "EXIT_MERGED_MOVE_OWED", "[warn] PR merged but move-issue exited"),
+        (
+            "_invoke_close_issue",
+            "EXIT_MERGED_CLOSE_OWED",
+            "[warn] PR merged but close-issue exited",
+        ),
+    ],
+    ids=["move-to-done", "close"],
+)
+def test_a_step_after_the_merge_that_fails_exits_with_the_step_owed(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    merge: str,
+    failing: str,
+    owed: str,
+    warning: str,
+) -> None:
+    calls = _MERGES[merge](dw, tmp_path, monkeypatch)
+    monkeypatch.setattr(dw, failing, lambda *args, **kwargs: 3)
+    ended = dw.run(["42", "--yes"])
+    assert (ended.kind, ended.exit_code) == (dw.FOLLOW_UP_OWED, getattr(dw, owed))
+    assert ended.exit_code not in (1, 2, 3)
+    assert ended.reason.startswith(f"{warning} 3")
+    # The other step and the clean-up ran all the same.
+    assert calls["moved"] or failing == "_invoke_move_issue"
+    assert calls["closed"] or failing == "_invoke_close_issue"
+    assert ("remote_delete", "sha-head") in calls["order"]
+
+
+def test_a_failed_move_and_a_failed_close_exit_with_the_move_owed(
+    dw: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The code names the first step owed, and the warnings name each."""
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw, "_invoke_move_issue", lambda *args, **kwargs: 2)
+    monkeypatch.setattr(dw, "_invoke_close_issue", lambda *args, **kwargs: 3)
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == dw.EXIT_MERGED_MOVE_OWED
+    err = capsys.readouterr().err
+    assert "`move-issue 42 --to done`" in err
+    assert "`close-issue 42 --mode pr-merge --pr 496`" in err
+
+
+def test_a_failed_move_ahead_of_the_move_to_done_on_a_merged_pr_is_owed(
+    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Completing a PR that had merged, the move ahead of the move to Done
+    (#1162) is a step after the merge too."""
+    _wire_second_run(dw, tmp_path, monkeypatch, issues={42: _open_issue("")})
+    monkeypatch.setattr(dw, "_invoke_move_issue", lambda *args, **kwargs: 3)
+    monkeypatch.setattr(
+        dw,
+        "_lead_in_to_done",
+        lambda issue, root, loader: dw._LeadIn(from_state="in-progress", to_state="review"),
+    )
+    ended = dw.run(["42", "--yes"])
+    assert (ended.kind, ended.exit_code) == (dw.FOLLOW_UP_OWED, dw.EXIT_MERGED_MOVE_OWED)
+    assert ended.reason.startswith("error: move-issue exited 3 moving #42 in-progress → review")
