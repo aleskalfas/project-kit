@@ -71,7 +71,9 @@ format may add:
   `{"kind": "value"}` or `{"kind": "size"}`, is an axis of the brand's own (DEC-004 point
   2): its contexts are its modes, two or more, its default one of them. Only a brand that
   builds on no other declares one, and none takes a shared axis's name (`own-axis-name`),
-  so a new shared axis breaks such a brand (DEC-004 point 5).
+  so a new shared axis breaks such a brand (DEC-004 point 5). Nor does one take
+  `font-profile` (`FONT_PROFILE`), the name kept for the shared axis of font profiles, so
+  that axis breaks none (DEC-057 points 2 and 3).
 - *Fonts* lie in the capability's extension key, `pkit.visual-communication`, on a
   `fontFamily` token: `files` maps each family to its file in the brand's version folder,
   or to `{"hash": "sha256:<hex>"}` for a file in the location's `fonts/`; `measure` says
@@ -239,6 +241,11 @@ AXIS_KINDS = ("value", "size")
 #: The key of the capability's extension point on a modifier that declares an axis of the
 #: brand's own, which gives the axis's kind (DEC-004 points 1 and 2).
 KIND = "kind"
+
+#: The name kept for the shared axis of font profiles, which no axis of a brand's own takes,
+#: whether or not the foundations declare it, so that axis comes as an addition (DEC-057
+#: points 1 to 3).
+FONT_PROFILE = "font-profile"
 
 _MODIFIER_KEYS = ("contexts", "default", "description", "$extensions")
 
@@ -2084,8 +2091,9 @@ class _BrandReader:
         """The axis of the brand's own the modifier `name` declares, of `kind` (DEC-004 point
         2): its modes are its contexts, in their order, two or more, and its default one of
         them. A brand built on another adds none (point 6), and no axis of a brand's own
-        takes a shared axis's name, which a new shared axis may come to take (point 5).
-        None where it does not hold, a finding."""
+        takes a shared axis's name, which a new shared axis may come to take (point 5), nor
+        the name kept for the shared axis of font profiles (DEC-057 point 2). None where it
+        does not hold, a finding."""
         if base is not None:
             self._fail(
                 "base-axis",
@@ -2102,6 +2110,15 @@ class _BrandReader:
                 f"the modifier `{name}` declares an axis of the brand's own by the name of a "
                 f"shared axis: rename the brand's axis, or leave out `{EXTENSION}` to vary the "
                 f"shared one",
+                rel,
+                f"{where}.$extensions",
+            )
+            return None
+        if name == FONT_PROFILE:
+            self._fail(
+                "own-axis-name",
+                f"the modifier `{name}` declares an axis of the brand's own by the name kept "
+                f"for the shared axis of font profiles: rename the brand's axis",
                 rel,
                 f"{where}.$extensions",
             )

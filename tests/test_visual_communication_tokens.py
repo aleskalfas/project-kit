@@ -2048,6 +2048,21 @@ def test_an_axis_of_a_brands_own_that_takes_a_shared_axiss_name_fails(
     assert "by the name of a shared axis" in finding.message
 
 
+def test_an_axis_of_a_brands_own_named_font_profile_fails_though_no_shared_axis_takes_it(
+    tmp_path: Path, foundations: Any
+) -> None:
+    """`font-profile` is kept for the shared axis of font profiles, which the foundations
+    the brand is checked with do not declare (visual-communication DEC-057 point 2)."""
+    assert tokens.FONT_PROFILE not in foundations.axes
+    folder = giving_own_axis(brand_copy(tmp_path), tokens.FONT_PROFILE)
+    with pytest.raises(tokens.TokenError) as raised:
+        tokens.read_brand(folder, foundations)
+    (finding,) = raised.value.findings
+    assert finding.code == "own-axis-name"
+    assert finding.where == "modifiers.font-profile.$extensions"
+    assert "by the name kept for the shared axis of font profiles" in finding.message
+
+
 @pytest.mark.parametrize(
     ("contexts", "default", "kind", "said"),
     [
