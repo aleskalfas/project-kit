@@ -105,10 +105,10 @@ board, an issue's add among them, which no other record decides.
 - **The health check reads the board on each run, and never passes on a stored
   id.** Its failure stops what DEC-017 has it stop: every operation the
   capability's skill runs, those that touch no board among them, migrate, and a
-  CI job that gates on it. So in a project with a board, an outage of the
-  service's boards, or a credential the board does not answer, stops them all,
-  and a CI job under the workflow's own token, which reaches no board, fails on
-  each run. Whether the check fails or warns there is DEC-017's to decide, and
+  CI job that gates on it. So where DEC-017 has the check fail on a board that
+  did not answer, an outage of the service's boards, or a credential the board
+  does not answer, stops them all in a project with a board, and a CI job under
+  the workflow's own token, which reaches no board, fails on each run. Whether the check fails or warns there is DEC-017's to decide, and
   [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)
   proposes that it warn.
 - **New reports and refusals** reach projects whose credential the board does
@@ -309,7 +309,8 @@ says what its failure costs:
   point 5).
 - **The environment health check gates each operation** the capability's skill
   runs, and migrate, and a CI job may gate on it too. A failed prerequisite
-  refuses the operation, and a declared board that does not resolve is one
+  refuses the operation, and DEC-017 says which outcomes of its board check are
+  one
   ([project-management:DEC-017](../../../.pkit/capabilities/project-management/decisions/DEC-017-prerequisites-bootstrap-migrate-discipline.md)).
   It checks the environment, and scans no issue's state (DEC-019).
   The check degrades rather than refuses where an axis's substrate is
@@ -970,18 +971,20 @@ environment, as DEC-019 and DEC-020 have it: it is a fixed sample, read for the
 credential's reach, and the warning names no issue, so the check scans no
 issue's state.
 
-What the check's failure stops is DEC-017's gate: every operation the skill
-runs, those that touch no board among them, migrate, and a CI job that gates
-on the check. That cost, and the live call each run of the check makes, follow
-from DEC-017's gate meeting a check that reads the board, as DEC-017's check
-asks. Under this record, every command meets a board that did not answer at
-its own reads, in the posture point 4 gives each, and a command whose act
-needs a later write to the board meets it before it acts. So without the
-gate's stop, no command leaves a board write its act requires unmade for a
-board that did not answer. The stop keeps two things from happening even so:
-an operation of several commands running its first before a later one
-refuses on the board, and a board write no act requires going unmade, such as
-a Status that only mirrors the state, which point 4 reports with its repair.
+Where DEC-017 has the check fail on a board that did not answer, that failure
+stops what DEC-017's gate stops: every operation the skill runs, those that
+touch no board among them, migrate, and a CI job that gates on the check.
+That cost follows from DEC-017's gate meeting a check that reads the board, as
+DEC-017's check asks. The live call each run of the check makes follows from
+that read, whether the check fails there or warns. Under this record, every
+command meets a board that did not answer at its own reads, in the posture
+point 4 gives each, and a command whose act needs a later write to the board
+meets it before it acts. So without the gate's stop, no command leaves a board
+write its act requires unmade for a board that did not answer. Where the check
+fails there, the gate's stop keeps two things from happening even so: an
+operation of several commands running its first before a later one refuses on
+the board, and a board write no act requires going unmade, such as a Status
+that only mirrors the state, which point 4 reports with its repair.
 Whether the check fails or only warns there is DEC-017's to decide, a record of
 the capability's own, and
 [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)
@@ -990,12 +993,14 @@ proposes that it warn. This record holds either way.
 ADR-053 refuses a call that fuses where an axis lives with the board's read,
 since a board outage would then become a filing outage on paths that never
 touch a board. This record fuses nothing: carriage reads no board, and no
-command that touches no board reads one. The stop such paths meet is DEC-017's
+command that touches no board reads one. Any stop such paths meet is DEC-017's
 gate, which stops each operation on a gap in the environment before any
-command reads. Through it, an outage of the service's boards stops each
-operation the skill runs in a project with a board, with migrate and a CI job
-that gates on the check, the harm ADR-053 names, reached through another
-layer, and the Summary's weigh list names it.
+command reads. Where DEC-017 has the check fail on a board that did not
+answer, an outage of the service's boards stops through it each operation the
+skill runs in a project with a board, with migrate and a CI job that gates on
+the check, the harm ADR-053 names, reached through another layer, and the
+Summary's weigh list names it. Where DEC-017 has the check warn there, that
+outcome stops none of them.
 
 **Why membership comes under the contract.** The membership check's one read is
 a filtered read that names no board. Under a credential the board does not
@@ -1131,8 +1136,7 @@ holds it, the lesson ADR-031 point 4 draws for writes.
 - **Trust a stored board id as the sign,** so the health check is no stricter
   than the commands it serves. Rejected: the id was written under another
   credential at another time, no command takes it as the sign either, and a
-  pass on it lets every operation the check gates start on a board none can
-  read.
+  pass on it reports an environment the check never looked at.
 - **Let the health check warn where the board does not answer, or narrow its
   stop to the operations that read or write the board.** The case: an outage of
   the boards, or a credential the board does not answer, would stop no
@@ -1199,8 +1203,9 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   only where the map leaves the state out.
 - **Read first only at filing.** The case: the rule reaches only the command
   known to need it. Rejected: another command whose act needs a later write to
-  the board would then act on a board none of its reads asked, and only the
-  health check's stop would keep that write from going unmade.
+  the board would then act on a board none of its reads asked, and nothing but
+  the health check's stop, where DEC-017 has the check fail there, would keep
+  that write from going unmade.
 - **Bring what an act sets off on another issue under the read first and the
   write classes,** the forward cascade's moves of the issue's ancestors among
   them. The case: one rule for every write whose source is the board. Rejected:
@@ -1345,8 +1350,9 @@ holds it, the lesson ADR-031 point 4 draws for writes.
       filing outage on paths that never touch a board:** this record fuses
       nothing, and carriage reads no board. Filing in a project with a board
       touches the board, adding its card, so its refusal there is on no such
-      path. The stop an outage brings such paths through DEC-017's gate is that
-      gate's, and the weigh list above names it;
+      path. Where DEC-017 has the board check fail on a board that did not
+      answer, the stop an outage brings such paths through DEC-017's gate is
+      that gate's, and the weigh list above names it;
     - **the Rationale's "a warning that passes is the same failure with better
       prose":** it argues a gate's verdict, which point 4 here keeps as the
       raise. A check that lets the issue through reports a board that did not
