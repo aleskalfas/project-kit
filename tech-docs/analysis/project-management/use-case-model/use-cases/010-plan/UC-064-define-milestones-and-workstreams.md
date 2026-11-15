@@ -28,6 +28,7 @@ pkit:
         - .pkit/capabilities/project-management/scripts/set-pool.py
         - .pkit/capabilities/project-management/scripts/_lib/milestone.py
         - .pkit/capabilities/project-management/scripts/_lib/pools.py
+        - .pkit/capabilities/project-management/scripts/_lib/board_answer.py
         - .pkit/capabilities/project-management/scripts/edit-issue.py
         - .pkit/capabilities/project-management/scripts/add-workstream.py
         - .pkit/capabilities/project-management/scripts/edit-workstream.py

@@ -42,6 +42,7 @@ pkit:
         - .pkit/capabilities/project-management/scripts/next-task.py
         - .pkit/capabilities/project-management/scripts/_lib/task_pool.py
         - .pkit/capabilities/project-management/scripts/_lib/pools.py
+        - .pkit/capabilities/project-management/scripts/_lib/board_answer.py
         - .pkit/capabilities/project-management/scripts/start-work.py
         - .pkit/capabilities/project-management/scripts/review-work.py
         - .pkit/capabilities/project-management/scripts/handoff-issue.py
