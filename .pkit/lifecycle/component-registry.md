@@ -45,7 +45,7 @@ The backbone manifest's `components` list is the canonical install record. The o
 **Install an externally-sourced capability** (COR-041) → install, with the capability fetched from another git repository rather than read from the running pkit's bundle: `pkit capabilities install <name> --from <git URL> --ref <tag or commit>`.
 
 - **Its order:** the fetch takes the subtree at `.pkit/capabilities/<name>/` whole at the ref. Install's pre-flight checks then run on its `package.yaml`, before any file is placed. A refusal writes nothing.
-- **Its name first:** a name that a registered capability of any origin holds is refused before anything is fetched, never overwritten. So are files at the landing path outside its `project/` tier.
+- **A name already held:** never overwritten (ADR-040 point 6). What holds one, when install checks it and what it says are in [the CLI reference, "Capabilities — two ways in"](../cli/README.md#capabilities--two-ways-in), under "From another repository" <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->.
 - **Its entry and manifest:** it appends a `{kind, name, origin: externally-sourced, manifest}` entry. Its per-component manifest records the `pin`, its source and ref, beside the version ([`manifest.md`, "Per-component manifest"](manifest.md#per-component-manifest-one-per-installed-component)).
 - **Deploy and dependency gating:** as for any install, the write categories' defaults and the points' questions included.
 
