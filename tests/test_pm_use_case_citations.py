@@ -374,6 +374,14 @@ def test_a_resolved_document_without_fillers_is_partly_checked(uc: ModuleType) -
             [SETTLED_FILLER, {**SETTLED_FILLER, "name": "other", "state": None}],
             ("other gives no state this reading can read",),
         ),
+        (
+            [SETTLED_FILLER, {**SETTLED_FILLER, "name": "other", "state": ["taken"]}],
+            ("other gives no state this reading can read",),
+        ),
+        (
+            [SETTLED_FILLER, {**SETTLED_FILLER, "name": "other", "state": {}}],
+            ("other gives no state this reading can read",),
+        ),
     ],
 )
 def test_fillers_this_reading_cannot_read_make_the_point_partly_checked(

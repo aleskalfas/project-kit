@@ -311,8 +311,16 @@ def _doubts(listed: Any) -> tuple[str, ...]:
     return tuple(
         _doubt(filler if isinstance(filler, Mapping) else {})
         for filler in listed
-        if not (isinstance(filler, Mapping) and filler.get("state") in WHOLE)
+        if not _whole(filler)
     )
+
+
+def _whole(filler: Any) -> bool:
+    """Whether a listed filler leaves the point wholly answered: a mapping whose
+    state is the text `taken` or `passed over`. A state of any other type, a list
+    or a mapping among them, is no state this reading can read."""
+    state = filler.get("state") if isinstance(filler, Mapping) else None
+    return isinstance(state, str) and state in WHOLE
 
 
 def _doubt(filler: Mapping[str, Any]) -> str:
