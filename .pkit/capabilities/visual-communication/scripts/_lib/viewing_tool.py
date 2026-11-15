@@ -31,8 +31,8 @@ step works today, not what the step is, so nothing else of the step reads an SVG
   beneath it was drawn.
 - **What the page shows of a span.** Each span that drew ink is drawn alone, its letters
   opaque black, on a swath with room past the page, and read for its ink: what lies past the
-  page's edge is cut. The page is then drawn whole twice, the span's letters black and then
-  white, cropped to the span's ink: what the two draws show alike is covered. A cause is
+  page's edge is cut. The page is then drawn whole twice, the span's letters opaque, black and
+  then white, cropped to the span's ink: what the two draws show alike is covered. A cause is
   named where it hides at least the threshold of the span's strong ink, or takes an island of
   its ink, such as a dot: it hides some of the island wholly and leaves none of it showing at
   the island's level. Else it names nothing (DEC-045 point 1). The reads follow a group's move
@@ -705,11 +705,15 @@ class _Page:
         return shows
 
     def _with_ink(self, span: ET.Element, ink: str, view: Mapping[str, str]) -> bytes:
-        """The samples of the page drawn whole as `view` gives it, `span`'s letters in `ink`
-        and all else as it stands."""
+        """The samples of the page drawn whole as `view` gives it, `span`'s letters opaque in
+        `ink` and all else as it stands. The span's opacities are set to 1, not taken off: a
+        span in the look of its text's first run carries no paint of its own, and inherits the
+        `fill-opacity` the canvas writes on the text for a translucent colour. So a pixel the
+        page shows whole changes by `ALL`, whatever the alpha of the span's paint (DEC-045
+        point 1)."""
         held = {name: span.get(name) for name in ("fill", *OPACITIES)}
         for name in OPACITIES:
-            span.attrib.pop(name, None)
+            span.set(name, "1")
         span.set("fill", ink)
         try:
             return png.samples(png.read(self._tool(self._svg_of(view), background=GROUND)))

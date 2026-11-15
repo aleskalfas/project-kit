@@ -1328,6 +1328,30 @@ def test_a_graze_the_threshold_leaves_takes_no_island_and_is_left_unnamed(
         assert named(step) == [], step
 
 
+@pytest.mark.parametrize("alpha", (0.4, 0.2))
+def test_a_graze_of_a_text_in_a_translucent_colour_takes_no_island_and_is_left_unnamed(
+    tmp_path: Path, alpha: float, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A text in a colour less than opaque, which its span takes from the text, under a later
+    box over one strong pixel near the middle of its letters and a pixel past it on each side.
+    The box hides fewer pixels than the threshold. The page drawn whole changes the span's
+    letters between two opaque colours, whatever the alpha of its paint, so the rest of the
+    letter still shows as strong ink: the box takes no island and is left unnamed (DEC-045
+    point 1)."""
+    words, em = "Hello", 40
+    monkeypatch.setitem(COLOURS, "ink", {"components": [0, 0, 0], "alpha": alpha})
+    strong, width, _ = found_of(tmp_path, words, em, 1.0, words)
+    pixels = sorted(
+        pixel for pixel in on_the_page(strong) if strong.ink[pixel] <= viewing_tool.STRONG
+    )
+    over = box_over([pixels[len(pixels) // 2]], strong, width)
+    drawing, shows = shown_under(tmp_path, (words,), em, words, over)
+    hidden = [pixel for pixel, shown in shows.items() if not shown]
+    lost = sum(strong.ink[pixel] <= viewing_tool.STRONG for pixel in hidden)
+    assert 0 < lost < viewing_tool._least(strong.em)
+    assert drawing.lost == ()
+
+
 @pytest.mark.parametrize(("em", "scale"), ((40, 1.0), (20, 1.225), (12.5, 1.0)))
 def test_the_dot_of_a_ż_past_the_page_s_top_is_named_cut_as_an_island(
     tmp_path: Path, em: float, scale: float
