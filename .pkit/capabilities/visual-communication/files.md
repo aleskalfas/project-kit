@@ -579,7 +579,7 @@ pages:
           source: Jacques Bertin, Semiology of Graphics
 ```
 
-- **`piece`** is the part for the whole piece. It holds what concerns the piece, or more than one of its pages. A piece of one page, such as a figure, keeps all of its brief here, its takeaway included. So does the intent of a page not yet in the content. Whoever starts the page gives it its id in the content, and its part can then lie under `pages`.
+- **`piece`** is the part for the whole piece. It holds what concerns the piece, or more than one of its pages. A piece whose top is a page alone, such as a figure, keeps all of its brief here, its takeaway included. So does the intent of a page not yet in the content. Whoever starts the page gives it its id in the content, and its part can then lie under `pages`.
 - **`pages`** holds a part for each page the brief speaks of, keyed by the id the page carries in the content, such as a slide's id. A page the brief names carries an id, as anything another part of the piece names does ([Content files](#content-files)).
 
 Each part may hold these fields:
@@ -602,7 +602,7 @@ A reason holds these fields:
 | `principle` | yes | The principle the choice rests on: its `name`, and its `source`, such as an author and a work. A reason that names no principle is taste, which nobody can judge. |
 
 - **A key path** names a part of the content as a tie's end names its item ([Content files](#content-files)). It joins the keys the content file writes with `.`, and names each item of a list by its id, as `[<id>]`, never by its place. It may end at a field, a list's included. A page's part starts the path at its page, as `visual.levels`. The piece's part starts it at the content's top, as `slides[layers]`, or a site's `header`. A part inside a local component, or in shared content, takes no key path, since a key path reaches only the piece's own content: name it in the words.
-- **The makers' record of drafts** lies in `drafts` of the page's part, or of the part for the whole piece on a piece of one page. See below.
+- **The makers' record of drafts** lies in `drafts` of the page's part, or of the part for the whole piece on a piece whose top is a page alone, such as a figure. See below.
 - **What a brief never holds.** Nothing the content holds: its text, its pictures, the component that draws each part, and any value or layout. Nothing `piece.yaml` declares: who the piece is for, where it is shown, whether it explains, its libraries and its lock. No reason for a library's own choice, such as why a brand's accent is the colour it is, which lives with the library. No requirement that binds more than this piece, which lives in a rule set.
 - **The methodology's container,** `pkit`, is kept free at the brief's top and in each mapping of it, as in a content file ([Reserved words](#reserved-words)). Its schema refuses every other key it does not declare.
 - **Who writes it.** A person, or an agent working for one. `pkit visual new` stamps it holding its binding alone, and says nothing in it. Its goals and relations come from whoever asks for the piece, and its reasons from whoever designs it, as they design.
