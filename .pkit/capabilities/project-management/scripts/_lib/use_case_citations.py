@@ -27,8 +27,11 @@ Four parts, so the validators that call them stay pure:
   - `NotChecked` — any other unresolved `outcome`, one this reading does not
     know, a document of a version it does not know, or no document at all:
     there is no set to judge against, and it is never read as `Off`;
-  - `Held` with `missing` — `resolved` with an inert filler: partly checked;
-  - `Held` — `resolved` with no inert filler: the whole set, empty or not.
+  - `Held` with `doubts` — `resolved`, with a filler whose state is neither
+    `taken` nor `passed over`, such as `inert` or a state this reading does not
+    know, or without the `fillers` key: partly checked;
+  - `Held` — `resolved`, with its fillers listed and each `taken` or `passed
+    over`: the whole set, empty or not.
 - **The rule** (`findings`): the point is read only for a body that cites. A
   cited id the whole set does not hold is reported, naming what the set was
   read against. It checks existence only. A withdrawn use case passes, since
@@ -91,9 +94,17 @@ UNREAD = frozenset(
     }
 )
 
-#: A filler's state, its source, and the state it reads the default branch as.
-INERT = "inert"
+#: A filler's states: its answer taken, or the filler not asked since another
+#: answers first — the two in which each filler leaves the point wholly answered
+#: (DEC-054 point 3, as ADR-097 refines it) — and the one in which it was meant to
+#: answer and could not. Any other state, such as one a later backbone adds, says
+#: that the filler may not have answered, as `inert` does.
 TAKEN = "taken"
+PASSED_OVER = "passed over"
+WHOLE = frozenset({TAKEN, PASSED_OVER})
+INERT = "inert"
+
+#: A filler's source, and the state it reads the default branch as.
 PROJECT_FILLER = "project filler"
 SETTLED = "settled"
 
@@ -170,14 +181,15 @@ class Held:
     `source` says what they were read against, for a finding: the default
     branch at a commit, the project's filler file, or the filler that answered.
     `fetch` is whether the answer was read from the default branch, so a fetch
-    may bring a use case that landed since. `missing` names each filler that
-    was meant to answer and did not, with why: non-empty, the set may be
-    incomplete — partly checked."""
+    may bring a use case that landed since. `doubts` says why the set may be
+    incomplete: each filler that was meant to answer and did not, or is in a
+    state this reading does not know, with why, or that the document lists no
+    fillers. Non-empty, the set is partly checked."""
 
     ids: frozenset[str]
     source: str
     fetch: bool = False
-    missing: tuple[str, ...] = ()
+    doubts: tuple[str, ...] = ()
 
 
 Reading = Off | NotChecked | Held
@@ -260,7 +272,11 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
     """The state a `pkit connections resolve --json` document puts the point in
     (DEC-054 point 3), from its `outcome` and its fillers' `state` alone. A
     document of a version this reading does not know, or one that does not say
-    how the point resolved — a backbone that predates `outcome` — is NotChecked."""
+    how the point resolved — a backbone that predates `outcome` — is NotChecked.
+    A resolved point is wholly answered only where the document lists its
+    fillers and each is `taken` or `passed over`; otherwise it is partly
+    checked, since a state or a key this reading cannot read tells it nothing
+    (ADR-097 point 3)."""
     version = document.get("schema_version", DOCUMENT_VERSION)
     if version != DOCUMENT_VERSION:
         return NotChecked(
@@ -268,7 +284,8 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
             f"understands {DOCUMENT_VERSION}"
         )
     outcome = document.get("outcome")
-    fillers = [f for f in document.get("fillers") or [] if isinstance(f, Mapping)]
+    listed = document.get("fillers")
+    fillers = [f for f in listed if isinstance(f, Mapping)] if isinstance(listed, list) else []
     inert = [f for f in fillers if f.get("state") == INERT]
     if outcome in OFF:
         return Off()
@@ -282,7 +299,35 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
     )
     taken = next((f for f in fillers if f.get("state") == TAKEN), None)
     source, fetch = _source(taken, str(document.get("origin") or ""))
-    return Held(ids, source, fetch, tuple(_filler(f) for f in inert))
+    return Held(ids, source, fetch, _doubts(listed))
+
+
+def _doubts(listed: Any) -> tuple[str, ...]:
+    """Why a resolved point's set may be incomplete, from its `fillers`: each one
+    whose state is neither `taken` nor `passed over`, or that the document lists
+    none. Empty, each filler meant to answer did."""
+    if not isinstance(listed, list):
+        return ("the backbone's document does not list the point's fillers",)
+    return tuple(
+        _doubt(filler if isinstance(filler, Mapping) else {})
+        for filler in listed
+        if not (isinstance(filler, Mapping) and filler.get("state") in WHOLE)
+    )
+
+
+def _doubt(filler: Mapping[str, Any]) -> str:
+    """A filler that may not have answered, as a notice names it: who, what its
+    state says, and its reason."""
+    name = str(filler.get("name") or "a filler")
+    state = filler.get("state")
+    if state == INERT:
+        said = f"{name} gave no answer"
+    elif isinstance(state, str):
+        said = f"{name} is in the state {state!r}, which this reading does not know"
+    else:
+        said = f"{name} gives no state this reading can read"
+    reason = str(filler.get("reason") or "").strip()
+    return f"{said} ({reason})" if reason else said
 
 
 def _unresolved(
@@ -366,10 +411,10 @@ def judge(ids: Sequence[str], reading: Reading, severity: str) -> list[Finding]:
     lacked = [uc for uc in ids if uc not in reading.ids]
     if not lacked:
         return []
-    if reading.missing:
+    if reading.doubts:
         detail = (
-            f"{_enumerate(lacked)} not checked: the use-case point answered without "
-            f"{'; '.join(reading.missing)}, so the set it holds may be incomplete."
+            f"{_enumerate(lacked)} not checked: the use-case point answered, but "
+            f"{'; '.join(reading.doubts)}, so the set it holds may be incomplete."
         )
         return [(severity, UNCHECKED, detail)]
     hint = (
