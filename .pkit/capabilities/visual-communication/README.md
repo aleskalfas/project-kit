@@ -48,6 +48,7 @@ pkit:
         - .pkit/capabilities/visual-communication/rule-sets/graphic.md
         - .pkit/capabilities/visual-communication/releases/starter/releases.yaml
         - .pkit/capabilities/visual-communication/design-knowledge/README.md
+        - .pkit/capabilities/visual-communication/schemas/review.schema.json
       record:
         - visual-communication:DEC-001#1
         - visual-communication:DEC-001#3
@@ -78,6 +79,11 @@ pkit:
         - visual-communication:DEC-030#4
         - visual-communication:DEC-030#5
         - visual-communication:DEC-030#8
+        - visual-communication:DEC-042#1
+        - visual-communication:DEC-042#3
+        - visual-communication:DEC-042#4
+        - visual-communication:DEC-042#6
+        - visual-communication:DEC-042#9
         - COR-017
         - COR-070#1
         - COR-073#3
@@ -514,16 +520,16 @@ Its findings are advice. They join no validation and hold no merge.
 
 ### Its grades
 
-Beside its findings, the reviewer grades each rule it reads, in one of four words: *below competent*, *competent*, *professional* or *excellent*. *Professional* is the work a professional designer hands over for that audience and medium. It never weighs effort, what the engine can draw, or progress.
+Beside its findings, the reviewer grades each rule it reads, in one of four words: *below competent*, *competent*, *professional* or *excellent*. *Professional* is the work a professional designer hands over for that audience and medium. It never weighs effort, what the engine can draw, or progress ([visual-communication:DEC-042-grades-bar-and-loop] point 1).
 
 - **On each page, or once for the piece.** A rule that judges the pages together, such as the rule that the pages tell the story in order, takes one grade for the piece. Two rules take both, and the others take one on each page. The reviewer's body holds which. It lists a rule whose text leaves a page or the piece out as not graded, with why.
 - **A rule's text settles the exact grade only where it names one.** Every other grade is the reviewer's reading, so a finding on it is for a person once its rule binds.
-- **Its marks.** A grade that only a tool the engine lacks would raise is marked a *need*, and one that only the asker's words would raise is marked as the asker's. Each goes to you as a question. The reviewer alone marks a grade.
-- **What it reads, in order.** It grades from the drawn pages and the brief's intent, which a command hands it. It reads the brief's file, and its reports of the loop's earlier rounds as it wrote them, only once its grades are written, and then says why each grade differs from the round before.
-- **Its report** opens with a document of a fixed form, held by the schema [`review.schema.json`](schemas/review.schema.json). It holds the grades and their marks, what the reviewer read before grading, and the full name of the model it ran on, with its effort where the harness has one. A command gives the verdict from it.
-- **Kept whole, and its document alone.** The loop keeps each round's report as the reviewer wrote it, in the clone's local folder: the whole report, which a later round's review reads and which goes to you with the round the loop hands you, and beside it the document alone ([Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept)).
+- **Its marks.** A grade that only a tool the engine lacks would raise is marked a *need*, and one that only the asker's words would raise is marked as the asker's. Each goes to you as a question. The reviewer alone marks a grade ([visual-communication:DEC-042-grades-bar-and-loop] point 4).
+- **What it reads, in order.** It grades from the drawn pages and the brief's intent, which a command hands it. It reads the brief's file, and its reports of the loop's earlier rounds as it wrote them, only once its grades are written, and then says why each grade differs from the round before ([visual-communication:DEC-042-grades-bar-and-loop] point 4).
+- **Its report** opens with a document of a fixed form, held by the schema [`review.schema.json`](schemas/review.schema.json). It holds the grades and their marks, what the reviewer read before grading, and the full name of the model it ran on, with its effort where the harness has one ([visual-communication:DEC-042-grades-bar-and-loop] points 1 and 9). A command gives the verdict from it.
+- **Kept whole, and its document alone.** The loop keeps each round's report as the reviewer wrote it, in the clone's local folder: the whole report, which a later round's review reads and which goes to you with the round the loop hands you, and beside it the document alone ([visual-communication:DEC-042-grades-bar-and-loop] points 4 and 6; [Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept)).
 
-The reviewer grades by no bar.
+The reviewer grades by no bar ([visual-communication:DEC-042-grades-bar-and-loop] point 3).
 
 It needs a harness that reads images. Where the harness reads none, it stops and says so, and reports nothing as looked at.
 

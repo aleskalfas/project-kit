@@ -156,6 +156,8 @@ pkit:
         - visual-communication:DEC-039#3
         - visual-communication:DEC-039#4
         - visual-communication:DEC-039#5
+        - visual-communication:DEC-042#4
+        - visual-communication:DEC-042#6
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -177,6 +179,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-browser
+        - .pkit/cli/README.md#validate
       source:
         - html-page-print-runs
 ---
@@ -979,7 +982,7 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 
 ### Where the review's reports are kept
 
-[The reviewer](README.md#the-reviewer) writes a report for each round, which opens with a document of a fixed form, held by the schema `review.schema.json` ([Its grades](README.md#its-grades)). The reviewer writes no file: it replies with the report, and whoever dispatched it keeps the report as it was written, in two files (DEC-042 points 4 and 6).
+[The reviewer](README.md#the-reviewer) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> writes a report for each round, which opens with a document of a fixed form, held by the schema `review.schema.json` ([Its grades](README.md#its-grades) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). The reviewer writes no file: it replies with the report, and whoever dispatched it keeps the report as it was written, in two files (DEC-042 points 4 and 6).
 
 - **Where.** Both lie in `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/`, named by the round's number `<n>`, from 1. That folder lies in the clone's local folder, as the look's images do ([The clone's local folder](files.md#the-clones-local-folder); DEC-015 point 4), so no file of it is committed.
 - **The whole report,** `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/round-<n>.md`: the document, what the reviewer looked at, and its findings. A later round's review reads it only once it has written its grades, and where the loop hands a round to the person, that round's report goes with it.

@@ -190,6 +190,8 @@ pkit:
         - visual-communication:DEC-036#7
         - visual-communication:DEC-036#8
         - ADR-057#2
+      artefact:
+        - .pkit/cli/README.md#validate
 ---
 
 # The files of the visual work
@@ -327,7 +329,7 @@ It removes each folder whole, then takes each entry out of the list as text ([Th
 - `before-after/<piece>/`: a piece's scenes drawn around a change to its lock's versions, in `before/` without the change and in `after/` with it;
 - `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder;
 - `look/<piece>/`: the images, the frames and the report `pkit visual look` writes;
-- `reviews/<piece>/`: the reviewer's report of each round, as whoever dispatched the reviewer kept it, whole in `round-<n>.md` and its document alone in `round-<n>.yaml` ([Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept)).
+- `reviews/<piece>/`: the reviewer's report of each round, as whoever dispatched the reviewer kept it, whole in `round-<n>.md` and its document alone in `round-<n>.yaml` ([Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 
 *What is made from a piece* names the files in each. While `pkit visual look` runs, the folder also holds a temporary folder of the fonts it hands its tool, which the run removes.
 
