@@ -95,6 +95,7 @@ pkit:
       artefact:
         - .pkit/capabilities/visual-communication/files.md#contents
         - .pkit/capabilities/visual-communication/files.md#a-piece
+        - .pkit/capabilities/visual-communication/files.md#the-brief
         - .pkit/capabilities/visual-communication/files.md#picture-files
         - .pkit/capabilities/visual-communication/files.md#brands
         - .pkit/capabilities/visual-communication/files.md#notations
