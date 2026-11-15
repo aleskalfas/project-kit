@@ -12,7 +12,9 @@ Held here:
   match what the rule-set files say they judge; its report opens with the document, then
   says what it looked at, then gives its findings;
 - **where the reports are kept**: the agent's body, the pages of the capability and the
-  schema name one folder, in the clone's local folder.
+  schema name one folder, in the clone's local folder, which keeps each round's report
+  whole, as the reviewer wrote it, and beside it its document alone (DEC-042 points 4
+  and 6).
 
 The schema is read through the capability's own `files.shape_problems`, in the test's own
 process (`tests/in_process.py`).
@@ -36,8 +38,11 @@ from tests.visual_communication_project import CAPABILITY, SCHEMAS, bound
 REVIEWER = CAPABILITY / "agents" / "graphic-design-reviewer.md"
 RULE_SETS = CAPABILITY / "rule-sets"
 
-#: Where a round's report is kept, relative to the capability's folder.
-KEPT = "project/local/reviews/<piece>/round-<n>.yaml"
+#: Where a round's report is kept, relative to the capability's folder: the whole report as the
+#: reviewer wrote it, and beside it its document alone.
+KEPT_FOLDER = "project/local/reviews/<piece>/"
+KEPT_REPORT = f"{KEPT_FOLDER}round-<n>.md"
+KEPT_DOCUMENT = f"{KEPT_FOLDER}round-<n>.yaml"
 
 
 def instance() -> dict[str, Any]:
@@ -323,13 +328,37 @@ def test_the_report_opens_with_its_document_then_what_was_looked_at_then_the_fin
 
 
 def test_the_body_keeps_the_reports_where_the_pages_of_the_capability_say() -> None:
-    folder = f".pkit/capabilities/visual-communication/{KEPT}"
-    assert folder in body()
-    assert KEPT.split("/local/")[1].rsplit("/", 1)[0] + "/" in (CAPABILITY / "files.md").read_text(
-        encoding="utf-8"
+    prefix = ".pkit/capabilities/visual-communication/"
+    outputs = (CAPABILITY / "outputs.md").read_text(encoding="utf-8")
+    files_page = (CAPABILITY / "files.md").read_text(encoding="utf-8")
+    assert f"{prefix}{KEPT_FOLDER}" in body()
+    for kept in (KEPT_REPORT, KEPT_DOCUMENT):
+        assert kept.rsplit("/", 1)[1] in body(), kept
+        assert f"{prefix}{kept}" in outputs, kept
+        assert kept.rsplit("/", 1)[1] in files_page, kept
+    assert KEPT_FOLDER.split("/local/")[1] in files_page
+    assert "clone's local folder" in outputs
+
+
+def test_the_body_reads_the_whole_reports_of_earlier_rounds_and_keeps_the_document_alone() -> None:
+    reading_section = section("What you read")
+    earlier = next(
+        line for line in reading_section.splitlines() if "reports of earlier rounds" in line
     )
-    assert folder in (CAPABILITY / "outputs.md").read_text(encoding="utf-8")
-    assert "clone's local folder" in (CAPABILITY / "outputs.md").read_text(encoding="utf-8")
+    assert "`round-<n>.md`, the whole report" in earlier
+    assert "Read each round's whole report, `round-<n>.md`" in earlier
+    report = section("Your report")
+    assert "**`round-<n>.md`** holds the whole report" in report
+    assert "**`round-<n>.yaml`** holds the grades' document alone" in report
+
+
+def test_the_reference_instance_reads_the_whole_report_of_the_round_before() -> None:
+    earlier = [
+        read["what"]
+        for read in instance()["read-after-grading"]
+        if read["kind"] == "earlier-reports"
+    ]
+    assert earlier and all("round-1.md" in what for what in earlier)
 
 
 def test_the_body_names_the_schema_it_reports_in_and_that_schema_ships() -> None:

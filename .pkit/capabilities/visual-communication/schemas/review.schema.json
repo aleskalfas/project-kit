@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "review.schema.json",
   "title": "A round's review report — visual-communication capability",
-  "description": "Formal shape of the document `graphic-design-reviewer` opens its grades with, one for each round of a piece's review (DEC-042 points 1 and 4; DEC-015 point 7). It holds what a command reads to give the verdict, and what the report says it read before grading and the model it ran on. The report's findings stay prose, as the agent's body words them. It holds no bar, no number a rule's text does not give, and no look of a piece: the bar lies in the capability's configuration, and the review grades by none (DEC-042 point 3). The reviewer writes it as its reply; whoever dispatched it keeps it as written, in the clone's local folder. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of the document `graphic-design-reviewer` opens its grades with, one for each round of a piece's review (DEC-042 points 1 and 4; DEC-015 point 7). It holds what a command reads to give the verdict, and what the report says it read before grading and the model it ran on. The report's findings stay prose, as the agent's body words them. It holds no bar, no number a rule's text does not give, and no look of a piece: the bar lies in the capability's configuration, and the review grades by none (DEC-042 point 3). The reviewer writes its report as its reply; whoever dispatched it keeps the report as written, in the clone's local folder, whole and, beside it, this document alone. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
