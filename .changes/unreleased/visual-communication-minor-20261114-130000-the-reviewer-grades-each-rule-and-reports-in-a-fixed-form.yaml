@@ -1,0 +1,12 @@
+component: visual-communication
+kind: minor
+body: >
+  The graphic-design reviewer grades each rule it reads in words, below competent,
+  competent, professional or excellent, on each page or for the piece, and marks a
+  grade only a tool the engine lacks, or only the asker's words, would raise. It grades
+  before it reads the brief's file and its reports of earlier rounds, and says why a
+  grade differs from the round before. Its report opens with a document of a fixed form,
+  held by the new schema `visual-communication:review`, which says what it read before
+  grading and the full name of the model it ran on. A loop keeps each round's report in
+  the clone's local `reviews/<piece>/` folder (#3152). A rule finding below professional
+  carries its grade.
