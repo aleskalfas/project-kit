@@ -20,6 +20,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/look.py
         - .pkit/capabilities/visual-communication/scripts/pages.py
+        - .pkit/capabilities/visual-communication/scripts/draft.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/drafts.py
         - .pkit/capabilities/visual-communication/scripts/before-after.py
         - .pkit/capabilities/visual-communication/scripts/mark-final.py
         - .pkit/capabilities/visual-communication/scripts/upgrade.py
@@ -395,6 +397,18 @@ Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 - **Finds the browser** a run would start, and starts none. It names the program, or where it looked where it found none, and the forced palettes it draws where `look` is asked `--forced-colours`.
 - **Writes** nothing.
 - **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold. It exits 1 too where the configuration's `browser` names no path ([The browser](files.md#the-browser)).
+
+### `pkit visual draft <piece>`
+
+Gives the digest of a draft's text, and says whether a text still matches the digest the piece's brief records ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+
+- **Names the draft** by `--kind` (`lead`, `title` or `takeaway`), `--language` and, for a piece of more than one page, `--page <id>`. It reads the text from the piece, so no one hashes text by hand: a takeaway from the brief's part, and a lead or a title from the content in that language, at the key path `--at` names from the page ([The brief](files.md#the-brief)).
+- **The digest** is `sha256:` and the hex of the SHA-256 of the text *normalised*: Unicode normalisation form C, then each run of white space, a line break among them, made one space, then the ends trimmed. So a text reflowed or re-indented keeps its digest, and a changed word, letter case or mark changes it.
+- **Prints** the entry for the part's `drafts`, for whoever designs the piece to write into the brief.
+- **`--check`** says whether the text *matches* the entry recorded for its page, kind and language, *differs* from it, or has *no entry*. It is the designer's only on a match, and the asker's on the other two ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **Writes** nothing, since no command changes what a brief says. It needs no lock.
+- **Refuses** a piece, a page, a field or a takeaway it cannot read.
+- **Exits** 0 when it printed the entry, or `--check` found a match; 1 when it refused ([Commands](#commands)); 2 on a usage error; 3 when `--check` found the text the asker's.
 
 ### `pkit visual before-after <piece>`
 

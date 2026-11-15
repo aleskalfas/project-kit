@@ -1792,11 +1792,16 @@ def brief_findings(piece: pl.Piece) -> list[Finding]:
     """What the piece's brief names that its content lacks (DEC-029 point 5), its pages
     found through its top's declaration, read as the check of ids reads a component, before
     the lock is checked (`briefs.findings`)."""
+    return briefs.findings(piece, top_of(piece))
+
+
+def top_of(piece: pl.Piece) -> Mapping[str, Any] | None:
+    """The data of the piece's top component, read as the check of ids reads a component,
+    or None where it cannot be read."""
     try:
-        top = _Locked(piece).component(piece.top)
+        return _Locked(piece).component(piece.top)
     except KeyError:
-        top = None
-    return briefs.findings(piece, top)
+        return None
 
 
 def _shown(ids: set[str]) -> str:

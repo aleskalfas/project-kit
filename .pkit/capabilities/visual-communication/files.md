@@ -54,6 +54,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/code.py
         - .pkit/capabilities/visual-communication/scripts/_lib/briefs.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/drafts.py
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
         - .pkit/capabilities/visual-communication/schemas/config.schema.json
         - .pkit/capabilities/visual-communication/schemas/piece.schema.json
@@ -587,6 +588,7 @@ Each part may hold these fields:
 | `goals` | What the piece, or the page, must achieve with its audience, such as what the audience can do after it, one sentence each. |
 | `takeaway` | The one point a reader should leave the page with, only where the page has no *lead*. A lead is the text the page's content gives to state its point, such as a slide's lead under its title. No field says which text that is, so whoever writes or reviews the page reads it from the content. Where the page has a lead, the lead is its takeaway, and the brief does not repeat it. A cover or a section page often has none. |
 | `reasons` | Why each choice of the design was made, one reason for each choice, listed in the order of their aspects. |
+| `drafts` | The makers' record of drafts, which is no intent ([The makers' record of drafts](#the-makers-record-of-drafts)). |
 
 A reason holds these fields:
 
@@ -598,11 +600,36 @@ A reason holds these fields:
 | `principle` | yes | The principle the choice rests on: its `name`, and its `source`, such as an author and a work. A reason that names no principle is taste, which nobody can judge. |
 
 - **A key path** names a part of the content as a tie's end names its item ([Content files](#content-files)). It joins the keys the content file writes with `.`, and names each item of a list by its id, as `[<id>]`, never by its place. It may end at a field, a list's included. A page's part starts the path at its page, as `visual.levels`. The piece's part starts it at the content's top, as `slides[layers]`, or a site's `header`. A part inside a local component, or in shared content, takes no key path, since a key path reaches only the piece's own content: name it in the words.
+- **The makers' record of drafts** lies in `drafts` of the page's part, or of the part for the whole piece on a piece of one page. See below.
 - **What a brief never holds.** Nothing the content holds: its text, its pictures, the component that draws each part, and any value or layout. Nothing `piece.yaml` declares: who the piece is for, where it is shown, whether it explains, its libraries and its lock. No reason for a library's own choice, such as why a brand's accent is the colour it is, which lives with the library. No requirement that binds more than this piece, which lives in a rule set.
 - **The methodology's container,** `pkit`, is kept free at the brief's top and in each mapping of it, as in a content file ([Reserved words](#reserved-words)). Its schema refuses every other key it does not declare.
 - **Who writes it.** A person, or an agent working for one. `pkit visual new` stamps it holding its binding alone, and says nothing in it. Its goals and relations come from whoever asks for the piece, and its reasons from whoever designs it, as they design.
 - **No command changes what it says.** No renderer, export or producer reads it. So a change to it moves no lock, changes no scene, and stales no output: no fingerprint reads it (*The input set of each kind* in *What the check reports*). `pkit visual take-up` copies it with the rest of a final piece's folder, as it is ([The lock](#the-lock)). An id renamed in the content leaves the brief naming what is gone, which the check fails until a person mends the brief.
 - **What the check reads of it.** Its shape is the core's data validation's. The check fails a page or a key path the brief names that names nothing in the content of the piece's source language: `brief-page` and `brief-path`, under *The brief* in *What the check reports*. A final piece's brief goes unread, but for its binding. Whether the drawn pages show what the brief asks is no check's to say. The capability's reviewer reads them against it, and reports each part of the brief a page does not show as a brief finding (DEC-030 point 6; *The reviewer* in the capability's README).
+
+#### The makers' record of drafts
+
+The designer owns each word of a piece that is not the asker's, and the asker's words include a lead, title or takeaway once the asker has seen it (DEC-042 point 7). The `drafts` of a part record the ones the designer drafted and the asker has not seen:
+
+```yaml
+cover:
+  takeaway: The talk is about how the method's parts fit together.
+  drafts:
+    - kind: takeaway
+      language: en
+      digest: sha256:dad3e08763728fe64fd8bc2e0d79408c525cdd32f6defc8ec8766ee5a37992e8
+```
+
+| Field | Required | What it holds |
+|---|---|---|
+| `kind` | yes | `lead`, `title` or `takeaway`. |
+| `language` | yes | The language of the text. |
+| `digest` | yes | `sha256:` and the hex of the SHA-256 of the text, normalised as `pkit visual draft` states. |
+
+- **A digest, never the text.** An entry has no field for a text, and the schema refuses one. The page is the part the entry lies in.
+- **Written by whoever designs the piece,** as it drafts the text, and cleared once the asker has seen it. `pkit visual draft` gives the digest, and writes nothing in the brief ([`pkit visual draft`](README.md#pkit-visual-draft-piece)).
+- **What follows.** A lead, title or takeaway whose text no longer matches the digest recorded for its page, kind and language, or that the record lists nothing for, is the asker's. A piece with no brief has no record, so its leads, titles and takeaways are the asker's. `pkit visual draft --check` says which.
+- **Read by no check and no renderer.** Like the rest of the brief, a change to it moves no lock and stales no output.
 
 ## Picture files
 
