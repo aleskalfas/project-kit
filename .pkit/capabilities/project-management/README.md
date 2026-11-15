@@ -97,7 +97,9 @@ workstreams: []                       # the key stays, and the workstreams live 
 # projects_v2_node_id: PVT_xxx        # the board's node id, stored at adoption
 #                                     # (bootstrap writes it; adopt-existing recommends
 #                                     # it): a name each read addresses the board by,
-#                                     # never taken for the board's answer
+#                                     # never taken for the board's answer, save by
+#                                     # pre-check's board check ("When the board
+#                                     # does not answer", under "Then use")
 # code_path_to_doc_mapping:           # per DEC-015 + ADR-019
 #   enforce: false
 #   rules:
@@ -1076,12 +1078,12 @@ No other issue moves with it: the forward cascade runs on forward moves only, an
 
 #### When the board does not answer (per [pkit:ADR-096])
 
-Under every credential, a read of the board tells a board that did not answer from one that answered empty. So no command reports a finding, or acts on a value, from a board it could not read. Every read of the board goes through one seam, `scripts/_lib/board_fields` with `scripts/_lib/board_answer`, and a test holds that no other script builds one.
+Under every credential, a read of the board tells a board that did not answer from one that answered empty. So no command reports a finding, or acts on a value, from a board it could not read. Every read of the board goes through one seam, `scripts/_lib/board_fields` with `scripts/_lib/board_answer`, and a scan of the scripts holds that no other script builds one ([pkit:ADR-096] point 6).
 
-- **The board answered only where its answer names it.** A read asks the board itself, by its number under its owner, or by `projects_v2_node_id` where one is stored. The owner is `gh.default_owner`, else the repository's owner. The answer counts only where it names the configured board: its number, its owner and the stored node. A stored node is a name the read is addressed by, never the board's answer, so a node stored for another board fails the read.
+- **The board answered only where its answer names it.** A read asks the board itself, by its number under its owner, or by `projects_v2_node_id` where one is stored. The owner is `gh.default_owner`, else the repository's owner. The answer counts only where it names the configured board: its number, its owner and the stored node. A stored node is a name the read is addressed by, never the board's answer, so a node stored for another board fails the read. Only `pre-check`'s board check still passes on a stored node alone (the table below).
 - **An issue is off the board only where a witness shows it.** An issue's own list of cards shows only the cards the credential may see. So an issue with no card counts as off the board only where the same request shows a card on the board for another issue of its repository. That issue is one of those read, or one of a page of the repository's most recently created and most recently updated issues. Otherwise the board did not answer, and the message names both causes: an issue off the board, or a credential whose reads do not see the board's cards.
 - **A read that is not whole answers nothing.** A read cut short, or one carrying an error on the board or its cards, is a board that did not answer.
-- **A card the credential may not read is withheld.** The board returns a card whose issue lies in a repository the credential may not read with nothing of its issue. A command over its own repository's issues sets it aside. A command that would remove or merge a board option refuses while such a card may hold it, and so does a card that holds a state issue.
+- **A card the credential may not read is withheld.** The board returns a card whose issue lies in a repository the credential may not read with nothing of its issue. A command over its own repository's issues sets it aside. Where such a card may hold a workstream, the commands that remove that workstream refuse, as "Cards the walk did not count", under "Workstream lifecycle", below, says.
 - **An add is made only where the board answers with the issue's card,** and a field write only where the board accepts it without error.
 - **A project with no board makes no call to a board.**
 
@@ -1089,13 +1091,13 @@ What each command does where the board does not answer:
 
 | Command | Where the board does not answer |
 |---|---|
-| `create-issue` | Reads the board before it files, `--dry-run` included, and files nothing: exit 3. See "Filing an issue onto the board" below |
-| `set-field` | Leaves each axis the board carries unset, and exits 3, even where it wrote the other axes. Running it again sets what is still unset. Where the board answered with no card, field or option for the value, the refusal stays exit 1 |
+| `create-issue` | See "Filing an issue onto the board", below |
+| `set-field` | See "Failure + recovery", under "Batch substrate primitives", above |
 | `validate-issue` | Reports the membership check as `board_membership.unverified`, a warning, and never as an issue off the board (`board_membership.missing`) |
-| `merge-workstream`, `split-workstream`, `remove-workstream` | Exit 3, and change nothing. Where the board answered, each refuses with exit 1 while a withheld card, or a card holding a state issue, may hold the option it would remove. `remove-workstream --force` removes the option anyway |
-| `sync-board` | Exits 3. It counts an add only where the board answers with the card, and leaves a withheld card alone |
-| `back-fill` | Reports each `set-board-field` intent as blocked, saying the board did not answer, never as an issue that needs board membership |
-| `pre-check` | Where no `projects_v2_node_id` is stored, it reads the board, and fails the board check, naming `gh.default_owner` as where the board's owner goes |
+| `merge-workstream`, `split-workstream`, `remove-workstream` | Exit 3, and change nothing. Where the board answered, see "Cards the walk did not count", under "Workstream lifecycle", below |
+| `sync-board` | Exits 3. How it counts an add, and the cards it leaves alone, are in "Bringing a whole board level", below |
+| `back-fill` | See "Where the board does not answer", under "Corpus back-fill", below |
+| `pre-check` | Where a `projects_v2_node_id` is stored, passes the board check on it alone, and reads nothing. Whether it reads the board all the same is [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)'s to decide. Where none is stored, it reads the board, and fails the board check, naming `gh.default_owner` as where the board's owner goes |
 
 `move-issue`, `start-work`, `review-work` and `close-issue` read the board where it holds the state, and exit 3, as "Where the Status is the source", below, says.
 
@@ -1118,7 +1120,7 @@ Where a Projects v2 board is configured and the map carries the state off it, it
 - **The forward cascade** writes each ancestor's Status step by step, and stops at an ancestor its Status does not place
 - **A closed issue's card** says where its work stood before the close. Where the issue did not close as completed, that tells finished work from a won't-do close. A card that then places the issue nowhere is named, with what the board said, and no ancestor moves
 - **`start-work` and `review-work`** refuse at their early check in the same cases
-- **`create-issue`** gives the new card its first Status: Todo, or Backlog for an issue filed with a milestone. It reads the board before it files, and files nothing where the Status has no option for that state. Where the write fails once the issue is filed, the issue stays filed, and the command exits 5 ("Filing an issue onto the board", above)
+- **`create-issue`** gives the new card its first Status: Todo, or Backlog for an issue filed with a milestone. What it does where the Status has no option for that state, or the write fails, is in "Filing an issue onto the board", above
 - **`create-issue --board <N>`** is refused, with exit 2, unless N is the configured board's number. An issue filed onto another board would have no card on the configured board, so no command could read its position. The refusal comes before anything is written or asked and before the board is read, `--dry-run` included. Leave `--board` out to file onto the configured board, and where the issue belongs on the other board too, add a card there after filing with `gh project item-add`. That card carries no position ([project-management:DEC-070-filing-another-board])
 - **A closed issue is Done whatever its card says,** so a close that leaves the card as it was needs nothing more. `sync-board` refuses here, so after `reopen-issue`, set the card's Status by hand
 
@@ -1246,7 +1248,7 @@ Where the file is absent, the two commands read the legacy `workstreams:` key of
 
 **The substrate before the file.** A command that changes a label or the board does so before it writes the file. When that change fails, the file keeps what the change did not finish, and the command exits 3. Running it again finishes the change. Where the board has no single-select `Workstream` field, the command refuses.
 
-**Cards the walk did not count.** On the board, a card the credential may not read is withheld, and a card that holds a state issue is set aside, so neither is counted. Where such a card may hold an option, `merge-workstream` and `split-workstream` refuse to remove it with exit 1, and change nothing, since removing it would clear the card's value unseen. `remove-workstream` refuses too, unless `--force` is given. Adding and renaming an option go on, since they clear no value.
+**Cards the walk did not count.** On the board, a card the credential may not read is withheld, and a card that holds a state issue is set aside, so neither is counted. Where such a card may hold an option, `merge-workstream` and `split-workstream` refuse to remove it with exit 1, and change nothing, since removing it would clear the card's value unseen. Where such a card may hold the workstream, `remove-workstream` refuses with exit 1 unless `--force` is given ("Removing", below), since its count of the issues that carry the workstream leaves that card out. It removes no option, so it clears no card's value. Adding and renaming an option go on, since they clear no value.
 
 **Renaming.** `rename-workstream` refuses where both the old and the new label exist, since the issues would sit under two labels. Consolidate two such labels with `merge-workstream`. Where only the new label exists, there is nothing to rename. The board's options follow the same rule, and a renamed option keeps each card's value.
 
@@ -1574,7 +1576,7 @@ Two override families run across the mutating commands, and which a command expo
 
 #### Exit 4 — accepted, a re-run completes it
 
-A verb exits **4** when the act it exists for was accepted and stands — it is never rolled back — but what follows it has not run yet, and running again what its output names completes it, repeating nothing already done. `done-work` and `merge-pr` exit 4 while a merge queue holds the PR, and when gh accepted a merge that GitHub could not then be read to confirm, or a merge or an enqueue got no answer and whether it was made is not known — GitHub could not be read since, or, with no answer from the backbone at all, one reading found the PR neither merged nor queued: the output says which, names the reading that tells (`pkit pull-request read <PR>`), and never calls an unconfirmed merge queued or not made: the same verb run again once the PR has merged runs what follows the merge (`merge-pr` from the same clone, whose record says the steps are owed), and on a PR that did not merge it merges it, on the same authorisation. `land-work` passes `done-work`'s 4 through, its last line saying `queued` or `unconfirmed`, and `land-work` run again completes it. `create-issue --from-report` exits 4 when the issue was created but its link into the report failed: `pkit report link` completes it. Where a step the filing requires failed too, such as the issue's card not added to the board, it exits 5 instead, naming each step ("Filing an issue onto the board"). Exit 0 always means the whole act is done, so a caller never mistakes an accepted act for a finished one.
+A verb exits **4** when the act it exists for was accepted and stands — it is never rolled back — but what follows it has not run yet, and running again what its output names completes it, repeating nothing already done. `done-work` and `merge-pr` exit 4 while a merge queue holds the PR, and when gh accepted a merge that GitHub could not then be read to confirm, or a merge or an enqueue got no answer and whether it was made is not known — GitHub could not be read since, or, with no answer from the backbone at all, one reading found the PR neither merged nor queued: the output says which, names the reading that tells (`pkit pull-request read <PR>`), and never calls an unconfirmed merge queued or not made: the same verb run again once the PR has merged runs what follows the merge (`merge-pr` from the same clone, whose record says the steps are owed), and on a PR that did not merge it merges it, on the same authorisation. `land-work` passes `done-work`'s 4 through, its last line saying `queued` or `unconfirmed`, and `land-work` run again completes it. `create-issue --from-report` exits 4 when the issue was created but its link into the report failed: `pkit report link` completes it. "Filing fixes from a report" says when it exits 5 instead. Exit 0 always means the whole act is done, so a caller never mistakes an accepted act for a finished one.
 
 #### Corpus back-fill — seeding (and repairing) a value across every issue (per [project-management:DEC-037-adoption-ceremony] §2)
 
