@@ -44,6 +44,8 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/instance_claims.py
         - .pkit/capabilities/project-management/scripts/_lib/friction_answers.py
         - .pkit/capabilities/project-management/scripts/_lib/head_programs.py
+        - .pkit/capabilities/project-management/scripts/_lib/membership.py
+        - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
         - .pkit/capabilities/project-management/schemas/workflow.yaml
         - .pkit/capabilities/project-management/skills/pm/transition-state.md
       record:
@@ -169,6 +171,7 @@ pkit:
 - **6h.** The issue moved back is a parent issue with a child In Progress or in Review. The system refuses, naming each such child, and writes nothing ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). It refuses too where the children cannot all be told, such as an open child in another repository. The use case ends.
 - **6i.** The developer's clone cannot release the issue's owner: the clone is no [instance](../../../glossary.md#term-instance--instance), or a clone of another account made the ownership. The system refuses the move back, naming the owner, and writes nothing ([DEC-035 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#4-ownership-releases-when-the-work-ends-or-stops-and-transfers-on-reclaim)). The use case ends.
 - **6j.** The project's substrate map binds the state to the board. The system refuses the move back and writes nothing, releasing no ownership and journaling no move ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). The use case ends.
+- **6k.** The command runs as a user's account other than the developer's, such as one kept for a workflow. `start-work` assigns that account, not the developer. It refuses a Task assigned to the developer as one assigned to someone else, as in variant 6a ([DEC-021](../../../../../../.pkit/capabilities/project-management/decisions/DEC-021-team-membership-gate.md)).
 - **7a.** The developer moves the Task to Done directly: `pkit pm move-issue <N> --to done`. The system checks that each checkbox is ticked before it writes ([DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
 
 > [!WARNING]

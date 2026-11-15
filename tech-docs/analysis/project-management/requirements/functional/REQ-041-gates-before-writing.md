@@ -3,9 +3,9 @@ id: REQ-041
 title: A command that writes first checks the project's prerequisites and the membership of whoever runs it
 status: active
 statement: "Before writing, a project-management command checks the project's prerequisites, and that whoever runs it, a user's account wherever GitHub names one, is a team member."
-measure: "Where the project does not meet the prerequisites, the command refuses before its first write. The same holds where a list of members leaves out whoever runs the command. Wherever GitHub names the user's account a command runs as, that account is whoever runs it, not the person an agent works for. The command names the cause, and changes nothing."
+measure: "Where the project does not meet the prerequisites, the command refuses before its first write. The same holds where a list of members leaves out whoever runs the command. Wherever GitHub names a user's account a command runs as, that account is whoever runs it, not the person an agent works for. The command names the cause, and changes nothing."
 applies-to: "Every command of project-management that writes, whether a person runs it or an agent runs it for them. Some commands are exempt from the first check, such as `bootstrap`, which makes the prerequisites, and `migrate`, which runs its own check. Where the team keeps no list of members, or an empty one, whoever runs a command passes the second check."
-obligation: v1:sha256:82fd633e57bd985766bdd0193d319b2bae19c32609dc73623bd2ad461ac3cc86
+obligation: v1:sha256:e8be9fda46fcfdc48cb2eed9c93391388f2bb4c72d3b5a453a5b164cc5afcdf4
 actors:
   - core:ACT-developer
   - ACT-planner

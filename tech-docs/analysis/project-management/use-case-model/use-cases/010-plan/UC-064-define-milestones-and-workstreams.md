@@ -37,6 +37,8 @@ pkit:
         - .pkit/capabilities/project-management/scripts/remove-workstream.py
         - .pkit/capabilities/project-management/scripts/_lib/workstreams.py
         - .pkit/capabilities/project-management/scripts/_lib/workstream_sync.py
+        - .pkit/capabilities/project-management/scripts/_lib/membership.py
+        - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
         - .pkit/capabilities/project-management/schemas/time-containers.yaml
         - .pkit/capabilities/project-management/schemas/workstreams.schema.json
       record:

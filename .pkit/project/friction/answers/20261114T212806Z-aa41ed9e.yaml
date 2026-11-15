@@ -10,7 +10,7 @@ answers:
       - 20261113T015341Z-df578670.yaml
       - 20261113T222453Z-06dececb.yaml
     revalidated:
-      at: 2026-11-14T21:28:06Z
+      at: 2026-11-15T10:37:13Z
       outcome: updated
     revisited:
       - anchor:
@@ -20,19 +20,9 @@ answers:
         reason: It holds the first check, on the project's prerequisites. The change moves only the second check, which judges a user's account GitHub names as whoever runs the command, so the first check's code holds as it is.
       - anchor:
           kind: path
-          value: .pkit/capabilities/project-management/scripts/_lib/membership.py
-        outcome: deferred
-        reason: "project-kit#3175's code step, which lands on this change's branch once a person accepts the refinement, before the change merges: the code reads PM_INVOKER_LOGIN in place of a user's login the hosting service answers, and lets git's email match beside that login, where the second check judges that account alone. That step edits this file, which revisits it, and rewrites this change's own entry before the change merges."
-      - anchor:
-          kind: path
           value: tests/test_pm_bootstrap_gate.py
         outcome: unchanged
         reason: They verify the first check, on the project's prerequisites. The change moves only the second check, which judges a user's account GitHub names as whoever runs the command, so these tests verify what they did.
-      - anchor:
-          kind: path
-          value: tests/test_pm_membership.py
-        outcome: deferred
-        reason: "project-kit#3175's code step, which lands on this change's branch once a person accepts the refinement, before the change merges: two tests have PM_INVOKER_LOGIN stand in place of a user's login the hosting service answers, and none refuses a member's email beside a non-member's login, where the second check judges that account alone. That step edits these tests, which revisits them, and rewrites this change's own entry before the change merges."
       - anchor:
           kind: record
           value: ADR-061#3

@@ -39,6 +39,8 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/decision_ids.py
         - .pkit/capabilities/project-management/scripts/_lib/containment.py
         - .pkit/capabilities/project-management/scripts/_lib/session_guard.py
+        - .pkit/capabilities/project-management/scripts/_lib/membership.py
+        - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
         - .pkit/capabilities/project-management/schemas/issue-types.yaml
         - .pkit/capabilities/project-management/schemas/body-format.yaml
         - .pkit/capabilities/project-management/schemas/titles.yaml

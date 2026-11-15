@@ -48,6 +48,8 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/head_programs.py
         - .pkit/capabilities/project-management/scripts/_lib/accepted_records.py
         - .pkit/capabilities/project-management/scripts/_lib/pr_merge.py
+        - .pkit/capabilities/project-management/scripts/_lib/membership.py
+        - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
         - .pkit/capabilities/project-management/agents/pm-reviewer.md
         - .pkit/capabilities/project-management/schemas/review-contributions.yaml
       record:
