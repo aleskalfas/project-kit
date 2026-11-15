@@ -10,7 +10,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 - **A defect lowers a grade.** The reviewer keeps a list of defects, such as an overlap. Each is a plain error of drawing, never a matter of design. Where a rule's own words name such a defect, a page that shows it is graded below *professional* on that rule.
 - **Typography,** how a paragraph is set, gains a new rule, since no rule, defect or check judges it.
 - **Craft,** whether parts line up, stand clear of each other and meet where they join, gains no rule. The list of defects and the rule on grouping judge it. Two new automatic checks find boxes that overlap and edges that nearly line up, and the reviewer judges each place they find.
-- **Legibility at the medium's size,** whether a text is large enough where the piece is shown, gains no rule. Comparing a text's size with the smallest its medium allows is an automatic check's, which needs a record of its own first. Until that check runs, the review can say only that a text cannot be made out in the image, so this gap stays open through the next test of the review.
+- **Legibility at the medium's size,** whether a text is large enough where the piece is shown, gains no rule. Comparing a text's size with the smallest its medium allows is an automatic check's. Where that check judged no text's size, the review can say only that a text cannot be made out in the image, so the gap stays open there.
 - **Colour** gains no rule. The rules on form and on the focal point judge it, and the rest is a brand's look or a matter of taste.
 
 The new rule lands in a later change, which gives the rule set a new major version.
@@ -42,7 +42,7 @@ The words it uses:
 What judged each gap when the first calibration ran:
 - **Craft.** `RS-GRAPHIC-002` asks that what belongs together is "placed together and lined up", that "what is separate is set apart", and that steps "are joined in the order they are read". The reviewer's fault of alignment covers parts that belong on one edge, one line or one even spacing and do not lie there. Its fault of overlaps covers a part over a part, and its fault of a part missing or blank covers a part cut off. So craft was named, and the first calibration found it weak all the same.
 - **Typography.** No rule and no fault judged how long a text's lines are, how far apart they stand, or how they break. The design knowledge's topic on type taught it, and nothing was graded on it.
-- **Legibility at the medium's size.** `RS-GRAPHIC-005` asks that everything "can be read where the piece is shown". DEC-028 point 10 gives the smallest text size for a medium to a check, which was never built (DEC-042 point 2). The review graded the rule by how much a page holds (DEC-042, Context).
+- **Legibility at the medium's size.** `RS-GRAPHIC-005` asks that everything "can be read where the piece is shown". DEC-028 point 10 gives the smallest text size for a medium to a check, which had not been built (DEC-042 point 2). The review graded the rule by how much a page holds (DEC-042, Context).
 - **Colour.** `RS-GRAPHIC-007` asks that every difference a reader takes for meaning is one the content has. DEC-028 point 11 gives "five unrelated hues on one chain" as a break of it. Contrast is a check's.
 
 ## Decision
@@ -132,14 +132,15 @@ What the rule leaves to others:
 
 Legibility gains no rule. The canon names it, and DEC-028 point 10 divides it: the smallest text size for a medium is a check's, and the rest is the rule's.
 
-- **Comparing a text with its medium's minimum is the check's.** The frames give each text's box and the image's size, so the share of the page a text takes can be worked out. Working it out and comparing it with a minimum is arithmetic, which is a check's (DEC-028 point 1). The review has no minimum to compare with: a piece says where it is shown in words, which give no size.
+- **Comparing a text with its medium's minimum is the check's.** Comparing a text's size with the smallest its medium allows needs no judgement, so it is a check's (DEC-028 point 1). How the check finds a text's size and its medium's minimum is the check's own work, and this record decides none of it.
 - **What the rule's first sentence judges,** on the drawn page: whether a reader can read each text as it was drawn (DEC-030 point 6). That stays the reviewer's wherever no check measures it ([visual-communication:DEC-015-viewing-step-and-reviewer] point 7). How the review reads it is the reviewer's body's.
 - **What its second sentence judges:** whether the page is taken in at a glance. How much a page holds is evidence for this sentence alone, and never for whether a text can be read.
 - **One grade, and the finding names the sentence** it rests on.
 - **A fault the rule's words name,** such as a text that does not read over a picture, holds its grade as point 2 says.
-- **No small text fails twice.** Where the check runs, a text under its medium's minimum fails the check alone, since what a check measures stays the check's (DEC-030 point 7). It lowers no grade of `RS-GRAPHIC-005`, and the reviewer names it in one line.
-- **Where no such check runs,** the review judges a text's size only as far as the image shows that the text cannot be read. It does not say that a text is too small for its medium. Its report says that no text was compared with a medium's minimum, so the gap stays open there.
-- **The check itself stays DEC-042's work.** DEC-042's Implications list it. This record adds only how the reading and the check divide the rule.
+- **No small text fails twice.** Where the check judged a text's size, a text under its medium's minimum is the check's finding alone, since what a check measures stays the check's (DEC-030 point 7). It lowers no grade of `RS-GRAPHIC-005`, and the reviewer names it in one line.
+- **Where the check judged no text's size,** whether in a medium, at a size or for a whole piece, or where no such check runs, the review judges a text's size only as far as the image shows that the text cannot be read. It does not say that a text is too small for its medium.
+- **Who says where no text's size was judged.** Where the check states that it judged no text's size, that statement is what tells the reviewer, and the review's report repeats none of it, which keeps what a check measures the check's (DEC-030 point 7). Where no such check runs, the review's report says that no text's size was compared with its medium's minimum. Either way the gap is named where it stays open.
+- **The check itself is not this record's.** DEC-042's Implications list it as later work. This record adds only how the reading and the check divide the rule.
 
 ### 6. Colour gains no rule
 
@@ -179,7 +180,7 @@ Each part of the gap has a home, or no source states it as a test.
 
 **Why checks do the arithmetic.** Comparing the edges of every list on every page is sums over a file, which the reviewer does unevenly and a command does the same way each time. The checks leave the reviewer the part that is a judgement: whether the place they name is a defect.
 
-**Why the medium's minimum is the check's, and the review keeps whether a text can be read.** A minimum size by medium needs no judgement, so it is a check's (DEC-028 points 1 and 10). The reviewer's remit is what no check measures (DEC-015 point 7), so whether a text as drawn can be read stays the review's. Where the check runs, a review that judged the minimum too would fail one small text twice.
+**Why the medium's minimum is the check's, and the review keeps whether a text can be read.** A minimum size by medium needs no judgement, so it is a check's (DEC-028 points 1 and 10). The reviewer's remit is what no check measures (DEC-015 point 7), so whether a text as drawn can be read stays the review's. Where the check judged a text's size, a review that judged the minimum too would fail one small text twice.
 
 **Why colour gains none.** Each test a source states has a home: `RS-GRAPHIC-007` judges hues against the kinds the content has, and `RS-GRAPHIC-001` what is seen first. What is left, strong colour used sparingly and whether a palette's colours go together, no source states as a test every piece must pass.
 
@@ -202,8 +203,8 @@ Each part of the gap has a home, or no source states it as a test.
 - **A rule on muted grounds.** Rejected: it would fail a brand's title page in its strongest colour.
 - **A rule on how many hues a page draws.** Rejected: it would fail a diagram whose eight concepts each keep their colour, as `RS-GRAPHIC-004` asks.
 - **"Strong colour sparingly" as a clause of `RS-GRAPHIC-001` or `RS-GRAPHIC-003`.** Rejected: a brand may want the opposite.
-- **The review judging text size from an image scaled to the medium.** Rejected: no piece declares a size or a viewing distance, and the judgement is arithmetic.
-- **The review judging nothing of a text's size where no check runs.** Rejected: whether a reader can read what was drawn is the reviewer's remit wherever no check measures it (DEC-015 point 7), and a text that cannot be made out in the image would pass unseen.
+- **The review judging text size from an image scaled to the medium.** Rejected: comparing a text's size with its medium's minimum is arithmetic, so it is a check's (DEC-028 point 1), and a review that made it too would fail one small text twice.
+- **The review judging nothing of a text's size where no check judged it.** Rejected: whether a reader can read what was drawn is the reviewer's remit wherever no check measures it (DEC-015 point 7), and a text that cannot be made out in the image would pass unseen.
 - **`RS-GRAPHIC-005` split in two rules,** one for each sentence. Not taken: with the minimum left to the check, both sentences rest on one reading of the page. Its trigger to revisit: the review grades the rule by how much a page holds.
 - **A brand's longest line, with a check.** Rejected: it would be a limit, which is a project's taste, and no value a piece draws with.
 - **A clause on a lone last word, and one on a heading parted from its text.** Not taken. For the first, this record found no source that states the test for every language. For the second, the engine flows no text from page to page, and nearness is `RS-GRAPHIC-002`'s.
@@ -247,7 +248,7 @@ Each part of the gap has a home, or no source states it as a test.
     This joins the reviewer's body DEC-042's Implications list. The calibration waits for it.
   - **The design knowledge.** The topic on type gains the uneven line ends and what each source says of line length and line spacing, with Lupton and Butterick among its works. The topic on colour gains a question on strong colour over large areas. The calibration waits for it.
   - **The two checks of boxes** of point 3, each with its entry in the capability's list of checks. The calibration waits for them: the reviewer's body tells the review to judge the places they name, and a body changed after a calibration lapses the hold (DEC-042 point 9).
-  - **The check for a text smaller than its medium allows** stays DEC-042's item. Its work must first give a piece's medium a form a command can read, since the piece's field that says where it is shown holds words, and name a standard for each medium. That is a record of its own. The calibration does not wait for it: the check moves no grade, and the hold reaches only rules a calibration tested (DEC-042 point 10). The calibration's report says that no text was compared with a medium's minimum.
+  - **The check for a text smaller than its medium allows** is the work DEC-042's Implications list, and how it finds a text's size and its medium's minimum is that work's to decide. The calibration does not wait for it: the check moves no grade, and the hold reaches only rules a calibration tested (DEC-042 point 10). The calibration's report says where no text's size was compared with its medium's minimum.
   - **The calibration** DEC-042 point 9 describes, last.
 - **What `GRAPHIC@2` brings,** in the change that lands the rule:
   - **Adopters' pins.** A project's set that takes rules from `GRAPHIC@1` fails validation until the project reads the new rule and moves its pin (COR-051 point 7). Until then no rule of `GRAPHIC` binds through that set.
