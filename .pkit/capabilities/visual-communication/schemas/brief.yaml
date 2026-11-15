@@ -30,6 +30,11 @@ piece:
 pages:
   cover:
     takeaway: The talk is about how the method's parts fit together.
+    # The makers' record of a draft the asker has not seen: a digest, never the text.
+    drafts:
+      - kind: takeaway
+        language: en
+        digest: sha256:dad3e08763728fe64fd8bc2e0d79408c525cdd32f6defc8ec8766ee5a37992e8
   layers:
     relations:
       - text: >-

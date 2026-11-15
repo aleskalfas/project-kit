@@ -34,9 +34,11 @@ process:
 # rules, `.pkit/rules/project.md`, kept as a plain file (COR-069 point 3):
 # `pkit validate` fails the file past it. Lowered by the trim (#2261) to the
 # trimmed file's 290 words with room for about 50 more (COR-069 point 4); a
-# growth past it is a raise a person authorises.
+# growth past it is a raise a person authorises. Raised by the maintainer to
+# 600 for rule 5, which is interim (#3249): the change that removes rule 5
+# lowers it back to 340.
 rule-sets:
-  plain-file-budget: 340
+  plain-file-budget: 600
 
 # `friction` — anchors and friction (COR-050 point 14). `enforcing` from the
 # day the check exists (ADR-055 point 5).

@@ -536,8 +536,10 @@ def _is_autonomous(interactive: bool | None) -> bool:
 
     ``interactive`` lets the caller force the mode (and lets tests pin it).
     When None, autonomy is inferred: a non-tty stdin (CI / agent / piped) is
-    autonomous; a tty is interactive. ``PM_INVOKER_LOGIN`` (the CI/agent
-    identity signal used by membership resolution) also marks autonomy.
+    autonomous; a tty is interactive. ``PM_INVOKER_LOGIN``, set in CI and
+    agent contexts, also marks autonomy. The membership library reads it as
+    an identity only where GitHub names no user's account for the
+    credential (DEC-021).
     """
     if interactive is not None:
         return not interactive

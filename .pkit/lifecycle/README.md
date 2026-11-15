@@ -18,6 +18,7 @@ pkit:
         - src/project_kit/sync.py
         - src/project_kit/install.py
         - src/project_kit/upgrade.py
+        - src/project_kit/cli.py
         - src/project_kit/capabilities.py
         - src/project_kit/visibility.py
         - src/project_kit/loaded_rules.py
@@ -40,7 +41,7 @@ pkit:
         - .pkit/schemas/backbone/config.schema.json
         - .pkit/schemas/backbone/filler.schema.json
         - .pkit/schemas/backbone/rule-set.schema.json
-      record: [COR-001, COR-004, COR-005, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-050#1", "COR-052#5", COR-053, "COR-059#2", "COR-059#3", COR-061, "COR-062#9", "COR-062#11", "ADR-057#2", "COR-052#6", "COR-051#5", COR-019, "COR-059#9", "ADR-065#9", "ADR-065#10", "living-docs:DEC-001", ADR-003, ADR-051, "ADR-055#3", ADR-059, "ADR-065#1", "ADR-086#1", "ADR-087#1", "ADR-087#2", "ADR-088#7"]
+      record: [COR-001, COR-004, COR-005, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-050#1", "COR-052#5", COR-053, "COR-059#2", "COR-059#3", COR-061, "COR-062#9", "COR-062#11", "ADR-057#2", "COR-052#6", "COR-051#5", COR-019, "COR-059#9", "ADR-065#9", "ADR-065#10", "living-docs:DEC-001", ADR-003, ADR-051, "ADR-055#3", ADR-059, "ADR-065#1", "ADR-086#1", "ADR-087#1", "ADR-087#2", "ADR-088#7", ADR-040]
       artefact:
         - .pkit/lifecycle/manifest.md
         - .pkit/lifecycle/component-registry.md
@@ -350,9 +351,10 @@ Either way, the kit-side spec at the recorded version is the source of truth for
 
 ### What sync writes
 
-`pkit sync` reconciles a project at the release it records, and moves no version (COR-059 point 2). Among the project's files it writes three kinds of thing, and no other:
+`pkit sync` reconciles a project at the release it records, and moves no version (COR-059 point 2). Among the project's files it writes four kinds of thing, and no other:
 
 - **The methodology's content** at the recorded release: its trees, adapters included, and each installed capability the running pkit ships at the version the project records ("The downgrade guard on capability refresh", below). A project-owned path is never overwritten.
+- **Each externally-sourced capability's copy, at its pin:** the content of the source and ref its manifest records, outside its `project/` tier ("The externally-sourced origin: match the pin", below).
 - **Derivable state:** the capabilities' rules index, the deployed skills and agents, `.pkit/.gitignore` <!-- unanchored: names the file the step reads or writes, not its content -->, pkit's region of the clone's local exclude file where the project is private, the agent workspace and its line in that file, and the query commands' environments.
 - **The project's own paths, through merge delivery only,** in its tier that asks nothing. For Claude Code it merges `.claude/settings.json` <!-- unanchored: names the file the step reads or writes, not its content --> and `CLAUDE.md`, adding the methodology's entries and never removing one the project wrote. A tier that asks never runs in sync. Merge delivery may create its own target file where it is missing, such as `CLAUDE.md`, as merge, not as seeding.
 
@@ -365,6 +367,19 @@ The reconciliation above assumes a kit-side spec to reconcile against — true f
 The skip is scoped to *reconciliation against the kit source only*. Everything else is unchanged: deploy primitives still run (the capability's skills/agents re-materialise in the harness), dependency gating still counts the capability as installed, and structural self-consistency validation still applies against the adopter's own tree (which is its spec). Origin governs source-reconciliation, not participation or self-validation.
 
 One boundary case (COR-031): if a same-named capability *now* also ships from kit source — graduation arriving before graduation is specified — `sync` surfaces the collision rather than silently shadowing either tree, so the adopter can decide. The default skip applies only while no kit capability of that name exists.
+
+### The externally-sourced origin: match the pin
+
+An `externally-sourced` capability is authored in another git repository and installed at a pin, a tag or a commit's full id, which its per-component manifest records with the source (COR-041; [`manifest.md`, "Per-component manifest"](manifest.md#per-component-manifest-one-per-installed-component)). Its kit-side spec is the pin's content, never the running pkit's bundle. So `sync` never reads it as shipped, and propagation for it is matching the pin (COR-059 point 2):
+
+- **Each run fetches the pin again,** whole, with the person's own git credentials and none of pkit's.
+- **The copy is brought to that content.** A file the pin holds is restored, one it does not hold is removed, and the artefacts the project skipped stay out. The `project/` tier is left as it is.
+- **The pin never moves.** Sync writes no manifest, so the recorded pin and version stay. A transition that moves a pin is not built yet, and `pkit upgrade` leaves the capability as it is.
+- **It degrades loudly.** Where the source cannot be reached, holds no such ref, refuses the credential, or holds no capability of the name, the copy is kept as it is, a `⚠ WARNING` line names why, and the rest of sync runs. So does a pin whose tag now holds another version than the project records: only a person moves a version, by uninstalling the capability and installing it again. So does content whose `requires_backbone` excludes the backbone the project records, since sync gates what it lands as install does.
+- **`--dry-run` fetches nothing,** and reports `would match`.
+- **A capability of the same name in the running pkit's bundle** is named in the report, and never copied over it.
+
+In the methodology's own source repository, sync's self-host path matches no pin, as it copies nothing, and install from another repository is refused there.
 
 <a id="the-downgrade-guard-on-capability-refresh-issue-524"></a>
 ### The downgrade guard on capability refresh

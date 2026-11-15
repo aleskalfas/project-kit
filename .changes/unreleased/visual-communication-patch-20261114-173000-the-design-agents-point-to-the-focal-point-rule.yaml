@@ -1,0 +1,6 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Changed
+body: >
+  The graphic designer and the graphic design reviewer no longer restate the rule on one focal point (`RS-GRAPHIC-001`) in their own words: each sends its reader to the rule's file, and the reviewer files a finding on it only as the rule's text reads. Neither names a step of a method by its number.

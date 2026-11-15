@@ -15,16 +15,18 @@ pkit:
         - src/project_kit/capability_plans.py
         - src/project_kit/point_questions.py
         - src/project_kit/connections.py
+        - src/project_kit/cli.py
         - .pkit/lifecycle/capability_records.py
         - .pkit/agents/definition_source.py
         - .pkit/adapters/claude-code/undeploy-capability.sh
-      record: [COR-001, COR-005, COR-007, COR-010, COR-013, COR-017, COR-030, COR-031, COR-041, "COR-051#3", "COR-053#6", COR-061, "ADR-059", "ADR-065#7", "ADR-065#11", ADR-087, "ADR-088#5"]
+      record: [COR-001, COR-005, COR-007, COR-010, COR-013, COR-017, COR-030, COR-031, COR-041, "COR-051#3", "COR-053#6", COR-061, "ADR-059", "ADR-065#7", "ADR-065#11", ADR-087, "ADR-088#5", ADR-040]
       artefact:
         - .pkit/lifecycle/manifest.md#discovery-what-a-capability-would-connect-to
         - .pkit/lifecycle/manifest.md#a-data-points-question
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
         - .pkit/lifecycle/manifest.md#validation-the-package-schema
         - .pkit/lifecycle/manifest.md#strict-on-unknown-keys
+        - .pkit/lifecycle/manifest.md#per-component-manifest-one-per-installed-component
 ---
 
 # The component registry
@@ -39,6 +41,13 @@ The backbone manifest's `components` list is the canonical install record. The o
 - **Its entry:** it appends a `{kind, name, origin: incubated-in-repo, manifest}` entry.
 - **No copy:** it copies no subtree, and writes no per-component manifest, since the tree is the adopter's (COR-031 D2 and D3).
 - **Deploy and dependency gating:** deploy primitives and dependency gating run as for install (COR-031 D1). Only source reconciliation differs (the lifecycle README, "The incubated-origin skip-branch (COR-031 D1)").
+
+**Install an externally-sourced capability** (COR-041) → install, with the capability fetched from another git repository rather than read from the running pkit's bundle: `pkit capabilities install <name> --from <git URL> --ref <tag or commit>`.
+
+- **Its order:** the fetch takes the subtree at `.pkit/capabilities/<name>/` whole at the ref. Install's pre-flight checks then run on its `package.yaml`, before any file is placed. A refusal writes nothing.
+- **A name already held:** never overwritten. What holds one, when install checks it and what it says are in [the CLI reference, "Capabilities — two ways in"](../cli/README.md#capabilities--two-ways-in), under "From another repository" <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->.
+- **Its entry and manifest:** it appends a `{kind, name, origin: externally-sourced, manifest}` entry. Its per-component manifest records the `pin`, its source and ref, beside the version ([`manifest.md`, "Per-component manifest"](manifest.md#per-component-manifest-one-per-installed-component)).
+- **Deploy and dependency gating:** as for any install, the write categories' defaults and the points' questions included.
 
 **The project's choices between capabilities** (COR-017) sit beside the registry, in the backbone manifest's `agent_choices`. It maps an agent's name to the capability chosen for it, one for each name.
 
@@ -73,6 +82,7 @@ agent_choices:
 - **When it stops:** before anything is read or written, under `--dry-run` and `--plan` too. Under another pkit, both would preview another release's capability.
 - **No override:** nothing overrides it. Its message names sync's remedies for the state it finds.
 - **The methodology's source** is exempt, as it is for sync.
+- **An install from another repository** (`--from`) runs it too. Its first check runs before the fetch, with the check of the name. The other five then read the `package.yaml` the fetch staged, before any file is placed.
 
 **The six checks.** `--plan` runs after the first, since an installed capability has no install plan. It stops there, and writes nothing.
 
@@ -162,6 +172,7 @@ Once those pass, **what gets deleted depends on origin** — origin-blind deleti
   - **An adapter with no undeploy primitive** is named in a `warning` line, since its harness may still carry the capability's skills. It is never skipped silently.
   - **The order:** the undeploy runs before the registry entry is removed. So a failing adapter leaves the capability registered, and the uninstall can run again.
   - **`--purge`:** deleting an incubated capability's files is a separate, explicit opt-in. `--purge` confirms first, honouring the pause-before-destructive-ops discipline, and `--yes` skips the prompt for non-interactive use. The default never deletes incubated files.
+- **`externally-sourced`:** everything outside the `project/` tier is a copy of the pin's content. Uninstall deletes it, and the per-component manifest that records the pin, removes the registry entry, and re-runs deploy, as for a kit-shipped one. The rest of the `project/` tier is the project's own and stays. Where nothing of the project's is there, the capability's folder goes whole.
 - **The methodology's source repository, run by its own code:** whatever the origin, the subtree is never deleted. It is unregistered in place as an incubated one is, the adapters' undeploy primitives included.
   - **Its source, never a copy:** a kit-shipped or incubated capability's subtree is its source there. Uninstall keeps an externally-sourced one too, though it is a copy there, since uninstall reads every subtree in the source as authored.
   - **A `kit-shipped` registration,** whose uninstall would otherwise delete the subtree: the CLI first says which subtree it would have deleted, and that it unregisters instead. It then asks: `--yes` answers, and `--dry-run` asks nothing.
