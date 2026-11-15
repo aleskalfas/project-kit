@@ -22,7 +22,7 @@ answers:
           kind: path
           value: .pkit/capabilities/project-management/scripts/_lib/membership.py
         outcome: deferred
-        reason: "project-kit#3175's code step, which lands on this change's branch once a person accepts the refinement, before the change merges: the code reads PM_INVOKER_LOGIN in place of a user's login the hosting service answers, and lets git's email match beside that login, where the second check judges that account alone. That step edits this file, so REQ-041 is revalidated again there, which replaces this deferral."
+        reason: "project-kit#3175's code step, which lands on this change's branch once a person accepts the refinement, before the change merges: the code reads PM_INVOKER_LOGIN in place of a user's login the hosting service answers, and lets git's email match beside that login, where the second check judges that account alone. That step edits this file, which revisits it, and rewrites this change's own entry before the change merges."
       - anchor:
           kind: path
           value: tests/test_pm_bootstrap_gate.py
@@ -32,7 +32,7 @@ answers:
           kind: path
           value: tests/test_pm_membership.py
         outcome: deferred
-        reason: "project-kit#3175's code step, which lands on this change's branch once a person accepts the refinement, before the change merges: a test has PM_INVOKER_LOGIN stand in place of a user's login the hosting service answers, and none refuses a member's email beside a non-member's login, where the second check judges that account alone. That step edits these tests, so REQ-041 is revalidated again there, which replaces this deferral."
+        reason: "project-kit#3175's code step, which lands on this change's branch once a person accepts the refinement, before the change merges: two tests have PM_INVOKER_LOGIN stand in place of a user's login the hosting service answers, and none refuses a member's email beside a non-member's login, where the second check judges that account alone. That step edits these tests, which revisits them, and rewrites this change's own entry before the change merges."
       - anchor:
           kind: record
           value: ADR-061#3
@@ -528,7 +528,7 @@ answers:
     revalidated:
       at: 2026-11-15T00:51:45Z
       outcome: unchanged
-      unchanged-because: DEC-021 has a user's login the hosting service answers stand alone as the invoker's identity, for the gate and every other reader of it, and DEC-022 words its two qualifiers on PM_INVOKER_LOGIN by that. The README names the gate's two modes and members.yaml, and no surface the gate or another reader of the identity reads, so it holds.
+      unchanged-because: DEC-021 has a user's login the hosting service answers stand alone as the invoker's identity, for the gate and every other reader of it, and has an entry name the login as the service spells it. DEC-022 words its two qualifiers on PM_INVOKER_LOGIN by that. The README names the gate's two modes and members.yaml, and no surface, spelling or reader of the identity, so it holds.
   - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
     read:
       - 20261102T131450Z-cd4d7951.yaml
@@ -564,7 +564,7 @@ answers:
     revalidated:
       at: 2026-11-15T00:49:38Z
       outcome: unchanged
-      unchanged-because: Its steps need from UC-060, UC-061 and UC-062 a Task filed, the Task in Review with its pull request open, and the merge. The use cases' change rewords only whose membership their entry check judges, the account the command runs as, which the journey states nothing of, so it holds.
+      unchanged-because: Its steps need from UC-060, UC-061 and UC-062 a Task filed, the Task in Review with its pull request open, and the merge. The use cases' change rewords only whose membership their entry check judges, whoever runs the command, which is the user's account the command runs as wherever GitHub names one. The journey states nothing of that, so it holds.
   - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
     read:
       - 20261029T002130Z-82af462f.yaml
@@ -589,7 +589,7 @@ answers:
     revalidated:
       at: 2026-11-15T00:49:44Z
       outcome: unchanged
-      unchanged-because: It needs from UC-064 only the workstreams the project declares, which a seat's scope may name. UC-064's change rewords only whose membership its entry check judges, the account the command runs as, which the journey states nothing of, so it holds.
+      unchanged-because: It needs from UC-064 only the workstreams the project declares, which a seat's scope may name. UC-064's change rewords only whose membership its entry check judges, whoever runs the command, which is the user's account the command runs as wherever GitHub names one. The journey states nothing of that, so it holds.
   - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-013-build-and-land-next-task.md
     read:
       - 20261102T131450Z-cd4d7951.yaml
@@ -619,4 +619,4 @@ answers:
     revalidated:
       at: 2026-11-15T00:49:49Z
       outcome: unchanged
-      unchanged-because: It needs from UC-060 only Tasks a developer filed, each with its workstream. UC-060's change rewords only whose membership its entry check judges, the account the command runs as, which the journey states nothing of, so it holds.
+      unchanged-because: It needs from UC-060 only Tasks a developer filed, each with its workstream. UC-060's change rewords only whose membership its entry check judges, whoever runs the command, which is the user's account the command runs as wherever GitHub names one. The journey states nothing of that, so it holds.
