@@ -9,6 +9,12 @@ of that text, never the text.
   changed word, case or mark changes it. Where the text is a takeaway it is the brief's own;
   where a lead or a title, it is the content's field of the language, named by its key path
   from the page, or from the content's top where the piece is one page.
+- **Where a page is.** The piece's top component declares where its pages lie
+  (`briefs.pages_of`), and is read as the check reads it, under the piece's lock
+  (`checks.top_of`). Where the piece has no lock yet, it is read under the versions the
+  piece's first render would lock (`libraries.move_lock`, DEC-003 point 8). So a draft is
+  digested as the designer writes it, before that render (DEC-042 point 7), and what that
+  render's search refuses, such as a pinned draft with no lock, refuses the draft.
 - **What the record tells.** A text *matches* the digest recorded for its page, kind and
   language, *differs* from it, or has *no entry*. Only a match leaves the text the
   designer's; a text that differs, or that the record lists nothing for, is the asker's.
@@ -23,7 +29,7 @@ import unicodedata
 from collections.abc import Mapping
 from typing import Any
 
-from _lib import briefs, layout
+from _lib import briefs, checks, layout, libraries, names
 from _lib import pipeline as pl
 
 #: The kinds of text a draft is of, and the brief's field a part keeps its entries in.
@@ -88,10 +94,26 @@ def asker_owns(found: str) -> bool:
     return found != MATCHES
 
 
+def top_of(piece: pl.Piece) -> Mapping[str, Any] | None:
+    """The data of the piece's top component, which declares where its pages lie: read under
+    the piece's lock, or, where it has none yet, under the versions its first render would
+    lock. None where it cannot be read. Raises DraftRefused where the search for those
+    versions refuses."""
+    if piece.lock or piece.top.partition("/")[0] == names.PIECE:
+        return checks.top_of(piece)
+    held = libraries.Held(piece.root, piece.location)
+    try:
+        first = libraries.move_lock(held, pl.needed(piece), pinned=piece.pinned)
+    except libraries.LockRefused as exc:
+        raise DraftRefused(
+            f"the piece has no lock yet to find its pages by, and no first one is found: {exc}"
+        ) from exc
+    return checks.top_of(piece, first.lock)
+
+
 def text_of(
     piece: pl.Piece,
     brief: Mapping[str, Any] | None,
-    top: Mapping[str, Any] | None,
     page: str | None,
     kind: str,
     language: str,
@@ -99,7 +121,8 @@ def text_of(
 ) -> str:
     """The text of the draft: the takeaway the brief's part holds, or the field of the
     content in `language` that the key path `at` names from the page, or from the content's
-    top where `page` is None. Raises DraftRefused where it names no text."""
+    top where `page` is None, the page found through the top (`top_of`). Raises DraftRefused
+    where it names no text."""
     if kind == TAKEAWAY:
         held = part_of(brief, page).get(TAKEAWAY)
         if not isinstance(held, str):
@@ -112,6 +135,7 @@ def text_of(
         raise DraftRefused(f"the piece has no content in `{language}`")
     start: Any = content
     if page is not None:
+        top = top_of(piece)
         pages = briefs.pages_of(top, content) if top is not None else None
         if pages is None or page not in pages:
             raise DraftRefused(f"the content in `{language}` holds no page `{page}`")

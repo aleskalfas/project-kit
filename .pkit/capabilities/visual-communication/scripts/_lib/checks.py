@@ -1795,11 +1795,12 @@ def brief_findings(piece: pl.Piece) -> list[Finding]:
     return briefs.findings(piece, top_of(piece))
 
 
-def top_of(piece: pl.Piece) -> Mapping[str, Any] | None:
+def top_of(piece: pl.Piece, lock: Mapping[str, str] | None = None) -> Mapping[str, Any] | None:
     """The data of the piece's top component, read as the check of ids reads a component,
-    or None where it cannot be read."""
+    under `lock`, or under the piece's own lock where it is None; None where it cannot be
+    read."""
     try:
-        return _Locked(piece).component(piece.top)
+        return _Locked(piece, lock).component(piece.top)
     except KeyError:
         return None
 
@@ -1834,10 +1835,12 @@ class _Locked:
     """The components a piece's lock names, and its own, read before its lock is checked:
     what the check of ids needs to know which lists of the content hold runs. A component
     that a use, the lock or its file does not lead to, or that cannot be read as a
-    mapping, is none, and the lock's check and the scene report why."""
+    mapping, is none, and the lock's check and the scene report why. `lock` stands in for
+    the piece's own, where given."""
 
-    def __init__(self, piece: pl.Piece) -> None:
+    def __init__(self, piece: pl.Piece, lock: Mapping[str, str] | None = None) -> None:
         self.piece = piece
+        self.lock = piece.lock if lock is None else lock
         self.read: dict[str, Mapping[str, Any] | None] = {}
 
     def component(self, use: str) -> Mapping[str, Any]:
@@ -1858,7 +1861,7 @@ class _Locked:
             path = piece.folder / pl.COMPONENTS / f"{name}.yaml"
         else:
             try:
-                version = Version.parse(piece.lock.get(library))
+                version = Version.parse(self.lock.get(library))
             except ValueError:
                 return None
             folder = piece.root / piece.location / FOLDER / library / str(version)

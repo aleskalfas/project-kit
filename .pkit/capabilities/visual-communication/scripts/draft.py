@@ -14,8 +14,10 @@ still matches the digest the brief records (DEC-042 point 7, DEC-029 points 3 an
 It reads the text from the piece, so no one hashes text by hand: a takeaway from the
 brief's part, a lead or a title from the content in the language, at the key path `--at`
 names from the page (from the content's top without `--page`, for a piece of one page).
-The digest is over the text normalised as `_lib/drafts.py` says: Unicode form C, each run
-of white space one space, the ends trimmed.
+It finds the page under the piece's lock, or, before the piece's first render, under the
+versions that render would lock, so a draft is digested as it is written. The digest is
+over the text normalised as `_lib/drafts.py` says: Unicode form C, each run of white space
+one space, the ends trimmed.
 
 Without `--check` it prints the entry for the part's `drafts`, for whoever designs the
 piece to write, and writes nothing, since no command changes what a brief says. With
@@ -30,7 +32,8 @@ Usage:
 
 Exit codes:
   0  the entry printed, or `--check` found the text a match, the designer's
-  1  refused: the piece, its brief or the text asked for cannot be read
+  1  refused: the piece, its brief or the text asked for cannot be read, or, before the
+     first render, the versions that render would lock cannot be found
   3  `--check` found the text the asker's: it differs from its entry, or has none
 """
 
@@ -43,7 +46,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import briefs, checks, drafts, location
+from _lib import briefs, drafts, location
 from _lib import pipeline as pl
 from _lib.files import FileError
 from _lib.reading import ReadError
@@ -71,9 +74,7 @@ def main() -> int:
             raise pl.Refused(f"the project holds no visual work, so no piece `{args.piece}`")
         piece = pl.read_piece(root, found.path, args.piece)
         brief = briefs.read(piece)
-        text = drafts.text_of(
-            piece, brief, checks.top_of(piece), args.page, args.kind, args.language, args.at
-        )
+        text = drafts.text_of(piece, brief, args.page, args.kind, args.language, args.at)
     except (
         pl.Refused,
         drafts.DraftRefused,

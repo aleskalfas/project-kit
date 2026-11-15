@@ -8,7 +8,10 @@ Held here:
 - **the schema**: an entry holds a kind, a language and a digest, and refuses a text;
 - **whose a text is**: a text that matches its recorded digest is the designer's, and one
   that differs from it, or that the record lists nothing for, is the asker's;
-- **the command writes nothing**: no command changes what a brief says (DEC-029 point 4).
+- **the command writes nothing**: no command changes what a brief says (DEC-029 point 4);
+- **a page before the first render**: a piece with no lock yet finds its page under the
+  versions its first render would lock, so a draft is digested as it is written (DEC-042
+  point 7), and what that render's search refuses refuses the draft.
 
 The commands run in the test's own process (`tests/in_process.py`).
 """
@@ -27,10 +30,11 @@ from tests.test_visual_communication_checks import deck_project
 from tests.test_visual_communication_pipeline import PIECE, PIECE_FOLDER
 from tests.visual_communication_project import bound, importable, write, yaml_text
 
-drafts, files, seam, svg, draft = load(
+drafts, files, reading, seam, svg, draft = load(
     "visual-communication",
     "drafts",
     "files",
+    "reading",
     "plugins.seam",
     "plugins.svg",
     "draft.py",
@@ -51,6 +55,18 @@ def plugins(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 def brief_with(root: Path, **pages: Any) -> Path:
     return write(root / BRIEF, yaml_text(bound("brief", pages=pages)))
+
+
+def with_piece_fields(root: Path, **fields: Any) -> None:
+    """The piece's `piece.yaml` with each of `fields` set, or taken out where it is None."""
+    path = root / PIECE_FOLDER / "piece.yaml"
+    data = dict(reading.read_yaml(path))
+    for key, value in fields.items():
+        if value is None:
+            data.pop(key, None)
+        else:
+            data[key] = value
+    write(path, yaml_text(data))
 
 
 def run(root: Path, *args: str) -> Any:
@@ -165,6 +181,29 @@ def test_a_takeaway_is_read_from_the_brief_and_its_change_is_the_askers(tmp_path
 
     brief_with(root, cover={"takeaway": "Another point.", "drafts": [recorded(said, "takeaway")]})
     assert run(root, *TAKEAWAY, "--check").returncode == 3
+
+
+def test_a_piece_with_no_lock_yet_finds_its_page_as_its_first_render_would(
+    tmp_path: Path,
+) -> None:
+    root = deck_project(tmp_path)
+    locked = run(root, *TITLE)
+    with_piece_fields(root, lock=None)
+
+    done = run(root, *TITLE)
+
+    assert done.returncode == 0, done.stderr
+    assert done.stdout == locked.stdout
+
+
+def test_a_pinned_draft_with_no_lock_is_refused_as_its_render_is(tmp_path: Path) -> None:
+    root = deck_project(tmp_path)
+    with_piece_fields(root, lock=None, pinned=True)
+
+    done = run(root, *TITLE)
+
+    assert done.returncode == 1
+    assert "unpin it for its first render" in done.stderr
 
 
 def test_a_draft_is_refused_where_the_text_cannot_be_found(tmp_path: Path) -> None:
