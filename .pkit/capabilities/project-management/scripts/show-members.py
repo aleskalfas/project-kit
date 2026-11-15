@@ -37,7 +37,11 @@ from _lib import bootstrap_gate
 from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
+    FROM_SERVICE,
+    FROM_VARIABLE,
+    INVOKER_VARIABLE,
     MEMBERS_RELATIVE,
+    Identity,
     check_membership,
     format_unresolved,
     members_path,
@@ -89,7 +93,7 @@ def main() -> int:
     print(f"mode:         {result.mode}")
     print(f"invoker:      {invoker.label()}")
     if invoker.github_login:
-        print(f"  github_login: {invoker.github_login}")
+        print(f"  github_login: {invoker.github_login}{_whence(invoker)}")
     else:
         print(f"  github_login: none: {format_unresolved(invoker.unresolved_cause)}")
     if invoker.email:
@@ -119,6 +123,20 @@ def main() -> int:
             print(line)
 
     return 0
+
+
+def _whence(invoker: Identity) -> str:
+    """Where the invoker's login came from, in brackets: GitHub's answer for
+    the credential, or `PM_INVOKER_LOGIN` and why GitHub named no user's
+    account (DEC-021)."""
+    source = getattr(invoker, "login_source", None)
+    if source == FROM_SERVICE:
+        return " (GitHub's answer for the credential)"
+    if source == FROM_VARIABLE:
+        cause = getattr(invoker, "service_cause", None)
+        since = f", since {cause}" if cause else ""
+        return f" (from {INVOKER_VARIABLE}{since})"
+    return ""
 
 
 def _read_members(file_path: Path) -> list[dict]:

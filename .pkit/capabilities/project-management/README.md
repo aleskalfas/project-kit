@@ -2056,6 +2056,31 @@ Bootstrap is **self-add by the first member while open mode applies**. From the 
 
 This refines [project-management:DEC-008-pm-and-implementer-roles] — the PM / Implementer role distinction continues to apply *within* the membership; the gate is what restricts entry.
 
+### Who runs a command
+
+A command resolves the invoker's identity before its gate, in this order ([project-management:DEC-021-team-membership-gate], "Identity resolution"):
+
+1. **GitHub is asked first,** whether or not `PM_INVOKER_LOGIN` is set: `gh api user`, on the host `gh.host` names, for the login and the type of the account the credential acts as. Where the type is `User`, that login alone is the invoker. An answer of another type, such as an app's `Bot`, an answer with one field or none, a refusal, a timeout and a missing `gh` all name no user's account. GitHub refuses `/user` to an app installation's token and to a workflow's token, so such a credential names none.
+2. **`PM_INVOKER_LOGIN` names the invoker** only where GitHub names no user's account. Beside a user's account GitHub answered, the variable is no identity: a command ignores it, and warns once, on standard error, where it names another account.
+3. **Otherwise the login is unresolved,** and a command that needs it says that pkit cannot tell which account is acting, and why.
+
+Git's `user.email` is read in every case. At a closed gate it counts only where GitHub names no user's account, and then a match of the login or of the email on any entry passes. Where GitHub answers with a user's account, only an entry whose `github_login` names that account passes, without regard to case, since GitHub looks an account's name up so. The refusal then names what did not count: a `PM_INVOKER_LOGIN` that names a member, and an entry git's email matches. `show-members` says where the login came from: GitHub's answer, or the variable and why GitHub named no user's account.
+
+**An entry names a user's login as GitHub spells it.** `add-member` looks up each login an entry would take that GitHub did not answer for the credential: `--github-login`, a login typed at its prompt, and, under `--me`, the variable's login. It writes GitHub's spelling of a user's login, and refuses a login GitHub knows no account by, with exit 2. It writes the login of another type of account as typed, and where GitHub gives no answer, it writes the login as typed, with a warning. It refuses a login already listed in another case. `add-member --me` takes the email from git's `user.email`, and shows it before the write, and `added_by` is the invoker's login.
+
+**One request per process.** A command asks GitHub once for each host, and the commands it loads in its own process take the same answer, as `land-work` loads `done-work` and `review-pr`. Each command it starts as a process of its own asks again: `move-issue` under `start-work`, `review-work`, `close-issue`, `promote-issue` and `done-work`; `close-issue` under `done-work`; `start-work` under `next-task`; and `edit-issue` under `close-milestone`, once for each issue it rolls forward. Each request waits at most `GH_USER_TIMEOUT`, 10 seconds, and counts against GitHub's limits on requests. A fault between a parent's request and a child's can leave the two on different accounts.
+
+**Every reader of the identity takes the same login.** Each caller of `resolve_invoker_identity` reads it: the 51 commands that call it, and `_lib/comment.py`, `_lib/criterion_cli.py` and `_lib/head_programs.py`, for the commands that comment, tick a criterion and name a head. What each reads it for:
+
+- **The gate.** Every caller but `_lib/head_programs.py` checks membership with it.
+- **Whose work it is.** `create-issue`'s default assignee, `assign-issue --me`, the Task assignees `start-work` compares with it and the assignee it writes, the Tasks `next-task` offers, which leave out one assigned to another account, and the author `review-work` leaves out of the reviewers it asks for by role.
+- **Claims and seats.** The account a clone's claims are made and released under, in `create-issue`, `edit-issue`, `move-issue`, `promote-issue`, `start-work`, `review-work`, `close-issue` and `done-work`; the seat `next-task` takes work for, and the seat a comment is posted from; the holder `take-seat` and `release-seat` act for; and the seat `seats` lists as this clone's.
+- **The engine's actor.** The actor `move-issue` and `close-issue` hand the lifecycle's gates.
+- **Audit comments.** The account that authorised a bypass, an override or a forced step, in the audit comments of `move-issue`, `done-work`, `merge-pr` and `review-work`, in the one an instance-ownership bypass posts, and in the word a person leaves on a head. Git's email stands beside the login there.
+- **The member list.** `add-member --me`, an entry's `added_by` and a bootstrap's first member, and `remove-member --me`.
+
+So under a credential that acts as a user's account kept for a workflow, `start-work` assigns new work to that account, and refuses a Task assigned to the person the agent works for, as assigned to someone else.
+
 ## Citing this capability's decisions
 
 Inside this capability's own content (and from any other kit-shipped or adopter content referencing the discipline), cite decisions by their filename stem: `[project-management:DEC-001-distillation-lineage]`. The validator (`pkit refs validate`) walks capability subtrees and resolves these citations.

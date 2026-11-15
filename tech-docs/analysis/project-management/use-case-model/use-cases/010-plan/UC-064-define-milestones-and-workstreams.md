@@ -40,12 +40,16 @@ pkit:
         - .pkit/capabilities/project-management/scripts/remove-workstream.py
         - .pkit/capabilities/project-management/scripts/_lib/workstreams.py
         - .pkit/capabilities/project-management/scripts/_lib/workstream_sync.py
+        - .pkit/capabilities/project-management/scripts/_lib/membership.py
+        - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
         - .pkit/capabilities/project-management/schemas/time-containers.yaml
         - .pkit/capabilities/project-management/schemas/workstreams.schema.json
       record:
         - project-management:DEC-012
         - project-management:DEC-016
         - project-management:DEC-018
+        - project-management:DEC-021
+        - project-management:DEC-003
         - project-management:DEC-046
         - project-management:DEC-051
         - project-management:DEC-061#2
@@ -94,7 +98,7 @@ pkit:
 
 1. The planner declares the [project](../../../../core/glossary.md#term-project--project)'s [Milestone categories](../../../glossary.md#term-milestone-category--milestone-category) in the [capability](../../../../core/glossary.md#term-capability--capability)'s settings. Each has its title format, its default [close trigger](../../../glossary.md#term-close-trigger--close-trigger) and what it means ([DEC-016](../../../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 2. The planner creates a [Milestone](../../../glossary.md#term-milestone--milestone): `pkit pm create-milestone <category> --name "<name>" --due-on <date>`.
-3. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the project's prerequisites, and the planner's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+3. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the project's prerequisites, and that whoever runs the command is a member where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). Wherever GitHub names a user's account the command runs as, that account is whoever runs the command, not the person an agent works for. The system then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 4. The system checks that the category is declared, and builds the title from its format. Where the format holds a number, the system numbers the Milestone after the last of its category (DEC-016).
 
 > [!WARNING]
@@ -119,7 +123,7 @@ pkit:
 - **2a.** The planner passes `--dry-run` to any of these commands. The [system](../../../../core/glossary.md#term-system--system) makes its checks, prints what it would create, edit or move, and writes nothing. The use case ends.
 - **2b.** The planner puts the new [Milestone](../../../glossary.md#term-milestone--milestone) into a [pool](../../../glossary.md#term-pool--pool): `--pool <name>`. The system refuses a pool that the [topology](../../../glossary.md#term-topology--topology) does not declare. It writes the `Pool: <name>` line only with the planner's [consent](../../../../core/glossary.md#term-consent--consent), at the terminal or by `--yes`, logged in the description ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). With no terminal and no `--yes`, it refuses and creates nothing.
 - **2c.** The planner sets or clears an open Milestone's pool: `pkit pm set-pool <M> <pool>`, or `pkit pm set-pool <M> --clear`. The system asks for consent as in variant 2b, and reads the description again right before it writes. It replaces the `Pool:` line, never adds a second, and logs the edit in the description ([DEC-061 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#2-a-milestone-joins-a-pool-by-a-line-in-its-description)).
-- **3a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, the planner is no member, or the operator declines a write in another repository. The system refuses and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)). The use case ends.
+- **3a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, whoever runs the command is no member, or the operator declines a write in another repository. The system refuses and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)). The use case ends.
 - **4a.** The [Milestone category](../../../glossary.md#term-milestone-category--milestone-category) is not declared, or the project declares none. The system refuses, names the declared categories, and creates nothing ([DEC-016](../../../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)). The use case ends.
 - **4b.** A Milestone of that title exists. The system refuses, and asks for `--number` (`create-milestone.py`). The use case ends.
 - **6a.** This command, or a command of 7b to 7e, runs with no terminal and no `--yes`, so nobody can give consent. The system refuses, names the command to run with `--yes`, and writes nothing (`add-workstream.py`). The use case ends.

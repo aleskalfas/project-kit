@@ -1598,10 +1598,11 @@ def _filing_onto_board(
 
 
 def _gh_calls(ran: list[list[str]]) -> list[list[str]]:
-    """The `gh` calls among the commands run: before the refusal only the reads
-    of who is filing run, none of them `gh`, so nothing is written there and no
-    board is read."""
-    return [argv for argv in ran if argv[:1] == ["gh"]]
+    """The `gh` calls among the commands run, but for the read of who is filing:
+    before the refusal only the reads of who is filing run, and the one of them
+    that is `gh`, `gh api user`, asks which account the credential acts as
+    (DEC-021), so nothing is written there and no board is read."""
+    return [argv for argv in ran if argv[:1] == ["gh"] and argv[1:3] != ["api", "user"]]
 
 
 @pytest.mark.parametrize(

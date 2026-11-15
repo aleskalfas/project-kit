@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:459f0396074135bdae4bc862251d5d13957edffebaebe953c73d981d37c99f01 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:e5fd00f46f2c1f40429b93013f8743e6eaf19fe9f29b18c91b1856d32a1b1f87 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -151,7 +151,7 @@ Each view of the domain model explains a group of related concepts:
 ### Requirements in no area
 
 - [REQ-040 · Constraint · project-management works on GitHub alone, through an authenticated gh](../requirements/constraints/REQ-040-github-and-gh.md)
-- [REQ-041 · Functional · A command that writes checks the project's prerequisites and the person's membership first](../requirements/functional/REQ-041-gates-before-writing.md)
+- [REQ-041 · Functional · A command that writes first checks the project's prerequisites and the membership of whoever runs it](../requirements/functional/REQ-041-gates-before-writing.md)
 - [REQ-042 · Functional · A move a person holds, asked for directly, is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
 
 ### Journeys
