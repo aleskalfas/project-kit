@@ -12,10 +12,11 @@
 (DEC-042 point 4).
 
 It prints the goals, relations and takeaways of the piece and of each page its brief speaks
-of, and none of the reasons. The review grades each page against them, and reads the brief's
-file only once its grades are written. A part that states none is named as stating none.
+of, and none of the reasons. DEC-042 point 4 has the review grade each page against them, and
+read the brief's file only once its grades are written. A part that states none is named as
+stating none.
 
-It only reads the brief, and needs no lock, no drawing and no network.
+It reads the piece's `piece.yaml` and its brief, and needs no lock, no drawing and no network.
 
 Usage:
   pkit visual intent <piece>          the intent, in words

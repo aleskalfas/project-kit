@@ -403,9 +403,9 @@ Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 
 Prints what a piece's brief hands the review first: the intent, without the reasons ([visual-communication:DEC-042-grades-bar-and-loop] point 4).
 
-- **Prints** the goals, relations and takeaways of the piece's part and of each page's part, in the order the brief gives them. A relation is printed with the parts of the content it relates. A part that states none is named as stating none. `--json` prints it as one document.
-- **Leaves out** every reason, and each aspect and principle a reason holds. The review grades each page against what this prints, and reads the brief's file only once its grades are written.
-- **Reads** the brief alone: no lock, no drawing, no content. A piece with no brief, or whose brief cannot be read, is said to keep none.
+- **Prints** the goals, relations and takeaways of the piece's part and of each page's part, in the order the brief gives them ([The brief](files.md#the-brief)). A relation is printed with the parts of the content it relates. A part that states none is named as stating none. `--json` prints it as one document.
+- **Leaves out** every reason, and each aspect and principle a reason holds ([The brief](files.md#the-brief)).
+- **Reads** the piece's `piece.yaml` and its brief: no lock, no drawing, no content. A piece with no brief, or whose brief cannot be read, is said to keep none.
 - **Writes** nothing.
 - **Exits** 0 when it printed; 1 when the project holds no visual work, the piece is not in the location or its `piece.yaml` cannot be read, or the configuration cannot be read ([Commands](#commands)).
 
