@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/visual-communication/package.yaml
+        - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
         - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/export.py
@@ -56,6 +57,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/values.schema.json
         - .pkit/capabilities/visual-communication/schemas/values-2.schema.json
+        - .pkit/capabilities/visual-communication/schemas/review.schema.json
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
       record:
         - visual-communication:DEC-001#2
@@ -155,6 +157,8 @@ pkit:
         - visual-communication:DEC-039#3
         - visual-communication:DEC-039#4
         - visual-communication:DEC-039#5
+        - visual-communication:DEC-042#4
+        - visual-communication:DEC-042#6
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -172,9 +176,11 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#pieceyaml
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#shapes
+        - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-browser
+        - .pkit/cli/README.md#validate
       source:
         - html-page-print-runs
 ---
@@ -975,3 +981,14 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 - **A folder of its own.** Never fetch them into `look/`, where a look replaces its renderer's folder ([What a run writes](#what-a-run-writes)). Read the fetched folder as a look's folder, `report.json` first.
 - **The hosts it reaches.** In a session's sandbox, each host the fetch needs is the project's own allowance to add. The capability declares none.
 - **A run the permission model confines,** such as a builder's, reaches no such host. Only the SVG renderer's pages remain in it.
+
+### Where the review's reports are kept
+
+[The reviewer](README.md#the-reviewer) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> writes a report for each round. The reviewer writes no file: it replies with the report, and whoever dispatched it keeps the report as it was written, in two files (DEC-042 points 4 and 6).
+
+- **Where.** Both lie in `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/`, named by the round's number `<n>`, from 1. That folder lies in the clone's local folder, as the look's images do ([The clone's local folder](files.md#the-clones-local-folder); DEC-015 point 4), so no file of it is committed.
+- **The whole report,** `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/round-<n>.md`. A later round's review reads it only once it has written its grades, and where the loop hands a round to the person, that round's report goes with it.
+- **The document alone,** `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/round-<n>.yaml`: the report's fenced YAML document and nothing else, so that it reads as one instance of `visual-communication:review`.
+- **Kept as written.** Nobody summarises, filters or answers either file before it is kept.
+- **Not validated.** `pkit validate` checks no kept file, though each document names its schema ([The binding](files.md#the-binding)).
+- **One folder for each piece,** which a later round adds to and no run replaces. A look replaces its own folder and leaves this one.
