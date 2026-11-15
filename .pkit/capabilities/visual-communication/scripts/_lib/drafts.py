@@ -8,7 +8,13 @@ of that text, never the text.
   space, then the ends trimmed. So a reflowed or re-indented text keeps its digest, and a
   changed word, case or mark changes it. Where the text is a takeaway it is the brief's own;
   where a lead or a title, it is the content's field of the language, named by its key path
-  from the page, or from the content's top where the piece is one page.
+  from the page, or, on a piece whose top is a page alone, from the content's top.
+- **Which part an entry lies in.** An entry lies in its page's part, or in the part for the
+  whole piece on a piece whose top is a page alone, such as a figure (DEC-029 point 3). So
+  a lead, a title or a takeaway named by no page is the whole piece's only on such a piece.
+  On a piece whose top holds pages, such as a deck or a site, even of one page, it is
+  refused, never read as the whole piece's, and so it is where the piece's top cannot be
+  read, since whether it holds pages cannot then be told.
 - **Where a page is.** The piece's top component declares where its pages lie
   (`briefs.pages_of`), and is read as the check reads it, under the piece's lock
   (`checks.top_of`). Where the piece has no lock yet, it is read under the versions the
@@ -111,6 +117,39 @@ def top_of(piece: pl.Piece) -> Mapping[str, Any] | None:
     return checks.top_of(piece, first.lock)
 
 
+def holds_pages(top: Mapping[str, Any]) -> bool:
+    """Whether the top `top` holds pages, as a deck's or a site's does, even of one page: its
+    layouts are its pages' forms, or a slot of one of its layouts holds pages (DEC-010 point
+    5). A top that holds none, such as a figure, is a page alone (DEC-005 point 5)."""
+    if layout.page_forms(top) is not None:
+        return True
+    layouts = top.get("layouts")
+    return isinstance(layouts, Mapping) and any(
+        isinstance(slot, Mapping) and slot.get("pages") is True
+        for decl in layouts.values()
+        if isinstance(decl, Mapping) and isinstance(decl.get("slots"), Mapping)
+        for slot in decl["slots"].values()
+    )
+
+
+def whole_piece(piece: pl.Piece, kind: str) -> None:
+    """Refuses a draft of `kind` named by no page, and so the whole piece's, where the
+    piece's top is not a page alone: where it holds pages, even of one page, since each
+    entry of such a piece lies in its page's part (DEC-029 point 3), or where it cannot be
+    read, so whether it holds pages cannot be told. Raises DraftRefused."""
+    top = top_of(piece)
+    if top is None:
+        raise DraftRefused(
+            "the piece's top cannot be read, so whether it holds pages cannot be told: "
+            "`pkit visual check` says why"
+        )
+    if holds_pages(top):
+        raise DraftRefused(
+            f"a {kind} of a piece whose top holds pages, such as a deck or a site, even of "
+            "one page, lies in its page's part: name its page with `--page <id>`"
+        )
+
+
 def text_of(
     piece: pl.Piece,
     brief: Mapping[str, Any] | None,
@@ -120,9 +159,12 @@ def text_of(
     at: str | None,
 ) -> str:
     """The text of the draft: the takeaway the brief's part holds, or the field of the
-    content in `language` that the key path `at` names from the page, or from the content's
-    top where `page` is None, the page found through the top (`top_of`). Raises DraftRefused
-    where it names no text."""
+    content in `language` that the key path `at` names from the page, the page found through
+    the top (`top_of`), or from the content's top where `page` is None. Raises DraftRefused
+    where it names no text, and where `page` is None on a piece whose top is not a page
+    alone (`whole_piece`)."""
+    if page is None:
+        whole_piece(piece, kind)
     if kind == TAKEAWAY:
         held = part_of(brief, page).get(TAKEAWAY)
         if not isinstance(held, str):
