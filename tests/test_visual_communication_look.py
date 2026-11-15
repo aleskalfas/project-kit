@@ -792,13 +792,19 @@ def test_the_groups_the_renderer_writes_hold_a_move_and_marks_alone(tmp_path: Pa
 
 # --- what a graze and a háček lose (DEC-045 point 1) -------------------------------------------
 
-FLOOR = 10
 CONTROL = 40
-SCALES = (0.5, 0.8167, 1.225, 2.0)
-#: The ems, in image pixels, the probe drew both a háček and a graze at (DEC-045).
-EMS = (10, 12, 16, 24, 30, 40)
-#: The ems below the one where a graze's smallest row costs less than the sliver.
-ROW_COSTS_A_HACEK = (10, 12, 16, 24)
+#: The scales the probes drew at: DEC-037's four, and 0.8167, at which a 1920 by 1080 page is
+#: drawn 1568 pixels wide (DEC-015 point 5).
+SCALES = (0.5, 0.8167, 1.0, 1.225, 2.0)
+#: The ems, in image pixels, the probes' table gives a háček and a graze at (DEC-045).
+EMS = (10, 12, 16, 20, 24, 30, 35, 40)
+#: Ems at which a háček loses two pixels at some scale, fewer than the sliver's area of the em
+#: squared: 2.1, 2.3 and 2.6 pixels.
+TWO_PIXEL_HACEK = (13, 13.7, 14.3)
+#: The ems at which a graze's least row holds the sliver's whole pixels at every scale.
+ROW_HOLDS_THE_SLIVER = (10, 12, 16, 24)
+#: The em, in image pixels, of 24 px text on a 1920 page drawn at 0.8167 (DEC-015 point 5).
+DECK_TEXT = 19.6
 
 
 def háček_at(tmp_path: Path, em: float, scale: float) -> list[tuple[str, float]]:
@@ -819,10 +825,11 @@ def háček_at(tmp_path: Path, em: float, scale: float) -> list[tuple[str, float
 
 def graze_rows(
     tmp_path: Path, em: float, scale: float, monkeypatch: pytest.MonkeyPatch
-) -> tuple[Callable[[int], list[str]], dict[int, float]]:
+) -> tuple[Callable[[int], list[str]], dict[int, int], int]:
     """A later box whose top edge steps by half an image pixel across the foot of the
     descenders of "Typography gypsy" set `em` image pixels high: what each step hides of the
-    text with nothing unnamed, as a share of its ink, and the causes a step names as it is."""
+    text with nothing unnamed, in image pixels, the causes a step names as it is, and the fewest
+    pixels the read names at the text's em as it reads it."""
 
     def edge(step: int) -> Callable[[float, float], dict[str, Any]]:
         return lambda base, size: {
@@ -832,42 +839,65 @@ def graze_rows(
             "height": 0.5 * size + 10,
         }
 
+    read: list[Any] = []
+    strong = viewing_tool._Page._strong
+
+    def kept(page: Any, *args: Any) -> Any:
+        read.append(strong(page, *args))
+        return read[-1]
+
+    hides: dict[int, int] = {}
     with monkeypatch.context() as unbound:
         unbound.setattr(viewing_tool, "SLIVER", 0.0)
-        unbound.setattr(viewing_tool, "FEWEST", 0.0)
-        hides = {
-            step: sum(
-                share
-                for why, share in set_at(tmp_path, "Typography gypsy", em, scale, edge(step))
-                if why == viewing_tool.COVERED
-            )
-            for step in range(-6, 7)
-        }
+        unbound.setattr(viewing_tool, "FEWEST", 0)
+        unbound.setattr(viewing_tool._Page, "_strong", kept)
+        for step in range(-6, 7):
+            found = set_at(tmp_path, "Typography gypsy", em, scale, edge(step))
+            share = sum(share for why, share in found if why == viewing_tool.COVERED)
+            hides[step] = round(share * read[-1].found)
 
     def named(step: int) -> list[str]:
         return [why for why, _ in set_at(tmp_path, "Typography gypsy", em, scale, edge(step))]
 
-    return named, hides
+    return named, hides, viewing_tool._least(read[-1].em)
 
 
-@pytest.mark.parametrize("em", EMS)
+def least_graze(hides: Mapping[int, int]) -> tuple[int, int]:
+    """The step that hides the fewest pixels of any that hide some, and how many."""
+    fewest = min(hidden for hidden in hides.values() if hidden)
+    return next(step for step, hidden in hides.items() if hidden == fewest), fewest
+
+
+@pytest.mark.parametrize(
+    ("em", "fewest"), ((10, 2), (12, 2), (13, 2), (14.3, 2), (18, 4), (19.6, 4), (20, 5), (40, 20))
+)
+def test_the_sliver_is_counted_in_the_whole_pixels_it_holds_and_never_under_two(
+    em: float, fewest: int
+) -> None:
+    """0.0125 of the em squared, rounded down to whole pixels, and two at the least (DEC-045
+    point 1). Rounded up, a háček's two pixels at an em of 12.7 to 14.3 would fall under it."""
+    assert viewing_tool._least(em) == fewest
+
+
+@pytest.mark.parametrize("em", (*EMS, *TWO_PIXEL_HACEK))
 @pytest.mark.parametrize("scale", SCALES)
 def test_a_háček_under_a_box_is_named_at_every_em_and_scale(
     tmp_path: Path, em: float, scale: float
 ) -> None:
-    """The háček loses at least 0.0139 of the em squared at any em from the floor to 40, over
-    the sliver."""
+    """The háček loses two pixels or more at any em from the floor to 40, but for one pixel at an
+    em of 10.2 to 10.7, and so is named. At an em of 12.7 to 14.3 its two pixels are 0.0098 to
+    0.0124 of the em squared, under the sliver's area but not under its whole pixels."""
     assert [why for why, _ in háček_at(tmp_path, em, scale)] == [viewing_tool.COVERED]
 
 
-@pytest.mark.parametrize("scale", (0.5, 1.225))
+@pytest.mark.parametrize("scale", SCALES)
 def test_a_box_edge_grazing_the_descenders_foot_of_the_control_is_named_at_no_scale(
     tmp_path: Path, scale: float, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The control is a text of descenders set at 40 image pixels, a later box whose top edge
     steps across their foot. resvg hides whole rows, so the box hides the last row, then more:
     the last row is a graze and stays unnamed, and the row above it is named."""
-    named, hides = graze_rows(tmp_path, CONTROL, scale, monkeypatch)
+    named, hides, _ = graze_rows(tmp_path, CONTROL, scale, monkeypatch)
     levels = sorted({hidden for hidden in hides.values() if hidden})
     graze, more = levels[0], levels[1]
     for step, hidden in hides.items():
@@ -877,19 +907,48 @@ def test_a_box_edge_grazing_the_descenders_foot_of_the_control_is_named_at_no_sc
             assert named(step) == [viewing_tool.COVERED], step
 
 
-@pytest.mark.parametrize("scale", (0.5, 0.8167))
-@pytest.mark.parametrize("em", ROW_COSTS_A_HACEK)
-def test_a_graze_below_the_em_a_row_costs_less_than_the_sliver_is_named(
+@pytest.mark.parametrize("scale", SCALES)
+@pytest.mark.parametrize("em", ROW_HOLDS_THE_SLIVER)
+def test_a_graze_whose_least_row_holds_the_sliver_at_every_scale_is_named(
     tmp_path: Path, em: float, scale: float, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Below an em of about 20 image pixels a single row of the descenders' foot hides 0.0156
-    to 0.13 of the em squared, as much as a háček and over the sliver, so the smallest graze is
-    named there. This is the rule DEC-045 states: a graze is spared only where its row is thin,
-    seen from an em of 20, and never where a row costs a háček's worth."""
-    named, hides = graze_rows(tmp_path, em, scale, monkeypatch)
-    smallest = min(hidden for hidden in hides.values() if hidden)
-    step = next(step for step, hidden in hides.items() if hidden == smallest)
+    """At these ems a single row of the descenders' foot hides 0.0156 to 0.13 of the em squared
+    at every scale, as much as a háček and over the sliver, so the smallest graze is named."""
+    named, hides, least = graze_rows(tmp_path, em, scale, monkeypatch)
+    step, fewest = least_graze(hides)
+    assert fewest >= least
     assert named(step) == [viewing_tool.COVERED]
+
+
+@pytest.mark.parametrize("scale", SCALES)
+def test_a_descenders_foot_a_box_touches_in_24_px_text_on_a_1920_page_is_named_at_every_scale(
+    tmp_path: Path, scale: float, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """24 px text on a 1920 page drawn at 0.8167 is set at an em of 19.6 image pixels. There
+    the least row of the descenders' foot holds 17 to 20 pixels at each scale, over the sliver's
+    4, so the least graze is named (DEC-045 point 1)."""
+    named, hides, least = graze_rows(tmp_path, DECK_TEXT, scale, monkeypatch)
+    step, fewest = least_graze(hides)
+    assert fewest >= least
+    assert named(step) == [viewing_tool.COVERED]
+
+
+def test_at_an_em_of_20_a_graze_is_spared_at_some_scales_and_named_at_others(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """At an em of 20 image pixels the least row of the descenders' foot holds 2 pixels at some
+    scales, under the sliver's 5, and over 20 at others. So whether a graze is named turns on
+    where its last row falls among the pixels, which the em and the scale set, and on no size
+    alone (DEC-045 point 1). At each scale the least graze is named where its row holds the
+    sliver's whole pixels, and spared where it holds fewer."""
+    spared: list[bool] = []
+    for scale in SCALES:
+        named, hides, least = graze_rows(tmp_path, 20, scale, monkeypatch)
+        step, fewest = least_graze(hides)
+        assert named(step) == ([viewing_tool.COVERED] if fewest >= least else []), scale
+        spared.append(fewest < least)
+    assert any(spared)
+    assert not all(spared)
 
 
 # --- what a run draws (DEC-015 point 5) ---------------------------------------------------------

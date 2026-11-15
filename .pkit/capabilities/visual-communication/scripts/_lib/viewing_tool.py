@@ -98,16 +98,15 @@ STRONG = 127
 OPACITIES = ("opacity", "fill-opacity")
 
 #: The least a cut or a cover must lose of a span's strong ink to be named, in the span's em²,
-#: both in image pixels (DEC-045 point 1). It is not DEC-037's number, which resvg's drawing
-#: does not meet: a graze of a box's edge hides whole rows here. It lies under every háček
-#: probed, 0.0139 at the least, and over the thinnest last row of a graze at an em of 20 or
-#: more. Below that a graze's row costs as much as a háček, and is named.
+#: both in image pixels, counted in the whole pixels it holds (DEC-045 point 1, `_least`). It is
+#: not DEC-037's number, which resvg's drawing does not meet: a graze of a box's edge hides
+#: whole rows here. Counted so, it lies under every háček of two pixels or more, and over the
+#: thinnest last row of the control's graze.
 SLIVER = 0.0125
 
-#: The least a cause must hide to be named, whatever the em, in pixels: more than one. On a page
-#: too wide for its smallest text to read, the sliver comes under one pixel, and a single pixel
-#: is noise.
-FEWEST = 1.5
+#: The fewest pixels a cause must hide to be named, whatever the em: two. On a page too wide
+#: for its smallest text to read, the sliver holds fewer, and a single pixel is noise.
+FEWEST = 2
 
 #: A group's attributes that leave a text where its moves put it: the renderer's own marks,
 #: and its move (DEC-045 point 1).
@@ -232,6 +231,14 @@ def draw(
 def _pixels(length: float, scale: float) -> int:
     """How many pixels of an image `length` px take at `scale`, whole."""
     return math.ceil(round(length * scale, 6))
+
+
+def _least(em: float) -> int:
+    """The fewest pixels of a span's strong ink a cause must hide to be named, at the span's em
+    in image pixels: the whole pixels the sliver holds, and never fewer than `FEWEST` (DEC-045
+    point 1). Ink is counted in whole pixels, and a háček's few come a pixel under their share
+    of the em squared at some ems, so the sliver is cut to the whole pixels it holds."""
+    return max(math.floor(round(SLIVER * em**2, 6)), FEWEST)
 
 
 class _Page:
@@ -536,7 +543,7 @@ class _Page:
         band, the span's letters black and then white."""
         if not strong.found:
             return
-        least = max(SLIVER * strong.em**2, FEWEST)
+        least = _least(strong.em)
         if strong.past >= least:
             yield Lost(element, span.text or "", CUT, strong.past / strong.found)
         if len(strong.on_page) < least:
