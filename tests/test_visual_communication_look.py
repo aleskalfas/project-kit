@@ -209,29 +209,73 @@ def tool_at(tmp_path: Path, scale: float, *children: dict[str, Any], **sizes: An
     return viewing_tool.draw(drawn, scale, tmp_path, viewing.line_widths(page))
 
 
-def set_at(
+#: The fills a line's runs take by turns where `set_at` sets more than one: the renderer writes
+#: runs of one look as one span.
+RUN_FILLS = ("ink", "accent")
+
+
+def plant(
     tmp_path: Path,
-    words: str,
+    words: str | Sequence[str],
     em: float,
     scale: float,
     over: Callable[[float, float], dict[str, Any]] | None = None,
-) -> list[tuple[str, float]]:
-    """What the page shows of `words` set `em` image pixels high at `scale`, as the cause and
-    the share of its strong ink each loses. `over` gives the box drawn after the text, from
-    where the text's baseline lies and its font size in px, as the box's fields."""
+    *,
+    moved: tuple[float, float] = (0.0, 0.0),
+) -> Any:
+    """The page of `words` set `em` image pixels high at `scale`, drawn whole. `words` is one
+    run, or a run for each of a sequence, on one line, in ink and accent by turns, so that each
+    is a span of its own. `over` gives the box drawn after the text, from where the text's
+    baseline lies and its font size in px, as the box's fields. `moved` moves the text so many
+    px across and down from where it is set, and leaves the page as it is."""
+    children, sizes = plant_of(words, em, scale, over, moved=moved)
+    return tool_at(tmp_path, scale, *children, **sizes)
+
+
+def baseline_of(size: float) -> float:
+    """Where `plant` sets the baseline of a line whose font is `size` px, in the page's px: 16
+    px below its text's top, and low enough for the line's ascenders."""
+    return max(46.0, 0.85 * size)
+
+
+def plant_of(
+    words: str | Sequence[str],
+    em: float,
+    scale: float,
+    over: Callable[[float, float], dict[str, Any]] | None = None,
+    *,
+    moved: tuple[float, float] = (0.0, 0.0),
+) -> tuple[list[dict[str, Any]], dict[str, float]]:
+    """The elements of the page `plant` draws, in order, and its width and height in px."""
     size = em / scale
-    baseline = max(46.0, 0.85 * size)  # the line's baseline lies 16 px below its text's top
+    baseline = baseline_of(size)
     said = text_element(
         "figure/said",
-        run(words, fill="ink", **{"font-size": size}),
-        y=baseline - 16,
+        *(
+            run(each, fill=RUN_FILLS[at % len(RUN_FILLS)], **{"font-size": size})
+            for at, each in enumerate([words] if isinstance(words, str) else words)
+        ),
+        x=10 + moved[0],
+        y=baseline + moved[1] - 16,
         width=11 * size,
     )
     children = [said]
     if over is not None:
-        children.append(element("box", "figure/over", fill="surface", **over(baseline, size)))
-    drawing = tool_at(tmp_path, scale, *children, width=12 * size, height=baseline + 0.6 * size)
-    return [(each.why, each.share) for each in drawing.lost]
+        box = over(baseline + moved[1], size)
+        children.append(element("box", "figure/over", fill="surface", **box))
+    return children, {"width": 12 * size, "height": baseline + 0.6 * size}
+
+
+def set_at(
+    tmp_path: Path,
+    words: str | Sequence[str],
+    em: float,
+    scale: float,
+    over: Callable[[float, float], dict[str, Any]] | None = None,
+) -> list[tuple[str, float]]:
+    """What the page shows of `words` set `em` image pixels high at `scale`, as `plant` sets
+    them, as the cause and the share of its strong ink each loses."""
+    return [(each.why, each.share) for each in plant(tmp_path, words, em, scale, over).lost]
 
 
 def dropped_of(
@@ -630,18 +674,18 @@ def test_a_span_both_cut_and_covered_gives_two_entries(tmp_path: Path) -> None:
     assert [why for _, _, why, _ in found] == [viewing_tool.CUT, viewing_tool.COVERED]
 
 
-def test_a_graze_under_the_sliver_is_named_neither(tmp_path: Path) -> None:
+def test_a_graze_under_the_threshold_is_named_neither(tmp_path: Path) -> None:
     said = text_element("figure/said", run("Edge", fill="ink"), x=10, y=30)
     over = element("box", "figure/over", x=0, y=0, width=10.3, height=100, fill="surface")
     assert lost_of(tmp_path, said, over) == []
 
 
-def test_a_text_of_double_spaces_keeps_its_ink_where_the_page_puts_it_in_the_bands(
+def test_a_text_of_double_spaces_keeps_its_ink_where_the_page_puts_it_in_the_swaths(
     tmp_path: Path,
 ) -> None:
-    """The bands carry the page's rules, `text{white-space:pre}` among them, so the advance and
-    the spaces of a text in a band are the page's. resvg 0.48 reads that rule in neither, and
-    collapses the spaces alike. Were the bands' ink to lie elsewhere than the page's, the cover
+    """The swaths carry the page's rules, `text{white-space:pre}` among them, so the advance
+    and the spaces of a text in a swath are the page's. resvg 0.48 reads that rule in neither,
+    and collapses the spaces alike. Were the swaths' ink to lie elsewhere than the page's, the cover
     read would find the page's pixels alike in both draws and name the text covered with
     nothing over it."""
     said = text_element("figure/said", run("A   B   C   D", fill="ink"), y=30)
@@ -792,21 +836,22 @@ def test_the_groups_the_renderer_writes_hold_a_move_and_marks_alone(tmp_path: Pa
 
 # --- what a graze and a háček lose (DEC-045 point 1) -------------------------------------------
 
-#: The em, in image pixels, of the control: a text of descenders whose last row a box's edge
-#: grazes, unnamed at every scale (DEC-045 point 1).
-CONTROL = 40
+#: The em, in image pixels, at which a test holds the least graze, a box's edge across the last
+#: row of a text's descenders, unnamed at every scale in Source Sans Pro Regular, and the row
+#: above it named (DEC-045 point 1).
+LEAST_GRAZE_EM = 40
 #: The scales the probes drew at: DEC-037's four, and 0.8167, at which a 1920 by 1080 page is
 #: drawn 1568 pixels wide (DEC-015 point 5). `scripts/visual_svg_reads.py` draws at them too.
 SCALES = (0.5, 0.8167, 1.0, 1.225, 2.0)
 #: The ems, in image pixels, the probes' table gives a háček and a graze at (DEC-045).
 EMS = (10, 12, 16, 20, 24, 30, 35, 40)
-#: Ems at which a háček loses as many pixels as the sliver holds at some scale, or one more:
-#: one pixel at 10.2 and 10.3, two at 12.7 to 14.3, fewer than the sliver's area of the em
-#: squared, and one more than the sliver at 14.5, 16.1, 17.7, 18.3 and 20.3
+#: Ems at which a háček loses as many pixels as the threshold holds at some scale, or one
+#: more: one pixel at 10.2 to 10.7 and two at 14.3, fewer than the threshold's area of the em
+#: squared, and one more than the threshold at 14.4, 14.5, 17.6 and 17.7
 #: (`scripts/visual_svg_reads.py`).
-HACEK_AT_THE_SLIVER = (10.2, 10.3, 12.7, 13, 13.7, 14.3, 14.5, 16.1, 17.7, 18.3, 20.3)
-#: The ems at which a graze's least row holds the sliver's whole pixels at every scale.
-ROW_HOLDS_THE_SLIVER = (10, 12, 16, 24)
+HACEK_AT_THE_THRESHOLD = (10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 14.3, 14.4, 14.5, 17.6, 17.7)
+#: The ems at which a graze's least row holds the threshold's whole pixels at every scale.
+ROW_HOLDS_THE_THRESHOLD = (10, 12, 16, 24)
 #: The em, in image pixels, of 24 px text on a 1920 page drawn at 0.8167 (DEC-015 point 5).
 DECK_TEXT = 19.6
 #: The text whose háček a later box covers, and the text whose descenders' foot a later box's
@@ -835,6 +880,59 @@ def graze_box(step: int, scale: float) -> Callable[[float, float], dict[str, Any
     }
 
 
+def box_over(
+    pixels: Sequence[tuple[int, int]], strong: Any, width: float
+) -> Callable[[float, float], dict[str, Any]]:
+    """A box over `pixels` of `strong`'s swath, a pixel past them on each side, as a plant's
+    `over` gives it, on a page `width` px wide. Beside a dot that stands apart from its
+    neighbour, that pixel is the empty row or column between them."""
+    to_page = width / strong.columns
+    to_swath = 2 * strong.reach / strong.rows
+    rows = [row for row, _ in pixels]
+    columns = [column for _, column in pixels]
+    top = strong.top + (min(rows) - 1) * to_swath
+    left = (min(columns) - 1) * to_page
+    box = {
+        "x": left,
+        "y": top,
+        "width": (max(columns) + 2) * to_page - left,
+        "height": strong.top + (max(rows) + 2) * to_swath - top,
+    }
+    return lambda _baseline, _size: dict(box)
+
+
+def box_into(
+    pixels: Sequence[tuple[int, int]], strong: Any, width: float, side: str, eighths: int
+) -> Callable[[float, float], dict[str, Any]]:
+    """A box over `pixels` as `box_over` lays one, but for its `side` edge, which lies
+    `eighths` eighths of a pixel inside their outermost column or row on that side, as the
+    probe's `partial` steps it (`scripts/visual_svg_reads.py`)."""
+    to_page = width / strong.columns
+    to_swath = 2 * strong.reach / strong.rows
+    rows = [row for row, _ in pixels]
+    columns = [column for _, column in pixels]
+    inside = eighths / 8
+    edges = {
+        "left": (min(columns) - 1) * to_page,
+        "right": (max(columns) + 2) * to_page,
+        "top": strong.top + (min(rows) - 1) * to_swath,
+        "bottom": strong.top + (max(rows) + 2) * to_swath,
+    }
+    edges[side] = {
+        "left": (min(columns) + inside) * to_page,
+        "right": (max(columns) + 1 - inside) * to_page,
+        "top": strong.top + (min(rows) + inside) * to_swath,
+        "bottom": strong.top + (max(rows) + 1 - inside) * to_swath,
+    }[side]
+    box = {
+        "x": edges["left"],
+        "y": edges["top"],
+        "width": edges["right"] - edges["left"],
+        "height": edges["bottom"] - edges["top"],
+    }
+    return lambda _baseline, _size: dict(box)
+
+
 def háček_at(tmp_path: Path, em: float, scale: float) -> list[tuple[str, float]]:
     """The háček of a ž set `em` image pixels high, a later box over it alone."""
     return set_at(tmp_path, HACEK, em, scale, over=háček_box)
@@ -860,7 +958,7 @@ def graze_rows(
 
     hides: dict[int, int] = {}
     with monkeypatch.context() as unbound:
-        unbound.setattr(viewing_tool, "SLIVER", 0.0)
+        unbound.setattr(viewing_tool, "THRESHOLD", 0.0)
         unbound.setattr(viewing_tool, "FEWEST", 0)
         unbound.setattr(viewing_tool._Page, "_strong", kept)
         for step in GRAZE_STEPS:
@@ -884,48 +982,46 @@ def least_graze(hides: Mapping[int, int]) -> tuple[int, int]:
     ("em", "fewest"),
     (
         (5, 1),
+        (9.9, 1),
         (10, 1),
-        (12.6, 1),
-        (12.7, 2),
+        (14.1, 1),
+        (14.2, 2),
         (14.3, 2),
-        (15.4, 2),
-        (15.5, 3),
-        (17.8, 3),
-        (17.9, 4),
-        (19.6, 4),
-        (20, 5),
-        (40, 20),
+        (17.3, 2),
+        (17.4, 3),
+        (19.6, 3),
+        (20, 4),
+        (40, 16),
     ),
 )
-def test_the_sliver_is_counted_in_the_whole_pixels_it_holds_and_never_under_one(
+def test_the_threshold_is_counted_in_the_whole_pixels_it_holds_and_never_under_one(
     em: float, fewest: int
 ) -> None:
-    """0.0125 of the em squared, rounded down to whole pixels, and one at the least (DEC-045
-    point 1). Rounded up, a háček's two pixels at an em of 12.7 to 14.3 would fall under it. At
-    20 and 40 the sliver falls on a whole pixel, and takes it."""
+    """0.01 of the em squared, rounded down to whole pixels, and one at the least (DEC-045
+    point 1). Rounded up, a háček's two pixels at an em of 14.3 would fall under it. At 10, 20
+    and 40 the threshold falls on a whole pixel, and takes it."""
     assert viewing_tool._least(em) == fewest
 
 
-@pytest.mark.parametrize("em", (*EMS, *HACEK_AT_THE_SLIVER))
+@pytest.mark.parametrize("em", (*EMS, *HACEK_AT_THE_THRESHOLD))
 @pytest.mark.parametrize("scale", SCALES)
 def test_a_háček_under_a_box_is_named_at_every_em_and_scale(
     tmp_path: Path, em: float, scale: float
 ) -> None:
-    """The háček is named wherever it loses a pixel or more, from the floor to 40. At 10.2 and
-    10.3 it loses its one pixel at some scales, and at 12.7 to 14.3 two pixels at some, 0.0097
-    to 0.0123 of the em squared as read, fewer than the sliver's area but not than its whole
-    pixels."""
+    """The háček is named wherever it loses a pixel or more, from the floor to 40. At 10.2 to
+    10.7 it loses its one pixel at some scales, and at 14.3 two pixels at one, under 0.01 of the
+    em squared as read, fewer than the threshold's area but not than its whole pixels."""
     assert [why for why, _ in háček_at(tmp_path, em, scale)] == [viewing_tool.COVERED]
 
 
 @pytest.mark.parametrize("scale", SCALES)
-def test_a_box_edge_grazing_the_descenders_foot_of_the_control_is_named_at_no_scale(
+def test_the_least_graze_at_an_em_of_40_is_named_at_no_scale_and_the_row_above_it_is(
     tmp_path: Path, scale: float, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The control is a text of descenders set at 40 image pixels, a later box whose top edge
-    steps across their foot. resvg hides whole rows, so the box hides the last row, then more:
-    the last row is a graze and stays unnamed, and the row above it is named."""
-    named, hides, _ = graze_rows(tmp_path, CONTROL, scale, monkeypatch)
+    """A text of descenders set at 40 image pixels in Source Sans Pro Regular, a later box whose
+    top edge steps across their foot. resvg hides whole rows, so the box hides the last row,
+    then more: the last row, the least graze, stays unnamed, and the row above it is named."""
+    named, hides, _ = graze_rows(tmp_path, LEAST_GRAZE_EM, scale, monkeypatch)
     levels = sorted({hidden for hidden in hides.values() if hidden})
     graze, more = levels[0], levels[1]
     for step, hidden in hides.items():
@@ -936,12 +1032,13 @@ def test_a_box_edge_grazing_the_descenders_foot_of_the_control_is_named_at_no_sc
 
 
 @pytest.mark.parametrize("scale", SCALES)
-@pytest.mark.parametrize("em", ROW_HOLDS_THE_SLIVER)
-def test_a_graze_whose_least_row_holds_the_sliver_at_every_scale_is_named(
+@pytest.mark.parametrize("em", ROW_HOLDS_THE_THRESHOLD)
+def test_a_graze_whose_least_row_holds_the_threshold_at_every_scale_is_named(
     tmp_path: Path, em: float, scale: float, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """At these ems a single row of the descenders' foot hides 0.0156 to 0.13 of the em squared
-    at every scale, as much as a háček and more than the sliver, so the least graze is named."""
+    at every scale, as much as a háček and more than the threshold, so the least graze is
+    named."""
     named, hides, least = graze_rows(tmp_path, em, scale, monkeypatch)
     step, fewest = least_graze(hides)
     assert fewest >= least
@@ -954,7 +1051,7 @@ def test_a_descenders_foot_a_box_touches_in_24_px_text_on_a_1920_page_is_named_a
 ) -> None:
     """24 px text on a 1920 page drawn at 0.8167 is set at an em of 19.6 image pixels. There
     the least row of the descenders' foot holds 17 to 20 pixels at each scale, more than the
-    sliver's 4, so the least graze is named (DEC-045 point 1)."""
+    threshold's 3, so the least graze is named (DEC-045 point 1)."""
     named, hides, least = graze_rows(tmp_path, DECK_TEXT, scale, monkeypatch)
     step, fewest = least_graze(hides)
     assert fewest >= least
@@ -965,10 +1062,10 @@ def test_at_an_em_of_20_a_graze_is_spared_at_some_scales_and_named_at_others(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """At an em of 20 image pixels the least row of the descenders' foot holds 2 pixels at some
-    scales, fewer than the sliver's 5, and more than 20 at others. So whether a graze is named
-    turns on where its last row falls among the pixels, which the text's size does not tell
-    (DEC-045 point 1). At each scale the least graze is named where its row holds the sliver's
-    whole pixels, and spared where it holds fewer."""
+    scales, fewer than the threshold's 4, and more than 20 at others. So whether a graze is
+    named turns on where its last row falls among the pixels, which the text's size does not
+    tell (DEC-045 point 1). At each scale the least graze is named where its row holds the
+    threshold's whole pixels, and spared where it holds fewer."""
     spared: list[bool] = []
     for scale in SCALES:
         named, hides, least = graze_rows(tmp_path, 20, scale, monkeypatch)
@@ -977,6 +1074,292 @@ def test_at_an_em_of_20_a_graze_is_spared_at_some_scales_and_named_at_others(
         spared.append(fewest < least)
     assert any(spared)
     assert not all(spared)
+
+
+#: Runs that meet on one line, each a span of its own: a word split in two, pairs a face
+#: kerns, a decimal point between its figures, and quotes round a word.
+MEETING_RUNS = (
+    ("Typo", "graphy"),
+    ("T", "y"),
+    ("A", "V"),
+    ("f", "j"),
+    ("3", ".", "5"),
+    ("“", "Jo", "”"),
+)
+
+
+@pytest.mark.parametrize("em", (10, 11, 12, 16, 40))
+@pytest.mark.parametrize("scale", SCALES)
+def test_runs_that_meet_on_one_line_hide_none_of_each_other(
+    tmp_path: Path, em: float, scale: float
+) -> None:
+    """Up to an em of about 14.1 a cause that hides a single pixel is named, and at any em a
+    cause that takes an island of a span's ink (DEC-045 point 1). A run drawn after
+    another on its line hides a pixel of the other's ink only where its letters cover all of
+    that pixel, which runs that meet do not."""
+    for runs in MEETING_RUNS:
+        assert set_at(tmp_path, runs, em, scale) == [], runs
+
+
+def found_of(
+    tmp_path: Path,
+    words: Sequence[str],
+    em: float,
+    scale: float,
+    wanted: str,
+    *,
+    moved: tuple[float, float] = (0.0, 0.0),
+    over: Callable[[float, float], dict[str, Any]] | None = None,
+) -> tuple[Any, float, Any]:
+    """What the reads find of the run `wanted` of `words`, set as `plant` sets them, its
+    strong ink and its ink; the page's width in px; and the page drawn."""
+    found: list[tuple[Any, float]] = []
+    strong = viewing_tool._Page._strong
+
+    def kept(page: Any, text: Any, line: Any, index: int, *rest: Any) -> Any:
+        read = strong(page, text, line, index, *rest)
+        if line[index].text == wanted:
+            found.append((read, page.width))
+        return read
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(viewing_tool._Page, "_strong", kept)
+        drawing = plant(tmp_path, words, em, scale, over, moved=moved)
+    [(read, width)] = found
+    return read, width, drawing
+
+
+def on_the_page(strong: Any) -> list[tuple[int, int]]:
+    """The pixels of a span's ink that lie on the page."""
+    return [pixel for pixel in strong.ink if pixel not in strong.beyond]
+
+
+def dot_rows(strong: Any) -> list[tuple[int, int]]:
+    """The pixels of a span's ink above the first row of its ink that holds none: the dot of
+    an ż, or a háček, where it stands apart from its letter."""
+    rows = {row for row, _ in strong.ink}
+    gap = next(row for row in range(min(rows), max(rows)) if row not in rows)
+    return [pixel for pixel in strong.ink if pixel[0] < gap]
+
+
+def test_an_island_is_ink_at_a_level_each_pixel_meeting_another_by_a_side_or_a_corner() -> None:
+    """A stroke of strong ink, a speck that meets it by a corner alone, and a faint pixel that
+    meets the stroke by a side: at strong ink the speck is part of the stroke's island, and the
+    faint pixel at 159 is an island of its own, which at 191 meets the stroke (DEC-045 point
+    1)."""
+    stroke = {(row, 0): 0 for row in range(4)}
+    speck = {(4, 1): 100}
+    faint = {(0, 2): 150, (0, 3): 150}
+    near = {(0, 1): 180}
+    ink = {**stroke, **speck, **faint, **near}
+    assert not viewing_tool._takes_an_island(ink, speck)
+    assert viewing_tool._takes_an_island(ink, [*stroke, *speck])
+    assert viewing_tool._takes_an_island(ink, faint)
+    assert not viewing_tool._takes_an_island(ink, [(0, 2)])
+    assert not viewing_tool._takes_an_island({(0, 0): 230}, [(0, 0)])
+    assert not viewing_tool._takes_an_island(ink, [])
+    assert viewing_tool.LEVELS == (viewing_tool.STRONG, 159, 191)
+
+
+def test_a_cover_takes_an_island_it_hides_in_part_and_leaves_showing_at_its_level_nowhere() -> None:
+    """Where the page drawn whole shows how much of each pixel's ink is left, a cause takes an
+    island where it hides some of it wholly and leaves none of it showing at the island's level:
+    a dot whose last column a box's edge leaves at under half its ink. A dot that still shows a
+    pixel at its level, under a translucent box that hides no pixel wholly, or a pixel past the
+    page's edge, which the cover leaves to the cut, is not taken (DEC-045 point 1)."""
+    dot = {(0, 0): 0, (0, 1): 0, (1, 0): 0, (1, 1): 0}
+    stroke = {(row, 4): 0 for row in range(4)}
+    ink = {**dot, **stroke}
+    shown = {pixel: viewing_tool.ALL for pixel in ink}
+    edge = {**shown, (0, 1): 0, (1, 1): 0, (0, 0): 100, (1, 0): 100}
+    assert viewing_tool._takes_an_island(ink, [(0, 1), (1, 1)], edge)
+    assert not viewing_tool._takes_an_island(ink, [(0, 1), (1, 1)])
+    kept = {**edge, (1, 0): 160}
+    assert not viewing_tool._takes_an_island(ink, [(0, 1), (1, 1)], kept)
+    veiled = {**shown, **dict.fromkeys(dot, 51)}
+    assert not viewing_tool._takes_an_island(ink, [], veiled)
+    past = {pixel: shows for pixel, shows in edge.items() if pixel != (1, 0)}
+    assert not viewing_tool._takes_an_island(ink, [(0, 1), (1, 1)], past)
+    assert viewing_tool._takes_an_island(ink, list(dot), {**shown, **dict.fromkeys(dot, 0)})
+    assert viewing_tool._shows_at(160, viewing_tool.STRONG)
+    assert not viewing_tool._shows_at(100, viewing_tool.STRONG)
+    assert viewing_tool._shows_at(100, 159)
+
+
+#: Dots a reader needs, each hidden whole under a later box at a scale of 1: the runs of its
+#: line, the run that holds it, and the em it is set at. The full stop holds as many strong
+#: pixels as the threshold at 20, the point and the dot of ż fewer at 22.5 and at 40, and the
+#: point at 11.1 none (`scripts/visual_svg_reads.py cover`).
+HIDDEN_DOTS = (
+    (("end", "."), ".", 20),
+    (("3", ".", "5"), ".", 22.5),
+    (("ż",), "ż", 40),
+    (("3", ".", "5"), ".", 11.1),
+)
+
+
+@pytest.mark.parametrize(("runs", "dot", "em"), HIDDEN_DOTS)
+def test_a_dot_hidden_whole_is_named_covered_as_an_island_of_its_span_s_ink(
+    tmp_path: Path, runs: tuple[str, ...], dot: str, em: float
+) -> None:
+    """A box over all of a dot's ink hides all of an island of it, and so takes it: the cover
+    is named, whatever the threshold holds, with `island` (DEC-045 point 1). The share is of
+    the span's strong ink: all of it for a full stop or a point that is a run of its own, and a
+    part for the dot of ż. A point with no strong ink loses all its ink, at the lightest level
+    read (point 2)."""
+    strong, width, _ = found_of(tmp_path, runs, em, 1.0, dot)
+    pixels = dot_rows(strong) if dot == "ż" else on_the_page(strong)
+    drawing = plant(tmp_path, runs, em, 1.0, box_over(pixels, strong, width))
+    assert [(each.text, each.why, each.island) for each in drawing.lost] == [
+        (dot, viewing_tool.COVERED, True)
+    ]
+    [lost] = drawing.lost
+    hidden = sum(strong.ink[pixel] <= viewing_tool.STRONG for pixel in pixels)
+    assert hidden <= viewing_tool._least(strong.em)
+    assert lost.share == (hidden / strong.found if strong.found else 1.0)
+    assert drawing.dropped == ()
+
+
+def shown_under(
+    tmp_path: Path,
+    runs: tuple[str, ...],
+    em: float,
+    dot: str,
+    over: Callable[[float, float], dict[str, Any]],
+) -> tuple[Any, dict[tuple[int, int], int]]:
+    """The page of `runs` at a scale of 1 under the box `over` gives, and how much of each
+    pixel of the run `dot`'s ink the cover read finds the page drawn whole still shows."""
+    found: list[dict[tuple[int, int], int]] = []
+    shown = viewing_tool._Page._shown
+
+    def kept(page: Any, span: Any, strong: Any) -> dict[tuple[int, int], int]:
+        shows = shown(page, span, strong)
+        if span.text == dot:
+            found.append(shows)
+        return shows
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(viewing_tool._Page, "_shown", kept)
+        drawing = plant(tmp_path, runs, em, 1.0, over)
+    [shows] = found
+    return drawing, shows
+
+
+#: A dot under a box a pixel past it on each side but one, whose edge on that side lies four
+#: eighths of a pixel inside the dot's outermost column or row: the runs of its line, the run
+#: that holds it, its em, and the side (`scripts/visual_svg_reads.py partial`).
+EDGE_IN_A_DOT = (
+    (("end", "."), ".", 20, "left"),
+    (("3", ".", "5"), ".", 22.5, "bottom"),
+)
+
+
+@pytest.mark.parametrize(("runs", "dot", "em", "side"), EDGE_IN_A_DOT)
+def test_a_box_whose_edge_leaves_a_dot_a_faint_line_takes_the_dot_and_is_named(
+    tmp_path: Path, runs: tuple[str, ...], dot: str, em: float, side: str
+) -> None:
+    """The box hides part of the dot wholly, and leaves its outermost column or row at under
+    half its ink, so none of it still shows as strong ink. It hides fewer strong pixels than
+    the threshold and not all of the dot, yet takes the dot's island, so the cover is named with
+    `island` (DEC-045 point 1)."""
+    strong, width, _ = found_of(tmp_path, runs, em, 1.0, dot)
+    pixels = on_the_page(strong)
+    drawing, shows = shown_under(tmp_path, runs, em, dot, box_into(pixels, strong, width, side, 4))
+    hidden = [pixel for pixel, shown in shows.items() if not shown]
+    assert sum(strong.ink[pixel] <= viewing_tool.STRONG for pixel in hidden) < viewing_tool._least(
+        strong.em
+    )
+    assert not viewing_tool._takes_an_island(strong.ink, hidden)
+    assert [(each.text, each.why, each.island) for each in drawing.lost] == [
+        (dot, viewing_tool.COVERED, True)
+    ]
+
+
+@pytest.mark.parametrize(("runs", "dot", "em", "side"), EDGE_IN_A_DOT)
+def test_a_box_whose_edge_leaves_a_dot_showing_at_its_level_is_left_unnamed(
+    tmp_path: Path, runs: tuple[str, ...], dot: str, em: float, side: str
+) -> None:
+    """With its edge seven eighths inside the dot's outermost column or row, the box leaves
+    that column or row showing as strong ink: the dot is not taken, and the box hides fewer
+    strong pixels than the threshold, so nothing is named (DEC-045 point 1)."""
+    strong, width, _ = found_of(tmp_path, runs, em, 1.0, dot)
+    pixels = on_the_page(strong)
+    drawing, shows = shown_under(tmp_path, runs, em, dot, box_into(pixels, strong, width, side, 7))
+    assert any(
+        viewing_tool._shows_at(shows[pixel], viewing_tool.STRONG)
+        for pixel in pixels
+        if strong.ink[pixel] <= viewing_tool.STRONG
+    )
+    assert drawing.lost == ()
+
+
+@pytest.mark.parametrize("opacity", (0.8, 0.5))
+def test_a_dot_under_a_translucent_box_is_not_named(
+    tmp_path: Path, opacity: float, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A box of the ground's colour, less than opaque, over all of a dot fades it below strong
+    ink and hides none of it wholly. Covered means hidden, so it takes no island and is not
+    named: whether the dot reads through it is the reviewer's (DEC-045 point 1)."""
+    runs, dot, em = ("end", "."), ".", 20
+    strong, width, _ = found_of(tmp_path, runs, em, 1.0, dot)
+    box = box_over(on_the_page(strong), strong, width)(0.0, 0.0)
+    monkeypatch.setitem(COLOURS, "veil", {"components": [1, 1, 1], "alpha": opacity})
+    children, sizes = plant_of(runs, em, 1.0)
+    children.append(element("box", "figure/over", fill="veil", **box))
+    drawing = tool_at(tmp_path, 1.0, *children, **sizes)
+    assert drawing.lost == ()
+
+
+@pytest.mark.parametrize(
+    ("em", "scale"), ((15.3, 0.8167), *((LEAST_GRAZE_EM, scale) for scale in SCALES))
+)
+def test_a_graze_the_threshold_leaves_takes_no_island_and_is_left_unnamed(
+    tmp_path: Path, em: float, scale: float, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A box's edge across the foot of the descenders hides part of a stroke, never all of an
+    island: a strong pixel at a descender's foot that meets the rest of its letter by a corner
+    alone is part of the letter's island. So each step of the edge that hides fewer pixels than
+    the threshold is left unnamed: at 15.3, at the scale where a step hides that pixel alone,
+    which islands joined by sides alone would name, and at an em of 40 (DEC-045 point 1)."""
+    named, hides, least = graze_rows(tmp_path, em, scale, monkeypatch)
+    spared = [step for step, hidden in hides.items() if 0 < hidden < least]
+    assert spared
+    for step in spared:
+        assert named(step) == [], step
+
+
+@pytest.mark.parametrize(("em", "scale"), ((40, 1.0), (20, 1.225), (12.5, 1.0)))
+def test_the_dot_of_a_ż_past_the_page_s_top_is_named_cut_as_an_island(
+    tmp_path: Path, em: float, scale: float
+) -> None:
+    """The text is moved up by whole rows of its swath until the page's top lies on the empty
+    row between the dot and its letter. The dot is cut whole, so the cut is named with
+    `island`, though the strong ink past the edge is fewer pixels than the threshold, and at
+    12.5 none (DEC-045 point 1)."""
+    strong, _, _ = found_of(tmp_path, ("ż",), em, scale, "ż")
+    last = max(row for row, _ in dot_rows(strong))
+    moved = (0.0, -(strong.top + (last + 1) * 2 * strong.reach / strong.rows))
+    cut, _, drawing = found_of(tmp_path, ("ż",), em, scale, "ż", moved=moved)
+    assert set(dot_rows(cut)) == set(cut.beyond)
+    assert cut.past < viewing_tool._least(cut.em)
+    assert [(each.why, each.island) for each in drawing.lost] == [(viewing_tool.CUT, True)]
+    assert drawing.dropped == ()
+
+
+def test_a_full_stop_of_its_own_past_the_page_s_side_lies_off_the_page(tmp_path: Path) -> None:
+    """The text is moved across by whole columns until the page's right edge lies on the empty
+    column between the word and its full stop, a run of its own: the full stop's ink lies
+    wholly past the edge, so it is dropped as off the page, and the word is whole (DEC-045
+    point 2)."""
+    runs = ("end", ".")
+    strong, width, _ = found_of(tmp_path, runs, 20, 1.0, ".")
+    first = min(column for _, column in on_the_page(strong))
+    moved = ((strong.columns - first) * width / strong.columns, 0.0)
+    drawing = plant(tmp_path, runs, 20, 1.0, moved=moved)
+    assert [(each.text, each.whole, each.why) for each in drawing.dropped] == [
+        (".", False, viewing_tool.OFF_THE_PAGE)
+    ]
+    assert drawing.lost == ()
 
 
 # --- what a run draws (DEC-015 point 5) ---------------------------------------------------------
@@ -1330,7 +1713,9 @@ def test_through_the_svg_renderer_the_report_names_each_text_cut_or_covered_with
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """What the tool says a page shows in part is an entry of `dropped`, as a browser's is,
-    and the command prints it in words for its cause (DEC-045 point 2)."""
+    and the command prints it in words for its cause. An entry whose cause takes an island of
+    the span's ink says so in `island`, whatever its share, and another holds no such key. A
+    faint mark lost whole loses all its ink (DEC-045 point 2)."""
     root = parts_project(tmp_path)
     real = viewing.viewing_tool.draw
     label = "figure/body/label"
@@ -1340,6 +1725,8 @@ def test_through_the_svg_renderer_the_report_names_each_text_cut_or_covered_with
         found = (
             viewing_tool.Lost(label, "Go", viewing_tool.CUT, 0.36322869955),
             viewing_tool.Lost(label, "Go", viewing_tool.COVERED, 0.5),
+            viewing_tool.Lost(label, "end.", viewing_tool.COVERED, 0.004, True),
+            viewing_tool.Lost(label, ".", viewing_tool.COVERED, 1.0, True),
         )
         return viewing_tool.Drawing(drawn.images, drawn.dropped, found)
 
@@ -1350,11 +1737,21 @@ def test_through_the_svg_renderer_the_report_names_each_text_cut_or_covered_with
     assert report_of(root, "tags")["dropped"] == [
         {**place, "text": "Go", "why": "cut", "share": 0.363},
         {**place, "text": "Go", "why": "covered", "share": 0.5},
+        {**place, "text": "end.", "why": "covered", "share": 0.004, "island": True},
+        {**place, "text": ".", "why": "covered", "share": 1.0, "island": True},
     ]
     lines = shown.stdout.splitlines()
     span = f"dropped: figure (en, default): a span of the text `{label}`"
     assert f"{span} is cut by its page's edge, past which 36% of its ink lies: 'Go'" in lines
     assert f"{span} is covered by a part over it, which hides 50% of its ink: 'Go'" in lines
+    assert (
+        f"{span} is covered by a part over it, which hides under 1% of its ink"
+        " (one island of it gone, such as a dot): 'end.'"
+    ) in lines
+    assert (
+        f"{span} is covered by a part over it, which hides 100% of its ink"
+        " (one island of it gone, such as a dot): '.'"
+    ) in lines
 
 
 def test_a_loss_the_piece_accepted_is_still_reported_and_so_is_the_text_it_drops(

@@ -22,19 +22,21 @@ step works today, not what the step is, so nothing else of the step reads an SVG
 - **What it dropped.** The tool returns only the image. It logs a family it could not
   match to the process's output, which names no run, and a text over a picture defeats a
   look for its ink in the image. So each span is drawn again alone: its line as the page
-  sets it, the line's other spans unpainted, so nothing moves, on a band of the page around
-  its baseline. A span whose band comes back as the same band empty left no ink. That
+  sets it, the line's other spans unpainted, so nothing moves, on a swath of the page around
+  its baseline. A span whose swath comes back as the same swath empty left no ink. That
   holds whatever the cause: a font the tool could not match, no paint, a colour with no
-  opacity. A span with no strong ink on the page, all of it past an edge, is off the page,
-  and any other is dropped for no ink, one cause to an entry (DEC-045 point 2). Over the
-  page's other elements this draw asks nothing: a text in the colour of what lies beneath it
-  was drawn.
+  opacity. A span whose ink lies wholly past an edge is off the page, its strong ink where
+  it holds any, and any other is dropped for no ink, one cause to an entry (DEC-045 point 2).
+  Over the page's other elements this draw asks nothing: a text in the colour of what lies
+  beneath it was drawn.
 - **What the page shows of a span.** Each span that drew ink is drawn alone, its letters
-  opaque black, on a band with room past the page, and read for strong ink: what lies past
-  the page's edge is cut. The page is then drawn whole twice, the span's letters black and
-  then white, cropped to the span's ink: what the two draws show alike is covered. A cause
-  that hides fewer pixels than the sliver names nothing (DEC-045 point 1). The reads follow a
-  group's move alone, so a page whose group does more fails (`_move_of`).
+  opaque black, on a swath with room past the page, and read for its ink: what lies past the
+  page's edge is cut. The page is then drawn whole twice, the span's letters black and then
+  white, cropped to the span's ink: what the two draws show alike is covered. A cause is
+  named where it hides at least the threshold of the span's strong ink, or takes an island of
+  its ink, such as a dot: it hides some of the island wholly and leaves none of it showing at
+  the island's level. Else it names nothing (DEC-045 point 1). The reads follow a group's move
+  alone, so a page whose group does more fails (`_move_of`).
 - **Regions.** The caller hands it the bands of a page too tall for one image, each a top
   and a height in the page's px, and it draws each as an image as wide as the page, at the
   one scale the caller gives (DEC-022 point 7). Handed none, it draws the page whole. What
@@ -52,8 +54,8 @@ import math
 import re
 import struct
 import xml.etree.ElementTree as ET
-from collections.abc import Iterator, Mapping, Sequence
-from dataclasses import dataclass, replace
+from collections.abc import Collection, Iterator, Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -69,9 +71,10 @@ TOOL = {"name": "resvg", "version": resvg_py.__resvg_version__, "wheel": resvg_p
 #: The ground of every image: a page that draws none of its own lies on it (DEC-015 point 5).
 GROUND = "#ffffff"
 
-#: How far from a baseline a span's ink is looked for, in its font sizes, either way. Ink
-#: beyond it is reported dropped, which a reader can see is wrong; it is never missed.
-BAND = 2
+#: How far from a baseline a span's ink is looked for, in its font sizes, either way: the
+#: reach of the swath a span is drawn alone on. Ink beyond it is reported dropped, which a
+#: reader can see is wrong; it is never missed.
+SWATH = 2
 
 #: The most pixels an image takes, 512 MiB as the tool holds it. It draws so many in some two
 #: seconds. Far past it the tool runs for minutes, then ends the process (`draw`).
@@ -94,17 +97,33 @@ INKS = ("#000000", "#ffffff")
 #: the pixel lies nearer black than white.
 STRONG = 127
 
+#: The levels at which a span's ink falls into islands, each the lightest a pixel's darkest
+#: sample may be, drawn black on white, for the pixel to be ink at that level: strong ink, and
+#: two lighter. A small dot may hold no strong ink, and at a lighter level it may meet its
+#: letter, so a cause that takes an island at any of them is named (DEC-045 point 1).
+LEVELS = (STRONG, 159, 191)
+
+#: The lightest ink the reads take of a span: its lightest level.
+FAINT = LEVELS[-1]
+
+#: How much of a pixel's ink the page drawn whole shows where it shows all of it: the whole
+#: difference between black and white, the span's two colours in the cover read.
+ALL = 255
+
+#: Where the pixels of an island meet one another: by a side or by a corner.
+NEIGHBOURS = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
+
 #: The attributes that make a span's letters less than opaque.
 OPACITIES = ("opacity", "fill-opacity")
 
-#: The least a cut or a cover must lose of a span's strong ink to be named, in the span's em²,
-#: both in image pixels, counted in the whole pixels it holds (DEC-045 point 1, `_least`). It is
-#: not DEC-037's number, which resvg's drawing does not meet: a box's edge hides whole rows
-#: here.
-SLIVER = 0.0125
+#: The threshold's share of a span's em²: the least a cut or a cover must lose of the span's
+#: strong ink to be named, both in image pixels, counted in the whole pixels it holds (DEC-045
+#: point 1, `_least`). A smaller loss is a sliver. It is DEC-037's number, but whole image
+#: pixels, not an area of device pixels: a box's edge hides whole rows here.
+THRESHOLD = 0.01
 
 #: The fewest pixels a cause must hide to be named, whatever the em: one, so a cause that hides
-#: nothing names nothing where the sliver holds no whole pixel, below an em of about 9
+#: nothing names nothing where the threshold holds no whole pixel, below an em of 10
 #: (DEC-045 point 1).
 FEWEST = 1
 
@@ -113,7 +132,7 @@ FEWEST = 1
 GROUP_MARKS = "data-"
 
 #: The attributes the page's root may carry: its size and view, and its marks. None is a
-#: presentation attribute a text inherits, so a band drawn of one text inherits nothing it lacks
+#: presentation attribute a text inherits, so a swath drawn of one text inherits nothing it lacks
 #: (DEC-045 point 1).
 ROOT_ATTRIBUTES = ("width", "height", "viewBox")
 
@@ -157,24 +176,33 @@ class Dropped:
 @dataclass(frozen=True)
 class Lost:
     """A span the page shows in part: its trace id, its characters, its cause, `CUT` or
-    `COVERED`, and the share of its strong ink the cause loses (DEC-045 point 1)."""
+    `COVERED`, the share of its ink the cause loses, and whether the cause takes an island of
+    its ink (DEC-045 points 1 and 2). The share is of its strong ink where it holds any,
+    and else of its ink at `FAINT`."""
 
     element: str
     text: str
     why: str
     share: float
+    island: bool = False
+
+
+#: A pixel of a swath: its row, and its column of the page, before the page's first column or
+#: past its last where the swath holds room past a side.
+Pixel = tuple[int, int]
 
 
 @dataclass(frozen=True)
 class _Strong:
-    """A span's strong ink on its band: how many pixels of it, how many lie past the page's
-    edge, where on the page those on it lie (a row of the band and a column of the page), the
-    page's width in columns, the band's place and rows, its pixels' samples, whether the ink
-    comes near the band's sides, and the span's em in image pixels."""
+    """A span's strong ink on its swath: how many pixels of it, how many lie past the page's
+    edge, where on the page those on it lie, the page's width in columns, the swath's place and
+    rows, its pixels' samples, whether its ink comes near the swath's sides, and the span's em
+    in image pixels. And its ink at `FAINT`, strong ink among it, each pixel's darkest sample
+    by where it lies, and which of those pixels lie past the page's edge."""
 
     found: int
     past: int
-    on_page: list[tuple[int, int]]
+    on_page: list[Pixel]
     columns: int
     top: float
     reach: float
@@ -182,6 +210,16 @@ class _Strong:
     step: int
     spills: bool = False
     em: float = 0.0
+    ink: Mapping[Pixel, int] = field(default_factory=dict[Pixel, int])
+    beyond: frozenset[Pixel] = frozenset()
+
+    @property
+    def wholly_past(self) -> bool:
+        """Whether the span's ink lies wholly past the page's edge: its strong ink where it
+        holds any, and else its ink at `FAINT` (DEC-045 point 2)."""
+        if self.found:
+            return not self.on_page
+        return bool(self.ink) and len(self.beyond) == len(self.ink)
 
 
 @dataclass(frozen=True)
@@ -235,12 +273,65 @@ def _pixels(length: float, scale: float) -> int:
 
 def _least(em: float) -> int:
     """The fewest pixels of a span's strong ink a cause must hide to be named, at the span's em
-    in image pixels: the whole pixels the sliver holds, and never fewer than `FEWEST` (DEC-045
-    point 1). Ink is counted in whole pixels, and a háček's few come to fewer than their share
-    of the em squared at some ems, so the sliver is cut to the whole pixels it holds. The
-    product is rounded to six places before it is cut, so an em whose sliver falls on a whole
-    pixel, such as 20 or 40, takes that pixel."""
-    return max(math.floor(round(SLIVER * em**2, 6)), FEWEST)
+    in image pixels, the threshold: the whole pixels its share of the em squared holds, and
+    never fewer than `FEWEST` (DEC-045 point 1). Ink is counted in whole pixels, and a háček's
+    few come to fewer than their share of the em squared at some ems, so the threshold is cut
+    to the whole pixels it holds. The product is rounded to six places before it is cut, so an
+    em whose threshold falls on a whole pixel, such as 20 or 40, takes that pixel."""
+    return max(math.floor(round(THRESHOLD * em**2, 6)), FEWEST)
+
+
+def _takes_an_island(
+    ink: Mapping[Pixel, int],
+    lost: Collection[Pixel],
+    shows: Mapping[Pixel, int] | None = None,
+) -> bool:
+    """Whether a cause that hides `lost` of `ink` wholly takes an island of it at any of
+    `LEVELS`: of its pixels no lighter than the level, a set each of which meets another by a
+    side or a corner, and meets no other such pixel (DEC-045 point 1). The cause hides wholly
+    some pixel of the island, and leaves none of it showing at the level: where `shows` gives
+    how much of each pixel's ink the page drawn whole still shows, a pixel shows at the level
+    where it shows enough for it to be that dark (`_shows_at`); where it gives none, as past
+    the page's edge, every pixel the cause does not hide shows. Only the islands that hold a
+    pixel of `lost` are walked."""
+    gone = set(lost)
+    for level in LEVELS:
+        seen: set[Pixel] = set()
+        for start in gone:
+            if start in seen or ink.get(start, level + 1) > level:
+                continue
+            seen.add(start)
+            island = [start]
+            unseen = True
+            for row, column in island:
+                for down, across in NEIGHBOURS:
+                    near = (row + down, column + across)
+                    if near not in seen and ink.get(near, level + 1) <= level:
+                        seen.add(near)
+                        island.append(near)
+                        if shows is None:
+                            unseen = unseen and near in gone
+                        else:
+                            unseen = unseen and not _shows_at(shows.get(near, ALL), level)
+            if unseen:
+                return True
+    return False
+
+
+def _shows_at(shown: int, level: int) -> bool:
+    """Whether a pixel of a span's ink, of which the page drawn whole shows `shown` of `ALL`,
+    still shows at `level`: whether, drawn black on white, so much of its ink would make it
+    that dark or darker (DEC-045 point 1)."""
+    return ALL - shown <= level
+
+
+def _share(strong: _Strong, lost: Collection[Pixel]) -> float:
+    """The share of a span's ink that a cause's `lost` pixels are: of its strong ink where it
+    holds any, and else of its ink at `FAINT`, so a faint mark lost whole reads all of it
+    (DEC-045 point 2)."""
+    if strong.found:
+        return sum(strong.ink[pixel] <= STRONG for pixel in lost) / strong.found
+    return len(lost) / len(strong.ink) if strong.ink else 0.0
 
 
 class _Page:
@@ -254,8 +345,8 @@ class _Page:
         for name in self.root.attrib:
             if name not in ROOT_ATTRIBUTES and not name.startswith(GROUP_MARKS):
                 raise ToolFailed(
-                    f"the page's root carries `{name}`, which a band drawn of one text does not "
-                    f"inherit: the bands carry the page's rules and no root attribute"
+                    f"the page's root carries `{name}`, which a swath drawn of one text does not "
+                    f"inherit: the swaths carry the page's rules and no root attribute"
                 )
         self.fonts: list[str] = []
         self.style = ""
@@ -362,10 +453,10 @@ class _Page:
                     if not (span.text or "").strip():
                         continue
                     strong = self._strong(text, line, index, (x, y), scale)
-                    if strong.found and not strong.on_page:
+                    if strong.wholly_past:
                         nothing.append((span.text or "", OFF_THE_PAGE))
                     elif not self._drew(text, line, index, (x, y), scale):
-                        far = not strong.found and self._beyond(text, line, place, x)
+                        far = not strong.ink and self._beyond(text, line, place, x)
                         nothing.append((span.text or "", OFF_THE_PAGE if far else NO_INK))
                     else:
                         shown = True
@@ -420,17 +511,17 @@ class _Page:
         scale: float,
     ) -> bool:
         """Whether span `index` of `line` leaves any ink on the page in its own paint: drawn
-        alone, its line kept whole and every other span unpainted, on the band of the page
+        alone, its line kept whole and every other span unpainted, on the swath of the page
         around the line."""
         sizes = [float(each.get("font-size", "0")) for each in (text, *line)]
-        reach = BAND * max(sizes)
+        reach = SWATH * max(sizes)
         baseline = at[1] + float(line.get("y", "0"))
         top = max(baseline - reach, 0.0)
         height = min(baseline + reach, self.height) - top
         if height <= 0:
             return False
         size = (math.ceil(self.width * scale), math.ceil(height * scale))
-        band = ET.Element(
+        swath = ET.Element(
             f"{{{SVG_NAMESPACE}}}svg",
             {
                 "width": str(size[0]),
@@ -438,15 +529,15 @@ class _Page:
                 "viewBox": f"{-at[0]} {top - at[1]} {self.width} {height}",
             },
         )
-        self._carry_style(band)
-        alone = ET.SubElement(band, TEXT, text.attrib)
+        self._carry_style(swath)
+        alone = ET.SubElement(swath, TEXT, text.attrib)
         drawn = copy.deepcopy(line)
         for place, span in enumerate(drawn):
             if place != index:
                 span.set("fill", "none")
                 span.attrib.pop("fill-opacity", None)
         alone.append(drawn)
-        return self._tool(ET.tostring(band, encoding="unicode")) != self._blank(size)
+        return self._tool(ET.tostring(swath, encoding="unicode")) != self._blank(size)
 
     def _strong(
         self,
@@ -456,27 +547,27 @@ class _Page:
         at: tuple[float, float],
         scale: float,
     ) -> _Strong:
-        """The strong ink of span `index` of `line` (DEC-045 point 1): the span drawn alone,
-        its letters opaque black, on a band that reaches a page's width past each side of the
-        page, and two of the span's largest font sizes either way of its baseline, past the
-        page's top and foot too. The band is first drawn with room for two of the span's
-        largest font sizes past each side, and drawn again with a page's width where it shows
-        no strong ink, or the ink comes within one such size of the band's side, since the draw
-        is the more costly the wider the band."""
+        """The strong ink of span `index` of `line`, and its ink at `FAINT` (DEC-045 point 1):
+        the span drawn alone, its letters opaque black, on a swath that reaches a page's width
+        past each side of the page, and two of the span's largest font sizes either way of its
+        baseline, past the page's top and foot too. The swath is first drawn with room for two
+        of the span's largest font sizes past each side, and drawn again with a page's width
+        where it shows no ink, or the ink comes within one such size of the swath's side, since
+        the draw is the more costly the wider the swath."""
         em = float(
             line[index].get("font-size") or line.get("font-size") or text.get("font-size") or 0
         )
         size = max(float(each.get("font-size", "0")) for each in (text, *line))
-        columns, rows = math.ceil(self.width * scale), math.ceil(2 * BAND * size * scale)
+        columns, rows = math.ceil(self.width * scale), math.ceil(2 * SWATH * size * scale)
         if em <= 0 or rows <= 0:
             return _Strong(0, 0, [], columns, 0.0, 0.0, 0, 0)
-        tight = min(math.ceil(BAND * size * scale), columns)
-        found = self._band(text, line, index, at, scale, tight, size)
-        if tight < columns and (found.spills or not found.found):
-            found = self._band(text, line, index, at, scale, columns, size)
+        tight = min(math.ceil(SWATH * size * scale), columns)
+        found = self._swath(text, line, index, at, scale, tight, size)
+        if tight < columns and (found.spills or not found.ink):
+            found = self._swath(text, line, index, at, scale, columns, size)
         return replace(found, em=em * scale)
 
-    def _band(
+    def _swath(
         self,
         text: ET.Element,
         line: ET.Element,
@@ -486,13 +577,13 @@ class _Page:
         lead: int,
         size: float,
     ) -> _Strong:
-        """The strong ink of the span on a band with `lead` pixels of room past each side of
-        the page."""
-        reach = BAND * size
+        """The strong ink of the span, and its ink at `FAINT`, on a swath with `lead` pixels of
+        room past each side of the page."""
+        reach = SWATH * size
         top = at[1] + float(line.get("y", "0")) - reach
         columns, rows = math.ceil(self.width * scale), math.ceil(2 * reach * scale)
         to_page = self.width / columns
-        band = ET.Element(
+        swath = ET.Element(
             f"{{{SVG_NAMESPACE}}}svg",
             {
                 "width": str(columns + 2 * lead),
@@ -505,21 +596,23 @@ class _Page:
             },
         )
         attributes = {name: value for name, value in text.attrib.items() if name not in OPACITIES}
-        self._carry_style(band)
-        alone = ET.SubElement(band, TEXT, attributes)
+        self._carry_style(swath)
+        alone = ET.SubElement(swath, TEXT, attributes)
         drawn = copy.deepcopy(line)
         for place, each in enumerate(drawn):
             for name in OPACITIES:
                 each.attrib.pop(name, None)
             each.set("fill", INKS[0] if place == index else "none")
         alone.append(drawn)
-        picture = png.read(self._tool(ET.tostring(band, encoding="unicode"), background=GROUND))
+        picture = png.read(self._tool(ET.tostring(swath, encoding="unicode"), background=GROUND))
         samples = png.samples(picture)
         step = picture.channels
         near = math.ceil(size * scale)
         found = past = 0
         spills = False
-        on_page: list[tuple[int, int]] = []
+        on_page: list[Pixel] = []
+        ink: dict[Pixel, int] = {}
+        beyond: set[Pixel] = set()
         for row in range(rows):
             y = top + (row + 0.5) * 2 * reach / rows
             outside = not 0 <= y < self.height
@@ -529,56 +622,87 @@ class _Page:
             last = len(stretch.rstrip(b"\xff")) // step
             for column in range(first, last + 1):
                 at_pixel = column * step
-                if min(stretch[at_pixel : at_pixel + 3]) > STRONG:
+                dark = min(stretch[at_pixel : at_pixel + 3])
+                if dark > FAINT:
+                    continue
+                pixel = (row, column - lead)
+                ink[pixel] = dark
+                spills = spills or column < near or column >= picture.width - near
+                gone = outside or not lead <= column < lead + columns
+                if gone:
+                    beyond.add(pixel)
+                if dark > STRONG:
                     continue
                 found += 1
-                spills = spills or column < near or column >= picture.width - near
-                if outside or not lead <= column < lead + columns:
+                if gone:
                     past += 1
                 else:
-                    on_page.append((row, column - lead))
-        return _Strong(found, past, on_page, columns, top, reach, rows, step, spills)
+                    on_page.append(pixel)
+        return _Strong(
+            found,
+            past,
+            on_page,
+            columns,
+            top,
+            reach,
+            rows,
+            step,
+            spills,
+            ink=ink,
+            beyond=frozenset(beyond),
+        )
 
     def _partly(self, span: ET.Element, strong: _Strong, element: str) -> Iterator[Lost]:
-        """Each cause, `CUT` then `COVERED`, that hides at least the sliver of `span`'s
-        strong ink, with its share (DEC-045 point 1). The page is drawn whole on the same
-        band, the span's letters black and then white (`_hidden`)."""
-        if not strong.found:
+        """Each cause, `CUT` then `COVERED`, that hides at least the threshold of `span`'s
+        strong ink, or takes an island of its ink, with its share (DEC-045 points 1 and
+        2). Each cause is judged alone. The page is drawn whole on the span's ink, its letters
+        black and then white (`_shown`): a pixel it shows alike in both is hidden."""
+        if not strong.ink:
             return
         least = _least(strong.em)
-        if strong.past >= least:
-            yield Lost(element, span.text or "", CUT, strong.past / strong.found)
-        if len(strong.on_page) < least:
+        cut = _takes_an_island(strong.ink, strong.beyond)
+        if strong.past >= least or cut:
+            yield Lost(element, span.text or "", CUT, _share(strong, strong.beyond), cut)
+        if len(strong.beyond) == len(strong.ink):
             return
-        hidden = len(self._hidden(span, strong))
-        if hidden >= least:
-            yield Lost(element, span.text or "", COVERED, hidden / strong.found)
+        shows = self._shown(span, strong)
+        hidden = [pixel for pixel, shown in shows.items() if not shown]
+        lost = sum(strong.ink[pixel] <= STRONG for pixel in hidden)
+        covered = _takes_an_island(strong.ink, hidden, shows)
+        if lost >= least or covered:
+            yield Lost(element, span.text or "", COVERED, _share(strong, hidden), covered)
 
-    def _hidden(self, span: ET.Element, strong: _Strong) -> list[tuple[int, int]]:
-        """Where `span`'s strong ink on the page lies covered, each pixel as a row of the band
-        and a column of the page: the page drawn whole on the span's ink, its letters black and
-        then white, shows the pixel alike in both."""
-        rows, columns = zip(*strong.on_page, strict=True)
+    def _shown(self, span: ET.Element, strong: _Strong) -> dict[Pixel, int]:
+        """How much of each pixel of `span`'s ink on the page the page drawn whole shows, each
+        pixel as a row of the swath and a column of the page: drawn on the span's ink, its
+        letters black and then white, the greatest difference of the pixel's samples between
+        the two, from 0, hidden, to `ALL`."""
+        shown_here = [pixel for pixel in strong.ink if pixel not in strong.beyond]
+        rows, columns = zip(*shown_here, strict=True)
         top, left = min(rows), min(columns)
         height, width = max(rows) - top + 1, max(columns) - left + 1
         to_page = self.width / strong.columns
-        to_band = 2 * strong.reach / strong.rows
+        to_swath = 2 * strong.reach / strong.rows
         view = {
             "width": str(width),
             "height": str(height),
             "preserveAspectRatio": "none",
             "viewBox": (
-                f"{left * to_page} {strong.top + top * to_band} "
-                f"{width * to_page} {height * to_band}"
+                f"{left * to_page} {strong.top + top * to_swath} "
+                f"{width * to_page} {height * to_swath}"
             ),
         }
-        shown, unshown = (self._with_ink(span, ink, view) for ink in INKS)
-        hidden: list[tuple[int, int]] = []
-        for row, column in strong.on_page:
+        black, white = (self._with_ink(span, ink, view) for ink in INKS)
+        shows: dict[Pixel, int] = {}
+        for row, column in shown_here:
             each = ((row - top) * width + column - left) * strong.step
-            if shown[each : each + 3] == unshown[each : each + 3]:
-                hidden.append((row, column))
-        return hidden
+            dark, light = black[each : each + 3], white[each : each + 3]
+            shows[row, column] = (
+                0
+                if dark == light
+                else max(abs(dark[0] - light[0]), abs(dark[1] - light[1]), abs(dark[2] - light[2]))
+            )
+        return shows
 
     def _with_ink(self, span: ET.Element, ink: str, view: Mapping[str, str]) -> bytes:
         """The samples of the page drawn whole as `view` gives it, `span`'s letters in `ink`
@@ -596,14 +720,14 @@ class _Page:
                 else:
                     span.set(name, value)
 
-    def _carry_style(self, band: ET.Element) -> None:
-        """Give a band the page's own rules, `text{white-space:pre}` among them, so a text on
+    def _carry_style(self, swath: ET.Element) -> None:
+        """Give a swath the page's own rules, `text{white-space:pre}` among them, so a text on
         it keeps the advance and the spaces it has on the page (DEC-045 point 1). resvg 0.48
-        reads that rule in neither the page nor a band, so this changes no pixel today; it holds
-        the bands to the page's if resvg comes to read it. The page's root carries no
-        presentation attribute for a band to inherit: `_Page.__init__` fails a root that does."""
+        reads that rule in neither the page nor a swath, so this changes no pixel today; it
+        holds the swaths to the page's if resvg comes to read it. The page's root carries no
+        presentation attribute for a swath to inherit: `_Page.__init__` fails a root that does."""
         if self.style:
-            ET.SubElement(ET.SubElement(band, f"{{{SVG_NAMESPACE}}}defs"), STYLE).text = self.style
+            ET.SubElement(ET.SubElement(swath, f"{{{SVG_NAMESPACE}}}defs"), STYLE).text = self.style
 
     def _beyond(self, text: ET.Element, line: ET.Element, place: int, at: float) -> bool:
         """Whether the engine's own geometry puts the whole of `line` past a side of the page:
@@ -616,7 +740,7 @@ class _Page:
         return start >= self.width or start + width <= 0
 
     def _blank(self, size: tuple[int, int]) -> bytes:
-        """The band of `size` pixels with nothing drawn on it."""
+        """The swath of `size` pixels with nothing drawn on it."""
         if size not in self._blanks:
             empty = ET.Element(
                 f"{{{SVG_NAMESPACE}}}svg", {"width": str(size[0]), "height": str(size[1])}

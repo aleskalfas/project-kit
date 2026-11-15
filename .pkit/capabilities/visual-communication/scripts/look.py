@@ -282,11 +282,13 @@ def _dropped(each: Mapping[str, Any]) -> str:
         return f"the tool drew nothing of {subject}: {text!r}"
     if why == viewing.viewing_browser.CUT:
         return (
-            f"{span} is cut by its page's edge, past which {_share(each)} of its ink lies: {text!r}"
+            f"{span} is cut by its page's edge, past which {_share(each)} of its ink lies"
+            f"{_island(each)}: {text!r}"
         )
     if why == viewing.viewing_browser.COVERED:
         return (
-            f"{span} is covered by a part over it, which hides {_share(each)} of its ink: {text!r}"
+            f"{span} is covered by a part over it, which hides {_share(each)} of its ink"
+            f"{_island(each)}: {text!r}"
         )
     if why == viewing.viewing_browser.OFF_THE_PAGE:
         return f"{span} lies off its page: {text!r}"
@@ -294,9 +296,17 @@ def _dropped(each: Mapping[str, Any]) -> str:
 
 
 def _share(each: Mapping[str, Any]) -> str:
-    """The share of a span's ink a cause loses, in whole percent, and never as none."""
+    """The share of a span's ink a cause loses, in whole percent, and never as none: of its
+    strong ink, or through the SVG renderer of its ink at the lightest level the reads take
+    where it holds no strong ink, so a faint mark lost whole reads 100% (DEC-045 point 2)."""
     percent = round(each["share"] * 100)
     return f"{percent}%" if percent else "under 1%"
+
+
+def _island(each: Mapping[str, Any]) -> str:
+    """What the report says of a cause that takes an island of a span's ink, leaving none of
+    it showing at its level, whatever its share (DEC-045 point 2)."""
+    return " (one island of it gone, such as a dot)" if each.get(viewing.ISLAND) else ""
 
 
 def _otherwise(each: Mapping[str, Any]) -> str:
