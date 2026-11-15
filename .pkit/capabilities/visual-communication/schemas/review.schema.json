@@ -109,7 +109,7 @@
     "rule-id": {
       "description": "A rule's id, as the rule-set file that holds it gives it, such as `RS-COMM-001`.",
       "type": "string",
-      "pattern": "^RS-[A-Z]+-[0-9]{3}$"
+      "pattern": "^RS-[A-Z][A-Z0-9]*-(?:[0-9]{3}|[1-9][0-9]{3,})$"
     },
     "place": {
       "description": "What a grade is of: a page, by the id the page carries in the content, or the piece as a whole. Exactly one of `page` and `piece`.",

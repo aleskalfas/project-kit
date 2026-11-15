@@ -138,6 +138,19 @@ def test_a_rule_is_named_by_its_id(rule: str) -> None:
     assert refused(data)
 
 
+@pytest.mark.parametrize("rule", ["RS-COMM-001", "RS-A11Y-001", "RS-X-1000"])
+def test_any_id_the_rule_set_grammar_gives_holds(rule: str) -> None:
+    """A project's own set may carry a digit in its name, and a set may pass its thousandth rule:
+    the review grades any rule it reads, so the report takes any id the core's grammar gives."""
+    graded = minimal()
+    graded["grades"][0]["rule"] = rule
+    assert refused(graded) == []
+    left_out = minimal(
+        **{"not-graded": [{"rule": rule, "on": {"piece": True}, "why": "It judges each page."}]}
+    )
+    assert refused(left_out) == []
+
+
 def test_a_grade_holds_its_evidence() -> None:
     data = minimal()
     del data["grades"][0]["evidence"]
