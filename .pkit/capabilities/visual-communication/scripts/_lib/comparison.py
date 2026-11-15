@@ -42,8 +42,7 @@ and the record that sets it), the segment, and whether the later number allows i
 - *pairs:* every pair a library declares, whatever reads it (DEC-008 point 7);
 - *the foundations:* their shared roles and the top groups they lie in, axes and colour
   families, whatever reads them (DEC-004 point 5). A new shared axis breaks, since a brand
-  may hold an axis of its own by its name, but for `font-profile`, the name kept for the
-  shared axis of font profiles, which no brand's own axis takes (DEC-057 point 3);
+  may hold an axis of its own by its name;
 - *a brand:* the token paths it exports, a shared picture role among them only where it
   gives it a value (DEC-025 point 4), its axes and modes, every shared value axis whole,
   each size it gives (DEC-021 point 2) and each axis of its own, the component tokens it
@@ -986,9 +985,7 @@ def _axes(
     """Axes and their modes (DEC-004 point 5): an axis removed, of another kind or with
     another default, and a mode removed, break; a new mode is an addition. A new axis is an
     addition too, but where `new_breaks` says it breaks: a new shared axis, whose name may
-    meet an axis a brand holds of its own, which then fails. The shared axis of font
-    profiles is an addition even there, since no brand's own axis takes the name kept for it
-    (DEC-057 point 3). A brand's axes are those it has
+    meet an axis a brand holds of its own, which then fails. A brand's axes are those it has
     (`tokens.Brand.axes`), its own among them, so a brand that comes to give a size or adds
     an axis of its own, with its default, adds an axis, and one that ceases to removes it. An
     axis of its own renamed is one removed and one new."""
@@ -1010,13 +1007,7 @@ def _axes(
             )
         _named(at, "mode", axis.modes, now.modes, "DEC-004 point 5", "DEC-004 point 5", found)
     for name in sorted(set(later) - set(earlier)):
-        if new_breaks and name == tokens.FONT_PROFILE:
-            found.added(
-                f"{noun} `{name}`",
-                "is new, by the name kept for it, which no brand's own axis holds",
-                "DEC-057 point 3",
-            )
-        elif new_breaks:
+        if new_breaks:
             found.broken(
                 f"{noun} `{name}`",
                 "is new, a name a brand's own axis may hold, which then fails",

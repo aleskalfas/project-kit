@@ -134,8 +134,6 @@ pkit:
         - visual-communication:DEC-038#4
         - visual-communication:DEC-038#5
         - visual-communication:DEC-038#7
-        - visual-communication:DEC-057#2
-        - visual-communication:DEC-057#3
         - COR-073#5
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-brands-drawing
@@ -400,7 +398,7 @@ A finding marked *stops the brand* leaves the brand unread: no piece that locks 
 | `resolver-unreadable`, `resolver-shape`, `brand-file` | The Resolver document cannot be read, holds what format 1 does not read, or names a file the version folder does not hold. Stops the brand. | fails |
 | `brand-axis` | A modifier is no shared axis and declares no axis of the brand's own, or it gives a mode the shared axis lacks, gives no context for its default, or defaults to another mode. Stops the brand. | fails |
 | `own-axis` | A modifier that declares an axis of the brand's own gives no kind, `value` or `size`, in the capability's extension key, or the axis is not a name, or has fewer than two modes, a mode that is not a name, or a default that is none of its modes ([Axes and modes](files.md#axes-and-modes)). Stops the brand. | fails |
-| `own-axis-name` | An axis of the brand's own takes the name of a shared axis, or `font-profile`, the name kept for the shared axis of font profiles, whether or not the foundations declare it (DEC-057 point 2). A shared axis the foundations add later may meet an axis's name, which is why that is a break (DEC-004 point 5), and the kept name is why the axis of font profiles is not one (DEC-057 point 3). Stops the brand. | fails |
+| `own-axis-name` | An axis of the brand's own takes the name of a shared axis. Its name may meet a shared axis the foundations add later, which is why that is a break (DEC-004 point 5). Stops the brand. | fails |
 | `tokens-unreadable`, `tokens-shape`, `token-name`, `token-type`, `token-value`, `token-shared-group` | A token file cannot be read, or holds a key, a name, a type or a value format 1 does not read, or a brand's own token in a group of the shared roles. Stops the brand. | fails |
 | `role-missing`, `role-type` | The brand gives a shared role other than a picture role no value, or a value of another type, in some combination. Stops the brand. | fails |
 | `alias-loop`, `alias-dangling`, `alias-type` | Aliases make a loop, lead to a token the brand does not hold, to a role of a library the brand does not name or to one with no value under it, or lead to a token of another type. Or an alias leads to a picture role ([Picture roles](files.md#picture-roles)). Stops the brand. | fails |

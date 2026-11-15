@@ -1181,15 +1181,6 @@ FOUNDATIONS_CASES: dict[str, tuple[Change, Change | None, list[str], str | None]
         ],
         None,
     ),
-    "a new shared axis by the name kept for font profiles": (
-        lambda d: d["axes"].update(
-            {"font-profile": {"kind": "size", "modes": ["files", "board"], "default": "files"}}
-        ),
-        None,
-        [],
-        "shared axis `font-profile`: is new, by the name kept for it, which no brand's own axis "
-        "holds (DEC-057 point 3)",
-    ),
     "a pair's level lowered": (
         lambda d: put(d["pairs"][0], "level", "large-text"),
         None,
