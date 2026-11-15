@@ -79,7 +79,7 @@ Each row gives the share of the span's strong ink lost, at a scale of 2. Where i
 - **What is named.** A span that left no ink, or lies wholly off its page, is named (DEC-020 point 6). So is a span that is cut or covered. A span is *cut* where part of its strong ink lies past its page's edge. A span is *covered* where the page drawn whole hides part of its strong ink on the page, under a part drawn after it: a shape, a line of text, or under forced colours a text's ground.
 - **A sliver does not count.** A loss smaller than an area the outputs page states, in the span's em², names no entry. Each cause is judged alone.
 - **A fault mended where it arises.** A cut or covered span is mended where its cause lies: in the piece's layout or content, or in the spacing a component or a brand sets between lines and between texts. No such loss is accepted.
-- **Through a browser.** Through the SVG renderer, `dropped` keeps what resvg drew nothing of ([visual-communication:DEC-015-viewing-step-and-reviewer] point 3), and names a cut or covered span too, as [visual-communication:DEC-045-svg-reads-cover-and-cut] sets.
+- **Through the SVG renderer.** `dropped` keeps what resvg drew nothing of ([visual-communication:DEC-015-viewing-step-and-reviewer] point 3), and names a cut or covered span too, as [visual-communication:DEC-045-svg-reads-cover-and-cut] sets.
 
 ### 2. Each cause is an entry of `dropped`, with its share
 
