@@ -95,7 +95,7 @@ Read all of these, and judge a page by its image above all:
 - **The brief's intent,** its goals, relations and takeaways, without their reasons, which a command of the capability hands you ([visual-communication:DEC-042-grades-bar-and-loop] point 4). You grade against it. Where your dispatcher hands you none, say so under `intent` in what you read, and grade without it.
 - **The brief,** `brief.yaml` in the piece's folder, where the piece keeps one ([visual-communication:DEC-029-piece-brief] point 1), **only once your grades are written** ("Grades"). It has a part for the whole piece, and a part for each page it speaks of, keyed by the page's id. Each part holds relations, goals and reasons. A page's part holds a takeaway only where the page has no lead. A piece of one page keeps all of it in the part for the whole piece. Where the piece has no brief, you have none to judge against: say so.
 - **The rule sets.** Read each rule from the file of the set that holds it, never from this body or from memory. Read the rule sets the capability ships, in `.pkit/capabilities/visual-communication/rule-sets/`. Do not read the set the capability loads into sessions, whose front matter says `loaded: true`: it binds a session's work, not a piece (COR-070). Read also each rule set of the project's own that inherits one of them, as `visual-communication:<SET>@<major>` in its `inherits`. The project's sets lie in `rule-sets/` under its internal documentation root.
-- **Your reports of earlier rounds,** in `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/`, one file `round-<n>.yaml` for each round of the loop, **only once your grades are written** ("Grades"). Before then you may list the folder's names to number your round, and never open a file in it.
+- **Your reports of earlier rounds,** in `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/`, one file `round-<n>.yaml` for each round of the loop, which holds that round's grades' document alone, as you wrote it ("Your report"), **only once your grades are written** ("Grades"). Before then you may list the folder's names to number your round, and never open a file in it.
 - **The design knowledge,** in the capability's `design-knowledge/` folder. Read its index, `README.md`, first. Then read each topic it points you to for the pages you were asked about, or every topic where you were asked to review the whole piece. It teaches how to look and judge, and holds no rule, no value and no threshold. So no finding rests on it but a note of taste.
 - **The sources of its facts.** Where the piece shows a fact of the repository, such as a count or a file a command's output was kept in, read the source the piece names.
 
@@ -224,9 +224,18 @@ Some things look wrong and are not faults:
 
 ## Your report
 
-Open with what you looked at, because nothing unseen reads as clean. Then give the grades' document, and then the findings.
+Your report has three parts, in this order: the grades' document, what you looked at, and the findings. Its form is fixed, and a command reads its document to give the verdict ([visual-communication:DEC-042-grades-bar-and-loop] point 1).
 
-The report's form is fixed, and a command reads it to give the verdict ([visual-communication:DEC-042-grades-bar-and-loop] point 1).
+Open with the grades' document: one YAML document, fenced, bound to `visual-communication:review`, in the form `.pkit/capabilities/visual-communication/schemas/review.schema.json` fixes and `.pkit/capabilities/visual-communication/schemas/review.yaml` shows. Nothing comes before it. It holds:
+
+- the `piece`, the `lock` the images were drawn under, and the `round`, which your dispatcher names, or else one more than the highest round whose report the reports' folder lists by name;
+- the `model` you ran on, by its full name as your harness gives it, never an alias, and its `effort` where the harness has one. Where you cannot tell your model's full name, say so in `name`, and never guess it;
+- what you read before grading, and what you read after (`read-before-grading`, `read-after-grading`), by the kinds the schema names;
+- each grade, with its rule, its page or the piece, its evidence, its mark, its other cause and its difference from the round before, and each rule not graded, with why.
+
+The report goes to your dispatcher as your reply, and you write no file. Whoever dispatched you keeps the grades' document alone, the fenced YAML as you wrote it, in `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/round-<n>.yaml`, local to the clone ([visual-communication:DEC-042-grades-bar-and-loop] and [visual-communication:DEC-015-viewing-step-and-reviewer] point 4). So the file is one instance of `visual-communication:review`, and the rest of your report is not kept in it. Nobody summarises, filters or answers the document first.
+
+Right after the document, say in words what this body asks you to say at the head of your report: that the images show another state of the piece, that the piece's files changed since a pipeline's commit, or that you read a file before grading that belongs after. Then say what you looked at, because nothing unseen reads as clean:
 
 ```
 Looked at: <piece>, under lock <lock>
@@ -240,15 +249,6 @@ Brief: <the brief read, or that the piece has none>
 Rule sets: <each rule set read, by its id and its file>
 Not looked at: <each page, band, language, mode and size the piece has that you did not see, and why>
 ```
-
-Next comes the grades' document: one YAML document, fenced, bound to `visual-communication:review`, in the form `.pkit/capabilities/visual-communication/schemas/review.schema.json` fixes and `review.yaml` shows. It holds:
-
-- the `piece`, the `lock` the images were drawn under, and the `round`, which your dispatcher names, or else one more than the highest round whose report the reports' folder lists by name;
-- the `model` you ran on, by its full name as your harness gives it, never an alias, and its `effort` where the harness has one. Where you cannot tell your model's full name, say so in `name`, and never guess it;
-- what you read before grading, and what you read after (`read-before-grading`, `read-after-grading`), by the kinds the schema names;
-- each grade, with its rule, its page or the piece, its evidence, its mark, its other cause and its difference from the round before, and each rule not graded, with why.
-
-The report goes to your dispatcher as your reply, and you write no file. Whoever dispatched you keeps it as you wrote it, in `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/round-<n>.yaml`, local to the clone ([visual-communication:DEC-042-grades-bar-and-loop] and [visual-communication:DEC-015-viewing-step-and-reviewer] point 4). Nobody summarises, filters or answers it first.
 
 Name each combination you saw where they differ from page to page. Where a run through the HTML renderer drew no forced palette, name forced colours under `Not looked at`. Where it drew them, they are looked at: list there only what the report's `forced` says the images do not show. A page whose bands you did not all read is not looked at: name it there, with the bands you did read. Name each set of images under `Drawn by`, the step's and each your dispatcher handed you. An image you could not read goes under `Not looked at`, with why.
 

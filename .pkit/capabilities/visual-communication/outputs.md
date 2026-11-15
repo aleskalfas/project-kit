@@ -56,6 +56,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/values.schema.json
         - .pkit/capabilities/visual-communication/schemas/values-2.schema.json
+        - .pkit/capabilities/visual-communication/schemas/review.schema.json
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
       record:
         - visual-communication:DEC-001#2
@@ -172,6 +173,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#pieceyaml
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#shapes
+        - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-browser
@@ -977,8 +979,10 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 
 ### Where the review's reports are kept
 
-[The reviewer](README.md#the-reviewer) writes a report for each round, whose first part is a document of a fixed form, held by the schema `review.schema.json` ([Its grades](README.md#its-grades)). The reviewer writes no file: it replies with the report, and whoever dispatched it keeps the report as it was written (DEC-042 point 4).
+[The reviewer](README.md#the-reviewer) writes a report for each round, whose first part is a document of a fixed form, held by the schema `review.schema.json` ([Its grades](README.md#its-grades)). The reviewer writes no file: it replies with the report, and whoever dispatched it keeps the report's document as it was written (DEC-042 point 4).
 
 - **Where.** `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/round-<n>.yaml`, with `<n>` the round's number from 1. It lies in the clone's local folder, as the look's images do ([The clone's local folder](files.md#the-clones-local-folder); DEC-015 point 4), so no file of it is committed.
-- **Kept as written.** Nobody summarises, filters or answers a report before it is kept, and a later round's review reads the reports of the rounds before it only once it has written its grades.
+- **The document alone.** Each file holds the report's fenced YAML document and nothing else, so that it reads as one instance of `visual-communication:review`. What the reviewer looked at, and its findings, are not kept in it.
+- **Kept as written.** Nobody summarises, filters or answers a document before it is kept, and a later round's review reads the documents of the rounds before it only once it has written its grades.
+- **Not validated.** `pkit validate` checks no kept file, though each names its schema ([The binding](files.md#the-binding)).
 - **One folder for each piece,** which a later round adds to and no run replaces. A look replaces its own folder and leaves this one.
