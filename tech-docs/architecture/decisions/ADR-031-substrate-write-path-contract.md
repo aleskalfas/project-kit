@@ -222,17 +222,17 @@ stays done.
 contract**. Adding an issue *to* a board is **placement / membership** — it
 establishes that an item exists on the board; it does **not** write an attribute
 *value* onto an existing item. The two covered substrates are field-value and
-milestone (the attribute writes); board-membership is a distinct operation with
-its own single site, neither subsumed by nor in tension with the field-value
-constructor it sits near in `create-issue.py`.
+milestone (the attribute writes); board-membership is a distinct operation, made
+outside the field-value constructor wherever an issue is added to a board, and
+neither subsumed by nor in tension with that constructor.
 
 The boundary matters for the guard: the allow-list must distinguish
 `gh project item-edit` (field-value write — covered, sole-constructor-only) from
-`gh project item-add` (membership — out of scope, its own site). A guard that
-keyed on `gh project` broadly would either wrongly flag the legitimate
-`_gh_add_to_board` membership site or wrongly allow a stray inline field-value
-write. The guard keys on the *operation* (`item-edit` field-value; `issue
-…--milestone`), not the `gh project` prefix.
+`gh project item-add` (membership — out of scope). A guard that keyed on
+`gh project` broadly would either wrongly flag a legitimate membership add or
+wrongly allow a stray inline field-value write. The guard keys on the
+*operation* (`item-edit` field-value; `issue …--milestone`), not the
+`gh project` prefix.
 
 ### 4. The guard — sole-constructor, enforced by a grep/AST check
 
