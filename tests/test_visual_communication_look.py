@@ -792,35 +792,52 @@ def test_the_groups_the_renderer_writes_hold_a_move_and_marks_alone(tmp_path: Pa
 
 # --- what a graze and a háček lose (DEC-045 point 1) -------------------------------------------
 
+#: The em, in image pixels, of the control: a text of descenders whose last row a box's edge
+#: grazes, unnamed at every scale (DEC-045 point 1).
 CONTROL = 40
 #: The scales the probes drew at: DEC-037's four, and 0.8167, at which a 1920 by 1080 page is
-#: drawn 1568 pixels wide (DEC-015 point 5).
+#: drawn 1568 pixels wide (DEC-015 point 5). `scripts/visual_svg_reads.py` draws at them too.
 SCALES = (0.5, 0.8167, 1.0, 1.225, 2.0)
 #: The ems, in image pixels, the probes' table gives a háček and a graze at (DEC-045).
 EMS = (10, 12, 16, 20, 24, 30, 35, 40)
-#: Ems at which a háček loses two pixels at some scale, fewer than the sliver's area of the em
-#: squared: 2.1, 2.3 and 2.6 pixels.
-TWO_PIXEL_HACEK = (13, 13.7, 14.3)
+#: Ems at which a háček loses as many pixels as the sliver holds at some scale, or one more:
+#: one pixel at 10.2 and 10.3, two at 12.7 to 14.3, fewer than the sliver's area of the em
+#: squared, and one more than the sliver at 14.5, 16.1, 17.7, 18.3 and 20.3
+#: (`scripts/visual_svg_reads.py`).
+HACEK_AT_THE_SLIVER = (10.2, 10.3, 12.7, 13, 13.7, 14.3, 14.5, 16.1, 17.7, 18.3, 20.3)
 #: The ems at which a graze's least row holds the sliver's whole pixels at every scale.
 ROW_HOLDS_THE_SLIVER = (10, 12, 16, 24)
 #: The em, in image pixels, of 24 px text on a 1920 page drawn at 0.8167 (DEC-015 point 5).
 DECK_TEXT = 19.6
+#: The text whose háček a later box covers, and the text whose descenders' foot a later box's
+#: edge grazes.
+HACEK = "ž"
+DESCENDERS = "Typography gypsy"
+#: The steps of a graze's edge, each half an image pixel, from three pixels above where the
+#: foot of the descenders lies to three below.
+GRAZE_STEPS = range(-6, 7)
+
+
+def háček_box(base: float, size: float) -> dict[str, Any]:
+    """A box over a ž's háček, its baseline at `base` and its font `size` px: from the page's
+    top down to 0.56 of the font size above the baseline."""
+    return {"x": 0, "y": 0, "width": 12 * size, "height": base - 0.56 * size}
+
+
+def graze_box(step: int, scale: float) -> Callable[[float, float], dict[str, Any]]:
+    """A box whose top edge lies `step` half image pixels below 0.2 of the font size under the
+    baseline, across the foot of the descenders, drawn at `scale`."""
+    return lambda base, size: {
+        "x": 0,
+        "y": base + 0.2 * size + step / 2 / scale,
+        "width": 12 * size,
+        "height": 0.5 * size + 10,
+    }
 
 
 def háček_at(tmp_path: Path, em: float, scale: float) -> list[tuple[str, float]]:
     """The háček of a ž set `em` image pixels high, a later box over it alone."""
-    return set_at(
-        tmp_path,
-        "ž",
-        em,
-        scale,
-        over=lambda base, size: {
-            "x": 0,
-            "y": 0,
-            "width": 12 * size,
-            "height": base - 0.56 * size,
-        },
-    )
+    return set_at(tmp_path, HACEK, em, scale, over=háček_box)
 
 
 def graze_rows(
@@ -832,12 +849,7 @@ def graze_rows(
     pixels the read names at the text's em as it reads it."""
 
     def edge(step: int) -> Callable[[float, float], dict[str, Any]]:
-        return lambda base, size: {
-            "x": 0,
-            "y": base + 0.2 * size + step / 2 / scale,
-            "width": 12 * size,
-            "height": 0.5 * size + 10,
-        }
+        return graze_box(step, scale)
 
     read: list[Any] = []
     strong = viewing_tool._Page._strong
@@ -851,13 +863,13 @@ def graze_rows(
         unbound.setattr(viewing_tool, "SLIVER", 0.0)
         unbound.setattr(viewing_tool, "FEWEST", 0)
         unbound.setattr(viewing_tool._Page, "_strong", kept)
-        for step in range(-6, 7):
-            found = set_at(tmp_path, "Typography gypsy", em, scale, edge(step))
+        for step in GRAZE_STEPS:
+            found = set_at(tmp_path, DESCENDERS, em, scale, edge(step))
             share = sum(share for why, share in found if why == viewing_tool.COVERED)
             hides[step] = round(share * read[-1].found)
 
     def named(step: int) -> list[str]:
-        return [why for why, _ in set_at(tmp_path, "Typography gypsy", em, scale, edge(step))]
+        return [why for why, _ in set_at(tmp_path, DESCENDERS, em, scale, edge(step))]
 
     return named, hides, viewing_tool._least(read[-1].em)
 
@@ -869,24 +881,40 @@ def least_graze(hides: Mapping[int, int]) -> tuple[int, int]:
 
 
 @pytest.mark.parametrize(
-    ("em", "fewest"), ((10, 2), (12, 2), (13, 2), (14.3, 2), (18, 4), (19.6, 4), (20, 5), (40, 20))
+    ("em", "fewest"),
+    (
+        (5, 1),
+        (10, 1),
+        (12.6, 1),
+        (12.7, 2),
+        (14.3, 2),
+        (15.4, 2),
+        (15.5, 3),
+        (17.8, 3),
+        (17.9, 4),
+        (19.6, 4),
+        (20, 5),
+        (40, 20),
+    ),
 )
-def test_the_sliver_is_counted_in_the_whole_pixels_it_holds_and_never_under_two(
+def test_the_sliver_is_counted_in_the_whole_pixels_it_holds_and_never_under_one(
     em: float, fewest: int
 ) -> None:
-    """0.0125 of the em squared, rounded down to whole pixels, and two at the least (DEC-045
-    point 1). Rounded up, a háček's two pixels at an em of 12.7 to 14.3 would fall under it."""
+    """0.0125 of the em squared, rounded down to whole pixels, and one at the least (DEC-045
+    point 1). Rounded up, a háček's two pixels at an em of 12.7 to 14.3 would fall under it. At
+    20 and 40 the sliver falls on a whole pixel, and takes it."""
     assert viewing_tool._least(em) == fewest
 
 
-@pytest.mark.parametrize("em", (*EMS, *TWO_PIXEL_HACEK))
+@pytest.mark.parametrize("em", (*EMS, *HACEK_AT_THE_SLIVER))
 @pytest.mark.parametrize("scale", SCALES)
 def test_a_háček_under_a_box_is_named_at_every_em_and_scale(
     tmp_path: Path, em: float, scale: float
 ) -> None:
-    """The háček loses two pixels or more at any em from the floor to 40, but for one pixel at an
-    em of 10.2 to 10.7, and so is named. At an em of 12.7 to 14.3 its two pixels are 0.0098 to
-    0.0124 of the em squared, under the sliver's area but not under its whole pixels."""
+    """The háček is named wherever it loses a pixel or more, from the floor to 40. At 10.2 and
+    10.3 it loses its one pixel at some scales, and at 12.7 to 14.3 two pixels at some, 0.0097
+    to 0.0123 of the em squared as read, fewer than the sliver's area but not than its whole
+    pixels."""
     assert [why for why, _ in háček_at(tmp_path, em, scale)] == [viewing_tool.COVERED]
 
 
@@ -913,7 +941,7 @@ def test_a_graze_whose_least_row_holds_the_sliver_at_every_scale_is_named(
     tmp_path: Path, em: float, scale: float, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """At these ems a single row of the descenders' foot hides 0.0156 to 0.13 of the em squared
-    at every scale, as much as a háček and over the sliver, so the smallest graze is named."""
+    at every scale, as much as a háček and more than the sliver, so the least graze is named."""
     named, hides, least = graze_rows(tmp_path, em, scale, monkeypatch)
     step, fewest = least_graze(hides)
     assert fewest >= least
@@ -925,8 +953,8 @@ def test_a_descenders_foot_a_box_touches_in_24_px_text_on_a_1920_page_is_named_a
     tmp_path: Path, scale: float, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """24 px text on a 1920 page drawn at 0.8167 is set at an em of 19.6 image pixels. There
-    the least row of the descenders' foot holds 17 to 20 pixels at each scale, over the sliver's
-    4, so the least graze is named (DEC-045 point 1)."""
+    the least row of the descenders' foot holds 17 to 20 pixels at each scale, more than the
+    sliver's 4, so the least graze is named (DEC-045 point 1)."""
     named, hides, least = graze_rows(tmp_path, DECK_TEXT, scale, monkeypatch)
     step, fewest = least_graze(hides)
     assert fewest >= least
@@ -937,10 +965,10 @@ def test_at_an_em_of_20_a_graze_is_spared_at_some_scales_and_named_at_others(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """At an em of 20 image pixels the least row of the descenders' foot holds 2 pixels at some
-    scales, under the sliver's 5, and over 20 at others. So whether a graze is named turns on
-    where its last row falls among the pixels, which the em and the scale set, and on no size
-    alone (DEC-045 point 1). At each scale the least graze is named where its row holds the
-    sliver's whole pixels, and spared where it holds fewer."""
+    scales, fewer than the sliver's 5, and more than 20 at others. So whether a graze is named
+    turns on where its last row falls among the pixels, which the text's size does not tell
+    (DEC-045 point 1). At each scale the least graze is named where its row holds the sliver's
+    whole pixels, and spared where it holds fewer."""
     spared: list[bool] = []
     for scale in SCALES:
         named, hides, least = graze_rows(tmp_path, 20, scale, monkeypatch)

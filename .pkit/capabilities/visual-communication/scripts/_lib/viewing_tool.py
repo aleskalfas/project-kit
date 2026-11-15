@@ -33,8 +33,8 @@ step works today, not what the step is, so nothing else of the step reads an SVG
   opaque black, on a band with room past the page, and read for strong ink: what lies past
   the page's edge is cut. The page is then drawn whole twice, the span's letters black and
   then white, cropped to the span's ink: what the two draws show alike is covered. A cause
-  that hides under the sliver names nothing (DEC-045 point 1). The reads follow a group's
-  move alone, so a page whose group does more fails (`_move_of`).
+  that hides fewer pixels than the sliver names nothing (DEC-045 point 1). The reads follow a
+  group's move alone, so a page whose group does more fails (`_move_of`).
 - **Regions.** The caller hands it the bands of a page too tall for one image, each a top
   and a height in the page's px, and it draws each as an image as wide as the page, at the
   one scale the caller gives (DEC-022 point 7). Handed none, it draws the page whole. What
@@ -99,14 +99,14 @@ OPACITIES = ("opacity", "fill-opacity")
 
 #: The least a cut or a cover must lose of a span's strong ink to be named, in the span's em²,
 #: both in image pixels, counted in the whole pixels it holds (DEC-045 point 1, `_least`). It is
-#: not DEC-037's number, which resvg's drawing does not meet: a graze of a box's edge hides
-#: whole rows here. Counted so, it lies under every háček of two pixels or more, and over the
-#: thinnest last row of the control's graze.
+#: not DEC-037's number, which resvg's drawing does not meet: a box's edge hides whole rows
+#: here.
 SLIVER = 0.0125
 
-#: The fewest pixels a cause must hide to be named, whatever the em: two. On a page too wide
-#: for its smallest text to read, the sliver holds fewer, and a single pixel is noise.
-FEWEST = 2
+#: The fewest pixels a cause must hide to be named, whatever the em: one, so a cause that hides
+#: nothing names nothing where the sliver holds no whole pixel, below an em of about 9
+#: (DEC-045 point 1).
+FEWEST = 1
 
 #: A group's attributes that leave a text where its moves put it: the renderer's own marks,
 #: and its move (DEC-045 point 1).
@@ -236,8 +236,10 @@ def _pixels(length: float, scale: float) -> int:
 def _least(em: float) -> int:
     """The fewest pixels of a span's strong ink a cause must hide to be named, at the span's em
     in image pixels: the whole pixels the sliver holds, and never fewer than `FEWEST` (DEC-045
-    point 1). Ink is counted in whole pixels, and a háček's few come a pixel under their share
-    of the em squared at some ems, so the sliver is cut to the whole pixels it holds."""
+    point 1). Ink is counted in whole pixels, and a háček's few come to fewer than their share
+    of the em squared at some ems, so the sliver is cut to the whole pixels it holds. The
+    product is rounded to six places before it is cut, so an em whose sliver falls on a whole
+    pixel, such as 20 or 40, takes that pixel."""
     return max(math.floor(round(SLIVER * em**2, 6)), FEWEST)
 
 
@@ -540,7 +542,7 @@ class _Page:
     def _partly(self, span: ET.Element, strong: _Strong, element: str) -> Iterator[Lost]:
         """Each cause, `CUT` then `COVERED`, that hides at least the sliver of `span`'s
         strong ink, with its share (DEC-045 point 1). The page is drawn whole on the same
-        band, the span's letters black and then white."""
+        band, the span's letters black and then white (`_hidden`)."""
         if not strong.found:
             return
         least = _least(strong.em)
@@ -548,6 +550,14 @@ class _Page:
             yield Lost(element, span.text or "", CUT, strong.past / strong.found)
         if len(strong.on_page) < least:
             return
+        hidden = len(self._hidden(span, strong))
+        if hidden >= least:
+            yield Lost(element, span.text or "", COVERED, hidden / strong.found)
+
+    def _hidden(self, span: ET.Element, strong: _Strong) -> list[tuple[int, int]]:
+        """Where `span`'s strong ink on the page lies covered, each pixel as a row of the band
+        and a column of the page: the page drawn whole on the span's ink, its letters black and
+        then white, shows the pixel alike in both."""
         rows, columns = zip(*strong.on_page, strict=True)
         top, left = min(rows), min(columns)
         height, width = max(rows) - top + 1, max(columns) - left + 1
@@ -563,12 +573,12 @@ class _Page:
             ),
         }
         shown, unshown = (self._with_ink(span, ink, view) for ink in INKS)
-        hidden = 0
+        hidden: list[tuple[int, int]] = []
         for row, column in strong.on_page:
             each = ((row - top) * width + column - left) * strong.step
-            hidden += shown[each : each + 3] == unshown[each : each + 3]
-        if hidden >= least:
-            yield Lost(element, span.text or "", COVERED, hidden / strong.found)
+            if shown[each : each + 3] == unshown[each : each + 3]:
+                hidden.append((row, column))
+        return hidden
 
     def _with_ink(self, span: ET.Element, ink: str, view: Mapping[str, str]) -> bytes:
         """The samples of the page drawn whole as `view` gives it, `span`'s letters in `ink`
