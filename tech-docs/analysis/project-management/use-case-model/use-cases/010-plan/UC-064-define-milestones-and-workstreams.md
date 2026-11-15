@@ -44,6 +44,7 @@ pkit:
         - project-management:DEC-016
         - project-management:DEC-018
         - project-management:DEC-021
+        - project-management:DEC-003
         - project-management:DEC-046
         - project-management:DEC-051
         - project-management:DEC-061#2
@@ -91,7 +92,7 @@ pkit:
 
 1. The planner declares the [project](../../../../core/glossary.md#term-project--project)'s [Milestone categories](../../../glossary.md#term-milestone-category--milestone-category) in the [capability](../../../../core/glossary.md#term-capability--capability)'s settings. Each has its title format, its default [close trigger](../../../glossary.md#term-close-trigger--close-trigger) and what it means ([DEC-016](../../../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 2. The planner creates a [Milestone](../../../glossary.md#term-milestone--milestone): `pkit pm create-milestone <category> --name "<name>" --due-on <date>`.
-3. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the project's prerequisites, and that whoever runs the command is a member where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). Wherever GitHub names the user's account the command runs as, the system judges that account as whoever runs the command. It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+3. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the project's prerequisites, and that whoever runs the command is a member where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). Wherever GitHub names a user's account the command runs as, that account is whoever runs the command, not the person an agent works for. The system then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 4. The system checks that the category is declared, and builds the title from its format. Where the format holds a number, the system numbers the Milestone after the last of its category (DEC-016).
 
 > [!WARNING]

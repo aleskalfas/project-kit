@@ -54,6 +54,7 @@ pkit:
         - COR-004
         - project-management:DEC-007
         - project-management:DEC-021
+        - project-management:DEC-003
         - project-management:DEC-026
         - project-management:DEC-027
         - project-management:DEC-028
@@ -140,7 +141,7 @@ pkit:
 **Main path:**
 
 1. The developer runs `pkit pm land-work <N>`, with the [Task](../../../glossary.md#term-task--task)'s number.
-2. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the [project](../../../../core/glossary.md#term-project--project)'s prerequisites, and that whoever runs the command is a member where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). Wherever GitHub names the user's account the command runs as, the system judges that account as whoever runs the command. It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+2. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the [project](../../../../core/glossary.md#term-project--project)'s prerequisites, and that whoever runs the command is a member where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). Wherever GitHub names a user's account the command runs as, that account is whoever runs the command, not the person an agent works for. The system then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 3. The system reads the [pull request](../../../../core/glossary.md#term-pull-request--pull-request)'s [head](../../../../core/glossary.md#term-head--head), prints it, and holds it as the head this run judges.
 4. The system waits for the checks at that head, and goes on once each has passed. A head that shows no check never counts as passed (`ci_checks.py`).
 5. The system works out the [required reviewers](../../../glossary.md#term-required-reviewer--required-reviewer): those the project's settings name, and each a [capability](../../../../core/glossary.md#term-capability--capability) contributes whose condition the [change](../../../../core/glossary.md#term-change--change) meets ([DEC-032 point D1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)). It prints them, with each contributed [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) the project declined and its reason ([DEC-032 point D2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d2--capabilities-contribute-reviewer-requirements-pm-collects-them-by-walking-the-manifest)).

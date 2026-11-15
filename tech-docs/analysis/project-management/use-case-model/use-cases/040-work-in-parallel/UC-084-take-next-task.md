@@ -49,6 +49,7 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/instance_claims.py
       record:
         - project-management:DEC-026
+        - project-management:DEC-021
         - project-management:DEC-029
         - project-management:DEC-005
         - project-management:DEC-012

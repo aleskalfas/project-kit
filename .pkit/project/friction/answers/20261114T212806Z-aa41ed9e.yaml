@@ -114,7 +114,7 @@ answers:
       - 20261114T135441Z-fd5c2dc0.yaml
       - 20261114T140804Z-6f794478.yaml
     revalidated:
-      at: 2026-11-15T00:46:16Z
+      at: 2026-11-15T02:29:00Z
       outcome: updated
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
     read:
@@ -159,7 +159,7 @@ answers:
       - 20261114T135441Z-fd5c2dc0.yaml
       - 20261114T140804Z-6f794478.yaml
     revalidated:
-      at: 2026-11-15T00:46:35Z
+      at: 2026-11-15T02:29:01Z
       outcome: updated
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
     read:
@@ -212,7 +212,7 @@ answers:
       - 20261114T135441Z-fd5c2dc0.yaml
       - 20261114T140804Z-6f794478.yaml
     revalidated:
-      at: 2026-11-15T00:46:54Z
+      at: 2026-11-15T02:29:02Z
       outcome: updated
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
     read:
@@ -239,7 +239,7 @@ answers:
       - 20261114T135441Z-fd5c2dc0.yaml
       - 20261114T140804Z-6f794478.yaml
     revalidated:
-      at: 2026-11-15T00:47:06Z
+      at: 2026-11-15T02:29:03Z
       outcome: updated
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
     read:
@@ -364,9 +364,9 @@ answers:
       - 20261114T135441Z-fd5c2dc0.yaml
       - 20261114T140804Z-6f794478.yaml
     revalidated:
-      at: 2026-11-15T00:51:28Z
+      at: 2026-11-15T02:29:04Z
       outcome: unchanged
-      unchanged-because: It lists REQ-041 among its requirements, and states nothing of whose membership the second check judges. REQ-041's change moves only that, to the user's account GitHub names for the command wherever it names one, so the use case holds.
+      unchanged-because: It lists REQ-041 among its requirements, and now anchors DEC-021, which names the account start-work compares a Task's assignee with and assigns, the user's account GitHub names for the command wherever it names one. Step 4's worker's account and variant 4a's refusal of a Task assigned to another person's account hold under that rule, so the use case holds.
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
     read:
       - 20261029T002130Z-82af462f.yaml
@@ -392,9 +392,9 @@ answers:
       - 20261113T104927Z-f6afe126.yaml
       - 20261113T222453Z-06dececb.yaml
     revalidated:
-      at: 2026-11-15T00:51:31Z
+      at: 2026-11-15T02:29:05Z
       outcome: unchanged
-      unchanged-because: It lists REQ-041 among its requirements, and states nothing of whose membership the second check judges. REQ-041's change moves only that, to the user's account GitHub names for the command wherever it names one, so the use case holds.
+      unchanged-because: It lists REQ-041 among its requirements, and now anchors DEC-021, which names the account start-work compares a Task's assignee with, the user's account GitHub names for the command wherever it names one. Variant 2b's refusal of a Task assigned to another person's account holds under that rule, so the use case holds.
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md
     read:
       - 20261101T152616Z-c96602dc.yaml
@@ -528,7 +528,7 @@ answers:
     revalidated:
       at: 2026-11-15T00:51:45Z
       outcome: unchanged
-      unchanged-because: DEC-021 has a user's login the hosting service answers stand alone as the invoker's identity, for the gate and every other reader of it, and has an entry name the login as the service spells it. DEC-022 words its two qualifiers on PM_INVOKER_LOGIN by that. The README names the gate's two modes and members.yaml, and no surface, spelling or reader of the identity, so it holds.
+      unchanged-because: DEC-021 has a user's login the hosting service answers stand alone as the invoker's identity, for the gate and every other reader of it, and has an entry for a user's account name the login as the service spells it. DEC-022 words its two qualifiers on PM_INVOKER_LOGIN by that. The README names the gate's two modes and members.yaml, and no surface, spelling or reader of the identity, so it holds.
   - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
     read:
       - 20261102T131450Z-cd4d7951.yaml

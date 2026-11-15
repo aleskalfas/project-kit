@@ -58,6 +58,7 @@ pkit:
         - project-management:DEC-008
         - project-management:DEC-014
         - project-management:DEC-021
+        - project-management:DEC-003
         - project-management:DEC-024
         - project-management:DEC-026
         - project-management:DEC-031
@@ -122,7 +123,7 @@ pkit:
 **Main path:**
 
 1. The developer schedules the [issue](../../../glossary.md#term-issue--issue): `pkit pm promote-issue <N> --reason "<R>"`, with `--milestone <M>` where the [project](../../../../core/glossary.md#term-project--project) uses [Milestones](../../../glossary.md#term-milestone--milestone) ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and [DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
-2. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the project's prerequisites, and that whoever runs the command is a member where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). Wherever GitHub names the user's account the command runs as, the system judges that account as whoever runs the command. It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+2. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the project's prerequisites, and that whoever runs the command is a member where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). Wherever GitHub names a user's account the command runs as, that account is whoever runs the command, not the person an agent works for. The system then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 3. The system checks that the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) declares the move from Todo to Backlog for the issue's type. It checks too that the issue's body holds no placeholder of its template (DEC-006 and [DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md)).
 4. Unless the project turns [audit comments](../../../glossary.md#term-audit-comment--audit-comment) off, the system posts the reason in an audit comment that names the move, before the move ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)). It then moves the issue to Backlog, and attaches the Milestone. Where the project keeps a [journal](../../../glossary.md#term-journal--journal), the move goes into it with its reason ([DEC-049](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 
