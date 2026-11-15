@@ -37,6 +37,8 @@ import pytest
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
+from tests.pm_board_graphql import FieldsBoard
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 SCRIPTS_DIR = CAP_ROOT / "scripts"
@@ -206,27 +208,41 @@ def test_a_sample_filled_with_a_state_issue_is_still_truncated(ae, monkeypatch) 
     assert inv.sample_truncated is True
 
 
+def _board(fields: list[dict], node_id: str = "PVT_board") -> FieldsBoard:
+    """Board #7 of `ai-platform-incubation`, holding ``fields`` as a field list
+    names them: each field by its name, a single-select with its options."""
+    held = []
+    for index, field in enumerate(fields):
+        full: dict = {"id": f"PVTF_{index}", "name": field["name"], "type": "ProjectV2Field"}
+        if "options" in field:
+            full["type"] = "ProjectV2SingleSelectField"
+            full["options"] = [
+                {"id": f"opt_{index}_{n}", "name": option["name"]}
+                for n, option in enumerate(field["options"])
+            ]
+        held.append(full)
+    return FieldsBoard(held, node=node_id, number=7, owner="ai-platform-incubation")
+
+
+def _board_read(args: list[str], board: FieldsBoard) -> subprocess.CompletedProcess | None:
+    """The board's answer to a read of it, its fields or its names, or None for
+    any other call."""
+    if args[1:3] == ["api", "graphql"]:
+        return board.reply(args)
+    if args[:3] == ["gh", "project", "view"]:
+        return subprocess.CompletedProcess(args, 0, json.dumps(board.identity()), "")
+    return None
+
+
 def test_inventory_board_fields_read_when_board_configured(ae, monkeypatch) -> None:
+    board = _board([{"name": "Workstream", "options": [{"name": "Spyre"}]}, {"name": "Status"}])
+
     def serve(args, config=None, **kw):
         if args[:3] == ["gh", "label", "list"]:
             return subprocess.CompletedProcess(args, 0, json.dumps([{"name": "P0"}]), "")
         if args[:3] == ["gh", "issue", "list"]:
             return subprocess.CompletedProcess(args, 0, json.dumps(AUJ_ISSUES), "")
-        if args[:3] == ["gh", "project", "field-list"]:
-            return subprocess.CompletedProcess(
-                args,
-                0,
-                json.dumps(
-                    {
-                        "fields": [
-                            {"name": "Workstream", "options": [{"name": "Spyre"}]},
-                            {"name": "Status"},
-                        ]
-                    }
-                ),
-                "",
-            )
-        return subprocess.CompletedProcess(args, 0, "{}", "")
+        return _board_read(args, board) or subprocess.CompletedProcess(args, 0, "{}", "")
 
     monkeypatch.setattr(ae, "gh_run", serve)
     config = {
@@ -246,18 +262,14 @@ def test_inventory_board_fields_read_when_board_configured(ae, monkeypatch) -> N
 
 
 def _serve_with_board(node_id: str = "PVT_board"):
+    board = _board([], node_id)
+
     def serve(args, config=None, **kw):
         if args[:3] == ["gh", "label", "list"]:
             return subprocess.CompletedProcess(args, 0, json.dumps([{"name": "P0"}]), "")
         if args[:3] == ["gh", "issue", "list"]:
             return subprocess.CompletedProcess(args, 0, json.dumps(AUJ_ISSUES), "")
-        if args[:3] == ["gh", "project", "field-list"]:
-            return subprocess.CompletedProcess(args, 0, json.dumps({"fields": []}), "")
-        if args[:3] == ["gh", "project", "view"]:
-            return subprocess.CompletedProcess(
-                args, 0, json.dumps({"id": node_id, "number": 7}), ""
-            )
-        return subprocess.CompletedProcess(args, 0, "{}", "")
+        return _board_read(args, board) or subprocess.CompletedProcess(args, 0, "{}", "")
 
     return serve
 
@@ -526,7 +538,9 @@ def test_workstream_unsupported_echoes_unrecognised_grouping_labels(ae, monkeypa
 
 
 def _serve_board_fields(fields: list[dict], *, labels: list[dict] | None = None):
-    """A fake gh_run serving a board field-list, plus an optional label set."""
+    """A fake gh_run serving a board's fields, plus an optional label set."""
+
+    board = _board(fields, "PVT_b")
 
     def serve(args, config=None, **kw):
         if args[:3] == ["gh", "label", "list"]:
@@ -535,11 +549,7 @@ def _serve_board_fields(fields: list[dict], *, labels: list[dict] | None = None)
             )
         if args[:3] == ["gh", "issue", "list"]:
             return subprocess.CompletedProcess(args, 0, json.dumps([]), "")
-        if args[:3] == ["gh", "project", "field-list"]:
-            return subprocess.CompletedProcess(args, 0, json.dumps({"fields": fields}), "")
-        if args[:3] == ["gh", "project", "view"]:
-            return subprocess.CompletedProcess(args, 0, json.dumps({"id": "PVT_b"}), "")
-        return subprocess.CompletedProcess(args, 0, "{}", "")
+        return _board_read(args, board) or subprocess.CompletedProcess(args, 0, "{}", "")
 
     return serve
 
@@ -705,7 +715,9 @@ def test_detection_is_scoped_to_the_declarable_axes(ae, monkeypatch) -> None:
     inv = ae.take_inventory(_board_config(), sample_limit=200)
     assert ae._board_field_candidate(inv, "type") is None
     assert ae._board_field_candidate(inv, "state") is None
-    assert ae._board_field_candidate(inv, "priority") == _PRIORITY_FIELD
+    candidate = ae._board_field_candidate(inv, "priority")
+    assert candidate is not None and candidate["name"] == "Priority"
+    assert [option["name"] for option in candidate["options"]] == ["P0", "P1"]
 
 
 def test_board_field_detection_is_still_a_read(ae, monkeypatch) -> None:

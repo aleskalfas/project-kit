@@ -1,0 +1,28 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  Each read of the project's board tells a board that did not answer from one
+  that answered empty, under every credential (ADR-096). A read counts only
+  where the board's answer names the configured board, and an issue counts as
+  off the board only where the same request shows a card on the board for
+  another issue of its repository. A stored `projects_v2_node_id` is a name
+  the read is addressed by, never the board's answer. `create-issue` reads the
+  board before it files, `--dry-run` included: it files nothing and exits 3
+  where the board does not answer, and exits 1 where the board carries the
+  state and has no Status option for the issue's first state. Once an issue
+  is filed, a card the board did not add, or a first Status not written,
+  exits 5, the issue filed, in place of a warning and exit 0, and 5 replaces
+  4 where the report link failed beside it. A caller that reads the code, such
+  as the pm skill's filing pages, reads 5 as the issue filed. `set-field`
+  exits 3 where the board did not answer for an axis it carries, even where it
+  wrote the others. `validate-issue` reports a board that did not answer as
+  `board_membership.unverified`, never as an issue off the board.
+  `merge-workstream`, `split-workstream` and `remove-workstream` refuse, exit
+  1, while a card the credential may not read, or one holding a state issue,
+  may hold the option they would remove. The post-check workflow template
+  gains a credential the board answers, unset as it ships: `PM_BOARD_TOKEN`,
+  or a GitHub App's `PM_BOARD_APP_ID` and `PM_BOARD_APP_KEY`. Its add keeps
+  one owner, and its `PM_PROJECT_BOARD_OWNER` setting is gone. A copy made
+  earlier gains this only once copied again.

@@ -465,6 +465,66 @@ def test_merge_moves_an_archived_card_before_it_drops_the_loser_option(
     assert board.option_names() == ["cli"]
 
 
+@pytest.mark.parametrize(
+    ("uncounted", "says"),
+    [
+        ({"withheld": {"I9"}}, "1 card(s) whose issues lie in repositories this credential"),
+        ({"state_issues": {"I9"}}, "1 card(s) holding a state issue"),
+    ],
+    ids=["withheld", "state-issue"],
+)
+def test_merge_refuses_while_a_card_it_did_not_count_may_hold_the_loser(
+    mw, tmp_path, monkeypatch, seams, capsys, uncounted, says
+) -> None:
+    """A withheld card's value is unknown, and a card the walk set aside holds a
+    state issue: dropping the loser's option would clear it unseen, so the merge
+    refuses before it writes anything ([pkit:ADR-096] point 2)."""
+    stage_project(tmp_path, TWO, board=True)
+    board = FakeBoard(["cli", "old"], {"I1": (1, "old"), "I9": (9, "old")}, **uncounted)
+    board.install(monkeypatch, *seams)
+    monkeypatch.setattr(mw, "gh_run", FakeRepo())
+    rc = _run(mw, monkeypatch, tmp_path, *MERGE_OLD, "--skip-references")
+    assert rc == 1
+    assert board.writes == []
+    assert board.option_names() == ["cli", "old"]
+    assert _file(tmp_path) == TWO
+    err = capsys.readouterr().err
+    assert says in err and "'old'" in err
+
+
+def test_merge_goes_on_where_a_set_aside_card_holds_another_option(
+    mw, tmp_path, monkeypatch, seams
+) -> None:
+    """Only a card that may hold the loser stops the merge: a state issue's card
+    holding the survivor is untouched by it."""
+    stage_project(tmp_path, TWO, board=True)
+    board = FakeBoard(["cli", "old"], {"I1": (1, "old"), "I9": (9, "cli")}, state_issues={"I9"})
+    board.install(monkeypatch, *seams)
+    monkeypatch.setattr(mw, "gh_run", FakeRepo())
+    rc = _run(mw, monkeypatch, tmp_path, *MERGE_OLD, "--skip-references")
+    assert rc == 0
+    assert board.option_names() == ["cli"]
+    assert board.card_option("I9") == "cli"
+
+
+def test_merge_stops_where_the_board_answer_names_another_board(
+    mw, tmp_path, monkeypatch, seams, capsys
+) -> None:
+    """The board's own read counts only where its answer names the configured
+    board ([pkit:ADR-096] point 1): any other answer is a board that did not
+    answer, and nothing is changed."""
+    stage_project(tmp_path, TWO, board=True)
+    board = FakeBoard(["cli", "old"], {"I1": (1, "old")})
+    board.graph.placed["board"] = "Could not resolve to a ProjectV2 with the number 7."
+    board.install(monkeypatch, *seams)
+    monkeypatch.setattr(mw, "gh_run", FakeRepo())
+    rc = _run(mw, monkeypatch, tmp_path, *MERGE_OLD, "--skip-references")
+    assert rc == 3
+    assert board.writes == []
+    assert _file(tmp_path) == TWO
+    assert "Could not resolve to a ProjectV2 with the number 7." in capsys.readouterr().err
+
+
 # --- split -----------------------------------------------------------------
 
 
@@ -615,6 +675,22 @@ def test_split_on_a_board_moves_each_card_to_its_answer(sw, tmp_path, monkeypatc
     assert board.option_names() == ["docs", "cli-tools", "cli-rendering"]
 
 
+def test_split_refuses_while_a_withheld_card_may_hold_the_source(
+    sw, tmp_path, monkeypatch, seams
+) -> None:
+    stage_project(tmp_path, ONE, board=True)
+    board = FakeBoard(["cli"], {"I1": (1, "cli"), "I9": (9, "cli")}, withheld={"I9"})
+    board.install(monkeypatch, *seams)
+    monkeypatch.setattr(sw, "gh_run", FakeRepo())
+    rc = _run(
+        sw, monkeypatch, tmp_path, "split-workstream", "--source", "cli", "--into", "cli-tools",
+        "--into", "cli-rendering", "--default", "cli-rendering",
+    )  # fmt: skip
+    assert rc == 1
+    assert board.writes == []
+    assert _file(tmp_path) == ONE
+
+
 # --- remove ----------------------------------------------------------------
 
 
@@ -650,6 +726,36 @@ def test_remove_refuses_while_only_an_archived_card_carries_it(
     assert _run(rw, monkeypatch, tmp_path, "remove-workstream", "cli") == 1
     assert _file(tmp_path) == ONE
     assert board.card_option("I1") == "cli"
+
+
+def test_remove_refuses_while_a_withheld_card_may_hold_it(
+    rw, tmp_path, monkeypatch, seams, capsys
+) -> None:
+    """No counted card holds the option, but the board withheld one whose value
+    it did not return: removing the option could clear it unseen
+    ([pkit:ADR-096] point 2)."""
+    stage_project(tmp_path, ONE, board=True)
+    board = FakeBoard(["cli"], {"I9": (9, "cli")}, withheld={"I9"})
+    board.install(monkeypatch, *seams)
+    monkeypatch.setattr(rw, "gh_run", FakeRepo())
+    assert _run(rw, monkeypatch, tmp_path, "remove-workstream", "cli") == 1
+    assert _file(tmp_path) == ONE
+    assert board.writes == []
+    assert "repositories this credential may not read" in capsys.readouterr().err
+
+
+def test_rename_goes_on_while_a_withheld_card_holds_the_option(
+    rn, tmp_path, monkeypatch, seams
+) -> None:
+    """Renaming an option in place alters no card's value, so a card the walk did
+    not count does not stop it ([pkit:ADR-096] point 2)."""
+    stage_project(tmp_path, ONE, board=True)
+    board = FakeBoard(["cli", "docs"], {"I9": (9, "cli")}, withheld={"I9"})
+    board.install(monkeypatch, *seams)
+    monkeypatch.setattr(rn, "gh_run", FakeRepo())
+    assert _run(rn, monkeypatch, tmp_path, "rename-workstream", "cli", "tools") == 0
+    assert board.option_names() == ["tools", "docs"]
+    assert board.card_option("I9") == "tools"
 
 
 def test_remove_refuses_when_the_count_cannot_be_read(rw, tmp_path, monkeypatch, seams) -> None:

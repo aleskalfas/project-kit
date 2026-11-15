@@ -52,8 +52,9 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  split (or dry-run reported)
-  1  membership refusal / validation refusal / an issue left untriaged / off
-     a terminal without --yes
+  1  membership refusal / validation refusal / an issue left untriaged / a
+     card on the board may hold the source's option whose value the walk did
+     not count / off a terminal without --yes
   2  usage error
   3  gh failure (issues unreadable; a move, a delete or a rewrite failed)
 """  # noqa: E501 — a usage line is a command, kept whole
@@ -296,6 +297,10 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 3
+        uncounted = workstream_sync.uncounted_refusal(args.source, read)
+        if uncounted is not None:
+            print(f"[refused] nothing was changed: {uncounted}", file=sys.stderr)
+            return 1
         issues = read.carriers
 
     stray = sorted(set(assigned) - {i.number for i in issues})
