@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  DEC-071 and DEC-072 are proposed (#3241): the first has filing refuse a
+  board option naming a board other than the configured one in every
+  project, and the second has sync-board give each open issue its missing
+  card in every project with a board. Neither binds until accepted, and no
+  command changes until the change that builds them, so no surface moves.
