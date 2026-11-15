@@ -1944,6 +1944,23 @@ def test_a_step_after_the_merge_failing_is_merged_and_owed(world, capsys, monkey
     assert out.splitlines()[-1] == f"merge: #{ISSUE} completed through its merged PR"
 
 
+def test_a_close_after_the_merge_failing_keeps_land_work_s_own_code(
+    world, capsys, monkeypatch
+) -> None:
+    """done-work exits 6 for a close owed (#3207); land-work decides on how its
+    run ended, so it exits 7, as for any step after the merge."""
+    run = world()
+    monkeypatch.setattr(run.land.done_work, "_invoke_close_issue", lambda *a, **k: 3)
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_RETRY == 7
+    assert out.splitlines()[-1] == (
+        f"merge: merged as {'c' * 7}, but a step after the merge failed: [warn] PR merged "
+        f"but close-issue exited 3 for #{ISSUE}. The merge is durable; re-run `close-issue "
+        f"{ISSUE} --mode pr-merge --pr {PR}` to close and cascade it. — run `land-work "
+        f"{ISSUE}` again to complete #{ISSUE}"
+    )
+
+
 def _then(run: _Run, monkeypatch: pytest.MonkeyPatch, after: Callable[[], None]) -> None:
     """Run `after` once done-work's run has returned."""
     original = run.land.done_work.run

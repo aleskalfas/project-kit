@@ -67,7 +67,10 @@ A link failure after a
 successful create prints the backbone's message verbatim plus the exact
 remediation command (`pkit report link <N> <new>`) and exits non-zero
 (exit 4) — the created issue is never deleted or closed to "undo" the
-partial state.
+partial state. Where a write to the board that the filing requires
+([pkit:ADR-096] point 4) failed too, such as the add of its card, filing names
+each failure and exits with the code it takes for that write, not exit 4
+(refinement per [pkit:ADR-096]).
 
 ## Rationale
 
