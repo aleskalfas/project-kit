@@ -35,7 +35,11 @@ What it does:
   * writes the Status on those cards only, and adds a card for each open issue
     that has none, then sets its Status.
 
-A card for another repository's issue, a pull request or a draft is left alone.
+A card for another repository's issue, a pull request or a draft is left alone,
+and so is a card the board withheld, whose issue lies in a repository the
+credential may not read: the credential reads this repository, so no such card
+holds one of its issues ([pkit:ADR-096] point 2). A card is added only where
+the board answers with the issue's card (point 3).
 So is a card whose issue's state has no Status option: the options missing from
 the board's Status field are named first, with the remedy.
 
@@ -78,6 +82,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import (
     axis_carriage,
     axis_labels,
+    board_answer,
     board_fields,
     board_status,
     bootstrap_gate,
@@ -192,7 +197,10 @@ def main() -> int:
             file=sys.stderr,
         )
     cards = board_fields.read_items(
-        config, project_node_id=read.field.project_id, field_name=board_status.STATUS_FIELD
+        config,
+        project_node_id=read.field.project_id,
+        field_name=board_status.STATUS_FIELD,
+        owner=read.field.owner,
     )
     if not cards.ok:
         print(f"error: the board's cards could not be read: {cards.error}", file=sys.stderr)
@@ -375,7 +383,9 @@ def _add_card(url: str, config: dict) -> tuple[str | None, str]:
     """Add the issue at ``url`` to the configured board: its card's id, or None
     and why. Board membership (DEC-019), which ADR-031 point 3 names out of the
     substrate writes, so it is constructed here, as `create-issue` does: on the
-    board of `gh.default_owner`, else of the issue's owner, the repository's."""
+    board of `gh.default_owner`, else of the issue's owner, the repository's. It
+    is made only where the board answers with the issue's card
+    (`board_answer.added_card`, [pkit:ADR-096] point 3)."""
     number = board_fields.board_number(config)
     owner = board_fields.url_owner(url)
     cmd = ["gh", "project", "item-add", str(number), "--url", url, "--format", "json"]
@@ -385,14 +395,7 @@ def _add_card(url: str, config: dict) -> tuple[str | None, str]:
         return None, "`gh` is not on PATH"
     if proc.returncode != 0:
         return None, " ".join((proc.stderr or "no stderr").split())
-    try:
-        payload = json.loads(proc.stdout or "")
-    except ValueError:
-        payload = None
-    item_id = payload.get("id") if isinstance(payload, dict) else None
-    if not isinstance(item_id, str) or not item_id:
-        return None, "`gh project item-add` returned no card id"
-    return item_id, ""
+    return board_answer.added_card(proc.stdout, url)
 
 
 def _repository(config: dict) -> tuple[str | None, str]:

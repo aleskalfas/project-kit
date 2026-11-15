@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/visual-communication/package.yaml
+        - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
         - .pkit/capabilities/visual-communication/scripts/status.py
         - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/release.py
@@ -18,6 +19,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/new.py
         - .pkit/capabilities/visual-communication/scripts/prune.py
         - .pkit/capabilities/visual-communication/scripts/write-code.py
+        - .pkit/capabilities/visual-communication/scripts/draft.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
         - .pkit/capabilities/visual-communication/scripts/_lib/location.py
         - .pkit/capabilities/visual-communication/scripts/_lib/grant.py
@@ -54,6 +56,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/fingerprint.py
         - .pkit/capabilities/visual-communication/scripts/_lib/code.py
         - .pkit/capabilities/visual-communication/scripts/_lib/briefs.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/drafts.py
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
         - .pkit/capabilities/visual-communication/schemas/config.schema.json
         - .pkit/capabilities/visual-communication/schemas/piece.schema.json
@@ -64,6 +67,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/library.schema.json
         - .pkit/capabilities/visual-communication/schemas/roles.schema.json
         - .pkit/capabilities/visual-communication/schemas/notation.schema.json
+        - .pkit/capabilities/visual-communication/schemas/review.schema.json
         - .pkit/capabilities/visual-communication/libraries/foundations/library.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
@@ -192,6 +196,10 @@ pkit:
         - visual-communication:DEC-036#8
         - visual-communication:DEC-042#3
         - visual-communication:DEC-042#6
+        - visual-communication:DEC-042#7
+        - ADR-057#2
+      artefact:
+        - .pkit/cli/README.md#validate
 ---
 
 # The files of the visual work
@@ -348,7 +356,8 @@ It removes each folder whole, then takes each entry out of the list as text ([Th
 - `exports/<piece>/`: the files `pkit visual export` and `pkit visual upgrade` make, but for the version `pkit visual mark-final` moved into the piece's folder;
 - `before-after/<piece>/`: a piece's scenes drawn around a change to its lock's versions, in `before/` without the change and in `after/` with it;
 - `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder;
-- `look/<piece>/`: the images, the frames and the report `pkit visual look` writes.
+- `look/<piece>/`: the images, the frames and the report `pkit visual look` writes;
+- `reviews/<piece>/`: the reviewer's report of each round, as whoever dispatched the reviewer kept it, whole in `round-<n>.md` and its document alone in `round-<n>.yaml` ([Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 
 *What is made from a piece* names the files in each. While `pkit visual look` runs, the folder also holds a temporary folder of the fonts it hands its tool, which the run removes.
 
@@ -386,9 +395,9 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 ```
 
-The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `brief`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports` and `code`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
+The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `brief`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports`, `code` and `review`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
 
-No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks each bound file's shape against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
+No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks the shape of each bound file it reads against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). The documents of the reviewer's kept reports name `visual-communication:review`, yet `pkit validate` checks none of them. They lie in the clone's local folder, which git ignores ([The clone's local folder](#the-clones-local-folder)), and the core's data validation reads only the files git sees (ADR-057 point 2). Nor does the check read them. Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
 
 ### How the files are read
 
@@ -600,7 +609,7 @@ pages:
           source: Jacques Bertin, Semiology of Graphics
 ```
 
-- **`piece`** is the part for the whole piece. It holds what concerns the piece, or more than one of its pages. A piece of one page, such as a figure, keeps all of its brief here, its takeaway included. So does the intent of a page not yet in the content. Whoever starts the page gives it its id in the content, and its part can then lie under `pages`.
+- **`piece`** is the part for the whole piece. It holds what concerns the piece, or more than one of its pages. A piece whose top is a page alone, such as a figure, keeps all of its brief here, its takeaway included. So does the intent of a page not yet in the content. Whoever starts the page gives it its id in the content, and its part can then lie under `pages`.
 - **`pages`** holds a part for each page the brief speaks of, keyed by the id the page carries in the content, such as a slide's id. A page the brief names carries an id, as anything another part of the piece names does ([Content files](#content-files)).
 
 Each part may hold these fields:
@@ -611,6 +620,7 @@ Each part may hold these fields:
 | `goals` | What the piece, or the page, must achieve with its audience, such as what the audience can do after it, one sentence each. |
 | `takeaway` | The one point a reader should leave the page with, only where the page has no *lead*. A lead is the text the page's content gives to state its point, such as a slide's lead under its title. No field says which text that is, so whoever writes or reviews the page reads it from the content. Where the page has a lead, the lead is its takeaway, and the brief does not repeat it. A cover or a section page often has none. |
 | `reasons` | Why each choice of the design was made, one reason for each choice, listed in the order of their aspects. |
+| `drafts` | The makers' record of drafts, which is no intent ([The makers' record of drafts](#the-makers-record-of-drafts)). |
 
 A reason holds these fields:
 
@@ -622,11 +632,37 @@ A reason holds these fields:
 | `principle` | yes | The principle the choice rests on: its `name`, and its `source`, such as an author and a work. A reason that names no principle is taste, which nobody can judge. |
 
 - **A key path** names a part of the content as a tie's end names its item ([Content files](#content-files)). It joins the keys the content file writes with `.`, and names each item of a list by its id, as `[<id>]`, never by its place. It may end at a field, a list's included. A page's part starts the path at its page, as `visual.levels`. The piece's part starts it at the content's top, as `slides[layers]`, or a site's `header`. A part inside a local component, or in shared content, takes no key path, since a key path reaches only the piece's own content: name it in the words.
+- **The makers' record of drafts** lies in `drafts` of the page's part, or of the part for the whole piece on a piece whose top is a page alone, such as a figure. See below.
 - **What a brief never holds.** Nothing the content holds: its text, its pictures, the component that draws each part, and any value or layout. Nothing `piece.yaml` declares: who the piece is for, where it is shown, whether it explains, its libraries and its lock. No reason for a library's own choice, such as why a brand's accent is the colour it is, which lives with the library. No requirement that binds more than this piece, which lives in a rule set.
 - **The methodology's container,** `pkit`, is kept free at the brief's top and in each mapping of it, as in a content file ([Reserved words](#reserved-words)). Its schema refuses every other key it does not declare.
 - **Who writes it.** A person, or an agent working for one. `pkit visual new` stamps it holding its binding alone, and says nothing in it. Its goals and relations come from whoever asks for the piece, and its reasons from whoever designs it, as they design.
 - **No command changes what it says.** No renderer, export or producer reads it. So a change to it moves no lock, changes no scene, and stales no output: no fingerprint reads it (*The input set of each kind* in *What the check reports*). `pkit visual take-up` copies it with the rest of a final piece's folder, as it is ([The lock](#the-lock)). An id renamed in the content leaves the brief naming what is gone, which the check fails until a person mends the brief.
 - **What the check reads of it.** Its shape is the core's data validation's. The check fails a page or a key path the brief names that names nothing in the content of the piece's source language: `brief-page` and `brief-path`, under *The brief* in *What the check reports*. A final piece's brief goes unread, but for its binding. Whether the drawn pages show what the brief asks is no check's to say. The capability's reviewer reads them against it, and reports each part of the brief a page does not show as a brief finding (DEC-030 point 6; *The reviewer* in the capability's README).
+
+#### The makers' record of drafts
+
+The designer owns each word of a piece that is not the asker's, and the asker's words include a lead, title or takeaway once the asker has seen it (DEC-042 point 7). The `drafts` of a part record the ones the designer drafted and the asker has not seen:
+
+```yaml
+cover:
+  takeaway: The talk is about how the method's parts fit together.
+  drafts:
+    - kind: takeaway
+      language: en
+      digest: sha256:dad3e08763728fe64fd8bc2e0d79408c525cdd32f6defc8ec8766ee5a37992e8
+```
+
+| Field | Required | What it holds |
+|---|---|---|
+| `kind` | yes | `lead`, `title` or `takeaway`. |
+| `language` | yes | The language of the text. |
+| `digest` | yes | `sha256:` and the hex of the SHA-256 of the text, normalised as below. |
+
+- **A digest, never the text.** An entry has no field for a text, and the schema refuses one. The page is the part the entry lies in.
+- **The text normalised.** The digest is taken over the text put in Unicode normalisation form C, then each run of white space, a line break among them, made one space, then the ends trimmed. So a text reflowed or re-indented keeps its digest, and a changed word, letter case or mark changes it.
+- **Written by whoever designs the piece,** as it drafts the text, and cleared once the asker has seen it. `pkit visual draft` gives the entry, its digest included, and writes nothing in the brief ([`pkit visual draft`](README.md#pkit-visual-draft-piece)). It finds a page where the piece's top declares its pages, the top read under the piece's lock or, before the piece's first render, under the versions that render would lock ([The lock](#the-lock)). So a draft is recorded as it is written. Where that render's search for a lock refuses, such as for a pinned draft with no lock, the command refuses too.
+- **What follows.** A lead, title or takeaway whose text no longer matches the digest recorded for its page, kind and language, or that the record lists nothing for, is the asker's. A piece with no brief has no record, so its leads, titles and takeaways are the asker's. `pkit visual draft --check` says which: the text *matches* the entry, *differs* from it, or has *no entry*, and only a match leaves it the designer's.
+- **Neither `pkit visual check` nor any renderer reads it.** Its shape alone is validated, by the core's data validation.
 
 ## Picture files
 

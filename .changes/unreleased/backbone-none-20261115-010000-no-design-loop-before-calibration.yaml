@@ -1,0 +1,3 @@
+component: backbone
+kind: none
+body: Project rule 5 in `.pkit/rules/project.md`, project-kit's own and never synced, runs no design loop in project-kit until the graphic-design review is calibrated (#3249). Nothing an adopter receives changes.

@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import os
+import shlex
+import shutil
 import sys
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -144,6 +147,88 @@ def outside_any_clone(
         return is_file(path, **kwargs)
 
     monkeypatch.setattr(Path, "is_file", outside_the_session)
+
+
+#: The variable that names the invoker where GitHub names no user's account
+#: (project-management DEC-021, "Identity resolution").
+INVOKER_VARIABLE = "PM_INVOKER_LOGIN"
+
+
+def write_gh(folder: Path, account: tuple[str, str] | None, after: str | None) -> Path:
+    """A `gh` in `folder`, a shell script, which answers a read of an account,
+    `gh api user` or `gh api users/<login>`, with `account`, a login and its type,
+    or, given None, with no account. It hands every other call to `after`, the path
+    of the `gh` it stands before, or exits 127 where there is none. Given an
+    account, it answers `gh api user` alone and hands a lookup on. A shell script
+    starts faster than a Python one, and every resolution of the invoker starts it."""
+    if account is None:
+        reads = "user|users/*"
+        answer = "echo 'gh: no account in a test (HTTP 401)' >&2; exit 1"
+    else:
+        reads = "user"
+        login, kind = (shlex.quote(field) for field in account)
+        answer = f"printf '%s\\t%s\\n' {login} {kind}; exit 0"
+    rest = f'exec {shlex.quote(after)} "$@"' if after is not None else "exit 127"
+    gh = folder / "gh"
+    gh.write_text(
+        f'#!/bin/sh\nif [ "$1" = api ]; then\n  case "$2" in\n    {reads}) {answer} ;;\n'
+        f"  esac\nfi\n{rest}\n",
+        encoding="utf-8",
+    )
+    gh.chmod(0o755)
+    return gh
+
+
+@pytest.fixture(scope="session")
+def no_account_gh(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
+    """The folder of a `gh` through which GitHub names no account (`write_gh`), before
+    the real `gh` this session found on PATH, or None where it found none."""
+    real = shutil.which("gh")
+    if real is None:
+        return None
+    folder = tmp_path_factory.mktemp("no-account-gh")
+    write_gh(folder, None, real)
+    return folder
+
+
+@pytest.fixture(autouse=True)
+def no_account_from_github(monkeypatch: pytest.MonkeyPatch, no_account_gh: Path | None) -> None:
+    """Every test runs where GitHub names no account for the credential, whatever the
+    developer's `gh` is signed in as: project-management asks `gh api user` for the
+    account acting before it reads `PM_INVOKER_LOGIN`, and a user's account it answers
+    is the invoker (DEC-021, "Identity resolution"). The `gh` first on PATH answers
+    every read of an account with none, and hands every other call to the real `gh`.
+    Where there is no real `gh`, none is put there, and the read finds no `gh`, which
+    is no answer too. No test reads the variable of the session that runs the suite,
+    and no copy of the membership library keeps an answer from an earlier test. A test
+    that needs GitHub to answer asks `service_answers`."""
+    if no_account_gh is not None:
+        monkeypatch.setenv("PATH", f"{no_account_gh}{os.pathsep}{os.environ.get('PATH', '')}")
+    monkeypatch.delenv(INVOKER_VARIABLE, raising=False)
+    for module in [*list(sys.modules.values()), *in_process.loaded_libs()]:
+        if isinstance(module, ModuleType):
+            forget = vars(module).get("forget_service_answers")
+            if callable(forget):
+                forget()
+
+
+@pytest.fixture
+def service_answers(
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+    no_account_from_github: None,
+) -> Callable[..., None]:
+    """`service_answers(login, account_type="User")`: from then on in the test, `gh api
+    user` answers that the credential acts as `login`, an account of `account_type`.
+    Every other call goes to the `gh` that stood first on PATH, which names no account
+    (`no_account_from_github`)."""
+
+    def answer(login: str, account_type: str = "User") -> None:
+        folder = tmp_path_factory.mktemp("service-answers")
+        write_gh(folder, (login, account_type), shutil.which("gh"))
+        monkeypatch.setenv("PATH", f"{folder}{os.pathsep}{os.environ.get('PATH', '')}")
+
+    return answer
 
 
 @pytest.fixture

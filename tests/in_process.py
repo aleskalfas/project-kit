@@ -36,6 +36,7 @@ import shlex
 import subprocess
 import sys
 import traceback
+import weakref
 from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from pathlib import Path
 from types import FrameType, ModuleType
@@ -230,6 +231,18 @@ def route_pkit(
 # --- the loader -----------------------------------------------------------------------------
 
 
+#: Each module of a capability's `_lib` that `load` imported, held weakly: a copy leaves
+#: `sys.modules` once its call ends, and lives as long as a script loaded with it.
+_LOADED: weakref.WeakSet[ModuleType] = weakref.WeakSet()
+
+
+def loaded_libs() -> list[ModuleType]:
+    """Each module of a capability's `_lib` that `load` imported and something still
+    holds, out of `sys.modules`, so a fixture can reach it: such as to clear what a copy
+    keeps for the life of its process, as a new process of the script holds none."""
+    return list(_LOADED)
+
+
 def _scripts_of(capability: str | Path) -> Path:
     return CAPABILITIES / capability / "scripts" if isinstance(capability, str) else capability
 
@@ -287,7 +300,9 @@ def load(
     finally:
         sys.path[:] = path
         for name in _ours():
-            del sys.modules[name]
+            module = sys.modules.pop(name)
+            if isinstance(module, ModuleType):
+                _LOADED.add(module)
         sys.modules.update(saved)
 
 
