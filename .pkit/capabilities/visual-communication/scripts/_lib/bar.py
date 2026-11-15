@@ -15,6 +15,12 @@ bar covers only what the review grades, and in the major its set's pin says.
   set's `inherits` writes it, or the set's own major where no set of the project pins it
   (`bar-major`), as a pin behind its set fails (COR-051 point 7).
 
+The rules a bar covers (`covered`) are what the verdict reads (DEC-042 point 1): each rule
+of a set it covers that the review grades, and each single rule it covers. A rule's *text*
+(`rule_text`) is its section in the body of its set's file: from the heading that opens
+with its id to the next heading of that level or above, outside fenced code, the line
+breaks that end it read as one.
+
 Reads only. The project's own sets are those in the `rule-sets/` folder of its internal
 documentation root, where the backbone finds them without configuration (COR-051 point 6).
 """
@@ -22,7 +28,7 @@ documentation root, where the backbone finds them without configuration (COR-051
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -34,6 +40,7 @@ from _lib.root import CAPABILITY, CONFIG, SHIPPED
 #: The configuration's key of the bar, and its two keys.
 KEY = "bar"
 COVERS = "covers"
+AT_LEAST = "at-least"
 
 #: The findings' codes.
 UNGRADED = "bar-ungraded"
@@ -59,18 +66,29 @@ _INHERIT = re.compile(
     rf"^(?:{re.escape(CAPABILITY)}:)?(?P<set>[A-Z][A-Z0-9]*)@(?P<major>0|[1-9][0-9]*)$"
 )
 _FRONT = re.compile(r"\A---\r?\n(?P<front>.*?)\r?\n---[ \t]*(?:\r?\n|\Z)", re.DOTALL)
+_HEADING = re.compile(r"^ {0,3}(#{1,6})(?:[ \t]+(.*?))?[ \t]*$")
+_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 
 
 @dataclass(frozen=True)
 class RuleSet:
     """A rule set as its front matter gives it: its name, its major, its rules' ids with
-    each one's status, and what it inherits as written."""
+    each one's status, and what it inherits as written, with the file that holds it."""
 
     name: str
     major: int
     rules: Mapping[str, str]
     inherits: tuple[str, ...]
     loaded: bool
+    path: Path
+
+
+@dataclass(frozen=True)
+class Covered:
+    """A rule a bar covers, with the set that holds it."""
+
+    rule: str
+    held_by: RuleSet
 
 
 def findings(root: Path, data: Any) -> list[Finding]:
@@ -79,17 +97,72 @@ def findings(root: Path, data: Any) -> list[Finding]:
     covers = _covers(data)
     if not covers:
         return []
-    shipped = [each for each in _read_folder(SHIPPED_SETS) if not each.loaded]
     project = _read_folder(_project_folder(root))
-    graded = {each.name: each for each in shipped}
-    for each in project:
-        if _inherits_graded(each, project, set(graded)):
-            graded[each.name] = each
+    sets = _graded(project)
     pins = _pins(project)
     found: list[Finding] = []
     for cover in covers:
-        found.extend(_judge(cover, graded, pins))
+        found.extend(_judge(cover, sets, pins))
     return found
+
+
+def covered(root: Path, data: Any) -> tuple[Covered, ...]:
+    """Each rule the bar the configuration `data` holds covers, in the order its covers
+    name them, each once: every rule a covered set holds that the review grades, and each
+    single rule covered. A cover that names nothing the review grades gives none."""
+    sets = _graded(_read_folder(_project_folder(root)))
+    found: dict[str, Covered] = {}
+    for cover in _covers(data):
+        parsed = _COVER.match(cover)
+        held = sets.get(parsed["set"] or parsed["of"]) if parsed else None
+        if parsed is None or held is None:
+            continue
+        named = [parsed["rule"]] if parsed["rule"] else list(held.rules)
+        for rule in named:
+            if held.rules.get(rule, "withdrawn") not in GONE:
+                found.setdefault(rule, Covered(rule, held))
+    return tuple(found.values())
+
+
+def rule_text(path: Path, rule: str) -> str:
+    """The text of `rule` in the rule-set file at `path`: its section of the body, or "" where
+    the body has none."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+    front = _FRONT.match(text)
+    body = text[front.end() :] if front else text
+    opens = re.compile(rf"^{re.escape(rule)}(?![A-Za-z0-9-])")
+    taken: list[str] = []
+    level = 0
+    fence = ""
+    for line in body.splitlines():
+        fenced = _FENCE.match(line)
+        if fence:
+            if fenced and fenced[1][0] == fence[0] and len(fenced[1]) >= len(fence):
+                fence = ""
+        elif fenced:
+            fence = fenced[1]
+        else:
+            heading = _HEADING.match(line)
+            if heading and level and len(heading[1]) <= level:
+                break
+            if heading and not level and opens.match(heading[2] or ""):
+                level = len(heading[1])
+        if level:
+            taken.append(line)
+    return "\n".join(taken).rstrip("\n") + "\n" if taken else ""
+
+
+def _graded(project: Sequence[RuleSet]) -> dict[str, RuleSet]:
+    """The sets the review grades, by name: each the capability ships and loads no session
+    with, and each of the project's own `project` that inherits one."""
+    graded = {each.name: each for each in _read_folder(SHIPPED_SETS) if not each.loaded}
+    for each in project:
+        if _inherits_graded(each, project, set(graded)):
+            graded[each.name] = each
+    return graded
 
 
 def _covers(data: Any) -> list[str]:
@@ -227,4 +300,5 @@ def _read_set(path: Path) -> RuleSet | None:
         if isinstance(inherits, list)
         else (),
         loaded=front.get("loaded") is True,
+        path=path,
     )
