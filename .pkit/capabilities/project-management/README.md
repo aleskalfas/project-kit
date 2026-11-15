@@ -1100,7 +1100,7 @@ What each command does where the board does not answer:
 | `create-issue` | See "Filing an issue onto the board", below |
 | `set-field` | See "Failure + recovery", under "Batch substrate primitives", above |
 | `validate-issue` | Reports the membership check as `board_membership.unverified`, a warning, and never as an issue off the board (`board_membership.missing`) |
-| `merge-workstream`, `split-workstream`, `remove-workstream` | Exit 3, and change nothing. Where the board answered, see "Cards the walk did not count", under "Workstream lifecycle", below |
+| `merge-workstream`, `split-workstream`, `remove-workstream` | Exit 3, and change nothing. `remove-workstream --force` instead warns that the issue count could not be read, and removes the workstream ("Removing", under "Workstream lifecycle", below). Where the board answered, see "Cards the walk did not count", under "Workstream lifecycle", below |
 | `sync-board` | Exits 3. How it counts an add, and the cards it leaves alone, are in "Bringing a whole board level", below |
 | `back-fill` | See "Where the board does not answer", under "Corpus back-fill", below |
 | `pre-check` | Where a `projects_v2_node_id` is stored, passes the board check on it alone, and reads nothing. Whether it reads the board all the same is [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)'s to decide. Where none is stored, it reads the board, and fails the board check, naming `gh.default_owner` as where the board's owner goes |
