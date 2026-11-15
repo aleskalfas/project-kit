@@ -4,8 +4,9 @@ designer's loop (visual-communication DEC-042 points 1, 9 and 10).
 - **What it reads.** The document a round's review opens its report with, as whoever
   dispatched the reviewer kept it alone: `round-<n>.yaml` in the piece's folder of
   `reviews/` in the clone's local folder, the highest round kept unless one is named. And
-  the bar, from the capability's configuration alone (DEC-042 point 3). Nothing else, so
-  anyone gives the same verdict again from the same report.
+  the bar, from the capability's configuration alone (DEC-042 point 3), with the rule sets
+  it covers, so anyone gives the same verdict again from the same report. To tell whether
+  the verdict ends the loop, it also reads what `calibration` compares.
 - **The verdict.** A page meets the bar where each of its unmarked grades on the rules the
   bar covers reaches the bar's grade. The piece meets it where every page does, and each
   unmarked grade it takes as a whole does. A marked grade is left out, and named apart. The
