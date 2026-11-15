@@ -1,7 +1,7 @@
 ---
 id: ADR-096
 title: A board that did not answer is never taken for one that answered empty
-status: proposed
+status: accepted
 date: 2026-11-14
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
