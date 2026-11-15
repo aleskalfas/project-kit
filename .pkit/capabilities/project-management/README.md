@@ -1083,6 +1083,7 @@ Where a Projects v2 board is configured and the map carries the state off it, it
 - **A closed issue's card** says where its work stood before the close. Where the issue did not close as completed, that tells finished work from a won't-do close. A card that then places the issue nowhere is named, with what the board said, and no ancestor moves
 - **`start-work` and `review-work`** refuse at their early check in the same cases
 - **`create-issue`** gives the new card its first Status: Todo, or Backlog for an issue filed with a milestone
+- **`create-issue --board <N>`** is refused, with exit 2, unless N is the configured board's number. An issue filed onto another board would have no card on the configured board, so no command could read its position. The refusal comes before anything is written or asked, `--dry-run` included. Leave `--board` out to file onto the configured board, and where the issue belongs on the other board too, add a card there after filing with `gh project item-add`. That card carries no position ([project-management:DEC-070-filing-another-board])
 - **A closed issue is Done whatever its card says,** so a close that leaves the card as it was needs nothing more. `sync-board` refuses here, so after `reopen-issue`, set the card's Status by hand
 
 **Where the Status is a projection.** The same writers write it after each move, and the issue's own state stays the source.
