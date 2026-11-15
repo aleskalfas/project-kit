@@ -10,10 +10,10 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 - **A defect lowers a grade.** The reviewer keeps a list of defects, such as an overlap. Each is a plain error of drawing, never a matter of design. Where a rule's own words name such a defect, a page that shows it is graded below *professional* on that rule.
 - **Typography,** how a paragraph is set, gains a new rule, since no rule, defect or check judges it.
 - **Craft,** whether parts line up, stand clear of each other and meet where they join, gains no rule. The list of defects and the rule on grouping judge it. Two new automatic checks find boxes that overlap and edges that nearly line up, and the reviewer judges each place they find.
-- **Legibility at the medium's size,** whether a text is large enough where the piece is shown, gains no rule. Comparing a text's size with the smallest its medium allows is an automatic check's. Where that check judged no text's size, the review can say only that a text cannot be made out in the image, so the gap stays open there.
+- **Legibility at the medium's size,** whether a text is large enough where the piece is shown, gains no rule. Comparing a text's size with the smallest its medium allows is an automatic check's. Where that check judged no text's size, or while the capability ships none, the review can say only that a text cannot be read where the piece is shown, as far as the image lets the review judge, so the gap stays open there.
 - **Colour** gains no rule. The rules on form and on the focal point judge it, and the rest is a brand's look or a matter of taste.
 
-The new rule lands in a later change, which gives the rule set a new major version.
+The new rule lands in a later change, which gives the rule set a new major version. The review is tested again only once that rule, the reviewer's new instructions, the new teaching on type and colour, and all three automatic checks have landed: the two of boxes and the one of a text's size (point 8).
 
 ## Context
 
@@ -23,6 +23,7 @@ The words it uses:
 - **The canon** is the published, established works of the field, which each rule is taken from (DEC-028 point 1).
 - **The review** is what the capability's reviewer agent does: it reads the images of a piece's pages and reports. Its *body* is the file of instructions it works by.
 - **A check** is a measurement a command makes on every render, with no judgement. A check's finding either *fails* or *asks for attention*. It asks for attention when someone is expected to act, and names who ([visual-communication:DEC-002-files-and-validation] point 7).
+- **The capability's list of checks** is its page that lists each check and its findings, `checks.md`.
 - **A fault** is one of the defects the reviewer's body lists, such as an overlap. It is a drawing that does not show what the content, the brand or a passing check says it should, and never a judgement of design ([visual-communication:DEC-030-design-agents] point 6).
 - **A grade** is one of four words the review gives each rule on each page: *below competent*, *competent*, *professional* and *excellent* (DEC-042 point 1). A grade below professional is reported as a finding on its rule.
 - **A bar** is a project's setting that names rules and the grade each page must reach on them, professional or excellent (DEC-042 point 3).
@@ -60,10 +61,10 @@ DEC-042 point 2 gives four places. This record takes them in this order for each
 ### 2. A fault lowers the grade of the rule whose words name it
 
 This point holds for every rule the review grades, in `COMM` and in `GRAPHIC`.
-- **When a fault cites a rule.** A fault cites a rule where the rule's words name the defect, and only there: no other rule is a ground of the fault (DEC-030 point 6). An offset between parts that belong together is named by "lined up" in `RS-GRAPHIC-002`, so that fault cites that rule. No rule's words name a wrong picture, so that fault cites none. The reviewer's body holds which kind of fault cites which rule, for both sets.
+- **When a fault cites a rule.** A fault cites a rule where the rule's words name the defect, and only there: no other rule is a ground of the fault (DEC-030 point 6). An offset between parts that belong together is named by "lined up" in `RS-GRAPHIC-002`, so that fault cites that rule. No rule of `GRAPHIC` names a wrong picture, so there that fault cites none. The reviewer's body holds which kind of fault cites which rule, for both sets.
 - **Such a fault is a break the rule's text settles.** The rule's words name the defect, so no reading of the rule is left to choose (DEC-030 point 6). Whether the defect is on the page is the fault's own judgement, made on the image.
 - **How far it moves the grade.** A page on which the review finds a fault that cites a rule takes a grade below professional on that rule, as a break a rule's text settles does (DEC-042 point 1). *Professional* is the work a professional designer hands over, and none hands over a page with such a defect. Which of the two lower grades it takes is a reading, since no rule's text names one for a fault.
-- **Why two runs grade alike.** A bar asks professional or excellent, so its verdict turns only on whether a grade is below professional. The same fault gives the same answer on every run, however small the defect.
+- **Why two runs grade alike.** A bar asks professional or excellent, so no bar's verdict turns on which grade below professional a page takes. The same fault gives the same answer on every run, however small the defect.
 - **One finding of the defect.** The fault is the one finding of what the reviewer observed (DEC-030 point 6). The rule's grade on that page is the rule's own finding, as every grade below professional is (DEC-042 point 1). It names the fault as its evidence, and does not describe the defect again.
 - **A fault that cites no rule** moves no grade. The designer mends it as it mends any fault it judges right (DEC-030 point 2).
 - **Among the faults, these are named by no rule of `GRAPHIC`:** a part the page does not draw at all; a wrong picture; a typeface the brand does not give a text's role, where every text of that kind looks alike; and a join that misses between parts that are not steps. Whether a rule of `COMM` names one of them is traced by the work on the reviewer's body.
@@ -133,13 +134,15 @@ What the rule leaves to others:
 Legibility gains no rule. The canon names it, and DEC-028 point 10 divides it: the smallest text size for a medium is a check's, and the rest is the rule's.
 
 - **Comparing a text with its medium's minimum is the check's.** Comparing a text's size with the smallest its medium allows needs no judgement, so it is a check's (DEC-028 point 1). How the check finds a text's size and its medium's minimum is the check's own work, and this record decides none of it.
-- **What the rule's first sentence judges,** on the drawn page: whether a reader can read each text as it was drawn (DEC-030 point 6). That stays the reviewer's wherever no check measures it ([visual-communication:DEC-015-viewing-step-and-reviewer] point 7). How the review reads it is the reviewer's body's.
+- **What the rule's first sentence judges,** on the drawn page: whether a reader can read each text as it was drawn, where the piece is shown (DEC-030 point 6). That stays the reviewer's wherever no check measures it ([visual-communication:DEC-015-viewing-step-and-reviewer] point 7). How the review reads it is the reviewer's body's.
+- **"As it was drawn" takes in where the piece is shown.** The review reads each image as a reader would in the place the piece declares it is shown ([visual-communication:DEC-001-visual-communication-discipline] point 3, "What a piece declares"; DEC-030 point 6, "What it judges"). The rule's text names that place "as its `shown` field names, such as projected in a room, on a screen, or printed". The review takes the place from that declaration. It judges whether the drawn text can be read there, and never a text's size against a minimum, which keeps it apart from the alternative "The review judging text size from an image scaled to the medium", rejected below.
 - **What its second sentence judges:** whether the page is taken in at a glance. How much a page holds is evidence for this sentence alone, and never for whether a text can be read.
 - **One grade, and the finding names the sentence** it rests on.
 - **A fault the rule's words name,** such as a text that does not read over a picture, holds its grade as point 2 says.
-- **No small text fails twice.** Where the check judged a text's size, a text under its medium's minimum is the check's finding alone, since what a check measures stays the check's (DEC-030 point 7). It lowers no grade of `RS-GRAPHIC-005`, and the reviewer names it in one line.
-- **Where the check judged no text's size,** whether in a medium, at a size or for a whole piece, or where no such check runs, the review judges a text's size only as far as the image shows that the text cannot be read. It does not say that a text is too small for its medium.
-- **Who says where no text's size was judged.** Where the check states that it judged no text's size, that statement is what tells the reviewer, and the review's report repeats none of it, which keeps what a check measures the check's (DEC-030 point 7). Where no such check runs, the review's report says that no text's size was compared with its medium's minimum. Either way the gap is named where it stays open.
+- **No small text fails twice.** Where the check judged a text's size, a text under its medium's minimum is the check's finding alone, since what a check measures stays the check's (DEC-030 point 7). It lowers no grade of `RS-GRAPHIC-005`, and the review's report names it in one line.
+- **Anywhere the check judged no text's size,** or while the capability ships no such check, the review judges a text's size only as far as the image shows that the text cannot be read. It does not say that a text is too small for its medium.
+- **Who says where no text's size was judged.** Where the check states that it judged no text's size, that statement is what tells the reviewer, and the review's report names it in one line, as it names a fault the check already reports (DEC-030 point 7). While the capability ships no such check, the review's report says that no text's size was compared with its medium's minimum. Either way the gap is named where it stays open.
+- **One reading, with the check or without it.** The reviewer's body words this point's reading for both states, a check of a text's size and none, since the review also runs while the capability ships no such check. In each, the report names the gap as the bullet above says.
 - **The check itself is not this record's.** DEC-042's Implications list it as later work. This record adds only how the reading and the check divide the rule.
 
 ### 6. Colour gains no rule
@@ -159,6 +162,15 @@ Each part of the gap has a home, or no source states it as a test.
 - **Its sources are the canon's.** The first calibration's outside judge ranked its ladder by measures of its own. No wording, figure or example of those measures enters the rule, a check or a reading this record places (DEC-042 point 2).
 - **It names no grade.** A rule's text names a grade only where a break of it blocks a bar (DEC-042 points 1 and 2). No source calls a break of this rule unworkable.
 - **Its origin is this record, and it anchors as its set's rules do.** The rule names DEC-028 points 3 and 4 among the points it rests on, as every rule of `GRAPHIC` does, and this record's point 4. So a later change to any of them flags the rule to be read again.
+
+### 8. The calibration waits for each check whose output the review reads
+
+A calibration of DEC-042 point 9 runs only once each check whose output the review reads has landed. Here those are the two checks of boxes of point 3 and the check of a text's size of point 5.
+
+- **Why it waits for them.** Such a check changes how the review grades the rule it bears on, `RS-GRAPHIC-002` or `RS-GRAPHIC-005`. Yet the command that gives the verdict compares with the accepted data only what DEC-042 point 9's list of what lapses the hold names, and that list names no check ([project-kit#3296](https://github.com/aleskalfas/project-kit/issues/3296) is the follow-up that would add them). So a calibration accepted before such a check lands keeps the hold on once it lands, vouching for a review that does not run as it was measured.
+- **What else it waits for.** The calibration also waits for the rule of point 4 and for the work on the reviewer's body and the design knowledge. A change to any of them lapses the hold (DEC-042 point 9), so for them the wait is a matter of economy: a report accepted before one lands would lapse when it lands.
+- **What it costs.** Only an accepted calibration's report switches the hold on (DEC-042 point 9), so the hold waits on the check of a text's size too ([project-kit#3185](https://github.com/aleskalfas/project-kit/issues/3185)). Until the hold is on, the verdict informs, and the designer's loop ends after two rounds and the person (DEC-030 point 2).
+- **Its report says where no text's size was compared** with its medium's minimum. Which checks ran, and where, bounds the evidence each covered rule has. A calibration's report shows enough to weigh each covered rule's own evidence (DEC-042 point 9).
 
 ## Rationale
 
@@ -198,6 +210,7 @@ Each part of the gap has a home, or no source states it as a test.
 - **The fault's lowering of a grade restated at each rule a fault cites.** Rejected: one decision would have many homes, and a change to it would have to find each.
 - **A rule on every text of more than one line.** Rejected: it would reach a title on two lines, a label that wraps and a bullet, which no source of the rule speaks of. A rule that failed a two-line title for short lines would state a test the canon does not. Its trigger to revisit: a calibration finds headings or list items that wrap badly, and a source states a test for them.
 - **Half of Lupton's test,** only the lines much shorter than the rest. Not taken: the rule would state a test its source does not.
+- **Lupton's words on hyphenation kept in the rule.** Not taken: the engine never hyphenates, so there is nothing to keep low. Its trigger to revisit: the engine gains hyphenation.
 - **A clause on the gaps between words in a text with two straight edges.** Not taken: the engine draws no such text. Its trigger to revisit: the engine gains it.
 - **A rule that a page's colours form one scheme.** Rejected: its break, hues that read as no scheme, is DEC-028's own example of a break of `RS-GRAPHIC-007` (DEC-028 point 11).
 - **A rule on muted grounds.** Rejected: it would fail a brand's title page in its strongest colour.
@@ -210,6 +223,7 @@ Each part of the gap has a home, or no source states it as a test.
 - **A clause on a lone last word, and one on a heading parted from its text.** Not taken. For the first, this record found no source that states the test for every language. For the second, the engine flows no text from page to page, and nearness is `RS-GRAPHIC-002`'s.
 - **A check of boxes that fails unless accepted,** as a loss is accepted in a piece. Rejected: an overlap a library's component means would need accepting in every piece that uses it.
 - **The rule landed in this change.** Rejected: its new major belongs in a change that declares it, with the reviewer's body and the design knowledge that read the rule.
+- **Calibrating before the check of a text's size,** with the report saying where no text's size was compared. Rejected: the command compares only what DEC-042 point 9's list names, and that list names no check, so a calibration accepted before the check lands keeps the hold on once it lands, for a review that does not run as it was measured. Its trigger to revisit: [project-kit#3296](https://github.com/aleskalfas/project-kit/issues/3296)'s refinement lands, after which waiting is a matter of economy, not safety.
 
 ## Implications
 
@@ -224,8 +238,10 @@ Each part of the gap has a home, or no source states it as a test.
   - **Its Implications.** "Each rule cites this record as its origin" comes to add: but `RS-GRAPHIC-008`, whose origin is this record (refinement per this record, point 7).
 - **An edit to DEC-030,** made the same way.
   - **Point 6,** "One observation, one finding". Its three sentences stand, and two follow them. After the edit the bullet reads, whole: "**One observation, one finding.** Where one rests on more than one ground, it cites each. It takes the first of these kinds that applies: a fault, then a rule finding, then a brief finding. A rule is a ground of a fault only where the rule's words name the defect, so a fault cites that rule and no other. Where such a fault holds that rule's grade below professional, the grade's rule finding is no second finding of the observation: it names the fault as its evidence, and does not describe the defect again (refinement per this record, point 2)."
-- **An edit to DEC-042,** made the same way.
+- **Edits to DEC-042,** made the same way.
   - **Point 1,** "Settled, or for a person". After its first sentence, it comes to say that a fault that cites a rule is a break that rule's text settles, so a page that shows one takes a grade below professional on the rule (refinement per this record, point 2). Its sentence "Every other grade is a reading" stands. This is the one place among the edited records that restates the decision of point 2.
+  - **Point 9,** "A calibration". After "none runs before the refinement of point 2 has landed", it comes to add that none runs before each check whose output the review reads has landed either (refinement per this record, point 8).
+  - **Its Implications,** the calibration among the work under project-kit#3148. After "once the refinement of DEC-028 lands", it comes to add: and each check whose output the review reads (refinement per this record, point 8).
 - **Read against this record, and left as they stand:**
   - DEC-030 point 6's "A fault" and "A rule finding", since a fault stays no judgement of design, and the grade it holds is the rule's finding;
   - DEC-030 point 6's "A binding rule finding, settled or for a person", since its sentence on a break a rule's text settles holds of a fault that cites the rule;
@@ -236,25 +252,27 @@ Each part of the gap has a home, or no source states it as a test.
   - DEC-028 point 11, since its words on `RS-GRAPHIC-007` hold as they are: point 6 says how the review finds the break they name, by counting the hues a page draws against the kinds its content names, and that reading is the reviewer's body's;
   - DEC-028's Implications, "which finding the reviewer makes where a rule and its list of faults name one defect", since DEC-030 point 6 answers it with the fault, and point 2 keeps that answer;
   - DEC-042 point 2's "A blocking fault that judges design is a rule's", which stays open below.
-- **Later work under [project-kit#3148](https://github.com/aleskalfas/project-kit/issues/3148),** each in a change of its own. A calibration grades by the rules, the reviewer's body and the design knowledge as shipped (DEC-042 point 9).
-  - **The rule.** It adds `RS-GRAPHIC-008` to the `GRAPHIC` set in the words of point 4, accepted, with this record as its origin and the anchors of point 7. It has each rule a fault cites, in either set, name point 2 among the points it rests on. It has `RS-GRAPHIC-002`, `RS-GRAPHIC-005` and `RS-GRAPHIC-007` name points 3, 5 and 6 too. It rewords the set's opening sentence, which says DEC-028 names each source. The calibration waits for it.
+- **Later work under [project-kit#3148](https://github.com/aleskalfas/project-kit/issues/3148),** each in a change of its own. A calibration grades by the rules, the reviewer's body, the design knowledge and the checks whose output the review reads, as shipped (DEC-042 point 9).
+  - **The rule.** It adds `RS-GRAPHIC-008` to the `GRAPHIC` set in the words of point 4, accepted, with this record as its origin and the anchors of point 7. It has each rule a fault cites, in either set, name point 2 among the points it rests on. It has `RS-GRAPHIC-002`, `RS-GRAPHIC-005` and `RS-GRAPHIC-007` name points 3, 5 and 6 too. It rewords the set's opening sentence, which says DEC-028 names each source. The calibration waits for it (point 8).
   - **The reviewer's body.**
     - How alignment is read: which lines siblings may share, that parts which differ on purpose and share a line are aligned, how even spacing is read, and what a box does not show of the letters or the drawing in it.
     - The fault of overlaps with the join that misses, named so in the body and in the agent's description.
     - Which kind of fault cites which rule, in both sets, by point 2, and the grade such a fault holds its rule to.
     - How the reviewer judges the places the two checks name.
-    - The readings of `RS-GRAPHIC-005` and `RS-GRAPHIC-007` of points 5 and 6, and how `RS-GRAPHIC-008` is read.
+    - The readings of `RS-GRAPHIC-005` and `RS-GRAPHIC-007` of points 5 and 6, the first worded for a check of a text's size and for none, and how `RS-GRAPHIC-008` is read.
+    - How the reviewer tells that the capability ships no check of a text's size. Not from a piece's findings alone: a check that passed every text may state nothing of their sizes, as a check that is not shipped states nothing. It tells it from what the check's output can state, as the capability's list of checks gives it: the list names a finding for a text smaller than its medium allows only while the capability ships such a check.
 
-    This joins the reviewer's body DEC-042's Implications list. The calibration waits for it.
-  - **The design knowledge.** The topic on type gains the uneven line ends and what each source says of line length and line spacing, with Lupton and Butterick among its works. The topic on colour gains a question on strong colour over large areas. The calibration waits for it.
-  - **The two checks of boxes** of point 3, each with its entry in the capability's list of checks. The calibration waits for them: the reviewer's body tells the review to judge the places they name, and a body changed after a calibration lapses the hold (DEC-042 point 9).
-  - **The check for a text smaller than its medium allows** is the work DEC-042's Implications list, and how it finds a text's size and its medium's minimum is that work's to decide. The calibration does not wait for it: the check moves no grade, and the hold reaches only rules a calibration tested (DEC-042 point 10). The calibration's report says where no text's size was compared with its medium's minimum.
+    This joins the reviewer's body DEC-042's Implications list. The calibration waits for it (point 8).
+  - **The design knowledge.** The topic on type gains the uneven line ends and what each source says of line length and line spacing, with Lupton and Butterick among its works. The topic on colour gains a question on strong colour over large areas. The calibration waits for it (point 8).
+  - **The two checks of boxes** of point 3, each with its entry in the capability's list of checks. The calibration waits for them (point 8).
+  - **The check for a text smaller than its medium allows,** under whichever record decides it, is the work DEC-042's Implications list, and how it finds a text's size and its medium's minimum is that work's to decide. The calibration waits for it (point 8).
   - **The calibration** DEC-042 point 9 describes, last.
 - **What `GRAPHIC@2` brings,** in the change that lands the rule:
   - **Adopters' pins.** A project's set that takes rules from `GRAPHIC@1` fails validation until the project reads the new rule and moves its pin (COR-051 point 7). Until then no rule of `GRAPHIC` binds through that set.
   - **Bars.** A bar that names `GRAPHIC@1` fails the capability's check until the project names `GRAPHIC@2` (DEC-042 point 3).
-  - **The hold.** A new major lapses a hold that an accepted calibration switched on (DEC-042 point 9). The hold reaches a bar only where a calibration tested every rule the bar names (DEC-042 point 10). So a bar that names all of `GRAPHIC@2` ends no loop of the designer's until a calibration has tested `RS-GRAPHIC-008` too. A bar that names single rules, each one tested, gets the hold.
+  - **The hold.** No hold is on when `GRAPHIC@2` lands: the calibration waits for the rule, so no calibration's report is accepted before it. A bar that names `RS-GRAPHIC-008`, or all of `GRAPHIC@2`, gets the hold only where the calibration that follows tested each rule the bar names (DEC-042 points 9 and 10).
   - **Its changeset and migration.** That change declares, in its changeset, that the set has a new major, and its release notes tell a project to read the rule and move its pin and its bar. No migration moves a pin or a bar, since the project's own review is what a pin waits for (COR-051 point 7). That change runs the check for owed migrations, and carries one only if the check names it.
 - **Left open:**
   - **The one fault the first calibration's outside judge blocked on that judges design.** DEC-042 point 2 gives it to a rule. Neither DEC-042 nor the repository the capability is authored in says which defect it was, so this record places none. Whoever maintains the capability names it, and a refinement of this record gives it to the rule that names it, with *below competent*. A calibration does not wait for it: its outside judge ranks by the rules the bar covers (DEC-042 point 9), and never by measures of its own.
   - **Whether a page with a fault that cites no rule may meet a bar.** The verdict reads grades alone. It stays DEC-042's question, decided by a refinement of that record.
+  - **A change to a check whose output the review reads.** DEC-042 point 9 lapses the hold on anything that could move the grades, but the command compares only what that point's list names, and the list names no check. So until [project-kit#3296](https://github.com/aleskalfas/project-kit/issues/3296)'s refinement adds the checks the review reads to that list, the command does not see a change to one of them, and the verdict goes on ending loops.
