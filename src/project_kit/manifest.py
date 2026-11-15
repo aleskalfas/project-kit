@@ -536,20 +536,25 @@ class CapabilityPin:
     (COR-041; ADR-040 points 1 and 3).
 
     *source* is the git URL the person gave, which their own git credentials
-    reach, and *ref* a tag or a commit's full id. Recorded in the capability's
+    reach, and *ref* a tag or a commit's full id. *commit* is the full id of the
+    commit the ref named when install fetched it, so a tag moved at its source
+    later is not followed; None for a pin the person names, before any fetch,
+    and for one a manifest records without it. Recorded in the capability's
     manifest, under its ``project/``, out of the fetch's reach: sync brings the
     copy to the pin's content and never writes the pin (COR-059 points 1 and 2).
     """
 
     source: str
     ref: str
+    commit: str | None = None
 
 
 # The per-component manifest's key of an externally-sourced capability's pin,
-# and its two keys (`CapabilityPin`).
+# and its keys (`CapabilityPin`).
 PIN_KEY = "pin"
 _PIN_SOURCE_KEY = "source"
 _PIN_REF_KEY = "ref"
+_PIN_COMMIT_KEY = "commit"
 
 
 @dataclass
@@ -601,20 +606,26 @@ def read_component_manifest(path: Path) -> ComponentManifest | None:
 
 def _read_pin(raw: object) -> CapabilityPin | None:
     """The pin a manifest's `pin` mapping records, or None where it records none
-    that reads: no mapping, or a source or a ref missing or empty."""
+    that reads: no mapping, or a source or a ref missing or empty. A commit
+    missing, empty or not a string reads as none."""
     if not isinstance(raw, dict):
         return None
     mapping = cast("dict[str, Any]", raw)
     source, ref = mapping.get(_PIN_SOURCE_KEY), mapping.get(_PIN_REF_KEY)
     if not isinstance(source, str) or not isinstance(ref, str) or not source or not ref:
         return None
-    return CapabilityPin(source=source, ref=ref)
+    commit = mapping.get(_PIN_COMMIT_KEY)
+    return CapabilityPin(
+        source=source, ref=ref, commit=commit if isinstance(commit, str) and commit else None
+    )
 
 
 def _pin_to_map(pin: CapabilityPin) -> CommentedMap:
     out = CommentedMap()
     out[_PIN_SOURCE_KEY] = pin.source
     out[_PIN_REF_KEY] = pin.ref
+    if pin.commit is not None:
+        out[_PIN_COMMIT_KEY] = pin.commit
     return out
 
 
