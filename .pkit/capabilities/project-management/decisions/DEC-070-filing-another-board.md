@@ -1,7 +1,7 @@
 ---
 id: DEC-070
 title: Where the board holds the state, filing refuses a board other than the configured one
-status: proposed
+status: accepted
 date: 2026-11-14
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
