@@ -27,6 +27,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/upgrade.py
         - .pkit/capabilities/visual-communication/scripts/outdated.py
         - .pkit/capabilities/visual-communication/scripts/take-up.py
+        - .pkit/capabilities/visual-communication/scripts/intent.py
         - .pkit/capabilities/visual-communication/scripts/new.py
         - .pkit/capabilities/visual-communication/scripts/prune.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
@@ -44,6 +45,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/grant.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/intent.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/briefs.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
         - .pkit/capabilities/visual-communication/rule-sets/vis.md
         - .pkit/capabilities/visual-communication/rule-sets/comm.md
@@ -100,6 +103,7 @@ pkit:
       artefact:
         - .pkit/capabilities/visual-communication/files.md#contents
         - .pkit/capabilities/visual-communication/files.md#a-piece
+        - .pkit/capabilities/visual-communication/files.md#the-brief
         - .pkit/capabilities/visual-communication/files.md#picture-files
         - .pkit/capabilities/visual-communication/files.md#brands
         - .pkit/capabilities/visual-communication/files.md#notations
@@ -114,7 +118,6 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#how-a-command-finds-it
         - .pkit/capabilities/visual-communication/files.md#the-lock
-        - .pkit/capabilities/visual-communication/files.md#the-brief
         - .pkit/capabilities/visual-communication/files.md#the-makers-record-of-drafts
         - .pkit/capabilities/visual-communication/files.md#what-a-release-compares
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
@@ -406,6 +409,16 @@ Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 - **Finds the browser** a run would start, and starts none. It names the program, or where it looked where it found none, and the forced palettes it draws where `look` is asked `--forced-colours`.
 - **Writes** nothing.
 - **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold. It exits 1 too where the configuration's `browser` names no path ([The browser](files.md#the-browser)).
+
+### `pkit visual intent <piece>`
+
+Prints what a piece's brief hands the review first: the intent, without the reasons ([visual-communication:DEC-042-grades-bar-and-loop] point 4).
+
+- **Prints** the goals, relations and takeaways of the piece's part and of each page's part ([The brief](files.md#the-brief)): the pages and the items of each list in the brief's order, and within a part its goals, then its relations, then its takeaway. A relation is printed with the parts of the content it relates. A part that states none is named as stating none. `--json` prints it as one document.
+- **Leaves out** every reason, and each aspect and principle a reason holds ([The brief](files.md#the-brief)).
+- **Reads** the piece's `piece.yaml` and its brief: no lock, no drawing, no content. A piece with no brief, or whose brief cannot be read, is said to keep none.
+- **Writes** nothing.
+- **Exits** 0 when it printed; 1 when the project holds no visual work, the piece is not in the location or its `piece.yaml` cannot be read, or the configuration cannot be read ([Commands](#commands)).
 
 ### `pkit visual draft <piece>`
 
