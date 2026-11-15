@@ -1,0 +1,354 @@
+pkit_schema: visual-communication:brief
+schema_version: 1
+
+# The second deck of project-kit's showcase (PRJ-012): what pkit's capabilities add, for a
+# developer who knows pkit's core and chooses what to install. The three pages are three
+# slides of the Friday talk of 30 October, each rewritten to be read alone, as a PDF or a
+# web page, and checked against the repository as it stands now. The goals and relations
+# below are proposed from the talk's notes and the maintainer's guidance, and are the
+# maintainer's to confirm.
+#
+# Where each claim is sourced: the first page's limit, in software-engineering's
+# package.yaml (requires_capabilities) and COR-030; the second page's limit, in
+# project-management DEC-059 and DEC-063.
+# Each page names the document behind it by its path, in its footer, as the content's own
+# text: the deck's layout has a footer for it, and no field that says "source".
+piece:
+  goals:
+    - >-
+      A developer who knows pkit's core can say what a capability is and why pkit keeps
+      some parts out of the core: core holds what every project needs, and the rest comes
+      as optional parts chosen one at a time.
+    - >-
+      They can say what project-management and software-engineering each add, and what
+      each asks of them, and so decide whether to install it.
+    - >-
+      Read alone, as a PDF or a web page, each page carries its point without a speaker,
+      and the reader can find the document behind it by its path.
+  relations:
+    - text: >-
+        The pages explain from the whole to the parts (RS-COMM-002): what a capability is
+        and why it exists first, then two capabilities. software-engineering comes last
+        because it installs only after project-management, as the first page's limit
+        says, so the second page is a precondition of the third.
+      relates:
+        - slides[why]
+        - slides[pm]
+        - slides[se]
+
+pages:
+  cover:
+    takeaway: The deck is about what pkit's optional parts, its capabilities, add to a project.
+
+  why:
+    relations:
+      - text: >-
+          The order of explanation, from the lead, which is the maintainer's: core pkit
+          is in every project, and a capability is the optional rest, one folder you
+          install. So the page opens on the two kinds, core first, and the layers each
+          holds follow under them.
+        relates:
+          - visual.rows[heads]
+          - visual.rows
+      - text: >-
+          A capability holds the same kinds of part as core, each for its own way of
+          working: a layer of core has its counterpart in the capability's folder. A
+          reader compares a layer along its row, and a kind down its column.
+        relates:
+          - visual.rows
+      - text: >-
+          Where a capability is limited, the limit stands apart: some capabilities need
+          another installed first, so the choice is free only within what they depend on.
+        relates:
+          - limit
+    goals:
+      - >-
+        A developer who knows pkit's core can say where a capability lives, that it is
+        one folder, and that it holds the layers core holds. They know the folder's path
+        and which folder holds core's, and why: no project then carries what it does not
+        use, which the lead says.
+    reasons:
+      - aspect: structure
+        about: visual
+        text: >-
+          Two kinds of thing, core and a capability, each holding the same four layers,
+          which stand in the order of the showcase's page on how pkit fits together:
+          decisions, rules, schemas and processes, skills, agents and permissions, then
+          commands and checks. A grid of layers against kinds, with a place for each fact.
+        principle:
+          name: Name the content's structure before choosing its form; facts of the same kinds in rows and columns
+          source: Yuri Engelhardt, The Language of Graphics
+      - aspect: form
+        about: visual.rows
+        text: >-
+          The starter's table: a row for each layer, a column for core and one for a
+          capability, so the pairing of the layers reads along a row. Each head names its
+          root, `.pkit/` and `.pkit/capabilities/<name>/`, and a cell holds only the
+          folder under it, so each cell is one line. Two forms were weighed. Two groups,
+          each holding its four layers as cards and each in its notation's colour, tell
+          the kinds apart by hue and sign, but a trial asked for 544 px where the slide gives
+          its picture 292. The layers as steps say what rests on what, which
+          this page does not: it says where the same layers live.
+        principle:
+          name: A table shows facts that differ along two dimensions
+          source: Edward Tufte, The Visual Display of Quantitative Information
+      - aspect: form
+        about: visual.rows[heads]
+        text: >-
+          The path starts at the column heads, at the left of the two, where the eye
+          enters a page written left to right, and core stands first because the lead
+          explains core first. The heads are the table's strongest text, so the eye starts
+          there and reads core, then the capability, then down the rows.
+        principle:
+          name: Without other cues the eye starts at the top left and reads in the direction of writing
+          source: Cole Nussbaumer Knaflic, Storytelling with Data
+      - aspect: hierarchy
+        about: visual
+        text: >-
+          The column heads and the layers' names stand in the strong type, the folders in
+          the body type, so the grid is read as heads first and cells after. The limit
+          stands under the table on the accent's bar, the deck's mark for what a claim
+          does not cover, and the source path last, in the secondary text.
+        principle:
+          name: Emphasise by de-emphasising what competes
+          source: Adam Wathan and Steve Schoger, Refactoring UI
+      - aspect: type
+        about: visual
+        text: >-
+          The projector's body type in the cells and the strong type in the heads, and no
+          other size, as the showcase's table of permissions does.
+        principle:
+          name: Few sizes, each clearly apart
+          source: Robert Bringhurst, The Elements of Typographic Style
+      - aspect: colour
+        about: visual.rows
+        text: >-
+          No hue: the starter's table cannot name a concept in a cell, so core and a
+          capability are told apart by their heads and their columns, not by the colours
+          their notation gives them. The rules between the rows take the brand's faint
+          line.
+        principle:
+          name: Every mark earns its ink; colour is never the only signal
+          source: Edward Tufte, The Visual Display of Quantitative Information; W3C, WCAG 2, success criterion 1.4.1
+      - aspect: space
+        about: visual
+        text: >-
+          The rows stand on the slide's margin, the first column on the title's edge, and
+          the rows' rules group each cell with its row, with no boxes.
+        principle:
+          name: Few alignment edges shared across the page
+          source: Josef Müller-Brockmann, Grid Systems in Graphic Design
+
+  pm:
+    relations:
+      - text: >-
+          The order of explanation, from the lead, which is the maintainer's: you say what
+          you want and approve the plan once, one agent plans and files the work and
+          starts a builder for each Task, several at once, reviewers check each change and
+          all must approve, and you say yes and it merges. So the page reads in one
+          direction, from you to you, with the agent's work in between.
+        relates:
+          - visual.left[you-plan]
+          - visual.left[manager]
+          - visual.middle
+          - visual.right[reviewers]
+          - visual.right[you-merge]
+          - visual.ties
+      - text: >-
+          You hold both ends: only a person approves a plan and a merge, and the agent
+          does the work in between (project-management DEC-057). The two steps that are
+          yours read as the person's, apart from the agent's.
+        relates:
+          - visual.left[you-plan]
+          - visual.right[you-merge]
+      - text: >-
+          One agent works with several builders at once, one for each Task, and every
+          builder's change goes to the same reviewers: a flow that fans out from the
+          agent and in to the reviewers.
+        relates:
+          - visual.middle
+          - visual.ties
+    goals:
+      - >-
+        A developer can say what project-management adds, one agent that plans and files
+        the work and starts builders, and who decides: they approve the plan once and each
+        merge.
+      - >-
+        They know what it asks, a GitHub repository, and that builders in parallel need a
+        topology of seats (project-management DEC-059 and DEC-063), so they judge what to
+        expect.
+    reasons:
+      - aspect: structure
+        about: visual
+        text: >-
+          A flow in one direction with two kinds of actor, a person at its two ends and
+          agents between them, and in the middle one step done several times at once: a
+          sequence with a fan-out and a fan-in.
+        principle:
+          name: Name the content's structure before choosing its form; an ordered structure takes an ordered form
+          source: Yuri Engelhardt, The Language of Graphics
+      - aspect: form
+        about: visual
+        text: >-
+          The starter's network with three columns, read from the left: the person and the
+          agent, the builders, then the reviewers and the person. A tie is an arrow along
+          the path, from the agent to each builder and from each builder to the reviewers,
+          so a reader sees the fan-out and the fan-in that the lead names, and the order
+          is told by position and arrows. Two forms were weighed. A row of five cards shows
+          the order by place alone, hides that the builders are several, and leaves each
+          card about two hundred pixels wide, too narrow for the agent's name. A table of
+          steps lists the order and shows neither fan.
+        principle:
+          name: An arrow shows what leads to what; map an order to position, never to hue
+          source: Julie Heiser and Barbara Tversky, Arrows in Comprehending and Producing Mechanical Diagrams; Jacques Bertin, Semiology of Graphics
+      - aspect: form
+        about: visual.left[you-plan]
+        text: >-
+          The path starts at the top left, with the person who asks, where the eye enters,
+          which is also where the explanation starts. The first tie leads down to the
+          agent, and its arrows then lead right through the builders to the reviewers, and
+          down to the person's last step, so the content's order, left column, middle,
+          right, is the order of explanation.
+        principle:
+          name: Without other cues the eye starts at the top left and reads in the direction of writing
+          source: Cole Nussbaumer Knaflic, Storytelling with Data
+      - aspect: hierarchy
+        about: visual
+        text: >-
+          Under the title and the lead, the person's two steps, the only cards with a bar
+          along their side, mark the ends the page's point is about. The bar is the card's
+          own and as faint as the brand's line, so it marks them only slightly: the label
+          `You` carries the difference, and the bar is a second channel that the review
+          found weak, hardly seen in the dark mode. The heads of all cards stand in the
+          strong type and the arrows are thin, so the flow leads the eye without
+          competing. A stronger mark is not in the starter, and is a need for the shipped
+          library's owner.
+        principle:
+          name: Emphasise by de-emphasising what competes
+          source: Adam Wathan and Steve Schoger, Refactoring UI
+      - aspect: type
+        about: visual
+        text: >-
+          Each card's head in the strong type and its text in the body type, the builders
+          as one line each, so the cards of one kind share face and size.
+        principle:
+          name: Texts of one kind share face, size and weight, and texts of different kinds differ clearly
+          source: Robert Bringhurst, The Elements of Typographic Style
+      - aspect: colour
+        about: visual
+        text: >-
+          No hue: nothing on the page is a concept of the notation, and the person and the
+          agent are told apart by their labels, `You` and the agent's name, and by the bar.
+        principle:
+          name: Colour is never the only signal; every mark earns its ink
+          source: W3C, WCAG 2, success criterion 1.4.1; Edward Tufte, The Visual Display of Quantitative Information
+      - aspect: space
+        about: visual.ties
+        text: >-
+          The network's lanes hold the ties, its columns share a width and each column is
+          centred on the picture's height, so the three builders stand level with the
+          agent and the reviewers, and the page keeps the slide's margin.
+        principle:
+          name: Few alignment edges shared across the page
+          source: Josef Müller-Brockmann, Grid Systems in Graphic Design
+
+  se:
+    relations:
+      - text: >-
+          The order of explanation, from the lead, which is the maintainer's: your
+          conventions come first, since the builder follows them, then the builder, then
+          the three reviewers that check its code. So the page reads from the conventions,
+          at the left, through the builder to the reviewers.
+        relates:
+          - visual.left[conventions]
+          - visual.middle[builder]
+          - visual.right
+          - visual.ties
+      - text: >-
+          The conventions are the reader's own and stay theirs without the capability, and
+          the builder has no opinions of its own: it follows them where they exist, and
+          where none are written down the agents use good practice. The page says so in
+          the card that holds the conventions.
+        relates:
+          - visual.left[conventions]
+      - text: >-
+          Three reviewers, each for its own question, check the builder's code: its
+          correctness, its security and its documentation. They stand as equals, in no
+          order, and each is tied to the builder.
+        relates:
+          - visual.right
+          - visual.ties
+    goals:
+      - >-
+        A developer can say what software-engineering adds, a builder that follows their
+        conventions and three reviewers of its code, and what they must do to use it: write
+        their conventions down.
+      - >-
+        They can say what each reviewer asks, so they know what a merge was checked for.
+    reasons:
+      - aspect: structure
+        about: visual
+        text: >-
+          One input, one producer and three checkers of equal standing: a sequence of two
+          steps that fans out to three parallel kinds of check.
+        principle:
+          name: Name the content's structure before choosing its form; an ordered structure takes an ordered form
+          source: Yuri Engelhardt, The Language of Graphics
+      - aspect: form
+        about: visual
+        text: >-
+          The starter's network with three columns, as the page before draws a fan-out, so
+          the one form says one thing on both pages: your conventions, the builder, then
+          the three reviewers, tied by arrows in the direction of reading. Two forms were
+          weighed. Two groups, one that builds and one that reviews, show who belongs
+          together and lose that the conventions feed the builder, which is the page's
+          point. A table of the four agents lists them with no order. The page's limit, that
+          with no conventions the agents use good practice, stands in the conventions' card
+          and not in the limit's place, since three reviewers with their questions fill the
+          height the limit would take.
+        principle:
+          name: An arrow shows what leads to what; the same meaning looks the same everywhere
+          source: Julie Heiser and Barbara Tversky, Arrows in Comprehending and Producing Mechanical Diagrams; Jakob Nielsen, 10 Usability Heuristics
+      - aspect: form
+        about: visual.left[conventions]
+        text: >-
+          The path starts with the card that holds the conventions, at the left, where the
+          explanation starts, and the arrows lead from it to the builder and on to the
+          reviewers. The network centres each column on the picture's height, so the
+          conventions' card stands at the middle of the left and the first reviewer higher
+          than it: the review found the entry mild, and it is the network's own.
+        principle:
+          name: Without other cues the eye starts at the top left and reads in the direction of writing
+          source: Cole Nussbaumer Knaflic, Storytelling with Data
+      - aspect: hierarchy
+        about: visual
+        text: >-
+          The cards share one rank, as the content has one: the heads in the strong type,
+          the arrows thin, and nothing else marks one above another. The reviewers stand
+          level with each other, none above the rest, since the content gives them no order.
+        principle:
+          name: Emphasise by de-emphasising what competes
+          source: Adam Wathan and Steve Schoger, Refactoring UI
+      - aspect: type
+        about: visual
+        text: >-
+          Each head in the strong type and its text in the body type, each reviewer's
+          question one line, so the three read as one kind.
+        principle:
+          name: Texts of one kind share face, size and weight
+          source: Robert Bringhurst, The Elements of Typographic Style
+      - aspect: colour
+        about: visual
+        text: >-
+          No hue: the page names no concept, and its cards are told apart by their heads.
+        principle:
+          name: Every mark earns its ink
+          source: Edward Tufte, The Visual Display of Quantitative Information
+      - aspect: space
+        about: visual.ties
+        text: >-
+          The same lanes and columns as the page before, so the two pages share their
+          edges and a reader meets the same grid.
+        principle:
+          name: Few alignment edges shared across the page; the same meaning looks the same everywhere
+          source: Josef Müller-Brockmann, Grid Systems in Graphic Design; Jakob Nielsen, 10 Usability Heuristics
