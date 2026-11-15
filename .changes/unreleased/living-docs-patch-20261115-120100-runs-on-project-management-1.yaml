@@ -1,0 +1,10 @@
+component: living-docs
+kind: patch
+body: >
+  The documentation check and its fixer run on project-management 1.0.0. Its
+  two breaking changes reach nothing this capability calls: filing refusing
+  another board where the board holds the state (#3254), and whoever runs a
+  command being the user's account GitHub names for the credential, ahead of
+  `PM_INVOKER_LOGIN` (#3175).
+runs_on_capabilities:
+  project-management: release

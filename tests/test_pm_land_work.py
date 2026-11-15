@@ -238,7 +238,9 @@ class _FakeGitHub:
             }
             return _done(argv, json.dumps(issue))
         if argv[:2] == ["api", "user"]:
-            return _done(argv, "octocat\n")
+            # The membership library asks for the login and the account's type.
+            typed = "[.login, .type] | @tsv" in argv
+            return _done(argv, "octocat\tUser\n" if typed else "octocat\n")
         if argv == ["api", f"repos/{{owner}}/{{repo}}/branches/{self.base_branch}"]:
             # A ruleset protects the branch; its classic protection is off.
             off = {"enabled": False, "required_status_checks": {"enforcement_level": "off"}}
