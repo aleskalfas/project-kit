@@ -535,5 +535,5 @@ def test_the_html_page_draws_a_path_in_a_layer_and_forced_colours_reach_its_pain
         '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]),'
         '[data-layer] path[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
         f"{html.FORCED_SHEET}"
-        '[data-inset="erode"]{filter:url(#pkit-edge)}'
+        '[data-inset="erode"]{fill:CanvasText;filter:url(#pkit-edge)}'
     )

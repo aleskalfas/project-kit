@@ -1897,9 +1897,10 @@ CLIPPED = scene(
 
 def test_a_path_and_a_shape_with_a_hole_take_an_eroded_copy_by_their_fill_rule() -> None:
     """Each path is drawn whole, and over it a copy of its outline, its `fill-rule` the
-    shape's, marked as eroded. Under forced colours alone the copy takes the reader's
-    background colour through the file's filter, which erodes by the edge's width, so the edge
-    lies inside the shape (DEC-039 point 4)."""
+    shape's, marked as eroded. Under forced colours alone the copy takes the reader's text
+    colour, and the file's filter erodes its area by the edge's width and paints what is left
+    in the reader's background colour, so the edge lies inside the shape, and a browser that
+    drops the filter draws the shape solid (DEC-039 point 4)."""
     root = read(CLIPPED)
 
     [layer] = marked(root, "layer")
@@ -1912,14 +1913,24 @@ def test_a_path_and_a_shape_with_a_hole_take_an_eroded_copy_by_their_fill_rule()
         html.ERODED,
     ]
     [filtered] = root.iter("filter")
-    [erosion] = list(filtered)
-    assert filtered.get("id") == html.ERODE_ID
-    assert (erosion.tag, erosion.get("operator"), erosion.get("radius")) == (
-        "feMorphology",
-        "erode",
-        "1",
+    erosion, flood, composite = list(filtered)
+    assert (filtered.get("id"), filtered.get("color-interpolation-filters")) == (
+        html.ERODE_ID,
+        "sRGB",
     )
-    assert f'[data-inset="erode"]{{filter:url(#{html.ERODE_ID})}}' in forced(root)
+    assert erosion.tag == "feMorphology"
+    assert erosion.attrib == {
+        "in": "SourceAlpha",
+        "operator": "erode",
+        "radius": "1",
+        "result": html.ERODE_RESULT,
+    }
+    assert (flood.tag, flood.attrib) == ("feFlood", {"flood-color": "Canvas"})
+    assert (composite.tag, composite.attrib) == (
+        "feComposite",
+        {"in2": html.ERODE_RESULT, "operator": "in"},
+    )
+    assert f'[data-inset="erode"]{{fill:CanvasText;filter:url(#{html.ERODE_ID})}}' in forced(root)
     assert "clip-path" not in forced(root)
     assert 'path[fill="var(--surface)"]:not([stroke])' in forced(root)
 

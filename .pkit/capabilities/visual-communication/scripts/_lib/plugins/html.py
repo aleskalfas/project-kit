@@ -34,13 +34,14 @@ points 1 to 6, DEC-039 points 1 to 4, DEC-005 points 4, 5, 9 and 10).
   over it the same shape inset by the edge's width, marked `data-inset`, in the background
   colour; one no thicker than twice the edge's width takes no inset shape, so it is drawn
   solid. A path, and a run's sign, takes the text colour too, and over it a copy of its own
-  outline, its `fill-rule` the shape's, marked `data-inset="erode"` and eroded by the
-  edge's width: a rule under forced colours alone applies a filter that the file defines
-  once, in an `svg` of no size, an `feMorphology` that erodes by the declared width. So the
-  copy lies inside the outline whatever its outline crosses or holds, and the outline's
-  pixel is smoothed once, as it is in the shape's own colours. Outside forced colours the
-  inset shape is hidden and no filter applies, so the layers draw as the SVG renderer
-  draws them.
+  outline, its `fill-rule` the shape's, marked `data-inset="erode"`, in the text colour as
+  well: a rule under forced colours alone applies a filter that the file defines once, in
+  an `svg` of no size, which erodes the copy's area by the declared width with an
+  `feMorphology` and paints what is left in the background colour. So the copy lies inside
+  the outline whatever its outline crosses or holds, the outline's pixel is smoothed once,
+  as it is in the shape's own colours, and a browser that drops the filter draws the shape
+  solid in the text colour. Outside forced colours the inset shape is hidden and no filter
+  applies, so the layers draw as the SVG renderer draws them.
 - **A line's ground** under forced colours (DEC-039 points 1 to 3). Each line takes no
   backplate, its spans the reader's colours, and lies on a ground the file draws in the
   reader's background colour, an element of its own marked `data-ground` with its text's
@@ -182,8 +183,9 @@ INSET = "data-inset"
 ERODED = "erode"
 
 #: The id of the filter that erodes an eroded inset shape by the edge's width, defined once in
-#: the file.
+#: the file, and the name of the eroded area within it.
 ERODE_ID = "pkit-edge"
+ERODE_RESULT = "inside"
 
 #: The rules every page file holds, after its faces. None sets a colour or clips anything: a
 #: line's ground and the inset shape draw nothing outside forced colours (DEC-039).
@@ -619,7 +621,9 @@ class PageFile(Canvas):
                 rules.append(f"{','.join(inset)}{{fill:{edge['colour']}}}")
         rules.append(FORCED_SHEET)
         if self._eroded:
-            rules.append(f'[{INSET}="{ERODED}"]{{filter:url(#{ERODE_ID})}}')
+            # The copy's own fill is the edge's colour, so a browser that drops the filter
+            # draws the shape solid; only the filter paints the copy in the ground's colour.
+            rules.append(f'[{INSET}="{ERODED}"]{{fill:{edge["colour"]};filter:url(#{ERODE_ID})}}')
         return f"@media (forced-colors:active){{{''.join(rules)}}}"
 
     def _opaque_in_every_key(self, role: str | None) -> bool:
@@ -921,21 +925,36 @@ class PageFile(Canvas):
     def _eroded_copy(self, outline: str, rule: str | None) -> str:
         """The inset shape of a shape with no inset of its own to draw, its `outline` filled by
         `rule`: a copy marked as eroded, which a rule under forced colours alone draws in the
-        reader's background colour through the file's filter (`_erosion`)."""
+        reader's text colour through the file's filter, which paints it in the background
+        colour (`_erosion`)."""
         self._eroded = True
         attributes = attribute_text([(INSET, ERODED), ("d", outline), ("fill-rule", rule)])
         return f"<path {attributes}/>"
 
     def _erosion(self) -> str:
-        """The filter that erodes each eroded inset shape by the edge's width, in an `svg` of no
-        size, as the arrowheads are held: a layer reaches it by its id, so it is defined once.
-        Nothing where the file holds no such shape (DEC-039 point 4)."""
+        """The filter that erodes the area of each eroded inset shape by the edge's width, and
+        paints what is left in the reader's background colour, in an `svg` of no size, as the
+        arrowheads are held: a layer reaches it by its id, so it is defined once. It works in
+        sRGB, so that colour reaches the page as the palette gives it. Nothing where the file
+        holds no such shape (DEC-039 point 4)."""
         if not self._eroded:
             return ""
-        erode = attribute_text([("operator", "erode"), ("radius", number(self._edge_width()))])
+        erode = attribute_text(
+            [
+                ("in", "SourceAlpha"),
+                ("operator", "erode"),
+                ("radius", number(self._edge_width())),
+                ("result", ERODE_RESULT),
+            ]
+        )
+        flood = attribute_text(
+            [("flood-color", self.declaration["forced-colours"]["opaque-fills"])]
+        )
         return (
             '<svg width="0" height="0" style="position:absolute" aria-hidden="true">'
-            f'<defs><filter id="{ERODE_ID}"><feMorphology {erode}/></filter></defs></svg>'
+            f'<defs><filter id="{ERODE_ID}" color-interpolation-filters="sRGB">'
+            f"<feMorphology {erode}/><feFlood {flood}/>"
+            f'<feComposite in2="{ERODE_RESULT}" operator="in"/></filter></defs></svg>'
         )
 
     def _edge_width(self) -> float:

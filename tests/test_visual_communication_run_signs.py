@@ -503,7 +503,7 @@ def test_under_forced_colours_a_runs_ground_lies_in_its_lines_and_its_sign_is_er
         "erode",
         "evenodd",
     )
-    assert '[data-inset="erode"]{filter:url(#pkit-edge)}' in forced(root)
+    assert '[data-inset="erode"]{fill:CanvasText;filter:url(#pkit-edge)}' in forced(root)
     assert '[data-sign] [fill="var(--border)"]{fill:Canvas}' in forced(root)
 
 
