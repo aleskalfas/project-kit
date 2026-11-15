@@ -1,0 +1,31 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  Through the SVG renderer, the look report's `dropped` names each span the
+  page hides or cuts by more than a sliver, as it does through a browser
+  (DEC-045, #3111): one entry for each cause in `why`, `cut` past its page's
+  edge or `covered` by a part drawn after it, each with the `share` of the
+  span's strong ink it loses. A cause is named where it hides at least the
+  threshold, the whole pixels that 0.01 of the span's em squared holds of its
+  strong ink, in image pixels, and at least one pixel, or where it takes an
+  island of the span's ink, such as a dot, a háček or a full stop that stands
+  apart from its letter: it hides some of the island wholly and leaves none
+  of it showing at its strength. Such an entry carries `island: true`,
+  whatever its share. Where the span holds no strong ink, `share` is of its
+  ink at the lightest level the read takes, so a faint full stop hidden whole
+  gives 1. A smaller loss that takes no island names none. DEC-045 lists the
+  losses the read can still pass over: a small dot a box's edge fades to a
+  faint line without hiding any of it wholly, a mark joined to its letter
+  below the baseline such as an ogonek, a mark split between the page's edge
+  and a part, and a dot a face draws fused to its letter. Each text or run
+  the tool drew nothing of carries a `why` too, `no ink` or `off the page`,
+  beside its `whole`.
+  The report no longer holds `dropped-not-read`, which #3088's change added,
+  and the command no longer says that cover and cut were not read. A look
+  names a text that a part covers, or the page's edge cuts, where it named
+  none before, and takes nearly twice as long. A page whose group carries
+  anything but a move and the attributes by which the renderer names it,
+  such as a clip, a mask or an opacity, fails the look, naming the group, and
+  so does a page whose root carries an attribute a text would inherit.

@@ -214,7 +214,7 @@ def test_each_report_entry_the_loop_names_is_one_a_run_writes() -> None:
     #: An entry the reader reaches through a constant the viewing module names.
     named = (CAPABILITY / "scripts" / "_lib" / "viewing.py").read_text(encoding="utf-8")
     entries = _rows(_section(LOOP_MD.read_text(encoding="utf-8"), "## 3. Read"))
-    assert len(entries) == 7
+    assert len(entries) == 6
     for row in entries:
         (entry,) = _LABEL.findall(row[0])
         assert (
