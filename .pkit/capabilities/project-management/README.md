@@ -485,6 +485,22 @@ Any other clone is left where it is, nothing pulled, and the run says so in one 
 
 In both cases the local head is kept. The backbone deletes the head branch on GitHub as above, wherever the clone is. Where the switch fails, as when another worktree holds the default branch, the run warns and keeps the clone on the head branch. `land-work` lands through `done-work` and so treats its clone the same way.
 
+**What `done-work`'s exit code says** (#3207). For codes 0 to 4, see:
+
+- 0 and 4: "Exit 4 — accepted, a re-run completes it" below
+- 1: "The checkbox close-gate on the merge path" and "The CI-status gate" below
+- 2: "A merge needs the person's authorisation" above
+- 3: "Merging through a queue" above
+
+Codes 5 and 6 name the step still owed after a merge:
+
+| Exit | Meaning | Next |
+|---|---|---|
+| 5 | merged, and the move to Done failed, or, completing a PR that had merged, the move ahead of it | run `done-work <N>` again, or the command the warning names |
+| 6 | merged and the issue moved to Done, and the close of an issue the PR closes failed | run `done-work <N>` again, or the `close-issue` command the warning names |
+
+A step after the merge never exits 1, 2 or 3, which say that nothing merged, while the merge stands and cannot be undone ([project-management:DEC-026-work-ownership-lifecycle], "Failure semantics"). `move-issue` and `close-issue` report a board that did not answer, and their other failures, with those codes, so `done-work` does not pass their code on. Where both the move and a close fail, the run exits 5, and its warnings name each.
+
 **The backbone guards the changes it makes.** `pkit pull-request merge`, `enqueue`, `dequeue` and `delete-branch` run the cross-repository guard (COR-039) themselves before the request, with no terminal to ask: the verbs run them with no input. So the verb's own guard, which runs first, is the one that asks. When the operator confirmed at the verb — gave `--allow-foreign-repo` on its command line, whatever its own comparison found, or answered yes at its prompt — the verb passes `--allow-foreign-repo` on, and never otherwise, so the operator is asked once and nothing is confirmed that they did not confirm. It goes to the backbone with the merge and with the head branch's deletion, and to the verbs `done-work` starts — the move ahead of the merge, and after it the move to Done and each close — so a confirmed landing is not refused, or asked about again, halfway. `land-work` passes a confirmation on to `done-work` the same way, so a run at a terminal asks once, not twice. Should the backbone's guard refuse all the same — its comparison of the session's anchor with the target and the capability's disagree, and the operator confirmed nothing — the landing stops refused (exit 1), naming both verdicts, with nothing asked of GitHub: a disagreement with no confirmation refuses, and the flag, passed on, settles it. The capability keeps its copy of that comparison until it reads the backbone's by command (#1220); a test holds the two to one table of cases.
 
 All seven are idempotent at the level of observable state — re-running after a partial failure recovers cleanly, and a re-run does not repeat an audit comment the failed attempt already posted.
@@ -1067,6 +1083,7 @@ Where a Projects v2 board is configured and the map carries the state off it, it
 - **A closed issue's card** says where its work stood before the close. Where the issue did not close as completed, that tells finished work from a won't-do close. A card that then places the issue nowhere is named, with what the board said, and no ancestor moves
 - **`start-work` and `review-work`** refuse at their early check in the same cases
 - **`create-issue`** gives the new card its first Status: Todo, or Backlog for an issue filed with a milestone
+- **`create-issue --board <N>`** is refused, with exit 2, unless N is the configured board's number. An issue filed onto another board would have no card on the configured board, so no command could read its position. The refusal comes before anything is written or asked, `--dry-run` included. Leave `--board` out to file onto the configured board, and where the issue belongs on the other board too, add a card there after filing with `gh project item-add`. That card carries no position ([project-management:DEC-070-filing-another-board])
 - **A closed issue is Done whatever its card says,** so a close that leaves the card as it was needs nothing more. `sync-board` refuses here, so after `reopen-issue`, set the card's Status by hand
 
 **Where the Status is a projection.** The same writers write it after each move, and the issue's own state stays the source.

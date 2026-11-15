@@ -18,6 +18,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.pm_board_world import LABEL_STATE
 from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with, use
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -1440,6 +1441,158 @@ def test_no_first_status_is_written_where_the_state_degrades(ci, tmp_path, monke
 
     assert board.adds == [42] and board.edits == []
     assert not [argv for argv in board.calls if argv[2:3] == ["field-list"]]
+
+
+# --- a board other than the configured one (DEC-070, #3254) ------------------
+# Where the map binds the state to the board, every command reads an open issue's
+# position from its card on the configured board, board 7 here, so a `--board`
+# naming another is refused before anything is run or asked, the foreign-repo
+# question included. Elsewhere the option goes on, as DEC-019 has it.
+
+#: The configured board, as `_stage_capability_tree` writes it.
+CONFIGURED_BOARD = "has_projects_v2_board: true\nprojects_v2_board_id: 7\n"
+
+#: What the refusal says wherever the configuration names a board.
+ANOTHER_BOARD = "names a board other than the configured one"
+
+
+def _filing_onto_board(
+    ci,
+    tmp_path: Path,
+    monkeypatch,
+    *,
+    axes: dict | None,
+    board: int,
+    board_config: str = CONFIGURED_BOARD,
+    extra: tuple[str, ...] = (),
+):
+    """Stage a filing with `--board board` at a terminal, without `--yes`, in a
+    project whose config declares ``board_config``. Return the board, every
+    command run and every question asked, the foreign-repo guard's among them."""
+    board_world = _status_kept_filing(ci, tmp_path, monkeypatch, axes=axes)
+    root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    config = root / "project" / "config.yaml"
+    config.write_text(f"workstreams: [spyre]\n{board_config}", encoding="utf-8")
+    ran: list[list[str]] = []
+    asked: list[str] = []
+    run = subprocess.run
+
+    def recording(cmd, *args, **kwargs):
+        ran.append([str(c) for c in cmd])
+        return run(cmd, *args, **kwargs)
+
+    def guard(**kwargs) -> bool:
+        asked.append("the foreign-repo question")
+        return True
+
+    def answer(prompt: str = "") -> str:
+        asked.append(prompt)
+        return "y"
+
+    monkeypatch.setattr(subprocess, "run", recording)
+    monkeypatch.setattr(ci.session_guard, "enforce", guard)
+    monkeypatch.setattr("builtins.input", answer)
+    monkeypatch.setattr(ci.sys, "stdin", SimpleNamespace(isatty=lambda: True))
+    argv = ["create-issue.py", "--type", "task", "--title", "do a thing", "--parent", "1"]
+    argv += ["--workstream", "spyre", "--capability-root", str(root), "--board", str(board)]
+    monkeypatch.setattr(ci.sys, "argv", [*argv, *extra])
+    return board_world, ran, asked
+
+
+def _gh_calls(ran: list[list[str]]) -> list[list[str]]:
+    """The `gh` calls among the commands run, but for the read of who is filing:
+    before the refusal only the reads of who is filing run, and the one of them
+    that is `gh`, `gh api user`, asks which account the credential acts as
+    (DEC-021), so nothing is written there and no board is read."""
+    return [argv for argv in ran if argv[:1] == ["gh"] and argv[1:3] != ["api", "user"]]
+
+
+@pytest.mark.parametrize(
+    "extra", [pytest.param((), id="filing"), pytest.param(("--dry-run",), id="dry-run")]
+)
+def test_another_board_is_refused_where_the_board_holds_the_state(
+    ci, tmp_path, monkeypatch, capsys, extra
+) -> None:
+    _, ran, asked = _filing_onto_board(
+        ci, tmp_path, monkeypatch, axes=BOARD_AXES, board=9, extra=extra
+    )
+
+    assert ci.main() == 2
+
+    assert _gh_calls(ran) == [] and asked == []
+    captured = capsys.readouterr()
+    assert "about to create issue" not in captured.out
+    err = captured.err
+    assert f"--board 9 {ANOTHER_BOARD}, board 7, and is refused" in err
+    assert "every command reads an open issue's position from its card on the configured" in err
+    assert "To file the issue onto board 7, leave --board out." in err
+    assert "`gh project item-add 9 --owner <owner> --url <the issue's url>`" in err
+
+
+@pytest.mark.parametrize(
+    "board_config",
+    [
+        pytest.param("has_projects_v2_board: true\n", id="no-board-number"),
+        pytest.param("", id="no-board-declared"),
+    ],
+)
+def test_with_no_configured_board_number_the_refusal_names_that_fault(
+    ci, tmp_path, monkeypatch, capsys, board_config
+) -> None:
+    _, ran, asked = _filing_onto_board(
+        ci, tmp_path, monkeypatch, axes=BOARD_AXES, board=7, board_config=board_config
+    )
+
+    assert ci.main() == 2
+
+    assert _gh_calls(ran) == [] and asked == []
+    err = capsys.readouterr().err
+    assert "--board 7 is refused: the substrate map binds the state to the board" in err
+    assert "gives no board number" in err
+    assert "leave --board out" not in err
+
+
+@pytest.mark.parametrize(
+    "board_id",
+    [pytest.param("7", id="a-number"), pytest.param("'7'", id="a-string")],
+)
+def test_the_configured_boards_own_number_goes_on(
+    ci, tmp_path, monkeypatch, capsys, board_id
+) -> None:
+    """The two are compared as numbers, so a number the configuration writes as a
+    string names the same board as the option."""
+    board_config = f"has_projects_v2_board: true\nprojects_v2_board_id: {board_id}\n"
+    board, ran, _ = _filing_onto_board(
+        ci, tmp_path, monkeypatch, axes=BOARD_AXES, board=7, board_config=board_config
+    )
+
+    assert ci.main() == 0
+
+    assert _issue_created(ran)
+    assert board.adds == [42]
+    assert ANOTHER_BOARD not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "axes",
+    [
+        pytest.param(LABEL_STATE, id="state-on-labels"),
+        pytest.param(None, id="no-map"),
+        pytest.param(
+            {axis: binding for axis, binding in BOARD_AXES.items() if axis != "state"},
+            id="state-degrades",
+        ),
+    ],
+)
+def test_another_board_is_not_refused_where_the_state_is_off_the_board(
+    ci, tmp_path, monkeypatch, capsys, axes
+) -> None:
+    _, ran, _ = _filing_onto_board(ci, tmp_path, monkeypatch, axes=axes, board=9)
+
+    assert ci.main() == 0
+
+    assert _issue_created(ran)
+    assert ANOTHER_BOARD not in capsys.readouterr().err
 
 
 def _hooks_module(ci):

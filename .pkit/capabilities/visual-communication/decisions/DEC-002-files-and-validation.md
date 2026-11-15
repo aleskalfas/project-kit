@@ -37,7 +37,7 @@ Four facts shape the answer:
 ### 2. The configuration holds only the project's choices as a whole
 
 - **Where it lies:** in the capability's own project configuration, as other capabilities keep theirs. Its schema refuses an unknown key.
-- **What it holds:** the location, once a command has recorded it (point 1), and which plugins that reach a service are turned on (point 8).
+- **What it holds:** the location, once a command has recorded it (point 1), and which plugins that reach a service are turned on (point 8). It also holds the bar the designer's loop runs to, with the loop's bounds (refinement per [visual-communication:DEC-042-grades-bar-and-loop] points 3 and 6), and the browser that [visual-communication:DEC-020-html-page-drawing] point 7 already put in the configuration.
 - **What it never holds:** a look, a lock, or a choice that belongs to one piece or one declaration. Those lie in a library, a piece or a declaration (point 1), so a piece copied to another project reads the same there.
 
 ### 3. Each file names its schema
