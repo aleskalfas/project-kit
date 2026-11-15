@@ -7952,7 +7952,7 @@ def _install_pin(source_url: str | None, ref: str | None) -> CapabilityPin | Non
     carries a credential is never passed on, recorded or printed (ADR-040 point 2).
     """
     from project_kit import capability_fetch
-    from project_kit.manifest import CapabilityPin
+    from project_kit import manifest as manifest_mod
 
     if source_url is None and ref is None:
         return None
@@ -7960,7 +7960,7 @@ def _install_pin(source_url: str | None, ref: str | None) -> CapabilityPin | Non
         raise click.UsageError(
             "--from and --ref go together: the git source, and the tag or commit to install at."
         )
-    pin = CapabilityPin(source=source_url, ref=ref)
+    pin = manifest_mod.CapabilityPin(source=source_url, ref=ref)
     try:
         capability_fetch.refuse_pin(pin)
     except capability_fetch.FetchRefused as exc:
