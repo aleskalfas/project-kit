@@ -512,19 +512,23 @@ def test_the_html_page_draws_a_path_in_a_layer_and_forced_colours_reach_its_pain
     """A path is a shape like any other: it lies in a layer, holds no text, and under forced
     colours its fill takes the ground, with an edge inside it where it has no stroke, and its
     stroke the text colour, as the declaration names (DEC-036 points 4 and 5, DEC-039 point
-    4). The path with no stroke is drawn whole, and over it a copy of its outline, by its fill
-    rule, which the file's filter erodes."""
+    4). The path with no stroke is a clipped shape, its geometry held once, which the `use`
+    draws and the clip's `use` takes, by its fill rule."""
     root = ElementTree.fromstring(draw_html(scene(EVEN_ODD, PATH)).document)
 
     [layer] = marked(root, "layer")
     drawn = [node for node in layer if "data-id" in node.attrib]
     assert [(node.tag, node.get("data-id")) for node in drawn] == [
-        ("path", "figure/ring"),
+        ("use", "figure/ring"),
         ("path", "figure/sign"),
     ]
-    assert (drawn[0].get("fill"), drawn[0].get("fill-rule")) == ("var(--surface)", "evenodd")
-    [inset] = [node for node in layer if "data-inset" in node.attrib]
-    assert (inset.get("data-inset"), inset.get("fill-rule")) == ("erode", "evenodd")
+    assert (drawn[0].get("href"), drawn[0].get("fill")) == ("#pkit-shape-1", "var(--surface)")
+    [geometry] = [node for node in layer.iter() if node.get("id") == "pkit-shape-1"]
+    assert geometry.get("fill-rule") == "evenodd"
+    [clip] = [node for node in layer.iter() if node.get("id") == "pkit-clip-1"]
+    assert [(node.tag, node.get("href"), node.get("clip-rule")) for node in clip] == [
+        ("use", "#pkit-shape-1", "evenodd")
+    ]
     assert drawn[1].get("stroke") == "var(--border)"
     assert marked(root, "text") == []
     assert forced(root) == (
@@ -532,8 +536,8 @@ def test_the_html_page_draws_a_path_in_a_layer_and_forced_colours_reach_its_pain
         "marker path{fill:CanvasText}"
         '[data-layer] [fill="var(--surface)"]{fill:Canvas}'
         '[data-layer] rect[fill="var(--surface)"]:not([stroke]),'
-        '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]),'
-        '[data-layer] path[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
+        '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
         f"{html.FORCED_SHEET}"
-        '[data-inset="erode"]{fill:CanvasText;filter:url(#pkit-edge)}'
+        "[data-clip]{stroke:CanvasText;stroke-width:2px}"
+        '[data-clip="1"]{clip-path:url(#pkit-clip-1)}'
     )
