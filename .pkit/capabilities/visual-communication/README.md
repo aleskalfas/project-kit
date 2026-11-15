@@ -20,6 +20,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/look.py
         - .pkit/capabilities/visual-communication/scripts/pages.py
+        - .pkit/capabilities/visual-communication/scripts/draft.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/drafts.py
         - .pkit/capabilities/visual-communication/scripts/before-after.py
         - .pkit/capabilities/visual-communication/scripts/mark-final.py
         - .pkit/capabilities/visual-communication/scripts/upgrade.py
@@ -106,6 +108,8 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#how-a-command-finds-it
         - .pkit/capabilities/visual-communication/files.md#the-lock
+        - .pkit/capabilities/visual-communication/files.md#the-brief
+        - .pkit/capabilities/visual-communication/files.md#the-makers-record-of-drafts
         - .pkit/capabilities/visual-communication/files.md#what-a-release-compares
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#the-browser
@@ -395,6 +399,17 @@ Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 - **Finds the browser** a run would start, and starts none. It names the program, or where it looked where it found none, and the forced palettes it draws where `look` is asked `--forced-colours`.
 - **Writes** nothing.
 - **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold. It exits 1 too where the configuration's `browser` names no path ([The browser](files.md#the-browser)).
+
+### `pkit visual draft <piece>`
+
+Gives the digest of a draft's text, and says whether a text still matches the digest the piece's brief records ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+
+- **Names the draft** by `--kind` (`lead`, `title` or `takeaway`), `--language` and, for a piece whose top holds pages, such as a deck or a site, even of one page, `--page <id>`. It reads the text from the piece, so no one hashes text by hand: a takeaway from the brief's part, and a lead or a title from the content in that language, at the key path `--at` names from the page ([The brief](files.md#the-brief)). Without `--page`, a draft is the whole piece's, which only a piece whose top is a page alone, such as a figure, has: its entry lies in the brief's part for the whole piece, a takeaway is read from that part, and a lead's or a title's key path from the content's top. On a piece whose top holds pages each draft lies in its page's part ([The brief](files.md#the-brief)). So the command refuses a draft given without `--page` on such a piece, and on a piece whose top it cannot read to tell whether it holds pages. It finds the page, and whether the top holds pages, under the piece's lock, or, before the piece's first render, under the versions that render would lock ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **Prints** the entry for the part's `drafts`, its digest taken over the text normalised as the record says, for whoever designs the piece to write into the brief ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **`--check`** says whether the text still matches the entry the brief records for it, and so whose the text is ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **Writes** nothing, the brief included ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **Refuses** a piece, its brief, a page, a field or a takeaway it cannot read.
+- **Exits** 0 when it printed the entry, or `--check` found a match; 1 when it refused ([Commands](#commands)); 2 on a usage error; 3 when `--check` found the text the asker's.
 
 ### `pkit visual before-after <piece>`
 
