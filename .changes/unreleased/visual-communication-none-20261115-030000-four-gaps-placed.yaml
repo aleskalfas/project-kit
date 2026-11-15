@@ -2,7 +2,8 @@ component: visual-communication
 kind: none
 body: >
   DEC-046, proposed, places the four gaps the review's first calibration found:
-  craft, typography and colour each gain a rule in GRAPHIC, and legibility at
-  the medium's size stays RS-GRAPHIC-005's, its two sentences judged apart
-  (#3225). It is a design-ahead record: the rule sets, the checks and the
-  design knowledge follow in later work under #3148. No surface moves here.
+  typography gains a rule in GRAPHIC, and craft, legibility at the medium's
+  size and colour are left to the reviewer's reading and to checks (#3225). It
+  is a design-ahead record. The rule, which makes the set GRAPHIC@2, the
+  reviewer's body, the design knowledge and the overlap check follow in later
+  work under #3148, each with its own changeset. No surface moves here.

@@ -1,125 +1,182 @@
 ---
 id: DEC-046
-title: Craft, typography and colour gain a rule of their own in GRAPHIC, legibility at the medium's size stays one rule's with a corrected reading, and each keeps a check or a brand's value for the part that needs no judgement
+title: Typography gains a rule in GRAPHIC, and craft, legibility and colour are left to the reviewer's reading and to checks
 status: proposed
 date: 2026-11-14
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** the review's calibration found four things the rule sets hold weakly or not at all: how cleanly each part is finished and joined to the next (*craft*), how the type is set (*typography*), whether the text reads at the size the medium shows it (*legibility at the medium's size*), and whether the colours work as one scheme in each mode the piece is shown in (*colour*). This record places each. Craft, typography and colour each gain a rule in `GRAPHIC`, taken from the canon with its source. Each also leaves what needs no judgement to a check, or to the brand's values where it is the look. Legibility gains no rule, since `RS-GRAPHIC-005` already names it. Its two sentences are judged apart from now on, and the check for the smallest text stays the check's. No outside judge's measure becomes a rule's source.
+**In plain terms:** the review of a piece was tested once against a designer's ranking. The test found four things the rules judge weakly or not at all. This record says where each belongs.
+- **Typography,** how a text of several lines is set, gains a new rule, since nothing judges it today.
+- **Craft,** whether parts line up, stand clear of each other and meet where they join, gains no rule. The reviewer's list of defects and the rule on grouping judge it already. The reviewer is told to read them more exactly, and a new automatic check finds boxes that overlap.
+- **Legibility at the medium's size,** whether a text is large enough where the piece is shown, is left wholly to an automatic check. The rule on readability keeps what no check can see.
+- **Colour** gains no rule. The rule on form judges it already, and the rest is a brand's look or a matter of taste.
+
+The new rule lands in a later change, which gives the rule set a new major version.
 
 ## Context
 
-[visual-communication:DEC-042-grades-bar-and-loop] point 2 has a refinement of the record of the principles ([visual-communication:DEC-028-principles-of-visual-communication]) decide where each gap the calibration found belongs. Its four places are a rule of the canon with its source, a check, a brand's values, and the *reading*, which is the design knowledge (DEC-030 point 8) or the reviewer's body, where a rule names the gap and the review read the rule otherwise. The calibration cannot tell a gap in the canon from a gap in the reading, so each is weighed here.
+[visual-communication:DEC-042-grades-bar-and-loop] point 2 has a refinement of the record of the principles ([visual-communication:DEC-028-principles-of-visual-communication]) decide where each gap belongs. This record is that refinement.
 
-What the rule sets hold today, against the four gaps:
-- **Craft.** `RS-GRAPHIC-002` asks that what belongs together is grouped and lined up, and `RS-GRAPHIC-003` that nothing is extra. No rule asks that a part is finished: its edges true, the gaps between parts even, an end meeting the part it joins.
-- **Typography.** `RS-GRAPHIC-001` ranks what is seen first, and `RS-GRAPHIC-004` asks that one meaning looks the same. No rule judges how a text is set: its line length, its line spacing, its breaks. The design knowledge's file on type, grid and space teaches it ([visual-communication:DEC-030-design-agents] point 8), and nothing is graded on it.
-- **Legibility at the medium's size.** `RS-GRAPHIC-005` names it: "everything on a page can be read where the piece is shown", and "a page is taken in at a glance". The review graded it by how much a page holds, which is the glance, and not by whether its text reads at its size. The check for a text smaller than its medium allows, which DEC-028 point 1 assigns, was never built (DEC-042 point 2).
-- **Colour.** `RS-GRAPHIC-006` asks that colour is never the only signal, and `RS-GRAPHIC-007` that a difference of colour is one the content has. Contrast, an order's ends and the pairs a brand declares are checks'. No rule asks whether the colours a page draws belong to one scheme, or hold as one in each mode.
+The words it uses:
+- **The canon** is the published, established works of the field, which each rule is taken from (DEC-028 point 1).
+- **The review** is what the capability's reviewer agent does: it reads the images of a piece's pages and reports. Its *body* is the file of instructions it works by.
+- **A check** is a measurement a command makes on every render, with no judgement.
+- **A fault** is one of eight defects the reviewer's body lists, such as an overlap. It is a drawing that does not show what the content says it should, and never a judgement of design ([visual-communication:DEC-030-design-agents] point 6).
+- **A grade** is one of four words the review gives each rule on each page, from *below competent* to *excellent* (DEC-042 point 1).
+- **A bar** is a project's setting that names rules and the grade each page must reach on them (DEC-042 point 3).
+- **The hold** is the switch by which meeting the bar ends the designer's work on a piece. It needs an accepted *calibration*, a test of the review against a designer's ranking of a series of designs (DEC-042 point 9).
+- **The reading** is how the reviewer interprets a rule or a fault. It lies in the reviewer's body, or in the *design knowledge*, the folder that teaches what the field's practice is (DEC-030 point 8).
+- **A brand** is the library that holds a piece's look as values: its typefaces, sizes, colours and spaces.
+- **The frames** are the file beside each image that gives every drawn part's box, in pixels.
+- **A mode** is one variant a piece is drawn in, such as light or dark. Each image shows one mode.
+- **A major** is the first number of a rule set's version. A project's set that takes rules from another names that set's major, as in `GRAPHIC@1`. That is its *pin* (COR-051 point 7).
 
-The review grades rules, and a project's bar covers rules (DEC-042 points 1 and 3). A gap no rule names has no grade of its own, so a bar can never ask for it.
+What judges each gap today:
+- **Craft.** `RS-GRAPHIC-002` asks that what belongs together is "placed together and lined up". The reviewer's fault 7, alignment, covers parts that "plainly belong on one edge, one line or one even spacing" and do not lie there. Fault 6 covers overlaps, and fault 1 a part cut off. So craft is named, and the calibration still found it weak.
+- **Typography.** No rule and no fault judges how long a text's lines are, how far apart they stand, or how they break. The design knowledge's topic on type teaches it, and nothing is graded on it.
+- **Legibility at the medium's size.** `RS-GRAPHIC-005` asks that everything "can be read where the piece is shown". DEC-028 point 10 gives the smallest text size for a medium to a check, which was never built (DEC-042 point 2). The review graded the rule by how much a page holds.
+- **Colour.** `RS-GRAPHIC-007` asks that every difference a reader takes for meaning is one the content has. DEC-028 point 11 gives "five unrelated hues on one chain" as a break of it. Contrast is a check's.
 
 ## Decision
 
-**Craft, typography and colour each gain a rule in `GRAPHIC`, with the canon's sources, and each leaves its parts that need no judgement to a check or to a brand's values. Legibility at the medium's size gains no rule: `RS-GRAPHIC-005`'s two sentences are judged apart in the reading, and the check for the smallest text size stays the check's. No rule has a source in the outside judge's measures, and none names a grade.**
+**`GRAPHIC` gains one rule, on how running text is set. Craft, legibility at the medium's size and colour gain none: rules, faults and checks name them already, and this record corrects how they are read and adds one check. No rule lands in this record's change. A later change adds the rule, in the words of point 3, and with it `GRAPHIC` becomes `GRAPHIC@2`.**
 
 ### 1. How a gap is placed
 
-The four places of DEC-042 point 2, in the order this record takes them for each gap:
-- **A rule of the canon** where a source of the field names the gap, the review needs a grade on it for a bar to ask for it, and no rule already asks the same test. A rule that duplicates another's test makes one defect fail twice.
-- **A check** for each part that needs no judgement, run on every render (DEC-028 point 1).
-- **A brand's values** where the part is the look: a value a brand sets and a piece draws with.
-- **The reading** where a rule names the gap and the review read it otherwise.
+DEC-042 point 2 gives four places. This record takes them in this order for each gap:
+- **The reading,** where a rule or a fault already names the gap. A second rule on the same test would make one defect fail twice.
+- **A check,** for each part that needs no judgement (DEC-028 point 1).
+- **A brand's values,** where the part is the look.
+- **A rule of the canon,** only for what is left: a test that no rule, fault or check makes, which a source of the field states.
 
-A gap may take more than one. Each takes the rule for what only a judgement settles, and the check or the value for the rest, as DEC-028 point 1 leaves the sets what is theirs and the rest to others.
+### 2. Craft is the faults' and `RS-GRAPHIC-002`'s, read more exactly, with a check for overlap
 
-### 2. Craft is a rule of its own, with a check for overlap
+Craft gains no rule. Each part of it has a home already, and this record found nothing left over that a rule could judge.
 
-**`RS-GRAPHIC-008`, each part is finished and joined to the next.** It judges what a page's parts do at their edges: an edge true to its neighbour's, the gaps between parts one measure, an end of a line or arrow on the part it names, nothing cut short or left a few units off. It leaves to `RS-GRAPHIC-002` which parts belong together, and to the checks what they measure.
+- **Fault 7, alignment, is read from the frames on every page.** The reviewer compares the edges of the parts one list, row or column holds, and the gaps between them, by their boxes. It does not judge them by eye. An offset larger than a pixel of rounding is the fault.
+- **Fault 6, overlaps, also covers a join that misses.** A line or an arrow that stops short of the part the content joins it to, or runs past it, is this fault.
+- **`RS-GRAPHIC-002`'s "lined up" keeps the judgement of design.** The rule judges whether parts that belong together were given a shared edge at all. Fault 7 judges whether parts that were given one lie on it.
+- **One finding, and one grade.** An offset between parts that belong together is one finding, a fault, which cites `RS-GRAPHIC-002` too (DEC-030 point 6). The page's grade on that rule counts the offset as its evidence. Where the grade falls below professional, its finding names the fault and describes the defect no second time. So a bar over `GRAPHIC` sees misalignment through that rule's grade.
+- **A check for what needs no judgement.** It reports two boxes in one container that overlap, where neither holds the other. It leaves out lines and arrows, whose crossings stay fault 6's. It asks for attention and never fails, since a library's component may place one part on another on purpose, such as a badge on a corner. The work that builds it settles how a component says an overlap is meant, so that such an overlap is not reported for ever. Where that adds a field, it drafts the record first (COR-065 point 3).
+- **Beside the check.** Once the check exists, an overlap of boxes is the check's. The reviewer names it in one line and judges it no second time (DEC-030 point 7).
+- **Not a brand's value.** A brand sets the unit and the steps of space ([visual-communication:DEC-004-brands-and-notations]). Where parts lie is the piece's and its components'.
 
-- **Sources.** Dieter Rams, "good design is thorough down to the last detail" (*Ten Principles for Good Design*); Robin Williams, alignment, where nothing is placed arbitrarily (*The Non-Designer's Design Book*); Josef Müller-Brockmann, parts that share the edges of one grid (*Grid Systems in Graphic Design*); Adam Wathan and Steve Schoger, space drawn from a small set of steps (*Refactoring UI*).
-- **From the text:** whether the content draws each gap from the brand's space and sets no gap by hand.
-- **On the drawn page:** the rest of the rule.
-- **A check for what needs no judgement:** two sibling parts whose boxes overlap, neither holding the other, as the scene gives them. It asks for attention, never fails, since an overlap can be meant, such as a badge on a corner.
-- **Not a brand's value.** A brand sets the space's unit and steps (DEC-004), and a piece's use of them is the piece's.
+### 3. Typography gains a rule
 
-### 3. Typography is a rule of its own, with the brand's values and a check
+**`RS-GRAPHIC-008`, running text is set to be read.** *Running text* is a text of more than one line. The rule's statement, in the words `graphic.md` would hold:
 
-**`RS-GRAPHIC-009`, type is set to be read.** It judges how each text is set: its line length for the size, its line spacing for the line length, its breaks. A heading is not cut from the text it heads, and no line ends on a lone word the text could have held. It leaves to `RS-GRAPHIC-001` which text ranks first, and to `RS-GRAPHIC-004` that a kind of text keeps one look.
+> ## RS-GRAPHIC-008 — Running text is set to be read
+>
+> A text that runs over several lines is set so that a reader keeps their place. Its lines are neither too long nor too short for its size. The space between its lines suits their length. Its uneven edge is even enough: no line but the last ends far short of the others.
+>
+> - **What it does not judge.** A text of one line, such as a title or a label. A text whose lines the content breaks, such as code. A text that only stands for text, such as the lines of a mock-up, and what lies inside a picture made elsewhere. Which text ranks first, which is `RS-GRAPHIC-001`'s. Whether a kind of text keeps one look, which is `RS-GRAPHIC-004`'s. Whether a text can be read at all where it is shown, which is `RS-GRAPHIC-005`'s. Whether a text is large enough for its medium, which is a check's.
+> - **From the text:** nothing, since a line's length and its spacing show only once the page is drawn.
+> - **On the drawn page:** the whole rule, on each image, so in each language and at each size the piece is drawn in.
 
-- **Sources.** Robert Bringhurst, size, line spacing and line length chosen together (*The Elements of Typographic Style*); Tim Brown, the relations that hold as the reading conditions change (*Flexible Typesetting*); Ellen Lupton, the rag and the lone line (*Thinking with Type*); Matthew Butterick, line spacing and line length for reading (*Practical Typography*).
-- **From the text:** whether each text names the brand's role for its kind and sets no size or spacing of its own.
-- **On the drawn page:** the rest of the rule.
-- **A brand's values.** The brand declares each text role's line spacing and the longest line it allows, with the sizes and the scale it already declares. They are the look, and a piece draws with them. A brand's type roles are DEC-004's, so the change that adds these fields refines that record, drafted for a person to accept (COR-065 point 3).
-- **A check for what needs no judgement,** once a brand declares them: a line longer than its role's longest line. It asks for attention until a person says otherwise, since a longer line can be the page's point.
+The source of each clause:
+- **Line length.** Robert Bringhurst: "Choose a comfortable measure". The *measure* is the length of a line, which he counts in characters, and he gives a range that reads well for one column of text (*The Elements of Typographic Style*). Matthew Butterick gives a range of characters to a line too, and asks a writer to keep within it (*Practical Typography*).
+- **Line spacing.** Bringhurst: "Choose a basic leading that suits the typeface, text and measure". *Leading* is the space between lines, and a longer line needs more of it, so that the eye finds the start of the next line. Butterick gives line spacing as a share of the type size.
+- **The uneven edge.** A text set flush on one side has an uneven edge on the other, which typographers call the *rag*. Ellen Lupton asks that it look evenly uneven, with no line much longer or shorter than the others (*Thinking with Type*).
+- **On each size.** Tim Brown: on a screen, size, line length and line spacing are relations that change together as the reading conditions change (*Flexible Typesetting*). So the rule is judged on each size the piece is drawn at.
 
-### 4. Legibility at the medium's size stays `RS-GRAPHIC-005`'s, read in two parts
+What the rule leaves to others, and how it is read:
+- **No figure.** The rule names no number of characters and no share of the size. The sources' ranges differ, and each is given for its own script and medium. The design knowledge says what each source teaches. A project that wants a limit adds it in a set of its own (DEC-028 point 1).
+- **A brand's values.** A brand's text style already holds its size and its line spacing (`lineHeight`). They are the look. Where the line spacing does not suit the lines a piece draws, the finding's fix belongs to the brand.
+- **Who can mend it.** A line's length follows from the width a layout or a component gives the text. So the fix belongs to the piece, where it can choose another layout or cut the text, or else to a component or a library. The engine breaks lines by filling each one, and never hyphenates. Where only another way of breaking would even the edge, the grade is a *need*, a tool the engine lacks (DEC-042 point 4).
+- **Languages.** Each language is judged on its own images, so a break that is bad in one translation is found there alone. Long compound words, as in German, make an edge rough in a narrow column, which is the rule's to find. Where a text is in a script none of the rule's sources speaks of, such as one written without spaces, the review gives line length no grade there and says so.
+- **Little or nothing to judge.** A deck of short bullets, a diagram with labels only and a board people fill in hold no running text. The rule takes no grade on such a page, and the review says so (DEC-042 point 1).
+- **A grade on each page.** The rule judges pages one at a time.
+- **No "from the text" part.** Content sets no size and no spacing. A component does, and a text names a brand's style for its kind. So the text alone shows nothing of this rule.
+- **No check and no new brand value.** A longest line a brand allows would be a limit, which is a project's taste or a check's threshold, and never a value a piece draws with (DEC-028 point 1; DEC-030 point 8).
 
-The canon names it already: Nancy Duarte's glance test, and the legibility minimums for each medium (DEC-028 point 10). The gap is in how the review read the rule, so the placement is the reading and a check, not a rule.
+### 4. Whether a text is large enough is the check's, and `RS-GRAPHIC-005` keeps what no check sees
 
-- **The reading.** The reviewer's body and the design knowledge judge the rule's two sentences apart. *Reads at its size:* whether each text on the image, at the size the piece's `shown` field names, can be read, which the review judges from the image scaled to that size. *Taken in at a glance:* whether the page holds no more than it can be taken in at a glance there. The rule's grade is the lower of the two, and the finding says which sentence it rests on. How much a page holds is evidence for the second only.
-- **A check.** A text smaller than its medium allows is the check DEC-028 point 1 assigns and DEC-042 point 2 keeps. The minimum for each medium is the check's, cited to its standard, never a rule's figure, and never a brand's value, since the medium decides it.
-- **No brand's value.** The sizes a brand declares are its look. Whether one reaches the minimum of a medium is the check's.
+Legibility gains no rule. The canon names it already, and DEC-028 point 10 already divides it: the smallest text size for a medium is a check's, and the rest is the rule's.
 
-### 5. Colour is a rule of its own, over the brand's palette
+- **Size is wholly the check's.** The review never judges whether a text is large enough for its medium. It cannot: the viewing step enlarges a page until its smallest text is at least 10 pixels, so the image is built so that the text reads. The reviewer runs no command, and a piece's `shown` field holds words, not a size.
+- **What the rule's first sentence still judges,** on the drawn page: what makes a text hard to read at any size. Examples are a face too thin or too ornate for its use, a weight too light, and a text that fades over a picture or a busy ground. A text over a picture stays fault 4 first.
+- **What its second sentence judges:** whether the page is taken in at a glance. How much a page holds is evidence for this sentence only.
+- **One grade, and the finding names the sentence** it rests on.
+- **No small text fails twice.** Once the check exists, a text under its medium's minimum fails the check alone. It lowers no grade of `RS-GRAPHIC-005`, and the reviewer names it in one line.
+- **Until the check exists,** nothing judges a text's size, and the review's report says so.
+- **The check itself stays DEC-042's work.** DEC-042's Implications list it. This record adds only that the reading leaves size to it.
 
-**`RS-GRAPHIC-010`, the colours work as one scheme, in each mode.** It judges the colours a page draws: that they belong to one scheme, with muted large areas and strong colour on the few marks that should be seen, and that the scheme holds in each mode the piece draws. It leaves to `RS-GRAPHIC-006` and `RS-GRAPHIC-007` what a colour tells, and to the checks contrast.
+### 5. Colour gains no rule
 
-- **Sources.** Josef Albers, a colour judged where it sits (*Interaction of Color*); Cynthia Brewer, the kind of scheme that follows the kind of data (*Designing Better Maps*); Edward Tufte, after Eduard Imhof, muted grounds and strong colour used sparingly (*Envisioning Information*); Cole Nussbaumer Knaflic, colour used sparingly draws the eye (*Storytelling with Data*).
-- **From the text:** how many roles the content points its parts at, and whether it overrides a mode's values.
-- **On the drawn page:** the whole rule, in each mode the piece draws.
-- **The modes it judges.** The modes the piece names in its own file. A reader's forced palette is the reader's, so no finding on it rests on a scheme (DEC-015 point 7, refinement per [visual-communication:DEC-027-forced-colours-viewing]).
-- **What stays the checks'.** Contrast, an order's ends and a declared pair's contrast in each combination are checks' already. This record adds none.
-- **What stays a brand's value.** A brand's palette is its look, and each brand's author answers for it. The rule judges what a piece does with the palette, such as how many hues it draws and where it puts its strong colour, and never the palette.
+Each part of the gap has a home, or no source states it as a test.
 
-### 6. The shape of the new rules
+- **Whether the colours match what the content has is `RS-GRAPHIC-007`'s.** That covers hues with no kinds behind them, and an order shown by unrelated hues. The reviewer's body tells the review to count the hues a page draws against the kinds its content names.
+- **Where the strong colour sits is `RS-GRAPHIC-001`'s and `RS-GRAPHIC-007`'s.** The first ranks what is seen first, by colour among other means. The second allows emphasis only where the page's point needs it.
+- **Strong colour used sparingly, over muted large areas, is a note of taste.** Edward Tufte, after the map-maker Eduard Imhof, teaches it for maps and charts (*Envisioning Information*). A brand may fill a title page with its strongest colour, so it is no test every piece must pass. The design knowledge's topic on colour teaches it already, and a note names it (DEC-030 point 6).
+- **Whether a palette's colours go together is the brand's.** A palette is a brand's look, and its author answers for it. No source states a test of it that a piece could fail.
+- **Nothing is said of modes.** The review grades each image, and each image shows one mode. So each mode is judged already.
+- **Contrast stays the checks'.**
 
-- **The shape DEC-028 gives.** Each judges every piece, as `GRAPHIC` does (DEC-028 point 3), says apart what the text shows from what the drawing shows (DEC-028 point 4), and binds on nothing until a piece's content is an artefact (DEC-028 point 5).
-- **The sources are the canon's.** A talk, a deck or a judge's measure shows a rule at work and is never its source (DEC-028 point 1). No wording, figure or example of an outside judge's measure enters a rule, a check or a reading this record places.
-- **No grade is named.** A rule's text names a grade only where a break of it blocks a bar, as a rule on a blocking fault names *below competent* (DEC-042 points 1 and 2). No source above calls a break of these three a failure of that kind, so none names one. A blocking fault that judges design, found later, joins the rule that already names it, or a new one, never the reviewer's faults (DEC-042 point 2).
-- **Beside the reviewer's faults.** The faults the reviewer's body lists are what the drawing fails to show against the content, the brand or a passing check, and a finding takes the first kind that applies (DEC-030 point 6). A rule of this record judges how well it is done, so a drawn defect that is also a fault stays a fault.
+### 6. The shape of the new rule
+
+- **The shape DEC-028 gives.** `RS-GRAPHIC-008` judges every piece, as `GRAPHIC` does (DEC-028 point 3). It says apart what the text and the drawing show (DEC-028 point 4). It binds on nothing until a piece's content is an artefact (DEC-028 point 5).
+- **Its sources are the canon's.** The designer who ranked the calibration's designs used measures of their own. No wording, figure or example of those measures enters the rule, a check or a reading this record places (DEC-042 point 2).
+- **It names no grade.** A rule's text names a grade only where a break of it blocks a bar (DEC-042 points 1 and 2). No source calls a break of this rule unworkable.
+- **Its origin is this record,** and it anchors to point 3.
 
 ## Rationale
 
-**Why a rule, for craft, typography and colour.** The review grades rules, and a bar covers rules (DEC-042 points 1 and 3). A gap left to the reading is graded only under another rule, so no bar asks for it, and a grade on it moves with whatever else that rule judges. Each of these three has a test no accepted rule asks, and a source in the canon that names it.
+**Why typography alone gains a rule.** A rule duplicates nothing only where no rule, fault or check makes its test. Line length, line spacing and the uneven edge have no home today, and three sources state them as tests. Without a rule the review gives them no grade, so no bar can ask for them.
 
-**Why craft is not a widening of `RS-GRAPHIC-002`.** That rule asks which parts belong together. A page can pass it and still leave a gap off by a few units or a line short of its part. A widened rule would grade two tests as one, and a change to either would flag both.
+**Why craft gains none.** An edge out of line is fault 7 and `RS-GRAPHIC-002`. An overlap, and a line that misses its end, are fault 6. A part cut off is fault 1. A rule on craft would give one misaligned edge three findings. The calibration found craft weak while these existed, so what failed was the reading: the review judged alignment by eye, though the frames give each box.
 
-**Why typography is not the brand's alone.** A brand sets the faces, the sizes, the scale and, here, the line spacing and the longest line. A piece sets each text in them, and can set a heading cut from its text under a perfect brand. The values are the look, and the setting is the judgement.
+**Why a fault still moves a grade.** A bar reads grades alone (DEC-042 point 1). If an offset between grouped parts left `RS-GRAPHIC-002`'s grade as it was, no bar would see it. One finding that cites the rule, and one grade that counts it, keeps "one observation, one finding" (DEC-030 point 6).
 
-**Why legibility gains no rule.** The canon's source is already the rule's, and the rule's words already ask for both parts. A new rule would repeat that, and the same defect would fail two rules. What went wrong was the reading, which the reviewer's body and the design knowledge correct. Judging the two sentences apart, with the lower grade, grades the part the review had skipped without a second rule, and keeps the rule's id, its anchors and its history.
+**What this costs.** An overlap, or a line that misses its end, breaks no rule, so no grade shows it and a bar's verdict does not read it. The designer mends every fault whatever the bar (DEC-030 point 2). Whether a page with an open fault may meet a bar is DEC-042's question, left open below.
 
-**Why colour is not wholly a brand's value.** A brand's palette is its look, but a piece chooses how many of its hues to draw, and which one carries the strong colour. A piece can draw five hues from a good palette and read as no scheme. The value is the brand's, and what is done with it is a judgement.
+**Why the size of a text is wholly the check's.** A judgement the reviewer's images cannot support would repeat the calibration's failure. A minimum size by medium needs no judgement, so it is a check's (DEC-028 points 1 and 10).
 
-**Why none of the three checks fails.** An overlap and a long line can each be the page's point. A check that fails what only a judgement can tell would be waived each time, as DEC-028 says of a rule that would fail every piece of a kind. The rule judges the case, and the check points the reviewer at it.
+**Why colour gains none.** The record's first draft gave colour a rule on "one scheme". Its example, five hues that read as no scheme, is DEC-028's own example of a break of `RS-GRAPHIC-007`. A rule on muted grounds would fail a brand's full-colour title page. A rule on how many hues a page draws would fail a diagram whose eight concepts each keep their colour, as `RS-GRAPHIC-004` asks.
 
-**Why no rule names a grade.** The sources teach a practice, and none teaches that one break of it is unworkable. A grade named without a source would be a judge's taste carried to every project (DEC-028 point 1).
+**Why the rule's statement is in this record.** Accepting this record accepts the rule's words, so the maintainer reads them here. The later change that adds the rule to `graphic.md` shows it again in the list of what that change makes accepted (COR-066 point 3). Other words there would need a refinement of this record.
+
+**Why no rule lands in this change.** A new rule makes a new major (COR-051 point 7), which every project that pins `GRAPHIC@1` must answer. That belongs with the reviewer's body and the design knowledge that read the rule, in a change that declares it.
 
 ### Alternatives considered
 
-- **Every gap to the reading alone.** Rejected: the three would stay ungraded under their own names, and a bar could never cover them, which is the gap the calibration found.
-- **Every gap to a rule.** Rejected for legibility, as above.
-- **Legibility split into two rules.** Rejected: rule ids are permanent (COR-051 point 3), and splitting an accepted rule changes what its grade means in every project's bar. Its trigger to revisit is that the review still grades by how much a page holds after the reading is corrected.
-- **Craft as a fault.** Rejected: faults never judge design (DEC-030 point 6).
-- **Craft, typography and colour as one rule on finish.** Rejected: three sources, three tests, and a finding that names its kind of failure is what the split into sets is for (DEC-028, Rationale, "Why two sets").
-- **Typography's values in a rule's text.** Rejected: a type size or a measure is a brand's, and a threshold is a check's (the design knowledge's index).
-- **A check that fails an overlap.** Rejected, as above.
-- **The palette's quality as a check.** Rejected: whether a palette is a scheme needs a judgement, and its contrast is checked already.
-- **A new rule for the legibility minimum.** Rejected: a figure by medium is a check's, run always (DEC-028 point 10).
+- **A rule on craft.** Rejected, as above. Its trigger to revisit: a craft defect found that no fault and no rule names.
+- **Widening `RS-GRAPHIC-002`'s text.** Not needed: its words already say "lined up".
+- **A rule on colour as one scheme.** Rejected, as above.
+- **"Strong colour sparingly" as a clause of `RS-GRAPHIC-001` or `RS-GRAPHIC-003`.** Rejected: its source teaches it for maps and charts, and a brand may want the opposite.
+- **The review judging text size from an image scaled to the medium.** Rejected: no piece declares a size or a viewing distance, and the reviewer runs no command.
+- **`RS-GRAPHIC-005` split in two rules,** one for each sentence. Not taken: with size left to the check, both sentences rest on one reading of the page. Its trigger to revisit: the review still grades the rule by how much a page holds.
+- **A brand's longest line, with a check.** Rejected, as point 3 says.
+- **A clause on a lone last word, and one on a heading parted from its text.** Dropped. For the first, this record found no source that states the test for every language. For the second, the engine flows no text from page to page, and nearness is `RS-GRAPHIC-002`'s.
+- **An overlap check that fails unless accepted,** as a loss is accepted in a piece. Rejected: an overlap a library's component means would need accepting in every piece that uses it.
+- **The rule landed in this change.** Rejected, as above.
 
 ## Implications
 
-- **Edits to accepted records,** made once this record is accepted, in the change that proposes it (COR-066 point 5):
-  - **DEC-028 point 10,** the bullet on `RS-GRAPHIC-005`. It gains that the rule's two sentences are judged apart, the page's text read at the size its medium shows it and the page taken in at a glance, and that the rule's grade is the lower of the two (refinement per this record, point 4). Its sources and its check stay as they stood.
-  - **DEC-028's Implications,** the list of what is left to other records. It gains that this record places the gaps of craft, typography, legibility and colour, and adds `RS-GRAPHIC-008` to `RS-GRAPHIC-010` to `GRAPHIC` (refinement per this record).
-  - **No edit to DEC-042.** Its point 2 names this refinement, and its Implications list it as work after its acceptance, which this record does.
-- **Edits to rules,** named and made as the records' are (the decisions README, "Adding a record"). `GRAPHIC` gains three accepted rules, `RS-GRAPHIC-008` to `RS-GRAPHIC-010`, each citing this record as its origin and anchoring to the points they rest on, and its version rises as COR-051 point 7 asks of added rules. `RS-GRAPHIC-005`'s statement is unchanged, since the correction lies in the reading, and it gains an anchor to point 4.
-- **The reading changes** in the reviewer's body (the two sentences of `RS-GRAPHIC-005`, the new rules' parts) and in the design knowledge (a section on text at the size shown, a section on a scheme's parts and the modes, and the finish of a page's parts). Both are what DEC-042 point 9 names as lapsing a hold: none is switched on, and none is accepted.
-- **The new rules lie outside any calibration.** No report has been accepted, so no hold exists. A report accepted later covers a rule only where it has its own evidence (DEC-042 point 10), so a bar over `GRAPHIC@1` asks nothing of the three on the hold until a calibration gives them evidence. The calibration DEC-042 names follows once the tasks below land.
-- **A refinement of DEC-004** for a brand's declared line spacing and longest line (point 3) is drafted in its Task, and rests on a person accepting it.
-- **A surface change:** the new rules, the brand's new fields and the checks are what an adopter can observe. Each Task carries its changeset, with a migration where a field a brand holds becomes required (COR-010).
+- **No rule lands in this change, and no surface moves.** Its changeset is `none`. It owes no migration (COR-010).
+- **Edits to DEC-028,** made in this change once this record is accepted (COR-066 point 5). Each is worded to hold before and after the rule lands.
+  - **Its summary,** "this record names its source". It gains that a later record names the source of a rule it adds (refinement per this record, point 6).
+  - **Its Decision line,** the same sentence, the same way.
+  - **Point 1,** "Each is taken from a source this record names". The same way.
+  - **Point 8,** the bullet on `RS-GRAPHIC-002`. It gains that an offset between parts that belong together is read from the frames, as a fault that cites the rule, and that the rule keeps whether such parts were given a shared edge (refinement per this record, point 2).
+  - **Point 10,** the bullet on `RS-GRAPHIC-005`. It gains that the review never judges a text's size, and that the rule's first sentence judges what no check sees, such as a face, a weight and a ground (refinement per this record, point 4).
+  - **Its Rationale,** "Why the reasons live in a record": "The record gives each rule's id, title, sources and reason". It gains that a later record gives them for a rule it adds.
+  - **Its Implications,** "Each rule cites this record as its origin". It gains that a rule a later record adds cites that record.
+  - **Its Implications,** "Left to other records". The list gains that this record places the four gaps of the first calibration.
+- **No edit to DEC-042 or DEC-030.** DEC-042 point 2 names this refinement, and its Implications list it as later work.
+- **Later work under [project-kit#3148](https://github.com/aleskalfas/project-kit/issues/3148),** each in a change of its own. A calibration grades by the rules, the reviewer's body and the design knowledge as shipped (DEC-042 point 9). So it waits for the first three, and not for the checks, which move no grade.
+  - **The rule.** It adds `RS-GRAPHIC-008` to `graphic.md` as point 3 words it, accepted, with this record as its origin. It anchors `RS-GRAPHIC-002`, `RS-GRAPHIC-005` and `RS-GRAPHIC-007` to points 2, 4 and 5. It rewords the set's opening sentence, which says DEC-028 names each source. The calibration waits for it.
+  - **The reviewer's body.** Faults 6 and 7 as point 2 reads them. How a fault that cites a rule moves that rule's grade. The readings of `RS-GRAPHIC-005` and `RS-GRAPHIC-007` of points 4 and 5. How `RS-GRAPHIC-008` is read, by language and by page. This joins the reviewer's body DEC-042's Implications list. The calibration waits for it.
+  - **The design knowledge.** The topic on type gains the uneven edge and what each source says of line length and line spacing, with Lupton and Butterick among its works. The topic on colour gains a question on strong colour over large areas. The calibration waits for it.
+  - **The overlap check** of point 2, with its entry in the capability's list of checks. The calibration does not wait for it.
+  - **The check for a text smaller than its medium allows** stays DEC-042's item. Its work must first give a piece's medium a form a command can read, since `shown` holds words, and name a standard for each medium. That is a record of its own. The calibration does not wait for it, and its report says that nothing judged text size.
+  - **The calibration** DEC-042 point 9 describes, last.
+- **What `GRAPHIC@2` brings,** in the change that lands the rule:
+  - **Adopters' pins.** A project's set that takes rules from `GRAPHIC@1` fails validation until the project reads the new rule and moves its pin (COR-051 point 7). Until then no rule of `GRAPHIC` binds through that set.
+  - **Bars.** A bar that names `GRAPHIC@1` fails the capability's check until the project names `GRAPHIC@2` (DEC-042 point 3).
+  - **The hold.** A new major lapses a hold (DEC-042 point 9). No calibration is accepted yet, so none exists to lapse. Later, a bar that covers all of `GRAPHIC@2` gets the hold only once a calibration gives `RS-GRAPHIC-008` evidence of its own. A bar may name single rules meanwhile (DEC-042 points 3 and 10).
+  - **Its changeset and migration.** That change declares the surface change in its changeset, and its release notes tell a project to read the rule and move its pin and its bar. No migration moves a pin or a bar, since the project's own review is what a pin waits for (COR-051 point 7). That change runs the check for owed migrations, and carries one only if the check names it.
 - **Left open:**
-  - which gap the one blocking fault that judges design belongs to, which DEC-042 point 2 says is a rule's: the calibration's maintainer names it, and the rule that takes it names its grade by a refinement of this record;
-  - whether the review, once the reading is corrected, still grades `RS-GRAPHIC-005` by how much a page holds, which reopens the split of that rule.
-- **No migration for the record itself.** It adds no surface, and each Task's change carries what it needs (COR-010).
+  - **The one fault the first calibration's designer blocked on that judges design.** DEC-042 point 2 gives it to a rule. Neither DEC-042 nor the repository says which defect it was, so this record cannot place it. Whoever maintains the capability names it, and a refinement of this record gives it to the rule that names it, with *below competent*. The calibration does not wait: its new designer ranks by the rules the bar covers (DEC-042 point 9), and never by a measure of their own.
+  - **Whether a page with an open fault may meet a bar.** The verdict reads grades alone. Whoever maintains the capability decides it, by a refinement of DEC-042.
+  - **Whether `RS-GRAPHIC-005` is split,** if the review still grades it by how much a page holds.
