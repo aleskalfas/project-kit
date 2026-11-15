@@ -1,26 +1,40 @@
-"""The Projects-v2 board READ seam — name → id resolution for a board field write.
+"""The Projects-v2 board READ seam — every read of the board, and name → id resolution.
 
 A field-value write (`_lib/substrate_writes.write_field_value`, ADR-031) needs
 four **ids**: the project node id, the item (card) id for the issue, the field id,
 and — for a single-select — the option id. An adopter's `project/config.yaml`
 declares none of them: it carries the board *number* (`projects_v2_board_id`) and
-a purely-optional node-id cache. Until now the four ids existed only inside
-hand-authored `set-board-field` hook entries, which is why wiring the hook was the
-painful "dig the ids out of the API by hand" step report #708 describes.
-
-This module is the read half that removes that step: it resolves the ids from the
+an optional node id (`projects_v2_node_id`). This module resolves the ids from the
 **names the adopter already speaks** (the board number in config, the Title-cased
-axis name on the board, the classification value). It is the single home for those
-reads — the same three reads that previously existed as private copies in
-`back-fill.py` (project node id), `adopt-existing.py` (project node id + the live
-field/option list) and `create-issue.py` (project node id, cache-first on the hot
-create path). `back-fill` and `adopt-existing` now delegate here (per COR-007:
-the third copy is where the shape gets extracted, not re-typed).
+axis name on the board, the classification value), and it is the single home for
+every read of the board ([pkit:ADR-053] point 1): its identity, its fields, its
+cards, and an issue's own cards on it. `back-fill`, `adopt-existing`,
+`bootstrap`, `pre-check`, `create-issue`, `set-field`, `sync-board`,
+`validate-issue` and the workstream commands read the board here, and a scan of
+the scripts holds that no script outside the seam builds a read of it
+([pkit:ADR-096] point 6).
+
+What counts as the board's answer
+---------------------------------
+[pkit:ADR-096], under every credential alike, through `_lib/board_answer`, the
+part of the seam that builds each request and judges its answer:
+
+* **A read of the board itself answered** only where its answer names the
+  configured board, agreeing with each of its names: its number, its owner as
+  :func:`board_owner` resolves it, and its node where one is stored. An error, an
+  answer with no board in it, or one naming another board, is a board that did
+  not answer. A stored node id is a name, never an answer.
+* **An absence counts only where the same request shows the board answered.** An
+  issue's own cards list only what the credential may see, so the read of an
+  issue's card (:func:`resolve_item_id`, :func:`read_issue_cards`) carries the
+  board's own read and a search for a witness in the same request, and reports
+  no card only where a witness shows the credential's reads see the board.
+* **A read that is not whole answers nothing:** one cut short, asking for less
+  than its question covers, or carrying an error on the board or its cards.
 
 Reads only
 ----------
-Nothing here mutates. The module resolves ids and reports what the board offers;
-the *write* is constructed and executed exclusively by
+Nothing here mutates. The *write* is constructed and executed exclusively by
 `_lib/substrate_writes` (ADR-031's sole constructor), and board **membership**
 (`gh project item-add`) is deliberately absent — it is a different operation
 (DEC-019, named OUT of ADR-031 point 3), and a verb that sets a *field* has no
@@ -30,18 +44,21 @@ remediation, exactly as `back-fill` reports "blocked — needs board membership"
 
 Failure-posture neutrality (as in `substrate_writes`)
 ----------------------------------------------------
-Every read returns a result object carrying `ok` plus, on failure, `gh`'s stderr
-**verbatim** in `error`. A missing `read:project` scope is the single most likely
-failure in practice, and its remedy lives in that stderr (`gh auth refresh -s
-project`) — so the seam never paraphrases or swallows it. The caller decides what
-a failure means (refuse, skip, warn); this module takes no view.
+Every read returns a result object carrying `ok` plus, where the board did not
+answer, why in `error`: `gh`'s words verbatim where `gh` failed, or the fault the
+seam names, with the way out its cause gives ([pkit:ADR-096] point 6). `named` is
+True where `error` names the fault itself. A missing `read:project` scope is the
+single most likely failure in practice, and its remedy lives in `gh`'s stderr
+(`gh auth refresh -s project`) — so the seam never paraphrases or swallows it.
+The caller decides what a failure means (refuse, skip, warn), within the limits
+[pkit:ADR-096] point 4 sets; this module takes no view.
 
 Injectable `gh_call`
 --------------------
 Each read accepts `gh_call`, the callable that actually shells out, defaulting to
 the right constructor for the operation: `gh project` reads go through
 `gh_project_run` (the #453 sole constructor that threads `GH_HOST` and splices
-`--owner`), the GraphQL read through `gh_run`. Callers that already own a `gh`
+`--owner`), the GraphQL reads through `gh_run`. Callers that already own a `gh`
 seam — the delegating `back-fill` / `adopt-existing` wrappers, and tests — pass
 their own, keeping their existing invocation path and patch point unchanged.
 
@@ -50,20 +67,21 @@ Exports:
     ProjectLookup / BoardFieldsRead / ItemLookup — the three read results
     ItemValueRead                   — one issue's card, and the option it holds
     IssueCardsRead                  — the listed issues' cards, each as an ItemValueRead
-    FieldOptionsRead / ItemsRead / BoardItem — the workstream mutators' reads
+    ItemsRead / BoardItem           — a walk of the board's cards
     NO_BOARD                        — why a read is refused with no board configured
     EVERY_ARCHIVED_STATE            — the argument by which a walk of the cards reads them all
+    FIELD_REREAD_QUERY              — back-fill's fresh read of one card's values
     board_number(config)            — the configured board NUMBER, or None
     default_owner(config)           — `gh.default_owner`, or None
     board_owner(config, ...)        — the board's owner: `gh.default_owner`, else the repo's
+    configured_board(config, ...)   — the configured board by its names
     url_owner(url)                  — the owner a GitHub url names, or None
     read_project_node_id(...)       — board number → project node id (rich)
     resolve_project_node_id(...)    — the same, as a bare `str | None`
-    read_fields(...)                — the board's live fields + their options
+    read_fields(...)                — the board's live fields + their options, and its node
     resolve_item_id(...)            — the issue's card (item) id on that board
     read_issue_cards(...)           — the listed issues' cards, in batches of node ids
     read_item_value(...)            — one issue's card and the option it holds in one field
-    read_field_options(...)         — a single-select's options, with colour + description
     read_items(...)                 — every card, with the option it holds in one field
     read_items_with_option(...)     — the cards whose value is one option
     find_field / field_names / field_type / is_single_select
@@ -80,10 +98,11 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-# Sibling module — the gh shell-out helpers that pin the adopter's host/owner
-# (DEC-023). Imported the way `_lib.hooks` / `_lib.substrate_writes` do, with a
-# defensive fallback for unusual import contexts (a test that loads a module by
-# file path may not have `_lib` on sys.path).
+# Sibling modules — the gh shell-out helpers that pin the adopter's host/owner
+# (DEC-023), and the part of the seam that judges the board's answer. Imported the
+# way `_lib.hooks` / `_lib.substrate_writes` do, with a defensive fallback for
+# unusual import contexts (a test that loads a module by file path may not have
+# `_lib` on sys.path).
 try:
     from gh import gh_project_run, gh_run  # type: ignore[import-not-found]
 except ImportError:  # pragma: no cover - defensive import fallback
@@ -93,8 +112,13 @@ except ImportError:  # pragma: no cover - defensive import fallback
         gh_project_run = None  # type: ignore[assignment]
         gh_run = None  # type: ignore[assignment]
 
+try:
+    import board_answer  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover - defensive import fallback
+    from _lib import board_answer  # type: ignore[no-redef]
+
 # The state-issue seam's one reader of the marker (ADR-071 point 6), by which the
-# board's read leaves a state issue's card out.
+# board's read sets a state issue's card aside.
 try:
     from state_issues import is_state_issue  # type: ignore[import-not-found]
 except ImportError:  # pragma: no cover - defensive import fallback
@@ -108,12 +132,9 @@ GhCall = Callable[..., "subprocess.CompletedProcess[str]"]
 # here; the others are named so a refusal can say which kind it found.
 SINGLE_SELECT_TYPE = "ProjectV2SingleSelectField"
 
-# Bound on the cards of one issue a read asks for. An issue on more than this many
-# boards is not a case worth paginating for. The write's card lookup reports it as
-# not on the board, and the adopter's remediation (add the card) is the same
-# either way. A read of the card's value fails instead (:func:`read_issue_cards`),
-# so a card past the bound is never taken for no card.
-_MAX_PROJECT_ITEMS = 100
+# Bound on the fields a read of the board's fields asks for. GitHub allows a board
+# fifty, so a read past it is one cut short, and answers nothing.
+_MAX_FIELDS = 100
 
 #: Why a board read is refused where the configuration names no board, made
 #: with no call.
@@ -125,35 +146,45 @@ NO_BOARD = (
 
 @dataclass(frozen=True)
 class ProjectLookup:
-    """Outcome of resolving the board NUMBER to its project node id."""
+    """Outcome of resolving the board NUMBER to its project node id.
+
+    ``ok=True`` carries the node id of the board whose answer named the
+    configured board. ``ok=False`` is a board that did not answer, with why."""
 
     ok: bool
     node_id: str | None = None
     error: str | None = None
+    named: bool = False
 
 
 @dataclass(frozen=True)
 class BoardFieldsRead:
-    """Outcome of reading the board's live fields (each with its options)."""
+    """Outcome of reading the board's live fields (each with its options).
+
+    ``project_id`` is the board's node, from the same answer as the fields."""
 
     ok: bool
     fields: tuple[dict[str, Any], ...] = ()
     error: str | None = None
+    project_id: str | None = None
+    named: bool = False
 
 
 @dataclass(frozen=True)
 class ItemLookup:
     """Outcome of resolving the issue's card (item) id on the board.
 
-    `ok=True, item_id=None` is the **membership** case — the read succeeded and
-    the issue is genuinely not on the board (board membership is a post-creation
-    step, so a just-filed issue may have no card yet). That is distinct from
-    `ok=False`, which means the read itself failed and nothing is known.
+    `ok=True, item_id=None` is the **membership** case — the board answered, a
+    witness showing it, and the issue is not on the board (board membership is a
+    post-creation step, so a just-filed issue may have no card yet). That is
+    distinct from `ok=False`, which means the board did not answer, or the
+    issue's own read failed, and nothing is known.
     """
 
     ok: bool
     item_id: str | None = None
     error: str | None = None
+    named: bool = False
 
 
 # ----- config readers ----------------------------------------------------
@@ -183,6 +214,14 @@ def default_owner(config: dict[str, Any]) -> str | None:
         if isinstance(owner, str) and owner:
             return owner
     return None
+
+
+def stored_node(config: dict[str, Any]) -> str | None:
+    """The board's node id the configuration stores (`projects_v2_node_id`), or
+    None. A name, read only to address the board's own read and to know the
+    configured board's card ([pkit:ADR-096] point 6): never an answer."""
+    node = config.get("projects_v2_node_id") if isinstance(config, dict) else None
+    return node if isinstance(node, str) and node else None
 
 
 def board_owner(
@@ -217,6 +256,18 @@ def board_owner(
     return None
 
 
+def configured_board(
+    config: dict[str, Any], *, owner: str | None = None, node: str | None = None
+) -> board_answer.Board | None:
+    """The configured board by its names: its number, ``owner``, and its node,
+    ``node`` where the caller holds one from the board's own answer, else the one
+    the configuration stores. None where no board is configured."""
+    number = board_number(config)
+    if number is None:
+        return None
+    return board_answer.Board(number, owner, node or stored_node(config))
+
+
 def url_owner(url: str | None) -> str | None:
     """The owner a GitHub url names, as `https://<host>/<owner>/<repo>/…` does,
     such as an issue's; None for a url that names none."""
@@ -224,7 +275,16 @@ def url_owner(url: str | None) -> str | None:
     return match.group(1) if match else None
 
 
-# ----- the three reads ---------------------------------------------------
+def _owner(config: dict[str, Any], owner: str | None, gh_call: GhCall | None) -> str | None:
+    """The owner a read addresses the board under, as :func:`board_owner`
+    resolves it: `gh.default_owner`, else ``owner``, the repository's owner where
+    the caller holds it, else the repository's read by `gh repo view`. So every
+    read names the board under one owner, the one the `gh project` constructor
+    splices too."""
+    return board_owner(config, repository_owner=owner, gh_call=gh_call)
+
+
+# ----- the board's own reads ---------------------------------------------
 
 
 def read_project_node_id(
@@ -235,38 +295,30 @@ def read_project_node_id(
 ) -> ProjectLookup:
     """Resolve the board NUMBER to its Projects-v2 project node id (`PVT_…`).
 
-    A `gh project view --format json` read of `.id` — the same read `pre-check`
-    runs to verify the board resolves. The cached `projects_v2_node_id` is
-    deliberately NOT consulted: a caller that also reads the board's *fields*
-    (which are addressed by board NUMBER) would otherwise risk pairing field ids
-    from one board with the node id of another if the cache were stale. The cache
-    exists to spare the hot create path a round-trip (`create-issue`, #310); a
-    one-issue verb can afford the read and get a guaranteed-consistent pair.
+    A `gh project view --format json` read: its answer names the board by its
+    `id`, `number` and `owner`, and counts only where those agree with the
+    configured board's names — the number, the owner (:func:`_owner`) and the
+    stored `projects_v2_node_id` where there is one. A stored
+    node is never taken for the answer: it was written under some credential at
+    some time, and says nothing of this one ([pkit:ADR-096] point 1).
 
-    Returns `ok=False` with `gh`'s stderr verbatim when the read fails, and
-    `ok=True, node_id=None` only when the payload carries no usable `id`.
+    Returns `ok=False` with `gh`'s stderr verbatim when the read fails, and with
+    the fault named where the answer names no board or another one.
     """
     number = board_number(config)
     if number is None:
-        return ProjectLookup(ok=False, error=NO_BOARD)
+        return ProjectLookup(ok=False, error=NO_BOARD, named=True)
+    owner = _owner(config, owner, gh_call)
+    board = board_answer.Board(number, owner, stored_node(config))
     args = ["gh", "project", "view", number, "--format", "json"]
     proc, error = _invoke(args, config, owner=owner, gh_call=gh_call)
     if proc is None:
-        return ProjectLookup(ok=False, error=error)
+        return ProjectLookup(ok=False, error=board_answer.from_service(error or "").said)
     payload = _parse_json(proc.stdout)
-    if payload is None:
-        return ProjectLookup(
-            ok=False,
-            error=f"`gh project view {number}` returned non-JSON output.",
-        )
-    node_id = payload.get("id") if isinstance(payload, dict) else None
-    if isinstance(node_id, str) and node_id:
-        return ProjectLookup(ok=True, node_id=node_id)
-    return ProjectLookup(
-        ok=True,
-        node_id=None,
-        error=f"`gh project view {number}` returned no project id.",
-    )
+    why = board.disagreement(payload)
+    if why is not None:
+        return ProjectLookup(ok=False, error=board_answer.no_board(board, why).said, named=True)
+    return ProjectLookup(ok=True, node_id=str(payload["id"]))
 
 
 def resolve_project_node_id(
@@ -284,104 +336,129 @@ def resolve_project_node_id(
     return read_project_node_id(config, owner=owner, gh_call=gh_call).node_id
 
 
+# The fields the board's own read asks for: each field's kind, id and name, and a
+# single-select's options in full, colour and description included.
+_FIELDS_SELECTION = (
+    f"fields(first: {_MAX_FIELDS}) {{ pageInfo {{ hasNextPage }} nodes {{ __typename "
+    "... on ProjectV2FieldCommon { id name } "
+    "... on ProjectV2SingleSelectField { options { id name color description } } } }"
+)
+
+
 def read_fields(
     config: dict[str, Any],
     *,
     owner: str | None = None,
     gh_call: GhCall | None = None,
 ) -> BoardFieldsRead:
-    """The board's live fields, each with its `id`, `name`, `type` and `options`.
+    """The board's live fields, each with its `id`, `name`, `type` and `options`,
+    and the board's node, from one read of the board itself.
 
-    A `gh project field-list --format json` read. This is the payload every
-    name-based resolution needs: the field whose NAME matches an axis, and (for a
-    single-select) the option whose NAME matches the value. Options come back on
-    the same read, which is what lets a refusal name what the board actually
-    offers rather than only what was missing.
+    One GraphQL read, addressed to the board by its stored node, else by its
+    number under its owner (:func:`_owner`, ``owner`` the repository's), whose
+    answer names the board: it counts only where it names the configured board
+    ([pkit:ADR-096] point 1), and only where it read every field (point 2). Each
+    single-select's options come back on the same read, with their colour and
+    description, which is what lets a refusal name what the board actually
+    offers, and a write of a field's option list keep the value each card holds.
 
-    `ok=False` carries `gh`'s stderr verbatim — the missing-`read:project`-scope
-    case, whose remedy is in that text.
+    `ok=False` carries `gh`'s words verbatim — the missing-`read:project`-scope
+    case, whose remedy is in that text — or the fault the seam names.
     """
-    number = board_number(config)
-    if number is None:
-        return BoardFieldsRead(ok=False, error=NO_BOARD)
-    args = ["gh", "project", "field-list", number, "--format", "json"]
-    proc, error = _invoke(args, config, owner=owner, gh_call=gh_call)
-    if proc is None:
-        return BoardFieldsRead(ok=False, error=error)
-    payload = _parse_json(proc.stdout)
-    if payload is None:
-        return BoardFieldsRead(
-            ok=False,
-            error=f"`gh project field-list {number}` returned non-JSON output.",
-        )
-    fields = payload.get("fields") if isinstance(payload, dict) else payload
-    if not isinstance(fields, list):
-        return BoardFieldsRead(
-            ok=False,
-            error=f"`gh project field-list {number}` returned no `fields` list.",
-        )
-    return BoardFieldsRead(ok=True, fields=tuple(f for f in fields if isinstance(f, dict)))
+    if board_number(config) is None:
+        return BoardFieldsRead(ok=False, error=NO_BOARD, named=True)
+    board = configured_board(config, owner=_owner(config, owner, gh_call))
+    assert board is not None
+    selection, variables, flags = board_answer.board_selection(board, _FIELDS_SELECTION)
+    query = f"query({', '.join(variables)}) {{ {selection} }}"
+    reply = board_answer.send(query, flags, config, gh_call=_graphql(gh_call))
+    answer, unanswered = board_answer.board_answer(board, reply)
+    if unanswered is None:
+        words = board_answer.unplaced_error(reply, roots=())
+        if words is not None:
+            unanswered = board_answer.from_service(words)
+    if unanswered is not None:
+        return BoardFieldsRead(ok=False, error=unanswered.said, named=unanswered.named)
+    assert answer is not None
+    block = answer.get("fields")
+    nodes = block.get("nodes") if isinstance(block, dict) else None
+    page = block.get("pageInfo") if isinstance(block, dict) else None
+    if not isinstance(nodes, list) or (isinstance(page, dict) and page.get("hasNextPage")):
+        unanswered = board_answer.not_whole(board, "the board's fields were not all read")
+        return BoardFieldsRead(ok=False, error=unanswered.said, named=True)
+    fields = tuple(_field(node) for node in nodes if isinstance(node, dict) and node.get("id"))
+    return BoardFieldsRead(ok=True, fields=fields, project_id=str(answer["id"]))
+
+
+def _field(node: dict[str, Any]) -> dict[str, Any]:
+    """One field as the reads give it: `id`, `name`, `type`, and a
+    single-select's `options`, each with `id`, `name`, `color` and `description`."""
+    field: dict[str, Any] = {
+        "id": node.get("id"),
+        "name": node.get("name"),
+        "type": node.get("__typename") or "",
+    }
+    options = node.get("options")
+    if isinstance(options, list):
+        field["options"] = [
+            {
+                "id": option.get("id"),
+                "name": option.get("name"),
+                "color": str(option.get("color") or ""),
+                "description": str(option.get("description") or ""),
+            }
+            for option in options
+            if isinstance(option, dict)
+            and isinstance(option.get("id"), str)
+            and isinstance(option.get("name"), str)
+        ]
+    return field
+
+
+# ----- an issue's own cards ----------------------------------------------
 
 
 def resolve_item_id(
     config: dict[str, Any],
     *,
     issue_node_id: str,
-    project_node_id: str,
+    project_node_id: str | None = None,
+    owner: str | None = None,
     gh_call: GhCall | None = None,
 ) -> ItemLookup:
-    """The issue's card (item) node id on `project_node_id`, via one GraphQL read.
+    """The issue's card (item) node id on the configured board, from one request.
 
     Keyed on the ISSUE's own node id (`gh issue view --json id`) rather than on
     (repo, number): the issue is the thing we hold, and asking it for its
     `projectItems` needs no owner/repo re-derivation and cannot collide with a
-    same-numbered issue from another repo on the same board — the collision
-    `back-fill` has to defend against when it walks the whole board's items for a
-    BULK plan. The two shapes are complementary: this is the one-issue lookup.
+    same-numbered issue from another repo on the same board. The board is
+    addressed by ``project_node_id`` where the caller holds it from the board's
+    own answer, else by its stored node, else by its number under its owner
+    (:func:`_owner`, ``owner`` the repository's), and the request's own read of the
+    board must name the configured board.
 
     Archived cards are included: an archived item still has field values worth
     writing, so reporting it as "not on the board" would send the adopter to add a
-    duplicate card.
+    duplicate card. An issue whose cards run past those read without its card on
+    this board is a read cut short, never an issue with no card.
 
-    Returns `ok=True, item_id=None` when the issue is simply not on this board
-    (the membership case — the caller refuses with a remediation), and `ok=False`
-    with stderr verbatim when the read failed.
+    Returns `ok=True, item_id=None` only where a witness in the same request shows
+    the credential's reads see the board ([pkit:ADR-096] point 1: the membership
+    case, which the caller refuses with a remediation), and `ok=False` where the
+    board did not answer, with why and the way out, or the issue's own read failed.
     """
-    query = (
-        "query($issue: ID!) { node(id: $issue) { ... on Issue { "
-        f"projectItems(first: {_MAX_PROJECT_ITEMS}, includeArchived: true) "
-        "{ nodes { id project { id } } } } } }"
+    if board_number(config) is None:
+        return ItemLookup(ok=False, error=NO_BOARD, named=True)
+    board = configured_board(config, owner=_owner(config, owner, gh_call), node=project_node_id)
+    assert board is not None
+    read = board_answer.read_cards(
+        config, board=board, issue_node_ids=[issue_node_id], gh_call=_graphql(gh_call)
     )
-    args = [
-        "gh",
-        "api",
-        "graphql",
-        "-f",
-        f"query={query}",
-        "-F",
-        f"issue={issue_node_id}",
-    ]
-    proc, error = _invoke(args, config, owner=None, gh_call=gh_call)
-    if proc is None:
-        return ItemLookup(ok=False, error=error)
-    payload = _parse_json(proc.stdout)
-    if not isinstance(payload, dict):
-        return ItemLookup(
-            ok=False, error="`gh api graphql` returned non-JSON output for the card lookup."
-        )
-    node = payload.get("data", {}) if isinstance(payload.get("data"), dict) else {}
-    issue_block = node.get("node") if isinstance(node.get("node"), dict) else {}
-    items = issue_block.get("projectItems") if isinstance(issue_block, dict) else None
-    nodes = items.get("nodes") if isinstance(items, dict) else None
-    for item in nodes or []:
-        if not isinstance(item, dict):
-            continue
-        project = item.get("project")
-        project_id = project.get("id") if isinstance(project, dict) else None
-        item_id = item.get("id")
-        if project_id == project_node_id and isinstance(item_id, str) and item_id:
-            return ItemLookup(ok=True, item_id=item_id)
-    return ItemLookup(ok=True, item_id=None)
+    if not read.ok:
+        error, named = _failure(read)
+        return ItemLookup(ok=False, error=error, named=named)
+    card = read.cards.get(issue_node_id)
+    return ItemLookup(ok=True, item_id=card.item_id if card is not None else None)
 
 
 @dataclass(frozen=True)
@@ -389,17 +466,18 @@ class ItemValueRead:
     """Outcome of reading one issue's card on a board, and the single-select
     option it holds in one field.
 
-    Three answers, kept apart ([pkit:ADR-053] point 5): ``ok=False`` is a read
-    that failed, with `gh`'s words in ``error``; ``ok=True, item_id=None`` is a
-    board that answered and holds no card for the issue; ``ok=True`` with a card
-    and ``option_name=None`` is a card whose field is unset. The caller decides
-    what each means."""
+    Three answers, kept apart ([pkit:ADR-053] point 5): ``ok=False`` is a board
+    that did not answer, with why in ``error``; ``ok=True, item_id=None`` is a
+    board that answered, a witness showing it, and holds no card for the issue;
+    ``ok=True`` with a card and ``option_name=None`` is a card whose field is
+    unset. The caller decides what each means."""
 
     ok: bool
     item_id: str | None = None
     option_id: str | None = None
     option_name: str | None = None
     error: str | None = None
+    named: bool = False
 
 
 @dataclass(frozen=True)
@@ -408,126 +486,78 @@ class IssueCardsRead:
     each holds in one field.
 
     Whole or nothing: ``ok=False`` is a listing that could not be read in full,
-    with what was said in ``error``, and carries no card. ``ok=True`` carries in
-    ``cards`` one :class:`ItemValueRead` for each issue node id asked for, by that
-    id, each with ``ok=True``: the issue's card on the board, or none."""
+    with why in ``error``, and carries no card. ``ok=True`` carries in ``cards``
+    one :class:`ItemValueRead` for each issue node id asked for, by that id, each
+    with ``ok=True``: the issue's card on the board, or none."""
 
     ok: bool
     cards: Mapping[str, ItemValueRead] = dataclasses.field(default_factory=dict)
     error: str | None = None
-
-
-# The most issue node ids one read of the issues' cards asks for: the most
-# GitHub's `nodes(ids:)` takes.
-_MAX_NODE_IDS = 100
-
-# The query of :func:`read_issue_cards`: each issue's cards, with their board and
-# the single-select option each holds in one field, an archived card included.
-_ISSUE_CARDS_QUERY = (
-    "query($ids: [ID!]!, $field: String!) { nodes(ids: $ids) { ... on Issue { id "
-    f"projectItems(first: {_MAX_PROJECT_ITEMS}, includeArchived: true) "
-    "{ pageInfo { hasNextPage } nodes { id project { id } fieldValueByName(name: $field) "
-    "{ ... on ProjectV2ItemFieldSingleSelectValue { optionId name } } } } } } }"
-)
+    named: bool = False
 
 
 def read_issue_cards(
     config: dict[str, Any],
     *,
     issue_node_ids: Iterable[str],
-    project_node_id: str,
+    project_node_id: str | None = None,
     field_name: str,
+    owner: str | None = None,
     gh_call: GhCall | None = None,
 ) -> IssueCardsRead:
-    """The card on `project_node_id` of each issue whose node id is listed, and
+    """The card on the configured board of each issue whose node id is listed, and
     the option it holds in the single-select `field_name`.
 
-    One GraphQL read for each batch of up to a hundred ids, keyed on the issues'
-    own node ids, as :func:`resolve_item_id` is, so the read is bounded by what
-    is listed, not by the board. Each issue's own cards are read, an archived
-    card included, so an archived card is its issue's card. Whole or nothing: a
-    batch that fails, an id that resolves to no issue, or an issue whose cards
-    run past one page without its card on this board, fails the whole read.
-    Neutral: it reports what the board said, and takes no view on it."""
-    ids = list(dict.fromkeys(issue_node_ids))
+    One GraphQL request for each batch of up to a hundred ids, keyed on the
+    issues' own node ids, as :func:`resolve_item_id` is, so the read is bounded by
+    what is listed and a fixed page for each repository, not by the board. Each
+    request carries the board's own read, addressed as :func:`resolve_item_id`
+    addresses it, and the search for a witness, and a batch whose absences found
+    none is made again once, carrying a witness a later batch found
+    ([pkit:ADR-096] point 1). Each issue's own cards are read, an archived card
+    included, so an archived card is its issue's card. Whole or nothing: a batch
+    whose board did not answer, an id that resolves to no issue, an issue whose
+    cards run past one page without its card on this board, or an absence no
+    witness shows, fails the whole read. Neutral: it reports what the board said,
+    and takes no view on it."""
+    if board_number(config) is None:
+        return IssueCardsRead(ok=False, error=NO_BOARD, named=True)
+    board = configured_board(config, owner=_owner(config, owner, gh_call), node=project_node_id)
+    assert board is not None
+    read = board_answer.read_cards(
+        config,
+        board=board,
+        issue_node_ids=issue_node_ids,
+        field_name=field_name,
+        gh_call=_graphql(gh_call),
+    )
+    if not read.ok:
+        error, named = _failure(read)
+        return IssueCardsRead(ok=False, error=error, named=named)
     cards: dict[str, ItemValueRead] = {}
-    for start in range(0, len(ids), _MAX_NODE_IDS):
-        batch = ids[start : start + _MAX_NODE_IDS]
-        args = ["gh", "api", "graphql", "-f", f"query={_ISSUE_CARDS_QUERY}"]
-        args += ["-f", f"field={field_name}"]
-        for issue_node_id in batch:
-            args += ["-f", f"ids[]={issue_node_id}"]
-        proc, error = _invoke(args, config, owner=None, gh_call=gh_call)
-        if proc is None:
-            return IssueCardsRead(ok=False, error=error)
-        payload = _parse_json(proc.stdout)
-        data = payload.get("data") if isinstance(payload, dict) else None
-        nodes = data.get("nodes") if isinstance(data, dict) else None
-        if not isinstance(nodes, list) or len(nodes) != len(batch):
-            return IssueCardsRead(
-                ok=False, error="`gh api graphql` returned no cards for the issues' Status read."
-            )
-        for issue_node_id, node in zip(batch, nodes, strict=True):
-            card = _issue_card(node, issue_node_id, project_node_id)
-            if not card.ok:
-                return IssueCardsRead(ok=False, error=card.error)
-            cards[issue_node_id] = card
-    return IssueCardsRead(ok=True, cards=cards)
-
-
-def _issue_card(node: Any, issue_node_id: str, project_node_id: str) -> ItemValueRead:
-    """The card on `project_node_id` of the issue ``node`` gives, as
-    :func:`read_issue_cards` reads it: the card, no card, or a failed read."""
-    if not isinstance(node, dict) or node.get("id") != issue_node_id:
-        return ItemValueRead(
-            ok=False, error=f"`gh api graphql` returned no issue for the node id {issue_node_id}."
-        )
-    items = node.get("projectItems")
-    nodes = items.get("nodes") if isinstance(items, dict) else None
-    if not isinstance(nodes, list):
-        return ItemValueRead(
-            ok=False, error=f"`gh api graphql` returned no cards for the issue {issue_node_id}."
-        )
-    for item in nodes:
-        if not isinstance(item, dict):
+    for issue_node_id, card in read.cards.items():
+        if card is None:
+            cards[issue_node_id] = ItemValueRead(ok=True)
             continue
-        project = item.get("project")
-        item_id = item.get("id")
-        if not isinstance(project, dict) or project.get("id") != project_node_id:
-            continue
-        if not isinstance(item_id, str) or not item_id:
-            continue
-        value = item.get("fieldValueByName")
-        value = value if isinstance(value, dict) else {}
-        option = value.get("optionId")
-        name = value.get("name")
-        return ItemValueRead(
+        cards[issue_node_id] = ItemValueRead(
             ok=True,
-            item_id=item_id,
-            option_id=option if isinstance(option, str) and option else None,
-            option_name=name if isinstance(name, str) and name else None,
+            item_id=card.item_id,
+            option_id=card.option_id,
+            option_name=card.option_name,
         )
-    page = items.get("pageInfo") if isinstance(items, dict) else None
-    if isinstance(page, dict) and page.get("hasNextPage"):
-        return ItemValueRead(
-            ok=False,
-            error=(
-                f"the issue {issue_node_id} has cards on more than {_MAX_PROJECT_ITEMS} boards, "
-                "and its card on this one is not among those read."
-            ),
-        )
-    return ItemValueRead(ok=True)
+    return IssueCardsRead(ok=True, cards=cards)
 
 
 def read_item_value(
     config: dict[str, Any],
     *,
     issue_node_id: str,
-    project_node_id: str,
+    project_node_id: str | None = None,
     field_name: str,
+    owner: str | None = None,
     gh_call: GhCall | None = None,
 ) -> ItemValueRead:
-    """The issue's card on `project_node_id`, and the option it holds in the
+    """The issue's card on the configured board, and the option it holds in the
     single-select `field_name`: :func:`read_issue_cards` for one issue, so one
     issue and many are read by one account of which card is an issue's."""
     read = read_issue_cards(
@@ -535,25 +565,22 @@ def read_item_value(
         issue_node_ids=[issue_node_id],
         project_node_id=project_node_id,
         field_name=field_name,
+        owner=owner,
         gh_call=gh_call,
     )
     if not read.ok:
-        return ItemValueRead(ok=False, error=read.error)
+        return ItemValueRead(ok=False, error=read.error, named=read.named)
     return read.cards[issue_node_id]
 
 
-@dataclass(frozen=True)
-class FieldOptionsRead:
-    """Outcome of reading a single-select field's options in full.
+def _failure(read: board_answer.CardsRead) -> tuple[str, bool]:
+    """Why a read of issues' cards failed, and whether the seam names the fault."""
+    if read.unanswered is not None:
+        return read.unanswered.said, read.unanswered.named
+    return read.issue_failed or "the issues' cards could not be read", True
 
-    Each option carries `id`, `name`, `color` and `description`: the four
-    values a write of the field's option list must pass back for every option
-    it keeps, so that the board keeps the value each card holds.
-    """
 
-    ok: bool
-    options: tuple[dict[str, str], ...] = ()
-    error: str | None = None
+# ----- a walk of the board's cards ---------------------------------------
 
 
 @dataclass(frozen=True)
@@ -567,6 +594,11 @@ class BoardItem:
     id, by which a listing of issues is joined to its card, empty for anything
     but an issue. `option_id` and `option_name` are the single-select option
     the card holds in the field read, None where it holds none.
+
+    `withheld` marks a card whose issue lies in a repository the credential may
+    not read: the board returns it with nothing of its issue. `value_read` says
+    whether the board returned the card's value in the field read, which for a
+    withheld card it may not ([pkit:ADR-096] point 2).
     """
 
     item_id: str
@@ -578,15 +610,27 @@ class BoardItem:
     closed: bool = False
     option_id: str | None = None
     option_name: str | None = None
+    withheld: bool = False
+    value_read: bool = True
 
 
 @dataclass(frozen=True)
 class ItemsRead:
-    """Outcome of reading the cards whose single-select value is one option."""
+    """Outcome of a walk of the board's cards.
+
+    ``items`` holds each card the walk counted. ``withheld`` holds each card the
+    board withheld ([pkit:ADR-096] point 2), and ``set_aside`` each card the walk
+    set aside for a reason of its own, a state issue's: neither is among
+    ``items``. A command that acts only on its own repository's issues sets both
+    aside; one that would clear or alter a value a card may hold refuses while
+    one of them may hold it."""
 
     ok: bool
     items: tuple[BoardItem, ...] = ()
     error: str | None = None
+    withheld: tuple[BoardItem, ...] = ()
+    set_aside: tuple[BoardItem, ...] = ()
+    named: bool = False
 
 
 # Bound on the pages a card scan reads, at 100 cards a page. A board larger than
@@ -602,52 +646,104 @@ _MAX_ITEM_PAGES = 100
 #: cards hold for one no card holds (#3191).
 EVERY_ARCHIVED_STATE = "archivedStates: [ARCHIVED, NOT_ARCHIVED]"
 
+# The type GitHub gives a card whose issue the credential may not read.
+_WITHHELD = "REDACTED"
 
-def read_field_options(
+
+def _items_selection(field_name: str | None) -> str:
+    """One page of the walk, asked of the board beside its names: each card, an
+    archived one included, its type, what it holds, and the single-select option
+    it holds in one field."""
+    value = (
+        " fieldValueByName(name: $field) { ... on ProjectV2ItemFieldSingleSelectValue "
+        "{ optionId name } }"
+        if field_name is not None
+        else ""
+    )
+    return (
+        f"items(first: 100, after: $after, {EVERY_ARCHIVED_STATE}) {{ pageInfo "
+        "{ hasNextPage endCursor } nodes { id type content { __typename "
+        "... on Issue { id number title body state repository { nameWithOwner } } "
+        f"... on PullRequest {{ number title }} ... on DraftIssue {{ title }} }}{value} }} }}"
+    )
+
+
+def read_items(
     config: dict[str, Any],
     *,
-    field_id: str,
+    project_node_id: str,
+    field_name: str | None = None,
+    owner: str | None = None,
     gh_call: GhCall | None = None,
-) -> FieldOptionsRead:
-    """The options of the single-select field `field_id`, each with its colour and description.
+) -> ItemsRead:
+    """Every card on the board, with the single-select option it holds in
+    `field_name` where one is named.
 
-    `gh project field-list` gives each option's id and name only. Rewriting a
-    field's option list needs the colour and the description of each option it
-    keeps too, so this reads them through one GraphQL query.
+    Reads the board's cards a page at a time through GraphQL, each page carrying
+    the board's own read, addressed by ``project_node_id`` and counted only where
+    its answer names the configured board, its owner (:func:`_owner`, ``owner``
+    the repository's) among its names. The whole board or nothing: a
+    board read in part, or a page carrying an error, is never returned as the
+    whole. An archived card is read as any other, so it still places its issue.
+    A withheld card goes in `withheld`, and a card that holds a state issue in
+    `set_aside`, since a state issue holds no work
+    ([project-management:DEC-058-state-issues] point 3).
     """
-    query = (
-        "query($field: ID!) { node(id: $field) { ... on ProjectV2SingleSelectField "
-        "{ options { id name color description } } } }"
+    if board_number(config) is None:
+        return ItemsRead(ok=False, error=NO_BOARD, named=True)
+    board = configured_board(config, owner=_owner(config, owner, gh_call), node=project_node_id)
+    assert board is not None
+    selection, variables, flags = board_answer.board_selection(board, _items_selection(field_name))
+    variables.append("$after: String")
+    if field_name is not None:
+        variables.append("$field: String!")
+        flags += ["-f", f"field={field_name}"]
+    query = f"query({', '.join(variables)}) {{ {selection} }}"
+    counted: list[BoardItem] = []
+    withheld: list[BoardItem] = []
+    set_aside: list[BoardItem] = []
+    after: str | None = None
+    for _page in range(_MAX_ITEM_PAGES):
+        page_flags = [*flags, "-f", f"after={after}"] if after else flags
+        reply = board_answer.send(query, page_flags, config, gh_call=_graphql(gh_call))
+        answer, unanswered = board_answer.board_answer(board, reply)
+        if unanswered is None:
+            words = board_answer.unplaced_error(reply, roots=())
+            if words is not None:
+                unanswered = board_answer.from_service(words)
+        if unanswered is not None:
+            return ItemsRead(ok=False, error=unanswered.said, named=unanswered.named)
+        assert answer is not None
+        items = answer.get("items")
+        if not isinstance(items, dict) or not isinstance(items.get("nodes"), list):
+            unanswered = board_answer.not_whole(board, "the reply carries no cards")
+            return ItemsRead(ok=False, error=unanswered.said, named=True)
+        for item in items["nodes"]:
+            card = _board_item(item, value_asked=field_name is not None)
+            if card is None:
+                continue
+            if card.withheld:
+                withheld.append(card)
+            elif _holds_state_issue(item):
+                set_aside.append(card)
+            else:
+                counted.append(card)
+        page_info = items.get("pageInfo") if isinstance(items.get("pageInfo"), dict) else {}
+        if not page_info.get("hasNextPage"):
+            return ItemsRead(
+                ok=True,
+                items=tuple(counted),
+                withheld=tuple(withheld),
+                set_aside=tuple(set_aside),
+            )
+        after = page_info.get("endCursor") if isinstance(page_info.get("endCursor"), str) else None
+        if not after:
+            unanswered = board_answer.not_whole(board, "a next page came with no cursor")
+            return ItemsRead(ok=False, error=unanswered.said, named=True)
+    unanswered = board_answer.not_whole(
+        board, f"the board holds more than {_MAX_ITEM_PAGES * 100} cards"
     )
-    args = ["gh", "api", "graphql", "-f", f"query={query}", "-f", f"field={field_id}"]
-    proc, error = _invoke(args, config, owner=None, gh_call=gh_call)
-    if proc is None:
-        return FieldOptionsRead(ok=False, error=error)
-    payload = _parse_json(proc.stdout)
-    data = payload.get("data") if isinstance(payload, dict) else None
-    node = data.get("node") if isinstance(data, dict) else None
-    options = node.get("options") if isinstance(node, dict) else None
-    if not isinstance(options, list):
-        return FieldOptionsRead(
-            ok=False,
-            error=f"`gh api graphql` returned no options for field {field_id}.",
-        )
-    read: list[dict[str, str]] = []
-    for option in options:
-        if not isinstance(option, dict):
-            continue
-        oid, name = option.get("id"), option.get("name")
-        if not (isinstance(oid, str) and isinstance(name, str)):
-            continue
-        read.append(
-            {
-                "id": oid,
-                "name": name,
-                "color": str(option.get("color") or ""),
-                "description": str(option.get("description") or ""),
-            }
-        )
-    return FieldOptionsRead(ok=True, options=tuple(read))
+    return ItemsRead(ok=False, error=unanswered.said, named=True)
 
 
 def read_items_with_option(
@@ -656,110 +752,62 @@ def read_items_with_option(
     project_node_id: str,
     field_name: str,
     option_id: str,
+    owner: str | None = None,
     gh_call: GhCall | None = None,
 ) -> ItemsRead:
     """Every card on the board whose `field_name` value is the option `option_id`.
 
     The cards :func:`read_items` reads, kept where their single-select value is
     that option. Cards from every repository on the board count, since the field
-    and its options are the board's, and so does an archived card.
+    and its options are the board's, and so does an archived card. A withheld
+    card that holds the option, or whose value the board did not return, goes in
+    `withheld`, and a set-aside card that holds it in `set_aside`: a card that
+    may hold the option whose value was not counted ([pkit:ADR-096] point 2).
     """
     read = read_items(
-        config, project_node_id=project_node_id, field_name=field_name, gh_call=gh_call
+        config, project_node_id=project_node_id, field_name=field_name, owner=owner, gh_call=gh_call
     )
     if not read.ok:
         return read
-    return ItemsRead(ok=True, items=tuple(i for i in read.items if i.option_id == option_id))
-
-
-# The page query of :func:`read_items`: each card, an archived one included, what
-# it holds, and the single-select option it holds in one field.
-_ITEMS_QUERY = (
-    "query($project: ID!, $field: String!, $after: String) { node(id: $project) "
-    "{ ... on ProjectV2 { items(first: 100, after: $after, "
-    f"{EVERY_ARCHIVED_STATE}) {{ pageInfo "
-    "{ hasNextPage endCursor } nodes { id content { __typename "
-    "... on Issue { id number title body state repository { nameWithOwner } } "
-    "... on PullRequest { number title } ... on DraftIssue { title } } "
-    "fieldValueByName(name: $field) { ... on ProjectV2ItemFieldSingleSelectValue "
-    "{ optionId name } } } } } } }"
-)
-
-
-def read_items(
-    config: dict[str, Any],
-    *,
-    project_node_id: str,
-    field_name: str,
-    gh_call: GhCall | None = None,
-) -> ItemsRead:
-    """Every card on the board, with the single-select option it holds in `field_name`.
-
-    Reads the board's cards a page at a time through GraphQL, the whole board or
-    an error: a board read in part is never returned as the whole. An archived
-    card is read as any other, so it still places its issue. A card that
-    holds a state issue is left out, by its marker, since a state issue holds no
-    work ([project-management:DEC-058-state-issues] point 3).
-    """
-    found: list[BoardItem] = []
-    after: str | None = None
-    for _page in range(_MAX_ITEM_PAGES):
-        args = [
-            "gh",
-            "api",
-            "graphql",
-            "-f",
-            f"query={_ITEMS_QUERY}",
-            "-f",
-            f"project={project_node_id}",
-            "-f",
-            f"field={field_name}",
-        ]
-        if after:
-            args += ["-f", f"after={after}"]
-        proc, error = _invoke(args, config, owner=None, gh_call=gh_call)
-        if proc is None:
-            return ItemsRead(ok=False, error=error)
-        payload = _parse_json(proc.stdout)
-        data = payload.get("data") if isinstance(payload, dict) else None
-        node = data.get("node") if isinstance(data, dict) else None
-        items = node.get("items") if isinstance(node, dict) else None
-        if not isinstance(items, dict):
-            return ItemsRead(ok=False, error="`gh api graphql` returned no board items.")
-        for item in items.get("nodes") or []:
-            card = _board_item(item)
-            if card is not None:
-                found.append(card)
-        page_info = items.get("pageInfo") if isinstance(items.get("pageInfo"), dict) else {}
-        if not page_info.get("hasNextPage"):
-            return ItemsRead(ok=True, items=tuple(found))
-        after = page_info.get("endCursor") if isinstance(page_info.get("endCursor"), str) else None
-        if not after:
-            return ItemsRead(ok=False, error="`gh api graphql` gave a next page with no cursor.")
     return ItemsRead(
-        ok=False,
-        error=f"the board holds more than {_MAX_ITEM_PAGES * 100} cards; not read in part.",
+        ok=True,
+        items=tuple(i for i in read.items if i.option_id == option_id),
+        withheld=tuple(i for i in read.withheld if not i.value_read or i.option_id == option_id),
+        set_aside=tuple(i for i in read.set_aside if i.option_id == option_id),
     )
 
 
-def _board_item(item: Any) -> BoardItem | None:
+def _holds_state_issue(item: Any) -> bool:
+    """Whether a card of a page holds a state issue, by its marker."""
+    content = item.get("content") if isinstance(item, dict) else None
+    return isinstance(content, dict) and is_state_issue(str(content.get("body") or ""))
+
+
+def _board_item(item: Any, *, value_asked: bool = True) -> BoardItem | None:
     """One card of a page as :func:`read_items` returns it, or None for a node that
-    is no card, or a card that holds a state issue."""
+    is no card."""
     if not isinstance(item, dict):
         return None
     item_id = item.get("id")
     if not isinstance(item_id, str) or not item_id:
         return None
-    content = item.get("content") if isinstance(item.get("content"), dict) else {}
-    if is_state_issue(str(content.get("body") or "")):
-        return None
-    number = content.get("number")
-    repository = content.get("repository")
-    name = repository.get("nameWithOwner") if isinstance(repository, dict) else None
     value = item.get("fieldValueByName")
+    value_read = isinstance(value, dict)
     value = value if isinstance(value, dict) else {}
     option = value.get("optionId")
     option_name = value.get("name")
+    if item.get("type") == _WITHHELD:
+        return BoardItem(
+            item_id=item_id,
+            option_id=option if isinstance(option, str) and option else None,
+            option_name=option_name if isinstance(option_name, str) else None,
+            withheld=True,
+            value_read=value_asked and value_read,
+        )
+    content = item.get("content") if isinstance(item.get("content"), dict) else {}
+    number = content.get("number")
+    repository = content.get("repository")
+    name = repository.get("nameWithOwner") if isinstance(repository, dict) else None
     kind = str(content.get("__typename") or "")
     issue_id = content.get("id") if kind == "Issue" else None
     return BoardItem(
@@ -773,6 +821,25 @@ def _board_item(item: Any) -> BoardItem | None:
         option_id=option if isinstance(option, str) and option else None,
         option_name=option_name if isinstance(option_name, str) else None,
     )
+
+
+# ----- one card's values, read again before a write ------------------------
+
+# The GraphQL field-values re-read of one card, by its item id — the SINGLE source
+# of truth for this query, consumed by both of back-fill's read surfaces so they
+# can never silently desync: the emitted script's field guard embeds it
+# (`back_fill_apply._field_guarded_fragment`), and `--apply`'s fresh read issues
+# it (`back-fill._read_current_field_value`). Both re-check the board field
+# identically because both read the same string. It lives in the seam, which owns
+# every read of the board ([pkit:ADR-096] point 6).
+FIELD_REREAD_QUERY = (
+    "query($item: ID!) { node(id: $item) { ... on ProjectV2Item { "
+    "fieldValues(first: 50) { nodes { "
+    "... on ProjectV2ItemFieldSingleSelectValue { optionId "
+    "field { ... on ProjectV2FieldCommon { id } } } "
+    "... on ProjectV2ItemFieldTextValue { text "
+    "field { ... on ProjectV2FieldCommon { id } } } } } } } }"
+)
 
 
 # ----- name → id matching over a read field ------------------------------
@@ -866,7 +933,7 @@ def _invoke(
     owner: str | None,
     gh_call: GhCall | None,
 ) -> tuple[subprocess.CompletedProcess[str] | None, str | None]:
-    """Run one read; return `(proc, None)` on success or `(None, verbatim_error)`.
+    """Run one `gh` read; return `(proc, None)` on success or `(None, verbatim_error)`.
 
     `gh project` reads go through `gh_project_run` (the #453 sole constructor,
     which owns the `--owner` flag and threads `GH_HOST`); anything else through
@@ -890,6 +957,12 @@ def _invoke(
         stderr = (proc.stderr or "").strip() or "no stderr"
         return None, stderr
     return proc, None
+
+
+def _graphql(gh_call: GhCall | None) -> GhCall | None:
+    """The runner a GraphQL read goes through: the caller's, else this module's
+    `gh_run`, looked up at the call, so a test that patches it reaches every read."""
+    return gh_call if gh_call is not None else gh_run
 
 
 def _parse_json(stdout: str) -> Any:

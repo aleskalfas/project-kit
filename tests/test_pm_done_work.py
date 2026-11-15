@@ -2520,6 +2520,9 @@ if args[:2] == ["issue", "view"]:
 if args[:2] == ["pr", "view"]:
     print(json.dumps(state["pr"]))
     sys.exit(0)
+if args[:2] == ["api", "user"]:
+    print("octocat\\tUser")
+    sys.exit(0)
 if args[:1] == ["api"]:
     print("octocat")
 sys.exit(0)
@@ -2894,6 +2897,9 @@ if args[:1] == ["api"] and args[1].startswith("repos/{owner}/{repo}/issues/"):
             sys.exit(1)
         print(json.dumps(dict(issue, number=int(number), state=issue["state"].lower())))
         sys.exit(0)
+if args[:2] == ["api", "user"]:
+    print("octocat\\tUser")
+    sys.exit(0)
 if args[:1] == ["api"]:
     print("octocat")
 sys.exit(0)

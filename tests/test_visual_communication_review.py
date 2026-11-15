@@ -323,12 +323,17 @@ def test_the_body_reads_the_briefs_file_and_the_earlier_reports_only_after_the_g
     text = body()
     working = text[text.index("## How you work") : text.index("## The list of faults")]
     steps = {int(n): line for n, line in re.findall(r"^(\d+)\. (.+)$", working, flags=re.MULTILINE)}
-    grading = next(n for n, line in steps.items() if line.startswith("**Write your grades"))
-    reading_last = next(
-        n for n, line in steps.items() if line.startswith("**Read the brief's file")
-    )
-    assert grading < reading_last
-    assert f"step {reading_last}" in steps[4]
+
+    def step(opening: str) -> int:
+        return next(n for n, line in steps.items() if line.startswith(f"**{opening}"))
+
+    deferring = step("Read the intent, the rules and the design knowledge, but not the brief's")
+    grading = step("Write your grades")
+    reading_last = step("Read the brief's file and your earlier reports last.**")
+    assert deferring < grading < reading_last
+    deferral = "Leave the brief's file and your earlier reports until you read them last"
+    assert deferral in steps[deferring]
+    assert not re.search(r"\bsteps? \d", steps[deferring])
 
 
 def test_the_report_opens_with_its_document_then_what_was_looked_at_then_the_findings() -> None:

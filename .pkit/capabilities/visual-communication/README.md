@@ -20,11 +20,14 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/write-code.py
         - .pkit/capabilities/visual-communication/scripts/look.py
         - .pkit/capabilities/visual-communication/scripts/pages.py
+        - .pkit/capabilities/visual-communication/scripts/draft.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/drafts.py
         - .pkit/capabilities/visual-communication/scripts/before-after.py
         - .pkit/capabilities/visual-communication/scripts/mark-final.py
         - .pkit/capabilities/visual-communication/scripts/upgrade.py
         - .pkit/capabilities/visual-communication/scripts/outdated.py
         - .pkit/capabilities/visual-communication/scripts/take-up.py
+        - .pkit/capabilities/visual-communication/scripts/intent.py
         - .pkit/capabilities/visual-communication/scripts/new.py
         - .pkit/capabilities/visual-communication/scripts/prune.py
         - .pkit/capabilities/visual-communication/scripts/verdict.py
@@ -43,6 +46,8 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/grant.py
         - .pkit/capabilities/visual-communication/scripts/_lib/pipeline.py
         - .pkit/capabilities/visual-communication/scripts/_lib/root.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/intent.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/briefs.py
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/__init__.py
         - .pkit/capabilities/visual-communication/rule-sets/vis.md
         - .pkit/capabilities/visual-communication/rule-sets/comm.md
@@ -101,6 +106,7 @@ pkit:
       artefact:
         - .pkit/capabilities/visual-communication/files.md#contents
         - .pkit/capabilities/visual-communication/files.md#a-piece
+        - .pkit/capabilities/visual-communication/files.md#the-brief
         - .pkit/capabilities/visual-communication/files.md#picture-files
         - .pkit/capabilities/visual-communication/files.md#brands
         - .pkit/capabilities/visual-communication/files.md#notations
@@ -115,6 +121,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-location
         - .pkit/capabilities/visual-communication/files.md#how-a-command-finds-it
         - .pkit/capabilities/visual-communication/files.md#the-lock
+        - .pkit/capabilities/visual-communication/files.md#the-makers-record-of-drafts
         - .pkit/capabilities/visual-communication/files.md#what-a-release-compares
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#the-browser
@@ -410,6 +417,27 @@ Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 - **Writes** nothing.
 - **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold. It exits 1 too where the configuration's `browser` names no path ([The browser](files.md#the-browser)).
 
+### `pkit visual intent <piece>`
+
+Prints what a piece's brief hands the review first: the intent, without the reasons ([visual-communication:DEC-042-grades-bar-and-loop] point 4).
+
+- **Prints** the goals, relations and takeaways of the piece's part and of each page's part ([The brief](files.md#the-brief)): the pages and the items of each list in the brief's order, and within a part its goals, then its relations, then its takeaway. A relation is printed with the parts of the content it relates. A part that states none is named as stating none. `--json` prints it as one document.
+- **Leaves out** every reason, and each aspect and principle a reason holds ([The brief](files.md#the-brief)).
+- **Reads** the piece's `piece.yaml` and its brief: no lock, no drawing, no content. A piece with no brief, or whose brief cannot be read, is said to keep none.
+- **Writes** nothing.
+- **Exits** 0 when it printed; 1 when the project holds no visual work, the piece is not in the location or its `piece.yaml` cannot be read, or the configuration cannot be read ([Commands](#commands)).
+
+### `pkit visual draft <piece>`
+
+Gives the digest of a draft's text, and says whether a text still matches the digest the piece's brief records ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+
+- **Names the draft** by `--kind` (`lead`, `title` or `takeaway`), `--language` and, for a piece whose top holds pages, such as a deck or a site, even of one page, `--page <id>`. It reads the text from the piece, so no one hashes text by hand: a takeaway from the brief's part, and a lead or a title from the content in that language, at the key path `--at` names from the page ([The brief](files.md#the-brief)). Without `--page`, a draft is the whole piece's, which only a piece whose top is a page alone, such as a figure, has: its entry lies in the brief's part for the whole piece, a takeaway is read from that part, and a lead's or a title's key path from the content's top. On a piece whose top holds pages each draft lies in its page's part ([The brief](files.md#the-brief)). So the command refuses a draft given without `--page` on such a piece, and on a piece whose top it cannot read to tell whether it holds pages. It finds the page, and whether the top holds pages, under the piece's lock, or, before the piece's first render, under the versions that render would lock ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **Prints** the entry for the part's `drafts`, its digest taken over the text normalised as the record says, for whoever designs the piece to write into the brief ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **`--check`** says whether the text still matches the entry the brief records for it, and so whose the text is ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **Writes** nothing, the brief included ([The makers' record of drafts](files.md#the-makers-record-of-drafts)).
+- **Refuses** a piece, its brief, a page, a field or a takeaway it cannot read.
+- **Exits** 0 when it printed the entry, or `--check` found a match; 1 when it refused ([Commands](#commands)); 2 on a usage error; 3 when `--check` found the text the asker's.
+
 ### `pkit visual verdict <piece>`
 
 Gives the verdict against the project's bar from a round's review report, and says whether it ends the designer's loop ([The verdict](outputs.md#the-verdict)).
@@ -519,8 +547,9 @@ In mending, it asks you only where a fix would change what the piece says, needs
 To use it:
 
 1. **Draw the pages.** Run [`pkit visual look <piece>`](#pkit-visual-look-piece), with the pages, languages, modes and renderer you want read. Draw each size the piece names, a phone's among them: `--every-key` takes them all ([The viewing step](outputs.md#the-viewing-step)). Add `--forced-colours` where it should see what a reader who forces their own colours gets ([Under forced colours](outputs.md#under-forced-colours)). The reviewer runs no command, so it sees only what that run drew.
-2. **Dispatch it,** naming the piece. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. It also reads the piece's brief, where the piece keeps one, the capability's design knowledge, and the rule sets the capability ships. It does not read the set sessions load, which binds a session's work, not a piece. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
-3. **Read its report.** It opens with the document of its grades ([Its grades](#its-grades)). Then it says which pages, languages and modes it looked at, the bands of each page it read, and the forced palettes it looked at, where the run drew them. It names the brief it read, or that the piece has none, and the rule sets it read. It names what it did not see. What it did not see is not looked at, never clean.
+2. **Print the brief's intent.** Run [`pkit visual intent <piece>`](#pkit-visual-intent-piece). The reviewer grades against what it prints ([visual-communication:DEC-042-grades-bar-and-loop] point 4). Where you hand it no intent, it grades without one, and says so in its report, among what it read before grading.
+3. **Dispatch it,** naming the piece, and hand it the intent you printed. It reads the images in the folder of the renderer that drew them, with the frames and the report beside them, and the piece and the brand. It also reads the piece's brief, where the piece keeps one, the capability's design knowledge, and the rule sets the capability ships. It does not read the set sessions load, which binds a session's work, not a piece. You may hand it other images of the same pages, from another tool or renderer, and it says which drew each. It changes nothing.
+4. **Read its report.** It opens with the document of its grades ([Its grades](#its-grades)). Then it says which pages, languages and modes it looked at, the bands of each page it read, and the forced palettes it looked at, where the run drew them. It names the brief it read, or that the piece has none, and the rule sets it read. It names what it did not see. What it did not see is not looked at, never clean.
 
 Where a run's folder holds a report and no image, the browser stopped. The reviewer says so, and looks at nothing ([When the browser stops](outputs.md#when-the-browser-stops)). It passes on to you the ways on the stop names, in their order.
 

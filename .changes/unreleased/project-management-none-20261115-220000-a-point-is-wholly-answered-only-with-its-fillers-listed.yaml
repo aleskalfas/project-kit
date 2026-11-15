@@ -1,0 +1,10 @@
+component: project-management
+kind: none
+body: >
+  Record text only: ADR-097 refines DEC-054 in place (#3250). The use cases'
+  data point reads as wholly answered only where its document lists its
+  fillers and each is `taken` or `passed over`; a filler in any other state,
+  `inert` or one the capability does not know, and a document without
+  `fillers`, read as partly checked. The edits record what a later change to
+  the capability's code ships, under a changeset of its own, so nothing you
+  run changes in this one.

@@ -81,7 +81,7 @@ The compared state is **the methodology-mandated state that should be uniform ac
 
 `check-mesh.py` is read-only and invokes no mutating `gh` calls. The script gates on the [project-management:DEC-021-team-membership-gate] membership predicate like every other verb-subject script — open mode passes; closed mode refuses non-members. Beyond that, no methodology authority gate applies (there's no destructive operation to authorise).
 
-The scheduled workflow runs as the configured GitHub Action identity; that identity must be added to `members.yaml` (or `PM_INVOKER_LOGIN` must be set from a CI secret) in closed-mode repos.
+The scheduled workflow runs as the configured GitHub Action identity; that identity must be added to `members.yaml` (or, where the hosting service does not answer that the identity's credential acts as a user's account, `PM_INVOKER_LOGIN` must be set from a CI secret) in closed-mode repos.
 
 ### Reporting shape
 
@@ -153,7 +153,7 @@ The v0.7.0 PR ships:
 - **A new template `templates/.github/workflows/pm-mesh-check.yml`** ships at v0.7.0 — adopters install it into their own `.github/workflows/`.
 - **Adopter config schema** gains `mesh_peers:` (list of `github://owner/repo` URIs) and `mesh_source:` (single `github://owner/repo/path` URI) as optional fields, mutually compatible (whichever the adopter sets wins).
 - **The capability `version:`** bumps to v0.7.0 on the implementing PR.
-- **Membership gate (DEC-021)** applies to `check-mesh.py` like every other verb-subject script — open mode bypasses; closed mode requires the invoker (or service identity / `PM_INVOKER_LOGIN`) to be in `members.yaml`.
+- **Membership gate (DEC-021)** applies to `check-mesh.py` like every other verb-subject script — open mode bypasses; closed mode requires the invoker (or service identity, or `PM_INVOKER_LOGIN` where the hosting service does not answer that the identity's credential acts as a user's account) to be in `members.yaml`.
 - **Single-repo adopters are unaffected** — without `mesh_peers:` / `mesh_source:`, the script reports "skipped" and exits zero. The scheduled workflow template is opt-in.
 - **The scheduled workflow's output channel** (GitHub issue with `mesh-drift` label vs status check) is adopter-configurable in the template's `env:` block.
 - **Future kit-level COR may generalise this pattern** to other capabilities that mutate cross-repo state. Promotion follows COR-007 when a second capability needs the same shape. Until then, DEC-022 is the only mesh DEC in the kit corpus.
