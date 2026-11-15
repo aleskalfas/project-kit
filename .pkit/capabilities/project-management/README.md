@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
         - .pkit/capabilities/project-management/package.yaml
         - .pkit/capabilities/project-management/rule-sets/pm.md
-      record: [COR-008, COR-017, ADR-076, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, COR-070, ADR-004, ADR-016, ADR-019, "ADR-025#5", ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
+      record: [COR-008, COR-017, ADR-076, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, COR-070, ADR-004, ADR-016, ADR-019, "ADR-025#5", ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066, ADR-096]
       artefact:
         - .pkit/decisions/README.md#checking-a-changes-numbering
 ---
@@ -94,9 +94,10 @@ has_projects_v2_board: false          # set true + projects_v2_board_id when the
 workstreams: []                       # the key stays, and the workstreams live in their own file
 # Optional:
 # projects_v2_board_id: 12
-# projects_v2_node_id: PVT_xxx        # board→node-id cache; populated at adoption
+# projects_v2_node_id: PVT_xxx        # the board's node id, stored at adoption
 #                                     # (bootstrap writes it; adopt-existing recommends
-#                                     # it) so create-issue skips a per-create read
+#                                     # it): a name each read addresses the board by,
+#                                     # never taken for the board's answer
 # code_path_to_doc_mapping:           # per DEC-015 + ADR-019
 #   enforce: false
 #   rules:
@@ -736,6 +737,7 @@ Three narrow, batch-capable verbs replace the whole-body fetch-edit-resend that 
 - **Ambiguous guard** (text matches more than one criterion) → refuse and list the matches; ambiguity never silently resolves.
 - **Unknown field value** (`set-field`, including an unknown `--kind`) → refuse before any mutation, listing the adopter's declared values, or for a workstream the active ones.
 - **Kind/structural mismatch** (`set-field --kind` with a non-`feature` kind on an epic/feature/umbrella) → refuse before any mutation, naming the rule (DEC-011 / `structural_restriction`). `--kind feature` on those types is permitted (it's the kind they already carry) and lands as a no-op.
+- **The board did not answer** (`set-field` on an axis the board carries) → that axis is left unset, and the call exits 3, even where it wrote the other axes; `--dry-run` exits 3 too. A re-run sets what is still unset. Where the board answered with no card, field or option for the value, the axis is refused, and the exit stays 1.
 - **Parent link cannot follow the first line** (`set-field --parent`) → an issue whose native parent cannot be read is refused before any mutation (exit 1); a native move GitHub refuses stops the call before the first line is rewritten, naming the parent the issue stays under (exit 3).
 - **Already in the requested state** → no-op success. Ticking a ticked box, or setting a field to its current value, is not an error.
 - **Half-batch faults mid-apply** → re-run is safe: applied targets no-op, the rest complete.
@@ -1072,6 +1074,40 @@ No other issue moves with it: the forward cascade runs on forward moves only, an
 
 **A milestone edit is not a state change.** The native Milestone field is written through the substrate-write seam, and a first body line naming the old milestone as the parent (`Milestone: [#<N>](../milestone/<N>)`, or the older plain form) is rewritten to the new one, so the textual record and the native field keep agreeing — `close-milestone` counts a milestone's children by both. An issue with no state label has its position read from its milestone, so a milestone edit that would move it is refused: attaching one to a Todo issue is the Todo → Backlog transition (`promote-issue --milestone`), and the workflow has no way from Backlog back to Todo. Clearing the milestone an issue's first line names as its required parent is refused as well — re-parent it first with `set-field <N> --parent <P>`; on an EPIC, whose parent-ref is optional, the line is removed instead.
 
+#### When the board does not answer (per [pkit:ADR-096])
+
+Under every credential, a read of the board tells a board that did not answer from one that answered empty. So no command reports a finding, or acts on a value, from a board it could not read. Every read of the board goes through one seam, `scripts/_lib/board_fields` with `scripts/_lib/board_answer`, and a test holds that no other script builds one.
+
+- **The board answered only where its answer names it.** A read asks the board itself, by its number under its owner, or by `projects_v2_node_id` where one is stored. The owner is `gh.default_owner`, else the repository's owner. The answer counts only where it names the configured board: its number, its owner and the stored node. A stored node is a name the read is addressed by, never the board's answer, so a node stored for another board fails the read.
+- **An issue is off the board only where a witness shows it.** An issue's own list of cards shows only the cards the credential may see. So an issue with no card counts as off the board only where the same request shows a card on the board for another issue of its repository. That issue is one of those read, or one of a page of the repository's most recently created and most recently updated issues. Otherwise the board did not answer, and the message names both causes: an issue off the board, or a credential whose reads do not see the board's cards.
+- **A read that is not whole answers nothing.** A read cut short, or one carrying an error on the board or its cards, is a board that did not answer.
+- **A card the credential may not read is withheld.** The board returns a card whose issue lies in a repository the credential may not read with nothing of its issue. A command over its own repository's issues sets it aside. A command that would remove or merge a board option refuses while such a card may hold it, and so does a card that holds a state issue.
+- **An add is made only where the board answers with the issue's card,** and a field write only where the board accepts it without error.
+- **A project with no board makes no call to a board.**
+
+What each command does where the board does not answer:
+
+| Command | Where the board does not answer |
+|---|---|
+| `create-issue` | Reads the board before it files, `--dry-run` included, and files nothing: exit 3. See "Filing an issue onto the board" below |
+| `set-field` | Leaves each axis the board carries unset, and exits 3, even where it wrote the other axes. Running it again sets what is still unset. Where the board answered with no card, field or option for the value, the refusal stays exit 1 |
+| `validate-issue` | Reports the membership check as `board_membership.unverified`, a warning, and never as an issue off the board (`board_membership.missing`) |
+| `merge-workstream`, `split-workstream`, `remove-workstream` | Exit 3, and change nothing. Where the board answered, each refuses with exit 1 while a withheld card, or a card holding a state issue, may hold the option it would remove. `remove-workstream --force` removes the option anyway |
+| `sync-board` | Exits 3. It counts an add only where the board answers with the card, and leaves a withheld card alone |
+| `back-fill` | Reports each `set-board-field` intent as blocked, saying the board did not answer, never as an issue that needs board membership |
+| `pre-check` | Where no `projects_v2_node_id` is stored, it reads the board, and fails the board check, naming `gh.default_owner` as where the board's owner goes |
+
+`move-issue`, `start-work`, `review-work` and `close-issue` read the board where it holds the state, and exit 3, as "Where the Status is the source", below, says.
+
+**Filing an issue onto the board.** An issue belongs on the board from its filing ([project-management:DEC-019-mandatory-issue-state]), so in a project with a board, `create-issue` reads the board before it writes anything, `--dry-run` included. Where the board does not answer, nothing is filed, and the command exits 3. Where the map binds the state to the board, and the board answered with no single-select `Status` field, or no option for the state the issue is filed into, nothing is filed either, and the command exits 1. Once the issue is filed, its card counts as added only where the board answers with the issue's card. Where the card is not added, or, where the board carries the state, its first Status is not written, the issue stays filed. The command then says so, leading with the filed issue, and exits 5. Read 5 as the issue filed: finish the step it names, and do not file the issue again. Where the board does not hold the state, a `--board` naming another board is read by its number, and the stored node of the configured one is no name of it. Where it holds the state, such a `--board` is refused before the board is read ("Where the Status is the source", below).
+
+**The post-check workflow's credential.** The workflow template, `templates/.github/workflows/pm-issue-check.yml`, runs under the workflow's own token, which reaches no Projects v2 board. Under it, the membership check reports the board unanswered on each issue, as a warning, and lets the issue through. To have the workflow read the board, set a credential the board answers in your copy's repository settings:
+
+- **For a person's board,** a person's token, as the secret `PM_BOARD_TOKEN`. It lasts until revoked, and reaches whatever its scopes reach.
+- **For an organisation's board,** a GitHub App installed on that organisation: its id as the variable `PM_BOARD_APP_ID`, and its key as the secret `PM_BOARD_APP_KEY`. The job mints a token from the key on each run, which expires within the hour. The token is minted for the repository's owner, so for a board under another owner, set `PM_BOARD_TOKEN` instead.
+
+Only the steps that read or add on the board hold the credential. Those steps run tools the job fetches, so the credential reaches those tools too, and the job runs on each issue anyone opens, edits or reopens. Which to set, if any, is your project's choice. The workflow's add names the board under the one owner the capability resolves, and counts as made only where the board answers with the issue's card. A copy you made earlier gains the setting only once you copy the template again.
+
 #### A board's Status, source or projection — `sync-board` (per [project-management:DEC-006-state-machine-and-cascade])
 
 Where a Projects v2 board is configured and the map carries the state off it, its Status is a projection of each issue's state, which the agent maintains. That is with no map, or where the map binds `state` to another substrate. The issue's own state stays the source: every reader reads it, and where the card and the issue disagree, the issue wins. Where the map binds `state` to the board, its Status is the source instead, and where a present map leaves `state` out, no Status is written ([project-management:DEC-062-axes-chosen-in-the-map] point 5).
@@ -1082,8 +1118,8 @@ Where a Projects v2 board is configured and the map carries the state off it, it
 - **The forward cascade** writes each ancestor's Status step by step, and stops at an ancestor its Status does not place
 - **A closed issue's card** says where its work stood before the close. Where the issue did not close as completed, that tells finished work from a won't-do close. A card that then places the issue nowhere is named, with what the board said, and no ancestor moves
 - **`start-work` and `review-work`** refuse at their early check in the same cases
-- **`create-issue`** gives the new card its first Status: Todo, or Backlog for an issue filed with a milestone
-- **`create-issue --board <N>`** is refused, with exit 2, unless N is the configured board's number. An issue filed onto another board would have no card on the configured board, so no command could read its position. The refusal comes before anything is written or asked, `--dry-run` included. Leave `--board` out to file onto the configured board, and where the issue belongs on the other board too, add a card there after filing with `gh project item-add`. That card carries no position ([project-management:DEC-070-filing-another-board])
+- **`create-issue`** gives the new card its first Status: Todo, or Backlog for an issue filed with a milestone. It reads the board before it files, and files nothing where the Status has no option for that state. Where the write fails once the issue is filed, the issue stays filed, and the command exits 5 ("Filing an issue onto the board", above)
+- **`create-issue --board <N>`** is refused, with exit 2, unless N is the configured board's number. An issue filed onto another board would have no card on the configured board, so no command could read its position. The refusal comes before anything is written or asked and before the board is read, `--dry-run` included. Leave `--board` out to file onto the configured board, and where the issue belongs on the other board too, add a card there after filing with `gh project item-add`. That card carries no position ([project-management:DEC-070-filing-another-board])
 - **A closed issue is Done whatever its card says,** so a close that leaves the card as it was needs nothing more. `sync-board` refuses here, so after `reopen-issue`, set the card's Status by hand
 
 **Where the Status is a projection.** The same writers write it after each move, and the issue's own state stays the source.
@@ -1094,7 +1130,7 @@ Where a Projects v2 board is configured and the map carries the state off it, it
 - **The option a state takes is its display name** in `workflow.yaml`: Todo, Backlog, In Progress, Review and Done. It is matched exactly first, then without regard to case. `pre-check` warns, with the remedy, for each state the board's Status has no option for.
 - **`close-issue` and `reopen-issue` leave the card as it was.** They do not move an issue through `move-issue`, and neither do the closes `done-work` makes of the other issues a pull request closes. Run `sync-board` after them.
 
-**Bringing a whole board level.** A card dragged by hand, a write that failed or a board set up after its issues were filed leaves cards out of step. `pkit pm sync-board` reads every issue's state as the lifecycle does: closed is Done, and an open issue is read from its state label, its milestone or neither. It writes the Status only on the cards that differ, adds a card for each open issue that has none, and names each card whose Status disagreed. Cards of other repositories, pull requests and drafts are left alone, and so is a card whose state has no option.
+**Bringing a whole board level.** A card dragged by hand, a write that failed or a board set up after its issues were filed leaves cards out of step. `pkit pm sync-board` reads every issue's state as the lifecycle does: closed is Done, and an open issue is read from its state label, its milestone or neither. It writes the Status only on the cards that differ, adds a card for each open issue that has none, and names each card whose Status disagreed. An add counts only where the board answers with the issue's card. Cards of other repositories, pull requests and drafts are left alone, and so is a card the board withheld, or one whose state has no option.
 
 `--dry-run` prints the plan and writes nothing. Otherwise `sync-board` asks before its first write, and `--yes` runs it with nobody at a terminal. The membership gate and the foreign-repo guard run as in the other writers. Where no board is configured, the map binds the state to the board, or a present map leaves the state out, it refuses, saying which, and reads nothing.
 
@@ -1210,6 +1246,8 @@ Where the file is absent, the two commands read the legacy `workstreams:` key of
 
 **The substrate before the file.** A command that changes a label or the board does so before it writes the file. When that change fails, the file keeps what the change did not finish, and the command exits 3. Running it again finishes the change. Where the board has no single-select `Workstream` field, the command refuses.
 
+**Cards the walk did not count.** On the board, a card the credential may not read is withheld, and a card that holds a state issue is set aside, so neither is counted. Where such a card may hold an option, `merge-workstream` and `split-workstream` refuse to remove it with exit 1, and change nothing, since removing it would clear the card's value unseen. `remove-workstream` refuses too, unless `--force` is given. Adding and renaming an option go on, since they clear no value.
+
 **Renaming.** `rename-workstream` refuses where both the old and the new label exist, since the issues would sit under two labels. Consolidate two such labels with `merge-workstream`. Where only the new label exists, there is nothing to rename. The board's options follow the same rule, and a renamed option keeps each card's value.
 
 **References.** Once the file is written, a merge rewrites each typed reference to a loser, `workstream:<loser>` and `[workstream:<loser>]`, by default. It rewrites them in the files git tracks, and in the bodies of issues, pull requests and comments. It asks before each file and each body, and `--yes` confirms every file and body at once. `--skip-references` leaves every reference.
@@ -1293,7 +1331,10 @@ passes the same flag per filed issue when the plan originated from a report.
 Maintainer-side, same-repo: the backbone verb refuses outside the report-target
 repo and the refusal is surfaced verbatim. A link failure after a successful
 create warns loudly with the exact remediation command (`pkit report link N
-<new>`) and exits 4 — the created issue is never rolled back. It needs a
+<new>`) and exits 4 — the created issue is never rolled back. Where a step the
+filing requires failed beside the link, such as the issue's card not added to
+the board, it names each failure and exits 5, the code for a filed issue whose
+later step failed ([project-management:DEC-048-from-report-auto-link] point 4). It needs a
 backbone that ships `report link`, as every backbone in the range the
 capability's [`package.yaml`](package.yaml) declares under `requires_backbone`
 does.
@@ -1533,7 +1574,7 @@ Two override families run across the mutating commands, and which a command expo
 
 #### Exit 4 — accepted, a re-run completes it
 
-A verb exits **4** when the act it exists for was accepted and stands — it is never rolled back — but what follows it has not run yet, and running again what its output names completes it, repeating nothing already done. `done-work` and `merge-pr` exit 4 while a merge queue holds the PR, and when gh accepted a merge that GitHub could not then be read to confirm, or a merge or an enqueue got no answer and whether it was made is not known — GitHub could not be read since, or, with no answer from the backbone at all, one reading found the PR neither merged nor queued: the output says which, names the reading that tells (`pkit pull-request read <PR>`), and never calls an unconfirmed merge queued or not made: the same verb run again once the PR has merged runs what follows the merge (`merge-pr` from the same clone, whose record says the steps are owed), and on a PR that did not merge it merges it, on the same authorisation. `land-work` passes `done-work`'s 4 through, its last line saying `queued` or `unconfirmed`, and `land-work` run again completes it. `create-issue --from-report` exits 4 when the issue was created but its link into the report failed: `pkit report link` completes it. Exit 0 always means the whole act is done, so a caller never mistakes an accepted act for a finished one.
+A verb exits **4** when the act it exists for was accepted and stands — it is never rolled back — but what follows it has not run yet, and running again what its output names completes it, repeating nothing already done. `done-work` and `merge-pr` exit 4 while a merge queue holds the PR, and when gh accepted a merge that GitHub could not then be read to confirm, or a merge or an enqueue got no answer and whether it was made is not known — GitHub could not be read since, or, with no answer from the backbone at all, one reading found the PR neither merged nor queued: the output says which, names the reading that tells (`pkit pull-request read <PR>`), and never calls an unconfirmed merge queued or not made: the same verb run again once the PR has merged runs what follows the merge (`merge-pr` from the same clone, whose record says the steps are owed), and on a PR that did not merge it merges it, on the same authorisation. `land-work` passes `done-work`'s 4 through, its last line saying `queued` or `unconfirmed`, and `land-work` run again completes it. `create-issue --from-report` exits 4 when the issue was created but its link into the report failed: `pkit report link` completes it. Where a step the filing requires failed too, such as the issue's card not added to the board, it exits 5 instead, naming each step ("Filing an issue onto the board"). Exit 0 always means the whole act is done, so a caller never mistakes an accepted act for a finished one.
 
 #### Corpus back-fill — seeding (and repairing) a value across every issue (per [project-management:DEC-037-adoption-ceremony] §2)
 
@@ -1545,6 +1586,8 @@ pkit pm back-fill --json              # the same plan, machine-readable
 pkit pm back-fill --apply             # drive the reviewed plan (confirmation-gated; --yes for CI)
 pkit pm back-fill --emit-script       # draft-not-apply: a script you run yourself; pm writes nothing
 ```
+
+**Where the board does not answer.** The report reads the board's cards once. Where the board does not answer, each `set-board-field` intent is reported as blocked, saying the board did not answer, and never as an issue that needs board membership; nothing is written for it.
 
 **Change kinds, and where each one's intent is declared.** The declaration point differs by substrate, because the substrate-map cannot carry a board field-id or a milestone title (DEC-037 §3):
 
