@@ -1,7 +1,7 @@
 ---
 id: DEC-072
 title: The board sync gives missing cards wherever a board is configured, and never guesses an issue's position
-status: proposed
+status: accepted
 date: 2026-11-15
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
