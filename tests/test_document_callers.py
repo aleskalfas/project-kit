@@ -4,9 +4,11 @@
 Each test hands a caller the documents a command prints, from a real run or from the
 function the command prints them through, and `tests/caller_contracts.py` varies each:
 a key the caller does not know, each key it reads left out or null, a value of a set it
-does not know, a version it does not know, and no document at all. The documents and
-their contracts are `tests/test_backbone_documents.py`'s, so a caller is held to the
-same contract its command is.
+does not know, a version it does not know, and no document at all. The contracts are the
+ones the command's own tests pin, `tests/test_backbone_documents.py`'s, a module it
+gathers, or the capability's, so a caller is held to the same contract its command is.
+Where those tests build a document holding every key, the caller is handed it too. The
+deploy's pick, which no command prints, is the one document whose contract is pinned here.
 """
 
 from __future__ import annotations
@@ -23,14 +25,14 @@ import pytest
 
 from project_kit import agent_runs as runs
 from project_kit import data_points as dp
-from project_kit import decisions_check_diff as check_diff
 from project_kit import default_branch as db
 from project_kit.agent_confinement import CLEAN, Check
-from project_kit.validators import Finding, Severity
 from tests import analysis_repo as ar
 from tests import document_contracts as contracts
 from tests import test_backbone_documents as documents
 from tests import test_backbone_documents_components as component_documents
+from tests import test_backbone_documents_process as process_documents
+from tests import test_doc_examples_documents as doc_examples_documents
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.backbone_documents import JSON_OPTION, document_of, invoke
 from tests.caller_contracts import UNKNOWN_VALUE, Caller, Outcome, check, raises, same
@@ -258,37 +260,9 @@ def test_doc_examples_reads_the_artefacts_document_as_its_contract_says(
         check(DOC_EXAMPLES_PAGES, document)
 
 
-#: The pages document `pkit doc-examples pages --json` prints, as the run reads it, until
-#: the capability's documents have their contracts (#3315).
-DOC_EXAMPLES_SELECTION = Contract(
-    name="pkit doc-examples pages --json",
-    version=1,
-    forms={
-        "answer": Form(
-            keys={
-                "schema_version": "int",
-                "root": "str",
-                "types": "list",
-                "types[]": "str",
-                "pages": "list",
-                "pages[]": "str",
-                "setup": "list",
-                "setup[]": "str",
-                "path": "list",
-                "path[]": "str",
-                "environment": "object",
-                "environment{}": "str|null",
-                "placeholders": "object",
-                "placeholders{}": "str",
-            }
-        )
-    },
-    data=frozenset({"environment", "placeholders"}),
-)
-
 DOC_EXAMPLES_RUN = Caller(
     name="doc-examples's run, reading `pkit doc-examples pages --json`",
-    contract=DOC_EXAMPLES_SELECTION,
+    contract=doc_examples_documents.DOC_EXAMPLES_PAGES,
     read=de_run.selection_of,
     untold=raises(de_run.CannotRun),
     nothing=lambda: de_run.read_selection(Path("."), (sys.executable, "-c", "raise SystemExit(1)")),
@@ -306,9 +280,7 @@ def test_the_doc_examples_run_reads_its_pages_document_as_its_contract_says(
         placeholders={"VERSION": "cat VERSION"},
     )
     pages = de_selection.Pages(types=("living-docs:page",), paths=("README.md", "docs/a.md"))
-    document = de_selection.document(tmp_path, config, pages)
-    contracts.check(DOC_EXAMPLES_SELECTION, {"answer": [document]})
-    check(DOC_EXAMPLES_RUN, document)
+    check(DOC_EXAMPLES_RUN, de_selection.document(tmp_path, config, pages))
 
 
 def _without_pkit(backbone: Any, read: Any) -> Any:
@@ -838,34 +810,12 @@ pm_move_journal, pm_history, pm_move_issue = load(
     "project-management", "move_journal", "history.py", "move-issue.py"
 )
 
-#: The keys of `pkit process status --json` pm reads of an issue, as the process
-#: engine's page gives them ("The operations"), until the command's documents have
-#: their contracts (#3315). The journal's entries are the engine's records, each of a
-#: kind of its own, read as the engine writes them.
-PROCESS_STATUS = Contract(
-    name="pkit process status --json",
-    forms={
-        "status": Form(
-            keys={
-                "position": "object",
-                "position.state": "str|null",
-                "position.indeterminate": "bool",
-                "journal_logging": "object",
-                "journal_logging.enabled": "bool",
-                "journal_logging.committed": "bool",
-                "journal": "list",
-            }
-        )
-    },
-    payloads=frozenset({"journal"}),
-)
-
 #: An engine from before the setting gives no `journal_logging`, and kept a journal.
 _BEFORE_THE_SETTING = {"missing:journal_logging": same, "missing:journal_logging.enabled": same}
 
 PROJECT_MANAGEMENT_JOURNAL = Caller(
     name="project-management's reading of an issue's journal, `pkit process status --json`",
-    contract=PROCESS_STATUS,
+    contract=process_documents.PROCESS_STATUS,
     read=pm_move_journal.Journal.of,
     untold=lambda outcome: outcome is None,
     nothing=lambda: pm_move_journal.Journal.of(None),
@@ -874,7 +824,7 @@ PROJECT_MANAGEMENT_JOURNAL = Caller(
 
 PROJECT_MANAGEMENT_HISTORY = Caller(
     name="project-management's history of an issue, `pkit process status --json`",
-    contract=PROCESS_STATUS,
+    contract=process_documents.PROCESS_STATUS,
     read=lambda document: pm_history._read_journal_from(document),
     untold=lambda outcome: outcome is None,
     nothing=lambda: pm_history._read_journal_from(None),
@@ -883,7 +833,7 @@ PROJECT_MANAGEMENT_HISTORY = Caller(
 
 PROJECT_MANAGEMENT_POSITION = Caller(
     name="project-management's reading of where an issue is, `pkit process status --json`",
-    contract=PROCESS_STATUS,
+    contract=process_documents.PROCESS_STATUS,
     read=lambda document: (
         pm_move_issue._position_from_status(document),
         pm_move_issue._journal_length_from_status(document),
@@ -916,13 +866,13 @@ PROJECT_MANAGEMENT_POSITION = Caller(
 
 
 def test_project_management_reads_an_issue_s_status_as_its_contract_says() -> None:
+    # The status as the command prints it, less the keys pm does not read: a key a
+    # caller ignores leaves its reading as it is, as each check here holds.
     document = {
         "position": {"state": "ready", "indeterminate": False},
         "journal_logging": {"enabled": True, "committed": False},
         "journal": [{"from": "Backlog", "to": "Ready", "actor": "someone"}],
     }
-    indeterminate = {**document, "position": {"state": None, "indeterminate": True}}
-    contracts.check(PROCESS_STATUS, {"status": [document, indeterminate]})
     for caller in (PROJECT_MANAGEMENT_JOURNAL, PROJECT_MANAGEMENT_HISTORY):
         check(caller, document)
     check(PROJECT_MANAGEMENT_POSITION, document)
@@ -930,57 +880,9 @@ def test_project_management_reads_an_issue_s_status_as_its_contract_says() -> No
 
 (pm_accepted_records,) = load("project-management", "accepted_records")
 
-#: The document `pkit decisions check-diff --json` prints, as the decisions README
-#: gives it ("Refining an accepted record"), until the command's documents have their
-#: contracts (#3315).
-DECISIONS_CHECK_DIFF = Contract(
-    name="pkit decisions check-diff --json",
-    version=1,
-    forms={
-        "compared": Form(
-            keys={
-                "schema_version": "int",
-                "base": "object|null",
-                "base.ref": "str",
-                "base.fork": "str",
-                "base.tip": "str",
-                "head": "str|null",
-                "compared": "int",
-                "errors": "int",
-                "findings": "list",
-                "findings[]": "object",
-                "findings[].severity": "str",
-                "findings[].location": "str",
-                "findings[].message": "str",
-                "accepted_changes": "list",
-                "accepted_changes[]": "object",
-                "accepted_changes[].path": "str",
-                "accepted_changes[].record": "str",
-                "accepted_changes[].points": "list",
-                "accepted_changes[].points[]": "object",
-                "accepted_changes[].points[].id": "str",
-                "accepted_changes[].points[].change": "str",
-                "accepted_changes[].points[].title": "str",
-                "accepted_changes[].fields": "list",
-                "accepted_changes[].fields[]": "str",
-                "accepted_changes[].shared_text": "bool",
-                "accepted_changes[].other_text": "bool",
-                "accepted_changes[].list_form": "bool",
-                "accepted_changes[].removed": "bool",
-            }
-        )
-    },
-    sets={
-        "findings[].severity": frozenset({"error", "warning"}),
-        "accepted_changes[].points[].change": frozenset(
-            {check_diff.ADDED, check_diff.ALTERED, check_diff.RETIRED, check_diff.REMOVED}
-        ),
-    },
-)
-
 PROJECT_MANAGEMENT_ACCEPTED_RECORDS = Caller(
     name="project-management's reading of `pkit decisions check-diff --json`",
-    contract=DECISIONS_CHECK_DIFF,
+    contract=documents.CHECK_DIFF,
     read=lambda document: pm_accepted_records.read(document, "check-diff"),
     untold=lambda outcome: outcome.problem is not None,
     nothing=lambda: pm_accepted_records.read(None, "check-diff"),
@@ -990,37 +892,7 @@ PROJECT_MANAGEMENT_ACCEPTED_RECORDS = Caller(
 def test_project_management_reads_the_accepted_records_a_change_alters_as_its_contract_says() -> (
     None
 ):
-    changed = check_diff.ChangedRecord(
-        "decisions/project/PRJ-001-x.md",
-        "PRJ-001",
-        points=tuple(
-            check_diff.PointChange(str(n), change, f"Point {n}")
-            for n, change in enumerate(
-                sorted(DECISIONS_CHECK_DIFF.sets["accepted_changes[].points[].change"]), start=1
-            )
-        ),
-        fields=("title",),
-        shared=True,
-    )
-    report = check_diff.Report(
-        "origin/main",
-        "f" * 40,
-        "t" * 40,
-        3,
-        (
-            Finding("decisions/project/PRJ-002-y.md", "a point taken", Severity.ERROR),
-            Finding("decisions/project/PRJ-003-z.md", "a point moved", Severity.WARNING),
-        ),
-        (
-            changed,
-            check_diff.ChangedRecord("decisions/project/PRJ-004-w.md", "PRJ-004", removed=True),
-        ),
-    )
-    document = check_diff.as_json(report, None)
-    contracts.check(
-        DECISIONS_CHECK_DIFF, {"compared": [document, check_diff.as_json(None, "h" * 40)]}
-    )
-    check(PROJECT_MANAGEMENT_ACCEPTED_RECORDS, document)
+    check(PROJECT_MANAGEMENT_ACCEPTED_RECORDS, documents._numbering_report())
 
 
 (pm_friction_answers,) = load("project-management", "friction_answers")
@@ -1056,7 +928,9 @@ def _runner() -> Any:
 
 
 #: The pick the deploy's resolver writes for the runner (`_resolve_agent.pick_answer`),
-#: a document of one component, the adapter, with no version of its own.
+#: a document of one component, the adapter, with no version of its own. The resolver is
+#: the deploy's script, no command the adapter registers, so no command's tests pin it
+#: and this one does.
 RESOLVER_PICK = Contract(
     name="the deploy's resolver, `--pick <name>`",
     forms={
