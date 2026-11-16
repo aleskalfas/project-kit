@@ -41,6 +41,13 @@ brand offers, and hardly chosen.
 `overlaps` reports two siblings whose boxes overlap by more than a pixel each way, where
 neither holds the other, a text a sibling covers among them.
 
+**Each states its reach** (`NEAR_ALIGNMENT_CHECK`, `BOX_OVERLAP_CHECK`), beside its id, in
+the words of its entry in the list of checks, since the reviewer leans on its silence
+(DEC-063 point 1). Both compare no scenes: each finding is one scene's. Where the brand
+gives no step of space at a scene's key, or one no longer than a pixel of rounding, nothing
+can be near, so `near_alignment` states as a fact that it measured nothing there
+(`NEAR_ALIGNMENT_UNMEASURED`, DEC-063 point 2).
+
 Knows nothing of files, the lock or the check's run: the check places each finding.
 """
 
@@ -51,11 +58,78 @@ from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from _lib.findings import ATTENTION, Finding
+from _lib.findings import ATTENTION, FACT, Finding
+from _lib.scene_checks import Reach, SceneCheck
 
 #: The calls for attention of the two checks of boxes.
 NEAR_ALIGNMENT = "near-alignment"
 BOX_OVERLAP = "box-overlap"
+
+#: The fact the check of edges that nearly line up states at a key where it could measure
+#: nothing (DEC-063 point 2).
+NEAR_ALIGNMENT_UNMEASURED = "near-alignment-unmeasured"
+
+#: What each check of boxes leaves out, by the base they share (DEC-046 point 3).
+_BOTH_LEAVE_OUT = (
+    "two parts of different groups, since it compares siblings alone (DEC-046 point 3)",
+    "a line, and a group below which every element but a group is a line or of no area, "
+    "such as a tie's (DEC-046 point 3)",
+    "an element of no area (DEC-046 point 3)",
+    "a page (DEC-046 point 3)",
+)
+
+#: The check of edges that nearly line up, with its reach (DEC-046 point 3, DEC-063 points 1
+#: and 2).
+NEAR_ALIGNMENT_CHECK = SceneCheck(
+    "edges and centres of siblings that nearly line up, and spacings that nearly agree",
+    id="edges-nearly-in-line",
+    labels=(NEAR_ALIGNMENT, NEAR_ALIGNMENT_UNMEASURED),
+    reach=Reach(
+        measures=(
+            "the left edges, centres and right edges, and the tops, middles and bottoms, of "
+            "each two siblings neither of which holds the other within a pixel "
+            "(DEC-046 point 3)",
+            "the insets on the two sides of each axis of a part inside a sibling's box "
+            "(DEC-046 point 3)",
+            "the spacings of one group's siblings on each axis, each gap taken from a sibling "
+            "to the nearest one after it that stands beside it (DEC-046 point 3)",
+        ),
+        leaves_out=(
+            *_BOTH_LEAVE_OUT,
+            "the other lines of an axis on which a pair lines up on one line within a pixel "
+            "(DEC-046 point 3)",
+            "the edges and centres of two siblings one of which holds the other within a "
+            "pixel, whose insets it measures instead (DEC-046 point 3)",
+            "the insets on an axis of a part inside a sibling's box that lies within a pixel "
+            "of one of that box's edges on that axis (DEC-046 point 3)",
+            "the gap between two siblings that share no more than a pixel of the other axis "
+            "(DEC-063 point 1)",
+        ),
+        states=(
+            f"`{NEAR_ALIGNMENT_UNMEASURED}`, at a key whose brand gives no step of space, or "
+            "one no longer than a pixel of rounding, which covers every pair and group of "
+            "siblings at that key (DEC-063 point 2)",
+        ),
+        statements=(NEAR_ALIGNMENT_UNMEASURED,),
+    ),
+)
+
+#: The check of boxes that overlap, with its reach (DEC-046 point 3, DEC-063 point 1).
+BOX_OVERLAP_CHECK = SceneCheck(
+    "boxes of siblings that overlap",
+    id="boxes-that-overlap",
+    labels=(BOX_OVERLAP,),
+    reach=Reach(
+        measures=(
+            "the boxes of each two siblings, for an overlap of more than a pixel across and "
+            "down (DEC-046 point 3)",
+        ),
+        leaves_out=(
+            *_BOTH_LEAVE_OUT,
+            "two siblings one of which holds the other within a pixel (DEC-046 point 3)",
+        ),
+    ),
+)
 
 #: How far apart, in px of the page, two values may lie and still be one: a pixel of
 #: rounding (DEC-046 point 3).
@@ -224,9 +298,10 @@ def _box(element: Mapping[str, Any]) -> Box:
 def near_alignment(scene: Mapping[str, Any], step: Step | None) -> list[Finding]:
     """Each place among the siblings of `scene` where two values nearly agree and do not:
     edges and centres of a pair, and the spacings between the siblings of a group, each on one
-    axis. Where the brand gives no step of space, nothing is near."""
+    axis. Where the brand gives no step of space, or one no longer than a pixel of rounding,
+    nothing is near, and the check states so (`unmeasured`)."""
     if step is None or step.value <= ROUNDING:
-        return []
+        return [unmeasured(step)]
     found = []
     for parent, boxes in siblings(scene):
         for index, first in enumerate(boxes):
@@ -235,6 +310,25 @@ def near_alignment(scene: Mapping[str, Any], step: Step | None) -> list[Finding]
         for axis in LINES:
             found.extend(_near_gaps(parent, boxes, axis, step))
     return found
+
+
+def unmeasured(step: Step | None) -> Finding:
+    """The fact that the check of edges that nearly line up measured nothing at the scene's
+    key, since the brand gives no step of space there, or `step`, no longer than a pixel of
+    rounding (DEC-063 point 2). It covers every pair and group of siblings at that key, and
+    lies at the brand, which gives the steps. It asks no act: a brand may give no step by
+    choice."""
+    if step is None:
+        why = "the brand gives no step of space at this key"
+    else:
+        why = f"{step.said()}, is no longer than a pixel of rounding"
+    return Finding(
+        NEAR_ALIGNMENT_UNMEASURED,
+        FACT,
+        f"{why}, so nothing is near: the check of edges that nearly line up measured no pair "
+        "or group of siblings at this key",
+        where="brand",
+    )
 
 
 def _near(difference: float, step: Step) -> bool:
