@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  DEC-073, proposed with this change (#3290), would take the membership
+  gate off each command that only reads and reports, and refine DEC-018,
+  DEC-020 and DEC-021 in place and supersede DEC-022 in part. It binds
+  nothing until a person accepts it, and no command changes until the
+  change that builds it, so no surface moves.
