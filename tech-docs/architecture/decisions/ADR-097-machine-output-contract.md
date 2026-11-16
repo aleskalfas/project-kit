@@ -88,7 +88,7 @@ The rule binds every command project-kit ships. Before it, each contract that st
 
 ### 6. Where each contract is stated
 
-- **Where its command is documented:** the CLI reference for a backbone command, and the README of the capability or adapter for its own. For each document printed for a program, it names each own key with its meaning, each set with its values, the order and framing a caller may rely on, and the document's version where it has one. It names any reading other than could not tell of a key missing or a value a caller does not know, and each key whose unexplained null reads as could not tell.
+- **Where its command is documented:** the CLI reference for a backbone command, and for a capability's or an adapter's own, the component's README or a page its command's entry there links to. For each document printed for a program, it names each own key with its meaning, each set with its values, the order and framing a caller may rely on, and the document's version where it has one. It names any reading other than could not tell of a key missing or a value a caller does not know, and each key whose unexplained null reads as could not tell.
 - **The rule itself** is stated in the CLI reference, for every command project-kit ships, a capability's and an adapter's included. The CLI reference reaches every project that installs the methodology, and this record does not (COR-025, "Propagation isolation"). It also asks a component authored elsewhere, until the core decision (point 8), to read a backbone document as point 3 says.
 - **In a record:** a record that decides a document decides what the document holds. For how the document stays stable, it cites this record and the CLI reference's statement, rather than state a rule of its own.
 

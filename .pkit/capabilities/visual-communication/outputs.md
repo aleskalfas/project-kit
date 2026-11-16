@@ -200,7 +200,7 @@ pkit:
 
 # What is made from a piece
 
-Plugins make what the capability gives out. A renderer draws a piece's scenes as previews and exports. A producer makes a picture a piece shows. A code writer writes a brand out as code. What each command reads, writes and refuses as a whole is under *Commands* in the README.
+Plugins make what the capability gives out. A renderer draws a piece's scenes as previews and exports. A producer makes a picture a piece shows. A code writer writes a brand out as code. What each command reads, writes and refuses as a whole is under *Commands* in the README. This page also holds the documents `pkit visual pages` and `pkit visual verdict` print for a program ([What `pkit visual pages` prints](#what-pkit-visual-pages-prints); [The verdict's document](#the-verdicts-document)).
 
 ## Contents
 
