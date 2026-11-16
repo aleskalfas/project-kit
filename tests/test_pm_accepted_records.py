@@ -198,6 +198,13 @@ def test_a_document_missing_what_the_list_rests_on_is_no_list(
     assert found.problem is not None and said in found.problem
 
 
+@pytest.mark.parametrize("version", [True, False, 1.0])
+def test_a_version_that_is_no_whole_number_is_no_list(ar: ModuleType, version: Any) -> None:
+    """`true` and `1.0` equal 1 to Python, yet neither is version 1 (ADR-097 point 3)."""
+    found = ar.read({"schema_version": version, "accepted_changes": []}, COMMAND)
+    assert found == ar.Derivation(problem=f"{COMMAND}: its answer is not a document of version 1")
+
+
 # ---- the lines for a terminal -----------------------------------------------------------
 
 
