@@ -223,7 +223,7 @@ def _read(command: str, returncode: int, stdout: str, stderr: str) -> AgentRun:
 def _from_document(document: Mapping[str, Any]) -> tuple[AgentRun | None, str]:
     """The run the document states, or None and what is wrong with it."""
     version = document.get("schema_version")
-    if version != VERSION or isinstance(version, bool):
+    if type(version) is not int or version != VERSION:
         return None, f"schema_version {version!r}; pm reads {VERSION}"
     ending = document.get("ending")
     if ending not in ENDINGS:

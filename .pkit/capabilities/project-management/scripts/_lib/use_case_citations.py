@@ -272,7 +272,8 @@ def read_point(run: Runner = backbone.run) -> Reading:
 def reading_of(document: Mapping[str, Any]) -> Reading:
     """The state a `pkit connections resolve --json` document puts the point in
     (DEC-054 point 3), from its `outcome` and its fillers' `state` alone. A
-    document of a version this reading does not know, one that does not say how
+    document of a version this reading does not know, a version that is no
+    whole number such as `true` or `1.0` among them, one that does not say how
     the point resolved — a backbone that predates `outcome` — or one whose
     `outcome` is not text is NotChecked.
     A resolved point is wholly answered only where the document lists its
@@ -280,7 +281,7 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
     checked, since a state or a key this reading cannot read tells it nothing
     (ADR-097 point 3)."""
     version = document.get("schema_version", DOCUMENT_VERSION)
-    if version != DOCUMENT_VERSION:
+    if type(version) is not int or version != DOCUMENT_VERSION:
         return NotChecked(
             f"the backbone answered a document at version {version!r}; this reading "
             f"understands {DOCUMENT_VERSION}"

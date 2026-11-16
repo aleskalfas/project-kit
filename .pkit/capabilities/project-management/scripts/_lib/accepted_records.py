@@ -149,8 +149,10 @@ def derive(head: str, base: str) -> Derivation:
 
 def read(document: Any, command: str) -> Derivation:
     """The backbone's document read, every field the list rests on checked: a document
-    missing one is no list."""
-    if not isinstance(document, Mapping) or document.get("schema_version") != SCHEMA_VERSION:
+    missing one is no list. A version that is no whole number, such as `true` or `1.0`,
+    is no version 1."""
+    version = document.get("schema_version") if isinstance(document, Mapping) else None
+    if type(version) is not int or version != SCHEMA_VERSION:
         return Derivation(problem=f"{command}: its answer is not a document of version 1")
     found = document.get("accepted_changes")
     if not isinstance(found, list):
