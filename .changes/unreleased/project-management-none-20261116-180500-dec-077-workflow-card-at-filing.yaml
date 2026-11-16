@@ -3,6 +3,7 @@ kind: none
 body: >
   DEC-077 is proposed: at an issue's filing, the post-check workflow gives
   a missing card by running the board sync for that issue, where the
-  project turned its remediation on (#3271). A design-ahead record: the
+  project turned its remediation on and the board does not hold the
+  state, and adds none where it does (#3271). A design-ahead record: the
   template and the commands change in the Task that builds it, which
   declares its own changeset, so no surface moves here.
