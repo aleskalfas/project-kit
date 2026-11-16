@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import dataclasses
 import importlib.util
+import json
 import subprocess
 import sys
 from collections.abc import Iterator, Mapping
@@ -937,6 +938,142 @@ def test_project_management_reads_what_the_change_check_is_asked_about_as_its_co
     repo = documents._evidence_adopter(make_adopter_repo)
     for document in documents._artefacts_states(repo):
         check(PROJECT_MANAGEMENT_DISCOVERY, document)
+
+
+#: The head a reading of the change check is for, as the module names it.
+_PM_HEAD = "h" * 40
+
+
+def _change_checked(document: Mapping[str, Any]) -> Any:
+    """What project-management reads in the change check's document: what the person
+    who authorises the merge is told, the counts and the paths the answers are on, the
+    base the check compared against, and whether it fails and on which findings. A
+    refusal to run a resolver away from the head is its own reading."""
+    fa = pm_friction_answers
+    found = fa.check_of(document, "`pkit friction check`", "it exited 1")
+    if isinstance(found, fa._NoDocument):
+        return found
+    derived = fa.Derivation(_PM_HEAD, document=found, answers=tuple(fa._entries(found)))
+    merged = fa.Merged(_PM_HEAD, document=found)
+    return (
+        tuple(fa.told(found)),
+        fa.counted_told(found),
+        tuple(fa.updated_in(found)),
+        tuple(sorted(fa.listed_paths(found))),
+        fa.documents(derived.answers),
+        (derived.merge_base, derived.tip, derived.outdated, derived.unreadable),
+        (merged.failed, tuple(finding["kind"] for finding in merged.failing)),
+    )
+
+
+def _not_named(outcome: Outcome, base: Outcome) -> bool:
+    """A finding of a kind project-management does not know is not among those it names
+    a refused merge by, and the check's `failed` still decides: nothing else changes."""
+    if not isinstance(outcome, tuple):
+        return False
+    (failed, kinds), (was_failed, was_kinds) = outcome[-1], base[-1]
+    return (
+        outcome[:-1] == base[:-1]
+        and failed == was_failed
+        and UNKNOWN_VALUE not in kinds
+        and set(kinds) <= set(was_kinds)
+    )
+
+
+PROJECT_MANAGEMENT_CHANGE_CHECK = Caller(
+    name="project-management's reading of `pkit friction check --json`",
+    contract=documents.FRICTION_CHECK,
+    read=_change_checked,
+    untold=lambda outcome: (
+        isinstance(outcome, pm_friction_answers._NoDocument) and not outcome.elsewhere
+    ),
+    nothing=lambda: _without_pkit(
+        pm_friction_answers.backbone,
+        lambda: pm_friction_answers._run_check(None, "main", cwd=None),
+    ),
+    # The check gained `schema_version` after it first shipped (the CLI reference).
+    readings={"missing:schema_version": same, "unknown:findings[].kind": _not_named},
+)
+
+
+def test_project_management_reads_the_change_check_as_its_contract_says() -> None:
+    every = documents._change_check()
+    for document in (every, {**every, "base": None}, documents._refusal()):
+        check(PROJECT_MANAGEMENT_CHANGE_CHECK, document)
+
+
+def test_project_management_knows_each_answer_and_refusal_the_change_check_names() -> None:
+    """A value of a set the contract names is one project-management reads as itself. A
+    revisit's `updated`, which the check gives a target revisited by changing it (the CLI
+    reference), is known beside the two the contract lists."""
+    fa, sets = pm_friction_answers, documents.FRICTION_CHECK.sets
+    assert set(fa._WRITTEN_ANSWERS) == sets["written:answer"]
+    assert set(fa._REVISIT_OUTCOMES) == {*sets["written:outcome"], fa.UPDATED}
+    assert set(fa._REFUSALS) == sets["refused.kind"]
+
+
+def _covers_with_no_document() -> Any:
+    """What `covers` answers where the base needs no fetch and `pkit friction since`
+    exits without a document."""
+    fa: Any = pm_friction_answers
+    refresh, fa._refresh_base = fa._refresh_base, lambda _base: None
+    try:
+        return _without_pkit(fa.backbone, lambda: fa.covers(_PM_HEAD, _PM_HEAD, "main"))
+    finally:
+        fa._refresh_base = refresh
+
+
+PROJECT_MANAGEMENT_SINCE = Caller(
+    name="project-management's reading of `pkit friction since --json`",
+    contract=documents.FRICTION_SINCE,
+    read=lambda document: pm_friction_answers.coverage_of(document, "`pkit friction since`"),
+    untold=lambda outcome: outcome.problem is not None,
+    nothing=_covers_with_no_document,
+)
+
+
+def test_project_management_reads_what_changed_since_an_authorisation_as_its_contract_says(
+    committed_adopter: AdopterRepo,
+) -> None:
+    repo = committed_adopter
+    since = repo.head()
+    repo.commit("an edit", {"docs/a.md": "A page.\n"})
+    printed = document_of(invoke("friction", "since", since, "--base", "main", JSON_OPTION))
+    fs = documents.fs
+    commits = (fs.Step("h" * 40, merges_base=True),)
+    outside = fs.Since(
+        "s" * 40,
+        "h" * 40,
+        "main",
+        "t" * 40,
+        commits,
+        ("answers/one.yaml",),
+        (fs.Outside(None, "h" * 40, "a merge conflict"), fs.Outside("docs/a.md", "a" * 40, "why")),
+        "the head does not descend from it",
+    )
+    inside = fs.Since("s" * 40, "h" * 40, "main", "t" * 40, commits, ("answers/one.yaml",))
+    for since_ in (outside, inside):
+        check(PROJECT_MANAGEMENT_SINCE, json.loads(fs.render_json(since_)))
+    check(PROJECT_MANAGEMENT_SINCE, printed)
+
+
+PROJECT_MANAGEMENT_ANSWERS_FOLDER = Caller(
+    name="project-management's reading of the answers' folder in `pkit friction check --all "
+    "--json`",
+    contract=documents.REPOSITORY_CHECK,
+    read=pm_friction_answers.folder_of,
+    untold=lambda outcome: outcome is None,
+    nothing=lambda: pm_friction_answers._folder_at(Path("."), _no_document),
+    # The check gained `schema_version` after it first shipped (the CLI reference).
+    readings={"missing:schema_version": same},
+)
+
+
+def test_project_management_reads_where_the_answers_are_kept_as_its_contract_says(
+    repository_checks: list[dict[str, Any]],
+) -> None:
+    for document in repository_checks:
+        check(PROJECT_MANAGEMENT_ANSWERS_FOLDER, document)
 
 
 # --- the Claude Code adapter ----------------------------------------------------------------
