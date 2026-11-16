@@ -1,33 +1,4 @@
 # The backbone commands that print a document for a program and whose documents no
-# contract in tests/test_backbone_documents.py pins yet (ADR-097 point 7). Nothing is
-# ever added: a command not listed, a new one included, has its contracts pinned there.
-# A change that pins a command's documents takes the command out.
-
-agents rules
-agents run
-capabilities install
-capabilities project-rule-set
-capabilities show
-capabilities uninstall
-connections graph
-decisions check-diff
-friction move-plan
-friction prune
-harness report
-process cascade
-process graph
-process health
-process status
-process validate
-pull-request delete-branch
-pull-request dequeue
-pull-request enqueue
-pull-request land
-pull-request merge
-pull-request read
-pull-request squash-defaults
-pull-request wait
-refs lookup
-refs records-for
-release plan
-rule-sets loaded
+# contract pins yet, in tests/test_backbone_documents.py or a module it gathers
+# (ADR-097 point 7). It names none: every such command has its contracts pinned. Nothing
+# is ever added: a command not listed, a new one included, has its contracts pinned there.
