@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from tests.document_contracts import ANY, Contract, Form, check, judge, shape
+from tests.document_contracts import ANY, Contract, Document, Form, check, judge, shape
 
 KEYS = {
     "schema_version": "int",
@@ -48,7 +48,7 @@ def _document(**changes: Any) -> dict[str, Any]:
 
 def _problems(
     contract: Contract,
-    *documents: Mapping[str, Any],
+    *documents: Document,
     enumerations: Mapping[str, Any] | None = None,
 ) -> list[str]:
     return judge(contract, {"answer": documents}, enumerations=enumerations or {})
@@ -218,6 +218,18 @@ def test_a_mapping_keyed_by_data_names_its_entries_and_a_payload_is_not_walked()
         "value": {"any": [1, {"k": 2}]},
     }
     assert _problems(keyed, document) == []
+
+
+def test_a_document_that_is_a_list_names_its_items_from_the_root() -> None:
+    listed = Contract(
+        name="a list",
+        forms={"answer": Form(keys={"[]": "object", "[].label": "str", "[].why": "str|null"})},
+        sets={"[].label": frozenset({"a", "b"})},
+    )
+    assert _problems(listed, [{"label": "a", "why": None}, {"label": "b", "why": "w"}]) == []
+    problems = _problems(listed, [{"label": "c"}])
+    assert _said(problems, "`[].label` printed 'c', which its contract does not list")
+    assert _said(problems, "`[].why` is pinned in the form 'answer' and no document printed it")
 
 
 def test_a_contract_that_contradicts_itself_fails() -> None:
