@@ -1,0 +1,6 @@
+component: visual-communication
+kind: minor
+body: >
+  `pkit visual intent <piece>` prints the goals, relations and takeaways of a
+  piece's brief, the piece's and each page's, and none of its reasons, as the
+  review is handed them before it reads the brief's file (DEC-042 point 4).

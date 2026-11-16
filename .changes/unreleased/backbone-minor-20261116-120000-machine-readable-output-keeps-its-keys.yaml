@@ -1,0 +1,24 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The CLI reference states, under "Command output conventions", one rule for
+  the machine-readable output of every command project-kit ships, the
+  backbone's, each capability's and each adapter's (ADR-097). A document's
+  own keys, what each means and the values of its sets are its contract with
+  the callers that read it, never its prose. A key or a value may be added,
+  goes only as a declared breaking change that raises the document's version
+  where it has one, and never comes to mean anything else. A caller reads a
+  key it needs and does not find, and a value it does not know, as could not
+  tell unless the document's entry names another reading, and refuses a
+  version it does not know. The entries that stated part of the rule now
+  agree with it: the friction checks' reading documents, the landing check's
+  document, `friction since`'s `all_inside`, a data point's document, whose
+  filler `state` may gain a value, and the landing's end document. Each set
+  of a backbone command's document that named no reading of a value a caller
+  does not know is marked so in the CLI reference until it gains its first
+  value, such as a data point's filler `state`, the cross-repository guard's
+  `verdict` and `cleared`, `agents run`'s `ending` and the friction change
+  check's answer `status`. A capability's or an adapter's README may not yet
+  mark its own. Nothing a command prints changes.

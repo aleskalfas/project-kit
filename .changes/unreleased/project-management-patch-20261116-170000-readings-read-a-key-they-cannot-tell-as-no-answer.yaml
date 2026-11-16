@@ -1,0 +1,24 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Project-management reads the backbone's documents by their keys, as ADR-097 point 3 says:
+  the default branch and base, what a change altered under a rule, whether a
+  record holds a cited id, the documentation-check and fixers points, the
+  declared types, the whole-repository check, discovery, an explanation and
+  the rules of a fixer's run for drift, an agent's run, an issue's journal and
+  where it stands, the accepted records a change alters, and the places and
+  excluded files the change check is asked about. A key pm reads that is
+  missing, null where the CLI reference does not print it null, or of another
+  type, and a value of a set it does not know, are an answer it cannot tell
+  anything from, never a default. Before, a lookup without `resolved` was left
+  out rather than read as unknown, a default branch of another source was read
+  as not declared, an altered artefact without its `base` was read as added, a
+  confined run without its `check` as one refused before its clone, a refused
+  call without its `tool` as `?` and one without its `input` as empty, a status
+  without its journal as an empty journal, a position without `indeterminate`
+  as a determined one, and a file without `excluded` as left in. A point
+  resolved with a filler in a state pm does not know is unresolved, and drift
+  lists an artefact with a finding of a kind pm does not know as not judged,
+  and starts no fixer on it.

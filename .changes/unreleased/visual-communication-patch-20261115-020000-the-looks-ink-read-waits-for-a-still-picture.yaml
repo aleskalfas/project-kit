@@ -1,0 +1,3 @@
+component: visual-communication
+kind: patch
+body: The look's read of a text's ink waits for the page to paint after each mark, trusts a band's picture only when two agree, and stops saying the ink cannot be told after three tries, so a span with no ink beside an inked one no longer reads as inked (#3235).

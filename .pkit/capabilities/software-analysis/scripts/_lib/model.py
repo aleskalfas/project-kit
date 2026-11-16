@@ -47,6 +47,8 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from _lib import document_keys as keys
+
 #: This capability's name, and the documentation location its package declares.
 CAPABILITY = "software-analysis"
 LOCATION = "analysis"
@@ -639,32 +641,42 @@ def one_actor(number: int, step: str, other: str, actor: str) -> str:
 
 def analysis_of(document: Mapping[str, Any]) -> Analysis:
     """The `pkit friction artefacts --json` document as the analysis. Raises
-    Unreadable for a document this reading does not understand — another
-    version, or an artefact of this capability's places without its anchors,
-    which reading as none would report every use case as not anchored."""
-    if document.get("schema_version") != SCHEMA_VERSION:
+    Unreadable for a document this reading does not understand: another version, or a
+    key it reads that is missing, null where the CLI reference prints no null, or of
+    another type (ADR-097 point 3). Reading such a key as a default would report a use
+    case as not anchored, or a file as in no place, that the backbone never said was."""
+    version = document.get("schema_version")
+    if type(version) is not int or version != SCHEMA_VERSION:
         raise Unreadable(
-            f"`pkit friction artefacts` answered schema_version "
-            f"{document.get('schema_version')!r}; this capability reads {SCHEMA_VERSION}"
+            f"`pkit friction artefacts` answered schema_version {version!r}; this "
+            f"capability reads {SCHEMA_VERSION}"
         )
+    try:
+        return _analysis(document)
+    except keys.Untold as exc:
+        raise Unreadable(
+            f"`pkit friction artefacts --json` answered a document this capability cannot "
+            f"read: {exc}"
+        ) from exc
+
+
+#: Who declares this capability's places and held folders, as the document gives it.
+OWN_SOURCE = f"capability:{CAPABILITY}"
+
+
+def _analysis(document: Mapping[str, Any]) -> Analysis:
     kind_of_place: dict[int, str] = {}
     is_nested: set[int] = set()
     places: dict[str, str] = {}
     nested: dict[str, str] = {}
     location: str | None = None
-    for index, place in enumerate(_mappings(document.get("places"))):
-        where = place.get("location")
-        if (
-            place.get("source") != f"capability:{CAPABILITY}"
-            or not place.get("declared")
-            or not isinstance(where, Mapping)
-            or where.get("name") != LOCATION
-        ):
+    for index, (where, place) in enumerate(keys.objects(document, "places", "")):
+        if not _own(place, where) or not keys.flag(place, "declared", where):
             continue
-        written = str(place.get("written"))
-        kind = KIND_OF_PLACE.get(written) or NESTED_PLACES.get(written)
-        path = place.get("path")
-        if kind is None or not isinstance(path, str):
+        written = keys.text_or_null(place, "written", where)
+        kind = KIND_OF_PLACE.get(written or "") or NESTED_PLACES.get(written or "")
+        path = keys.text_or_null(place, "path", where)
+        if kind is None or path is None:
             continue
         kind_of_place[index] = kind
         if written in NESTED_PLACES:
@@ -672,32 +684,34 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
             nested[kind] = path
         else:
             places[kind] = path
-        location = location or _text(where.get("path"))
+        located = keys.mapping(place, "location", where)
+        location = location or _text(keys.text(located, "path", f"{where}.location"))
 
-    records, unheld = _records(document.get(HELD), document.get(HELD_FILES))
+    records, unheld = _records(document)
     kind_of_file: dict[str, str] = {}
     folder_of: dict[str, str | None] = {}
     glossaries: dict[str, Mapping[str, Any]] = {}
     unreadable: dict[str, str] = {}
     no_front_matter: list[str] = []
     excluded: set[str] = set()
-    for entry in _mappings(document.get("files")):
-        indices = [i for i in entry.get("places") or [] if i in kind_of_place]
+    for where, entry in keys.objects(document, "files", ""):
+        indices = [i for i in keys.numbers(entry, "places", where) if i in kind_of_place]
         if not indices:
             continue
-        path = str(entry.get("path"))
-        if entry.get("excluded") is True:
+        path = keys.text(entry, "path", where)
+        if keys.flag(entry, "excluded", where):
             excluded.add(path)
             continue
         kind_of_file[path] = kind_of_place[indices[0]]
         folder_of[path] = _folder_of(path, location) if indices[0] in is_nested else None
-        reason = entry.get("unreadable")
+        reason = keys.text_or_null(entry, "unreadable", where)
+        fields = keys.mapping_or_null(entry, "fields", where)
         if reason is not None:
-            unreadable[path] = reason if isinstance(reason, str) else ""
-        elif entry.get("fields") is None:
+            unreadable[path] = reason
+        elif fields is None:
             no_front_matter.append(path)
-        elif kind_of_file[path] in COLLECTIONS and isinstance(entry.get("fields"), Mapping):
-            glossaries[path] = entry["fields"]
+        elif kind_of_file[path] in COLLECTIONS:
+            glossaries[path] = fields
 
     artefacts: list[Artefact] = []
     strays: dict[str, Stray] = {
@@ -708,41 +722,36 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         )
         for path in no_front_matter
     }
-    for entry in _mappings(document.get("artefacts")):
-        path = str(entry.get("path"))
+    for where, entry in keys.objects(document, "artefacts", ""):
+        path = keys.text(entry, "path", where)
         kind = kind_of_file.get(path)
         if kind is None:
             continue
-        if ANCHORS not in entry:
-            raise Unreadable(
-                f"`pkit friction artefacts` gave {entry.get('location') or path} without the "
-                f"`{ANCHORS}` key this capability reads each artefact's anchors from: the "
-                f"installed backbone predates it — upgrade it (`pkit upgrade`)"
-            )
+        anchors = _anchors(keys.mapping(entry, ANCHORS, where), f"{where}.{ANCHORS}")
         if path in strays:
             continue
-        is_entry = entry.get("kind") == "entry"
+        is_entry = keys.one_of(entry, "kind", where, ARTEFACT_KINDS) == ENTRY
         if is_entry != (kind in COLLECTIONS):
             strays[path] = Stray(kind, path, _misshapen(kind))
             continue
-        fields = entry.get("fields")
-        fields = fields if isinstance(fields, Mapping) else {}
-        own_id = entry.get("id") if is_entry else fields.get("id")
+        fields = keys.mapping(entry, "fields", where)
+        own_id = keys.text(entry, "id", where) if is_entry else fields.get("id")
         artefacts.append(
             Artefact(
                 kind=kind,
                 id=own_id if isinstance(own_id, str) and own_id else None,
                 path=path,
-                location=str(entry.get("location") or path),
+                location=keys.text(entry, "location", where) or path,
                 entry=is_entry,
                 fields=fields,
-                anchors=_anchors(entry.get(ANCHORS)),
-                unanchored_because=_text(entry.get(REASON)),
-                span=_span(entry.get(SPAN)),
-                span_read=SPAN in entry,
+                anchors=anchors,
+                unanchored_because=_text(keys.text_or_null(entry, REASON, where)),
+                span=_span(keys.mapping_or_null(entry, SPAN, where), f"{where}.{SPAN}"),
+                span_read=True,
                 folder=folder_of.get(path),
             )
         )
+    unplaced = _own_unplaced(document)
     return Analysis(
         location=location,
         places=places,
@@ -753,15 +762,29 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         records=records,
         records_unheld=unheld,
         excluded=frozenset(excluded),
-        outside_kinds=_outside_kinds(document.get(UNPLACED)),
+        outside_kinds=_outside_kinds(unplaced),
         method_rules=_method_rules(document),
         project_rules=_project_rules(document),
         rule_statuses=_rule_statuses(document),
         nested=nested,
         folders=folder_of,
         glossaries=glossaries,
-        unplaced=_unplaced(document.get(UNPLACED)),
+        unplaced=_unplaced(unplaced),
     )
+
+
+#: What an artefact is in the document: a whole document, or an entry of a collection
+#: file. Any other kind is one this reading does not know.
+DOCUMENT, ENTRY = "document", "entry"
+ARTEFACT_KINDS = (DOCUMENT, ENTRY)
+
+
+def _own(declared: Mapping[str, Any], where: str) -> bool:
+    """Whether a place or a held folder is this capability's, in the analysis location."""
+    if keys.text(declared, "source", where) != OWN_SOURCE:
+        return False
+    located = keys.mapping_or_null(declared, "location", where)
+    return located is not None and keys.text(located, "name", f"{where}.location") == LOCATION
 
 
 def _folder_of(path: str, location: str | None) -> str | None:
@@ -774,63 +797,90 @@ def _folder_of(path: str, location: str | None) -> str | None:
     return rel.split("/", 1)[0] if "/" in rel else None
 
 
-def _outside_kinds(unplaced: Any) -> tuple[str, ...] | None:
+def _own_unplaced(document: Mapping[str, Any]) -> tuple[str, list[tuple[str, Mapping]]] | None:
+    """The analysis location in the document's `UNPLACED`: where it lies, and each file in
+    it that no place or held folder of this capability holds, with where the document
+    gives it. `None` where the reading cannot say: the document does not list the
+    location, as it lists none it cannot place (the CLI reference, `friction
+    artefacts`), or gives it, or the key, missing, null or of another type. The check
+    then says it could not look, never that no such file is there (#1724)."""
+    try:
+        own = keys.mapping(document, UNPLACED, "").get(CAPABILITY)
+        if not isinstance(own, Mapping) or LOCATION not in own:
+            return None
+        where = f"{UNPLACED}.{CAPABILITY}.{LOCATION}"
+        location = keys.mapping(own, LOCATION, "")
+        files = keys.objects(location, "files", where)
+        for at, entry in files:
+            keys.text(entry, "path", at)
+            keys.flag(entry, "excluded", at)
+        return keys.text(location, "path", where), files
+    except keys.Untold:
+        return None
+
+
+def _outside_kinds(
+    unplaced: tuple[str, list[tuple[str, Mapping]]] | None,
+) -> tuple[str, ...] | None:
     """The files under `REQUIREMENTS_FOLDER` of the analysis location that the reading
     says no place or held folder of this capability holds, by path, less those
-    `friction.exclude` leaves out. `None` when the reading cannot say: it gives no
-    `UNPLACED`, or not the analysis location in it, or the location without where it
-    lies or without its list of files. The check reads this only where the reading
+    `friction.exclude` leaves out. `None` when the reading cannot say: it does not list
+    the analysis location (`_own_unplaced`). The check reads this only where the reading
     places this capability's places in the location, so a reading without it has no
     answer, never one of no such files."""
-    if not isinstance(unplaced, Mapping):
+    if unplaced is None:
         return None
-    own = unplaced.get(CAPABILITY)
-    location = own.get(LOCATION) if isinstance(own, Mapping) else None
-    if not isinstance(location, Mapping):
-        return None
-    where = _text(location.get("path"))
-    files = location.get("files")
-    if where is None or not isinstance(files, list):
-        return None
-    where = posixpath.normpath(where)
+    where = posixpath.normpath(unplaced[0])
     folder = REQUIREMENTS_FOLDER if where == "." else f"{where}/{REQUIREMENTS_FOLDER}"
-    return tuple(
-        sorted(
-            path
-            for entry in _mappings(files)
-            if isinstance(path := entry.get("path"), str)
-            and path.startswith(f"{folder}/")
-            and entry.get("excluded") is not True
-        )
-    )
+    return tuple(path for path in _unplaced(unplaced) or () if path.startswith(f"{folder}/"))
 
 
-def _unplaced(unplaced: Any) -> tuple[str, ...] | None:
+def _unplaced(unplaced: tuple[str, list[tuple[str, Mapping]]] | None) -> tuple[str, ...] | None:
     """Every file of the analysis location the reading says no place or held folder of
     this capability holds, by path, less those `friction.exclude` leaves out; `None`
     where the reading cannot say, as `_outside_kinds` reads it."""
-    own = unplaced.get(CAPABILITY) if isinstance(unplaced, Mapping) else None
-    location = own.get(LOCATION) if isinstance(own, Mapping) else None
-    files = location.get("files") if isinstance(location, Mapping) else None
-    if not isinstance(files, list):
+    if unplaced is None:
         return None
     return tuple(
         sorted(
-            path
-            for entry in _mappings(files)
-            if isinstance(path := entry.get("path"), str) and entry.get("excluded") is not True
+            keys.text(entry, "path", where)
+            for where, entry in unplaced[1]
+            if not keys.flag(entry, "excluded", where)
         )
     )
 
 
-def _span(value: Any) -> tuple[int, int] | None:
+def _span(value: Mapping[str, Any] | None, where: str) -> tuple[int, int] | None:
     """An entry's span, `{first_line, last_line}`, as the two lines; `None` for none."""
-    if not isinstance(value, Mapping):
+    if value is None:
         return None
-    first, last = value.get("first_line"), value.get("last_line")
-    if isinstance(first, int) and isinstance(last, int) and 1 <= first <= last:
-        return first, last
-    return None
+    first, last = keys.number(value, "first_line", where), keys.number(value, "last_line", where)
+    return (first, last) if 1 <= first <= last else None
+
+
+def _rule_set_places(document: Mapping[str, Any]) -> dict[int, str | None]:
+    """The component whose rule sets each place of rule sets holds, by the place's
+    index, `None` for the project's own: the places the document gives `rule_sets`."""
+    found: dict[int, str | None] = {}
+    for index, (where, place) in enumerate(keys.objects(document, "places", "")):
+        rule_sets = keys.mapping_or_null(place, "rule_sets", where)
+        if rule_sets is not None:
+            found[index] = keys.text_or_null(rule_sets, "component", f"{where}.rule_sets")
+    return found
+
+
+def _rule_set_files(
+    document: Mapping[str, Any], component_of: Mapping[int, str | None]
+) -> list[tuple[str, str | None, Mapping[str, Any]]]:
+    """Each file of a place of rule sets, with the component whose rule sets the first
+    such place holds and the file's fields: its path, and the fields it gives."""
+    found: list[tuple[str, str | None, Mapping[str, Any]]] = []
+    for where, entry in keys.objects(document, "files", ""):
+        held = [i for i in keys.numbers(entry, "places", where) if i in component_of]
+        fields = keys.mapping_or_null(entry, "fields", where) if held else None
+        if fields is not None:
+            found.append((keys.text(entry, "path", where), component_of[held[0]], fields))
+    return found
 
 
 def _method_rules(document: Mapping[str, Any]) -> dict[str, str] | None:
@@ -838,19 +888,9 @@ def _method_rules(document: Mapping[str, Any]) -> dict[str, str] | None:
     file of the set gives it — a rule without a status is proposed (COR-051 point 4);
     `None` when no file of the capability's rule sets is that set. The backbone reads
     a component's rule sets where it gives the place `rule_sets: {component: …}`."""
-    own = {
-        index
-        for index, place in enumerate(_mappings(document.get("places")))
-        if isinstance(place.get("rule_sets"), Mapping)
-        and place["rule_sets"].get("component") == CAPABILITY
-    }
-    for entry in _mappings(document.get("files")):
-        fields = entry.get("fields")
-        if (
-            not own.intersection(entry.get("places") or [])
-            or not isinstance(fields, Mapping)
-            or fields.get("rule-set") != METHOD_SET
-        ):
+    own = {i: c for i, c in _rule_set_places(document).items() if c == CAPABILITY}
+    for _path, _component, fields in _rule_set_files(document, own):
+        if fields.get("rule-set") != METHOD_SET:
             continue
         rules = fields.get("rules")
         return {
@@ -865,17 +905,9 @@ def _project_rules(document: Mapping[str, Any]) -> dict[str, ProjectRule]:
     give it: the files of every place of rule sets the reading gives no component
     (`rule_sets: {component: null}`). A rule written twice keeps its first, and
     validation reports the second."""
-    own = {
-        index
-        for index, place in enumerate(_mappings(document.get("places")))
-        if isinstance(place.get("rule_sets"), Mapping)
-        and place["rule_sets"].get("component") is None
-    }
+    own = {i: c for i, c in _rule_set_places(document).items() if c is None}
     found: dict[str, ProjectRule] = {}
-    for entry in _mappings(document.get("files")):
-        fields = entry.get("fields")
-        if not own.intersection(entry.get("places") or []) or not isinstance(fields, Mapping):
-            continue
+    for path, _component, fields in _rule_set_files(document, own):
         rules = fields.get("rules")
         for rule_id, rule in rules.items() if isinstance(rules, Mapping) else []:
             successor = rule.get("successor") if isinstance(rule, Mapping) else None
@@ -885,7 +917,7 @@ def _project_rules(document: Mapping[str, Any]) -> dict[str, ProjectRule]:
                 ProjectRule(
                     _status(rule),
                     successor if isinstance(successor, str) else None,
-                    str(entry.get("path")),
+                    path,
                     tuple(
                         str(cited).split("#", 1)[0]
                         for cited in (fills if isinstance(fills, list) else [])
@@ -899,18 +931,8 @@ def _project_rules(document: Mapping[str, Any]) -> dict[str, ProjectRule]:
 def _rule_statuses(document: Mapping[str, Any]) -> dict[str, str]:
     """The status of every rule of every rule set the reading holds, by its id as cited:
     bare for a rule of the project's own sets, `<component>:<id>` for a method rule."""
-    component_of = {
-        index: place["rule_sets"].get("component")
-        for index, place in enumerate(_mappings(document.get("places")))
-        if isinstance(place.get("rule_sets"), Mapping)
-    }
     found: dict[str, str] = {}
-    for entry in _mappings(document.get("files")):
-        fields = entry.get("fields")
-        places = [i for i in entry.get("places") or [] if i in component_of]
-        if not places or not isinstance(fields, Mapping):
-            continue
-        component = component_of[places[0]]
+    for _path, component, fields in _rule_set_files(document, _rule_set_places(document)):
         rules = fields.get("rules")
         for rule_id, rule in rules.items() if isinstance(rules, Mapping) else []:
             cited = f"{component}:{rule_id}" if component else str(rule_id)
@@ -923,36 +945,33 @@ def _status(rule: Any) -> str:
     return status if isinstance(status, str) and status else "proposed"
 
 
-def _records(held: Any, held_files: Any) -> tuple[tuple[str, ...], str | None]:
+def _records(document: Mapping[str, Any]) -> tuple[tuple[str, ...], str | None]:
     """The revalidation records — the files the document's declarations of this
     capability's folders of them hold, the one at the location's top and the glob of
     those one folder down (DEC-001 point 2), less those it lists as excluded — and why
     they hold none, when they hold nothing: the backbone skipped one, or the document
     declares no such folder."""
-    excluded = {str(f.get("path")) for f in _mappings(held_files) if f.get("excluded") is True}
+    excluded = {
+        keys.text(entry, "path", where)
+        for where, entry in keys.objects(document, HELD_FILES, "")
+        if keys.flag(entry, "excluded", where)
+    }
     records: set[str] = set()
     declared = False
     skipped_because: str | None = None
-    for entry in _mappings(held):
-        where = entry.get("location")
-        if (
-            entry.get("source") != f"capability:{CAPABILITY}"
-            or entry.get("written") not in (REVALIDATIONS, NESTED_REVALIDATIONS)
-            or not isinstance(where, Mapping)
-            or where.get("name") != LOCATION
+    for where, entry in keys.objects(document, HELD, ""):
+        if not _own(entry, where) or keys.text_or_null(entry, "written", where) not in (
+            REVALIDATIONS,
+            NESTED_REVALIDATIONS,
         ):
             continue
         declared = True
-        skipped = entry.get("skipped")
-        if isinstance(skipped, Mapping):
-            skipped_because = (
-                skipped_because or f"the backbone skipped it ({skipped.get('reason')})"
-            )
+        skipped = keys.mapping_or_null(entry, "skipped", where)
+        if skipped is not None:
+            reason = keys.text(skipped, "reason", f"{where}.skipped")
+            skipped_because = skipped_because or f"the backbone skipped it ({reason})"
             continue
-        files = entry.get("files")
-        records |= (
-            {str(f) for f in files if str(f) not in excluded} if isinstance(files, list) else set()
-        )
+        records |= {path for path in keys.texts(entry, "files", where) if path not in excluded}
     if not declared:
         return (), "the backbone's reading declares no such folder of this capability's"
     if skipped_because is not None and not records:
@@ -974,18 +993,9 @@ def with_article(kind: str) -> str:
     return f"{'an' if kind == ACTOR else 'a'} {NOUN[kind]}"
 
 
-def _anchors(value: Any) -> dict[str, tuple[str, ...]]:
-    if not isinstance(value, Mapping):
-        return {}
-    return {
-        str(kind): tuple(v for v in values if isinstance(v, str))
-        for kind, values in value.items()
-        if isinstance(values, list)
-    }
-
-
-def _mappings(value: Any) -> list[Mapping[str, Any]]:
-    return [item for item in value if isinstance(item, Mapping)] if isinstance(value, list) else []
+def _anchors(value: Mapping[str, Any], where: str) -> dict[str, tuple[str, ...]]:
+    """An artefact's anchors, each kind's values."""
+    return {str(kind): keys.texts(value, kind, where) for kind in value}
 
 
 def _text(value: Any) -> str | None:

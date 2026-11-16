@@ -86,6 +86,7 @@ from project_kit.install import (
     seed_missing_paths,
 )
 from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
     ORIGIN_KIT_SHIPPED,
     BackboneManifest,
     ComponentManifest,
@@ -2102,8 +2103,9 @@ def _resolve_compatibility(
 
     For each installed component, reads the `requires_backbone` range from the
     **source** `package.yaml` (the version it becomes after the upgrade's copy),
-    falling back to the installed copy for components the source no longer ships
-    (see `_resolve_package_yaml`). The file is read as the wiring resolver reads
+    falling back to the installed copy for components the source no longer ships,
+    and reading an externally-sourced capability's installed copy alone (see
+    `_resolve_package_yaml`). The file is read as the wiring resolver reads
     a package (`connections.read_package`), so the range is found however it is
     quoted, and compared through the resolver's one relation
     (`connections.range_admits`). Raises `click.ClickException` on conflict so
@@ -2156,6 +2158,10 @@ def _resolve_package_yaml(
     installed copy always lags the target). Falls back to the installed copy for
     a component the source no longer ships — the copy does not reach it, so
     its declared range still governs.
+
+    An externally-sourced capability is read from its installed copy alone: it
+    moves by its pin, and is never read as shipped, whatever the source ships
+    by its name (ADR-065 point 1, COR-041).
     """
     if entry.kind == "adapter":
         rel = Path("adapters") / entry.name / "package.yaml"
@@ -2163,7 +2169,12 @@ def _resolve_package_yaml(
         rel = Path("capabilities") / entry.name / "package.yaml"
     else:
         return None
-    for base in (source_kit, target_root / ".pkit"):
+    bases = (
+        (target_root / ".pkit",)
+        if entry.origin == ORIGIN_EXTERNALLY_SOURCED
+        else (source_kit, target_root / ".pkit")
+    )
+    for base in bases:
         candidate = base / rel
         if candidate.is_file():
             return candidate

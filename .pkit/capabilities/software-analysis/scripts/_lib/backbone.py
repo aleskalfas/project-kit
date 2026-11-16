@@ -105,6 +105,7 @@ from typing import Any
 
 from ruamel.yaml.error import YAMLError
 
+from _lib import document_keys as keys
 from _lib import markdown
 from _lib.citations import Found
 from _lib.model import CAPABILITY, LOCATION, Analysis, Unreadable, analysis_of, under_place
@@ -198,36 +199,55 @@ def settled(root: Path, base: str | None = None, run: Runner = subprocess.run) -
         document = None
     if not isinstance(document, Mapping):
         raise Unreadable(_failed(argv, proc))
-    version = document.get("schema_version")
-    if version != SETTLED_VERSION:
-        raise Unreadable(
-            f"`pkit repository base` answered schema_version {version!r}; this capability "
-            f"reads {SETTLED_VERSION}"
+    return settled_of(document)
+
+
+def settled_of(document: Mapping[str, Any]) -> Settled:
+    """The `pkit repository base --json` document as what is settled. Raises Unreadable
+    for a version this reading does not understand, and for a key it reads that is
+    missing, null where the CLI reference prints no null, or of another type (ADR-097
+    point 3): never a default branch or a base it did not answer."""
+    _version("pkit repository base", document, SETTLED_VERSION)
+    try:
+        branch = keys.mapping(document, "default_branch", "")
+        named = keys.mapping(document, "base", "")
+        return Settled(
+            Branch(
+                name=keys.text(branch, "name", "default_branch"),
+                ref=_text(keys.text_or_null(branch, "ref", "default_branch")),
+                commit=_text(keys.text_or_null(branch, "commit", "default_branch")),
+                problem=_text(keys.text_or_null(branch, "problem", "default_branch")),
+                unborn=keys.flag(branch, "unborn", "default_branch"),
+            ),
+            Base(
+                ref=keys.text(named, "ref", "base"),
+                tip=_text(keys.text_or_null(named, "tip", "base")),
+                fork=_text(keys.text_or_null(named, "fork", "base")),
+                outdated=keys.flag_or_null(named, "outdated", "base") is True,
+                problem=_text(keys.text_or_null(named, "problem", "base")),
+            ),
         )
-    branch = document.get("default_branch")
-    named = document.get("base")
-    if not isinstance(branch, Mapping) or not isinstance(named, Mapping):
-        raise Unreadable(_failed(argv, proc))
-    return Settled(
-        Branch(
-            name=str(branch.get("name")),
-            ref=_text(branch.get("ref")),
-            commit=_text(branch.get("commit")),
-            problem=_text(branch.get("problem")),
-            unborn=branch.get("unborn") is True,
-        ),
-        Base(
-            ref=str(named.get("ref")),
-            tip=_text(named.get("tip")),
-            fork=_text(named.get("fork")),
-            outdated=named.get("outdated") is True,
-            problem=_text(named.get("problem")),
-        ),
-    )
+    except keys.Untold as exc:
+        raise _untold("pkit repository base", exc) from exc
 
 
 def _text(value: Any) -> str | None:
     return value if isinstance(value, str) and value else None
+
+
+def _version(command: str, document: Mapping[str, Any], reads: int, *, absent: Any = None) -> None:
+    """Raises Unreadable where `document` is of a version other than `reads`: one without
+    `schema_version` is of `absent`, the version a backbone printed before the key."""
+    version = document.get("schema_version", absent)
+    if type(version) is not int or version != reads:
+        raise Unreadable(
+            f"`{command}` answered schema_version {version!r}; this capability reads {reads}"
+        )
+
+
+def _untold(command: str, exc: keys.Untold) -> Unreadable:
+    """The refusal of a document this reading cannot tell anything from at `exc`'s key."""
+    return Unreadable(f"`{command} --json` answered a document this capability cannot read: {exc}")
 
 
 #: The version of `pkit friction explain --json` this reading understands. A document
@@ -243,13 +263,13 @@ def explain(root: Path, artefact: str, run: Runner = subprocess.run) -> Mapping[
     answers a version this reading does not understand."""
     if not artefact or artefact.startswith("-"):
         raise Unreadable(f"{artefact!r} names no artefact")
-    document = _document(root, ["pkit", "friction", "explain", artefact, "--json"], run)
-    version = document.get("schema_version", EXPLAIN_VERSION)
-    if version != EXPLAIN_VERSION:
-        raise Unreadable(
-            f"`pkit friction explain` answered schema_version {version!r}; "
-            f"this capability reads {EXPLAIN_VERSION}"
-        )
+    return explained_of(_document(root, ["pkit", "friction", "explain", artefact, "--json"], run))
+
+
+def explained_of(document: Mapping[str, Any]) -> Mapping[str, Any]:
+    """`document`, an explanation, where it is of the version this reading understands.
+    Raises Unreadable otherwise."""
+    _version("pkit friction explain", document, EXPLAIN_VERSION, absent=EXPLAIN_VERSION)
     return document
 
 
@@ -285,29 +305,34 @@ def reach(
         document = None
     if not isinstance(document, Mapping):
         raise Unreadable(_failed(argv, proc))
-    version = document.get("schema_version")
-    if version != REACH_VERSION:
-        raise Unreadable(
-            f"`pkit rule-sets reach` answered schema_version {version!r}; this capability "
-            f"reads {REACH_VERSION}"
-        )
+    return reach_of(document, preview=preview)
+
+
+def reach_of(document: Mapping[str, Any], *, preview: bool = False) -> dict[str, dict[str, bool]]:
+    """The `pkit rule-sets reach --json` document as which rules bind on each artefact,
+    read with `preview` or without. Raises Unreadable for a version this reading does not
+    understand, an answer with or without the preview other than the one asked, and a key
+    it reads that is missing, null or of another type (ADR-097 point 3): never an
+    artefact on which no rule binds."""
+    _version("pkit rule-sets reach", document, REACH_VERSION)
     if document.get("preview", False) is not preview:
         raise Unreadable(
-            f"`{' '.join(argv)}` answered with `preview` {document.get('preview')!r}: the "
-            f"installed backbone predates the preview — upgrade it (`pkit upgrade`)"
+            f"`pkit rule-sets reach{' --preview' if preview else ''} --json` answered with "
+            f"`preview` {document.get('preview')!r}: the installed backbone predates the "
+            f"preview — upgrade it (`pkit upgrade`)"
         )
     found: dict[str, dict[str, bool]] = {}
-    for artefact in document.get("artefacts") or []:
-        if not isinstance(artefact, Mapping) or not isinstance(artefact.get("location"), str):
-            continue
-        rules = [r for r in artefact.get("rules") or [] if isinstance(r, Mapping)]
-        cited = {
-            str(r["rule"]): r.get("previewed") is True
-            for r in rules
-            if isinstance(r.get("rule"), str)
-        }
-        if cited:
-            found[artefact["location"]] = cited
+    try:
+        for where, artefact in keys.objects(document, "artefacts", ""):
+            cited = {
+                keys.text(rule, "rule", inner): keys.flag(rule, "previewed", inner)
+                for inner, rule in keys.objects(artefact, "rules", where)
+            }
+            location = keys.text(artefact, "location", where)
+            if cited:
+                found[location] = cited
+    except keys.Untold as exc:
+        raise _untold("pkit rule-sets reach", exc) from exc
     return found
 
 
@@ -437,23 +462,27 @@ class RecordFiles:
             document = None
         if not isinstance(document, Mapping):
             raise Unreadable(_failed(argv, proc))
-        version = document.get("schema_version")
-        if version != LOOKUP_VERSION:
-            raise Unreadable(
-                f"`pkit refs lookup` answered schema_version {version!r}; this capability "
-                f"reads {LOOKUP_VERSION}"
-            )
-        answered: dict[str, str | None] = {}
-        for entry in document.get("lookups") or []:
-            if not isinstance(entry, Mapping) or not isinstance(entry.get("id"), str):
-                continue
-            paths = [p for p in entry.get("paths") or [] if isinstance(p, str) and p]
-            resolved = entry.get("resolved") is True and paths
-            answered[entry["id"]] = paths[-1] if resolved else None
-        unanswered = [record for record in asked if record not in answered]
-        if unanswered:
-            raise Unreadable(f"`pkit refs lookup --json` gave no answer for {unanswered[0]}")
-        self._files |= {record: answered[record] for record in asked}
+        self._files |= record_files_of(document, asked)
+
+
+def record_files_of(document: Mapping[str, Any], asked: Iterable[str]) -> dict[str, str | None]:
+    """The `pkit refs lookup --json` document as the file each of the records `asked`
+    lies in, `None` where its id names none. Raises Unreadable for a version this reading
+    does not understand, a record asked and not answered, and a key it reads that is
+    missing, null or of another type (ADR-097 point 3)."""
+    _version("pkit refs lookup", document, LOOKUP_VERSION)
+    answered: dict[str, str | None] = {}
+    try:
+        for where, entry in keys.objects(document, "lookups", ""):
+            paths = [path for path in keys.texts(entry, "paths", where) if path]
+            resolved = keys.flag(entry, "resolved", where) and paths
+            answered[keys.text(entry, "id", where)] = paths[-1] if resolved else None
+    except keys.Untold as exc:
+        raise _untold("pkit refs lookup", exc) from exc
+    unanswered = [record for record in asked if record not in answered]
+    if unanswered:
+        raise Unreadable(f"`pkit refs lookup --json` gave no answer for {unanswered[0]}")
+    return {record: answered[record] for record in asked}
 
 
 def _status_of(root: Path, rel: str | None) -> str | None:
@@ -526,22 +555,29 @@ def lookup(root: Path, citations: Iterable[str], run: Runner = subprocess.run) -
         document = None
     if not isinstance(document, Mapping):
         raise Unreadable(_failed(argv, proc))
-    version = document.get("schema_version")
-    if version != LOOKUP_VERSION:
-        raise Unreadable(
-            f"`pkit refs lookup` answered schema_version {version!r}; this capability "
-            f"reads {LOOKUP_VERSION}"
-        )
+    return found_of(document, asked)
+
+
+def found_of(document: Mapping[str, Any], asked: Iterable[str]) -> dict[str, Found]:
+    """The `pkit refs lookup --json` document as where each of the citations `asked`
+    leads. Raises Unreadable for a version this reading does not understand, a citation
+    asked and not answered, and a key it reads that is missing, null where the CLI
+    reference prints no null, or of another type (ADR-097 point 3)."""
+    _version("pkit refs lookup", document, LOOKUP_VERSION)
     found: dict[str, Found] = {}
-    for entry in document.get("lookups") or []:
-        if isinstance(entry, Mapping) and isinstance(entry.get("id"), str):
-            path, anchor, problem = (entry.get(k) for k in ("path", "anchor", "problem"))
-            found[entry["id"]] = Found(
-                path if isinstance(path, str) else None,
-                anchor if isinstance(anchor, str) else None,
-                problem if isinstance(problem, str) else None,
-                entry.get("received") is True,
+    try:
+        for where, entry in keys.objects(document, "lookups", ""):
+            found[keys.text(entry, "id", where)] = Found(
+                keys.text_or_null(entry, "path", where),
+                keys.text_or_null(entry, "anchor", where),
+                keys.text_or_null(entry, "problem", where),
+                keys.flag(entry, "received", where),
             )
+    except keys.Untold as exc:
+        raise _untold("pkit refs lookup", exc) from exc
+    unanswered = [citation for citation in asked if citation not in found]
+    if unanswered:
+        raise Unreadable(f"`pkit refs lookup --json` gave no answer for {unanswered[0]}")
     return found
 
 

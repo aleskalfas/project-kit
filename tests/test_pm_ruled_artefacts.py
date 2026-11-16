@@ -360,7 +360,18 @@ def test_a_backbone_without_the_command_names_the_backbone_needed(ra: ModuleType
                     "brought_unaltered": [{"change": "unaltered", "base": {}, "head": None}],
                 }
             ),
-            "without a readable location",
+            "brought under a rule without its base or its head",
+        ),
+        (
+            0,
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "artefacts": [{"change": "added", "head": None}],
+                    "brought_unaltered": [],
+                }
+            ),
+            "without its base or its head",
         ),
     ],
 )

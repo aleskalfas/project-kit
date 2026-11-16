@@ -405,6 +405,7 @@ class _Backbone:
                 "ref": named or "origin/main",
                 "tip": self.tip,
                 "fork": self.tip,
+                "resolved": "remote" if self.tip else None,
                 "problem": self.problem,
             },
         }

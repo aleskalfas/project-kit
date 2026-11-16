@@ -1,0 +1,5 @@
+component: living-docs
+kind: none
+body: >
+  The comments over the readers of the backbone's binding and artefact
+  documents state ADR-097's rule. No behaviour changes.

@@ -22,18 +22,21 @@ degrades, makes no `gh` call for it ([pkit:ADR-053] point 3).
 Reading a board-carried state
 -----------------------------
 [project-management:DEC-051-axis-carriage-activation] point 6. A command reads the
-cards of the issues it acts on, and no others, each found by the issue's node id
-from the command's own read of the issue. :class:`StatusBoard` reads one issue's
-card at a time, for a command that moves or checks one issue, and for each
-ancestor its cascade walks. :func:`read_listed` reads the cards of the issues a
-command lists, in batches, joined to the one read of issues by the issue's node
-id. Both read the issue's own cards, an archived one included, so they give one
-account of which card is an issue's, and a listing read in part is never taken
-for the whole. Each read comes out as a `lifecycle_inference.StatusRead`, one of
-four outcomes beside a placed one: the board could not be read, no card, no
-Status, a Status naming no open state. What each means is the command's, never
-this module's: `lifecycle_inference` places none of them, and nothing falls back
-to the labels or the milestone.
+cards of the issues it acts on, and others only to find a sign that the board
+answered ([pkit:ADR-074] point 6), each found by the issue's node id from the
+command's own read of the issue. :class:`StatusBoard` reads one issue's card at a
+time, for a command that moves or checks one issue, and for each ancestor its
+cascade walks. :func:`read_listed` reads the cards of the issues a command lists,
+in batches, joined to the one read of issues by the issue's node id. Both read
+the issue's own cards, an archived one included, so they give one account of
+which card is an issue's, and a listing read in part is never taken for the
+whole. An issue reads as having no card only where the board answered for it, a
+witness in the same request showing it ([pkit:ADR-096] point 1); otherwise the
+board could not be read, and the read says why. Each read comes out as a
+`lifecycle_inference.StatusRead`, one of four outcomes beside a placed one: the
+board could not be read, no card, no Status, a Status naming no open state. What
+each means is the command's, never this module's: `lifecycle_inference` places
+none of them, and nothing falls back to the labels or the milestone.
 
 The three layers
 ----------------
@@ -132,10 +135,12 @@ def reading(workflow: dict, option: str | None, *, board: str) -> infer.StatusRe
 @dataclass(frozen=True)
 class StatusField:
     """The board's Status field as one run reads it: the project it belongs to,
-    and the field with its options, as `board_fields.read_fields` gives it."""
+    and the field with its options, as `board_fields.read_fields` gives it, and
+    the owner the board was found under, by which each later read addresses it."""
 
     project_id: str
     field: dict[str, Any]
+    owner: str | None = None
 
     @property
     def field_id(self) -> str:
@@ -152,16 +157,24 @@ class FieldRead:
     """The Status field, or why it could not be read, on one line. ``named`` is
     True where ``error`` names the fault itself, as for no board configured, or a
     board that answered with no single-select Status field, and False where it is
-    what `gh` said."""
+    what `gh` said.
+
+    ``answered`` is True where the board answered, its Status field found or
+    not, and ``project_id`` is then the board's node from that answer: a board
+    that answered with no single-select Status field is told from one that did
+    not answer ([pkit:ADR-096] point 4)."""
 
     field: StatusField | None
     error: str | None = None
     named: bool = False
+    answered: bool = False
+    project_id: str | None = None
 
 
 def read_status_field(config: dict[str, Any], *, repository_owner: str | None = None) -> FieldRead:
     """Read the project and its Status field, through the board read seam, under
-    the board's owner as `board_fields.board_owner` resolves it.
+    the board's owner as `board_fields.board_owner` resolves it: one read of the
+    board itself, whose answer names the configured board ([pkit:ADR-096] point 1).
 
     A configuration that names no board is refused before anything is read, the
     board's owner included, so it makes no `gh` call ([pkit:ADR-053] point 3).
@@ -170,26 +183,24 @@ def read_status_field(config: dict[str, Any], *, repository_owner: str | None = 
     if board_fields.board_number(config) is None:
         return FieldRead(None, board_fields.NO_BOARD, named=True)
     owner = board_fields.board_owner(config, repository_owner=repository_owner)
-    project = board_fields.read_project_node_id(config, owner=owner)
-    if not project.ok or not project.node_id:
-        return FieldRead(None, _one_line(project.error or "the board resolved to no project"))
     fields = board_fields.read_fields(config, owner=owner)
-    if not fields.ok:
-        return FieldRead(None, _one_line(fields.error or "the board's fields could not be read"))
+    if not fields.ok or not fields.project_id:
+        said = _one_line(fields.error or "the board's fields could not be read")
+        return FieldRead(None, said, named=fields.named)
     found = board_fields.find_field(fields.fields, STATUS_FIELD)
     if found is None:
         names = ", ".join(board_fields.field_names(fields.fields)) or "none"
-        return FieldRead(
-            None, f"the board has no `{STATUS_FIELD}` field (its fields: {names})", named=True
-        )
+        said = f"the board has no `{STATUS_FIELD}` field (its fields: {names})"
+        return FieldRead(None, said, named=True, answered=True, project_id=fields.project_id)
     if not board_fields.is_single_select(found):
-        return FieldRead(
-            None,
+        said = (
             f"the board's `{STATUS_FIELD}` field is a {board_fields.field_type(found)}, "
-            "not a single-select",
-            named=True,
+            "not a single-select"
         )
-    return FieldRead(StatusField(project.node_id, found))
+        return FieldRead(None, said, named=True, answered=True, project_id=fields.project_id)
+    return FieldRead(
+        StatusField(fields.project_id, found, owner), answered=True, project_id=fields.project_id
+    )
 
 
 def missing_options(status_field: StatusField, workflow: dict) -> list[str]:
@@ -245,15 +256,23 @@ class StatusBoard:
     ``config`` names the board, as `board_fields` reads it. The project and its
     Status field are read at the first read or write and kept for the run, so a
     move and its cascade read them once. ``repository_owner`` is the repository's
-    owner where the caller holds it, as :func:`read_status_field` takes it."""
+    owner where the caller holds it, as :func:`read_status_field` takes it.
+    ``field`` is the Status field where the caller read it already, before its
+    act, so the write rests on that read and makes none of its own
+    ([pkit:ADR-096] point 4, "Before it")."""
 
     def __init__(
-        self, config: dict[str, Any], workflow: dict, *, repository_owner: str | None = None
+        self,
+        config: dict[str, Any],
+        workflow: dict,
+        *,
+        repository_owner: str | None = None,
+        field: FieldRead | None = None,
     ) -> None:
         self._config = config
         self._workflow = workflow
         self._repository_owner = repository_owner
-        self._field: FieldRead | None = None
+        self._field: FieldRead | None = field
 
     @property
     def board(self) -> str:
@@ -287,10 +306,11 @@ class StatusBoard:
             issue_node_id=issue_node_id,
             project_node_id=read.field.project_id,
             field_name=read.field.name,
+            owner=read.field.owner,
         )
         if not card.ok:
             said = _one_line(card.error or "the card could not be read")
-            return infer.StatusRead("unreadable", said=said, board=self.board)
+            return infer.StatusRead("unreadable", said=said, board=self.board, named=card.named)
         if card.item_id is None:
             return infer.StatusRead("no-card", board=self.board)
         return reading(self._workflow, card.option_name, board=self.board)
@@ -319,7 +339,7 @@ class StatusBoard:
         if option is None:
             return Written(number, name, f"the board's Status field has no {name!r} option")
         if item_id is None:
-            item_id, failure = self._card(number, read.field.project_id, issue_node_id)
+            item_id, failure = self._card(number, read.field, issue_node_id)
             if item_id is None:
                 return Written(number, name, failure)
         result = substrate_writes.write_field_value(
@@ -332,18 +352,21 @@ class StatusBoard:
         return Written(number, name, None if result.ok else _one_line(result.detail))
 
     def _card(
-        self, number: int, project_id: str, issue_node_id: str | None
+        self, number: int, status_field: StatusField, issue_node_id: str | None
     ) -> tuple[str | None, str]:
         """Issue ``number``'s card on the board, found by its node id
         ``issue_node_id``, read from the issue where the caller holds none; or
-        None and why not."""
+        None and why not. No card counts only where the board answered for it."""
         node_id, failure = issue_node_id, ""
         if not node_id:
             node_id, failure = _issue_node_id(number, self._config)
         if node_id is None:
             return None, failure
         lookup = board_fields.resolve_item_id(
-            self._config, issue_node_id=node_id, project_node_id=project_id
+            self._config,
+            issue_node_id=node_id,
+            project_node_id=status_field.project_id,
+            owner=status_field.owner,
         )
         if not lookup.ok:
             return None, _one_line(lookup.error or "the card could not be looked up")
@@ -389,8 +412,10 @@ def read_listed(
 ) -> tuple[ListedStatuses | None, str]:
     """The Status of the card of each issue whose node id is listed, read in
     batches (`board_fields.read_issue_cards`), or None and why the board could
-    not be read. Only those issues' cards are read, so the read is bounded by the
-    listing, not by the board. Whole or nothing: a listing read in part is never
+    not be read. Those issues' cards are read, and others only to find a sign
+    that the board answered, so the read is bounded by the listing and a fixed
+    page of each repository's issues, not by the board. Whole or nothing: a
+    listing read in part, or one whose absences no witness shows, is never
     returned as the whole, and no listed issue is then taken for one with no
     card. A listing of no issues reads nothing."""
     asked = frozenset(issue_node_id for issue_node_id in issue_node_ids if issue_node_id)
@@ -404,6 +429,7 @@ def read_listed(
         issue_node_ids=sorted(asked),
         project_node_id=read.field.project_id,
         field_name=read.field.name,
+        owner=read.field.owner,
     )
     if not cards.ok:
         return None, _one_line(cards.error or "the listed issues' cards could not be read")
