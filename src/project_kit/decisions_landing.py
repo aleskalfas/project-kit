@@ -65,8 +65,10 @@ from project_kit.friction_git import SHORT, CommitTree, FrictionCheckError, run_
 from project_kit.project_config import REFUSE_PROPOSALS_KEY
 from project_kit.validate import VALID_DECISION_STATUSES
 
-#: The version of the JSON document (`document`): raised when a key a reader relies on
-#: changes its meaning or goes, never for a key added (ADR-081 point 8).
+#: The version of the JSON document (`document`; ADR-081 point 8). It rises only when
+#: one of the document's own keys, or a value of one of its sets, goes, a break the
+#: changeset declares at `major`; never for a key or a value added. No key or value
+#: comes to mean anything else, in place or by coming back (ADR-097 points 4 and 5).
 SCHEMA_VERSION = 1
 
 #: The exit of a run that gives no answer, apart from a refusal's 1 and a usage error's 2.

@@ -2,7 +2,7 @@
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
 and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
 points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-018 points 1, 2, 4
-and 5, DEC-019 point 8, DEC-030 point 5).
+and 5, DEC-019 point 8, DEC-030 point 5, DEC-042 point 3).
 
 **File-level findings, every run:**
 
@@ -10,6 +10,9 @@ and 5, DEC-019 point 8, DEC-030 point 5).
   name, and of the configuration: a file that names no schema, or another one, fails (a
   file at another format number the core's data validation reports, so this check does
   not repeat it);
+- the project's bar, against the rule sets the review grades: a bar that covers what the
+  review does not grade, or at a major other than the one the project pins for the set, or
+  the set's own where it pins none, fails (`bar.findings`, DEC-042 point 3);
 - without a piece named, the designer's grant, read from the agents overlay as the deploy
   reads it, against the location the configuration records: a path inside the
   methodology's folder fails, and so does a grant that does not cover the location
@@ -148,6 +151,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
 from _lib import (
+    bar,
     briefs,
     code,
     colour_steps,
@@ -353,9 +357,10 @@ def _config_findings(root: Path) -> list[Finding]:
     except ReadError as exc:
         return [Finding("file-unreadable", FAILS, str(exc), file=CONFIG)]
     problem = _binding(data, "config")
-    return (
+    bound = (
         [Finding("binding", FAILS, f"the configuration {problem}", file=CONFIG)] if problem else []
     )
+    return bound + bar.findings(root, data)
 
 
 def _binding(data: Any, kind: str) -> str | None:
@@ -1792,11 +1797,17 @@ def brief_findings(piece: pl.Piece) -> list[Finding]:
     """What the piece's brief names that its content lacks (DEC-029 point 5), its pages
     found through its top's declaration, read as the check of ids reads a component, before
     the lock is checked (`briefs.findings`)."""
+    return briefs.findings(piece, top_of(piece))
+
+
+def top_of(piece: pl.Piece, lock: Mapping[str, str] | None = None) -> Mapping[str, Any] | None:
+    """The data of the piece's top component, read as the check of ids reads a component,
+    under `lock`, or under the piece's own lock where it is None; None where it cannot be
+    read."""
     try:
-        top = _Locked(piece).component(piece.top)
+        return _Locked(piece, lock).component(piece.top)
     except KeyError:
-        top = None
-    return briefs.findings(piece, top)
+        return None
 
 
 def _shown(ids: set[str]) -> str:
@@ -1829,10 +1840,12 @@ class _Locked:
     """The components a piece's lock names, and its own, read before its lock is checked:
     what the check of ids needs to know which lists of the content hold runs. A component
     that a use, the lock or its file does not lead to, or that cannot be read as a
-    mapping, is none, and the lock's check and the scene report why."""
+    mapping, is none, and the lock's check and the scene report why. `lock` stands in for
+    the piece's own, where given."""
 
-    def __init__(self, piece: pl.Piece) -> None:
+    def __init__(self, piece: pl.Piece, lock: Mapping[str, str] | None = None) -> None:
         self.piece = piece
+        self.lock = piece.lock if lock is None else lock
         self.read: dict[str, Mapping[str, Any] | None] = {}
 
     def component(self, use: str) -> Mapping[str, Any]:
@@ -1853,7 +1866,7 @@ class _Locked:
             path = piece.folder / pl.COMPONENTS / f"{name}.yaml"
         else:
             try:
-                version = Version.parse(piece.lock.get(library))
+                version = Version.parse(self.lock.get(library))
             except ValueError:
                 return None
             folder = piece.root / piece.location / FOLDER / library / str(version)

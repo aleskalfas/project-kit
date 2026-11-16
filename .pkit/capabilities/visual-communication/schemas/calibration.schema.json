@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "calibration.schema.json",
+  "title": "The accepted calibration's data — visual-communication capability",
+  "description": "Formal shape of `calibration.yaml` in the capability's folder: the values a refinement of DEC-042 writes when whoever maintains the capability accepts a calibration's report (DEC-042 point 9). `pkit visual verdict` reads them to tell whether its verdict ends the designer's loop (DEC-042 points 9 and 10), and nothing else writes them: only the change of that refinement, which governs them. Absent, no calibration's report is accepted. It holds each rule with evidence of its own in the accepted report, with its set's major and a digest of its text; a digest of the reviewer's definition and one of the design knowledge; and the model the review ran on, with its effort. It holds no report, no grade, no bar and nothing of what the calibration was run on. Each digest is SHA-256, written `sha256:<hex>`, as a deploy's mark writes the digest of an agent's definition. Document-shaped schema. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "rules",
+    "reviewer",
+    "design-knowledge",
+    "model"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023; DEC-002 point 3): `visual-communication:calibration`.",
+      "const": "visual-communication:calibration"
+    },
+    "schema_version": {
+      "description": "The format number, shared by every schema of the capability (DEC-003 point 1).",
+      "type": "integer",
+      "const": 1
+    },
+    "pkit": {
+      "$ref": "#/$defs/container"
+    },
+    "rules": {
+      "description": "Each rule with evidence of its own in the accepted report, by its id. A bar that covers a rule this list does not name gets no hold (DEC-042 point 10).",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "review.schema.json#/$defs/rule-id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/rule"
+      }
+    },
+    "reviewer": {
+      "description": "The digest of the reviewer's definition the calibration ran, the capability's own `agents/graphic-design-reviewer.md`: the SHA-256 of its bytes.",
+      "$ref": "#/$defs/digest"
+    },
+    "design-knowledge": {
+      "description": "The digest of the design knowledge the calibration read, the capability's `design-knowledge/`: the SHA-256 of the canonical text (RFC 8785) of the SHA-256 of each file in it, by its path within the folder.",
+      "$ref": "#/$defs/digest"
+    },
+    "model": {
+      "description": "The model the calibration's review ran on, as its reports name it (DEC-042 point 9).",
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "name": {
+          "description": "The model's full name, as the harness gives it, never an alias that moves to a newer model.",
+          "$ref": "defs.schema.json#/$defs/text"
+        },
+        "effort": {
+          "description": "The effort the review ran at, where the harness has one. Absent where it has none.",
+          "$ref": "defs.schema.json#/$defs/text"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "container": {
+      "description": "The methodology's container (COR-053 point 10), which the capability never reads.",
+      "type": "object"
+    },
+    "digest": {
+      "description": "A SHA-256, written `sha256:` and its lower-case hexadecimal.",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "rule": {
+      "description": "One rule, as the calibration read it.",
+      "type": "object",
+      "required": [
+        "major",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pkit": {
+          "$ref": "#/$defs/container"
+        },
+        "major": {
+          "description": "The major of the set that holds the rule.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "text": {
+          "description": "The digest of the rule's text: its section in the body of its set's file, from the heading that opens with its id to the next heading of that level or above, outside fenced code, the line breaks that end it read as one, as UTF-8.",
+          "$ref": "#/$defs/digest"
+        }
+      }
+    }
+  }
+}

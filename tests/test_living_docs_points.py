@@ -282,9 +282,17 @@ def test_reading_the_readers_point_document() -> None:
         "defined": True,
         "resolved": True,
         "entries": [{"id": "user"}, {"id": "maintainer"}, {"id": "operator"}],
+        "fillers": [{"name": "living-docs", "state": "taken"}],
     }
     assert readers_lib.readers_of(resolved) == readers_lib.Readers(
         True, ids=("maintainer", "operator", "user")
+    )
+    # A filler in a state the reading does not know may not have answered (ADR-097 point 3).
+    unknown = {**resolved, "fillers": [{"name": "living-docs", "state": "a-new-state"}]}
+    assert readers_lib.readers_of(unknown) == readers_lib.Readers(
+        False,
+        why="a filler's readers cannot be told, since its state is not one in which it "
+        "answered: living-docs (a-new-state)",
     )
     unresolved = {
         "address": READERS,
@@ -451,7 +459,6 @@ def _unjudged_guide(state: str | None, findings: list[dict[str, Any]]) -> dict[s
         ("unresolved", ["no-answer", "unresolved-kind"]),
         ("unresolved", []),
         ("a-state-not-yet-invented", []),
-        (None, []),
     ],
 )
 def test_a_page_the_check_did_not_do_its_work_on_is_no_answer(
@@ -521,7 +528,24 @@ def test_a_page_answered_apart_owes_nothing_for_it() -> None:
 
 
 def test_a_dormant_check_owes_nothing() -> None:
-    assert doc_check_lib.obligations({"dormant": True, "artefacts": []}, PAGES) == []
+    assert doc_check_lib.obligations({**REPORT, "dormant": True}, PAGES) == []
+
+
+def test_a_page_whose_state_or_finding_cannot_be_read_is_no_answer() -> None:
+    """A state that is null, and a finding of a kind this reading does not know on a
+    page, are no judgment: the point fails closed, never reading the page as one that
+    owes nothing (ADR-097 point 3; the CLI reference, "Every reading document carries
+    its version")."""
+    with pytest.raises(doc_check_lib.NoAnswer, match=r"`artefacts\[1\]\.state` is null"):
+        doc_check_lib.obligations(_unjudged_guide(None, []), PAGES)
+    novel = _unjudged_guide("current", [_finding("a-kind-not-yet-invented", "path", "src/a.py")])
+    with pytest.raises(doc_check_lib.NoAnswer) as refused:
+        doc_check_lib.obligations(novel, PAGES)
+    assert "friction on docs/guide.md (a-kind-not-yet-invented) was not judged" in str(
+        refused.value
+    )
+    # Only a page's: such a finding on an artefact that is not a page decides nothing here.
+    assert len(doc_check_lib.obligations(novel, ["docs/current.md"])) == 2
 
 
 def _check_answering(document: dict[str, Any]) -> Any:
@@ -580,7 +604,7 @@ def test_whether_head_names_a_commit_is_the_backbone_s_reading() -> None:
     assert str(refused.value) == unread
     # A backbone whose reading names no HEAD cannot say there is no commit yet.
     without = {"schema_version": 1, "default_branch": {}, "base": {}}
-    with pytest.raises(doc_check_lib.NoAnswer, match="exited 0 without its document"):
+    with pytest.raises(doc_check_lib.NoAnswer, match="answered without `head`"):
         doc_check_lib.has_commit(".", _base_answering(without))
 
 

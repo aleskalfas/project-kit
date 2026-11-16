@@ -1,0 +1,18 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The use cases' data point reads as wholly answered only where its
+  `pkit connections resolve --json` document lists the point's fillers and
+  each one's `state` is `taken` or `passed over` (DEC-054 point 3, as ADR-097
+  refines it). A filler in any other state, `inert` or one the capability does
+  not know, and a resolved document without `fillers`, read as partly
+  checked: body validation names a cited id the set lacks as not checked,
+  under `body.use-cases-unchecked`, never as unknown, and batch planning says
+  that the set may be incomplete, and why. Before, a state other than `inert`
+  read as an answer, and a missing `fillers` as an empty list. No backbone
+  released so far prints either, so the reading changes what you see only on
+  a backbone that does. The partly checked notice now reads "the use-case
+  point answered, but <filler> gave no answer (<its reason>)", in place of
+  "the use-case point answered without <filler> (<its reason>)".

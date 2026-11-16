@@ -506,11 +506,20 @@ def _report_capabilities(target_root: Path, source_kit: Path) -> None:
     # Mark each installed capability whose origin is not the default, so that an
     # incubated one (COR-031), the project's own source, and an externally-sourced
     # one (COR-041), a copy of another repository's, are each told from a
-    # kit-shipped one.
+    # kit-shipped one. An externally-sourced one names its pin beside the mark
+    # (ADR-040 point 3).
     if installed:
         labelled: list[str] = []
         for name in installed:
-            mark = caps.origin_mark(origins.get(name, caps.KIT_SHIPPED))
+            origin = origins.get(name, caps.KIT_SHIPPED)
+            mark = caps.origin_mark(origin)
+            pin = (
+                caps.read_capability_pin(target_root, name)
+                if origin == caps.EXTERNALLY_SOURCED
+                else None
+            )
+            if pin is not None:
+                mark = f"{mark} from {caps.pin_text(pin)}"
             labelled.append(f"{name} ({mark})" if mark else name)
         installed_value = ", ".join(labelled)
     else:
