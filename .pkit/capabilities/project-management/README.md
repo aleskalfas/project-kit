@@ -2048,7 +2048,7 @@ A `fail` makes the command exit 1, and the list prints then too.
 
 `pkit pm check-mesh --json` compares this repository with its peers. Where it refuses, it prints none. Where no peer is configured, it prints `status`, `skipped` (*named no reading*), and `reason`, in words. Otherwise:
 
-- `target`: this repository, `owner/repo`, or `<local>` where it is not known.
+- `target`: this repository, `owner/repo`, with `<unknown>` for an owner or a name it could not find.
 - `peers`: each peer, `owner/repo`.
 - `drift`: each difference, with:
   - `kind` (*named no reading*): `capability-version`, `type-labels`, `priority-labels`, `workstream-labels`, `members` or `milestones`.
