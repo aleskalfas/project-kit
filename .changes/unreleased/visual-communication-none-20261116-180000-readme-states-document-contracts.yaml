@@ -1,0 +1,8 @@
+component: visual-communication
+kind: none
+body: >
+  The documentation states the contract of each document `pkit visual
+  intent`, `pages` and `verdict` print with `--json`: each key with what it
+  means, and each set with its values (ADR-097 point 6). Each set that named
+  no reading of a value a caller does not know is marked so. Nothing a
+  command prints changes.
