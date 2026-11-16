@@ -30,7 +30,9 @@ from typing import Any
 from _lib import backbone
 
 #: The document version this reading understands (the CLI reference, "friction
-#: artefacts"); a later backbone that changes its meaning raises it.
+#: artefacts"). A later backbone raises it only when a key or a value of a set goes,
+#: and no key or value comes to mean anything else; the reading refuses a version
+#: other than this one.
 SCHEMA_VERSION = 1
 
 ARGV = ("pkit", "friction", "artefacts", "--json")
