@@ -1035,7 +1035,6 @@ def main() -> int:
                     board_first,
                     why,
                     number=new_issue_number,
-                    url=issue_url,
                     workflow=workflow,
                 )
             )
@@ -1952,7 +1951,6 @@ def _add_not_made(
     why: str,
     *,
     number: int | None,
-    url: str,
     workflow: dict,
 ) -> str:
     """What a filing says of a card it could not add to the configured board, the
@@ -1960,15 +1958,14 @@ def _add_not_made(
     board holds the state, the Status the filing would have written, the state it
     filed the issue into, for the person to set on the card
     ([project-management:DEC-072-sync-gives-missing-cards] point 4). Where the
-    host's answer gave no issue number to run the sync for, it names the host's
-    own add."""
+    host's answer gave no issue number to run the sync for, it names the sync run
+    for the whole board, which adds this card with every other one missing, and
+    keeps the sync's rules that the host's own add would not: its switch, the
+    Status it writes where the board's Status is the projection, and its
+    read-back."""
     said = f"its card was not added to {board_first.board}: {why}"
     if number is None:
-        board = board_fields.board_number(board_first.config)
-        return (
-            f"{said}. Add it with `gh project item-add {board} --owner "
-            f"{board_first.owner or '<owner>'} --url {url}`"
-        )
+        said += ". The host's answer to the filing gave no number for the issue"
     holds = board_first.role == "source"
     said += f". {missing_card.remedy(number, board_holds_state=holds)}"
     if holds and board_first.state is not None:

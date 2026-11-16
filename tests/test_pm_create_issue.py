@@ -1441,6 +1441,42 @@ def test_a_card_not_added_leaves_the_issue_filed_and_exits_for_a_later_step(
         assert "sync_board.adds_with_no_terminal" not in err
 
 
+@pytest.mark.parametrize(
+    "axes", [MIRRORED, BOARD_AXES], ids=["status-mirrors", "board-carries-state"]
+)
+def test_a_card_not_added_with_no_number_names_the_sync_for_the_whole_board(
+    ci, tmp_path, monkeypatch, capsys, axes
+) -> None:
+    """Where the host's answer to the filing gave no number for the issue, the
+    message names the sync run for the whole board, which adds this card with
+    every other one missing, never the host's own add, which keeps none of the
+    sync's rules. Where the board holds the state, it still names the Status the
+    filing would have written (DEC-072 point 4)."""
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=axes)
+    board.fail_adds.add(42)
+    monkeypatch.setattr(ci, "_extract_issue_number_from_url", lambda url: None)
+
+    assert ci.main() == 5
+
+    err = capsys.readouterr().err
+    assert "[failed] https://github.com/acme/repo/issues/42 is filed" in err
+    assert (
+        "its card was not added to board #7: HTTP 502: Bad Gateway. The host's answer to the "
+        "filing gave no number for the issue. `pkit pm sync-board`, run for the whole board, "
+        "adds its card and the card of every other open issue that lacks one"
+    ) in err
+    assert "gh project item-add" not in err
+    if axes is BOARD_AXES:
+        assert (
+            "lacks one, only in a run at a terminal or with the project's switch "
+            "`sync_board.adds_with_no_terminal` on, and its Status is then set on the board, "
+            "since the card the sync adds carries none: set it to 'Todo', the state the issue "
+            "was filed into"
+        ) in err
+    else:
+        assert "sync_board.adds_with_no_terminal" not in err
+
+
 def test_a_card_not_added_beside_a_failed_link_names_both_and_takes_its_own_code(
     ci, tmp_path, monkeypatch, capsys
 ) -> None:
