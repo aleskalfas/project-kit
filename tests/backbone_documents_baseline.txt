@@ -27,7 +27,6 @@ pull-request merge
 pull-request read
 pull-request squash-defaults
 pull-request wait
-refs lookup
 refs records-for
 release plan
 rule-sets loaded

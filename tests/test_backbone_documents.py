@@ -1878,6 +1878,41 @@ def test_the_friction_report_documents_hold_their_contracts(
     )
 
 
+# --- `pkit refs lookup --json` --------------------------------------------------------------
+
+REFS_LOOKUP = Contract(
+    name="pkit refs lookup --json",
+    version=1,
+    forms={
+        "answer": Form(
+            keys={
+                "schema_version": "int",
+                "lookups": "list",
+                "lookups[]": "object",
+                "lookups[].id": "str",
+                "lookups[].resolved": "bool",
+                "lookups[].paths": "list",
+                "lookups[].paths[]": "str",
+                "lookups[].problem": "str|null",
+                "lookups[].path": "str|null",
+                "lookups[].anchor": "str|null",
+                "lookups[].received": "bool",
+                "lookups[].partial_supersession": "str|null",
+            }
+        )
+    },
+)
+
+#: Ids that print each part of a lookup: a record, a point of a record partly
+#: superseded, a rule, and an id that resolves nowhere.
+LOOKED_UP = ("COR-005", "COR-050#14", "RS-OPS-001", "NOPE-999")
+
+
+def test_the_refs_lookup_document_holds_its_contract(make_adopter_repo: Any) -> None:
+    make_adopter_repo()
+    check(REFS_LOOKUP, {"answer": [_printed(_cli("refs", "lookup", JSON_OPTION, *LOOKED_UP))]})
+
+
 # --- every command that prints a document has its contracts ---------------------------------
 
 #: The contracts of each backbone command that prints a document for a program, by the
@@ -1893,6 +1928,7 @@ CONTRACTS: Mapping[str, tuple[Contract, ...]] = {
     "friction check": (FRICTION_CHECK, REPOSITORY_CHECK),
     "friction debt": (FRICTION_DEBT,),
     "friction explain": (FRICTION_EXPLAIN,),
+    "refs lookup": (REFS_LOOKUP,),
 }
 
 
