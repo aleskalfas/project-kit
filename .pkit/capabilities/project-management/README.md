@@ -1897,7 +1897,7 @@ Each command below prints one JSON document for a program to read, where you ask
 
 - **How a caller reads one.** By key, ignoring a key it does not read. It reads a key it needs and does not find, a `null` this page does not explain and a value it does not know as could not tell, unless the document's entry names another reading. A run that prints no document is no answer.
 - **The mark.** A set marked *named no reading* is one that named no reading of a value a caller does not know before the rule was stated. It keeps the mark until it gains its first value, and reads meanwhile like any other set.
-- **What GitHub gives,** such as a state or a mergeable state, is passed on as GitHub gives it, and its values are GitHub's, not this capability's.
+- **What GitHub gives,** such as a state or a mergeable state, has GitHub's values, not this capability's.
 - **A value written for people,** such as a reason, a detail or a summary, is in the contract by its key and its purpose, never by its words.
 
 ### The prerequisites: `pre-check`
@@ -2034,11 +2034,11 @@ A `fail` makes the command exit 1, and the list prints then too.
 
 `pkit pm list-workstreams --json` prints what `project/workstreams.yaml` holds. Where the command refuses, it prints none.
 
-- `form` (*named no reading*): how the file holds its entries, `mapping` or `list`, or `empty` where it holds none or cannot be read.
+- `form` (*named no reading*): how the file holds its entries, `mapping` or `list`, or `empty` where it gives no `workstreams:` list or mapping, or cannot be read.
 - `errors`: each problem it found in the file, in words.
 - `duplicate_names`: each name that more than one active entry shares.
 - `entries`: each entry `--status` selects, active by default, in the file's order, with:
-  - `slug`, `name` and `description`, empty where there is none.
+  - `slug`; `name`, the slug where the file gives none; and `description`, empty where there is none.
   - `status` (*named no reading*): `active` or `deprecated`.
   - `deprecated_reason`: empty where there is none.
 
