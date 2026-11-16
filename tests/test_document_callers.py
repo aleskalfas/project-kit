@@ -12,6 +12,7 @@ same contract its command is.
 from __future__ import annotations
 
 import dataclasses
+import importlib.util
 import subprocess
 import sys
 from collections.abc import Iterator, Mapping
@@ -1103,3 +1104,61 @@ def test_project_management_reads_what_the_change_check_is_asked_about_as_its_co
     repo = documents._evidence_adopter(make_adopter_repo)
     for document in documents._artefacts_states(repo):
         check(PROJECT_MANAGEMENT_DISCOVERY, document)
+
+
+# --- the Claude Code adapter ----------------------------------------------------------------
+
+
+def _runner() -> Any:
+    """The agent runner, `run-agent.py`, loaded as its tests load it."""
+    path = Path(__file__).resolve().parent.parent / ".pkit/adapters/claude-code/run-agent.py"
+    spec = importlib.util.spec_from_file_location("claude_code_run_agent_for_callers", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+#: The pick the deploy's resolver writes for the runner (`_resolve_agent.pick_answer`),
+#: a document of one component, the adapter, with no version of its own.
+RESOLVER_PICK = Contract(
+    name="the deploy's resolver, `--pick <name>`",
+    forms={
+        "agent": Form(keys={"name": "str", "shipped": "bool", "agent": "str", "place": "str"}),
+        "not shipped": Form(keys={"name": "str", "shipped": "bool"}),
+        "no agent": Form(
+            keys={
+                "name": "str",
+                "shipped": "bool",
+                "untold": "str",
+                "none": "str",
+                "refused": "str",
+            }
+        ),
+    },
+)
+
+cc_runner = _runner()
+
+CLAUDE_CODE_PICK = Caller(
+    name="the Claude Code runner's reading of the deploy's pick",
+    contract=RESOLVER_PICK,
+    read=lambda document: cc_runner.pick_of(document, "fixer"),
+    untold=raises(cc_runner.Refused),
+    nothing=lambda: cc_runner.picked_source(
+        Path(sys.executable), Path("."), "fixer", {}, timeout=5
+    ),
+)
+
+
+def test_the_claude_code_runner_reads_the_deploy_s_pick_as_its_resolver_writes_it() -> None:
+    picked = {"name": "fixer", "shipped": True, "agent": ".pkit/agents/core/fixer.md"}
+    agent, not_shipped = {**picked, "place": "core"}, {"name": "fixer", "shipped": False}
+    no_agent = [
+        {"name": "fixer", "shipped": True, key: "why"} for key in ("untold", "none", "refused")
+    ]
+    contracts.check(
+        RESOLVER_PICK, {"agent": [agent], "not shipped": [not_shipped], "no agent": no_agent}
+    )
+    for document in (agent, not_shipped):
+        check(CLAUDE_CODE_PICK, document)
