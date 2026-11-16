@@ -3,8 +3,9 @@ kind: none
 body: >
   DEC-077 is proposed: at an issue's filing, the post-check workflow gives
   a missing card by running the board sync for that issue, where the
-  project turned its remediation on, the repository's own people opened
-  the issue and the board does not hold the state, and adds none
-  elsewhere (#3271). A design-ahead record: the template and the commands
-  change in the Task that builds it, which declares its own changeset, so
-  no surface moves here.
+  project turned its remediation on and the board does not hold the state:
+  under a person's token only for an issue the repository's own people
+  open, and under an App's token for every issue. It adds none elsewhere
+  (#3271). A design-ahead record: the template and the commands change in
+  the Task that builds it, which declares its own changeset, so no surface
+  moves here.
