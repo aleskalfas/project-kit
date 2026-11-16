@@ -1202,12 +1202,15 @@ def _move_back(
     claims: tuple[tuple[int, str], ...] = ((2, "me"),),
     labels: tuple[str, ...] = (),
     board_carried: bool = False,
+    later: dict | None = None,
 ):
     """Run `move-issue 42 <argv>` on #42 In Progress, as the clone `instance`
     (None: no instance id); the exit code, the writes in order, and the
     in-memory GitHub, whose `failing` calls fail once. #42 is assigned to
     `assignee`, and carries a claim on its comment log for each `claims` entry,
-    an instance and the account that made it, and the ownership `labels`."""
+    an instance and the account that made it, and the ownership `labels`.
+    `later` holds the fields the read made before the first write finds
+    changed since the first read (#3261)."""
     issue = {
         "title": "[Feature] the frobnication layer" if container else "[Task] ship the frobnicator",
         "labels": ["state:in-progress"] if container else ["type:bug", "state:in-progress"],
@@ -1218,6 +1221,9 @@ def _move_back(
     }
     move = MoveIssueInProcess(monkeypatch, issue)
     mi = move.module
+    if later is not None:
+        reads = iter([issue, {**issue, **later}])
+        monkeypatch.setattr(mi, "_gh_get_issue", lambda _n, _config: next(reads))
     writes: list[tuple] = []
 
     def comment(n, body, key, _config):
@@ -1468,6 +1474,21 @@ def test_a_move_back_to_todo_of_an_issue_in_a_milestone_is_refused(monkeypatch, 
     assert writes == []
     err = capsys.readouterr().err
     assert "#42 moves back to backlog, not todo: it is in the Milestone 'Alpha'" in err
+
+
+def test_a_move_back_is_checked_again_against_the_read_made_before_its_first_write(
+    monkeypatch, capsys
+) -> None:
+    """The issue is still In Progress at the read made before the first write,
+    and has left its Milestone since the preview: the move back now lands in
+    Todo, so the move to Backlog is refused there, and nothing is written, its
+    reason's audit comment included (#3261)."""
+    rc, writes, github = _move_back(
+        monkeypatch, "--to", "backlog", "--reason", "stalled", "--yes", later={"milestone": None}
+    )
+    assert rc == 2
+    assert writes == [] and github.writes() == []
+    assert "#42 moves back to todo, not backlog: it is in no Milestone" in capsys.readouterr().err
 
 
 def test_a_container_with_a_child_in_progress_or_in_review_is_refused_naming_it(
