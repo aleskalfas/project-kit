@@ -1,12 +1,17 @@
-"""`sync-board` writes the board's Status again from every issue's state (#2276).
+"""`sync-board` brings the board in line with the issues (#2276, #3301).
 
 DEC-006 makes the board's Status a projection the agent maintains, and native
-wins where the two disagree. `sync-board` reads every issue's state as
-`_lib/lifecycle_inference` does, writes the Status only on the cards that
-differ, adds a card for an open issue that has none, and names each card whose
-Status disagreed. `--dry-run` prints the plan, and `--yes` runs it with nobody
-at a terminal. These tests run the script against an in-memory GitHub with a
-board (`tests/pm_board_world.py`).
+wins where the two disagree. Where it is the projection, `sync-board` reads every
+issue's state as `_lib/lifecycle_inference` does, writes the Status only on the
+cards that differ, adds a card for an open issue that has none, and names each
+card whose Status disagreed. Wherever a board is configured, it gives each open
+issue with no card its card, and where the board holds the state, or the state
+degrades, it writes no Status: where the board holds it, it adds only in a run at
+a terminal or with the project's switch on, reads each added card back, and names
+each open issue whose card does not place it
+([project-management:DEC-072-sync-gives-missing-cards]). `--dry-run` prints the
+plan, and `--yes` runs it with nobody at a terminal. These tests run the script
+against an in-memory GitHub with a board (`tests/pm_board_world.py`).
 """
 
 from __future__ import annotations
@@ -17,9 +22,11 @@ from types import ModuleType
 
 import pytest
 
+from tests.pm_board_graphql import flag_value, query_of
 from tests.pm_board_world import (
     BOARD_CONFIG,
     LABEL_STATE,
+    STATE_ON_BOARD,
     BoardTracker,
     foreign_card,
 )
@@ -270,41 +277,6 @@ def test_with_no_board_configured_it_refuses_and_reads_no_board(
     assert "no Projects v2 board is configured" in capsys.readouterr().err
 
 
-def test_where_the_board_carries_the_state_it_refuses_and_writes_nothing(
-    sb: ModuleType,
-    board: BoardTracker,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    _configure(sb, monkeypatch, BOARD_CONFIG, {"state": {"board": True}})
-
-    assert _sync(sb, "--yes") == 2
-
-    assert board.calls == []
-    assert "the board's Status is the state's source" in capsys.readouterr().err
-
-
-@pytest.mark.parametrize("axes", [{}, {"state": {"unsupported": True}}])
-def test_where_the_state_degrades_it_refuses_and_says_why(
-    sb: ModuleType,
-    board: BoardTracker,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-    axes: dict,
-) -> None:
-    """A present map that leaves the state out degrades it, and the capability
-    writes no Status for it: the board's Status stays with the people who move
-    it, so there is nothing to bring level (DEC-062 point 5)."""
-    _configure(sb, monkeypatch, BOARD_CONFIG, axes)
-
-    assert _sync(sb, "--yes") == 2
-
-    assert board.calls == []
-    err = capsys.readouterr().err
-    assert "leaves `state` out or marks it `unsupported`" in err
-    assert "stays with the people who move it" in err
-
-
 def test_with_no_map_the_status_is_kept_and_synced(
     sb: ModuleType,
     board: BoardTracker,
@@ -420,3 +392,548 @@ def test_a_write_that_fails_is_said_and_the_others_are_made(
     out = capsys.readouterr().out
     assert f"  [fail] #{n['no_card']}: its card could not be added: HTTP 502: Bad Gateway" in out
     assert "done: 2 Status set, 0 cards added, 2 failed" in out
+
+
+# --- only the issues a run names (DEC-072 point 1) ----------------------------
+
+
+def test_a_run_naming_issues_writes_plans_and_reports_only_for_them(
+    sb: ModuleType, board: BoardTracker, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Where the Status is the projection, a run naming issues writes no other
+    card's Status, and lists each named issue it does nothing for, with why."""
+    n = _a_board_out_of_step(board)
+
+    named = (n["started"], n["no_card"], n["level"], 999)
+    assert _sync(sb, "--yes", *(str(number) for number in named)) == 0
+
+    assert board.edits == [(n["started"], "In Progress"), (n["no_card"], "Todo")]
+    assert board.adds == [n["no_card"]]
+    out = capsys.readouterr().out
+    assert f"#{n['scheduled']}" not in out and f"#{n['closed']}" not in out
+    assert (
+        "The issues named that this run does nothing for:\n"
+        f"  #{n['level']}: on the board already, with nothing to write\n"
+        "  #999: not among this repository's open issues this run read, and no card on the "
+        "board holds it: a closed issue, or a number no issue holds\n"
+    ) in out
+    assert "4 issues named" in out
+
+
+def test_a_named_state_issue_is_listed_as_one(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _configure(sb, monkeypatch, BOARD_CONFIG, STATE_ON_BOARD)
+    held = _issue(board, "type:task")
+    board.issues[held]["body"] = "<!-- pkit:state-issue v=1 kind=seat key=planner -->\n"
+
+    assert _sync(sb, "--yes", str(held)) == 0
+
+    assert board.adds == []
+    out = capsys.readouterr().out
+    assert f"  #{held}: a state issue, which holds no work and takes no card" in out
+
+
+def test_an_issue_number_must_be_a_number(sb: ModuleType, board: BoardTracker) -> None:
+    with pytest.raises(SystemExit) as exited:
+        _sync(sb, "--yes", "twelve")
+    assert exited.value.code == 2
+    assert board.calls == []
+
+
+# --- where the board holds the state (DEC-072 points 2 to 4) ------------------
+
+
+class _Terminal:
+    """Standard input on a terminal, as a run at a terminal has it."""
+
+    def isatty(self) -> bool:
+        return True
+
+
+def _at_terminal(monkeypatch: pytest.MonkeyPatch, answer: str = "y") -> list[str]:
+    """A run whose standard input is a terminal, its standard output captured as
+    a pipe would take it, answering ``answer`` to each question. The questions
+    asked are returned."""
+    asked: list[str] = []
+    monkeypatch.setattr(sys, "stdin", _Terminal())
+
+    def reply(prompt: str = "") -> str:
+        asked.append(prompt)
+        return answer
+
+    monkeypatch.setattr("builtins.input", reply)
+    return asked
+
+
+def _switch(sb: ModuleType, monkeypatch: pytest.MonkeyPatch, *, on: bool) -> None:
+    said = "`sync_board.adds_with_no_terminal` is on" if on else "it is off"
+    monkeypatch.setattr(
+        sb.sync_switch, "read", lambda config, root, **kw: sb.sync_switch.Switch(on, said)
+    )
+
+
+def _a_board_holding_the_state(
+    sb: ModuleType, board: BoardTracker, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, int]:
+    """Open issues with a card that places them, a card with no Status, a card
+    whose Status names no open state, an archived card, and no card; and a closed
+    issue whose card is short of Done."""
+    _configure(sb, monkeypatch, BOARD_CONFIG, STATE_ON_BOARD)
+    placed = _issue(board, "type:task")
+    unset = _issue(board, "type:task")
+    done = _issue(board, "type:task")
+    archived = _issue(board, "type:task")
+    no_card = _issue(board, "type:task", "state:in-progress")
+    closed = _issue(board, "type:task", closed=True)
+    board.card(placed, "In Progress")
+    board.card(unset)
+    board.card(done, "Done")
+    board.card(archived, "Review", archived=True)
+    board.card(closed, "Review")
+    return {
+        "placed": placed,
+        "unset": unset,
+        "done": done,
+        "archived": archived,
+        "no_card": no_card,
+        "closed": closed,
+    }
+
+
+def test_at_a_terminal_it_adds_the_missing_cards_and_writes_no_status(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A run whose standard input is a terminal and whose output goes to a pipe
+    is asked, and on a yes adds the cards. No Status is written, a closed issue's
+    card included, and the plan says what the position then is."""
+    n = _a_board_holding_the_state(sb, board, monkeypatch)
+    asked = _at_terminal(monkeypatch)
+
+    assert _sync(sb) == 0
+
+    assert asked == ["Write 1 card? [y/N] "]
+    assert board.adds == [n["no_card"]]
+    assert board.edits == []
+    assert board.status(n["no_card"]) is None
+    out = capsys.readouterr().out
+    assert "which holds the state: it gives each open issue its card, and writes no Status" in out
+    assert f"The open issues with no card, to be added:\n  #{n['no_card']}\n" in out
+    assert (
+        "The sync writes no Status on a card it adds, and the board's own automation may "
+        "set one when the card is added."
+    ) in out
+    assert (
+        "Each added issue's position stays undetermined until a person sets its card's "
+        "Status on the board, and every command would read a Status the automation set as "
+        "the issue's position (DEC-051 point 6)."
+    ) in out
+    assert "plan: 1 card to add, 4 issues already on the board" in out
+    assert f"  [board] #{n['no_card']}: card added, with no Status" in out
+    assert "done: 1 card added, 0 failed" in out
+
+
+def test_it_names_each_open_issue_whose_card_does_not_place_it(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The state's reader sorts each outcome from the walk; a card that places
+    its issue is not named, and an archived one is named as hidden."""
+    n = _a_board_holding_the_state(sb, board, monkeypatch)
+
+    assert _sync(sb, "--dry-run") == 0
+
+    out = capsys.readouterr().out
+    unplaced = out.split("The open issues whose card does not place them")[1].split("\n\n")[0]
+    assert (
+        f"  #{n['unset']}'s card on board #4 has no Status, so its position cannot be read "
+        "from it\n"
+    ) in unplaced + "\n"
+    assert f"  #{n['done']}'s card on board #4 has the Status 'Done'" in unplaced
+    assert f"  #{n['placed']}'s" not in unplaced and f"  #{n['archived']}'s" not in unplaced
+    assert (
+        "The open issues whose only card is archived, which the board's views hide:\n"
+        f"  #{n['archived']}: restore its card on the board to see it there\n"
+    ) in out
+    assert board.edits == [] and board.adds == []
+
+
+@pytest.mark.parametrize("options", [(), ("--yes",)], ids=["no-yes", "yes"])
+def test_with_no_terminal_and_the_switch_off_it_adds_no_card(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    options: tuple[str, ...],
+) -> None:
+    """With cards to add, a run neither at a terminal nor with the switch on
+    prints its plan, says the cards are added only at a terminal or with the
+    switch on, gives the command to run at a terminal, and refuses, whatever
+    option it passes."""
+    n = _a_board_holding_the_state(sb, board, monkeypatch)
+    _switch(sb, monkeypatch, on=False)
+
+    assert _sync(sb, *options) == 2
+
+    assert board.adds == [] and board.edits == []
+    captured = capsys.readouterr()
+    assert f"  #{n['no_card']}\n" in captured.out
+    assert (
+        "a card the sync adds there is added only in a run at a terminal, or with the "
+        "project's switch `sync_board.adds_with_no_terminal` on, whatever option the run "
+        "passes"
+    ) in captured.err
+    assert (
+        f"run this at a terminal:\n  pkit pm sync-board --capability-root {CAPABILITY_ROOT}\n"
+        in (captured.err)
+    )
+
+
+def test_with_no_terminal_and_none_to_add_it_passes_clean(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    n = _a_board_holding_the_state(sb, board, monkeypatch)
+    del board.issues[n["no_card"]]
+    _switch(sb, monkeypatch, on=False)
+
+    assert _sync(sb, "--yes") == 0
+
+    out = capsys.readouterr().out
+    assert (
+        f"  #{n['unset']}'s card on board #4 has no Status, so its position cannot be read from it"
+    ) in out
+    assert "every open issue has its card; nothing to write." in out
+
+
+def test_a_dry_run_says_which_adds_would_need_a_terminal_or_the_switch(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _a_board_holding_the_state(sb, board, monkeypatch)
+
+    assert _sync(sb, "--dry-run") == 0
+
+    out = capsys.readouterr().out
+    assert (
+        "[dry-run] 1 card to add would need a run at a terminal, or the project's switch "
+        "`sync_board.adds_with_no_terminal` on."
+    ) in out
+    assert board.adds == []
+
+
+def test_with_the_switch_on_a_run_with_no_terminal_adds_the_cards_with_yes(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    n = _a_board_holding_the_state(sb, board, monkeypatch)
+    _switch(sb, monkeypatch, on=True)
+
+    assert _sync(sb, "--yes") == 0
+
+    assert board.adds == [n["no_card"]] and board.edits == []
+    assert "so a run with no terminal adds the cards above" in capsys.readouterr().out
+
+
+def test_with_the_switch_on_a_run_with_no_terminal_still_needs_yes(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _a_board_holding_the_state(sb, board, monkeypatch)
+    _switch(sb, monkeypatch, on=True)
+
+    assert _sync(sb) == 2
+
+    assert board.adds == []
+    assert "run again with --yes" in capsys.readouterr().err
+
+
+def test_where_the_board_holds_the_state_a_run_naming_issues_plans_only_for_them(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Its adds, the cards it names as not placing their issue, and the issues
+    whose only card is archived, are only the named issues'."""
+    n = _a_board_holding_the_state(sb, board, monkeypatch)
+    other = _issue(board, "type:task")
+    _at_terminal(monkeypatch)
+
+    assert _sync(sb, str(n["no_card"]), str(n["unset"]), str(n["placed"])) == 0
+
+    assert board.adds == [n["no_card"]] and board.edits == []
+    out = capsys.readouterr().out
+    assert "3 issues named" in out
+    assert f"  #{n['unset']}'s card on board #4 has no Status" in out
+    assert f"#{n['done']}'s" not in out and f"#{other}" not in out
+    assert "only card is archived" not in out
+    assert f"  #{n['placed']}: on the board already, with nothing to write\n" in out
+
+
+# --- the read-back (DEC-072 point 3) ---------------------------------------
+
+
+def _added_by_switch(
+    sb: ModuleType, board: BoardTracker, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, int]:
+    n = _a_board_holding_the_state(sb, board, monkeypatch)
+    _switch(sb, monkeypatch, on=True)
+    return n
+
+
+def _card_reads(board: BoardTracker) -> list[list[str]]:
+    return [argv for argv in board.graph.graph_calls if "card: node(id: $item)" in query_of(argv)]
+
+
+def test_the_read_back_names_a_status_the_sync_did_not_write(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """It reads through the seam, by the card the add answered with, names the
+    Status for the person to check, claims no setter and suggests no clearing."""
+    n = _added_by_switch(sb, board, monkeypatch)
+    board.automation = "Todo"
+
+    assert _sync(sb, "--yes") == 0
+
+    [read] = _card_reads(board)
+    assert flag_value(read, "item") == board.cards[n["no_card"]]["id"]
+    assert "board: node(id: $board)" in query_of(read)
+    out = capsys.readouterr().out
+    assert (
+        f"  #{n['no_card']}: its card shows the Status 'Todo', which the sync did not write, "
+        "and every command now reads it as the issue's position: check it on the board"
+    ) in out
+    assert "clear" not in out.lower()
+    assert board.edits == []
+
+
+def test_the_read_back_of_a_card_with_no_status_is_no_all_clear(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    n = _added_by_switch(sb, board, monkeypatch)
+
+    assert _sync(sb, "--yes") == 0
+
+    out = capsys.readouterr().out
+    assert (
+        f"  #{n['no_card']}: its card showed no Status when read, and the board's automation "
+        "may set one later"
+    ) in out
+    assert "check each card added on the board" in out
+
+
+def test_a_card_the_read_back_does_not_find_is_not_confirmed(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    n = _added_by_switch(sb, board, monkeypatch)
+    monkeypatch.setattr(board.graph, "card_by_id", lambda item_id, value_field: None)
+
+    assert _sync(sb, "--yes") == 0
+
+    out = capsys.readouterr().out
+    assert (
+        f"  #{n['no_card']}: its card was not found when read again, so it is not confirmed" in out
+    )
+
+
+def test_a_read_back_the_board_did_not_answer_is_said_and_takes_no_code(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    n = _added_by_switch(sb, board, monkeypatch)
+    board.graph.placed["card"] = "Resource not accessible by integration"
+
+    assert _sync(sb, "--yes") == 0
+
+    out = capsys.readouterr().out
+    assert f"  #{n['no_card']}: the board did not answer the read of its card:" in out
+    assert "Resource not accessible by integration" in out
+    assert board.adds == [n["no_card"]]
+
+
+# --- a board with no Status field (DEC-072 point 1) --------------------------
+
+
+def _no_status_field(board: BoardTracker) -> None:
+    board.field_name, board.field_type = "Stage", "ProjectV2SingleSelectField"
+
+
+def test_where_the_board_holds_the_state_with_no_status_field_the_adds_go_on(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The fault is named once, no issue's outcome is reported as a finding, and
+    a run that made adds takes no code that reads as the adds not made."""
+    n = _added_by_switch(sb, board, monkeypatch)
+    _no_status_field(board)
+
+    assert _sync(sb, "--yes") == 0
+
+    assert board.adds == [n["no_card"]]
+    out = capsys.readouterr().out
+    assert out.count("[warn] the board can place no issue:") == 1
+    assert "the board has no `Status` field" in out
+    assert "does not place them" not in out
+    assert "so its position cannot be read from it" not in out
+
+
+def test_where_the_board_holds_the_state_with_no_status_field_no_adds_take_its_code(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    n = _added_by_switch(sb, board, monkeypatch)
+    del board.issues[n["no_card"]]
+    _no_status_field(board)
+
+    assert _sync(sb, "--yes") == 2
+
+    assert "[warn] the board can place no issue:" in capsys.readouterr().out
+
+
+# --- where the state degrades (DEC-072 points 1 and 2) -----------------------
+
+
+@pytest.mark.parametrize("axes", [{}, {"state": {"unsupported": True}}])
+def test_where_the_state_degrades_it_adds_the_cards_and_writes_no_status(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    axes: dict,
+) -> None:
+    """A run with no terminal adds the cards with the option that skips the
+    question alone: the switch is not read, and nothing is read back."""
+    _configure(sb, monkeypatch, BOARD_CONFIG, axes)
+    carded = _issue(board, "state:review")
+    board.card(carded, "Todo")
+    missing = _issue(board, "state:in-progress")
+
+    def not_read(*args, **kwargs):
+        raise AssertionError("the switch is not read where the state degrades")
+
+    monkeypatch.setattr(sb.sync_switch, "read", not_read)
+
+    assert _sync(sb, "--yes") == 0
+
+    assert board.adds == [missing] and board.edits == []
+    assert board.status(carded) == "Todo"
+    assert _card_reads(board) == []
+    out = capsys.readouterr().out
+    assert "where the state degrades" in out
+    assert "the board's own automation may set one when the card is added" in out
+    assert "undetermined" not in out
+
+
+def test_where_the_state_degrades_a_board_with_no_status_field_does_not_stop_the_adds(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _configure(sb, monkeypatch, BOARD_CONFIG, {})
+    missing = _issue(board)
+    _no_status_field(board)
+
+    assert _sync(sb, "--yes") == 0
+
+    assert board.adds == [missing]
+
+
+def test_where_the_state_degrades_a_dry_run_writes_nothing(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _configure(sb, monkeypatch, BOARD_CONFIG, {})
+    missing = _issue(board)
+
+    assert _sync(sb, "--dry-run") == 0
+
+    assert board.adds == [] and board.edits == []
+    out = capsys.readouterr().out
+    assert f"The open issues with no card, to be added:\n  #{missing}\n" in out
+    assert "[dry-run] nothing written." in out
+    assert "would need a run at a terminal" not in out
+
+
+def test_where_the_state_degrades_a_named_issue_whose_only_card_is_archived_is_listed(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _configure(sb, monkeypatch, BOARD_CONFIG, {})
+    hidden = _issue(board)
+    board.card(hidden, "Todo", archived=True)
+
+    assert _sync(sb, "--yes", str(hidden)) == 0
+
+    assert f"  #{hidden}: restore its card on the board to see it there" in capsys.readouterr().out
+
+
+# --- what the run says after it (DEC-072 point 4) ---------------------------
+
+
+def test_where_the_hooks_seed_a_board_field_it_names_the_back_fill(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    n = _a_board_out_of_step(board)
+    monkeypatch.setattr(sb.hooks, "seeds_board_field", lambda root: True)
+
+    assert _sync(sb, "--yes") == 0
+
+    assert board.adds == [n["no_card"]]
+    out = capsys.readouterr().out
+    assert "`pkit pm back-fill` seeds it" in out
+    assert "not only on the cards this run added (DEC-037 point 2)" in out
+
+
+def test_the_help_says_where_it_writes_a_status_and_what_the_switch_does(
+    sb: ModuleType, capsys: pytest.CaptureFixture[str]
+) -> None:
+    saved = sys.argv
+    sys.argv = ["sync-board.py", "--help"]
+    try:
+        with pytest.raises(SystemExit):
+            sb.main()
+    finally:
+        sys.argv = saved
+    text = " ".join(capsys.readouterr().out.split())
+    assert "give each open issue with no card its card, wherever a board is configured" in text
+    assert "a run with no terminal adds cards only with the project's switch" in text
+    assert "this option is no consent to the board's own automation" in text

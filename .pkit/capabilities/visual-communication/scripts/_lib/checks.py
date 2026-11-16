@@ -152,6 +152,7 @@ from typing import Any, Protocol
 
 from _lib import (
     bar,
+    boxes,
     briefs,
     code,
     colour_steps,
@@ -2657,7 +2658,10 @@ def scene_findings(
     for attention (`_widths`). What the piece states of the forms its brand's chain draws its
     tops in is said once (`_brand_forms`). The checks of signs read every scene at once: a
     concept left to its colour, once for each version of the component that draws it so, and
-    concepts of one sign, once in each language (`signs.findings`, DEC-036 point 8)."""
+    concepts of one sign, once in each language (`signs.findings`, DEC-036 point 8). The
+    checks of boxes read each scene's siblings, edges that nearly line up by the brand's
+    smallest step of space at its key, and boxes that overlap (`_of_boxes`, DEC-046 point
+    3)."""
     piece = project.piece
     document = project.values()
     colours = {
@@ -2673,6 +2677,7 @@ def scene_findings(
         (language, result.scene.size_key): _content_shown(scene)
         for language, result, scene in scenes
     }
+    steps: dict[str, boxes.Step | None] = {}
     for language, result, scene in scenes:
         size = result.scene.size_key
         served = [key for key in project.keys if project.size_key(key) == size]
@@ -2689,6 +2694,9 @@ def scene_findings(
                     found.append(loss_finding(loss))
         found.extend(_statuses(scene, project.env))
         found.extend(_no_ground(piece, scene, drawn, served))
+        if size not in steps:
+            steps[size] = _space_step(project, size)
+        found.extend(_of_boxes(scene, steps[size]))
         for finding in _once_on_pages(found, result.shared):
             by_size[size].setdefault(_mark(finding), finding)
     unique: dict[tuple[str, str, str, str, str], Finding] = {}
@@ -2719,6 +2727,29 @@ def _steps_of(
         for name, value in colour_steps.values_at(scene, at).items():
             found.setdefault(name, dict.fromkeys(keys))[key] = value
     return found
+
+
+def _of_boxes(scene: Mapping[str, Any], step: boxes.Step | None) -> list[Finding]:
+    """What the checks of boxes find among the siblings of `scene`, each at the piece's own
+    file, as it names no component (DEC-046 point 3): edges that nearly line up by `step`, the
+    brand's smallest step of space at the scene's key, and boxes that overlap."""
+    found = [*boxes.near_alignment(scene, step), *boxes.overlaps(scene)]
+    return [dataclasses.replace(finding, file=pl.PIECE_FILE) for finding in found]
+
+
+def _space_step(project: pl.Project, size: str) -> boxes.Step | None:
+    """The brand's smallest step of space at the key over the size axes `size`, every value
+    axis at its default, as the scene at that key reads each role (`boxes.smallest_step`): of
+    the shared steps of space the brand gives a value."""
+    env, scope = project.env.at(size), project.brand.scope
+    values = {}
+    for path in scope.roles:
+        if boxes.STEP.fullmatch(path) and not scope.owner.get(path):
+            try:
+                values[path] = env.role(path)
+            except KeyError:
+                continue
+    return boxes.smallest_step(values)
 
 
 #: The finding on a piece drawn at a size at which its top is as wide as at the default

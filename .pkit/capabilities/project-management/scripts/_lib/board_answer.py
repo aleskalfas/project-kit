@@ -41,6 +41,9 @@ under every credential alike:
   one (ADR-031 point 3), and counts as made only where the board answers with
   the issue's card ([pkit:ADR-096] point 3): :func:`added_card` reads that
   answer for each of them alike.
+* **One card by its item id,** the id an add answered with, read beside the
+  board's own read in one request: :func:`card_answer` takes no such card for
+  an answer only where the board answered.
 
 What an answer means to a command is the command's own ([pkit:ADR-096] point 4):
 this module reports the board's answer, or why the board did not answer with the
@@ -646,6 +649,41 @@ def _card(listed: Iterable[Any], project_id: str) -> Card | None:
             option_name=name if isinstance(name, str) and name else None,
         )
     return None
+
+
+# ----- one card, by its item id ----------------------------------------------------
+
+
+def card_answer(board: Board, reply: Reply) -> tuple[dict[str, Any] | None, Unanswered | None]:
+    """The card a request read by its item id under the alias `card`, beside the
+    board's own read, or None where the board answered that it holds no such card;
+    or why the board did not answer.
+
+    No such card is an answer only where the board's own read in the same request
+    answered, and the card's read came back empty, with no error or the service's
+    not-found on it, or names a card on another board. Any other error placed on
+    the card, or one the seam cannot place, is a board that did not answer."""
+    answer, unanswered = board_answer(board, reply)
+    if unanswered is not None:
+        return None, unanswered
+    assert answer is not None
+    errors = [e for e in reply.errors if _path(e)[:1] == ("card",)]
+    others = unplaced_error(reply, roots=("board", "card"))
+    if others is not None:
+        return None, from_service(others)
+    node = reply.data.get("card")
+    if node is None:
+        if all(error.get("type") == "NOT_FOUND" for error in errors):
+            return None, None
+        return None, from_service("; ".join(_message(e) for e in errors))
+    if errors:
+        return None, from_service("; ".join(_message(e) for e in errors))
+    if not isinstance(node, dict) or not isinstance(node.get("id"), str) or not node["id"]:
+        return None, not_whole(board, "the reply carries no card")
+    project = node.get("project")
+    if not isinstance(project, dict) or project.get("id") != answer.get("id"):
+        return None, None
+    return node, None
 
 
 # ----- an add's answer -----------------------------------------------------------

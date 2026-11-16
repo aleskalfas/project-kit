@@ -331,6 +331,21 @@ def load_hooks_file(capability_root: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def seeds_board_field(capability_root: Path) -> bool:
+    """Whether the project's hooks seed a board field on a new card: a
+    `set-board-field` hook declared for `after_create_issue`, which a card added
+    by another command than filing does not fire
+    ([project-management:DEC-072-sync-gives-missing-cards] point 2)."""
+    by_event = load_hooks_file(capability_root).get("hooks")
+    entries = by_event.get("after_create_issue") if isinstance(by_event, dict) else None
+    if not isinstance(entries, list):
+        return False
+    return any(
+        isinstance(entry, dict) and str(entry.get("kind", "")).strip() == "set-board-field"
+        for entry in entries
+    )
+
+
 def hook_stamp(
     stamp_id: str,
     event: str,
