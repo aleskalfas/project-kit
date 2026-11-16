@@ -44,6 +44,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/findings.schema.json
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
         - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/boxes.py
       record:
         - visual-communication:DEC-002#6
         - visual-communication:DEC-002#7
@@ -139,6 +140,7 @@ pkit:
         - visual-communication:DEC-042#3
         - visual-communication:DEC-042#6
         - COR-051#7
+        - visual-communication:DEC-046#3
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-brands-drawing
         - .pkit/capabilities/visual-communication/components.md#a-components-file
@@ -160,6 +162,7 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#trace-ids
         - .pkit/capabilities/visual-communication/components.md#values-states-and-colour
         - .pkit/capabilities/visual-communication/components.md#what-an-element-asks-for-and-what-it-gets
+        - .pkit/capabilities/visual-communication/components.md#what-a-scene-holds
         - .pkit/capabilities/visual-communication/files.md#brands
         - .pkit/capabilities/visual-communication/files.md#the-brief
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
@@ -189,6 +192,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#the-switching-file
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-an-export
         - .pkit/capabilities/visual-communication/outputs.md#written-code
+        - .pkit/capabilities/visual-communication/outputs.md#what-a-run-writes
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
@@ -538,8 +542,17 @@ Each fails, unless its row says otherwise.
 | `component-experimental` | The piece uses an experimental component, which its library may change in any release (DEC-003 point 9). States a fact. | `<piece>/piece.yaml#<trace>` |
 | `component-deprecated` | The piece uses a deprecated component. Asks the piece's author for attention: replace it with the component its library names in its place. | `<piece>/piece.yaml#<trace>` |
 | `switching-no-ground` | The piece exports as `svg-modes`, and a page draws no ground of its own in a combination its [switching file](outputs.md#the-switching-file) holds: no box of an opaque colour over its whole frame, as the viewing step reads a ground (DEC-018 point 5). A page shows the file on its own ground, so dark text could meet a dark page. The message names the page and those combinations. Asks the piece's author for attention, never fails, and repeats until a ground is there: give the page one, in its component or its brand. | `<piece>/piece.yaml#<page's trace>` |
+| `near-alignment` | Two siblings nearly line up and do not (DEC-046 point 3): on one axis, their left edges, centres or right edges, or their tops, middles or bottoms, differ by more than a pixel of rounding and by less than the brand's smallest step of space. A pair that lines up within a pixel on one line of an axis is not reported on that axis, since the near miss follows from the line chosen: an icon and a label centred in a row differ at their tops, and texts of different widths on one left edge differ at their right edges. Where one of the pair holds the other within a pixel, as a card's box holds its head, the check compares the held part's insets on the two sides of each axis in place of those lines: its left and right insets, or its top and bottom ones, differ by as much, unless it lies within a pixel of one of the other's edges on that axis. Or two spacings of one group nearly agree, on one axis, by as much: a spacing is the gaps within a pixel of each other between a sibling and the nearest one after it that stands beside it. The message names the pair and each line or each inset, or each gap of the two spacings, and the step. Asks the reviewer, `graphic-design-reviewer`, for attention, who judges on the image whether the place is a fault or is meant, and never fails. The step follows the brand at each key over the size axes, so a place may be near at one key alone. Where the brand gives no step, nothing is near. | `<piece>/piece.yaml#<trace of the pair's first, or of the group whose spacings they are>` |
+| `box-overlap` | Two siblings' boxes overlap by more than a pixel of rounding across and down, and neither holds the other within a pixel (DEC-046 point 3). The message names the pair, how far they overlap and which is drawn over which. A text a sibling covers is reported as any other part is. Asks the reviewer for attention, and never fails. An overlap a component means, such as a badge on a card's corner, is reported until a component can say that it is meant. | `<piece>/piece.yaml#<trace of the one drawn under>` |
 
-The check reports `contrast-drawn`, `unknown-colour`, the two statuses, `switching-no-ground`, and an `unknown-role` and an `order-no-ends` the lock shows, at `piece.yaml`, and they name no library version. So they never take the rule of a released version.
+**The checks of boxes.** `near-alignment` and `box-overlap` read one base:
+
+- **Siblings** are the elements one group of the scene holds directly, such as the items of one list or the parts of one component. Each pair is compared once, in the frame they share. Two components that are siblings are compared by their groups, and the parts inside one are compared only with each other.
+- **Their boxes** are the scene's: each element's frame in px of its page ([what a scene holds](components.md#what-a-scene-holds)), not the frames [the viewing step writes](outputs.md#what-a-run-writes) beside an image, which are those boxes in the image's pixels. So a pixel of rounding and the brand's step are read in one unit.
+- **The brand's smallest step of space** is the least value the brand gives a shared step of space, `space.1` and its like, at the scene's key, every value axis at its default ([the foundations](files.md#the-foundations)).
+- **Left out:** a line, whose ends and arrowheads meet or cross what they join, and whose misses stay the reviewer's to find; a group that draws nothing but lines, such as a tie's; an element of no area; and a page, which shares no drawing with the pages beside it.
+
+The check reports `contrast-drawn`, `unknown-colour`, the two statuses, `switching-no-ground`, `near-alignment`, `box-overlap`, and an `unknown-role` and an `order-no-ends` the lock shows, at `piece.yaml`, and they name no library version. So they never take the rule of a released version.
 
 ### Losses
 
