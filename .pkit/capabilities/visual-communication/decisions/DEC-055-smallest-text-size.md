@@ -102,7 +102,7 @@ When it reads the piece and the component, the check reports:
 - `smallest-text` on a component that is no top, or on a brand's drawing; a key in it that names no medium; and a value that is a number not positive, or a switch, each as a key or a value its format does not allow (`component-shape`);
 - a formula that gives no length, or reads anything but `:width`, `:height` and numbers, as a formula's own findings (`formula-dimension`, `formula-reach`).
 
-When it computes a scene, the check reports a share that reads `:height` at a page that asks for no height as a formula that reads what it may not reach (`formula-reach`), at the top's file, `#smallest-text.<medium>`, naming each such page, as severely as any formula's finding (DEC-005 point 14). No text of such a page is judged in that medium.
+When it computes a scene, the check reports a share that reads `:height` at a page that asks for no height as a formula that reads what it may not reach (`formula-reach`), at the top's file, `#smallest-text.<medium>`, naming each such page and saying that no text on it was judged in that medium, as severely as any formula's finding (DEC-005 point 14). No text of such a page is judged in that medium.
 
 ### 8. The shipped tops declare it, each value with its source
 
