@@ -19,6 +19,7 @@ from types import ModuleType
 
 import pytest
 
+from tests.pm_board_graphql import flag_value, query_of
 from tests.pm_board_world import BOARD_CONFIG, LABEL_STATE, BoardTracker
 from tests.pm_lifecycle_world import (
     AUTHORED_BODY,
@@ -216,8 +217,10 @@ def test_a_move_finds_the_board_under_its_owner(
     assert world.move(task, "in-progress") == 0
 
     assert board.status(task) == "In Progress"
-    reads = [argv for argv in board.calls if argv[1:2] == ["project"] and argv[2] != "item-edit"]
-    assert reads and {argv[argv.index("--owner") + 1] for argv in reads} == {owner}
+    # The board's own read names it by its number under its owner; later
+    # reads in the run address it by the node that read gave.
+    reads = [argv for argv in board.board_calls() if "repositoryOwner(login:" in query_of(argv)]
+    assert reads and {flag_value(argv, "owner") for argv in reads} == {owner}
 
 
 @pytest.mark.usefixtures("kept")

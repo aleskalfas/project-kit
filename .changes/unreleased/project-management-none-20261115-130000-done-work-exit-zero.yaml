@@ -1,0 +1,6 @@
+component: project-management
+kind: none
+body: >
+  The README says what done-work's exit 0 means as the code has it: a merge
+  whose every step after it ran, a dry run, or a declined prompt (#3242).
+  Documentation only; no command changes.

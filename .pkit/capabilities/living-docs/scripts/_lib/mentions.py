@@ -123,6 +123,7 @@ from typing import Any
 from urllib.parse import unquote
 
 from _lib import backbone, formats
+from _lib import document_keys as keys
 from _lib.artefacts import Artefact
 from _lib.declarations import CAPABILITIES_DIR, load_yaml, mapping, normalise
 
@@ -325,23 +326,44 @@ def look_up(root: Path, run: Runner = backbone.run) -> Lookup:
             document = json.loads(proc.stdout or "") if proc.returncode == 0 else None
         except ValueError:
             document = None
-        if not isinstance(document, Mapping) or document.get("schema_version") != LOOKUP_VERSION:
+        if not isinstance(document, Mapping):
             detail = (proc.stderr or "").strip().splitlines()
             raise Unreadable(
                 f"`{' '.join(LOOKUP)}` exited {proc.returncode} without a document this "
                 f"capability reads" + (f": {detail[-1]}" if detail else "")
             )
-        found: dict[str, str | None] = {}
-        for entry in document.get("lookups") or []:
-            if not isinstance(entry, Mapping) or not isinstance(entry.get("id"), str):
-                continue
-            paths = entry.get("paths")
-            first = paths[0] if isinstance(paths, list) and paths else None
-            resolved = entry.get("resolved") is True and isinstance(first, str)
-            found[entry["id"]] = first if resolved and isinstance(first, str) else None
-        return found
+        return lookups_of(document, ids)
 
     return lookup
+
+
+def lookups_of(document: Mapping[str, Any], ids: Sequence[str]) -> dict[str, str | None]:
+    """The `pkit refs lookup --json` document for `ids`: each id the file it resolves
+    to, or `None` where it resolves nowhere. Raises Unreadable for a version other than
+    this reading's, and for a document it cannot tell anything from at a key it reads,
+    an id asked and not answered included (ADR-097 point 3)."""
+    version = document.get("schema_version")
+    if type(version) is not int or version != LOOKUP_VERSION:
+        raise Unreadable(
+            f"`{' '.join(LOOKUP)}` answered schema_version {version!r}; this capability "
+            f"reads {LOOKUP_VERSION}"
+        )
+    found: dict[str, str | None] = {}
+    try:
+        for where, entry in keys.objects(document, "lookups", ""):
+            paths = keys.texts(entry, "paths", where)
+            resolved = keys.flag(entry, "resolved", where)
+            if resolved and not paths:
+                raise keys.Untold(f"`{where}` resolved to no path")
+            found[keys.text(entry, "id", where)] = paths[0] if resolved else None
+        unanswered = sorted(set(ids) - set(found))
+        if unanswered:
+            raise keys.Untold(f"no lookup answers {', '.join(unanswered)}")
+    except keys.Untold as exc:
+        raise Unreadable(
+            f"`{' '.join(LOOKUP)}` answered a document this capability cannot read: {exc}"
+        ) from exc
+    return found
 
 
 def commands(root: Path) -> list[Command]:
@@ -397,7 +419,7 @@ def read(
         read_pages[rel] = (found, idle)
         ids.update(m.record for m in found if m.kind == RECORD and m.record is not None)
         artefact = pages[rel]
-        if artefact is not None and artefact.anchors is not None:
+        if artefact is not None:
             ids.update(value.split("#", 1)[0] for value in artefact.anchors.get(RECORD, ()))
     resolved = {
         id: location.split("#", 1)[0] if location is not None else None
@@ -810,12 +832,12 @@ def _grounds(
     artefact: Artefact | None, resolved: Mapping[str, str | None], documents: Documents
 ) -> _Grounds:
     """What the page's anchors stand on, as the backbone resolves them."""
-    if artefact is None or artefact.anchors is None:
+    if artefact is None:
         return _Grounds(frozenset(), {}, {})
     whole: set[str] = set()
     named: dict[str, set[str]] = {}
     spans: dict[str, list[tuple[int, int]]] = {}
-    for files in (artefact.standing or {}).values():
+    for files in artefact.standing.values():
         whole.update(files)
     for value in artefact.anchors.get("artefact", ()):
         path, mark, part = value.partition("#")

@@ -352,6 +352,7 @@ from _lib import (
     structure,
     views,
 )
+from _lib import document_keys as keys
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
@@ -2207,19 +2208,33 @@ def _revalidated_on(
     Implications). It is never read from a file. `None` without one. Two live
     revalidations made apart each count. Raises Unreadable where the backbone
     cannot explain the artefact, or gives no `answers`."""
-    document = explain(root, artefact.location)
+    return last_revalidated(explain(root, artefact.location))
+
+
+def last_revalidated(document: Mapping[str, Any]) -> str | None:
+    """The latest day of the live revalidations an explanation, `pkit friction explain
+    --json`, gives in `answers`, as `_revalidated_on` reads it: `None` without one, and
+    for an artefact with no block, whose `answers` is null. Raises Unreadable for a key
+    it reads that is missing, null where the CLI reference prints no null, or of another
+    type (ADR-097 point 3)."""
     if "answers" not in document:
         raise Unreadable(
             "`pkit friction explain --json` gives no `answers`: the installed backbone "
             "predates them — upgrade it (`pkit upgrade`)"
         )
-    answers = document.get("answers")
-    revalidations = answers.get("revalidations") if isinstance(answers, Mapping) else None
-    days = [
-        at[:10]
-        for entry in (revalidations if isinstance(revalidations, list) else [])
-        if isinstance(entry, Mapping) and isinstance(at := entry.get("at"), str) and len(at) >= 10
-    ]
+    try:
+        answers = keys.mapping_or_null(document, "answers", "")
+        if answers is None:
+            return None
+        days = [
+            at[:10]
+            for where, entry in keys.objects(answers, "revalidations", "answers")
+            if (at := keys.text_or_null(entry, "at", where)) is not None and len(at) >= 10
+        ]
+    except keys.Untold as exc:
+        raise Unreadable(
+            f"`pkit friction explain --json` answered a document this capability cannot read: {exc}"
+        ) from exc
     return max(days, default=None)
 
 

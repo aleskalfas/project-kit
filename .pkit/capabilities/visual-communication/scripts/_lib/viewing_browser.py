@@ -229,6 +229,9 @@ SLIVER = 0.01
 #: forcing keeps (DEC-037 point 3).
 STRENGTH = ("CanvasText", "Canvas")
 
+#: How often a span's ink is read, where the pictures of its band do not hold still.
+INK_TRIES = 3
+
 #: How often a throwaway folder is tried, and the wait between: a helper of the browser may
 #: outlive it by a moment, and write as it goes.
 REMOVALS = 5
@@ -1074,15 +1077,29 @@ def _left_ink(
 ) -> bool:
     """Whether `span` alone changes the band of its page around it, as far as the page's room
     reaches. Each band is compared with itself empty, since a clip's pixels depend on where it
-    lies."""
+    lies. A picture is trusted only where the page has painted since the span was marked, the
+    picture with the span shown is the same twice where it differs from the empty one, and the
+    band is the empty one again once the span is not shown: else the blank is taken afresh, and
+    the read stops after `INK_TRIES` such rounds, which a browser that gives two pictures of one
+    page does not leave a read to guess between."""
     band = _band(span, page, room)
     key = tuple(band.values())
-    if key not in blanks:
-        blanks[key] = started.picture(band)
-    started.ask(ALONE, MARKS["span"], span["index"], ALONE_MARK, True)
-    picture = started.picture(band)
-    started.ask(ALONE, MARKS["span"], span["index"], ALONE_MARK, False)
-    return picture != blanks[key]
+    for _ in range(INK_TRIES):
+        if key not in blanks:
+            blanks[key] = started.picture(band)
+        started.ask(ALONE, MARKS["span"], span["index"], ALONE_MARK, True)
+        started.ask(SETTLE)
+        picture = started.picture(band)
+        steady = picture == blanks[key] or picture == started.picture(band)
+        started.ask(ALONE, MARKS["span"], span["index"], ALONE_MARK, False)
+        started.ask(SETTLE)
+        if steady and started.picture(band) == blanks[key]:
+            return picture != blanks[key]
+        del blanks[key]
+    raise started.stop(
+        f"the browser gave the band around the text `{span['text']}` as more than one picture "
+        f"in {INK_TRIES} tries, so its ink cannot be told"
+    )
 
 
 def _band(span: Mapping[str, Any], page: Mapping[str, Any], room: int = 0) -> dict[str, float]:

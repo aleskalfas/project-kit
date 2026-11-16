@@ -29,6 +29,13 @@ carrying an unmet mark (``unmet_mandatory_upstreams``); upgrading or
 uninstalling the capability it targets warns, naming each counterpart, and
 proceeds only under ``--force`` (``mandatory_counterparts_left_unmet``). Both
 judge through the wiring resolver, never by reading process definitions.
+
+Externally-sourced capabilities (COR-041, ADR-040): a capability pulled whole
+from another git repository at a pin. ``capability_fetch`` stages it; this
+module installs the staged tree with its pin (``install_capability``), brings
+an installed copy to the pin's content (``copy_fetched_capability``), reads the
+pin back (``read_capability_pin``), and removes the copy, keeping its
+``project/`` tier (``uninstall_capability``).
 """
 
 from __future__ import annotations
@@ -47,11 +54,13 @@ from ruamel.yaml import YAML
 
 from project_kit import agent_definitions, treecopy
 from project_kit.agents import carries_deploy_mark
+from project_kit.capability_fetch import shown as shown_source
 from project_kit.changesets import BACKBONE
 from project_kit.manifest import (
     ORIGIN_EXTERNALLY_SOURCED,
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
+    CapabilityPin,
     ComponentKind,
     ComponentManifest,
     ComponentRegistryEntry,
@@ -169,6 +178,8 @@ _COMPONENT_AREAS: dict[ComponentKind, str] = {"adapter": "adapters", "capability
 # `project/` tree is that project's instance data, not a template (#812).
 # See `_copy_capability_tree`.
 _CAPABILITY_PROJECT_SUBTREE = "project"
+# What an install stubs in that tier, so the folder is there to be written into.
+_PROJECT_STUB = ".gitkeep"
 
 
 # The key that marks a `requires_capabilities` entry optional (COR-030).
@@ -327,16 +338,17 @@ def authored_in_source(target_root: Path, source_kit: Path, name: str) -> bool:
 
 
 # Which source a caller wants when a name resolves in more than one place.
-CapabilityOrigin = str  # "kit-shipped" | "incubated-in-repo"
+CapabilityOrigin = str  # "kit-shipped" | "incubated-in-repo" | "externally-sourced"
 
 # The origin string values have a single canonical definition in
 # `manifest.py` (COR-031 D2 — origin is lifecycle-owned install-state, so the
 # manifest layer owns it). These module-level names are stable aliases kept
 # here so capability callers can keep referring to `caps.KIT_SHIPPED` /
-# `caps.INCUBATED_IN_REPO`; both bind to the manifest constants, so there is
-# one source of truth for the strings themselves.
+# `caps.INCUBATED_IN_REPO` / `caps.EXTERNALLY_SOURCED`; each binds to the
+# manifest constant, so there is one source of truth for the strings themselves.
 KIT_SHIPPED: CapabilityOrigin = ORIGIN_KIT_SHIPPED
 INCUBATED_IN_REPO: CapabilityOrigin = ORIGIN_INCUBATED_IN_REPO
+EXTERNALLY_SOURCED: CapabilityOrigin = ORIGIN_EXTERNALLY_SOURCED
 
 # The mark `pkit status` and `pkit capabilities list` give an installed capability
 # whose origin is not the default, so that a reader tells from them alone whether
@@ -352,6 +364,52 @@ def origin_mark(origin: str) -> str | None:
     """The mark of an installed capability of *origin*, or None for a kit-shipped one,
     which `pkit status` leaves unmarked."""
     return _ORIGIN_MARKS.get(origin)
+
+
+def pin_text(pin: CapabilityPin) -> str:
+    """A pin as pkit prints it: `<source> at <ref>`, a credential in the source never shown."""
+    return f"{shown_source(pin.source)} at {pin.ref}"
+
+
+def read_capability_pin(target_root: Path, name: str) -> CapabilityPin | None:
+    """The pin an externally-sourced capability's manifest records (ADR-040 point 3).
+
+    Read from the manifest under its ``project/``, where its install wrote it, out
+    of every copy's reach. None where there is no manifest, or it records no pin.
+    """
+    path = capability_manifest_path(target_root, name)
+    if not path.is_file() or _load_mapping(path) is None:
+        return None
+    manifest = read_component_manifest(path)
+    return manifest.pin if manifest is not None else None
+
+
+def fetched_capability(path: Path, name: str) -> CapabilitySource | None:
+    """The capability a fetch staged at *path*, or None where its ``package.yaml``
+    does not read as capability *name*'s."""
+    return _resolve_capability_dir(path, name)
+
+
+def landing_held(target_root: Path, name: str) -> str | None:
+    """What holds *name* at its landing path, ``.pkit/capabilities/<name>/``, or None.
+
+    The registered capability of that name, of any origin, or files outside the
+    folder's ``project/`` tier, such as a capability authored in this repository
+    and not registered. An externally-sourced install never lands over either
+    (ADR-040 point 6). A folder holding its ``project/`` tier alone, as an
+    uninstall of an externally-sourced capability leaves it, holds nothing.
+    """
+    origin = installed_capability_origins(target_root).get(name)
+    if origin is not None:
+        return f"the {origin_mark(origin) or KIT_SHIPPED} capability {name!r} installed here"
+    landing = target_root / ".pkit" / "capabilities" / name
+    if not landing.is_dir():
+        return None
+    if not any(entry.name != _CAPABILITY_PROJECT_SUBTREE for entry in landing.iterdir()):
+        return None
+    if find_capability_in_repo(target_root, name) is not None:
+        return f"the capability {name!r} authored in this repository at .pkit/capabilities/{name}/"
+    return f"the files at .pkit/capabilities/{name}/"
 
 
 @dataclass(frozen=True)
@@ -1346,6 +1404,7 @@ def install_capability(
     *,
     skipped_artifacts: tuple[tuple[str, str], ...] = (),
     dry_run: bool = False,
+    pin: CapabilityPin | None = None,
 ) -> Path:
     """Copy the capability subtree into the adopter and register it.
 
@@ -1353,6 +1412,13 @@ def install_capability(
     pairs the adopter chose to skip during interactive collision
     resolution. These files are NOT copied from source; their absence
     is recorded in the per-component manifest's `backend_state`.
+
+    *pin* installs a capability a fetch staged from another repository
+    (`capability_fetch`): it is registered `externally-sourced`, and its
+    manifest records the pin beside its version (ADR-040 point 3). Without
+    one the capability is the running pkit's, registered `kit-shipped`.
+    Either way the copy lands outside the subtree's ``project/`` tier, which
+    arrives empty.
 
     Returns the installed path: `<target_root>/.pkit/capabilities/<name>/`.
 
@@ -1374,10 +1440,12 @@ def install_capability(
     _copy_capability_tree(capability_source.path, dest, skipped_artifacts)
 
     # Register in the backbone manifest.
-    _register_in_backbone_manifest(target_root, capability_source.name)
+    origin = KIT_SHIPPED if pin is None else EXTERNALLY_SOURCED
+    _register_in_backbone_manifest(target_root, capability_source.name, origin=origin)
 
-    # Stamp per-component manifest with version + install timestamp + skip state.
-    _stamp_component_manifest(target_root, capability_source, skipped_artifacts)
+    # Stamp per-component manifest with version + install timestamp + skip state,
+    # and the pin of an externally-sourced one.
+    _stamp_component_manifest(target_root, capability_source, skipped_artifacts, pin=pin)
 
     return dest
 
@@ -1899,6 +1967,27 @@ def copy_shipped_capability(
     return dest
 
 
+def copy_fetched_capability(
+    target_root: Path,
+    capability_source: CapabilitySource,
+    skipped_artifacts: tuple[tuple[str, str], ...],
+) -> Path:
+    """Bring an externally-sourced capability's copy to its pin's content (ADR-040 point 3).
+
+    Match-the-pin, the propagation sync runs for this origin (COR-041, COR-059
+    point 2): *capability_source*, the subtree a fetch staged at the pin,
+    replaces everything of the installed copy outside its ``project/`` tier, and
+    a file the pin's content does not hold is removed. The artefacts the project
+    skipped at install stay out. It writes no manifest, so the recorded pin and
+    version never move, and it creates no seed path, so a missing ``project/``
+    stays missing.
+    """
+    dest = target_root / ".pkit" / "capabilities" / capability_source.name
+    _refuse_copy_onto_itself(capability_source.path, dest)
+    _copy_capability_tree(capability_source.path, dest, skipped_artifacts, stub_project=False)
+    return dest
+
+
 def migrate_copied_capability(
     target_root: Path,
     capability_source: CapabilitySource,
@@ -2041,6 +2130,10 @@ class UninstallOutcome:
       the files (``files_deleted=False``), unless the caller opts in to a
       purge.
 
+    - an ``externally-sourced`` capability's copy is removed too, everything
+      outside its ``project/`` tier with its manifest, and the rest of that
+      tier, the project's own, stays (``project_tier_kept``).
+
     Where the subtree is the capability's source (``in_source``, #1107) it is
     kept whatever the origin.
 
@@ -2050,10 +2143,13 @@ class UninstallOutcome:
     """
 
     cap_dir: Path  # the capability's subtree path (deleted or kept)
-    origin: str  # kit-shipped | incubated-in-repo
+    origin: str  # kit-shipped | incubated-in-repo | externally-sourced
     files_deleted: bool  # whether the subtree was (or would be) removed
     in_source: bool = False  # the subtree is the capability's source (`authored_in_source`)
     adapters_without_undeploy: tuple[str, ...] = ()  # adapters that could not undeploy it
+    # The `project/` tier an externally-sourced copy's removal keeps, holding the
+    # project's own files; None where nothing of it stays.
+    project_tier_kept: Path | None = None
 
 
 def uninstall_capability(
@@ -2083,6 +2179,12 @@ def uninstall_capability(
       agents are removed by the deploy the caller re-runs: once the
       capability is unregistered, none of its definitions counts (ADR-087
       point 4).
+    - **externally-sourced** — everything outside the ``project/`` tier is a
+      copy pulled from the pinned source (ADR-040 point 3), so it is deleted,
+      and so is the manifest that records the pin. The rest of the ``project/``
+      tier is the project's own and stays (`_remove_fetched_copy`). The
+      caller's deploy re-run drops the harness entries, as for a kit-shipped
+      one.
 
     The same write that unregisters the capability drops the project's
     choices of it (COR-017).
@@ -2127,7 +2229,10 @@ def uninstall_capability(
         )
 
     adapters_without_undeploy: tuple[str, ...] = ()
-    if delete_files:
+    project_tier_kept: Path | None = None
+    if delete_files and origin == ORIGIN_EXTERNALLY_SOURCED:
+        project_tier_kept = _remove_fetched_copy(target_root, name)
+    elif delete_files:
         if cap_dir.is_dir():
             shutil.rmtree(cap_dir)
         # The subtree is gone, so the deploy primitives' own stale-removal
@@ -2152,7 +2257,39 @@ def uninstall_capability(
         files_deleted=delete_files,
         in_source=in_source,
         adapters_without_undeploy=adapters_without_undeploy,
+        project_tier_kept=project_tier_kept,
     )
+
+
+def _remove_fetched_copy(target_root: Path, name: str) -> Path | None:
+    """Remove an externally-sourced capability's copy, keeping its ``project/`` tier.
+
+    Deletes every entry of ``.pkit/capabilities/<name>/`` but ``project/``, the
+    copy a fetch wrote (ADR-040 point 3), then the manifest under ``project/``
+    that records the pin and the version. The rest of ``project/`` is the
+    project's own and stays. Where nothing of the project's stays there, only
+    the stub its install made or nothing at all, the folder goes whole.
+
+    Returns the kept ``project/`` folder, or None where the folder went whole.
+    """
+    cap_dir = target_root / ".pkit" / "capabilities" / name
+    if not cap_dir.is_dir():
+        return None
+    for entry in cap_dir.iterdir():
+        if entry.name == _CAPABILITY_PROJECT_SUBTREE:
+            continue
+        if entry.is_dir() and not entry.is_symlink():
+            shutil.rmtree(entry)
+        else:
+            entry.unlink()
+    capability_manifest_path(target_root, name).unlink(missing_ok=True)
+    project = cap_dir / _CAPABILITY_PROJECT_SUBTREE
+    if project.is_dir() and any(
+        entry.name != _PROJECT_STUB or entry.is_dir() for entry in project.iterdir()
+    ):
+        return project
+    shutil.rmtree(cap_dir)
+    return None
 
 
 def find_references(
@@ -2525,7 +2662,7 @@ def _copy_capability_tree(
     # use it, and materialising the source's nested dirs would leak its shape.
     project_dir = dest / _CAPABILITY_PROJECT_SUBTREE
     project_dir.mkdir(parents=True, exist_ok=True)
-    keep = project_dir / ".gitkeep"
+    keep = project_dir / _PROJECT_STUB
     if not any(project_dir.iterdir()):
         keep.touch()
 
@@ -2541,7 +2678,7 @@ def _register_in_backbone_manifest(
 
     The entry names the capability's manifest under its ``project/``
     (``manifest.capability_manifest_rel``), whatever the origin. Only a
-    kit-shipped install writes a manifest there.
+    kit-shipped or an externally-sourced install writes a manifest there.
     """
     backbone = read_backbone_manifest(target_root)
     if backbone is None:
@@ -2587,13 +2724,15 @@ def _stamp_component_manifest(
     skipped_artifacts: tuple[tuple[str, str], ...],
     *,
     restamp: bool = False,
+    pin: CapabilityPin | None = None,
 ) -> None:
     """Write the capability's manifest under its ``project/`` (ADR-065 point 2).
 
     Records the version, the install timestamp and the range of
     *capability_source*, and the skips in force in ``backend_state.skipped``,
     for the next refresh to read back (`read_prior_skipped_artifacts`), and
-    points the registry entry at the path written.
+    points the registry entry at the path written. An externally-sourced
+    capability's install records its *pin* beside them (ADR-040 point 3).
 
     A *restamp*, after a refresh's migrations and copy, keeps every key of the
     manifest's ``backend_state`` but the skips, which *skipped_artifacts*
@@ -2633,6 +2772,7 @@ def _stamp_component_manifest(
         installed_at=_dt.datetime.now(_dt.UTC).isoformat(),
         requires_backbone=capability_source.package.requires_backbone,
         backend_state=backend_state,
+        pin=pin,
     )
     write_component_manifest(path, manifest)
     set_component_manifest_path(target_root, "capability", name, capability_manifest_rel(name))

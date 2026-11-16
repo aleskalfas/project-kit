@@ -10,6 +10,7 @@ metadata:
     - pkit visual check
     - pkit visual look
     - pkit visual pages
+    - pkit visual intent
     - pkit visual release
     - pkit validate
 composes:

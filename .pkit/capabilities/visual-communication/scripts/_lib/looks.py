@@ -171,8 +171,17 @@ def base_commit(root: Path, base: str | None) -> str:
         document = None
     if proc.returncode != 0 or not isinstance(document, Mapping):
         raise pl.Refused(f"`{shown}` exited {proc.returncode} without its document")
+    return fork_of(document)
+
+
+def fork_of(document: Mapping[str, Any]) -> str:
+    """The commit where the branch left the base, as `pkit repository base --json` answers
+    it. The document is read by its keys (ADR-097 point 3): a base that is not an object,
+    and a fork that is missing or not a commit, are a base that resolves to nothing, never
+    a commit. Raises Refused for those, and for a version this capability does not read."""
+    shown = " ".join(BASE_ARGV)
     version = document.get("schema_version")
-    if version != READING_VERSION:
+    if type(version) is not int or version != READING_VERSION:
         raise pl.Refused(
             f"`{shown}` answered schema_version {version!r}; this capability reads "
             f"{READING_VERSION}"
