@@ -514,6 +514,7 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
   - `install._install_adapter` leaves out `permission-enforcement.yaml`.
   - `capabilities` reads and writes a capability's manifest at its root, and `manifest.write_component_manifest` replaces `backend_state` whole.
   - A transition moves no externally-sourced capability's pin, and refuses no copy out of line: it reads each such capability's ranges from its copy (points 4 and 6). #3229 builds both (ADR-040's Implications).
+  - Sync's match of an externally-sourced capability's pin keeps the copy where the pin's ref has moved on or is gone, where point 1 brings the copy to the commit its pin records. Nor does it check the content's backbone range against the one recorded beside the pin, or fail its check on a manifest that records no version, as ADR-040 point 3 does. #3349 brings both in line (ADR-040's Implications).
   - `pkit upgrade` skips a capability its bundle ships older, through sync's capability downgrade check, where point 7 refuses.
   - `upgrade._check_capability_dep_conflicts_for_upgrade` reads the installed versions.
   - `upgrade._auto_advance_pinned` compares only the latest release with the pin, and returns when they are equal.
