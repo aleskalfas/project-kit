@@ -1970,7 +1970,7 @@ A `fail` makes the command exit 1, and the list prints then too.
 - `assignees`: their logins.
 - `milestone`: its title, or `null`.
 - `parent_ref`: the body's first line, past an integration marker, as written. Empty where the body is.
-- `classification`: `type`, `priority` and `workstream`, each the labels that carry the axis, as text for people, such as `<your label> -> <value>` on an axis your labels carry through the substrate map.
+- `classification`: `type`, the issue's `type:` labels; `priority` and `workstream`, each the labels that carry the axis, as text for people, such as `<your label> -> <value>` on an axis your labels carry through the substrate map.
 - `other_labels`: each label on no axis.
 - `required_sections`: each section its type requires, with `heading`, and `present`, whether the body holds it.
 - `criteria` and `doc_impact`: the items of its criteria and of its `## Doc impact`, in the order `check-criterion` numbers them.
