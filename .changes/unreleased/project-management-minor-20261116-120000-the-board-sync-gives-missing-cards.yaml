@@ -22,6 +22,9 @@ body: >
   it. Each message that reports a missing card, such as `set-field`'s refusal,
   the membership check, the back-fill's blocked write and a filing whose add
   failed, now names `pkit pm sync-board <N>` in place of `gh project item-add`.
+  A filing whose add failed where the host's answer gave no number for the new
+  issue says so, and names `pkit pm sync-board` run for the whole board instead,
+  which adds that card with every other open issue's that lacks one.
   The board read seam gains a read of one card by its id, and marks each card
   its walk returns archived or not. Nothing a project holds changes, so no
   migration is owed.
