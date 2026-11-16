@@ -1,0 +1,25 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/rule-sets/comm.md#RS-COMM-001
+    read:
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261111T115332Z-fe0ee923.yaml
+      - 20261116T070049Z-7ae3a863.yaml
+      - 20261116T074044Z-8e03e0ad.yaml
+    revalidated:
+      at: 2026-11-16T09:48:08Z
+      outcome: unchanged
+      unchanged-because: "Its words stand. It comes to anchor DEC-046 point 2, since the reviewer's body traces one fault to its words 'the main visual shows that answer': a wrong picture as the main visual, which does not show what the lead says. So that fault holds its grade below professional, and a change to point 2 flags it. A main visual the page does not draw cites no rule, by the test point 2 applies to every rule, and one it draws where a reader cannot see it cites what any such part cites."
+  - artefact: .pkit/capabilities/visual-communication/rule-sets/graphic.md#RS-GRAPHIC-005
+    read:
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261111T115332Z-fe0ee923.yaml
+      - 20261116T070049Z-7ae3a863.yaml
+      - 20261116T074044Z-8e03e0ad.yaml
+    revalidated:
+      at: 2026-11-16T09:48:24Z
+      outcome: unchanged
+      unchanged-because: Its words stand. Its first sentence, 'Everything on a page can be read', judges each part the page draws where the piece is shown, and a text as it was drawn, as DEC-046 point 5 words it for a text; its second judges the glance; and comparing a text's size with its medium's minimum stays a check's. It comes to anchor DEC-046 points 2 and 5, for the faults those words name, a part drawn that a reader cannot see among them, and for that division of the rule.
