@@ -169,7 +169,7 @@ def test_a_failed_write_is_one_line_and_the_move_stands(
     assert warning == [
         f"[warn] #{task}: the board's Status was not set to 'In Progress': "
         "gh project item-edit failed: HTTP 502: Bad Gateway; the move stands, "
-        "and `sync-board` sets it"
+        f"and `pkit pm sync-board {task}` sets it"
     ]
 
 
@@ -183,7 +183,9 @@ def test_an_issue_with_no_card_is_said_and_the_move_stands(
     assert world.move(task, "in-progress") == 0
 
     assert world.labels(task)[-1] == "state:in-progress"
-    said = f"#{task} has no card on board #4; the move stands, and `sync-board` sets it"
+    said = (
+        f"#{task} has no card on board #4; the move stands, and `pkit pm sync-board {task}` sets it"
+    )
     assert said in capsys.readouterr().err
 
 

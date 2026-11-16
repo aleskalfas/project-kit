@@ -9,6 +9,9 @@ a witness. :class:`GraphBoard` answers such a request as GitHub does: the data o
 each part, an error placed by its path on a part that failed, and `gh`'s non-zero
 exit where any error is placed.
 
+A read of one card by its item id asks for it beside the board's own read, under
+the alias `card`.
+
 A fake board subclasses it, or holds one, and says what the board holds through
 the methods below; each method's default holds nothing. Nothing here touches a
 network.
@@ -68,11 +71,12 @@ class GraphBoard:
 
     ``node``, ``number`` and ``owner`` are the board's names. A subclass says
     what the board holds: :meth:`fields`, :meth:`own_cards`, :meth:`more_cards`,
-    :meth:`repository_of`, :meth:`recent_issues` and :meth:`walk`. ``failing``
-    maps a part of a read (`fields`, `cards`, `items`) to the words of a request
-    that fails whole on it; ``placed`` maps a part to the words of an error placed
+    :meth:`repository_of`, :meth:`recent_issues`, :meth:`walk` and
+    :meth:`card_by_id`. ``failing`` maps a part of a read (`fields`, `cards`,
+    `items`) to the words of a request that fails whole on it, a read of one card
+    by its id among `cards`; ``placed`` maps a part to the words of an error placed
     on that part alone, the rest of the request answering (`board`, `cards`,
-    `page`, `issue:<node id>`)."""
+    `page`, `issue:<node id>`, `card`)."""
 
     def __init__(self, *, node: str, number: int, owner: str) -> None:
         self.node = node
@@ -114,6 +118,12 @@ class GraphBoard:
         only where ``archived`` is asked."""
         return []
 
+    def card_by_id(self, item_id: str, value_field: str | None) -> dict[str, Any] | None:
+        """The card whose item id is ``item_id``, with its `id`, `isArchived`,
+        `project` and, where ``value_field`` is asked, its `fieldValueByName`;
+        None for an id that names no card."""
+        return None
+
     # --- the answer -------------------------------------------------------------
 
     def identity(self) -> dict[str, Any]:
@@ -143,6 +153,8 @@ class GraphBoard:
         data["board"] = self._addressed(query, board)
         if "issues: nodes(ids:" in query:
             self._cards(argv, query, data, errors)
+        if "card: node(id: $item)" in query:
+            self._card(argv, query, data, errors)
         if errors:
             return done(argv, 1, json.dumps({"data": data, "errors": errors}), errors[0]["message"])
         return done(argv, 0, json.dumps({"data": data}))
@@ -255,6 +267,26 @@ class GraphBoard:
         for alias in re.findall(r"(carried\d+): node\(id: \$carried\d+\)", query):
             issue_id = flag_value(argv, alias) or ""
             data[alias] = self._issue(issue_id, None)
+
+    def _card(
+        self, argv: list[str], query: str, data: dict[str, Any], errors: list[dict[str, Any]]
+    ) -> None:
+        """One card by its item id, as GitHub answers a node: null, with a
+        not-found error on it, for an id that names none."""
+        item_id = flag_value(argv, "item") or ""
+        if "card" in self.placed:
+            errors.append({"type": "FORBIDDEN", "path": ["card"], "message": self.placed["card"]})
+            data["card"] = None
+            return
+        value_field = flag_value(argv, "field") if "fieldValueByName" in query else None
+        node = self.card_by_id(item_id, value_field)
+        if node is None:
+            errors.append(
+                not_found(
+                    ["card"], f"Could not resolve to a node with the global id of '{item_id}'"
+                )
+            )
+        data["card"] = node
 
     def _issue(self, issue_id: str, value_field: str | None) -> dict[str, Any] | None:
         cards = self.own_cards(issue_id, value_field)

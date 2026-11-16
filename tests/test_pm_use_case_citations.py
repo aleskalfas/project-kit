@@ -507,6 +507,21 @@ def test_an_outcome_this_reading_cannot_read_is_could_not_check(
     assert UNREADABLE_OUTCOME in detail
 
 
+@pytest.mark.parametrize("version", [True, False, 1.0])
+def test_a_version_that_is_no_whole_number_is_could_not_check(uc: ModuleType, version: Any) -> None:
+    """`true` and `1.0` equal 1 to Python, yet neither is a version this reading knows
+    (ADR-097 point 3): one notice that the citations were not checked, never the set
+    the document holds."""
+    reading = uc.read_point(_answering({**HAS_ENTRIES, "schema_version": version}))
+    assert reading == uc.NotChecked(
+        f"the backbone answered a document at version {version!r}; this reading understands 1"
+    )
+    [(severity, label, _detail)] = uc.findings(
+        _body("UC-042"), "task", BODY_FORMAT, lambda: reading
+    )
+    assert (severity, label) == ("warning", UNCHECKED)
+
+
 def _reader(uc: ModuleType, document: Mapping[str, Any]) -> Callable[[], Any]:
     return lambda: uc.reading_of(document)
 
