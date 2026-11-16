@@ -8,7 +8,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 > **Partially superseded by [visual-communication:DEC-032-ordered-colour-steps].** Overturned: in the Rationale's paragraph "Why the form rule narrows a reason, and leaves the model", the sentence "A change to how the engine resolves colour would rest on a judgement the engine cannot make: what a page's point is", and that the model stays, in its heading and its last sentence. Also overturned: the rejected alternative "The order's colour in the engine's model". The rule's narrowing of the principle stands, as does the rest, and those passages stay as they stood.
 
-**In plain terms:** the capability ships its view of good visual communication as two rule sets. `COMM` asks whether a piece says the right thing, and `GRAPHIC` whether it looks right. Each rule is taken from the established principles of its field, and this record names its source, so no project writes them again. A project adds its own rules on top. `COMM` judges only a piece that explains, and `GRAPHIC` every piece. Each rule says apart what can be judged from the content's text and what only the drawn page shows. The rules bind on a piece only once its content is something rules bind on. Until then they guide whoever designs or judges a piece. One rule, on how a page's differences show, narrows a reason the founding record gives for colour.
+**In plain terms:** the capability ships its view of good visual communication as two rule sets. `COMM` asks whether a piece says the right thing, and `GRAPHIC` whether it looks right. Each rule is taken from the established principles of its field, and this record names its source, or, for `RS-GRAPHIC-008`, on running text, [visual-communication:DEC-046-faults-lower-grades] does (refinement per that record, point 7), so no project writes them again. A project adds its own rules on top. `COMM` judges only a piece that explains, and `GRAPHIC` every piece. Each rule says apart what can be judged from the content's text and what only the drawn page shows. The rules bind on a piece only once its content is something rules bind on. Until then they guide whoever designs or judges a piece. One rule, on how a page's differences show, narrows a reason the founding record gives for colour.
 
 ## Context
 
@@ -22,11 +22,11 @@ A piece's content is a plain data file, and rules bind only on artefacts. Making
 
 ## Decision
 
-**The capability ships the principles of visual communication as two method rule sets. `COMM` judges whether a piece says the right thing, and `GRAPHIC` whether it looks right. Each rule is taken from the established canon of its field, and this record names its source. `COMM` judges only a piece that explains, and `GRAPHIC` every piece. Each rule says apart what the content's text shows and what only the drawn page shows. The sets bind on nothing until a piece's content is an artefact.**
+**The capability ships the principles of visual communication as two method rule sets. `COMM` judges whether a piece says the right thing, and `GRAPHIC` whether it looks right. Each rule is taken from the established canon of its field, and this record names its source, or, for `RS-GRAPHIC-008`, on running text, [visual-communication:DEC-046-faults-lower-grades] does (refinement per that record, point 7). `COMM` judges only a piece that explains, and `GRAPHIC` every piece. Each rule says apart what the content's text shows and what only the drawn page shows. The sets bind on nothing until a piece's content is an artefact.**
 
 ### 1. The rules are the canon's, and a project adds its own
 
-The shipped rules are known principles of good design, which no project wants the opposite of. Each is taken from a source this record names. A talk or a project that shows a rule at work confirms it, and is never its source. A project adds its own rules on top, in a set of its own that inherits these (COR-051 point 7).
+The shipped rules are known principles of good design, which no project wants the opposite of. Each is taken from a source this record names, or, for `RS-GRAPHIC-008`, from one [visual-communication:DEC-046-faults-lower-grades] names (refinement per that record, point 7). A talk or a project that shows a rule at work confirms it, and is never its source. A project adds its own rules on top, in a set of its own that inherits these (COR-051 point 7).
 
 What the sets leave to others:
 - **The look** is the libraries': a brand's values, a component's form and a notation's concepts.
@@ -85,7 +85,7 @@ These rules judge how a piece says it.
 
 These rules judge what a reader sees first, and what as one.
 - **`RS-GRAPHIC-001`, one focal point.** Sources: visual hierarchy, and the designer's squint test. `COMM` asks whether a page says its point, and this rule whether the eye finds it first.
-- **`RS-GRAPHIC-002`, what belongs together is grouped and lined up.** Sources: the Gestalt principles of proximity and connection; Robin Williams' proximity and alignment (*The Non-Designer's Design Book*). Lining parts up to a page's grid is mostly the layouts' work, so the rule's judgement is mostly which parts belong together.
+- **`RS-GRAPHIC-002`, what belongs together is grouped and lined up.** Sources: the Gestalt principles of proximity and connection; Robin Williams' proximity and alignment (*The Non-Designer's Design Book*). Lining parts up to a page's grid is mostly the layouts' work, so the rule's judgement is mostly which parts belong together. Whether parts that belong together were given a shared line is the rule's too, and whether parts given one lie on it is the reviewer's fault of alignment, which cites the rule (refinement per [visual-communication:DEC-046-faults-lower-grades] point 3).
 
 ### 9. Nothing extra, and one meaning one look
 
@@ -96,7 +96,7 @@ These rules judge what a page holds.
 ### 10. Everyone can read it, where it is shown
 
 These rules judge who can read a page.
-- **`RS-GRAPHIC-005`, readable where it is shown.** Sources: Nancy Duarte's glance test (*slide:ology*); legibility minimums for each medium, such as the display image size standard ANSI/INFOCOMM V202.01 (AVIXA's DISCAS). A smallest text size for a medium is a check's, run always (point 1), and the glance test is the rule's.
+- **`RS-GRAPHIC-005`, readable where it is shown.** Sources: Nancy Duarte's glance test (*slide:ology*); legibility minimums for each medium, such as the display image size standard ANSI/INFOCOMM V202.01 (AVIXA's DISCAS). A smallest text size for a medium is a check's, run always (point 1), and the glance test is the rule's. How much a page holds is evidence for the glance test alone, and never for whether a text can be read (refinement per [visual-communication:DEC-046-faults-lower-grades] point 5).
 - **`RS-GRAPHIC-006`, colour is never the only signal.** About one man in twelve cannot tell some colours apart, a projector washes colours out, and a print may be grey. Source: WCAG 1.4.1, use of colour. Contrast (WCAG 1.4.3) is a check's, run always.
 
 ### 11. The form says what the content says
@@ -113,7 +113,7 @@ Sources: Jock Mackinlay's expressiveness and effectiveness (*Automating the Desi
 
 **Why the canon, and not a project's taste.** No project wants a page without a point, or a colour only some readers can tell apart. A principle that holds for every audience is know-how the capability carries, as its founding record says (DEC-001 point 1). A project's taste, such as a word limit, holds for its own audience alone, so it stays the project's (COR-014).
 
-**Why the reasons live in a record.** Each rule rests on a source and a judgement longer than a line, and a record holds such a reason (COR-051 point 5). An origin in the decider's own words would read, to an adopter, as one person's say. The canon behind it would then have no home. A point per group of rules lets each rule anchor to its reason, so a change to the reason flags the rule. The record gives each rule's id, title, sources and reason, and the rule's statement is its set's.
+**Why the reasons live in a record.** Each rule rests on a source and a judgement longer than a line, and a record holds such a reason (COR-051 point 5). An origin in the decider's own words would read, to an adopter, as one person's say. The canon behind it would then have no home. A point per group of rules lets each rule anchor to its reason, so a change to the reason flags the rule. The record gives each rule's id, title, sources and reason, or, for `RS-GRAPHIC-008`, [visual-communication:DEC-046-faults-lower-grades] does, and the rule's statement is its set's.
 
 **Why two sets.** A finding that names its kind of failure tells its reader what to mend. One set would mix "the lead does not answer the title" with "the title is too small to read".
 
@@ -157,7 +157,7 @@ Sources: Jock Mackinlay's expressiveness and effectiveness (*Automating the Desi
 
 ## Implications
 
-- **The capability ships two method rule sets** in its rule-sets folder, `COMM` and `GRAPHIC`. Each rule cites this record as its origin, and anchors to the points it rests on. The rules are accepted with this record. In a project that installs the capability, both names join the names of its rule sets, which are unique (COR-051 point 3).
+- **The capability ships two method rule sets** in its rule-sets folder, `COMM` and `GRAPHIC`. Each rule cites this record as its origin, but `RS-GRAPHIC-008`, whose origin is [visual-communication:DEC-046-faults-lower-grades] (refinement per that record, point 7), and anchors to the points it rests on. The rules are accepted with this record. In a project that installs the capability, both names join the names of its rule sets, which are unique (COR-051 point 3).
 - **Edits to accepted records,** made once this record is accepted, in the change that proposes it (COR-066 point 5):
   - **The founding record's Rationale,** "Why options are declared, and colour follows meaning." Its sentence that a colour says what a thing is, not where it sits, gains its limit: on a page whose point is an order, the parts that show the order show the order, and each concept keeps its colour on a mark of its own (refinement per this record, point 11).
   - **The founding record's Implications.** Its list of what is left to later records no longer names the rules of good visual communication with their reasons (refinement per this record).
