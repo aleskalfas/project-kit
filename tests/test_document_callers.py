@@ -1003,12 +1003,10 @@ def test_project_management_reads_the_change_check_as_its_contract_says() -> Non
 
 
 def test_project_management_knows_each_answer_and_refusal_the_change_check_names() -> None:
-    """A value of a set the contract names is one project-management reads as itself. A
-    revisit's `updated`, which the check gives a target revisited by changing it (the CLI
-    reference), is known beside the two the contract lists."""
+    """A value of a set the contract names is one project-management reads as itself."""
     fa, sets = pm_friction_answers, documents.FRICTION_CHECK.sets
     assert set(fa._WRITTEN_ANSWERS) == sets["written:answer"]
-    assert set(fa._REVISIT_OUTCOMES) == {*sets["written:outcome"], fa.UPDATED}
+    assert set(fa._REVISIT_OUTCOMES) == sets["written:outcome"]
     assert set(fa._REFUSALS) == sets["refused.kind"]
 
 
