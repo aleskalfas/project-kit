@@ -64,6 +64,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/calibration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
+        - .pkit/capabilities/visual-communication/scripts/_lib/scene_checks.py
       record:
         - visual-communication:DEC-001#2
         - visual-communication:DEC-002#1
@@ -169,6 +170,9 @@ pkit:
         - visual-communication:DEC-042#9
         - visual-communication:DEC-042#10
         - visual-communication:DEC-030#2
+        - visual-communication:DEC-062#1
+        - visual-communication:DEC-062#2
+        - visual-communication:DEC-063#1
         - ADR-097
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
@@ -852,7 +856,8 @@ The check reads this code as it reads any written code (*Written code* in *What 
 
 The *viewing step* draws a piece's pages as images, for a person or an agent to read (DEC-015 point 1). `pkit visual look <piece>` runs it, and `pkit visual pages <piece>` lists what it can draw.
 
-- **No render, and no export.** It moves no lock and keeps no findings. It uses up no version number, writes no `exports.yaml` and records no location.
+- **No render, and no export.** It moves no lock and keeps no findings record. It uses up no version number, writes no `exports.yaml` and records no location.
+- **What the checks found.** It runs the checks a render runs on a scene, by the same code, on the scenes it computes ([Scenes](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->): each key over the size axes of each language it draws, whichever keys it draws, and of each language a check compares. Its report gives each image the findings that hold on it, and lists apart those on no image drawn, such as at a key the run did not draw. It never reads a piece's findings record, which holds what the last render found, on scenes that may differ (DEC-062 point 1).
 - **An export's facts** show as in a [preview](#previews): a number shown is the next export's, which the run leaves for it. Where an image shows a stand-in, the command says so, and why, after what the report says ([The facts of an export](components.md#the-facts-of-an-export)).
 - **Under the lock.** It reads the lock `piece.yaml` holds, and computes the piece's scenes under it (DEC-015 point 4).
 - **It runs no helper or producer.** A produced picture is drawn as it stands, stale or not. One with no variant for the key is left out, as a loss. So is a picture file that is missing or cannot be read.
@@ -953,6 +958,18 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
   - `no face`: the file holds no face of its family at its weight, with that family and weight;
   - `font of the machine`: the browser drew it, even in part, in a font of the machine, with each such font.
 - **`profiles`:** through the SVG renderer, each picture a page shows that carries a colour profile, with its element and its file's name. resvg may draw it without its profile, where a browser draws it by it (DEC-025 point 5).
+
+What the checks found on the scenes the run computed (DEC-062 points 1 and 2), through either renderer:
+
+- **`findings`,** on each image: each finding that holds on it. A finding gives its `check`, the id of the check that found it where that check states a [reach](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->, else `null`; its `label`, `level`, `location` and `message`, as the check gives them; and its `language`, `key` and `page`, each `null` where it holds in every language, at every key or on no page. Its key is a whole key for a finding of a check of colour that names a combination, as `contrast-drawn` does, once for each it names, and a key over the size axes for any other, which holds alike in every combination its scene serves.
+  - **Which image takes it.** Each image of its language and key, those for every language or every key among them, on its page or on no page. A band takes its page's. A finding the checks give once for several places, as for a concept told by its colour alone, is given to each image that shows one of them.
+  - **A forced image** takes the findings of its language, its key over the size axes and its page, and none of a check of colour that names a combination: its colours are the browser's palette's, which no check measures (DEC-027 point 6).
+  - **Given once.** A loss the report lists under `losses` for the image is not given again.
+- **`measured-by`,** on each image: the id of each check that measured it. A check measured an image where it states a reach and ran on the image's scene, and the checks' code stopped neither on that scene nor, for a check that compares scenes, on one it compares. A check of colour measures no forced image. A check that states no reach measured no image, though its findings are given.
+- **`not-measured`,** on each image: each check that states a reach and did not measure it, its `check` and `why`. Where the checks' code stops on a scene, the run still draws its images, and says here why no check measured them. A scene the run computes only for its findings stops no image it draws.
+- **`on-no-image`:** each finding the run gives to no image drawn, as above, for each key it holds for. Draw its language, key or page to see it.
+- **`reaches`:** the reach of each check that states one, by its id, as the code that ran states it: its `labels`, the axes it `compares` across, whether it is a check of `colour`, the kinds of place it `measures` and `leaves-out`, and what it `states` as a fact where it could measure nothing, with each such statement's label, `statements`.
+- **`capability`:** the capability's `name` and the `version` that ran the checks.
 
 Through the HTML renderer the report holds these too:
 

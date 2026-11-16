@@ -98,10 +98,29 @@ def test_only_a_difference_past_a_pixel_and_short_of_the_step_is_near(
     assert bool(boxes.near_alignment(given, STEP)) is reported
 
 
-def test_a_step_no_longer_than_a_pixel_leaves_nothing_near() -> None:
+def test_a_step_no_longer_than_a_pixel_leaves_nothing_near_and_says_so() -> None:
+    """Where the brand gives no step of space at a key, or one no longer than a pixel of
+    rounding, nothing can be near: the check states as a fact, at the brand, that it measured
+    nothing at that key (DEC-063 point 2)."""
     given = scene(element("figure/a"), element("figure/b", x=0.9, y=60))
-    assert boxes.near_alignment(given, boxes.Step("space.1", 1.0)) == []
-    assert boxes.near_alignment(given, None) == []
+    [short] = boxes.near_alignment(given, boxes.Step("space.1", 1.0))
+    [none] = boxes.near_alignment(given, None)
+    for stated in (short, none):
+        assert (stated.code, stated.level, stated.where) == (
+            boxes.NEAR_ALIGNMENT_UNMEASURED,
+            findings.FACT,
+            "brand",
+        )
+        assert stated.message.endswith(
+            "so nothing is near: the check of edges that nearly line up measured no pair or "
+            "group of siblings at this key"
+        )
+        assert not stated.fix and not stated.who
+    assert short.message.startswith(
+        "the brand's smallest step of space, `space.1`, 1 px, is no longer than a pixel of "
+        "rounding, so"
+    )
+    assert none.message.startswith("the brand gives no step of space at this key, so")
 
 
 def test_centres_a_little_apart_are_near_where_the_edges_lie_far_apart() -> None:
