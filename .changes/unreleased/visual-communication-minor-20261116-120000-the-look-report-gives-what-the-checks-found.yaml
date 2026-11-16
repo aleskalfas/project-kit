@@ -18,4 +18,6 @@ body: >
   whose brand gives no step of space or one no longer than a pixel, which the
   findings record keeps like any other. The reviewer reads every check from
   the look's report, never from `findings.yaml`, and reads a check's silence
-  by its reach. The findings record is otherwise as before.
+  by its reach. Its report gains a line, `Read without a check`, naming each
+  part missing where no check told it whether a size hides the part, and how
+  it read that part. The findings record is otherwise as before.
