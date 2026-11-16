@@ -1110,7 +1110,13 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
     to make, or it no longer merged cleanly — exit 3, with what the queue
     reported; nothing is deleted. Fix it and run again;
   - **head moved** after the checks were read — the PR is taken out of the
-    queue, so commits nobody checked do not merge; exit 3, nothing deleted.
+    queue; exit 3, nothing deleted. Taking it out races the queue, so
+    commits nobody checked may merge. Where taking it out finds the PR
+    merged, the run says at which head and exits 3, and a re-run deletes the
+    head branch; where it cannot tell whether the PR is out, it says how
+    to take it out by hand. Where the run's first reading at the new head
+    already shows the PR merged, that is a merge as above, exit 0, with a
+    warning naming the head it merged at and the head that was checked.
 
   Without a queue the merge is direct, pinned to the checked head; if GitHub
   then reports the PR queued rather than merged (a queue switched on
