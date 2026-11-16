@@ -63,7 +63,32 @@ answers:
       - 20261113T222453Z-06dececb.yaml
       - 20261114T113546Z-35debc4d.yaml
       - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T201738Z-88b7102c.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T091317Z-42b6403e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T213811Z-fcb1a04e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T060759Z-75e99435.yaml
+      - 20261116T071501Z-ef7c72db.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T073934Z-de939802.yaml
+      - 20261116T075435Z-97191300.yaml
+      - 20261116T094702Z-8f6ea845.yaml
     revalidated:
-      at: 2026-11-14T20:20:01Z
+      at: 2026-11-16T12:40:48Z
       outcome: unchanged
-      unchanged-because: The change adds only DEC-070, a proposed record on what the forward cascade does at an ancestor it cannot place, and changes no code. The README describes the cascade as built, stopping at an ancestor its Status does not place, which stays true until the change that builds DEC-070 lands and updates that account.
+      unchanged-because: "The change adds only DEC-075, a proposed record on what the forward cascade does at an ancestor it cannot place, and changes no code and no README text. Read with the two revalidations made apart on the base, on filing's board option and on the readings of a version that is not the integer 1, neither of which touches the cascade, the README still describes the cascade as built: an ancestor its Status or the engine does not place is not written and stops the walk. That stays true until the change that builds DEC-075 lands and updates that account."
