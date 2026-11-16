@@ -12,6 +12,7 @@ same contract its command is.
 from __future__ import annotations
 
 import subprocess
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -20,9 +21,11 @@ import pytest
 
 from project_kit import data_points as dp
 from project_kit import default_branch as db
+from tests import document_contracts as contracts
 from tests import test_backbone_documents as documents
 from tests.adopter_repo import AdopterRepo
 from tests.caller_contracts import Caller, Outcome, check, raises, same
+from tests.document_contracts import Contract, Form
 from tests.in_process import load
 
 
@@ -211,3 +214,82 @@ def test_living_docs_reads_where_records_lie_as_its_contract_says(
         documents._cli("refs", "lookup", documents.JSON_OPTION, *documents.LOOKED_UP)
     )
     check(_ld_lookup(documents.LOOKED_UP), printed)
+
+
+# --- doc-examples ---------------------------------------------------------------------------
+
+de_selection, de_run = load("doc-examples", "selection", "run-examples.py")
+
+#: The types of the project's own the last of the artefacts states gives its places.
+_PAGE_TYPES = ("plain", "starred", "ruled")
+
+DOC_EXAMPLES_PAGES = Caller(
+    name="doc-examples's reading of `pkit friction artefacts --json`",
+    contract=documents.FRICTION_ARTEFACTS,
+    read=lambda document: de_selection.select(
+        de_selection.Config(types=_PAGE_TYPES), de_selection.artefacts_of(document)
+    ),
+    untold=raises(de_selection.Unreadable),
+    nothing=lambda: de_selection.read_artefacts(Path("."), run=_no_document),
+)
+
+
+def test_doc_examples_reads_the_artefacts_document_as_its_contract_says(
+    make_adopter_repo: Any,
+) -> None:
+    repo = documents._evidence_adopter(make_adopter_repo)
+    for document in documents._artefacts_states(repo):
+        check(DOC_EXAMPLES_PAGES, document)
+
+
+#: The pages document `pkit doc-examples pages --json` prints, as the run reads it, until
+#: the capability's documents have their contracts (#3315).
+DOC_EXAMPLES_SELECTION = Contract(
+    name="pkit doc-examples pages --json",
+    version=1,
+    forms={
+        "answer": Form(
+            keys={
+                "schema_version": "int",
+                "root": "str",
+                "types": "list",
+                "types[]": "str",
+                "pages": "list",
+                "pages[]": "str",
+                "setup": "list",
+                "setup[]": "str",
+                "path": "list",
+                "path[]": "str",
+                "environment": "object",
+                "environment{}": "str|null",
+                "placeholders": "object",
+                "placeholders{}": "str",
+            }
+        )
+    },
+    data=frozenset({"environment", "placeholders"}),
+)
+
+DOC_EXAMPLES_RUN = Caller(
+    name="doc-examples's run, reading `pkit doc-examples pages --json`",
+    contract=DOC_EXAMPLES_SELECTION,
+    read=de_run.selection_of,
+    untold=raises(de_run.CannotRun),
+    nothing=lambda: de_run.read_selection(Path("."), (sys.executable, "-c", "raise SystemExit(1)")),
+)
+
+
+def test_the_doc_examples_run_reads_its_pages_document_as_its_contract_says(
+    tmp_path: Path,
+) -> None:
+    config = de_selection.Config(
+        types=("living-docs:page",),
+        setup=("make setup",),
+        path=("bin",),
+        environment={"LANG": "C", "HOME": None},
+        placeholders={"VERSION": "cat VERSION"},
+    )
+    pages = de_selection.Pages(types=("living-docs:page",), paths=("README.md", "docs/a.md"))
+    document = de_selection.document(tmp_path, config, pages)
+    contracts.check(DOC_EXAMPLES_SELECTION, {"answer": [document]})
+    check(DOC_EXAMPLES_RUN, document)
