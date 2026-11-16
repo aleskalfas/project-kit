@@ -1,7 +1,7 @@
 ---
 id: DEC-063
 title: A check's silence counts only where it measures
-status: proposed
+status: accepted
 date: 2026-11-16
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

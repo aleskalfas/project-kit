@@ -1,7 +1,7 @@
 ---
 id: DEC-062
 title: The viewing step reports what the checks found on each image it draws
-status: proposed
+status: accepted
 date: 2026-11-16
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
