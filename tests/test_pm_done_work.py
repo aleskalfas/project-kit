@@ -4240,10 +4240,11 @@ def test_a_later_run_closes_and_cascades_with_the_real_verbs(
 #
 # The merge cannot be undone (DEC-026), so a step after it that fails is owed,
 # never refused. The run exits with the code that names the step, whatever the
-# step's own code, and never with 1, 2 or 3, which say that nothing merged. The
-# same holds however the merge was made: by this run, by the queue this run
-# waited for, or found made by an earlier one. The failing step exits 3 here,
-# the code of a failed merge; the tests above have it exit 1 and 2.
+# step's own code, and never with 1, 2 or 3, which end a run that runs no step
+# after a merge. The same holds however the merge was made: by this run, by
+# the queue this run waited for, or found made by an earlier one. The failing
+# step exits 3 here, the code of a failed merge; the tests above have it exit
+# 1 and 2.
 
 
 def _merged_by_the_run(

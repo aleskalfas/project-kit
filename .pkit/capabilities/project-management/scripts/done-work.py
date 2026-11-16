@@ -237,10 +237,11 @@ Exit codes:
   2  usage error / gh failure, the PR's checks that could not be read among
      them; a run with no `--yes` and no terminal to ask at, which merges
      nothing
-  3  the merge failed; the PR left the merge queue without merging, or was
-     taken out of it because its head moved; or, called with a pinned head
-     (`run(argv, pinned_head=…)`, as `land-work` calls it), the PR's head is
-     not that one
+  3  the merge failed, or was not seen made; the PR left the merge queue
+     without merging; its head moved while the queue held it, and it was
+     taken out, merged before it could be, or may still merge; or, called
+     with a pinned head (`run(argv, pinned_head=…)`, as `land-work` calls
+     it), the PR's head is not that one
   4  accepted, a re-run completes it: the PR is in the merge queue and has
      not been seen merged, or gh accepted the merge — or a merge or an
      enqueue got no answer back — and GitHub could not be read to confirm it
@@ -250,9 +251,17 @@ Exit codes:
   6  merged and the issue moved to Done, and the close of an issue the merge
      closed failed: running done-work again completes it
 
-A step after the merge never exits 1, 2 or 3, which say that nothing merged
-(#3207). The verbs it runs report a board that did not answer, and their other
-failures, with those codes, so their code is not passed on.
+A step after the merge never exits 1, 2 or 3, which end a run that runs no
+step after a merge (#3207). The verbs it runs report a board that did not
+answer, and their other failures, with those codes, so their code is not
+passed on. 1 and 2 say that the run merged nothing. So does 3, save three
+cases, each of which the output names:
+  - the PR merged before it could be taken out of the queue, after its head
+    moved, so that merge may hold commits nobody checked;
+  - taking the PR out of the queue failed or gave no answer, so it may still
+    merge;
+  - a merge request was not seen made, and may still show: done-work run
+    again reads the PR first and completes a merge that shows.
 
 One exit code covers several ends — 0 is a merge, a dry run and a declined
 prompt alike — and one end several codes: no authorisation is 0 for a
@@ -412,7 +421,9 @@ EXIT_ACCEPTED = 4
 # owed (#3207). The merge cannot be undone (DEC-026), and a re-run completes
 # the step. The code names the first step that failed: the move to Done, or
 # the close of an issue the merge closed. The verbs' own codes are not passed
-# on, since 1, 2 and 3 say here that nothing merged.
+# on, since 1, 2 and 3 end a run that runs no step after a merge. They say
+# that the run merged nothing, but for the three exit 3s the module's
+# docstring names, which can follow a merge.
 EXIT_MERGED_MOVE_OWED = 5
 EXIT_MERGED_CLOSE_OWED = 6
 
@@ -440,14 +451,19 @@ UNCONFIRMED = "unconfirmed"
 DECLINED = "declined"
 #: A dry run printed what it would do.
 PLANNED = "planned"
-#: The PR's head is not the one the run was handed, or the queue let the PR
-#: go because its head moved: nothing merged.
+#: The PR's head is not the one the run was handed, or it moved while the
+#: merge queue held the PR: nothing merged, unless the queue merged the PR
+#: before it could be taken out, and where taking it out failed or gave no
+#: answer, the queue may merge it still. The reason says which.
 HEAD_MOVED = "head-moved"
 #: Nothing merged: a gate, the queue, GitHub or a step before the merge said
-#: no. `DoneWorkRun.retry` tells whether running again unchanged can help.
+#: no — save a merge request that was not seen made, which may still show.
+#: `DoneWorkRun.retry` tells whether running again unchanged can help.
 REFUSED = "refused"
-#: Nothing was changed: what the run needed to read could not be read, or the
-#: run could not start (no capability, an un-bootstrapped project).
+#: Nothing merged: what the run needed to read could not be read, or the run
+#: could not start (no capability, an un-bootstrapped project). Where the
+#: reading that failed is the one just before the merge, what the run posted
+#: or moved ahead of it stands.
 UNREADABLE = "unreadable"
 
 
@@ -1433,7 +1449,11 @@ def _not_merged(
     Accepted (exit 4) are a PR the queue was handed, and a merge GitHub could
     not then confirm — one gh accepted, or a merge or an enqueue that got no
     answer back: a later run finds the PR merged, or still open, and
-    finishes. Everything else merged nothing, and the issue stays where it is.
+    finishes. Everything else runs nothing after a merge and leaves the issue
+    where it is. It merged nothing, but for three ends of exit 3, each of
+    whose messages says so: the queue merged the PR before it could be taken
+    out, taking it out failed or gave no answer, and a merge request was not
+    seen made.
     """
     reading = landing.reading
     if landing.outcome == pr_merge.STILL_QUEUED:
