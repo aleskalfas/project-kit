@@ -49,7 +49,7 @@ pkit:
         - src/project_kit/router.py
         - .pkit/capabilities/living-docs/scripts/validate.py
         - .pkit/capabilities/living-docs/scripts/resolve-source.py
-      record: [COR-010, COR-013, COR-017, COR-019, COR-021, COR-030, COR-031, "COR-033#P7", COR-036, COR-038, COR-041, COR-049, COR-050, COR-051, COR-052, COR-053, "COR-054#2", COR-055, COR-056, COR-061, "COR-062#2", "COR-070#2", COR-073, ADR-009, ADR-050, ADR-056, ADR-057, ADR-058, ADR-059, ADR-065, ADR-066, ADR-076, ADR-088, ADR-040]
+      record: [COR-010, COR-013, COR-017, COR-019, COR-021, COR-030, COR-031, "COR-033#P7", COR-036, COR-038, COR-041, COR-049, COR-050, COR-051, COR-052, COR-053, "COR-054#2", COR-055, COR-056, COR-061, "COR-062#2", "COR-070#2", COR-073, ADR-009, ADR-050, ADR-056, ADR-057, ADR-058, ADR-059, ADR-065, ADR-066, ADR-076, ADR-088, ADR-040, "ADR-097#2", "ADR-097#3"]
 ---
 
 # Manifest schema
@@ -962,10 +962,12 @@ Each of these is the `packages` member's error:
 
 **Reading one point from a script.** `pkit connections resolve <address> --json` prints the same resolution of one point as a stable document ([the CLI README, "Connections commands"](../cli/README.md#connections-resolve-address---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). It is how a component's own script reads a point it defines, before applying the value itself. A capability script runs in its own environment and does not import the backbone. The consumer, not the point, knows what the value is applied to.
 
-- **A consumer dispatches on `outcome`, never on `why`.** `outcome` says how the resolution ended, as one value from a closed set: `resolved`, `unfilled`, `collision` and the rest the CLI README lists. `why` is that ending's sentence for people, and its wording is no contract. The filler states alone cannot tell the endings apart: a collision looks like a point nothing fills.
+- **A consumer dispatches on `outcome`, never on `why`.** `outcome` says how the resolution ended, as one value from a listed set: `resolved`, `unfilled`, `collision` and the rest the CLI README lists. `why` is that ending's sentence for people, and its wording is no contract. The filler states alone cannot tell the endings apart: a collision looks like a point nothing fills.
   - A consumer that turns a rule off when nothing fills the point reads `unfilled`, not the absence of a taken filler.
   - A value it does not know means it could not tell how the point ended: never `resolved`, never `unfilled`.
-- **`resolved` does not say every filler answered.** A point that resolved with an inert filler among several is `resolved` too. So a consumer that only reports checks that no `fillers[].state` is `inert` before it draws a finding from an entry's absence. What an inert filler would have supplied is unknown, not absent (COR-052 point 6).
+- **`resolved` does not say every filler answered.** A point that resolved with an inert filler among several is `resolved` too. So a consumer that only reports checks two things before it draws a finding from an entry's absence:
+  - The document lists `fillers`.
+  - Each `fillers[].state` is `taken` or `passed over`. A filler in any other state, `inert` or one the consumer does not know, may not have answered. What such a filler would have supplied is unknown, not absent (COR-052 point 6).
 - **The command resolves that point alone.** Only its fillers are asked, so no other point's command filler starts. Reading one point costs what that point costs, however many others the project has. `pkit validate` and `pkit status` still resolve every point.
   - Within one run, each point resolves at most once, whichever reader asks first, sharing the run's one wiring and filler files.
   - Points never read one another, so a point resolved alone is the point resolved among all.
