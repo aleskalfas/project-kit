@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - .pkit/capabilities/visual-communication/package.yaml
+        - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
         - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/scripts/export.py
@@ -56,6 +57,12 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/code-record.schema.json
         - .pkit/capabilities/visual-communication/schemas/values.schema.json
         - .pkit/capabilities/visual-communication/schemas/values-2.schema.json
+        - .pkit/capabilities/visual-communication/schemas/review.schema.json
+        - .pkit/capabilities/visual-communication/schemas/calibration.schema.json
+        - .pkit/capabilities/visual-communication/scripts/verdict.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/verdicts.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/calibration.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
       record:
         - visual-communication:DEC-001#2
@@ -155,6 +162,13 @@ pkit:
         - visual-communication:DEC-039#3
         - visual-communication:DEC-039#4
         - visual-communication:DEC-039#5
+        - visual-communication:DEC-042#4
+        - visual-communication:DEC-042#6
+        - visual-communication:DEC-042#1
+        - visual-communication:DEC-042#3
+        - visual-communication:DEC-042#9
+        - visual-communication:DEC-042#10
+        - visual-communication:DEC-030#2
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -172,9 +186,12 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#pieceyaml
         - .pkit/capabilities/visual-communication/files.md#rolesyaml
         - .pkit/capabilities/visual-communication/files.md#shapes
+        - .pkit/capabilities/visual-communication/files.md#the-binding
         - .pkit/capabilities/visual-communication/files.md#the-clones-local-folder
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#the-browser
+        - .pkit/capabilities/visual-communication/files.md#the-bar-and-the-bounds
+        - .pkit/cli/README.md#validate
       source:
         - html-page-print-runs
 ---
@@ -194,6 +211,7 @@ Plugins make what the capability gives out. A renderer draws a piece's scenes as
 - [Produced pictures](#produced-pictures)
 - [Written code](#written-code)
 - [The viewing step](#the-viewing-step)
+- [The verdict](#the-verdict)
 <!-- /pkit:contents -->
 
 ## Plugins
@@ -883,12 +901,13 @@ Some readers have their browser replace a page's colours with a few of their own
 
 ### When the browser stops
 
-A run stops where no browser runs, where one stops part way, or where its first read fails (DEC-020 point 8). This holds of the start under forced colours too.
+A run stops where no browser runs, where one stops part way, or where its first read fails (DEC-020 point 8). It stops too where it cannot tell a text's ink, in its first read or in a page file, since the browser's pictures of the band around that text do not hold still. This holds of the start under forced colours too.
 
 - **What it writes.** The page files and `report.json`, in the HTML renderer's folder, and no image ([What a run writes](#what-a-run-writes)).
-- **What the report says.** What stopped it, and under which lock. It names what is missing: where the step looked for a browser, or the program it started and what that said.
+- **What the report says.** What stopped it, and under which lock. It names what is missing: where the step looked for a browser, or the program it started and what that said. Where it cannot tell a text's ink, it names the text, the program it started and what that said.
 - **A sandbox.** Where the browser's words show a sandbox, the run says that a sandbox stopped the browser. Otherwise it names what the browser said.
 - **A browser run as root.** Chrome run as root, as a container may run it, refuses to start with its own sandbox on. The run says so, apart from a sandbox, and never turns that sandbox off.
+- **A text's ink that cannot be told.** In each of 3 tries, the browser gave two pictures of the band around a text that differ, though the page stood the same for both. The run stops, rather than guess which picture shows the text's ink. The same look, run again, starts the browser afresh, and its pictures may agree. Of the ways on below, a pipeline's drawings come from a run of their own, and way 3 serves as it does for any stop. Way 2, a person's run, is such a run again.
 - **How to go on.** The command exits 3, and names three ways on, in this order (DEC-024 point 4), and a fourth after a stop under forced colours (DEC-027 point 4):
   1. a build pipeline's drawings of the piece's pages, where the project has its pipeline draw them ([A pipeline's drawings](#a-pipelines-drawings)). They show a pushed commit, not your working tree.
   2. the same look, run once by a person outside any sandbox, such as in their own terminal. This line is addressed to a person. It runs the clone's scripts as they stand, with that person's rights.
@@ -974,3 +993,60 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 - **A folder of its own.** Never fetch them into `look/`, where a look replaces its renderer's folder ([What a run writes](#what-a-run-writes)). Read the fetched folder as a look's folder, `report.json` first.
 - **The hosts it reaches.** In a session's sandbox, each host the fetch needs is the project's own allowance to add. The capability declares none.
 - **A run the permission model confines,** such as a builder's, reaches no such host. Only the SVG renderer's pages remain in it.
+
+### Where the review's reports are kept
+
+[The reviewer](README.md#the-reviewer) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> writes a report for each round. The reviewer writes no file: it replies with the report, and whoever dispatched it keeps the report as it was written, in two files (DEC-042 points 4 and 6).
+
+- **Where.** Both lie in `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/`, named by the round's number `<n>`, from 1. That folder lies in the clone's local folder, as the look's images do ([The clone's local folder](files.md#the-clones-local-folder); DEC-015 point 4), so no file of it is committed.
+- **The whole report,** `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/round-<n>.md`. A later round's review reads it only once it has written its grades, and where the loop hands a round to the person, that round's report goes with it.
+- **The document alone,** `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/round-<n>.yaml`: the report's fenced YAML document and nothing else, so that it reads as one instance of `visual-communication:review`.
+- **Kept as written.** Nobody summarises, filters or answers either file before it is kept.
+- **Not validated.** `pkit validate` checks no kept file, though each document names its schema ([The binding](files.md#the-binding)).
+- **One folder for each piece,** which a later round adds to and no run replaces. A look replaces its own folder and leaves this one.
+
+## The verdict
+
+`pkit visual verdict <piece>` gives the *verdict* against the project's bar from a round's review report, and says whether it ends the designer's loop (DEC-042 point 1). The verdict needs no judgement, so a command gives it, and anyone gives the same verdict again from the same report. The reviewer runs no command, so whoever reads its report runs this one.
+
+- **What it reads.** The document the round's report opens with, kept alone as `round-<n>.yaml` ([Where the review's reports are kept](#where-the-reviews-reports-are-kept)): the highest round kept, or the one `--round` names. The bar, from the capability's configuration alone ([The bar and the bounds](files.md#the-bar-and-the-bounds)), and the rule sets it covers. And, to tell whether the verdict ends the loop, what [When it ends the loop](#when-it-ends-the-loop) compares.
+- **The rules the bar covers.** Each rule of a set it covers that the capability's check finds graded, and each single rule it covers.
+- **A page meets the bar** where each of its unmarked grades on those rules reaches the bar's grade. **The piece meets it** where every page does, and each unmarked grade it takes as a whole does. A grade of a rule the bar does not cover counts for nothing.
+- **A marked grade is left out,** a need or the asker's, and named apart with its mark (DEC-042 point 4).
+- **What it prints.** The report it read, the bar and the rules it covers. Then whether the piece meets the bar, each page with whether it meets it, the piece as a whole, and each grade that fails the bar, with its evidence, and each marked grade left out. Last, whether the verdict ends the loop, and each reason it does not. `--json` prints the same as one document, with the reading the hold was compared on, under `reading` ([The accepted calibration's data](#the-accepted-calibrations-data)).
+- **It writes nothing,** and needs no network.
+
+### When no verdict is given
+
+- **No bar.** Where the configuration holds no bar, no verdict is given, and the designer's loop ends as DEC-030 point 2 says (DEC-042 point 3).
+- **A covered rule the report leaves out.** Where the report neither grades a rule the bar covers nor lists it as not graded, no verdict is given, since one that passed would rest on no grade of that rule. The command names each such rule.
+- **Refused.** The command prints `error: …` and exits 1 where no report of the piece is kept, the report or the configuration cannot be read, the report's schema refuses it, or the report is of another piece or round than it is kept as. So does a bar the configuration's schema refuses, or one the capability's check fails, such as a bar over what the check does not find graded.
+
+Otherwise it exits 0, whatever the verdict, and 2 on a usage error.
+
+### When it ends the loop
+
+The verdict ends the designer's loop at the bar only while the *hold* is on (DEC-042 points 9 and 10). Otherwise it informs, and the loop ends as DEC-030 point 2 says. The command says each reason the hold is off:
+
+- **No report accepted.** The capability ships no accepted calibration's data.
+- **A bar that reaches past it.** The bar covers a rule with no evidence of its own in the accepted report. A bar over some of the accepted rules alone gets the hold.
+- **A lapse,** where anything that could move the grades differs from the accepted data:
+  - the set of a covered rule, at another major;
+  - a covered rule's text, by its digest. A rule the bar does not cover lapses nothing;
+  - the reviewer's definition, the capability's own `agents/graphic-design-reviewer.md`, by its digest. Another definition of `graphic-design-reviewer`, in the project's own place for agents or in another capability's, lapses the hold too, since the command cannot tell which of them ran;
+  - the design knowledge, by its digest;
+  - the model the round's report names, or its effort, one named and the other not included.
+- **Data it cannot read.** Accepted data the command cannot read, or that its schema refuses.
+
+A lapse only takes the hold away. The command starts nothing, and a new calibration is a person's to start (DEC-042 point 9).
+
+### The accepted calibration's data
+
+Once whoever maintains the capability accepts a calibration's report, a refinement of DEC-042 writes the values the hold is compared on: `calibration.yaml`, in the capability's own folder, bound to `visual-communication:calibration` ([The binding](files.md#the-binding); [`calibration.schema.json`](schemas/calibration.schema.json)). Only that refinement's change writes them, and the command reads them. Until a report is accepted, the capability ships no such file.
+
+- **`rules`:** each rule with evidence of its own in the accepted report, by its id, with the major of its set and the digest of its text.
+- **`reviewer`:** the digest of the reviewer's definition.
+- **`design-knowledge`:** the digest of the design knowledge.
+- **`model`:** the full name of the model the calibration's review ran on, with its effort where the harness has one.
+- **Each digest** is a SHA-256 of what it names, written `sha256:<hex>`, as [`calibration.schema.json`](schemas/calibration.schema.json) sets out.
+- **The reading** holds the same values as they stand now, in the data's shape: for the rules the bar covers, and the model the round's report names.

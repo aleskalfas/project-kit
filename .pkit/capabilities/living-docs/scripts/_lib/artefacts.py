@@ -16,6 +16,13 @@ places matching its file in the order COR-056 point 3 sets, with each one's
 rank (COR-056 point 6). living-docs reads them and ranks no place itself.
 What it decides over the answer is its own: which space a place serves, and
 what a document is to its spaces (`spaces`).
+
+The answer is read by its keys (ADR-097 point 3). A key the reading does not
+read, it ignores. A key it reads that is missing, null where the CLI reference
+does not print it null, of another type, or a value it does not know of a set it
+decides on, is an answer it cannot tell anything from: `Unreadable`, never a
+default such as false or empty. Every key it reads is printed by each backbone
+this capability runs on, so only a malformed answer lacks one.
 """
 
 from __future__ import annotations
@@ -23,14 +30,17 @@ from __future__ import annotations
 import json
 import subprocess
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from _lib import backbone
+from _lib import document_keys as keys
 
 #: The document version this reading understands (the CLI reference, "friction
-#: artefacts"); a later backbone that changes its meaning raises it.
+#: artefacts"). A later backbone raises it only when a key or a value of a set goes,
+#: and no key or value comes to mean anything else; the reading refuses a version
+#: other than this one.
 SCHEMA_VERSION = 1
 
 ARGV = ("pkit", "friction", "artefacts", "--json")
@@ -42,6 +52,21 @@ TYPE_KEY = "type"
 #: The key of every declared type in the document, added with an artefact's
 #: type: present even where the places hold no artefact.
 TYPES_KEY = "types"
+
+#: The documentation roots, by audience (COR-049 point 1). A root of another
+#: audience is one this capability serves no space in, so it is not read.
+AUDIENCES = ("user", "internal")
+
+#: Who declares a place: the project, the backbone for its rule-set folder, or a
+#: capability, `capability:<name>`. Any other is a source this reading does not know.
+PROJECT, BACKBONE, CAPABILITY_SOURCE = "project", "backbone", "capability:"
+
+#: What an artefact is: a whole document, or an entry of a collection file.
+DOCUMENT, ENTRY = "document", "entry"
+
+#: The kinds of anchor whose part a page's mentions stand on. The answer may list
+#: an anchor of another kind; a reader skips it (the CLI reference, `part_anchors`).
+PART_KINDS = frozenset({"artefact", "record"})
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -57,8 +82,9 @@ class DeclaredPlace:
     `index` is its position in the document's `places`, by which a file names
     the places matching it. `location` and `location_path` are the capability
     documentation location it lies inside, if it names one; `encloses` the
-    audiences of the roots it reaches whole. `rule_sets` is whether it holds
-    rule sets, as the answer's `rule_sets` marks it (COR-051 point 2): a
+    audiences of the roots it reaches whole, of those in `AUDIENCES`: a root of
+    another audience holds no space of this capability's. `rule_sets` is whether
+    it holds rule sets, as the answer's `rule_sets` marks it (COR-051 point 2): a
     rule-set folder, or a declared place whose path has a `rule-sets` segment.
     """
 
@@ -95,8 +121,7 @@ class Document:
     lists an anchor, and `unanchored_because` the reason it gives for listing
     none — the reason a person accepted it with none (COR-050 point 1); both as
     the backbone reads them. `anchored` is `None` when the file is no one
-    document artefact — a collection file, or a held document — or the backbone
-    answered without its anchors.
+    document artefact — a collection file, or a held document.
 
     `types` holds every type the file's artefacts take, or count as while a
     tie stands, as the backbone resolves them (COR-056 points 3 and 6): one at
@@ -138,34 +163,32 @@ class Artefact:
     """One artefact the places hold, as the backbone reads it: its file, its id,
     whether it is an entry of a collection file or a rule of a rule set rather
     than a whole document, the anchors its friction block lists by kind — every
-    kind, the values that are text, in written order; `None` when the backbone
-    answered without them, added within the document's version — the reason it
-    gives for listing none, `unanchored_because` (COR-050 point 1), and its own
-    fields, the container left out (a rule's carry its cited origin).
+    kind, in written order — the reason it gives for listing none,
+    `unanchored_because` (COR-050 point 1), and its own fields, the container
+    left out (a rule's carry its cited origin).
 
     Its type, as the backbone resolves it (COR-056 point 6): `type`, or every
     type it counts as while a tie stands (`conflict`), the places matching its
     file in the core's order with each one's rank (`ranked`), and the paths of
     the rule-set files whose scope covers it (`in_scope_of`).
 
-    What its anchors resolve to, as the backbone resolves them: each anchor that
-    names a part of a file, with the lines it spans (`parts`), and each path
-    anchor with the files it stands on (`standing`), `None` when the backbone
-    answered without them, added within the document's version."""
+    What its anchors resolve to, as the backbone resolves them: each anchor of a
+    kind in `PART_KINDS` that names a part of a file, with the lines it spans
+    (`parts`), and each path anchor with the files it stands on (`standing`)."""
 
     path: str
     id: str
     entry: bool
     rule: bool
-    anchors: Mapping[str, tuple[str, ...]] | None
+    anchors: Mapping[str, tuple[str, ...]]
     unanchored_because: str | None
-    fields: Mapping[str, Any] | None
+    fields: Mapping[str, Any]
     type: str | None = None
     conflict: tuple[str, ...] = ()
     ranked: tuple[tuple[int, int], ...] = ()
     in_scope_of: tuple[str, ...] = ()
     parts: tuple[Part, ...] = ()
-    standing: Mapping[str, tuple[str, ...]] | None = None
+    standing: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
     @property
     def types(self) -> tuple[str, ...]:
@@ -173,10 +196,9 @@ class Artefact:
         return (self.type,) if self.type is not None else self.conflict
 
     @property
-    def anchored(self) -> bool | None:
-        """Whether its friction block lists an anchor; `None` when the backbone
-        answered without its anchors."""
-        return None if self.anchors is None else any(self.anchors.values())
+    def anchored(self) -> bool:
+        """Whether its friction block lists an anchor."""
+        return any(self.anchors.values())
 
 
 @dataclass(frozen=True)
@@ -214,25 +236,39 @@ def read_artefacts(root: Path, run: Runner = backbone.run) -> Reading:
 
 
 def reading_of(document: Mapping[str, Any]) -> Reading:
-    """The `pkit friction artefacts --json` document as a Reading."""
-    if document.get("schema_version") != SCHEMA_VERSION:
+    """The `pkit friction artefacts --json` document as a Reading. Raises Unreadable
+    for a version other than this reading's, and for an answer it cannot tell
+    anything from at a key it reads (ADR-097 point 3): the key missing, null where
+    the CLI reference does not print it null, of another type, or a value it does
+    not know."""
+    version = document.get("schema_version")
+    if type(version) is not int or version != SCHEMA_VERSION:
         raise Unreadable(
-            f"`{' '.join(ARGV)}` answered schema_version {document.get('schema_version')!r}; "
+            f"`{' '.join(ARGV)}` answered schema_version {version!r}; "
             f"this capability reads {SCHEMA_VERSION}"
         )
-    roots = {str(k): v for k, v in _mapping(document.get("roots")).items() if isinstance(v, str)}
-    if not {"user", "internal"} <= set(roots):
-        raise Unreadable(f"`{' '.join(ARGV)}` answered without both documentation roots")
+    try:
+        return _reading(document)
+    except keys.Untold as exc:
+        raise Unreadable(
+            f"`{' '.join(ARGV)}` answered a document this capability cannot read: {exc}"
+        ) from exc
+
+
+def _reading(document: Mapping[str, Any]) -> Reading:
+    roots = _roots(document)
     places = tuple(
-        _place(index, entry) for index, entry in enumerate(_mappings(document.get("places")))
+        _place(index, where, entry)
+        for index, (where, entry) in enumerate(keys.objects(document, "places", ""))
     )
-    listed = _mappings(document.get("artefacts"))
-    if TYPES_KEY not in document or any(TYPE_KEY not in entry for entry in listed):
+    listed = keys.objects(document, "artefacts", "")
+    if TYPES_KEY not in document or any(TYPE_KEY not in entry for _where, entry in listed):
         raise Unreadable(
             f"`{' '.join(ARGV)}` answered without each artefact's type and ranked places; "
             f"this capability reads them (COR-056 point 6), so the backbone needs upgrading"
         )
-    artefacts = tuple(_artefact(entry) for entry in listed)
+    keys.mapping(document, TYPES_KEY, "")
+    artefacts = tuple(_artefact(where, entry) for where, entry in listed)
     # A file is one document artefact unless it is a collection file, whose
     # entries are artefacts of their own. Every artefact of one file shares its
     # matching places, ranked by the file's path.
@@ -240,17 +276,17 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
     of_file: dict[str, list[Artefact]] = {}
     for artefact in artefacts:
         of_file.setdefault(artefact.path, []).append(artefact)
-    documents = {}
-    for entry in _mappings(document.get("files")):
-        path = str(entry.get("path"))
+    documents: dict[str, Document] = {}
+    for where, entry in keys.objects(document, "files", ""):
+        path = keys.text(entry, "path", where)
         artefact = whole.get(path)
         found = of_file.get(path, [])
         documents[path] = Document(
             path=path,
-            places=_indices(entry.get("places")),
-            rule_set=entry.get("rule_set") is not None,
-            excluded=bool(entry.get("excluded")),
-            fields=_fields(entry.get("fields")),
+            places=keys.numbers(entry, "places", where),
+            rule_set=keys.number_or_null(entry, "rule_set", where) is not None,
+            excluded=keys.flag(entry, "excluded", where),
+            fields=keys.mapping_or_null(entry, "fields", where),
             anchored=artefact.anchored if artefact is not None else None,
             unanchored_because=artefact.unanchored_because if artefact is not None else None,
             types=tuple(sorted({named for each in found for named in each.types})),
@@ -260,126 +296,128 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
     # A held document is walked by no place, so it is never among the files; it
     # carries the places matching it and the held folder holding it, whose
     # declaration names its owner (COR-050 point 1).
-    owners = [str(entry.get("source")) for entry in _mappings(document.get("held"))]
-    for entry in _mappings(document.get("held_files")):
-        path = str(entry.get("path"))
-        folder = entry.get("held")
-        source = owners[folder] if isinstance(folder, int) and 0 <= folder < len(owners) else ""
+    owners = [_holder(where, entry) for where, entry in keys.objects(document, "held", "")]
+    for where, entry in keys.objects(document, "held_files", ""):
+        path = keys.text(entry, "path", where)
+        folder = keys.number(entry, "held", where)
+        if not 0 <= folder < len(owners):
+            raise keys.Untold(f"`{where}.held` is {folder}, which names no folder of `held`")
         documents[path] = Document(
             path=path,
-            places=_indices(entry.get("places")),
+            places=keys.numbers(entry, "places", where),
             rule_set=False,
             excluded=False,
-            fields=_fields(entry.get("fields")),
-            held_by=capability_of(source) or source,
+            fields=keys.mapping_or_null(entry, "fields", where),
+            held_by=owners[folder],
         )
     return Reading(roots=roots, places=places, documents=documents, artefacts=artefacts)
 
 
-def _artefact(entry: Mapping[str, Any]) -> Artefact:
-    listed = entry.get("anchors")
-    anchors = (
-        {
-            str(kind): tuple(value for value in values if isinstance(value, str))
-            for kind, values in listed.items()
-            if isinstance(values, list)
-        }
-        if isinstance(listed, Mapping)
-        else None
-    )
+def _roots(document: Mapping[str, Any]) -> dict[str, str]:
+    """The documentation roots this capability serves spaces in, by audience."""
+    found = document.get("roots")
+    if not isinstance(found, Mapping) or not all(
+        isinstance(found.get(audience), str) for audience in AUDIENCES
+    ):
+        raise Unreadable(f"`{' '.join(ARGV)}` answered without both documentation roots")
+    return {audience: found[audience] for audience in AUDIENCES}
+
+
+def _artefact(where: str, entry: Mapping[str, Any]) -> Artefact:
     return Artefact(
-        path=str(entry.get("path")),
-        id=str(entry.get("id")),
-        entry=entry.get("kind") == "entry",
-        rule=entry.get("rule_set") is not None,
-        anchors=anchors,
-        unanchored_because=_text(entry.get("unanchored_because")),
-        fields=_fields(entry.get("fields")),
-        type=_text(entry.get(TYPE_KEY)),
+        path=keys.text(entry, "path", where),
+        id=keys.text(entry, "id", where),
+        entry=keys.one_of(entry, "kind", where, (DOCUMENT, ENTRY)) == ENTRY,
+        rule=keys.number_or_null(entry, "rule_set", where) is not None,
+        anchors=_anchors(entry, where),
+        unanchored_because=keys.text_or_null(entry, "unanchored_because", where) or None,
+        fields=keys.mapping(entry, "fields", where),
+        type=keys.text_or_null(entry, TYPE_KEY, where) or None,
         conflict=tuple(
-            named
-            for tied in _mappings(entry.get("type_conflict"))
-            if (named := _text(tied.get("type"))) is not None
+            keys.text(tied, "type", inner)
+            for inner, tied in keys.objects(entry, "type_conflict", where)
         ),
         ranked=tuple(
-            (ranked["place"], ranked["rank"])
-            for ranked in _mappings(entry.get("ranked_places"))
-            if isinstance(ranked.get("place"), int) and isinstance(ranked.get("rank"), int)
+            (keys.number(ranked, "place", inner), keys.number(ranked, "rank", inner))
+            for inner, ranked in keys.objects(entry, "ranked_places", where)
         ),
-        in_scope_of=tuple(path for path in entry.get("in_scope_of") or [] if isinstance(path, str)),
+        in_scope_of=keys.texts(entry, "in_scope_of", where),
         parts=tuple(
-            part for listed in _mappings(entry.get("part_anchors")) if (part := _part(listed))
+            part
+            for inner, listed in keys.objects(entry, "part_anchors", where)
+            if (part := _part(inner, listed)) is not None
         ),
-        standing=_standing(entry.get("path_anchors")),
+        standing=_standing(entry, where),
     )
 
 
-def _part(entry: Mapping[str, Any]) -> Part | None:
-    kind, value, path = (_text(entry.get(key)) for key in ("kind", "value", "path"))
-    if kind is None or value is None or path is None:
+def _anchors(entry: Mapping[str, Any], where: str) -> dict[str, tuple[str, ...]]:
+    """Its friction block's anchors, by kind: a mapping keyed by data, each kind's
+    values as written."""
+    listed = keys.mapping(entry, "anchors", where)
+    inner = keys.at(where, "anchors")
+    return {str(kind): keys.texts(listed, kind, inner) for kind in listed}
+
+
+def _part(where: str, entry: Mapping[str, Any]) -> Part | None:
+    """One part anchor, or `None` for an anchor of a kind no mention stands on."""
+    kind = keys.text(entry, "kind", where)
+    if kind not in PART_KINDS:
         return None
-    span = entry.get("span")
+    span = keys.mapping_or_null(entry, "span", where)
+    inner = keys.at(where, "span")
     lines = (
-        (span["first_line"], span["last_line"])
-        if isinstance(span, Mapping)
-        and isinstance(span.get("first_line"), int)
-        and isinstance(span.get("last_line"), int)
-        else None
+        None
+        if span is None
+        else (keys.number(span, "first_line", inner), keys.number(span, "last_line", inner))
     )
-    return Part(kind, value, path, lines)
+    return Part(kind, keys.text(entry, "value", where), keys.text(entry, "path", where), lines)
 
 
-def _standing(value: Any) -> Mapping[str, tuple[str, ...]] | None:
-    """Each path anchor's files, by the anchor as written; `None` when the backbone
-    answered without them."""
-    if not isinstance(value, list):
-        return None
+def _standing(entry: Mapping[str, Any], where: str) -> dict[str, tuple[str, ...]]:
+    """Each path anchor's files, by the anchor as written."""
     return {
-        str(entry.get("value")): tuple(f for f in entry.get("files") or [] if isinstance(f, str))
-        for entry in _mappings(value)
-        if isinstance(entry.get("value"), str)
+        keys.text(anchor, "value", inner): keys.texts(anchor, "files", inner)
+        for inner, anchor in keys.objects(entry, "path_anchors", where)
     }
 
 
 def capability_of(source: str) -> str | None:
     """The capability a declaration's `source` names — `capability:<name>` — or `None`."""
-    prefix = "capability:"
-    return source[len(prefix) :] if source.startswith(prefix) else None
+    return source[len(CAPABILITY_SOURCE) :] if source.startswith(CAPABILITY_SOURCE) else None
 
 
-def _indices(value: Any) -> tuple[int, ...]:
-    return tuple(i for i in value if isinstance(i, int)) if isinstance(value, list) else ()
-
-
-def _fields(value: Any) -> Mapping[str, Any] | None:
-    return value if isinstance(value, Mapping) else None
-
-
-def _place(index: int, entry: Mapping[str, Any]) -> DeclaredPlace:
-    location = entry.get("location")
-    location = location if isinstance(location, Mapping) else {}
-    written = entry.get("written")
-    return DeclaredPlace(
-        index=index,
-        source=str(entry.get("source")),
-        declared=bool(entry.get("declared")),
-        pointer=str(entry.get("pointer") or ""),
-        written=written if isinstance(written, str) else None,
-        location=_text(location.get("name")),
-        location_path=_text(location.get("path")),
-        encloses=frozenset(str(a) for a in entry.get("encloses") or []),
-        type=_text(entry.get("type")),
-        rule_sets=isinstance(entry.get("rule_sets"), Mapping),
+def _source(entry: Mapping[str, Any], where: str) -> str:
+    """Who declares the place: `project`, `backbone` or `capability:<name>`."""
+    source = keys.text(entry, "source", where)
+    if source in (PROJECT, BACKBONE) or capability_of(source):
+        return source
+    raise keys.Untold(
+        f"`{keys.at(where, 'source')}` is {source!r}, a source this reading does not know"
     )
 
 
-def _mapping(value: Any) -> Mapping[str, Any]:
-    return value if isinstance(value, Mapping) else {}
+def _holder(where: str, entry: Mapping[str, Any]) -> str:
+    """The capability that declares a folder of held documents."""
+    source = keys.text(entry, "source", where)
+    holder = capability_of(source)
+    if not holder:
+        raise keys.Untold(f"`{keys.at(where, 'source')}` is {source!r}, which names no capability")
+    return holder
 
 
-def _mappings(value: Any) -> list[Mapping[str, Any]]:
-    return [item for item in value if isinstance(item, Mapping)] if isinstance(value, list) else []
-
-
-def _text(value: Any) -> str | None:
-    return value if isinstance(value, str) and value else None
+def _place(index: int, where: str, entry: Mapping[str, Any]) -> DeclaredPlace:
+    location = keys.mapping_or_null(entry, "location", where)
+    inner = keys.at(where, "location")
+    return DeclaredPlace(
+        index=index,
+        source=_source(entry, where),
+        declared=keys.flag(entry, "declared", where),
+        pointer=keys.text(entry, "pointer", where),
+        written=keys.text_or_null(entry, "written", where),
+        location=None if location is None else keys.text(location, "name", inner),
+        location_path=None if location is None else keys.text(location, "path", inner),
+        encloses=frozenset(keys.texts(entry, "encloses", where)) & frozenset(AUDIENCES),
+        type=keys.text_or_null(entry, "type", where) or None,
+        rule_sets=keys.mapping_or_null(entry, "rule_sets", where) is not None,
+    )

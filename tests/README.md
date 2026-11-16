@@ -302,6 +302,19 @@ runner runs behaves as one started from a terminal. A test that needs a run
 inside a run starts one for real, through `run_command` (the lifecycle README,
 "A run inside a run").
 
+Every test runs where GitHub names no account: an autouse fixture,
+`no_account_from_github`, puts first on PATH a `gh` that answers `gh api user`
+and `gh api users/<login>` with none, and hands every other call to the real
+`gh`. It also clears `PM_INVOKER_LOGIN`. project-management asks GitHub which
+account the credential acts as before it reads that variable, and takes a
+user's account GitHub answers as the invoker (project-management DEC-021), so
+no test reads the account the developer's `gh` is signed in as. A test that
+sets `PM_INVOKER_LOGIN` gets that login, as GitHub names none. A test that
+needs GitHub to answer asks `service_answers(login)`. A fake `gh` of a test's
+own that answers the membership library's request,
+`gh api user --jq '[.login, .type] | @tsv'`, answers a login and a type,
+tab-separated, such as `octocat\tUser`: a bare login is no answer.
+
 ### Built once, copied for each test
 
 **Each shape of adopter is built once per session and copied for every test

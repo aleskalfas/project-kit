@@ -42,6 +42,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from _lib import backbone
+from _lib import document_keys as keys
 
 POINT = "pkit::work-tracking:doc-check"
 POINT_VERSION = 1
@@ -197,22 +198,90 @@ def read_point(run: Runner = backbone.run) -> ResolvedPoint:
     return parse_point(document)
 
 
+#: The version of the point's document this reading understands. A document without
+#: `schema_version` comes from a backbone that predates the key: version 1 (the CLI
+#: reference, `connections resolve`).
+DOCUMENT_VERSION = 1
+
+#: The states of a filler the backbone gives (COR-052 point 6). A point that resolved
+#: holds every obligation only where each filler is `taken` or `passed over`.
+ANSWERED = frozenset({"taken", "passed over"})
+FILLER_STATES = ANSWERED | {"inert"}
+
+
 def parse_point(document: Mapping[str, Any]) -> ResolvedPoint:
-    """The `pkit connections resolve --json` document as a ResolvedPoint."""
-    if document.get("defined") is False:
-        return ResolvedPoint(resolved=False, why=f"it is not defined: {document.get('why', '')}")
-    entries = tuple(
-        (str(e.get("id", "")), str(e.get("origin", "")), e.get("value") or {})
-        for e in document.get("entries") or []
-        if isinstance(e, Mapping)
+    """The `pkit connections resolve --json` document as a ResolvedPoint, read by its
+    keys (ADR-097 point 3). A version this reading does not know, a key it reads that is
+    missing, null or of another type, an obligation that is not an object, and a filler
+    in a state it does not know each leave the point unresolved, with why: the check
+    then fails rather than pass on fewer obligations (DEC-053)."""
+    command = f"`pkit connections resolve {POINT} --json`"
+    version = document.get("schema_version", DOCUMENT_VERSION)
+    if type(version) is not int or version != DOCUMENT_VERSION:
+        return ResolvedPoint(
+            resolved=False,
+            why=f"{command} answered schema_version {version!r}; pm reads {DOCUMENT_VERSION}",
+        )
+    try:
+        return _point(document)
+    except keys.Untold as exc:
+        return ResolvedPoint(
+            resolved=False, why=f"{command} answered a document pm cannot read: {exc}"
+        )
+
+
+def _point(document: Mapping[str, Any]) -> ResolvedPoint:
+    if not keys.flag(document, "defined", ""):
+        return ResolvedPoint(
+            resolved=False, why=f"it is not defined: {keys.text(document, 'why', '')}"
+        )
+    resolved, why = keys.flag(document, "resolved", ""), keys.text(document, "why", "")
+    fillers = tuple(
+        _filler(filler, where) for where, filler in keys.objects(document, "fillers", "")
     )
+    if not resolved:
+        return ResolvedPoint(resolved=False, why=why, fillers=fillers)
+    unknown = [f"{f['name']} ({f['state']})" for f in fillers if f["state"] not in ANSWERED]
+    if unknown:
+        return ResolvedPoint(
+            resolved=False,
+            why=f"a filler's obligations cannot be told, since its state is not one in "
+            f"which it answered: {'; '.join(unknown)}",
+            fillers=fillers,
+        )
     return ResolvedPoint(
-        resolved=bool(document.get("resolved")),
-        why=str(document.get("why") or ""),
-        entries=entries,
-        removals=tuple(r for r in document.get("removals") or [] if isinstance(r, Mapping)),
-        fillers=tuple(f for f in document.get("fillers") or [] if isinstance(f, Mapping)),
+        resolved=True,
+        why=why,
+        entries=tuple(
+            _entry(entry, where) for where, entry in keys.objects(document, "entries", "")
+        ),
+        removals=tuple(
+            _removal(removal, where) for where, removal in keys.objects(document, "removals", "")
+        ),
+        fillers=fillers,
     )
+
+
+def _filler(filler: Mapping[str, Any], where: str) -> Mapping[str, Any]:
+    """A filler, its name, what it supplies, its state and why it is in it read."""
+    for key in ("name", "supplies", "state", "reason"):
+        keys.text(filler, key, where)
+    return filler
+
+
+def _entry(entry: Mapping[str, Any], where: str) -> tuple[str, str, Mapping[str, Any]]:
+    obligation = keys.value(entry, "value", where)
+    if not isinstance(obligation, Mapping):
+        raise keys.Untold(f"`{where}.value` is not an obligation, an object")
+    return keys.text(entry, "id", where), keys.text(entry, "origin", where), obligation
+
+
+def _removal(removal: Mapping[str, Any], where: str) -> Mapping[str, Any]:
+    """A removal, its id, why and what it removed the id from read."""
+    keys.text(removal, "id", where)
+    keys.text(removal, "reason", where)
+    keys.texts(removal, "removed_from", where)
+    return removal
 
 
 @dataclass(frozen=True)

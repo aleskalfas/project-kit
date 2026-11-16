@@ -338,11 +338,15 @@ review_pr = _load_verb("review-pr.py", "pm_land_work_review_pr")
 
 # The exit codes, one per action the caller takes; the README's table says
 # what each covers and what to do.
-#: Merged — or a PR that had merged completed — and the issue done.
+#: Merged — or a PR that had merged completed — and the issue done; with
+#: `--dry-run`, every step would go on.
 EXIT_MERGED = 0
 #: Something on the PR must change: hand it back.
 EXIT_NEEDS_CHANGE = 1
-#: Nothing was changed: a usage error, a refused invocation, or a reading.
+#: Nothing was merged: a usage error, a refused invocation, or a reading.
+#: What a step did before the stop stands, such as a verdict the review
+#: posted, a list removed from the description or the issue's move to Review
+#: ahead of the merge.
 EXIT_UNREADABLE = 2
 #: The PR's head is not the one pinned, or not the one authorised.
 EXIT_HEAD_MOVED = 3
@@ -354,7 +358,9 @@ EXIT_CI_PENDING = 5
 EXIT_REVIEW_INCOMPLETE = 6
 #: A step failed where running again completes it.
 EXIT_RETRY = 7
-#: Ready to merge, and not authorised to: nothing was merged.
+#: Ready to merge, and not authorised to: nothing was merged. Or, with no
+#: open PR, the person declined to complete one that had merged: nothing
+#: after that merge ran.
 EXIT_READY = 8
 #: A head from elsewhere needs a person at a terminal: nothing was merged, and a second
 #: run off a terminal changes nothing (DEC-067 point 3).

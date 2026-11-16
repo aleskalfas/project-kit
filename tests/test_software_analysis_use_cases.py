@@ -95,11 +95,19 @@ def _use_case(number: str, **fields: Any) -> dict[str, Any]:
     own = {"id": number, "title": f"Goal {number}", "status": "active", "actor": "ACT-tester"}
     return {
         "path": path,
+        "id": number,
         "kind": "document",
         "location": path,
         "fields": {**own, **fields},
         "anchors": {"artefact": ["ACT-tester"]},
+        "unanchored_because": None,
+        "span": None,
     }
+
+
+def _file(path: str, **listed: Any) -> dict[str, Any]:
+    """One file of the capability's place for use cases, as the document lists it."""
+    return {"path": path, "places": [0], "excluded": False, "unreadable": None, **listed}
 
 
 def _artefacts(*use_cases: Mapping[str, Any], files: Any = None) -> dict[str, Any]:
@@ -112,8 +120,9 @@ def _artefacts(*use_cases: Mapping[str, Any], files: Any = None) -> dict[str, An
         "location": {"name": "analysis", "path": "docs/analysis"},
         "written": "use-case-model/use-cases",
         "path": PLACE,
+        "rule_sets": None,
     }
-    listed = [{"path": u["path"], "places": [0], "fields": u["fields"]} for u in use_cases]
+    listed = [_file(u["path"], fields=u["fields"]) for u in use_cases]
     return {
         "schema_version": 1,
         "places": [place],
@@ -121,6 +130,7 @@ def _artefacts(*use_cases: Mapping[str, Any], files: Any = None) -> dict[str, An
         "artefacts": list(use_cases),
         "held": [],
         "held_files": [],
+        "unplaced": {},
     }
 
 
@@ -246,8 +256,8 @@ _BROKEN = f"{PLACE}/UC-002-broken.md"
                 _artefacts(
                     _READABLE,
                     files=[
-                        {"path": _READABLE["path"], "places": [0], "fields": _READABLE["fields"]},
-                        {"path": _BROKEN, "places": [0], "unreadable": "a mapping was expected"},
+                        _file(_READABLE["path"], fields=_READABLE["fields"]),
+                        _file(_BROKEN, unreadable="a mapping was expected", fields=None),
                     ],
                 )
             ),
@@ -259,8 +269,8 @@ _BROKEN = f"{PLACE}/UC-002-broken.md"
                 _artefacts(
                     _READABLE,
                     files=[
-                        {"path": _READABLE["path"], "places": [0], "fields": _READABLE["fields"]},
-                        {"path": _BROKEN, "places": [0], "fields": None},
+                        _file(_READABLE["path"], fields=_READABLE["fields"]),
+                        _file(_BROKEN, fields=None),
                     ],
                 )
             ),

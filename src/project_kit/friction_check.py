@@ -3878,9 +3878,11 @@ def _outdated_message(base: BaseState, head: HeadState) -> str:
 
 # --- output --------------------------------------------------------------------------
 
-#: The version of the document `render_json` returns. A change a reader could break
-#: against — a key removed, renamed or given another meaning — raises it; a key added
-#: does not. A document without it comes from a backbone that predates it: version 1.
+#: The version of the document `render_json` returns. It rises only when one of the
+#: document's own keys, or a value of one of its sets, goes, a break the changeset
+#: declares at `major`; never for a key or a value added. No key or value comes to
+#: mean anything else, in place or by coming back (ADR-097 points 4 and 5). A
+#: document without it comes from a backbone that predates it: version 1.
 CHANGE_SCHEMA_VERSION = 1
 
 

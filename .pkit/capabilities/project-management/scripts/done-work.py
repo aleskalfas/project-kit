@@ -189,12 +189,15 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     after the merge, so no best-effort step can stand between the
     irreversible merge and the lifecycle transition. Naming the PR journals
     the move with the reason close-issue gives the other issues it closed.
+    A failure is a warning naming the re-run, and the run exits 5 after
+    cleanup.
   - Then composes over `close-issue.py <M> --mode pr-merge --pr <PR>` for
     every issue the merge closed, the primary first (#1086): each is closed
     as completed if the merge left it open (a base branch other than the
     default one, where GitHub does not auto-close), its state label is
     reconciled to done, and its closure cascade runs (DEC-006). A failure is
-    a warning naming the re-run, and the run exits with it after cleanup.
+    a warning naming the re-run, and the run exits 6 after cleanup, unless
+    the move to Done failed too.
     Where this clone set an instance id, that close-issue also releases each
     issue's instance ownership (DEC-035 point 4): done-work releases through
     it and writes no ownership marker itself.
@@ -234,13 +237,31 @@ Exit codes:
   2  usage error / gh failure, the PR's checks that could not be read among
      them; a run with no `--yes` and no terminal to ask at, which merges
      nothing
-  3  the merge failed; the PR left the merge queue without merging, or was
-     taken out of it because its head moved; or, called with a pinned head
-     (`run(argv, pinned_head=…)`, as `land-work` calls it), the PR's head is
-     not that one
+  3  the merge failed, or was not seen made; the PR left the merge queue
+     without merging; its head moved while the queue held it, and it was
+     taken out, merged before it could be, or may still merge; or, called
+     with a pinned head (`run(argv, pinned_head=…)`, as `land-work` calls
+     it), the PR's head is not that one
   4  accepted, a re-run completes it: the PR is in the merge queue and has
      not been seen merged, or gh accepted the merge — or a merge or an
      enqueue got no answer back — and GitHub could not be read to confirm it
+  5  merged, and the move to Done failed, or, completing a PR that had
+     merged, the move ahead of it: running done-work again completes it, and
+     any close that failed as well
+  6  merged and the issue moved to Done, and the close of an issue the merge
+     closed failed: running done-work again completes it
+
+A step after the merge never exits 1, 2 or 3, which end a run that runs no
+step after a merge (#3207). The verbs it runs report a board that did not
+answer, and their other failures, with those codes, so their code is not
+passed on. 1 and 2 say that the run merged nothing. So does 3, save three
+cases, each of which the output names:
+  - the PR merged before it could be taken out of the queue, after its head
+    moved, so that merge may hold commits nobody checked;
+  - taking the PR out of the queue failed or gave no answer, so it may still
+    merge;
+  - a merge request was not seen made, and may still show: done-work run
+    again reads the PR first and completes a merge that shows.
 
 One exit code covers several ends — 0 is a merge, a dry run and a declined
 prompt alike — and one end several codes: no authorisation is 0 for a
@@ -396,6 +417,16 @@ STATE_SATISFIED_BY_OVERRIDE = "satisfied-by-override"
 # gh accepted. A re-run completes it.
 EXIT_ACCEPTED = 4
 
+# The exits of a run whose merge GitHub reports made, with a step after it
+# owed (#3207). The merge cannot be undone (DEC-026), and a re-run completes
+# the step. The code names the first step that failed: the move to Done, or
+# the close of an issue the merge closed. The verbs' own codes are not passed
+# on, since 1, 2 and 3 end a run that runs no step after a merge. They say
+# that the run merged nothing, but for the three exit 3s the module's
+# docstring names, which can follow a merge.
+EXIT_MERGED_MOVE_OWED = 5
+EXIT_MERGED_CLOSE_OWED = 6
+
 
 # ---- how a run ended, for a verb that composes done-work (#1203) ----------
 #
@@ -420,14 +451,19 @@ UNCONFIRMED = "unconfirmed"
 DECLINED = "declined"
 #: A dry run printed what it would do.
 PLANNED = "planned"
-#: The PR's head is not the one the run was handed, or the queue let the PR
-#: go because its head moved: nothing merged.
+#: The PR's head is not the one the run was handed, or it moved while the
+#: merge queue held the PR: nothing merged, unless the queue merged the PR
+#: before it could be taken out, and where taking it out failed or gave no
+#: answer, the queue may merge it still. The reason says which.
 HEAD_MOVED = "head-moved"
 #: Nothing merged: a gate, the queue, GitHub or a step before the merge said
-#: no. `DoneWorkRun.retry` tells whether running again unchanged can help.
+#: no — save a merge request that was not seen made, which may still show.
+#: `DoneWorkRun.retry` tells whether running again unchanged can help.
 REFUSED = "refused"
-#: Nothing was changed: what the run needed to read could not be read, or the
-#: run could not start (no capability, an un-bootstrapped project).
+#: Nothing merged: what the run needed to read could not be read, or the run
+#: could not start (no capability, an un-bootstrapped project). Where the
+#: reading that failed is the one just before the merge, what the run posted
+#: or moved ahead of it stands.
 UNREADABLE = "unreadable"
 
 
@@ -1290,8 +1326,10 @@ def _after_merge(
     merge closed closed and cascaded, then the best-effort branch cleanup.
 
     The merge is durable by now, so nothing here rolls it back: a failed step
-    warns with the command that finishes it, and the run exits with it after
-    the cleanup (:data:`FOLLOW_UP_OWED`). `branch` is the PR's head branch and
+    warns with the command that finishes it, and the run ends after the
+    cleanup (:data:`FOLLOW_UP_OWED`), exiting with the code that names the
+    first step that failed (:data:`EXIT_MERGED_MOVE_OWED`,
+    :data:`EXIT_MERGED_CLOSE_OWED`). `branch` is the PR's head branch and
     `merged_head` the head it merged at: the branch on GitHub is deleted only
     while its tip is that head, the local branch only when the one on GitHub
     was deleted or is gone and nothing on it is missing from the merge.
@@ -1328,7 +1366,7 @@ def _after_merge(
     # pr-merge close through this PR is the one implementation: it closes an
     # issue the merge left open (a non-default base, where GitHub does not
     # auto-close), reconciles the state label, and walks the parents (DEC-006).
-    close_rc = 0
+    close_failed = False
     for number in to_close:
         rc = _invoke_close_issue(
             number,
@@ -1346,7 +1384,7 @@ def _after_merge(
             )
             print(warning, file=sys.stderr)
             owed = owed or warning
-            close_rc = close_rc or rc
+            close_failed = True
 
     # Branch cleanup — never fatal, after the steps above. The head branch on
     # GitHub is the backbone's to delete, only while its tip is the head that
@@ -1360,9 +1398,9 @@ def _after_merge(
     )
 
     if move_rc != 0:
-        return _ended(FOLLOW_UP_OWED, move_rc, reason=owed)
-    if close_rc != 0:
-        return _ended(FOLLOW_UP_OWED, close_rc, reason=owed)
+        return _ended(FOLLOW_UP_OWED, EXIT_MERGED_MOVE_OWED, reason=owed)
+    if close_failed:
+        return _ended(FOLLOW_UP_OWED, EXIT_MERGED_CLOSE_OWED, reason=owed)
     also = _issue_list(n for n in to_close if n != args.issue_number)
     print(
         f"\n[ok] merged + closed #{args.issue_number}" + (f" (also closed: {also})" if also else "")
@@ -1411,7 +1449,11 @@ def _not_merged(
     Accepted (exit 4) are a PR the queue was handed, and a merge GitHub could
     not then confirm — one gh accepted, or a merge or an enqueue that got no
     answer back: a later run finds the PR merged, or still open, and
-    finishes. Everything else merged nothing, and the issue stays where it is.
+    finishes. Everything else runs nothing after a merge and leaves the issue
+    where it is. It merged nothing, but for three ends of exit 3, each of
+    whose messages says so: the queue merged the PR before it could be taken
+    out, taking it out failed or gave no answer, and a merge request was not
+    seen made.
     """
     reading = landing.reading
     if landing.outcome == pr_merge.STILL_QUEUED:
@@ -1695,9 +1737,11 @@ def _complete_merged_pr(
             **_owner_bypass(args),
         )
         if lead_in_rc != 0:
+            # The move ahead of the move to Done: that move is owed, as
+            # after a failed move to Done.
             return _ended(
                 FOLLOW_UP_OWED,
-                lead_in_rc,
+                EXIT_MERGED_MOVE_OWED,
                 f"error: move-issue exited {lead_in_rc} moving #{issue_number} "
                 f"{lead_in.from_state} → {lead_in.to_state}. PR #{pr_number} has merged; "
                 f"fix what move-issue reported, then re-run `done-work {issue_number}`.",
