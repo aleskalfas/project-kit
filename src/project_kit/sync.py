@@ -546,10 +546,11 @@ def match_pins(
     and the recorded version never move.
 
     A copy is kept as it was, with a loud warning, where its pin cannot be read
-    (point 7), where the pin holds no capability of its name, or where that
-    capability names another version than the project records: its tag has
-    moved at the source, and only a person moves a version, by uninstalling and
-    installing it again. So is one whose ``requires_backbone`` excludes the
+    (point 7), where its tag now names another commit than the pin records,
+    where the pin holds no capability of its name, or where that capability
+    names another version than the project records: its tag has moved at the
+    source, and only a person moves a version, by uninstalling and installing
+    it again. So is one whose ``requires_backbone`` excludes the
     backbone the project records, the gate install runs on the same content
     (point 4). Sync runs on past each. Under ``--dry-run`` nothing is fetched.
     Returns each externally-sourced capability's outcome, by name.

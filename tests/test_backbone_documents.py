@@ -1490,7 +1490,7 @@ FRICTION_CHECK = Contract(
             {"updated", "unchanged", "deferred", "unanchored", "revisited"}
         ),
         "written:status": frozenset({"stands", "bump", "edited", "written-back"}),
-        "written:outcome": frozenset({"unchanged", "deferred"}),
+        "written:outcome": frozenset({"updated", "unchanged", "deferred"}),
         "refused.kind": frozenset({"resolver-elsewhere"}),
     },
 )
@@ -1595,14 +1595,33 @@ def _refusal() -> dict[str, Any]:
 
 @pytest.mark.usefixtures("answers_in_files")
 def test_the_friction_check_document_holds_its_contract(committed_adopter: AdopterRepo) -> None:
+    """The run changes the CLI under the guide, and the requirement's threshold with its
+    test, a target the change revisits by changing it: outcome `updated`."""
     repo = committed_adopter
+    revisit_tests.declare_linker(repo.root)
     repo.write(
-        {FRICTION_CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()}
+        {
+            FRICTION_CONFIG: friction_config(mode="enforcing"),
+            **SOURCE,
+            "docs/guide.md": guide(),
+            revisit_tests.TEST_FILE: "def test_latency():\n    assert answer_time() < 2\n",
+            revisit_tests.DECISION: "Cache the status.\n",
+            revisit_tests.SOURCE_DOC: revisit_tests.requirement(),
+        }
     )
     repo.commit("base", files=None)
     repo.checkout("feature", create=True)
-    repo.commit("change the CLI only", {"src/cli/main.py": "print('j')\n"})
+    repo.commit(
+        "change the CLI, and relax the threshold with its test",
+        {
+            "src/cli/main.py": "print('j')\n",
+            revisit_tests.SOURCE_DOC: revisit_tests.requirement(threshold="10 s"),
+            revisit_tests.TEST_FILE: "def test_latency():\n    assert answer_time() < 10\n",
+        },
+    )
     printed = document_of(invoke("friction", "check", "--base", "main", JSON_OPTION))
+    outcomes = {answer.get("outcome") for answer in printed["answers"]}
+    assert fc.Answer.UPDATED.value in outcomes, printed["answers"]
     check(
         FRICTION_CHECK,
         {"answer": [printed, _change_check()], "refusal": [_refusal()]},
