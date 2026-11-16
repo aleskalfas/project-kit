@@ -16,6 +16,11 @@ The validator enforces the parts of `LDOC`'s rules its set declares under
 `checks` (COR-051 point 2; DEC-001 point 6), each only where its rule binds: a
 page's structure where RS-LDOC-004 binds on it, and its reader where RS-LDOC-003
 binds (DEC-001 point 3).
+
+The answer is read by its keys (ADR-097 point 3). A key the reading needs that is
+missing, null, of another type, or a kind of artefact it does not know, is an
+answer it cannot tell anything from: `Unreadable`. Read as nothing binding, it
+would leave a page unchecked where a rule binds on it.
 """
 
 from __future__ import annotations
@@ -28,6 +33,7 @@ from pathlib import Path
 from typing import Any
 
 from _lib import backbone
+from _lib import document_keys as keys
 
 #: The document version this reading understands (the CLI reference, "Rule-set
 #: commands"). A later backbone raises it only when a key or a value of a set goes,
@@ -38,7 +44,7 @@ SCHEMA_VERSION = 1
 ARGV = ("pkit", "rule-sets", "reach", "--json")
 
 #: How the answer names a whole document, as against an entry of a collection file.
-DOCUMENT = "document"
+DOCUMENT, ENTRY = "document", "entry"
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -84,26 +90,33 @@ def read_binding(root: Path, run: Runner = backbone.run) -> Binding:
 
 
 def binding_of(document: Mapping[str, Any]) -> Binding:
-    """The `pkit rule-sets reach --json` document as a Binding."""
-    if document.get("schema_version") != SCHEMA_VERSION:
+    """The `pkit rule-sets reach --json` document as a Binding. Raises Unreadable for
+    a version other than this reading's, and for an answer it cannot tell anything
+    from at a key it reads (ADR-097 point 3)."""
+    version = document.get("schema_version")
+    if type(version) is not int or version != SCHEMA_VERSION:
         raise Unreadable(
-            f"`{' '.join(ARGV)}` answered schema_version {document.get('schema_version')!r}; "
+            f"`{' '.join(ARGV)}` answered schema_version {version!r}; "
             f"this capability reads {SCHEMA_VERSION}"
         )
-    artefacts = document.get("artefacts")
-    if not isinstance(artefacts, list):
+    if not isinstance(document.get("artefacts"), list):
         raise Unreadable(f"`{' '.join(ARGV)}` answered without its artefacts")
+    try:
+        return Binding(_rules(document))
+    except keys.Untold as exc:
+        raise Unreadable(
+            f"`{' '.join(ARGV)}` answered a document this capability cannot read: {exc}"
+        ) from exc
+
+
+def _rules(document: Mapping[str, Any]) -> dict[str, frozenset[str]]:
+    """The rules that bind on each document artefact, by its path. An entry of a
+    collection file is no page, so it is left out."""
     rules: dict[str, frozenset[str]] = {}
-    for entry in artefacts:
-        if not isinstance(entry, Mapping) or entry.get("kind") != DOCUMENT:
+    for where, entry in keys.objects(document, "artefacts", ""):
+        if keys.one_of(entry, "kind", where, (DOCUMENT, ENTRY)) != DOCUMENT:
             continue
-        path = entry.get("path")
-        if not isinstance(path, str):
-            continue
-        listed = entry.get("rules")
-        rules[path] = frozenset(
-            rule["rule"]
-            for rule in (listed if isinstance(listed, list) else [])
-            if isinstance(rule, Mapping) and isinstance(rule.get("rule"), str)
+        rules[keys.text(entry, "path", where)] = frozenset(
+            keys.text(rule, "rule", inner) for inner, rule in keys.objects(entry, "rules", where)
         )
-    return Binding(rules)
+    return rules

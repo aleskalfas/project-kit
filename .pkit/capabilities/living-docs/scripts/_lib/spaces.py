@@ -1150,12 +1150,6 @@ def _mention_findings(
             )
         return ("mentions: no page to read.",)
     whole = {a.path: a for a in decl.artefacts if not a.entry}
-    if any(whole.get(rel) is not None and whole[rel].standing is None for rel in bound):
-        return (
-            "mentions: not read — the backbone's `pkit friction artefacts --json` answered "
-            "without the files each path anchor stands on, so no mention can be told covered "
-            "(upgrade the backbone).",
-        )
     one_home = frozenset(
         rel
         for rel in bound
