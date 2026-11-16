@@ -30,7 +30,9 @@ from project_kit.validators import Finding, Severity
 from tests import analysis_repo as ar
 from tests import document_contracts as contracts
 from tests import test_backbone_documents as documents
+from tests import test_backbone_documents_components as component_documents
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.backbone_documents import JSON_OPTION, document_of, invoke
 from tests.caller_contracts import UNKNOWN_VALUE, Caller, Outcome, check, raises, same
 from tests.document_contracts import Contract, Form
 from tests.in_process import load
@@ -61,6 +63,16 @@ def repository_checks(
     del answers_in_files
     documents._friction_history(committed_adopter)
     return documents._repository_documents(committed_adopter.root)
+
+
+#: Ids whose lookup prints each part of one: a record, a point of a record partly
+#: superseded, a rule, and an id that resolves nowhere.
+LOOKED_UP = ("COR-005", "COR-050#14", "RS-OPS-001", "NOPE-999")
+
+
+def _lookups() -> dict[str, Any]:
+    """`pkit refs lookup --json` of `LOOKED_UP`, in the project the test runs in."""
+    return document_of(invoke("refs", "lookup", JSON_OPTION, *LOOKED_UP))
 
 
 def _point(entries: tuple[str, ...], *states: dp.FillerState) -> dict[str, Any]:
@@ -217,10 +229,7 @@ def test_living_docs_reads_where_records_lie_as_its_contract_says(
     make_adopter_repo: Any,
 ) -> None:
     make_adopter_repo()
-    printed = documents._printed(
-        documents._cli("refs", "lookup", documents.JSON_OPTION, *documents.LOOKED_UP)
-    )
-    check(_ld_lookup(documents.LOOKED_UP), printed)
+    check(_ld_lookup(LOOKED_UP), _lookups())
 
 
 # --- doc-examples ---------------------------------------------------------------------------
@@ -395,11 +404,9 @@ def test_software_analysis_reads_where_records_and_citations_lie_as_its_contract
     make_adopter_repo: Any,
 ) -> None:
     make_adopter_repo()
-    printed = documents._printed(
-        documents._cli("refs", "lookup", documents.JSON_OPTION, *documents.LOOKED_UP)
-    )
-    check(_sa_records(documents.LOOKED_UP), printed)
-    check(_sa_citations(documents.LOOKED_UP), printed)
+    printed = _lookups()
+    check(_sa_records(LOOKED_UP), printed)
+    check(_sa_citations(LOOKED_UP), printed)
 
 
 def _analysis_document(repo: AdopterRepo) -> dict[str, Any]:
@@ -418,7 +425,7 @@ def _analysis_document(repo: AdopterRepo) -> dict[str, Any]:
             f"{ar.ANALYSIS}/requirements/REQ-009-loose.md": requirement.format(id="REQ-009"),
         }
     )
-    return documents._printed(documents._cli("friction", "artefacts", documents.JSON_OPTION))
+    return document_of(invoke("friction", "artefacts", JSON_OPTION))
 
 
 def _not_looked(outcome: Outcome, base: Outcome) -> bool:
@@ -577,7 +584,7 @@ PROJECT_MANAGEMENT_DECISIONS = Caller(
     contract=documents.REFS_LOOKUP,
     read=pm_decision_ids.reading_of,
     untold=lambda outcome: isinstance(outcome, pm_decision_ids.NotChecked),
-    nothing=lambda: pm_decision_ids.lookup(list(documents.LOOKED_UP), run=_no_document),
+    nothing=lambda: pm_decision_ids.lookup(list(LOOKED_UP), run=_no_document),
 )
 
 
@@ -585,10 +592,7 @@ def test_project_management_reads_whether_a_record_holds_an_id_as_its_contract_s
     make_adopter_repo: Any,
 ) -> None:
     make_adopter_repo()
-    printed = documents._printed(
-        documents._cli("refs", "lookup", documents.JSON_OPTION, *documents.LOOKED_UP)
-    )
-    check(PROJECT_MANAGEMENT_DECISIONS, printed)
+    check(PROJECT_MANAGEMENT_DECISIONS, _lookups())
 
 
 def _obligations(document: Mapping[str, Any]) -> Any:
@@ -771,7 +775,7 @@ def test_project_management_drift_reads_an_explanation_as_its_contract_says(
 
 PROJECT_MANAGEMENT_DRIFT_RULES = Caller(
     name="project-management's drift reading of `pkit agents rules --json`",
-    contract=documents.AGENTS_RULES,
+    contract=component_documents.AGENTS_RULES,
     read=lambda document: pm_drift.forms_of(document, "c" * 40),
     untold=raises(pm_drift.Stop),
     nothing=lambda: pm_drift._json(["pkit", "agents", "rules"], Path("."), _no_document),
@@ -779,10 +783,11 @@ PROJECT_MANAGEMENT_DRIFT_RULES = Caller(
 
 
 def test_project_management_drift_reads_the_rules_of_a_fixer_s_run_as_their_contract_says(
-    monkeypatch: pytest.MonkeyPatch,
+    make_adopter_repo: MakeAdopterRepo,
 ) -> None:
-    answered, _refused = documents._rules_documents(monkeypatch)
-    check(PROJECT_MANAGEMENT_DRIFT_RULES, answered)
+    make_adopter_repo(capabilities=("project-management",))
+    projected = document_of(invoke("agents", "rules", component_documents._FIX_DRIFT, JSON_OPTION))
+    check(PROJECT_MANAGEMENT_DRIFT_RULES, projected)
 
 
 (pm_agent_runs,) = load("project-management", "agent_runs")

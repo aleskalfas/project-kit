@@ -22,7 +22,8 @@ it, and fails:
   reason recorded from before ADR-097 (point 4, "The version rises").
 
 **Naming a key.** A key is named by its path: `base.ref` for a key of an object,
-`findings[]` for the items of a list and `findings[].kind` for a key of each. A mapping
+`findings[]` for the items of a list and `findings[].kind` for a key of each. A document
+that is a list names its items `[]`, and a key of each `[].kind`. A mapping
 keyed by data, such as one keyed by path or by a type's name (point 2, "A key that is
 data is a value"), is named in `data`; its keys are values, and `types{}.component`
 names a field of each entry. A key that carries another owner's payload is named in
@@ -53,6 +54,12 @@ TYPES = ("str", "int", "float", "bool", "null", "list", "object")
 
 #: The type of a key whose value may be any JSON value, as a payload's may.
 ANY = "|".join(TYPES)
+
+#: A document as a command prints it: an object, or a list of its items.
+Document = Mapping[str, Any] | list[Any]
+
+#: The name of the items of a document that is a list.
+ITEMS = "[]"
 
 
 @dataclass(frozen=True)
@@ -110,7 +117,7 @@ class _Key:
 
 def check(
     contract: Contract,
-    printed: Mapping[str, Iterable[Mapping[str, Any]]],
+    printed: Mapping[str, Iterable[Document]],
     *,
     enumerations: Mapping[str, Iterable[str]] | None = None,
 ) -> None:
@@ -124,7 +131,7 @@ def check(
 
 def judge(
     contract: Contract,
-    printed: Mapping[str, Iterable[Mapping[str, Any]]],
+    printed: Mapping[str, Iterable[Document]],
     *,
     enumerations: Mapping[str, Iterable[str]],
 ) -> list[str]:
@@ -274,10 +281,10 @@ def _raise_problems(contract: Contract, scopes: list[Form]) -> list[str]:
     return problems
 
 
-def _version_problems(contract: Contract, form: str, document: Mapping[str, Any]) -> list[str]:
+def _version_problems(contract: Contract, form: str, document: Document) -> list[str]:
     if contract.version is None:
         return []
-    found = document.get(VERSION_KEY)
+    found = document.get(VERSION_KEY) if isinstance(document, Mapping) else None
     if found == contract.version and type(found) is int:
         return []
     return [
@@ -324,8 +331,13 @@ def _key_problems(
     return []
 
 
-def _walk(contract: Contract, document: Mapping[str, Any]) -> Iterator[_Key]:
-    """Each own key of `document` with its value, the document's own keys first."""
+def _walk(contract: Contract, document: Document) -> Iterator[_Key]:
+    """Each own key of `document` with its value, the document's own keys first: of a
+    list, each item as `[]`."""
+    if isinstance(document, list):
+        for item in document:
+            yield from _walk_value(contract, None, ITEMS, item)
+        return
     for key, value in document.items():
         yield from _walk_value(contract, None, str(key), value)
 
@@ -369,7 +381,7 @@ def type_of(value: Any) -> str:
     raise TypeError(f"a document holds JSON values only, not {type(value).__name__}")
 
 
-def shape(contract: Contract, documents: Iterable[Mapping[str, Any]]) -> dict[str, str]:
+def shape(contract: Contract, documents: Iterable[Document]) -> dict[str, str]:
     """Each key the documents print, by name, with the types they print it with: what a
     contract pins, to read before writing one by hand."""
     found: dict[str, set[str]] = {}

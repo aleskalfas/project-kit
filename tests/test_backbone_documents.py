@@ -7,9 +7,12 @@ prints, from a result holding each of them. `tests/document_contracts.py` holds 
 the contract pinned here: a key or a value that goes, or comes back, fails until the
 same change updates the pin, beside the changeset that declares the break.
 
-Every backbone command that prints a document for a program has its contracts here, or
-stands in `tests/backbone_documents_baseline.txt` until a change pins them. Nothing is
-ever added to the baseline.
+Every backbone command that prints a document for a program has its contracts here, or in
+a module this one gathers: `tests/test_backbone_documents_pull_request.py`,
+`tests/test_backbone_documents_process.py` and `tests/test_backbone_documents_components.py`.
+`tests/backbone_documents_baseline.txt` names the commands no contract pins yet, and is
+empty; nothing is ever added to it. Each way a command prints for a program other than
+`--json` is named here, with why no contract pins it (`OTHER_OUTPUT`).
 """
 
 from __future__ import annotations
@@ -22,48 +25,41 @@ from typing import Any
 
 import click
 import pytest
-from click.testing import CliRunner, Result
 
 from project_kit import answer_files as af
 from project_kit import data_points as dp
 from project_kit import decisions_check_diff as numbering
 from project_kit import decisions_landing as landing
 from project_kit import default_branch as db
-from project_kit import docs_roots
+from project_kit import docs_roots, path_records
 from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
+from project_kit import friction_move as fmove
+from project_kit import friction_prune as fprune
 from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
 from project_kit import friction_since as fs
 from project_kit import loaded_rule_sets as lr
+from project_kit import refs as refs_mod
 from project_kit import rule_set_reading as reading
 from project_kit.cli import main
 from project_kit.config_at_commit import KeyAtCommit
+from project_kit.validators import Finding, Severity
 from tests import test_answer_files as answer_tests
+from tests import test_backbone_documents_components as component_documents
+from tests import test_backbone_documents_process as process_documents
+from tests import test_backbone_documents_pull_request as pull_request_documents
 from tests import test_friction_artefacts as artefacts_tests
 from tests import test_friction_revisit as revisit_tests
 from tests import test_rule_reach as reach
 from tests.adopter_repo import AdopterRepo, GitRepo
+from tests.backbone_documents import JSON_OPTION, document_of, invoke
 from tests.document_contracts import ANY, Contract, Form, check
 from tests.friction_documents import CONFIG as FRICTION_CONFIG
 from tests.friction_documents import SOURCE, Timeline, commit_install, friction_config, guide
 from tests.test_rule_sets import anchored_to, rule_set_text, rules
 
 BASELINE = Path(__file__).with_name("backbone_documents_baseline.txt")
-
-#: The option by which a backbone command prints its document for a program.
-JSON_OPTION = "--json"
-
-
-def _cli(*args: str) -> Result:
-    return CliRunner().invoke(main, list(args))
-
-
-def _printed(result: Result) -> dict[str, Any]:
-    assert result.stdout, result.output
-    document = json.loads(result.stdout)
-    assert isinstance(document, dict), result.stdout
-    return document
 
 
 @pytest.fixture(autouse=True)
@@ -140,7 +136,7 @@ def test_the_repository_base_document_holds_its_contract(
     repo = GitRepo.init(tmp_path / "work")
     repo.commit("first", {"README.md": "one\n"})
     monkeypatch.chdir(repo.root)
-    printed = _printed(_cli("repository", "base", JSON_OPTION))
+    printed = document_of(invoke("repository", "base", JSON_OPTION))
     built = [
         _settled(db.OPTION, db.RESOLVED_REMOTE),
         _settled(db.ENVIRONMENT, db.RESOLVED_LOCAL),
@@ -348,8 +344,8 @@ def test_the_landing_check_document_holds_its_contract(
     repo.commit("start", {_RECORD: _record("proposed")})
     repo.checkout("change", create=True)
     repo.commit("accept it", {_RECORD: _record("accepted")})
-    printed = _printed(_cli("decisions", "check-landing", "--base", "main", JSON_OPTION))
-    no_answer = _printed(_cli("decisions", "check-landing", "--base", "nowhere", JSON_OPTION))
+    printed = document_of(invoke("decisions", "check-landing", "--base", "main", JSON_OPTION))
+    no_answer = document_of(invoke("decisions", "check-landing", "--base", "nowhere", JSON_OPTION))
     check(
         CHECK_LANDING,
         {
@@ -357,6 +353,98 @@ def test_the_landing_check_document_holds_its_contract(
             "no answer": [no_answer, landing.no_answer_document("why")],
         },
     )
+
+
+# --- `pkit decisions check-diff --json` ---------------------------------------------------
+
+CHECK_DIFF = Contract(
+    name="pkit decisions check-diff --json",
+    version=1,
+    forms={
+        "answer": Form(
+            keys={
+                "schema_version": "int",
+                "base": "object|null",
+                "base.ref": "str",
+                "base.fork": "str",
+                "base.tip": "str",
+                "head": "str|null",
+                "compared": "int",
+                "errors": "int",
+                "findings": "list",
+                "findings[]": "object",
+                "findings[].severity": "str",
+                "findings[].location": "str",
+                "findings[].message": "str",
+                "accepted_changes": "list",
+                "accepted_changes[]": "object",
+                "accepted_changes[].path": "str",
+                "accepted_changes[].record": "str",
+                "accepted_changes[].points": "list",
+                "accepted_changes[].points[]": "object",
+                "accepted_changes[].points[].id": "str",
+                "accepted_changes[].points[].change": "str",
+                "accepted_changes[].points[].title": "str",
+                "accepted_changes[].fields": "list",
+                "accepted_changes[].fields[]": "str",
+                "accepted_changes[].shared_text": "bool",
+                "accepted_changes[].other_text": "bool",
+                "accepted_changes[].list_form": "bool",
+                "accepted_changes[].removed": "bool",
+            }
+        )
+    },
+    sets={
+        "findings[].severity": frozenset({"error", "warning"}),
+        "accepted_changes[].points[].change": _POINT_CHANGES,
+    },
+)
+
+
+def _numbering_report() -> dict[str, Any]:
+    """A numbering check holding every key: an error and a warning, and an accepted
+    record changed in each way the check tells."""
+    changed = numbering.ChangedRecord(
+        _RECORD,
+        "PRJ-001",
+        points=tuple(
+            numbering.PointChange(f"{i}", change, "A title")
+            for i, change in enumerate(sorted(_POINT_CHANGES), start=1)
+        ),
+        fields=("status",),
+        shared=True,
+        other=True,
+        list_form=True,
+    )
+    report = numbering.Report(
+        "main",
+        "f" * 40,
+        "t" * 40,
+        2,
+        (
+            Finding(_RECORD, "point 1 was dropped", Severity.ERROR),
+            Finding(_RECORD, "a title moved", Severity.WARNING),
+        ),
+        (changed, numbering.ChangedRecord(_RECORD, "PRJ-002", removed=True)),
+    )
+    return numbering.as_json(report, "h" * 40)
+
+
+def test_the_numbering_check_document_holds_its_contract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = GitRepo.init(tmp_path / "work")
+    monkeypatch.chdir(repo.root)
+    repo.commit("start", {"README.md": "A project.\n"})
+    no_record = document_of(invoke("decisions", "check-diff", "--base", "main", JSON_OPTION))
+    repo.commit("accept it", {_RECORD: _record("accepted")})
+    repo.checkout("change", create=True)
+    repo.commit("refine it", {_RECORD: _record("accepted").replace("Text of 1.", "Text.")})
+    printed = document_of(invoke("decisions", "check-diff", "--base", "main", JSON_OPTION))
+    at_head = document_of(
+        invoke("decisions", "check-diff", "--base", "main", "--head", "HEAD", JSON_OPTION)
+    )
+    check(CHECK_DIFF, {"answer": [no_record, printed, at_head, _numbering_report()]})
 
 
 # --- `pkit connections resolve --json` ----------------------------------------------------
@@ -475,7 +563,7 @@ def _point(outcome: dp.Outcome, value: Any) -> dp.ResolvedPoint:
 
 def test_the_data_point_document_holds_its_contract(make_adopter_repo: Any) -> None:
     make_adopter_repo()
-    undefined = _printed(_cli("connections", "resolve", _ADDRESS, JSON_OPTION))
+    undefined = document_of(invoke("connections", "resolve", _ADDRESS, JSON_OPTION))
     defined = [
         dp.point_document(_point(dp.Outcome.RESOLVED, [{"id": "one"}])),
         dp.point_document(_point(dp.Outcome.NO_ANSWER, None), source=dp.FROM_RUN_CACHE),
@@ -535,7 +623,7 @@ def test_the_friction_since_document_holds_its_contract(committed_adopter: Adopt
     repo = committed_adopter
     since = repo.head()
     repo.commit("an edit", {"docs/a.md": "A page.\n"})
-    printed = _printed(_cli("friction", "since", since, "--base", "main", JSON_OPTION))
+    printed = document_of(invoke("friction", "since", since, "--base", "main", JSON_OPTION))
     built = json.loads(
         fs.render_json(
             fs.Since(
@@ -551,6 +639,103 @@ def test_the_friction_since_document_holds_its_contract(committed_adopter: Adopt
         )
     )
     check(FRICTION_SINCE, {"answer": [printed, built]})
+
+
+# --- `pkit friction move-plan --json` and `pkit friction prune --json` ------------------------
+
+FRICTION_MOVE_PLAN = Contract(
+    name="pkit friction move-plan --json",
+    version=1,
+    forms={
+        "answer": Form(
+            keys={
+                "schema_version": "int",
+                "report": "str",
+                "folder": "str",
+                "files": "list",
+                "files[]": "object",
+                "files[].path": "str",
+                "files[].sha256": "str",
+                "files[].text": "str",
+                "files[].answers": "list",
+                "files[].answers[]": "object",
+                "files[].answers[].artefact": "str",
+                "files[].answers[].path": "str",
+                "files[].answers[].text": "str",
+                "left": "list",
+                "left[]": "object",
+                "left[].artefact": "str",
+                "left[].path": "str",
+                "left[].reason": "str",
+            }
+        )
+    },
+    sets={"report": frozenset({"move-plan"})},
+)
+
+FRICTION_PRUNE = Contract(
+    name="pkit friction prune --json",
+    version=1,
+    forms={
+        "answer": Form(
+            keys={
+                "schema_version": "int",
+                "report": "str",
+                "dry_run": "bool",
+                "head": "str",
+                "folder": "str",
+                "files": "int",
+                "live": "int",
+                "remove": "list",
+                "remove[]": "str",
+                "removed": "list",
+                "removed[]": "str",
+                "kept": "list",
+                "kept[]": "object",
+                "kept[].path": "str",
+                "kept[].why": "str",
+            }
+        )
+    },
+    sets={"report": frozenset({"prune"})},
+)
+
+
+def test_the_answer_move_and_prune_documents_hold_their_contracts(
+    committed_adopter: AdopterRepo,
+) -> None:
+    moved = fmove.MovePlan(
+        files=(
+            fmove.MovedFile(
+                "docs/guide.md",
+                "s" * 64,
+                "A page.\n",
+                (fmove.MovedAnswers("guide", "answers/one.yaml", "answers: []\n"),),
+            ),
+        ),
+        left=(fmove.LeftAnswers("other", "docs/other.md", "its block is an alias"),),
+    )
+    check(
+        FRICTION_MOVE_PLAN,
+        {
+            "answer": [
+                document_of(invoke("friction", "move-plan", JSON_OPTION)),
+                json.loads(fmove.render_json(moved)),
+            ]
+        },
+    )
+    pruned = fprune.PrunePlan(
+        "h" * 40, 3, 1, ("one.yaml",), (fprune.KeptFile("two.yaml", "a live deferral keeps it"),)
+    )
+    check(
+        FRICTION_PRUNE,
+        {
+            "answer": [
+                document_of(invoke("friction", "prune", "--dry-run", JSON_OPTION)),
+                json.loads(fprune.render_json(pruned, dry_run=False, removed=("one.yaml",))),
+            ]
+        },
+    )
 
 
 # --- `pkit rule-sets reach --json` and `pkit rule-sets altered --json` ---------------------
@@ -810,8 +995,8 @@ def test_the_rule_sets_reach_document_holds_its_contract(
         "nowhere.md",
         str(tmp_path.parent),
     )
-    printed = _printed(_cli("rule-sets", "reach", *given, JSON_OPTION))
-    at_commit = _printed(_cli("rule-sets", "reach", "--at", repo.head(), JSON_OPTION))
+    printed = document_of(invoke("rule-sets", "reach", *given, JSON_OPTION))
+    at_commit = document_of(invoke("rule-sets", "reach", "--at", repo.head(), JSON_OPTION))
     check(RULE_SETS_REACH, {"answer": [printed, at_commit, *built]})
 
 
@@ -859,9 +1044,9 @@ def _altered_documents(repo: AdopterRepo) -> list[dict[str, Any]]:
             )
         }
     )
-    printed = _printed(_cli("rule-sets", "altered", "--base", "main", JSON_OPTION))
-    named = _printed(
-        _cli("rule-sets", "altered", "--base", "main", "--head", "feature", JSON_OPTION)
+    printed = document_of(invoke("rule-sets", "altered", "--base", "main", JSON_OPTION))
+    named = document_of(
+        invoke("rule-sets", "altered", "--base", "main", "--head", "feature", JSON_OPTION)
     )
     budgets = [
         reading.budget_entry(lr.BudgetChange("OWN", "docs/rule-sets/own.md", file, base, head))
@@ -873,6 +1058,41 @@ def _altered_documents(repo: AdopterRepo) -> list[dict[str, Any]]:
         )
     ]
     return [printed, named, {**printed, "budgets": budgets}, *_ruled_states(repo)]
+
+
+# --- `pkit rule-sets loaded --json` ---------------------------------------------------------
+
+RULE_SETS_LOADED = Contract(
+    name="pkit rule-sets loaded --json",
+    version=1,
+    forms={
+        "answer": Form(
+            keys={
+                "schema_version": "int",
+                "loaded": "list",
+                "loaded[]": "object",
+                "loaded[].layer": "str",
+                "loaded[].owner": "str",
+                "loaded[].path": "str",
+                "loaded[].rule_set": "str|null",
+                "loaded[].set_path": "str|null",
+                "loaded[].present": "bool",
+                "index": "object",
+                "index.path": "str",
+                "index.present": "bool",
+            }
+        )
+    },
+    sets={"loaded[].layer": frozenset({"backbone", "capability", "project"})},
+)
+
+
+def test_the_loaded_rules_document_holds_its_contract(make_adopter_repo: Any) -> None:
+    make_adopter_repo(capabilities=("project-management",))
+    check(
+        RULE_SETS_LOADED,
+        {"answer": [document_of(invoke("rule-sets", "loaded", JSON_OPTION))]},
+    )
 
 
 # --- `pkit friction artefacts --json` ------------------------------------------------------
@@ -1114,8 +1334,8 @@ def _artefacts_states(repo: AdopterRepo) -> Iterator[dict[str, Any]]:
 
 def test_the_friction_artefacts_document_holds_its_contract(make_adopter_repo: Any) -> None:
     repo = _evidence_adopter(make_adopter_repo)
-    printed = _printed(_cli("friction", "artefacts", JSON_OPTION))
-    at_commit = _printed(_cli("friction", "artefacts", "--at", "HEAD", JSON_OPTION))
+    printed = document_of(invoke("friction", "artefacts", JSON_OPTION))
+    at_commit = document_of(invoke("friction", "artefacts", "--at", "HEAD", JSON_OPTION))
     check(
         FRICTION_ARTEFACTS,
         {"answer": [printed, at_commit, *_artefacts_states(repo)]},
@@ -1382,7 +1602,7 @@ def test_the_friction_check_document_holds_its_contract(committed_adopter: Adopt
     repo.commit("base", files=None)
     repo.checkout("feature", create=True)
     repo.commit("change the CLI only", {"src/cli/main.py": "print('j')\n"})
-    printed = _printed(_cli("friction", "check", "--base", "main", JSON_OPTION))
+    printed = document_of(invoke("friction", "check", "--base", "main", JSON_OPTION))
     check(
         FRICTION_CHECK,
         {"answer": [printed, _change_check()], "refusal": [_refusal()]},
@@ -1839,7 +2059,7 @@ def test_the_friction_report_documents_hold_their_contracts(
         REPOSITORY_CHECK,
         {
             "answer": [
-                _printed(_cli("friction", "check", "--all", JSON_OPTION)),
+                document_of(invoke("friction", "check", "--all", JSON_OPTION)),
                 *_repository_documents(root),
             ]
         },
@@ -1853,15 +2073,15 @@ def test_the_friction_report_documents_hold_their_contracts(
     )
     check(
         FRICTION_DEBT,
-        {"answer": [_printed(_cli("friction", "debt", JSON_OPTION)), *_debt_documents(root)]},
+        {"answer": [document_of(invoke("friction", "debt", JSON_OPTION)), *_debt_documents(root)]},
         enumerations={"debt[].kind": (kind.value for kind in frep.DEBT_KINDS)},
     )
     check(
         FRICTION_EXPLAIN,
         {
             "answer": [
-                _printed(_cli("friction", "explain", "guide", JSON_OPTION)),
-                _printed(_cli("friction", "explain", "REQ-1", JSON_OPTION)),
+                document_of(invoke("friction", "explain", "guide", JSON_OPTION)),
+                document_of(invoke("friction", "explain", "REQ-1", JSON_OPTION)),
                 *_explain_documents(root),
             ]
         },
@@ -1880,7 +2100,7 @@ def test_the_friction_report_documents_hold_their_contracts(
     )
 
 
-# --- `pkit refs lookup --json` --------------------------------------------------------------
+# --- `pkit refs lookup --json` and `pkit refs records-for --json` ---------------------------
 
 REFS_LOOKUP = Contract(
     name="pkit refs lookup --json",
@@ -1905,84 +2125,164 @@ REFS_LOOKUP = Contract(
     },
 )
 
-#: Ids that print each part of a lookup: a record, a point of a record partly
-#: superseded, a rule, and an id that resolves nowhere.
-LOOKED_UP = ("COR-005", "COR-050#14", "RS-OPS-001", "NOPE-999")
+_TIED = {
+    "id": "str",
+    "title": "str|null",
+    "path": "str",
+    "received": "bool",
+    "points": "list",
+    "points[]": "str",
+    "in_place_of": "str|null",
+}
 
-
-def test_the_refs_lookup_document_holds_its_contract(make_adopter_repo: Any) -> None:
-    make_adopter_repo()
-    check(REFS_LOOKUP, {"answer": [_printed(_cli("refs", "lookup", JSON_OPTION, *LOOKED_UP))]})
-
-
-# --- `pkit agents rules --json` ------------------------------------------------------------
-
-_RULE_FORM = {"tool": "str", "folder": "str", "command": "list", "command[]": "str"}
-
-AGENTS_RULES = Contract(
-    name="pkit agents rules --json",
+RECORDS_FOR = Contract(
+    name="pkit refs records-for --json",
     version=1,
     forms={
         "answer": Form(
             keys={
                 "schema_version": "int",
-                "rules_of": "str",
-                "refused": "str|null",
-                "allow": "list",
-                "allow[]": "object",
-                **{f"allow[].{key}": kind for key, kind in _RULE_FORM.items()},
-                "deny": "list",
-                "deny[]": "object",
-                **{f"deny[].{key}": kind for key, kind in _RULE_FORM.items() if key != "folder"},
-                "held": "list",
-                "held[]": "object",
-                "held[].how": "str",
-                "held[].privilege": "str",
-                "forms": "list",
-                "forms[]": "str",
-                "excluded_candidates": "list",
-                "excluded_candidates[]": "list",
-                "excluded_candidates[][]": "str",
+                "anchored": "int",
+                "unreadable": "list",
+                "unreadable[]": "str",
+                "paths": "list",
+                "paths[]": "object",
+                "paths[].path": "str",
+                "paths[].excluded_by": "str|null",
+                "paths[].direct": "list",
+                "paths[].direct[]": "object",
+                **{f"paths[].direct[].{key}": _TIED[key] for key in ("id", "title", "path")},
+                "paths[].direct[].received": "bool",
+                "paths[].direct[].ties": "list",
+                "paths[].direct[].ties[]": "object",
+                "paths[].direct[].ties[].how": "str",
+                "paths[].direct[].ties[].artefact": "str",
+                "paths[].direct[].ties[].anchor": "str|null",
+                "paths[].direct[].ties[].points": "list",
+                "paths[].direct[].ties[].points[]": "str",
+                "paths[].direct[].ties[].in_place_of": "str|null",
+                "paths[].through": "list",
+                "paths[].through[]": "object",
+                "paths[].through[].artefact": "str",
+                "paths[].through[].anchor": "str",
+                "paths[].through[].records": "list",
+                "paths[].through[].records[]": "object",
+                **{f"paths[].through[].records[].{key}": kind for key, kind in _TIED.items()},
             }
         )
     },
+    sets={
+        "paths[].direct[].ties[].how": frozenset({"record", "artefact"}),
+    },
 )
 
-#: This repository, whose project-management declares the rules of a fixer's runs.
-_HERE = Path(__file__).resolve().parent.parent
+_LOOKED_UP = ".pkit/decisions/project/PRJ-001-a.md"
 
 
-def _rules_documents(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
-    """The rules of a fixer's runs as they project, and a run the rules refuse."""
-    monkeypatch.chdir(_HERE)
-    return [
-        _printed(_cli("agents", "rules", "project-management:fix-drift", JSON_OPTION)),
-        _printed(_cli("agents", "rules", "project-management:nothing", JSON_OPTION)),
-    ]
+def _records_for() -> dict[str, Any]:
+    """An answer holding every key: a path excluded, tied directly by a record and by an
+    artefact, a record in place of one it supersedes, and an artefact it is reached
+    through."""
+    record = path_records.Record("PRJ-001", "A record", _LOOKED_UP, received=False)
+    received = path_records.Record("COR-001", None, ".pkit/decisions/core/COR-001-a.md", True)
+    ties = (
+        path_records.Tie(record, "record", "PRJ-001", "src/**", in_place_of="PRJ-000"),
+        path_records.Tie(received, "artefact", "guide", None, points=("1",)),
+        path_records.Tie(record, "through", "guide", "src/**", points=("2",)),
+    )
+    answer = path_records.Answer(
+        (path_records.PathRecords("src/a.py", "src/old/**", ties),), 2, ("docs/broken.md",)
+    )
+    return answer.as_json()
 
 
-def test_the_agents_rules_document_holds_its_contract(monkeypatch: pytest.MonkeyPatch) -> None:
-    check(AGENTS_RULES, {"answer": _rules_documents(monkeypatch)})
+def test_the_lookup_and_records_for_documents_hold_their_contracts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = GitRepo.init(tmp_path / "work")
+    monkeypatch.chdir(repo.root)
+    repo.commit("start", {_LOOKED_UP: _record("accepted")})
+    looked_up = document_of(
+        invoke("refs", "lookup", "PRJ-001", "PRJ-001#1", "PRJ-404", JSON_OPTION)
+    )
+    built = {
+        "schema_version": 1,
+        "lookups": [
+            refs_mod.Lookup(
+                "PRJ-001#1",
+                (f"{_LOOKED_UP}#1-point-1",),
+                path=_LOOKED_UP,
+                anchor="1-point-1",
+                received=True,
+                partial_supersession="*Partially superseded by PRJ-002.*",
+            ).as_json()
+        ],
+    }
+    check(REFS_LOOKUP, {"answer": [looked_up, built]})
+    records = document_of(invoke("refs", "records-for", "src/a.py", JSON_OPTION))
+    check(RECORDS_FOR, {"answer": [records, _records_for()]})
 
 
 # --- every command that prints a document has its contracts ---------------------------------
 
-#: The contracts of each backbone command that prints a document for a program, by the
-#: command's words.
-CONTRACTS: Mapping[str, tuple[Contract, ...]] = {
+#: The contracts of the commands this module pins, by the command's words.
+PINNED_HERE: Mapping[str, tuple[Contract, ...]] = {
     "repository base": (REPOSITORY_BASE,),
     "decisions check-landing": (CHECK_LANDING,),
+    "decisions check-diff": (CHECK_DIFF,),
     "connections resolve": (DATA_POINT,),
     "friction since": (FRICTION_SINCE,),
+    "friction move-plan": (FRICTION_MOVE_PLAN,),
+    "friction prune": (FRICTION_PRUNE,),
     "rule-sets reach": (RULE_SETS_REACH,),
     "rule-sets altered": (RULE_SETS_ALTERED,),
+    "rule-sets loaded": (RULE_SETS_LOADED,),
     "friction artefacts": (FRICTION_ARTEFACTS,),
     "friction check": (FRICTION_CHECK, REPOSITORY_CHECK),
     "friction debt": (FRICTION_DEBT,),
     "friction explain": (FRICTION_EXPLAIN,),
     "refs lookup": (REFS_LOOKUP,),
-    "agents rules": (AGENTS_RULES,),
+    "refs records-for": (RECORDS_FOR,),
 }
+
+#: The contracts of each command, by the module that pins them.
+_MODULES: tuple[Mapping[str, tuple[Contract, ...]], ...] = (
+    PINNED_HERE,
+    pull_request_documents.CONTRACTS,
+    process_documents.CONTRACTS,
+    component_documents.CONTRACTS,
+)
+
+#: The contracts of each backbone command that prints a document for a program, by the
+#: command's words.
+CONTRACTS: Mapping[str, tuple[Contract, ...]] = {
+    words: contracts for module in _MODULES for words, contracts in module.items()
+}
+
+#: Each way a backbone command prints for a program other than `--json`, by the command's
+#: words and the option, with why no contract pins it (ADR-097 point 1).
+OTHER_OUTPUT: Mapping[str, str] = {
+    "refs graph --format": (
+        "its `dot` form is a drawing in Graphviz's DOT language, which a renderer reads and "
+        "whose shape that language sets, a protocol outside project-kit; `ascii` and `text` "
+        "are for people"
+    ),
+    "connections graph --mermaid": (
+        "a flowchart in Mermaid's language, which a renderer reads and whose shape that "
+        "language sets, a protocol outside project-kit"
+    ),
+    "process graph --mermaid": (
+        "a flowchart in Mermaid's language, which a renderer reads and whose shape that "
+        "language sets, a protocol outside project-kit"
+    ),
+    "--version": "one line for people naming pkit's version, no request for machine output",
+}
+
+#: The options by which a backbone command chooses a form of its output other than
+#: `--json`, and the one by which `pkit` itself prints its version: what `OTHER_OUTPUT`
+#: is held to. A command's own `--version` names a version it is given.
+_OUTPUT_OPTIONS = frozenset({"--format", "--mermaid"})
+_VERSION_OPTION = "--version"
 
 
 def _commands(
@@ -2022,3 +2322,36 @@ def test_the_baseline_names_only_commands_no_contract_pins() -> None:
     commands = _printing_documents()
     assert not baseline() & set(CONTRACTS), "a command with its contracts leaves the baseline"
     assert baseline() <= commands, "the baseline names a command that prints no document"
+
+
+def test_each_command_has_its_contracts_in_one_module() -> None:
+    pinned = [words for module in _MODULES for words in module]
+    twice = sorted({words for words in pinned if pinned.count(words) > 1})
+    assert not twice, f"{twice} have their contracts in two modules: keep them in one"
+
+
+def _other_output() -> set[str]:
+    """Each option of a backbone command, or of `pkit` itself, that chooses a form of its
+    output other than `--json`, as the command's words and the option."""
+    found = {
+        f"{words} {option}"
+        for words, command in _commands(main)
+        for param in command.params
+        for option in param.opts
+        if option in _OUTPUT_OPTIONS
+    }
+    if any(_VERSION_OPTION in param.opts for param in main.params):
+        found.add(_VERSION_OPTION)
+    return found
+
+
+def test_each_other_output_is_named_with_why_no_contract_pins_it() -> None:
+    found = _other_output()
+    assert found <= set(OTHER_OUTPUT), (
+        f"{sorted(found - set(OTHER_OUTPUT))} print for a program other than through `--json`: "
+        f"pin the document's contract here, or name in `OTHER_OUTPUT` why none pins it "
+        f"(ADR-097 point 1)"
+    )
+    assert set(OTHER_OUTPUT) <= found, (
+        f"`OTHER_OUTPUT` names {sorted(set(OTHER_OUTPUT) - found)}, which no command takes"
+    )

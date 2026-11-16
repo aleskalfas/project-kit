@@ -1,0 +1,5 @@
+# The capabilities' and adapters' commands that print a document for a program and whose
+# documents no contract pins yet (ADR-097 point 7). Nothing is ever added: a command not
+# listed, a new one included, has its contracts pinned beside its capability's tests. A
+# change that pins a command's documents takes the command out.
+# tests/test_capability_documents.py says which commands the ratchet finds.
