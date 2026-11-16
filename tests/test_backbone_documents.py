@@ -829,7 +829,13 @@ def _ruled_states(repo: AdopterRepo) -> list[dict[str, Any]]:
 
 
 def test_the_rule_sets_altered_document_holds_its_contract(make_adopter_repo: Any) -> None:
-    repo = make_adopter_repo()
+    check(RULE_SETS_ALTERED, {"answer": _altered_documents(make_adopter_repo())})
+
+
+def _altered_documents(repo: AdopterRepo) -> list[dict[str, Any]]:
+    """The walk's documents of a change that alters, adds, renames and brings artefacts
+    under a rule, between named commits too, with every kind of budget change, and at
+    each ruled state."""
     reach._start(repo)
     repo.commit(
         "change",
@@ -866,11 +872,7 @@ def test_the_rule_sets_altered_document_holds_its_contract(make_adopter_repo: An
             ("CLAUDE.md", 40, None),
         )
     ]
-    ruled = _ruled_states(repo)
-    check(
-        RULE_SETS_ALTERED,
-        {"answer": [printed, named, {**printed, "budgets": budgets}, *ruled]},
-    )
+    return [printed, named, {**printed, "budgets": budgets}, *_ruled_states(repo)]
 
 
 # --- `pkit friction artefacts --json` ------------------------------------------------------
@@ -1913,6 +1915,56 @@ def test_the_refs_lookup_document_holds_its_contract(make_adopter_repo: Any) -> 
     check(REFS_LOOKUP, {"answer": [_printed(_cli("refs", "lookup", JSON_OPTION, *LOOKED_UP))]})
 
 
+# --- `pkit agents rules --json` ------------------------------------------------------------
+
+_RULE_FORM = {"tool": "str", "folder": "str", "command": "list", "command[]": "str"}
+
+AGENTS_RULES = Contract(
+    name="pkit agents rules --json",
+    version=1,
+    forms={
+        "answer": Form(
+            keys={
+                "schema_version": "int",
+                "rules_of": "str",
+                "refused": "str|null",
+                "allow": "list",
+                "allow[]": "object",
+                **{f"allow[].{key}": kind for key, kind in _RULE_FORM.items()},
+                "deny": "list",
+                "deny[]": "object",
+                **{f"deny[].{key}": kind for key, kind in _RULE_FORM.items() if key != "folder"},
+                "held": "list",
+                "held[]": "object",
+                "held[].how": "str",
+                "held[].privilege": "str",
+                "forms": "list",
+                "forms[]": "str",
+                "excluded_candidates": "list",
+                "excluded_candidates[]": "list",
+                "excluded_candidates[][]": "str",
+            }
+        )
+    },
+)
+
+#: This repository, whose project-management declares the rules of a fixer's runs.
+_HERE = Path(__file__).resolve().parent.parent
+
+
+def _rules_documents(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
+    """The rules of a fixer's runs as they project, and a run the rules refuse."""
+    monkeypatch.chdir(_HERE)
+    return [
+        _printed(_cli("agents", "rules", "project-management:fix-drift", JSON_OPTION)),
+        _printed(_cli("agents", "rules", "project-management:nothing", JSON_OPTION)),
+    ]
+
+
+def test_the_agents_rules_document_holds_its_contract(monkeypatch: pytest.MonkeyPatch) -> None:
+    check(AGENTS_RULES, {"answer": _rules_documents(monkeypatch)})
+
+
 # --- every command that prints a document has its contracts ---------------------------------
 
 #: The contracts of each backbone command that prints a document for a program, by the
@@ -1929,6 +1981,7 @@ CONTRACTS: Mapping[str, tuple[Contract, ...]] = {
     "friction debt": (FRICTION_DEBT,),
     "friction explain": (FRICTION_EXPLAIN,),
     "refs lookup": (REFS_LOOKUP,),
+    "agents rules": (AGENTS_RULES,),
 }
 
 

@@ -3,7 +3,6 @@
 # ever added: a command not listed, a new one included, has its contracts pinned there.
 # A change that pins a command's documents takes the command out.
 
-agents rules
 agents run
 capabilities install
 capabilities project-rule-set
