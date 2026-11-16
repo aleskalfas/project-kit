@@ -20,5 +20,7 @@ body: >
   does not know is marked so in the CLI reference until it gains its first
   value, such as a data point's filler `state`, the cross-repository guard's
   `verdict` and `cleared`, `agents run`'s `ending` and the friction change
-  check's answer `status`. A capability's or an adapter's README may not yet
-  mark its own. Nothing a command prints changes.
+  check's answer `status`. Each capability marks its own sets so, and
+  states the contract of each document its commands print, in its README or
+  in a page of its own that the command's entry there links to for that
+  document. Nothing a command prints changes.

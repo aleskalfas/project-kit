@@ -103,6 +103,7 @@ pkit:
         - COR-054#5
         - COR-055#3
         - ADR-059#1
+        - ADR-097
       artefact:
         - .pkit/capabilities/visual-communication/files.md#contents
         - .pkit/capabilities/visual-communication/files.md#a-piece
@@ -168,6 +169,8 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#when-no-verdict-is-given
         - .pkit/capabilities/visual-communication/outputs.md#when-it-ends-the-loop
         - .pkit/capabilities/visual-communication/outputs.md#the-accepted-calibrations-data
+        - .pkit/capabilities/visual-communication/outputs.md#what-pkit-visual-pages-prints
+        - .pkit/capabilities/visual-communication/outputs.md#the-verdicts-document
         - .pkit/rules/README.md#a-capabilitys-rules
         - .pkit/capabilities/visual-communication/checks.md#
         - .pkit/capabilities/visual-communication/checks.md#contents
@@ -184,6 +187,7 @@ pkit:
         - .pkit/adapters/claude-code/README.md#deploy-skillssh
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
+        - .pkit/cli/README.md#machine-readable-output
 ---
 
 # visual-communication capability
@@ -412,7 +416,7 @@ Draws a piece's pages as images, for a person or an agent to read ([The viewing 
 
 Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 
-- **Prints** the piece's languages and keys, what it draws by default, and each page by its number and trace id. Then the renderer it reads by default, and each renderer's tool. `--json` prints it as one document.
+- **Prints** the piece's languages and keys, what it draws by default, and each page by its number and trace id. Then the renderer it reads by default, and each renderer's tool. `--json` prints it as one document ([What `pkit visual pages` prints](outputs.md#what-pkit-visual-pages-prints)).
 - **Finds the browser** a run would start, and starts none. It names the program, or where it looked where it found none, and the forced palettes it draws where `look` is asked `--forced-colours`.
 - **Writes** nothing.
 - **Exits** 0 when it listed; 1 when the piece cannot be drawn, such as with no lock yet or a lock that does not hold. It exits 1 too where the configuration's `browser` names no path ([The browser](files.md#the-browser)).
@@ -421,7 +425,11 @@ Lists what [`pkit visual look`](#pkit-visual-look-piece) can draw of a piece.
 
 Prints what a piece's brief hands the review first: the intent, without the reasons ([visual-communication:DEC-042-grades-bar-and-loop] point 4).
 
-- **Prints** the goals, relations and takeaways of the piece's part and of each page's part ([The brief](files.md#the-brief)): the pages and the items of each list in the brief's order, and within a part its goals, then its relations, then its takeaway. A relation is printed with the parts of the content it relates. A part that states none is named as stating none. `--json` prints it as one document.
+- **Prints** the goals, relations and takeaways of the piece's part and of each page's part ([The brief](files.md#the-brief)): the pages and the items of each list in the brief's order, and within a part its goals, then its relations, then its takeaway. A relation is printed with the parts of the content it relates. A part that states none is named as stating none.
+- **`--json`** prints the same as one JSON document, under the CLI reference's rule for a document printed for a program ([Machine-readable output](../../cli/README.md#machine-readable-output)). It carries no version. Where the command refuses, it prints none and exits 1.
+  - **`piece`:** the piece's name, as given.
+  - **`intent`:** `null` where the piece keeps no brief, or its brief cannot be read. Otherwise `piece`, the part for the whole piece, and `pages`, the part of each page the brief speaks of, by the page's id.
+  - **A part** holds `goals`, the text of each goal; `relations`, each relation with its `text` and, where it names them, `relates`, the parts of the content it relates; and `takeaway`, its text. Lists keep the brief's order. A part leaves out each of the three it does not state, so a reader reads a missing one as not stated, and a relation without `relates` as one that names no part.
 - **Leaves out** every reason, and each aspect and principle a reason holds ([The brief](files.md#the-brief)).
 - **Reads** the piece's `piece.yaml` and its brief: no lock, no drawing, no content. A piece with no brief, or whose brief cannot be read, is said to keep none.
 - **Writes** nothing.
@@ -443,7 +451,7 @@ Gives the digest of a draft's text, and says whether a text still matches the di
 Gives the verdict against the project's bar from a round's review report, and says whether it ends the designer's loop ([The verdict](outputs.md#the-verdict)).
 
 - **Reads** the document the round's report opens with, as it is kept alone in the clone's local folder, the highest round kept unless `--round <n>` names one. It reads the bar from the capability's configuration alone.
-- **Prints** whether the piece meets the bar, each page with whether it meets it, each grade that fails it, each marked grade it leaves out, and the rules the bar covers. Then whether the verdict ends the loop, and each reason it does not ([When it ends the loop](outputs.md#when-it-ends-the-loop)). `--json` prints it as one document.
+- **Prints** whether the piece meets the bar, each page with whether it meets it, each grade that fails it, each marked grade it leaves out, and the rules the bar covers. Then whether the verdict ends the loop, and each reason it does not ([When it ends the loop](outputs.md#when-it-ends-the-loop)). `--json` prints it as one document ([The verdict's document](outputs.md#the-verdicts-document)).
 - **Gives no verdict** where the configuration holds no bar, or the report leaves out a rule the bar covers, and says why ([When no verdict is given](outputs.md#when-no-verdict-is-given)).
 - **Ends the loop** only once whoever maintains the capability has accepted a calibration's report, on a bar that covers only rules with evidence of their own in it, and while nothing that could move the grades has changed since. Until then the verdict informs ([visual-communication:DEC-042-grades-bar-and-loop] points 9 and 10).
 - **Writes** nothing, and needs no network. [`pkit sync`](../../cli/README.md#sync) provisions it, as it does every query command.
