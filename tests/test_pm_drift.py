@@ -233,6 +233,22 @@ def test_a_dead_or_ambiguous_anchor_is_listed(drift, fixers, kind) -> None:
     assert plan.empty and "validation reports" in _why(plan, "docs/a.md")
 
 
+@pytest.mark.parametrize("kind", ["dead-anchor", "a-kind-pm-does-not-know"])
+def test_a_finding_that_names_no_artefact_keeps_none_from_a_fixer(drift, fixers, kind) -> None:
+    report, item = _page("docs/a.md")
+    reading = _reading(
+        drift,
+        fixers,
+        [report],
+        [item],
+        granted={"living-docs": ["living-docs:page"]},
+        findings=[{"kind": kind, "location": None}],
+    )
+    plan = _plan(drift, reading)
+    assert [c.name for c in plan.dispatch["living-docs"]] == ["docs/a.md"]
+    assert not plan.listed
+
+
 def test_upstream_first_and_one_waits_for_its_stale_upstream(drift, fixers) -> None:
     up, up_item = _page("docs/up.md")
     down, down_item = _page("docs/down.md", upstream="docs/up.md#a-section")

@@ -460,7 +460,8 @@ def _readable(
 
 def checked_of(check: Mapping[str, Any]) -> Mapping[str, Any]:
     """The whole-repository check, `pkit friction check --all --json`, each artefact's
-    location and state and each finding's kind and location read."""
+    location and state and each finding's kind and location read: a finding's location
+    is null where it names no artefact, as the contract allows."""
 
     def read() -> None:
         for where, report in keys.objects(check, "artefacts", ""):
@@ -468,7 +469,7 @@ def checked_of(check: Mapping[str, Any]) -> Mapping[str, Any]:
             keys.text(report, "state", where)
         for where, finding in keys.objects(check, "findings", ""):
             keys.text(finding, "kind", where)
-            keys.text(finding, "location", where)
+            keys.text_or_null(finding, "location", where)
 
     _readable("pkit friction check --all --json", check, read, absent=1)
     return check
@@ -687,11 +688,14 @@ def _upstreams(item: Mapping[str, Any], by_key: Mapping[str, Mapping[str, Any]])
 def judged(check: Mapping[str, Any]) -> tuple[list[tuple[str, str]], dict[str, str]]:
     """Each artefact the check reports, by location, with its state; and why the plan
     lists an artefact rather than take it, by location and by file, for an anchor
-    finding validation reports and a finding of a kind pm does not know."""
+    finding validation reports and a finding of a kind pm does not know. A finding with
+    no location names no artefact, so it keeps none from a fixer."""
     reports = [(str(r["location"]), str(r["state"])) for r in check["artefacts"]]
     flagged: dict[str, str] = {}
     for finding in check["findings"]:
-        kind, location = str(finding["kind"]), str(finding["location"])
+        kind, location = str(finding["kind"]), finding["location"]
+        if location is None:
+            continue
         if kind in _ANCHOR_FINDINGS:
             why = f"it has {_ANCHOR_FINDINGS[kind]}, which validation reports"
         elif kind not in FINDING_KINDS:

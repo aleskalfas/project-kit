@@ -698,11 +698,23 @@ PROJECT_MANAGEMENT_DRIFT_CHECK = Caller(
 )
 
 
+def _with_an_unlocated_finding(document: Mapping[str, Any]) -> dict[str, Any]:
+    """`document` with a finding that names no artefact after its others, its `artefact`
+    and `location` null, as the contract allows."""
+    findings = document["findings"]
+    unlocated = {**findings[0], "artefact": None, "location": None}
+    return {**document, "findings": [*findings, unlocated]}
+
+
 def test_project_management_drift_reads_the_whole_repository_check_as_its_contract_says(
     repository_checks: list[dict[str, Any]],
 ) -> None:
     for document in repository_checks:
         check(PROJECT_MANAGEMENT_DRIFT_CHECK, document)
+    found = [document for document in repository_checks if document["findings"]]
+    assert found, "no check the contract's test prints holds a finding"
+    for document in found:
+        check(PROJECT_MANAGEMENT_DRIFT_CHECK, _with_an_unlocated_finding(document))
 
 
 def _upstreams(document: Mapping[str, Any]) -> dict[str, tuple[Any, ...]]:
