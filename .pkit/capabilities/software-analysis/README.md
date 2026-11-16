@@ -14,7 +14,7 @@ pkit:
         - .pkit/capabilities/software-analysis/package.yaml
         - .pkit/capabilities/software-analysis/rule-sets/san.md
         - .pkit/capabilities/software-analysis/migrations/1.0.0/001-write-each-obligation.sh
-      record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", "software-analysis:DEC-005", "software-analysis:DEC-006#6", "software-analysis:DEC-006#7", "software-analysis:DEC-006#9", "software-analysis:DEC-007", "software-analysis:DEC-008", COR-004, COR-017, COR-023, COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, "COR-054#1", "COR-054#2", "COR-054#3", "COR-054#4", "COR-054#5", "COR-055#1", "COR-055#2", "COR-056#2", COR-057, COR-060, "COR-062#1", "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
+      record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", "software-analysis:DEC-005", "software-analysis:DEC-006#6", "software-analysis:DEC-006#7", "software-analysis:DEC-006#9", "software-analysis:DEC-007", "software-analysis:DEC-008", COR-004, COR-017, COR-023, COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, "COR-054#1", "COR-054#2", "COR-054#3", "COR-054#4", "COR-054#5", "COR-055#1", "COR-055#2", "COR-056#2", COR-057, COR-060, "COR-062#1", "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9", ADR-097]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, RS-SAN-013, RS-SAN-014, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare", ".pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift", ".pkit/decisions/README.md#looking-a-citation-up", ".pkit/lifecycle/component-registry.md#install-pre-flight-checks", ".pkit/lifecycle/manifest.md#discovery-what-a-capability-would-connect-to", ".pkit/lifecycle/manifest.md#the-methodologys-literals", ".pkit/lifecycle/manifest.md#where-a-project-filler-file-lives-the-address-to-path-mapping", ".pkit/lifecycle/README.md#the-methodologys-literals", ".pkit/lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping"]
 ---
 
@@ -1054,7 +1054,10 @@ REQ-004 · Quality · Show a run's result quickly
 - **What it lists.** Each requirement in the order of its number, headed by its id, its kind and its title, and marked `(withdrawn)` when it is. Under it come the use cases, then the journeys, that list it.
 - **Only what is in force meets it.** A withdrawn use case or journey is history, and meets nothing. One in force that lists a withdrawn requirement is shown under it, and the check refuses it ("Checking", above).
 - **Complete, or no answer.** A file among the use cases, the journeys or the requirements that holds no artefact of its kind gives no answer, such as one whose front matter does not parse. So does a requirement, or a use case or journey in force, that gives no id of its kind's shape, or a `requirements` that is no list. What such a file lists, or which requirement it is, cannot be told. So the command exits 1 and names the file, and `pkit analysis validate` says what is wrong with it. A requirement you name that the analysis does not hold gives no answer too.
-- **`--json`** prints `{schema_version, requirements}`. Each requirement is `{id, kind, shown_as, title, status, path, met_by}`, and each entry of `met_by` is `{id, kind, title, path}`.
+- **`--json`** prints one JSON document, under the CLI reference's rule for a document printed for a program ([Machine-readable output](../../cli/README.md#machine-readable-output) <!-- unanchored: the rule is ADR-097's, which the page anchors, and the CLI reference anchors this page, so an anchor back would make a cycle -->). A run with no answer prints none.
+  - `schema_version`: `1`. A reader refuses a version it does not know.
+  - `requirements`: each requirement it lists, in the order of its number, with `id`; `kind`, its kind's name in `schemas/artefact-kinds.yaml`; `shown_as`, the name its kind shows beside its id, such as `Quality`, or `null` where the kinds' structures do not hold its kind; `title`, or `null` where its front matter gives none as text; `status`, as its front matter gives it, or `null` where it gives none; `path`, its file's path from the repository's root; and `met_by`.
+  - `met_by`: each use case, then each journey, in force that lists the requirement, with its `id`, `kind`, `title` and `path`, read as a requirement's are.
 
 It is a query: read-only and offline. It reads the working tree through the core's reading command, `pkit friction artefacts`, as the check does.
 
@@ -1067,7 +1070,13 @@ Each requirement carries `obligation`, a fingerprint of its statement, its measu
 - **What it sets aside.** What changes only how a text looks: comments, the marks of emphasis and strong emphasis as Markdown finds them, and wrapping. It also sets aside each link `pkit analysis link` writes, of a form the requirement's place declares, read as its words alone. So emphasis, a new line break or a term's link changes no fingerprint, and a changed word does.
 - **Where it reads each text.** From its front-matter field, else from the part of the body whose permanent id is the field's name, as your own structures label it. A text in neither home reads as absent. The value is the same in either home, so a text moved word for word into the body keeps its fingerprint.
 - **Its versions.** The value names its version, and the check verifies it under that version. A later release that reads the texts another way adds a version and keeps this one. So a value stays valid until its texts change, and the command then writes it under the current version.
-- **`--dry-run`** writes nothing and says what it would write. **`--json`** prints `{schema_version, dry_run, written, held, problems}`. Each entry of `written` is `{id, path, value, was, text}`: the value written, the one it held before or `null`, and the file's text with the value written.
+- **`--dry-run`** writes nothing and says what it would write.
+- **`--json`** prints one JSON document, under the CLI reference's rule for a document printed for a program ([Machine-readable output](../../cli/README.md#machine-readable-output) <!-- unanchored: the rule is ADR-097's, which the page anchors, and the CLI reference anchors this page, so an anchor back would make a cycle -->). Where the analysis cannot be read, or an id you name names no requirement, it prints none and exits 1.
+  - `schema_version`: `1`. A reader refuses a version it does not know.
+  - `dry_run`: whether the run wrote nothing.
+  - `written`: each requirement written, or that would be with `--dry-run`, in the order of their paths, with `id`, `path`, `value`, the value written, `was`, the value it held before or `null` where it held none, and `text`, the file's text with the value written.
+  - `held`: how many requirements held a value that still matches, and were left as they are.
+  - `problems`: each requirement it could not write, with `id`, `path` and `why`, in words.
 - **What it refuses.** A requirement whose texts or file it cannot read, or that names a version or a hash this release does not read, is named and left as it is. The others are written all the same, and the command exits 1.
 
 `pkit analysis validate` holds the field whatever any rule's status ("Checking", above). Your requirements' revisits still fire on `statement`, `measure` and `applies-to` ("The artefacts", above). Adding the field changes each requirement's content once, so the change that adds it answers what anchors each requirement, such as the use cases and journeys that list it (COR-050 point 5). The upgrade to the release that adds the field runs a migration that writes it on each requirement an earlier release wrote, from the command's `--dry-run --json` plan. Where it cannot read the plan, it warns and writes nothing, and the check names the command.
@@ -1088,7 +1097,12 @@ TERM-sandbox — sandbox, in the analysis
 - **Where else it is listed.** Each analysis whose glossary's head lists the term, with the name it lists. Search that analysis too, for the names the command gives with `--analysis <component>` naming it.
 - **A withdrawn term** gives its names alike, since a withdrawal leaves its uses to mend.
 - **One analysis.** Where your settings list several, `--analysis <component>` names the one read, as for the diagrams.
-- **`--json`** prints `{schema_version, term, names, replaces, not_searched, listed_in}`. The term is `{id, name, status, location, analysis, listed_from}`, each entry of `not_searched` is `{name, held_by}`, and each of `listed_in` is `{analysis, name}`.
+- **`--json`** prints one JSON document, under the CLI reference's rule for a document printed for a program ([Machine-readable output](../../cli/README.md#machine-readable-output) <!-- unanchored: the rule is ADR-097's, which the page anchors, and the CLI reference anchors this page, so an anchor back would make a cycle -->). A run with no answer prints none.
+  - `schema_version`: `1`. A reader refuses a version it does not know.
+  - `term`: the term read, with `id`; `name`, its name as the analysis reads it; `status`, as its entry gives it, or `null` where it gives none; `location`, its entry's place, `<path>#<id>`; `analysis`, the component of the analysis read, or `null` where the project keeps one analysis; and `listed_from`, the component whose glossary holds its entry where the glossary's head lists it from another analysis, else `null`.
+  - `names`: its names, and `replaces`: the names it replaces, as above.
+  - `not_searched`: each name another term holds, with `name`, and `held_by`, that term's id.
+  - `listed_in`: each analysis whose glossary's head lists the term, with `analysis`, its component, and `name`, the name it lists.
 
 **The search is yours.** A tool reads no body's text but the links to the terms and the texts it reads by their parts (DEC-001 point 1), so the command reads no body. Search the analysis's artefacts in force for each name, its plurals and verb forms included, and in diagrams' labels and bold lead-ins too. Mend each use that names the concept by a name the term no longer holds: the new name, another term, or words that fit the new definition.
 
@@ -1122,7 +1136,9 @@ flowchart LR
 - **The same bytes.** The same analysis prints the same text, its nodes sorted and its node ids stable.
 - **Where a copy may go.** Never into an analysis artefact, and never into a view of the solution, such as an architecture page or a record (DEC-003 point 9). A copy on any other page is that page's diagram, and the page anchors each artefact it draws.
 - **Complete, or no answer.** A file of a place a diagram reads that holds no artefact of its kind gives no answer. So does an artefact there with no id of its kind's shape, or one in force whose list a diagram reads that is no list of ids, or, for the chain, a use case in force whose `after` is no list of lists. The command exits 1 and names the file, and `pkit analysis validate` says what is wrong with it. A subject that names no diagram, and a journey or a requirement not in force, give no answer too.
-- **`--json`** prints `{schema_version, diagrams}`. Each diagram is `{id, title, description, mermaid}`, its `mermaid` text without the fence.
+- **`--json`** prints one JSON document, under the CLI reference's rule for a document printed for a program ([Machine-readable output](../../cli/README.md#machine-readable-output) <!-- unanchored: the rule is ADR-097's, which the page anchors, and the CLI reference anchors this page, so an anchor back would make a cycle -->). A run with no answer prints none.
+  - `schema_version`: `1`. A reader refuses a version it does not know.
+  - `diagrams`: each diagram it draws, with `id`, which names it: `use-cases`, `chain`, `journey-<id>` for a journey's flow or `requirement-<id>` for a requirement's map; `title`, its `accTitle`; `description`, its `accDescr`; and `mermaid`, its Mermaid text without the fence.
 - **Where readers find it:** each analysis's overview names this command, as you run it for that analysis, and shows each journey's flow beside its journey ("The overview", below). The other diagrams are left to the command: drawn for a large analysis, they are too big to read on a page.
 
 It is a query: read-only and offline. It reads the working tree through the core's reading command, `pkit friction artefacts`, as the check does.
@@ -1434,7 +1450,15 @@ Journeys and evidence cite a use case's step by its number, and a variant by its
 - **Where it binds.** Where the append-only rule, `RS-SAN-002`, binds, and at its status, as the structure check holds a body where the format rule binds ("Each body against its structure", above). Accepted, as the rule is, each finding is an error. While a rule is proposed, nothing is compared, and the summary says so. `--preview` compares where `pkit rule-sets reach --preview` says the rule would bind, and each finding is a report opening `preview:`, which never fails. The summary counts the use cases the rule does not bind on.
 - **Not in `pkit validate`.** It reads the base, so it answers about your change rather than the tree (COR-055 point 2). `pkit analysis validate` never runs it.
 
-`--json` prints `{schema_version, base, freed, summary, findings}`, the findings of both checks together: `base` is `{ref, tip, commit, outdated}` (`commit` is the merge-base), or `null` when nothing was compared; `freed` lists each file whose number your numbering setting frees, `{id, path, added_by, freed_by}`, and is empty without one. It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
+`--json` prints one JSON document, under the CLI reference's rule for a document printed for a program ([Machine-readable output](../../cli/README.md#machine-readable-output) <!-- unanchored: the rule is ADR-097's, which the page anchors, and the CLI reference anchors this page, so an anchor back would make a cycle -->). A run that fails a check prints it too. Where the numbers cannot be compared, it prints none, says why on standard error and exits 1. A set marked *named no reading* named no reading of a value a caller does not know before that rule was stated, and keeps the mark until it gains its first value.
+
+- `schema_version`: `1`. A reader refuses a version it does not know.
+- `base`: what your tree was compared with, or `null` when nothing was compared: `ref`, the base as named; `tip`, the commit it names; `commit`, the merge-base of that commit and `HEAD`; and `outdated`, whether the base moved on after your branch left it.
+- `freed`: each file whose number your numbering setting frees, with `id`, the number its history gave it; `path`; `added_by`, the commit that added the file; and `freed_by`, the commit the setting's entry names. It is empty without the setting.
+- `summary`: the summary's lines, for people.
+- `findings`: the findings of both checks together, each with `severity`, `error`, `warning` or `report` (*named no reading*); `location`, a path, `<path>#<id>` for an entry, or a path and a JSON Pointer; and `message`, in words. An `error` fails, and the other two do not.
+
+It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
 ## Commits off the default branch: `pkit analysis check-pointers`
 
@@ -1466,10 +1490,13 @@ It reads each source without a `url` whose `version` is a commit's full id, and 
 - a **`pull_request` checkout is GitHub's test merge** of your branch into the default branch. The records your branch adds are the ones the default branch lacks, so the line checks them there too.
 - a **depth-1 clone**, the default of `actions/checkout`, holds no merge-base, and may hold no `origin/<default-branch>` at all. So this line fails, as `check-numbers` does, whenever it has a commit to place. Fetch the whole history with `fetch-depth: 0`. A clone deep enough to hold the merge-base but still shallow reports what it cannot place as unknown.
 
-`--json` prints `{schema_version, default_branch, base, summary, findings, pointers}`:
+`--json` prints one JSON document, under the CLI reference's rule for a document printed for a program ([Machine-readable output](../../cli/README.md#machine-readable-output) <!-- unanchored: the rule is ADR-097's, which the page anchors, and the CLI reference anchors this page, so an anchor back would make a cycle -->). A run that fails prints it too. Where the commits cannot be placed, it prints none, says why on standard error and exits 1. A set marked *named no reading* named no reading of a value a caller does not know before that rule was stated, and keeps the mark until it gains its first value.
 
-- `default_branch` is `{name, ref, commit}`, and `base` is `{ref, tip, commit}`, where `commit` is the merge-base. Both are `null` when nothing was placed.
-- `pointers` lists each source placed as `{record, source, title, commit, added, placement}`. `source` is the source's place in `reviewed-against`, and `added` says whether your change adds the record. `placement` is `held`, `not-held` or `unknown`.
+- `schema_version`: `1`. A reader refuses a version it does not know.
+- `default_branch`: the default branch it placed the commits on, with `name`, `ref`, the reference read, and `commit`, its tip. `null` when nothing was placed.
+- `base`: the base that says which records your change adds, with `ref`, as named, `tip`, the commit it names, and `commit`, the merge-base of that commit and `HEAD`. `null` when nothing was placed.
+- `summary` and `findings`: as `check-numbers` gives them ("A number keeps its meaning", above).
+- `pointers`: each source placed, with `record`, the record's file; `source`, the source's place in `reviewed-against`, from 0; `title`, its title, empty where it gives none; `commit`, the commit it names; `added`, whether your change adds the record; and `placement`, `held`, `not-held` or `unknown`, as the table above places it (*named no reading*).
 
 It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
@@ -1696,7 +1723,24 @@ A record counts as accepted where its own front matter says so, its file found t
 
 **What an anchor matches is the explanation's.** `propose` matches no anchor itself: the files each path anchor stands on at the revalidation point and at HEAD, the commits behind each finding with the paths behind them — for a dead anchor, where its files went — and the artefact's body (for a term, its own section) all come from `pkit friction explain --json`, so they never disagree with what the checks decide. Git only reads what those files hold. A file `friction.exclude` leaves out is none of them: a quote only such a file still holds is gone, not kept.
 
-`--json` prints `{schema_version, artefact, location, state, head, revalidation_point, verdict, rule, reason, hint, question, anchors, read, answer}`: each changed anchor with its `shape` (`kept`, `moved`, `gone`, `deliberate`, `unread`), the commits behind it — each `{commit, change, paths}`, the paths behind the finding it touched, so `git show <commit> -- <paths>` is what changed under the anchor — what it `quoted`, what is `gone` and where it `moved_to`; each quote read with its `source`, `source_kind` (`commit` or `other`) and `verified` (`true`, `false`, or `null` when it cannot be checked); and the `answer`, `{outcome, first, commands, which}` or `null`, where `which` is what a regression's answer waits for, or `null`. It reads HEAD, as the explanation does; exit `1` when the artefact cannot be explained (not committed, not found) or was not judged, or when whether a regressed use case's record is accepted cannot be read, `2` on a usage error such as a quote without its source, or a box that cannot stand. A query: read-only, offline, and `pkit sync` provisions its dependencies.
+It reads HEAD, as the explanation does. It exits `1` when the artefact cannot be explained (not committed, not found) or was not judged, or when whether a regressed use case's record is accepted cannot be read, and `2` on a usage error, such as a quote without its source, or a box that cannot stand. A query: read-only, offline, and `pkit sync` provisions its dependencies.
+
+`--json` prints one JSON document, under the CLI reference's rule for a document printed for a program ([Machine-readable output](../../cli/README.md#machine-readable-output) <!-- unanchored: the rule is ADR-097's, which the page anchors, and the CLI reference anchors this page, so an anchor back would make a cycle -->). A run that exits `1` or `2` prints none. A set marked *named no reading* named no reading of a value a caller does not know before that rule was stated, and keeps the mark until it gains its first value.
+
+- `schema_version`: `1`. A reader refuses a version it does not know.
+- `artefact` and `location`: the artefact's id and its location, `path` or `path#id`, as the explanation gives them.
+- `state`: the artefact's state, as the explanation gives it.
+- `head`: the commit at `HEAD`, and `revalidation_point`: the commit of the artefact's revalidation point, or `null` where it has none, each as the explanation gives it.
+- `verdict`: what the rules come to: `holds`, `analysis-stale` or `code-regressed` for a proposal, `read` where the agent reads the change, `ambiguous` where a person decides, and `none` where there is nothing to resolve (*named no reading*).
+- `rule`: the rule that decided, one of the table's (*named no reading*), and `reason`, why, in words.
+- `hint`: on a `read` verdict that leans, the outcome it leans to, `holds` or `analysis-stale`, else `null` (*named no reading*).
+- `question`: on an `ambiguous` verdict, the question for a person, else `null`.
+- `anchors`: each changed anchor, with `kind` and `value`, as the artefact declares it; `state`, as the explanation gives it; and:
+  - `shape`: `kept`, `moved`, `gone`, `deliberate` or `unread` (*named no reading*).
+  - `commits`: the commits behind it, each with `commit`, `change`, its subject, and `paths`, the paths behind the finding it touched, so `git show <commit> -- <paths>` is what changed under the anchor.
+  - `quoted`: what the artefact quotes from its files; `gone`: what of that its files no longer hold at `HEAD`; and `moved_to`: where that went, where the reading can name it.
+- `read`: each of `contradicted`, `intended` and `unintended`, `null` where it was not given. A quote given holds `quote`; `source`; `source_kind`, `commit` or `other` (*named no reading*); and `verified`, `true`, `false`, or `null` when it cannot be checked.
+- `answer`: how a person records the outcome, or `null` where the verdict comes to none, an ambiguous one, one with nothing to resolve or a reading that does not lean: `outcome`, `holds`, `analysis-stale` or `code-regressed` (*named no reading*); `first`, what the person does first; `commands`, the writer commands that record it; and `which`, what a regression's answer waits for, or `null`.
 
 ## Connections
 
