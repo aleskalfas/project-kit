@@ -80,11 +80,12 @@ The code behind `pkit sync` splits in two: a propagation step, and the sync comm
   - no recorded version, from neither a manifest nor its `package.yaml`: skipped and reported
   - not in the bundle: COR-017's no-longer-shipped warning
   - incubated: skipped (COR-031)
-  - externally-sourced: skipped, and never read as shipped. Once its fetch is built, sync brings it to its pin (COR-041).
+  - externally-sourced: never read as shipped. Sync brings its copy to the commit its pin records ([ADR-040](ADR-040-external-source-write-path.md) points 1 and 3, COR-041).
 - **The commands, each anchored to one operation** on COR-004's list, which COR-059 point 3 extends:
   - `pkit sync` is reconciliation (COR-059 point 2).
   - `pkit upgrade` is a transition of the backbone. `pkit pin <newer>` reaches the same transition by running the target's `upgrade` through the router's bypass.
   - `pkit capabilities upgrade <name>` is a transition of one shipped capability, to the version the project's recorded release ships. It finishes an interrupted transition of that capability, or a capability an untagged install left behind.
+  - No command on this list moves an externally-sourced capability's pin, and `pkit capabilities upgrade` refuses a capability of that origin. A transition moves such a pin only where the person running it names the move (ADR-040 point 1). Which commands take that move is a record's of its own, refining this point and point 9 (#3229).
   - `pkit init` is first install. It records the two states in a transition's order (point 4).
   - `pkit capabilities install` propagates one capability at the recorded backbone, under the guard (point 7).
   - `pkit upgrade` and `pkit capabilities install`, `register` and `upgrade` each run, after their one operation, the questions the data points declare ([COR-061](../../../.pkit/decisions/core/COR-061-point-questions.md) point 2). A question is its definer's command, and no second operation (COR-059 point 5).
@@ -98,7 +99,7 @@ The code behind `pkit sync` splits in two: a propagation step, and the sync comm
 | each registered adapter | `.pkit/adapters/<name>/project/manifest.yaml` | a transition, when the adapter's migrations finish |
 | each shipped capability | `.pkit/capabilities/<name>/project/manifest.yaml` | a transition, when the capability's migrations finish. Its install writes it first. |
 | an incubated capability | its own `package.yaml` | the project (COR-031) |
-| an externally-sourced capability | its pin (COR-041) | a transition that repoints the pin, once its fetch is built |
+| an externally-sourced capability | its pin, the commit its ref named included, in `.pkit/capabilities/<name>/project/manifest.yaml` (COR-041, ADR-040 points 1 and 3) | a transition that moves the pin, where the person running it names the move (ADR-040 point 1) |
 
 - **A capability's manifest moves under its `project/`.** Every ownership predicate already treats that folder as the project's, so no copy deletes the manifest there.
   - **Who moves it:** a transition, before its copy. The transition of the backbone moves every root manifest in step 2, right after the target is recorded, and rewrites each registry path. A transition of one capability moves its own after its refusals (point 4).
@@ -512,7 +513,7 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
   - `run_upgrade`'s early return compares `backbone_version` alone.
   - `install._install_adapter` leaves out `permission-enforcement.yaml`.
   - `capabilities` reads and writes a capability's manifest at its root, and `manifest.write_component_manifest` replaces `backend_state` whole.
-  - `sync._sync_installed_capabilities` reads an externally-sourced capability as shipped.
+  - A transition moves no externally-sourced capability's pin, and refuses no copy out of line: it reads each such capability's ranges from its copy (points 4 and 6). #3229 builds both (ADR-040's Implications).
   - `pkit upgrade` skips a capability its bundle ships older, through sync's capability downgrade check, where point 7 refuses.
   - `upgrade._check_capability_dep_conflicts_for_upgrade` reads the installed versions.
   - `upgrade._auto_advance_pinned` compares only the latest release with the pin, and returns when they are equal.
