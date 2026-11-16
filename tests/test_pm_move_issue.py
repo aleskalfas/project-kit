@@ -939,19 +939,21 @@ def test_logging_on_key_is_unchanged_by_the_logging_off_fix(mi) -> None:
 
 
 def test_journal_length_and_position_read_one_status(mi) -> None:
-    status = {"position": {"state": "todo"}, "journal": [{}, {}]}
+    status = {"position": {"state": "todo", "indeterminate": False}, "journal": [{}, {}]}
     assert mi._position_from_status(status) == "todo"
     assert mi._journal_length_from_status(status) == 2
     assert mi._journal_length_from_status({"position": {"state": "todo"}}) is None
     assert mi._journal_length_from_status(None) is None
     assert mi._position_from_status(None) is None
     assert mi._position_from_status({"position": {"indeterminate": True}}) is None
+    # A position that does not say it was determined is none pm can tell from.
+    assert mi._position_from_status({"position": {"state": "todo"}}) is None
 
 
 # ---- the landed-move component, in both journal modes (#954) ----------
 
 _LOGGING_OFF = {
-    "position": {"state": "todo"},
+    "position": {"state": "todo", "indeterminate": False},
     "journal": [],
     "journal_logging": {"enabled": False, "committed": False},
 }

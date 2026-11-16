@@ -1561,7 +1561,9 @@ def _position_from_status(status: dict | None) -> str | None:
     precedence), so a missing `pkit` on PATH never blocks a move.
     """
     position = status.get("position") if isinstance(status, dict) else None
-    if not isinstance(position, dict) or position.get("indeterminate"):
+    # A position that does not say it was determined is one pm cannot tell from
+    # (ADR-097 point 3), never a determined one.
+    if not isinstance(position, dict) or position.get("indeterminate") is not False:
         return None
     state = position.get("state")
     return state if isinstance(state, str) else None
@@ -1574,8 +1576,8 @@ def _journal_length_from_status(status: dict | None) -> int | None:
     count is unchanged across a failed attempt and its retry, and has grown by
     the time the issue could make the same transition again.
     """
-    journal = status.get("journal") if isinstance(status, dict) else None
-    return len(journal) if isinstance(journal, list) else None
+    journal = move_journal.Journal.of(status)
+    return None if journal is None else len(journal.entries)
 
 
 def _journal_logging_off(status: dict | None) -> bool:

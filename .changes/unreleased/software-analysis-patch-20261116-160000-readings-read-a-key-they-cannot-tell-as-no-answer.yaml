@@ -1,0 +1,19 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The check, the stamp, the fillers and the proposal read each backbone
+  document by its keys, as ADR-097 point 3 says. A key they read that is
+  missing, null where the CLI reference does not print it null, or of another
+  type, and an artefact's `kind` they do not know, are an answer they cannot
+  tell anything from, never a default. So the analysis, what is settled, where
+  rules bind, where records and citations lie and an artefact's explanation
+  cannot be read, and the evidence point is unresolved. Before, a file without
+  `excluded` was read as included, an artefact without `kind` as a document, a
+  lookup without `received` as not received, and a rule without `previewed` as
+  binding outside the preview. A filler of the evidence point in a state the
+  capability does not know leaves the point unresolved, while an `inert` one
+  leaves the rest to count, as the point's `fallback` policy says. A
+  location's unplaced files that the answer does not give in full are still
+  read as not looked at, as before.

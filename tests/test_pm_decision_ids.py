@@ -258,12 +258,14 @@ def test_no_document_it_understands_is_not_checked(
     assert why in reading.why
 
 
-def test_an_entry_it_cannot_read_is_left_unanswered(dc: ModuleType) -> None:
-    document = {
-        "schema_version": 1,
-        "lookups": [{"id": "COR-001", "resolved": True}, {"id": "COR-064"}, "junk"],
-    }
-    assert dc.reading_of(document) == dc.Answered({"COR-001": True})
+@pytest.mark.parametrize("entry", [{"id": "COR-064"}, "junk", {"id": "COR-064", "resolved": None}])
+def test_an_entry_it_cannot_read_leaves_every_id_not_checked(dc: ModuleType, entry: Any) -> None:
+    """An entry without `resolved`, or not an object, says nothing of whether a record
+    holds its id, and the reading never takes it for an answer (ADR-097 point 3)."""
+    document = {"schema_version": 1, "lookups": [{"id": "COR-001", "resolved": True}, entry]}
+    reading = dc.reading_of(document)
+    assert isinstance(reading, dc.NotChecked)
+    assert "pm cannot read" in reading.why
 
 
 # --- the rule ------------------------------------------------------------------------
