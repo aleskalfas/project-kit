@@ -2,7 +2,7 @@
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
 and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
 points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-018 points 1, 2, 4
-and 5, DEC-019 point 8, DEC-030 point 5).
+and 5, DEC-019 point 8, DEC-030 point 5, DEC-042 point 3).
 
 **File-level findings, every run:**
 
@@ -10,6 +10,9 @@ and 5, DEC-019 point 8, DEC-030 point 5).
   name, and of the configuration: a file that names no schema, or another one, fails (a
   file at another format number the core's data validation reports, so this check does
   not repeat it);
+- the project's bar, against the rule sets the review grades: a bar that covers what the
+  review does not grade, or at a major other than the one the project pins for the set, or
+  the set's own where it pins none, fails (`bar.findings`, DEC-042 point 3);
 - without a piece named, the designer's grant, read from the agents overlay as the deploy
   reads it, against the location the configuration records: a path inside the
   methodology's folder fails, and so does a grant that does not cover the location
@@ -148,6 +151,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
 from _lib import (
+    bar,
     briefs,
     code,
     colour_steps,
@@ -353,9 +357,10 @@ def _config_findings(root: Path) -> list[Finding]:
     except ReadError as exc:
         return [Finding("file-unreadable", FAILS, str(exc), file=CONFIG)]
     problem = _binding(data, "config")
-    return (
+    bound = (
         [Finding("binding", FAILS, f"the configuration {problem}", file=CONFIG)] if problem else []
     )
+    return bound + bar.findings(root, data)
 
 
 def _binding(data: Any, kind: str) -> str | None:

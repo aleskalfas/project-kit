@@ -88,6 +88,12 @@ def _document(**fields: object) -> str:
         "output": "the review\n",
         "diagnostics": "",
         "reason": "",
+        "refused_calls": [],
+        "confined": False,
+        "commit": None,
+        "check": None,
+        "files": None,
+        "excluded": [],
     }
     document.update(fields)
     return json.dumps(document) + "\n"

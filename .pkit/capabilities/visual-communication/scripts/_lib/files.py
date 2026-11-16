@@ -50,6 +50,7 @@ KINDS = (
     "exports",
     "code",
     "review",
+    "calibration",
 )
 
 SCHEMA_FIELD = "pkit_schema"

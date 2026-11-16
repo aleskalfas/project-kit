@@ -150,7 +150,7 @@ Its sections:
   - **`source`:** the git source.
   - **`ref`:** the ref the install fetched, a tag or a commit's full id.
   - **`commit`:** the full id of the commit the ref named. Sync takes that commit only: where the tag now names another, it keeps the copy and warns. A pin that records no `commit`, as one written by hand may, follows its tag.
-  - **No credential** is recorded here, since a source that carries one is refused at install.
+  - **No credential** is passed in an argument, recorded here or printed, since a source whose URL carries one is refused at install.
 - **`backend_state`:** opaque backend identifiers the kit cannot rederive, such as board UUIDs and webhook IDs. It is empty, `{}`, for components that have none.
   - **`backend_state.skipped`:** in a capability's manifest, the skills and agents the project chose to skip on a naming collision (COR-017), each as a `{kind, name}` entry. A refresh reads them back from here, and leaves those artefacts out of its copy. A skip chosen in a transition is recorded here before the copy, so a transition a migration stops does not ask again. A name recorded here is never a new collision ([`upgrade-flow.md`, "A new collision"](upgrade-flow.md#a-new-collision) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
   - **A restamp** changes the version, the timestamp and the range. It replaces `skipped` with the skips in force, and keeps every other key of `backend_state`. It reads the manifest after the capability's migrations, so a key a migration wrote stays. A manifest that does not parse, such as one left with merge-conflict markers, is replaced by a new one, and the refresh says so.

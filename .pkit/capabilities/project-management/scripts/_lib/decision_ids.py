@@ -40,6 +40,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from _lib import backbone, body_rules, provenance
+from _lib import document_keys as keys
 
 #: The rule's id in `body-format.yaml`, the label a cited id that no record holds
 #: is reported under; and the label of the notice that the ids were not checked,
@@ -160,20 +161,19 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
     """What a `pkit refs lookup --json` document says of each id it answers. A
     document of a version this reading does not know is NotChecked."""
     version = document.get("schema_version")
-    if version != DOCUMENT_VERSION:
+    if type(version) is not int or version != DOCUMENT_VERSION:
         return NotChecked(
             f"`pkit refs lookup` answered schema_version {version!r}; this reading "
             f"understands {DOCUMENT_VERSION}"
         )
-    held: dict[str, bool] = {}
-    lookups = document.get("lookups")
-    for entry in lookups if isinstance(lookups, list) else []:
-        if (
-            isinstance(entry, Mapping)
-            and isinstance(entry.get("id"), str)
-            and isinstance(entry.get("resolved"), bool)
-        ):
-            held[entry["id"]] = entry["resolved"]
+    try:
+        held = {
+            keys.text(entry, "id", where): keys.flag(entry, "resolved", where)
+            for where, entry in keys.objects(document, "lookups", "")
+        }
+    except keys.Untold as exc:
+        # Read by its keys (ADR-097 point 3): never an id held or not that it did not say.
+        return NotChecked(f"`pkit refs lookup --json` answered a document pm cannot read: {exc}")
     return Answered(held)
 
 
