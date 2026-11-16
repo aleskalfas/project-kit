@@ -41,7 +41,7 @@ A finding in a library version that the project does not correct asks for attent
 
 ## 3. Read
 
-`pkit visual pages <piece>` lists what can be drawn: its languages and keys, what is drawn by default, and each page by its number and trace id. `pkit visual look <piece>` draws pages as images in the clone's local `look/<piece>/`, or `look/<piece>.html/` for the HTML renderer's pages. It moves no lock, keeps no finding, and replaces what an earlier run left there ([The viewing step](../../outputs.md#the-viewing-step)).
+`pkit visual pages <piece>` lists what can be drawn: its languages and keys, what is drawn by default, and each page by its number and trace id. `pkit visual look <piece>` draws pages as images in the clone's local `look/<piece>/`, or `look/<piece>.html/` for the HTML renderer's pages. It moves no lock, keeps no findings record, and replaces what an earlier run left there. Its report gives each image what the checks found on it ([The viewing step](../../outputs.md#the-viewing-step)).
 
 **Which pages to draw:**
 
