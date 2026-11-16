@@ -213,6 +213,7 @@ from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml, sha256
 from _lib.root import CONFIG, SHIPPED
 from _lib.scene import SceneResult
+from _lib.scene_checks import SIZES, Found, Reach, SceneCheck
 from _lib.shipped import read as read_shipped
 
 #: The renderer that draws every piece's previews.
@@ -2639,38 +2640,155 @@ def computed(project: pl.Project) -> list[Finding]:
     return scene_findings(project, results)
 
 
+#: The checks the engine makes as it computes a scene, each finding the engine's own, such as
+#: a text that overflows or a component that gets less than it asks for (DEC-005 point 14).
+ENGINE = SceneCheck("what the engine finds as it computes a scene")
+
+#: The fact of content a piece draws at one key over the size axes and not at another
+#: (DEC-021 points 5 and 7).
+SIZE_HIDDEN = "size-hidden"
+
+#: The check of content a size hides, with its reach, since the reviewer reads its silence
+#: (DEC-021 point 5, DEC-063 point 1).
+CONTENT_HIDDEN = SceneCheck(
+    "content a size hides",
+    frozenset({SIZES}),
+    id="content-a-size-hides",
+    labels=(SIZE_HIDDEN,),
+    reach=Reach(
+        measures=(
+            "each value of the content, by the key path a part's source names, that the "
+            "scenes of a language draw at one key over the size axes and not at another, "
+            "stated at each key that does not draw it, the content below it named with it "
+            "(DEC-021 point 5)",
+        ),
+        leaves_out=(
+            "content no key over the size axes of its language draws (DEC-063 point 1)",
+            "a part a component draws from no value of the content, such as its own text, a "
+            "fact of an export or a brand's picture (DEC-063 point 1)",
+        ),
+    ),
+)
+
+#: The check of contrast as drawn, a check of colour, with its reach, since the reviewer
+#: reads its silence (DEC-004 point 8, DEC-012 point 3, DEC-036 points 3 and 8, DEC-063 point
+#: 1). Its findings each name the combination they hold for, but one on a sign that paints
+#: nothing, which holds for every combination. It reads no path as a fill, and leaves out a
+#: whole text where one span of it lies over a picture: two departures from DEC-004 point 8,
+#: each stated as a clause until its fix.
+CONTRAST = SceneCheck(
+    "contrast as drawn",
+    colour=True,
+    id="contrast-as-drawn",
+    labels=(CONTRAST_DRAWN,),
+    reach=Reach(
+        measures=(
+            "each run of a text a page draws, in the run's own paint, black where it has "
+            "none, at WCAG's level for the run's size and weight, against the fills under the "
+            "middle of each span of the run, in each combination its scene serves "
+            "(DEC-004 point 8, DEC-012 point 3)",
+            "each sign a page draws, against the fills under its middle, at WCAG's level for "
+            "other marks: a sign part, which holds where its fill or its stroke reaches that "
+            "level, and fails where it paints neither; and a run's sign, in the run's paint, "
+            "with its span where the same fills lie under both (DEC-036 point 8)",
+            "as the fills under a point, each box or ellipse with a fill drawn before the text "
+            "or the sign that holds the point, a translucent one laid over the one under it, "
+            "and a run's ground over them (DEC-004 point 8, DEC-036 point 3)",
+        ),
+        leaves_out=(
+            "a span or a sign over a picture, where no box or ellipse with a fill is drawn "
+            "over the picture under its middle, which a reviewer judges (DEC-004 point 8)",
+            "every other span of a text one span of which lies so over a picture, though "
+            "DEC-004 point 8 has them measured: a departure, until its fix (DEC-004 point 8)",
+            "a span or a sign over nothing, under whose middle no box or ellipse with a fill "
+            "is drawn, and whose run draws no ground (DEC-063 point 1)",
+            "a span or a sign painted with a colour role the brand lacks, or over a fill "
+            "painted with one, which `unknown-colour` reports (DEC-063 point 1)",
+            "a combination in which a run's paint, or every paint of a sign, has no colour, "
+            "so it draws nothing there (DEC-063 point 1)",
+            "a combination in which none of the fills under the middle of a span or a sign "
+            "that have a colour there is opaque, of the nine boxes and ellipses with a fill "
+            "drawn last before it under that middle, and the run's ground (DEC-063 point 1)",
+            "a fill a path draws under a span or a sign, which it reads as drawing nothing "
+            "there, though DEC-004 point 8 has a text measured against the fill under it: a "
+            "departure, until its fix (DEC-004 point 8)",
+            "the fills under a span or a sign elsewhere than under its middle (DEC-063 point 1)",
+            "a text with no line, and a path with no outline, neither of which draws "
+            "anything (DEC-063 point 1)",
+        ),
+    ),
+)
+
+#: The checks that run on each scene alone, beside the engine's and the two above.
+UNKNOWN_COLOUR = SceneCheck("a paint with a colour role the brand lacks")
+LOSSES = SceneCheck("what a renderer that draws the piece loses of it, unaccepted")
+STATUSES = SceneCheck("components the piece uses that are experimental or deprecated")
+NO_GROUND = SceneCheck("a page of a switching file with no ground of its own", colour=True)
+
+#: The checks that read a piece's scenes together: a top as wide at a size as at the default,
+#: which compares sizes, and what the piece states of the forms its brand's chain draws its
+#: tops in, which holds in every language and at every key.
+SIZE_WIDTHS = SceneCheck("a top as wide at a size as at the default", frozenset({SIZES}))
+BRAND_FORMS = SceneCheck("the forms the brand's chain draws the piece's tops in")
+
+#: Every scene check, in the order a scene's findings are found: the report of the viewing
+#: step names each that states a reach, and reads from each the axes it compares across
+#: (DEC-062 points 1 and 2, DEC-063 point 1).
+SCENE_CHECKS = (
+    ENGINE,
+    CONTENT_HIDDEN,
+    CONTRAST,
+    UNKNOWN_COLOUR,
+    LOSSES,
+    STATUSES,
+    NO_GROUND,
+    boxes.NEAR_ALIGNMENT_CHECK,
+    boxes.BOX_OVERLAP_CHECK,
+    SIZE_WIDTHS,
+    BRAND_FORMS,
+    signs.LEFT_TO_COLOUR,
+    signs.ONE_SIGN,
+)
+
+
 def scene_findings(
     project: pl.Project, results: Sequence[tuple[str, SceneResult]]
 ) -> list[Finding]:
-    """What computing a piece's scenes found, each finding once, in a fixed order; files
-    relative to the piece's folder, or to a library version's folder where the finding
-    lies in one (the findings record keeps them so).
+    """What computing a piece's scenes found, as the findings record keeps it: each finding
+    of every scene check, scene by scene (`found_in`), merged as a render merges them
+    (`merged`)."""
+    return merged(results, found_in(project, results))
+
+
+def found_in(
+    project: pl.Project,
+    results: Sequence[tuple[str, SceneResult]],
+    stops: dict[tuple[str, str], str] | None = None,
+) -> list[Found]:
+    """Each finding of every scene check, as the check gives it in each scene, before the
+    render's merges (DEC-062 point 1, DEC-063 point 1): files relative to the piece's folder,
+    or to a library version's folder where the finding lies in one, as the findings record
+    keeps them.
 
     Each scene is computed at one key over the size axes, and contrast is measured on it in
     each combination it serves, each step of an order it paints in its value there, which
-    comes with the scene (`_steps_of`, DEC-032 point 5). A finding the scenes of every key
-    find alike is reported once, as it reads. Any other is reported for each key whose
-    scenes find it, its message opening with that key, so a finding takes no field for its
-    size. Content a scene draws
-    at one key and not at another is stated at the key that hides it (`_hidden`). A finding
-    in what a field of the top draws, read alike on several pages, is reported once, naming
-    its pages (`_once_on_pages`). A size at which the top is as wide as at the default asks
-    for attention (`_widths`). What the piece states of the forms its brand's chain draws its
-    tops in is said once (`_brand_forms`). The checks of signs read every scene at once: a
-    concept left to its colour, once for each version of the component that draws it so, and
-    concepts of one sign, once in each language (`signs.findings`, DEC-036 point 8). The
-    checks of boxes read each scene's siblings, edges that nearly line up by the brand's
-    smallest step of space at its key, and boxes that overlap (`_of_boxes`, DEC-046 point
-    3)."""
-    piece = project.piece
-    document = project.values()
+    comes with the scene (`_steps_of`, DEC-032 point 5). Content a scene draws at one key and
+    not at another is stated at the key that hides it (`_hidden`). The checks of boxes read
+    each scene's siblings, edges that nearly line up by the brand's smallest step of space at
+    its key, and boxes that overlap (`_of_boxes`, DEC-046 point 3). A size at which the top is
+    as wide as at the default asks for attention (`_widths`). What the piece states of the
+    forms its brand's chain draws its tops in holds at every key (`_brand_forms`). The checks
+    of signs read every scene: a concept left to its colour, in each scene that draws it so,
+    and concepts of one sign, in each language (`signs`, DEC-036 point 8).
+
+    Where `stops` is given, an error the checks' code raises on a scene is kept there, by the
+    scene's language and key over the size axes, with what it said, and the scene gives no
+    finding; one the checks that read the scenes together raise is kept for every scene.
+    With no `stops`, it is raised, as on a render."""
     colours = {
         path: token["values"]
-        for path, token in document["tokens"].items()
+        for path, token in project.values()["tokens"].items()
         if token["type"] == "color"
-    }
-    by_size: dict[str, dict[tuple[str, str, str, str, str], Finding]] = {
-        size: {} for size in dict.fromkeys(result.scene.size_key for _, result in results)
     }
     scenes = [(language, result, result.scene.to_dict()) for language, result in results]
     shown = {
@@ -2678,26 +2796,134 @@ def scene_findings(
         for language, result, scene in scenes
     }
     steps: dict[str, boxes.Step | None] = {}
+    found: list[Found] = []
     for language, result, scene in scenes:
-        size = result.scene.size_key
-        served = [key for key in project.keys if project.size_key(key) == size]
-        content = pl.content_file(language)
-        found = [_placed(finding, content, project) for finding in result.findings]
-        found.extend(_hidden(language, size, shown))
-        drawn = {**colours, **_steps_of(scene, colours, served)}
-        found.extend(drawn_contrast(scene, drawn, served))
-        found.extend(_unknown_colours(scene, drawn))
-        for renderer in renderers(piece):
-            declared = seam.declaration(renderer, seam.RENDERER)
-            for loss in losses(scene, declared):
-                if not accepted(loss, piece.accepted_losses):
-                    found.append(loss_finding(loss))
-        found.extend(_statuses(scene, project.env))
-        found.extend(_no_ground(piece, scene, drawn, served))
-        if size not in steps:
-            steps[size] = _space_step(project, size)
-        found.extend(_of_boxes(scene, steps[size]))
-        for finding in _once_on_pages(found, result.shared):
+        try:
+            found.extend(_in_scene(project, language, result, scene, colours, shown, steps))
+        except Exception as exc:
+            if stops is None:
+                raise
+            stops[language, result.scene.size_key] = _error_said(exc)
+    try:
+        found.extend(_over_scenes(project, scenes))
+    except Exception as exc:
+        if stops is None:
+            raise
+        for language, result, _ in scenes:
+            stops.setdefault((language, result.scene.size_key), _error_said(exc))
+    return found
+
+
+def _error_said(error: Exception) -> str:
+    """An error the checks' code raised, in words: its kind, and what it said."""
+    return f"{type(error).__name__}: {error}" if str(error) else type(error).__name__
+
+
+def _in_scene(
+    project: pl.Project,
+    language: str,
+    result: SceneResult,
+    scene: Mapping[str, Any],
+    colours: Mapping[str, Mapping[str, Any]],
+    shown: Mapping[tuple[str, str], set[str]],
+    steps: dict[str, boxes.Step | None],
+) -> list[Found]:
+    """What the checks that run on each scene alone find in one scene, in a fixed order: the
+    engine's own findings, content the scene's size hides, contrast as drawn, colour roles the
+    brand lacks, the renderers' unaccepted losses, components' statuses, pages with no ground
+    of their own, and the checks of boxes."""
+    piece = project.piece
+    size = result.scene.size_key
+    served = [key for key in project.keys if project.size_key(key) == size]
+    content = pl.content_file(language)
+    drawn = {**colours, **_steps_of(scene, colours, served)}
+    if size not in steps:
+        steps[size] = _space_step(project, size)
+    checked: list[tuple[SceneCheck, Finding]] = [
+        *((ENGINE, _placed(finding, content, project)) for finding in result.findings),
+        *((CONTENT_HIDDEN, finding) for finding in _hidden(language, size, shown)),
+        *((CONTRAST, finding) for finding in drawn_contrast(scene, drawn, served)),
+        *((UNKNOWN_COLOUR, finding) for finding in _unknown_colours(scene, drawn)),
+        *((LOSSES, loss_finding(loss)) for loss in _unaccepted(piece, scene)),
+        *((STATUSES, finding) for finding in _statuses(scene, project.env)),
+        *((NO_GROUND, finding) for finding in _no_ground(piece, scene, drawn, served)),
+        *_of_boxes(scene, steps[size]),
+    ]
+    pages = [str(page) for page in scene.get("pages", [])]
+    return [_found(check, finding, language, size, pages) for check, finding in checked]
+
+
+def _over_scenes(
+    project: pl.Project, scenes: Sequence[tuple[str, SceneResult, Mapping[str, Any]]]
+) -> list[Found]:
+    """What the checks that read a piece's scenes together find: a top as wide at a size as
+    at the default, at that size in every language; the forms the brand's chain draws its
+    tops in, in every language and at every key; a concept left to its colour, in each scene
+    that draws it so; and concepts of one sign, at every key of each language."""
+    found = [
+        Found(finding, SIZE_WIDTHS, None, size)
+        for size, finding in _widths(project, [(language, r) for language, r, _ in scenes])
+    ]
+    found.extend(Found(finding, BRAND_FORMS, None, None) for finding in _brand_forms(project))
+    for language, result, scene in scenes:
+        pages = [str(page) for page in scene.get("pages", [])]
+        found.extend(
+            _found(signs.LEFT_TO_COLOUR, _placed(finding, "", project), language, size, pages)
+            for size in (result.scene.size_key,)
+            for finding in signs.left_to_colour(result.shown)
+        )
+    languages = {pl.content_file(language): language for language, _, _ in scenes}
+    shown = [(pl.content_file(language), result.shown) for language, result, _ in scenes]
+    found.extend(
+        Found(_placed(finding, "", project), signs.ONE_SIGN, languages[content], None)
+        for content, finding in signs.one_sign(shown)
+    )
+    return found
+
+
+def _found(
+    check: SceneCheck, finding: Finding, language: str, size: str, pages: Sequence[str]
+) -> Found:
+    """`finding` as `check` gives it in the scene of `language` at the key over the size axes
+    `size`, whose pages are `pages`: on the page its place lies on, where it lies on one, its
+    place its trace id where the check keeps one, else where it points; with each combination
+    it names, where its check is one of colour."""
+    place = str(finding.extra.get("place") or finding.where)
+    page = next((each for each in pages if place == each or _below_trace(place, each)), None)
+    combinations = tuple(str(key) for key in finding.extra.get("combinations", ()))
+    return Found(finding, check, language, size, combinations, page)
+
+
+#: The checks whose findings the render merges over the piece's scenes, apart from those of
+#: each scene alone: in this order, after them.
+_OVER_SCENES = (SIZE_WIDTHS, BRAND_FORMS, signs.LEFT_TO_COLOUR, signs.ONE_SIGN)
+
+
+def merged(results: Sequence[tuple[str, SceneResult]], found: Sequence[Found]) -> list[Finding]:
+    """The render's merges of the findings `found` gives scene by scene, over the scenes of
+    `results`, each finding once, in a fixed order (DEC-062 point 1).
+
+    A finding in what a field of the top draws, read alike on several pages of a scene, is
+    reported once, naming its pages (`_once_on_pages`). One that the scenes of every key over
+    the size axes find alike is reported once, as it reads, in whichever language finds it.
+    Any other is reported for each key whose scenes find it, its message opening with that
+    key, so a finding takes no field for its size. A concept left to its colour is reported
+    once for each version of what draws it (`signs.once_for_each_version`). What the checks
+    that read the scenes together find is reported as they give it."""
+    shared = {(language, result.scene.size_key): result.shared for language, result in results}
+    by_size: dict[str, dict[tuple[str, str, str, str, str], Finding]] = {
+        size: {} for size in dict.fromkeys(result.scene.size_key for _, result in results)
+    }
+    in_scene: dict[tuple[str, str], list[Finding]] = {}
+    over: dict[SceneCheck, list[Finding]] = {check: [] for check in _OVER_SCENES}
+    for each in found:
+        if each.check in over:
+            over[each.check].append(each.finding)
+        else:
+            assert each.language is not None and each.size is not None
+            in_scene.setdefault((each.language, each.size), []).append(each.finding)
+    for (language, size), scene_found in in_scene.items():
+        for finding in _once_on_pages(scene_found, shared[language, size]):
             by_size[size].setdefault(_mark(finding), finding)
     unique: dict[tuple[str, str, str, str, str], Finding] = {}
     for size, found_at in by_size.items():
@@ -2707,9 +2933,12 @@ def scene_findings(
             else:
                 sized = dataclasses.replace(finding, message=f"`{size}`: {finding.message}")
                 unique.setdefault(_mark(sized), sized)
-    shown = [(pl.content_file(language), result.shown) for language, result in results]
-    signed = [_placed(finding, "", project) for finding in signs.findings(shown)]
-    for finding in [*_widths(project, results), *_brand_forms(project), *signed]:
+    for finding in [
+        *over[SIZE_WIDTHS],
+        *over[BRAND_FORMS],
+        *signs.once_for_each_version(over[signs.LEFT_TO_COLOUR]),
+        *over[signs.ONE_SIGN],
+    ]:
         unique.setdefault(_mark(finding), finding)
     return sorted(unique.values(), key=lambda f: (f.file, f.where, f.code, f.message))
 
@@ -2729,12 +2958,18 @@ def _steps_of(
     return found
 
 
-def _of_boxes(scene: Mapping[str, Any], step: boxes.Step | None) -> list[Finding]:
-    """What the checks of boxes find among the siblings of `scene`, each at the piece's own
-    file, as it names no component (DEC-046 point 3): edges that nearly line up by `step`, the
-    brand's smallest step of space at the scene's key, and boxes that overlap."""
-    found = [*boxes.near_alignment(scene, step), *boxes.overlaps(scene)]
-    return [dataclasses.replace(finding, file=pl.PIECE_FILE) for finding in found]
+def _of_boxes(
+    scene: Mapping[str, Any], step: boxes.Step | None
+) -> list[tuple[SceneCheck, Finding]]:
+    """What the checks of boxes find among the siblings of `scene`, each with its check, at
+    the piece's own file, as it names no component (DEC-046 point 3): edges that nearly line
+    up by `step`, the brand's smallest step of space at the scene's key, or the fact that
+    nothing can be near at that key, and boxes that overlap."""
+    found = [
+        *((boxes.NEAR_ALIGNMENT_CHECK, finding) for finding in boxes.near_alignment(scene, step)),
+        *((boxes.BOX_OVERLAP_CHECK, finding) for finding in boxes.overlaps(scene)),
+    ]
+    return [(check, dataclasses.replace(finding, file=pl.PIECE_FILE)) for check, finding in found]
 
 
 def _space_step(project: pl.Project, size: str) -> boxes.Step | None:
@@ -2757,12 +2992,15 @@ def _space_step(project: pl.Project, size: str) -> boxes.Step | None:
 SIZE_WIDTH = "size-width"
 
 
-def _widths(project: pl.Project, results: Sequence[tuple[str, SceneResult]]) -> list[Finding]:
+def _widths(
+    project: pl.Project, results: Sequence[tuple[str, SceneResult]]
+) -> list[tuple[str, Finding]]:
     """A call for attention for each key over the size axes, other than the default, at
-    which the piece's top is as wide as at the default: its shape follows the size, and its
-    width does not (DEC-022 point 3). It lies at the piece and names the brand, which gives
-    the widths, and no component (DEC-022 point 8). The top's width at a key is its scene's,
-    and at the default, where no scene was computed there, the width its top gets."""
+    which the piece's top is as wide as at the default, with that key: its shape follows the
+    size, and its width does not (DEC-022 point 3). It lies at the piece and names the brand,
+    which gives the widths, and no component (DEC-022 point 8). The top's width at a key is
+    its scene's, and at the default, where no scene was computed there, the width its top
+    gets."""
     widths: dict[str, float] = {}
     for _, result in results:
         top = result.scene.children[:1]
@@ -2778,18 +3016,21 @@ def _widths(project: pl.Project, results: Sequence[tuple[str, SceneResult]]) -> 
         return []
     brand = project.label(project.piece.brand)
     return [
-        Finding(
-            SIZE_WIDTH,
-            ATTENTION,
-            f"`{key}`: the top is {default:g} px wide, as at the default size: the brand "
-            f"{brand} gives its width no other value at this size, so its shape follows the "
-            "size and its width does not",
-            file=pl.PIECE_FILE,
-            where="brand",
-            fix="draw the piece in a brand that gives the top's width at each size it names, "
-            "or ask the brand's owner to; where the piece means one width at every size, "
-            "leave it",
-            who="the piece's author",
+        (
+            key,
+            Finding(
+                SIZE_WIDTH,
+                ATTENTION,
+                f"`{key}`: the top is {default:g} px wide, as at the default size: the brand "
+                f"{brand} gives its width no other value at this size, so its shape follows "
+                "the size and its width does not",
+                file=pl.PIECE_FILE,
+                where="brand",
+                fix="draw the piece in a brand that gives the top's width at each size it "
+                "names, or ask the brand's owner to; where the piece means one width at every "
+                "size, leave it",
+                who="the piece's author",
+            ),
         )
         for key in sized
         if abs(widths[key] - default) <= layout.TOLERANCE
@@ -2901,11 +3142,6 @@ def _once_on_pages(found: Sequence[Finding], shared: Mapping[str, Sequence[str]]
 def _below_trace(trace: str, other: str) -> bool:
     """Whether the trace id `trace` lies below `other`: a part, an item or a run of it."""
     return trace.startswith(other) and trace[len(other) : len(other) + 1] in ("/", "[", "#")
-
-
-#: The fact of content a piece draws at one key over the size axes and not at another
-#: (DEC-021 points 5 and 7).
-SIZE_HIDDEN = "size-hidden"
 
 
 def _hidden(language: str, size: str, shown: Mapping[tuple[str, str], set[str]]) -> list[Finding]:
@@ -3057,6 +3293,7 @@ def _no_ground(
                     fix="give the page a ground of an opaque colour over its whole frame, in its "
                     "component or its brand, in each mode its file holds",
                     who=AUTHOR,
+                    extra={"combinations": tuple(bare)},
                 )
             )
     return found
@@ -3199,6 +3436,7 @@ def _run_contrast(
                     where=str(text["id"]),
                     fix="change the colour roles of the text or of what lies under it, in "
                     "the component, its content's `override`, or the brand",
+                    extra={"combinations": (key,)},
                 )
             )
     return found
@@ -3252,7 +3490,15 @@ def _sign_contrast(
                 f"none reaches the {minimum} a sign needs (`{MARKS}`)"
             )
             found.append(
-                Finding(CONTRAST_DRAWN, FAILS, message, file=pl.PIECE_FILE, where=where, fix=fix)
+                Finding(
+                    CONTRAST_DRAWN,
+                    FAILS,
+                    message,
+                    file=pl.PIECE_FILE,
+                    where=where,
+                    fix=fix,
+                    extra={"combinations": (key,)},
+                )
             )
     return found
 
@@ -3439,9 +3685,22 @@ def losses(scene: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[sea
 
 def loss_finding(loss: seam.Loss) -> Finding:
     """A renderer's loss nobody accepted, which asks the piece's author for attention
-    (DEC-005 point 14), at the trace of what it loses. Whether the piece accepts a loss,
-    `accepted` says (`findings.accepted`)."""
-    return _loss_finding(loss, "renderer", file=pl.PIECE_FILE, where=loss.what)
+    (DEC-005 point 14), at the trace of what it loses, which keeps the loss's plugin and what
+    it loses. Whether the piece accepts a loss, `accepted` says (`findings.accepted`)."""
+    found = _loss_finding(loss, "renderer", file=pl.PIECE_FILE, where=loss.what)
+    return dataclasses.replace(found, extra={"plugin": loss.plugin, "what": loss.what})
+
+
+def _unaccepted(piece: pl.Piece, scene: Mapping[str, Any]) -> list[seam.Loss]:
+    """What each renderer that draws `piece` loses of `scene`, known from its declaration
+    before it runs, that the piece does not accept (DEC-005 point 9)."""
+    found = []
+    for renderer in renderers(piece):
+        declared = seam.declaration(renderer, seam.RENDERER)
+        found.extend(
+            loss for loss in losses(scene, declared) if not accepted(loss, piece.accepted_losses)
+        )
+    return found
 
 
 # --- the validator's document -------------------------------------------------------------------
