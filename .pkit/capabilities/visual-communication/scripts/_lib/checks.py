@@ -2696,7 +2696,7 @@ def scene_findings(
         found.extend(_no_ground(piece, scene, drawn, served))
         if size not in steps:
             steps[size] = _space_step(project, size)
-        found.extend(_of_boxes(scene, steps[size], piece))
+        found.extend(_of_boxes(scene, steps[size]))
         for finding in _once_on_pages(found, result.shared):
             by_size[size].setdefault(_mark(finding), finding)
     unique: dict[tuple[str, str, str, str, str], Finding] = {}
@@ -2729,23 +2729,11 @@ def _steps_of(
     return found
 
 
-#: The format a piece exports in whose renderer the viewing step reads the piece through by
-#: default, and the only one through which its report names each text a part covers
-#: (`viewing.renderer_of`, DEC-020 point 5, DEC-037 point 1).
-COVER_READ = "html"
-
-
-def _of_boxes(scene: Mapping[str, Any], step: boxes.Step | None, piece: pl.Piece) -> list[Finding]:
+def _of_boxes(scene: Mapping[str, Any], step: boxes.Step | None) -> list[Finding]:
     """What the checks of boxes find among the siblings of `scene`, each at the piece's own
     file, as it names no component (DEC-046 point 3): edges that nearly line up by `step`, the
-    brand's smallest step of space at the scene's key, and boxes that overlap. A text whose
-    lines a sibling drawn after it lies over is left out of the overlaps where the viewing
-    step's report names each text a part covers, which it does for a piece it reads through a
-    browser."""
-    found = [
-        *boxes.near_alignment(scene, step),
-        *boxes.overlaps(scene, cover_read=COVER_READ in piece.exports),
-    ]
+    brand's smallest step of space at the scene's key, and boxes that overlap."""
+    found = [*boxes.near_alignment(scene, step), *boxes.overlaps(scene)]
     return [dataclasses.replace(finding, file=pl.PIECE_FILE) for finding in found]
 
 

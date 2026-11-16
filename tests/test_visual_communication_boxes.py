@@ -7,8 +7,7 @@ boxes that overlap, among the siblings of each scene.
   on the two sides of one axis differ by as much, unless it lies on an edge of that axis; and
   two spacings between the siblings of a group that nearly agree.
 - **Boxes that overlap** (`box-overlap`): two siblings whose boxes overlap, where neither
-  holds the other. A text drawn under its sibling is left out where the viewing step's report
-  names each text a part covers (DEC-037 point 1).
+  holds the other, a text a sibling covers among them.
 - **Both** leave lines and arrows out, ask the reviewer for attention and never fail
   (DEC-002 point 7). The step follows the brand at each key over the size axes.
 """
@@ -274,7 +273,7 @@ def test_an_arrow_that_stops_short_of_a_card_is_left_out_of_both_checks() -> Non
         line("figure/rule", 110, 0, 130, 60),
     )
     assert boxes.near_alignment(given, STEP) == []
-    assert boxes.overlaps(given, cover_read=False) == []
+    assert boxes.overlaps(given) == []
 
 
 def test_a_group_that_draws_only_lines_is_left_out_as_a_line_is() -> None:
@@ -284,7 +283,7 @@ def test_a_group_that_draws_only_lines_is_left_out_as_a_line_is() -> None:
     tie = group("figure/links[a-b]", arrow, x=2, width=398, height=200)
     given = scene(element("figure/card", x=0, width=100), tie)
     assert boxes.near_alignment(given, STEP) == []
-    assert boxes.overlaps(given, cover_read=False) == []
+    assert boxes.overlaps(given) == []
 
 
 def test_an_element_of_no_area_and_a_page_are_left_out() -> None:
@@ -299,7 +298,7 @@ def test_an_element_of_no_area_and_a_page_are_left_out() -> None:
     deck = group("deck", slide("a", 0), slide("b", 2), width=400, height=200)
     pages = {"pages": ["deck/slides[a]", "deck/slides[b]"], "children": [deck]}
     assert boxes.near_alignment(pages, STEP) == []
-    assert boxes.overlaps(pages, cover_read=False) == []
+    assert boxes.overlaps(pages) == []
 
 
 def test_only_siblings_are_compared() -> None:
@@ -313,9 +312,7 @@ def test_only_siblings_are_compared() -> None:
 
 
 def test_two_boxes_that_overlap_where_neither_holds_the_other_ask_the_reviewer() -> None:
-    [finding] = boxes.overlaps(
-        scene(element("figure/a"), element("figure/b", x=30, y=20)), cover_read=False
-    )
+    [finding] = boxes.overlaps(scene(element("figure/a"), element("figure/b", x=30, y=20)))
     assert (finding.code, finding.level, finding.where, finding.who, finding.fix) == (
         "box-overlap",
         findings.ATTENTION,
@@ -331,70 +328,25 @@ def test_two_boxes_that_overlap_where_neither_holds_the_other_ask_the_reviewer()
 
 def test_a_box_that_holds_another_and_boxes_that_meet_within_a_pixel_do_not_overlap() -> None:
     held = scene(element("figure/back", width=100, height=100), element("figure/in", x=8, y=8))
-    assert boxes.overlaps(held, cover_read=False) == []
+    assert boxes.overlaps(held) == []
     within = scene(element("figure/a", width=100, height=100), element("figure/b", x=-0.5, y=8))
-    assert boxes.overlaps(within, cover_read=False) == []
+    assert boxes.overlaps(within) == []
     grazing = scene(element("figure/a"), element("figure/b", x=39.2, y=20))
-    assert boxes.overlaps(grazing, cover_read=False) == []
+    assert boxes.overlaps(grazing) == []
 
 
-def written(
-    trace: str, *widths: float, anchor: str = "start", x: float = 0, width: float = 100
-) -> dict[str, Any]:
-    """A text of a line of each of `widths`, 20 px high, standing by `anchor` in its width."""
-    lines = [{"text": "Words", "width": each, "baseline": 15, "paragraph": 0} for each in widths]
-    text = element(trace, "text", x=x, width=width, height=20 * len(widths))
-    return {**text, "text-anchor": anchor, "line-height": 20, "lines": lines}
-
-
-def test_a_text_under_its_sibling_is_left_to_the_report_where_it_reads_cover() -> None:
-    """The note is drawn first and the legend over the end of its line. Where the viewing
-    step's report names each text a part covers, as through a browser, it names the note, so
-    the check does not report it again. Elsewhere it is the check's to report."""
-    given = scene(
-        written("figure/note", 100), element("figure/legend", x=80, y=10, width=60, height=30)
-    )
-    assert boxes.overlaps(given, cover_read=True) == []
-    [finding] = boxes.overlaps(given, cover_read=False)
+def test_a_text_a_sibling_covers_is_reported_as_any_other_part_is() -> None:
+    """The note is drawn first and the legend over the end of its line: the check reports the
+    note, whatever the viewing step's report names."""
+    note = {
+        **element("figure/note", "text", width=100, height=20),
+        "line-height": 20,
+        "lines": [{"text": "Words", "width": 100, "baseline": 15, "paragraph": 0}],
+    }
+    given = scene(note, element("figure/legend", x=80, y=10, width=60, height=30))
+    [finding] = boxes.overlaps(given)
     assert finding.where == "figure/note"
-
-
-@pytest.mark.parametrize(
-    ("anchor", "reported"),
-    [("start", True), ("middle", True), ("end", False)],
-    ids=["start", "middle", "end"],
-)
-def test_a_text_is_left_out_only_where_its_sibling_lies_over_one_of_its_lines(
-    anchor: str, reported: bool
-) -> None:
-    """A line 40 px wide in a text 100 px wide: at its start or its middle, the legend lies
-    over none of it, only over the room the line leaves, so the report names nothing there and
-    the check reports the overlap; at its end, the legend lies over the line."""
-    given = scene(
-        written("figure/note", 40, anchor=anchor),
-        element("figure/legend", x=75, y=10, width=60, height=30),
-    )
-    assert bool(boxes.overlaps(given, cover_read=True)) is reported
-
-
-def test_each_line_of_a_text_stands_under_the_one_before() -> None:
-    """A long first line and a short second: a legend beside the second line, below the
-    first, lies over neither."""
-    beside = element("figure/legend", x=80, y=25, width=60, height=30)
-    assert boxes.overlaps(scene(written("figure/note", 100, 30), beside), cover_read=True)
-    over = element("figure/legend", x=80, y=10, width=60, height=30)
-    assert boxes.overlaps(scene(written("figure/note", 100, 30), over), cover_read=True) == []
-
-
-def test_a_text_drawn_over_its_sibling_is_reported_where_the_report_reads_cover() -> None:
-    """A label over a picture covers none of its own letters, so the report names nothing,
-    and the check reports the overlap."""
-    given = scene(
-        element("figure/picture", "image", width=100, height=100),
-        written("figure/label", 60, x=80, width=60),
-    )
-    [finding] = boxes.overlaps(given, cover_read=True)
-    assert finding.message.endswith("`figure/label` is drawn over `figure/picture`")
+    assert finding.message.endswith("`figure/legend` is drawn over `figure/note`")
 
 
 # --- the brand's smallest step of space ---------------------------------------------------------
@@ -493,21 +445,15 @@ COVERED = local(
 )
 
 
-@pytest.mark.parametrize(
-    ("exports", "reported"),
-    [(["svg"], True), (["svg", "html"], False)],
-    ids=["through-svg", "through-a-browser"],
-)
-def test_a_covered_text_is_left_to_the_report_of_a_piece_read_through_a_browser(
-    tmp_path: Path, exports: list[str], reported: bool
+@pytest.mark.parametrize("exports", [["svg"], ["svg", "html"]], ids=["svg", "html"])
+def test_a_covered_text_is_reported_whatever_the_piece_exports(
+    tmp_path: Path, exports: list[str]
 ) -> None:
-    """The viewing step reads a piece that exports `html` through a browser by default, and
-    its report then names the head the badge covers: the check reports the overlap of a piece
-    read through the SVG renderer alone, at the piece's own file."""
+    """The badge is drawn over the end of the head: the check reports the head at the piece's
+    own file, whether the viewing step reads the piece through the SVG renderer or, as for a
+    piece that exports `html`, through a browser."""
     root = drawing_project(tmp_path, picture=False, exports=exports)
     write(root / LOCAL / "covered.yaml", COVERED)
     write_body(root, body={"use": "piece/covered", "head": "Plan the work."})
     found = [f for f in checks.computed(project_of(root)) if f.code == boxes.BOX_OVERLAP]
-    assert [(f.file, f.where) for f in found] == (
-        [("piece.yaml", "figure/body/head")] if reported else []
-    )
+    assert [(f.file, f.where) for f in found] == [("piece.yaml", "figure/body/head")]

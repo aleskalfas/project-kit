@@ -140,7 +140,6 @@ pkit:
         - visual-communication:DEC-042#3
         - visual-communication:DEC-042#6
         - COR-051#7
-        - visual-communication:DEC-037#1
         - visual-communication:DEC-046#3
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-brands-drawing
@@ -193,9 +192,7 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#the-switching-file
         - .pkit/capabilities/visual-communication/outputs.md#what-refuses-an-export
         - .pkit/capabilities/visual-communication/outputs.md#written-code
-        - .pkit/capabilities/visual-communication/outputs.md#the-viewing-step
         - .pkit/capabilities/visual-communication/outputs.md#what-a-run-writes
-        - .pkit/capabilities/visual-communication/outputs.md#what-the-report-says
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
@@ -546,7 +543,7 @@ Each fails, unless its row says otherwise.
 | `component-deprecated` | The piece uses a deprecated component. Asks the piece's author for attention: replace it with the component its library names in its place. | `<piece>/piece.yaml#<trace>` |
 | `switching-no-ground` | The piece exports as `svg-modes`, and a page draws no ground of its own in a combination its [switching file](outputs.md#the-switching-file) holds: no box of an opaque colour over its whole frame, as the viewing step reads a ground (DEC-018 point 5). A page shows the file on its own ground, so dark text could meet a dark page. The message names the page and those combinations. Asks the piece's author for attention, never fails, and repeats until a ground is there: give the page one, in its component or its brand. | `<piece>/piece.yaml#<page's trace>` |
 | `near-alignment` | Two siblings nearly line up and do not (DEC-046 point 3): on one axis, their left edges, centres or right edges, or their tops, middles or bottoms, differ by more than a pixel of rounding and by less than the brand's smallest step of space. A pair that lines up within a pixel on one line of an axis is not reported on that axis, since the near miss follows from the line chosen: an icon and a label centred in a row differ at their tops, and texts of different widths on one left edge differ at their right edges. Where one of the pair holds the other within a pixel, as a card's box holds its head, the check compares the held part's insets on the two sides of each axis in place of those lines: its left and right insets, or its top and bottom ones, differ by as much, unless it lies within a pixel of one of the other's edges on that axis. Or two spacings of one group nearly agree, on one axis, by as much: a spacing is the gaps within a pixel of each other between a sibling and the nearest one after it that stands beside it. The message names the pair and each line or each inset, or each gap of the two spacings, and the step. Asks the reviewer, `graphic-design-reviewer`, for attention, who judges on the image whether the place is a fault or is meant, and never fails. The step follows the brand at each key over the size axes, so a place may be near at one key alone. Where the brand gives no step, nothing is near. | `<piece>/piece.yaml#<trace of the pair's first, or of the group whose spacings they are>` |
-| `box-overlap` | Two siblings' boxes overlap by more than a pixel of rounding across and down, and neither holds the other within a pixel (DEC-046 point 3). The message names the pair, how far they overlap and which is drawn over which. A text [the viewing step's report](outputs.md#what-the-report-says) drops as covered is not reported again (DEC-037 point 1). The check cannot read that report, so it leaves out the text where the report reads cover, through a browser, as [the viewing step](outputs.md#the-viewing-step) reads a piece that exports `html`, and its sibling drawn after it lies over one of its lines: the line's drawn width, where its anchor stands it, by its line height. Asks the reviewer for attention, and never fails. An overlap a component means, such as a badge on a card's corner, is reported until a component can say that it is meant. | `<piece>/piece.yaml#<trace of the one drawn under>` |
+| `box-overlap` | Two siblings' boxes overlap by more than a pixel of rounding across and down, and neither holds the other within a pixel (DEC-046 point 3). The message names the pair, how far they overlap and which is drawn over which. A text a sibling covers is reported as any other part is. Asks the reviewer for attention, and never fails. An overlap a component means, such as a badge on a card's corner, is reported until a component can say that it is meant. | `<piece>/piece.yaml#<trace of the one drawn under>` |
 
 **The checks of boxes.** `near-alignment` and `box-overlap` read one base:
 

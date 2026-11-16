@@ -39,15 +39,7 @@ brand offers, and hardly chosen.
   axis that nearly agree, with the gaps of each.
 
 `overlaps` reports two siblings whose boxes overlap by more than a pixel each way, where
-neither holds the other. A text the viewing step's report already drops as covered is not
-reported again (DEC-037 point 1). The check cannot read that report, which only a person or
-an agent reads (DEC-015), so it leaves out what the report names: where the report reads
-which texts a part covers, a text drawn under its sibling where the sibling's box lies over
-one of the text's lines by more than a pixel each way. A line of a text is its drawn width,
-where its anchor stands it in the text's width, by its line height, as the scene gives each
-(`components.md`, "What a scene holds"). The report names a span only where a part hides more
-than a sliver of its letters, so a text left out here goes unnamed by both where its sibling
-lies over the line and not over its letters, as over the space between two words.
+neither holds the other, a text a sibling covers among them.
 
 Knows nothing of files, the lock or the check's run: the check places each finding.
 """
@@ -118,8 +110,7 @@ class Step:
 @dataclass(frozen=True)
 class Box:
     """A sibling's box, in the frame of the group that holds it: its trace id, its type, and
-    its place and size in px. A text's `written` holds the box of each of its lines, in the
-    same frame."""
+    its place and size in px."""
 
     trace: str
     type: str
@@ -127,7 +118,6 @@ class Box:
     y: float
     width: float
     height: float
-    written: tuple[Box, ...] = ()
 
     def start(self, axis: str) -> float:
         return self.x if axis == ACROSS else self.y
@@ -225,29 +215,7 @@ def _box(element: Mapping[str, Any]) -> Box:
     trace, kind = str(element.get("id", "")), str(element.get("type", ""))
     x, y = float(element.get("x", 0)), float(element.get("y", 0))
     width, height = float(element.get("width", 0)), float(element.get("height", 0))
-    written = _written(element, trace, x, y, width) if kind == "text" else ()
-    return Box(trace, kind, x, y, width, height, written)
-
-
-#: Where a line of a text stands in the text's width, by its `text-anchor`: the share of the
-#: room the line leaves that lies before it.
-BEFORE = {"start": 0.0, "middle": 0.5, "end": 1.0}
-
-
-def _written(
-    text: Mapping[str, Any], trace: str, x: float, y: float, width: float
-) -> tuple[Box, ...]:
-    """The box of each line of `text`, placed at `x y` and `width` wide: its drawn width, where
-    its anchor stands it, by the text's line height, one under another from its top."""
-    lines: Sequence[Mapping[str, Any]] = text.get("lines") or []
-    height = float(text.get("line-height", 0))
-    before = BEFORE.get(str(text.get("text-anchor", "start")), 0.0)
-    written = []
-    for index, line in enumerate(lines):
-        drawn = float(line.get("width", 0))
-        left = x + (width - drawn) * before
-        written.append(Box(trace, "text", left, y + index * height, drawn, height))
-    return tuple(written)
+    return Box(trace, kind, x, y, width, height)
 
 
 # --- edges that nearly line up ------------------------------------------------------------------
@@ -388,18 +356,14 @@ def _near_gaps(parent: str, boxes: Sequence[Box], axis: str, step: Step) -> Iter
 # --- boxes that overlap -------------------------------------------------------------------------
 
 
-def overlaps(scene: Mapping[str, Any], *, cover_read: bool) -> list[Finding]:
+def overlaps(scene: Mapping[str, Any]) -> list[Finding]:
     """Each two siblings of `scene` whose boxes overlap by more than a pixel of rounding each
-    way, where neither holds the other. Where `cover_read`, the viewing step's report names
-    each text a part drawn after it covers, so a pair is left out whose first is a text one of
-    whose lines the second overlaps (DEC-037 point 1)."""
+    way, where neither holds the other."""
     found = []
     for _, boxes in siblings(scene):
         for index, under in enumerate(boxes):
             for over in boxes[index + 1 :]:
                 if not under.overlaps(over) or under.holds(over) or over.holds(under):
-                    continue
-                if cover_read and any(line.overlaps(over) for line in under.written):
                     continue
                 across, down = under.shares(over, ACROSS), under.shares(over, DOWN)
                 found.append(
