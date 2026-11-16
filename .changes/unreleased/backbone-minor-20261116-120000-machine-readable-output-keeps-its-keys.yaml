@@ -15,9 +15,10 @@ body: >
   version it does not know. The entries that stated part of the rule now
   agree with it: the friction checks' reading documents, the landing check's
   document, `friction since`'s `all_inside`, a data point's document, whose
-  filler `state` may gain a value, and the landing's end document. Six sets
-  that named no reading of a value a caller does not know are marked so until
-  each gains its first value: a data point's filler `state`, the landing's
-  warnings' `reason_kind`, the cross-repository guard's `verdict` and
-  `cleared`, and `repository base`'s two `source` keys. Other such sets carry
-  no mark yet. Nothing a command prints changes.
+  filler `state` may gain a value, and the landing's end document. Each set
+  of a backbone command's document that named no reading of a value a caller
+  does not know is marked so in the CLI reference until it gains its first
+  value, such as a data point's filler `state`, the cross-repository guard's
+  `verdict` and `cleared`, `agents run`'s `ending` and the friction change
+  check's answer `status`. A capability's or an adapter's README may not yet
+  mark its own. Nothing a command prints changes.
