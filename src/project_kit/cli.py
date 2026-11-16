@@ -8003,7 +8003,10 @@ def _install_externally_sourced(
     failing: a fetch that fails degrades, never refuses (point 7). The staged
     copy is removed whatever the outcome. Under `--plan --json` the lines about
     the fetch go to standard error, so the plan alone reaches standard output.
+    The pin is recorded with the commit the fetch took (`CapabilityPin.commit`).
     """
+    from dataclasses import replace
+
     from project_kit import capabilities as caps
     from project_kit import capability_fetch
 
@@ -8044,7 +8047,8 @@ def _install_externally_sourced(
                 target_root,
                 source_kit,
                 capability_source,
-                pin,
+                # The pin records the commit fetched, so sync follows no tag moved since.
+                replace(pin, commit=got.commit),
                 dry_run=dry_run,
                 plan=plan,
                 as_json=as_json,
@@ -8074,7 +8078,8 @@ def _refuse_landing_held(target_root: Path, name: str, pin: CapabilityPin) -> No
     wanted = caps.pin_text(pin)
     if caps.installed_capability_origins(target_root).get(name) == caps.EXTERNALLY_SOURCED:
         recorded = caps.read_capability_pin(target_root, name)
-        if recorded == pin:
+        # The same source and ref: the commit recorded beside them is what they named.
+        if recorded is not None and (recorded.source, recorded.ref) == (pin.source, pin.ref):
             raise click.ClickException(
                 f"capability {name!r} is already installed from {wanted}. `pkit sync` brings "
                 "its copy to that pin."
