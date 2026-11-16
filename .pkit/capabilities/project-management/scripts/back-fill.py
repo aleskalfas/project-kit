@@ -222,8 +222,10 @@ from _lib import (
     axis_labels,
     back_fill_apply,
     board_fields,
+    board_status,
     bootstrap_gate,
     issue_list,
+    missing_card,
     session_guard,
     substrate_writes,
 )
@@ -645,6 +647,7 @@ def _derive_plan(
         target_repo,
         substrate_map=substrate_map,
         board_unanswered=unanswered,
+        board_holds_state=board_status.role(config, substrate_map) == "source",
     )
     return (
         _plan_document(intents, proposed, gate, truncated=truncated, intent_errors=intent_errors),
@@ -1304,7 +1307,7 @@ def _enumerate_corpus(
         listing = issue_list.list_issues(
             config,
             ["--state", state, "--limit", str(limit)],
-            fields="number,title,milestone,labels",
+            fields="number,title,milestone,labels,state",
             gh_call=gh_run,
             check=False,
         )
@@ -1441,6 +1444,7 @@ def _build_proposed_changes(
     *,
     substrate_map: axis_labels.SubstrateMap | None = None,
     board_unanswered: str | None = None,
+    board_holds_state: bool = False,
 ) -> list[ProposedChange]:
     """Compute the proposed changes per (issue, intent), with the constructed argv.
 
@@ -1459,6 +1463,9 @@ def _build_proposed_changes(
     only when no field intent gated (milestone-only back-fill).
     ``board_unanswered`` is why the walk of the board's cards did not answer,
     where it did not: each field intent then reports that, never a missing card.
+    ``board_holds_state`` says whether the board holds the state, which the words
+    on an open issue's missing card follow
+    ([project-management:DEC-072-sync-gives-missing-cards] point 4).
 
     One change per (issue, intent) holds for the two non-label kinds. The label
     kind is the exception, and deliberately: it proposes NOTHING for an issue that
@@ -1484,6 +1491,7 @@ def _build_proposed_changes(
                         project_id,
                         target_repo,
                         board_unanswered=board_unanswered,
+                        card_remedy=_card_remedy(issue, number, board_holds_state),
                     )
                 )
             elif intent.kind == SET_AXIS_LABEL_KIND:
@@ -1504,6 +1512,7 @@ def _propose_field_value(
     target_repo: str,
     *,
     board_unanswered: str | None = None,
+    card_remedy: str = "",
 ) -> ProposedChange:
     """Propose one Projects-v2 field-value write for one issue.
 
@@ -1519,7 +1528,8 @@ def _propose_field_value(
     Where the walk of the board's cards did not answer (``board_unanswered``), the
     issue's card is unknown: the block says so, and back-fill skips the issue, the
     way it skips any read it cannot make (ADR-053 point 4). It is never reported
-    as an issue off the board ([pkit:ADR-096] point 4).
+    as an issue off the board ([pkit:ADR-096] point 4). An issue off the board is
+    told what gives it its card, ``card_remedy``, where the caller names one.
     """
     item_id = item_ids.get((target_repo, number))
     if item_id is None or project_id is None:
@@ -1534,7 +1544,7 @@ def _propose_field_value(
             reason = (
                 "issue not on the configured Projects v2 board "
                 f"(no item id for {target_repo}#{number})"
-            )
+            ) + (f": {card_remedy}" if card_remedy else "")
         return ProposedChange(
             issue_number=number,
             issue_title=title,
@@ -1564,6 +1574,15 @@ def _propose_field_value(
         observed=None,
         prediction="would-write",
     )
+
+
+def _card_remedy(issue: dict[str, Any], number: int, board_holds_state: bool) -> str:
+    """What gives an open issue its missing card: the sync, run for it
+    ([project-management:DEC-072-sync-gives-missing-cards] point 4). Empty for a
+    closed issue, which the sync gives no card."""
+    if str(issue.get("state") or "").upper() == "CLOSED":
+        return ""
+    return missing_card.remedy(number, board_holds_state=board_holds_state)
 
 
 def _propose_milestone(

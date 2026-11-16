@@ -889,3 +889,131 @@ def test_a_failed_batch_or_a_null_node_fails_the_whole_listing(bf, fail_at, null
     )
     assert read.ok is False and dict(read.cards) == {}
     assert read.error is not None and says in read.error
+
+
+def test_read_items_marks_each_archived_card(bf) -> None:
+    """The walk asks each card whether it is archived, which the board's views
+    hide, and marks it so: the sync names an open issue whose only card is
+    archived (DEC-072 points 1 and 4)."""
+    archived = _issue_card("I2", 2)
+    archived["isArchived"] = True
+    shown = _issue_card("I1", 1)
+    shown["isArchived"] = False
+    calls: list = []
+
+    read = bf.read_items(
+        BOARD_CONFIG,
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(_page([shown, archived, _issue_card("I3", 3)]), calls=calls),
+    )
+
+    assert [(i.item_id, i.archived) for i in read.items] == [
+        ("I1", False),
+        ("I2", True),
+        ("I3", False),
+    ]
+    assert " isArchived " in query_of(calls[0]["args"])
+
+
+# --- one card, by the id an add answered with (DEC-072 point 3) -------------
+
+
+class _CardBoard(_Board):
+    """Board #7 holding the cards ``by_id`` names, each `(board node, option,
+    archived)`, the option `(id, name)` or None."""
+
+    def __init__(self, by_id: dict[str, tuple[str, tuple[str, str] | None, bool]]) -> None:
+        super().__init__()
+        self.by_id = by_id
+
+    def card_by_id(self, item_id: str, value_field: str | None) -> dict | None:
+        if item_id not in self.by_id:
+            return None
+        project, option, archived = self.by_id[item_id]
+        card: dict = {"id": item_id, "isArchived": archived, "project": {"id": project}}
+        if value_field is not None:
+            card["fieldValueByName"] = (
+                {"optionId": option[0], "name": option[1]} if option else None
+            )
+        return card
+
+
+def _read_card(bf, board: GraphBoard, item_id: str = "PVTI_9", **kw):
+    calls: list = []
+    read = bf.read_card(
+        BOARD_CONFIG,
+        item_id=item_id,
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_graph_runner(board, calls=calls, **kw),
+    )
+    return read, calls
+
+
+def test_read_card_reads_the_card_and_its_status_beside_the_boards_own_read(bf) -> None:
+    board = _CardBoard({"PVTI_9": ("PVT_1", ("opt_todo", "Todo"), True)})
+
+    read, calls = _read_card(bf, board)
+
+    assert (read.ok, read.found, read.option_id, read.option_name, read.archived) == (
+        True,
+        True,
+        "opt_todo",
+        "Todo",
+        True,
+    )
+    [call] = calls
+    assert "board: node(id: $board)" in query_of(call)
+    assert "card: node(id: $item)" in query_of(call)
+    assert flag_value(call, "item") == "PVTI_9" and flag_value(call, "field") == "Status"
+
+
+def test_read_card_with_no_status_is_found_with_none(bf) -> None:
+    read, _ = _read_card(bf, _CardBoard({"PVTI_9": ("PVT_1", None, False)}))
+    assert (read.ok, read.found, read.option_name) == (True, True, None)
+
+
+@pytest.mark.parametrize(
+    "by_id",
+    [
+        pytest.param({}, id="no-such-card"),
+        pytest.param({"PVTI_9": ("PVT_other", None, False)}, id="a-card-on-another-board"),
+    ],
+)
+def test_read_card_not_found_is_an_answer_only_where_the_board_answered(bf, by_id) -> None:
+    read, _ = _read_card(bf, _CardBoard(by_id))
+    assert (read.ok, read.found, read.error) == (True, False, None)
+
+
+def test_read_card_with_an_error_on_the_card_is_a_board_that_did_not_answer(bf) -> None:
+    board = _CardBoard({"PVTI_9": ("PVT_1", None, False)})
+    board.placed["card"] = "Resource not accessible by integration"
+
+    read, _ = _read_card(bf, board)
+
+    assert read.ok is False and read.found is False
+    assert "Resource not accessible by integration" in (read.error or "")
+
+
+def test_read_card_on_a_board_that_did_not_answer_finds_nothing(bf) -> None:
+    board = _CardBoard({"PVTI_9": ("PVT_1", None, False)})
+    board.placed["board"] = "Could not resolve to a node"
+
+    read, _ = _read_card(bf, board)
+
+    assert read.ok is False and read.found is False
+    assert "Could not resolve to a node" in (read.error or "")
+
+
+def test_read_card_that_fails_whole_says_what_gh_said(bf) -> None:
+    read, _ = _read_card(bf, _CardBoard({}), fail_at=0)
+    assert read.ok is False and "HTTP 502" in (read.error or "")
+
+
+def test_read_card_with_no_board_configured_reads_nothing(bf) -> None:
+    def no_call(*args, **kwargs):
+        raise AssertionError("no board is read where none is configured")
+
+    read = bf.read_card({}, item_id="PVTI_9", project_node_id="PVT_1", gh_call=no_call)
+    assert read.ok is False and read.named is True

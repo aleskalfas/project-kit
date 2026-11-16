@@ -61,7 +61,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from _lib import axis_carriage, axis_labels, board_fields, substrate_writes
+from _lib import axis_carriage, axis_labels, board_fields, missing_card, substrate_writes
 from _lib import lifecycle_inference as infer
 from _lib.gh import gh_run
 
@@ -242,11 +242,14 @@ class Written:
 def report(written: Written, *, stands: str = "the move stands") -> None:
     """Print a projection's write as the lifecycle commands do: one line on
     standard output where it was made, and one on standard error where it was
-    not, saying what ``stands`` all the same and what sets the Status later."""
+    not, saying what ``stands`` all the same and what sets the Status later: the
+    sync, run for the issue, which also adds the card where it is missing
+    ([project-management:DEC-072-sync-gives-missing-cards] point 4)."""
     if written.ok:
         print(written.line())
     else:
-        print(f"{written.line()}; {stands}, and `sync-board` sets it", file=sys.stderr)
+        sync = missing_card.sync_command(written.number)
+        print(f"{written.line()}; {stands}, and `{sync}` sets it", file=sys.stderr)
 
 
 class StatusBoard:
