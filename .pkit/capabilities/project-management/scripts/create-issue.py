@@ -39,17 +39,18 @@ the configured Projects v2 board as the final step of filing. The
 default assignee is the resolved invoker identity per DEC-019's
 default_at_filing: filer.
 
-`--board` files the issue onto the board it names in place of the configured
-one (DEC-019), except where the substrate map binds the state to the board.
-There every command reads an open issue's position from its card on the
-configured board alone, so a `--board` naming another board is refused, with
-exit 2, before anything is written or asked and before any board is read,
-`--dry-run` included (DEC-070). One naming the configured board's own number
-goes on.
+`--board` is refused unless it names the configured board's own number, the
+two read as numbers, in every project (DEC-070, DEC-071): every issue belongs
+on the configured board, which every command but filing reads and writes
+alone. So it is refused where it names another board, and wherever no board is
+configured. One naming a number below 1, which no board has, is refused first,
+with a message of its own. Each refusal exits 2, before anything is written or
+asked and before any board is read, `--dry-run` included. One naming the
+configured board's own number goes on.
 
 An issue owes its card from its filing, so before anything is written,
-`--dry-run` included, a filing in a project with a board reads the board it
-adds to ([pkit:ADR-096] point 4, "Before it"): the board's own read, with its
+`--dry-run` included, a filing in a project with a board reads the configured
+board ([pkit:ADR-096] point 4, "Before it"): the board's own read, with its
 Status field, through the board read seam. Where the board did not answer, the
 filing is refused, exit 3, in the seam's words with the way out. Where the map
 binds the state to the board, and the board answered with no single-select
@@ -57,9 +58,7 @@ Status field, or no option for the state the issue is filed into, the filing is
 refused too, exit 1. Where the Status only mirrors the state, a missing field or
 option is one line once the issue is filed. That read is the one the first
 Status is written from, and it gives the `after_create_issue` hooks the board's
-node. Where `--board` is not refused, one that names another board stands in
-for the configured one in these reads and writes: its read asks that board by
-its number, and the configured board's stored node is no name of it.
+node.
 
 Once the issue is filed, its card counts as added only where the board answers
 with the issue's card ([pkit:ADR-096] point 3). Where the card is not added, or,
@@ -283,11 +282,12 @@ def main() -> int:
         type=int,
         default=None,
         help=(
-            "Projects v2 board number to file the issue onto, in place of the "
-            "configured `projects_v2_board_id`. Where the substrate map binds the "
-            "state to the board, refused unless it names the configured board, "
-            "since every command reads an open issue's position from that board "
-            "([project-management:DEC-070-filing-another-board])."
+            "Projects v2 board number, refused unless it names the configured "
+            "board, `projects_v2_board_id`: refused where it names another board "
+            "or a number below 1, and wherever no board is configured, since every "
+            "issue belongs on the configured board, which every command reads and "
+            "writes ([project-management:DEC-071-filing-only-configured-board]). "
+            "Leave it out to file onto the configured board."
         ),
     )
     parser.add_argument(
@@ -357,11 +357,24 @@ def main() -> int:
     # names is judged against it first.
     substrate_map = axis_labels.load_substrate_map(capability_root)
 
-    # A board other than the configured one, where the board holds the state
-    # (DEC-070): refused before anything is written or asked, the foreign-repo
-    # question below included, and before any read of a board. It needs only
-    # the configuration, the map and the option, so `--dry-run` meets it too.
-    board_refusal = _foreign_board_refusal(args.board, config, substrate_map)
+    # Board MEMBERSHIP, not carriage: every issue belongs on the configured board
+    # (DEC-019), whatever substrate carries its classification axes. This read of
+    # `has_projects_v2_board` is the flag's own job and must NOT be routed through
+    # the carriage accessor — doing so would silently drop the membership
+    # requirement for any board adopter who wrote a single label binding
+    # ([project-management:DEC-051-axis-carriage-activation], "board membership
+    # stays with the flag"). It judges the board option first, and then drives
+    # the add to the configured board below.
+    has_board = bool(config.get("has_projects_v2_board", False))
+
+    # A board option that does not name the configured board, in every project
+    # (DEC-070, DEC-071): refused before anything is written or asked, the
+    # foreign-repo question below included, and before any read of a board. It
+    # needs only the configuration, the map and the option, so `--dry-run` meets
+    # it too.
+    board_refusal = _board_option_refusal(
+        args.board, config, substrate_map, board_configured=has_board
+    )
     if board_refusal is not None:
         print(board_refusal, file=sys.stderr)
         return 2
@@ -837,19 +850,13 @@ def main() -> int:
             f"  from-report: #{args.from_report}  "
             "(will link the new issue into its Tracked by via `pkit report link`)"
         )
-    # Board MEMBERSHIP, not carriage: every issue belongs on the configured board
-    # (DEC-019), whatever substrate carries its classification axes. This read of
-    # `has_projects_v2_board` is the flag's own job and must NOT be routed through
-    # the carriage accessor — doing so would silently drop the membership
-    # requirement for any board adopter who wrote a single label binding
-    # ([project-management:DEC-051-axis-carriage-activation], "board membership
-    # stays with the flag").
-    has_board = bool(config.get("has_projects_v2_board", False))
-    board_id = args.board if args.board is not None else config.get("projects_v2_board_id")
-    board_config = _filing_board(config, args.board)
+    # The board flag read above, for membership. A `--board` still standing
+    # names the configured board, so the filing reads and writes that board
+    # alone (DEC-071).
+    board_id = config.get("projects_v2_board_id")
     if has_board:
         print(f"  board:      v2/{board_id}  (auto-add per DEC-019)")
-        role = board_status.role(board_config, substrate_map)
+        role = board_status.role(config, substrate_map)
         if role == "projection":
             print("  status:     the card's Status set to the issue's state (DEC-006)")
         elif role == "source":
@@ -864,9 +871,9 @@ def main() -> int:
     # board makes no call (ADR-053 point 3).
     workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader)
     board_first: BoardFirst | None = None
-    if has_board and board_fields.board_number(board_config) is not None:
+    if has_board and board_fields.board_number(config) is not None:
         board_first = _read_board_first(
-            board_config,
+            config,
             substrate_map,
             workflow,
             milestone_title=milestone_title,
@@ -1097,46 +1104,99 @@ def main() -> int:
     return link_code
 
 
-def _foreign_board_refusal(
+#: The record a refusal of `--board` cites; one that rests on the board holding
+#: the state cites DEC-070 instead.
+_ONLY_CONFIGURED_BOARD = "[project-management:DEC-071-filing-only-configured-board]"
+
+
+def _board_option_refusal(
     board: int | None,
     config: dict[str, Any],
     substrate_map: axis_labels.SubstrateMap | None,
+    *,
+    board_configured: bool,
 ) -> str | None:
     """Why a filing whose `--board` is ``board`` is refused, or None where it
-    goes on ([project-management:DEC-070-filing-another-board]).
+    goes on (DEC-071).
 
-    Where the map binds the state to the board, every command reads an open
-    issue's position from its card on the configured board alone (DEC-051 point
-    6), so an issue filed onto another board would have a position no command
-    reads. ``board`` names another board where it differs, as a number, from the
-    configured board's number, and wherever the configuration gives none.
-    Anywhere else the option goes on, as DEC-019 has it. No I/O.
+    Every issue belongs on the configured board, and every command but filing
+    reads and writes that board alone, so ``board`` goes on only where it is the
+    configured board's own number, the two read as numbers. A number below 1,
+    which no board has, is refused first, whatever the project's case, before
+    ``board`` is compared with the configured board. Every other refusal gives
+    the reason of the project's own case: no board configured, where
+    ``board_configured`` is false, a board configured with no number, the board
+    holding the state ([project-management:DEC-070-filing-another-board]), or a
+    board that does not. No I/O.
     """
-    if board is None or board_status.role(config, substrate_map) != "source":
+    if board is None:
         return None
+    if board < 1:
+        return (
+            f"error: --board {board} is refused: no board has the number {board}, since "
+            f"a board's number is 1 or more ({_ONLY_CONFIGURED_BOARD}). Nothing was filed.\n"
+            "  → Leave --board out to file the issue as project/config.yaml has it."
+        )
+    if not board_configured:
+        return (
+            f"error: --board {board} is refused: project/config.yaml configures no board "
+            "(`has_projects_v2_board`), so a filing adds the issue to no board "
+            f"({_ONLY_CONFIGURED_BOARD}). Nothing was filed.\n"
+            "  → To file the issue, leave --board out.\n"
+            f"  → To have it on board {board}, file it, then {_card_added_after(board)}."
+        )
     configured = _configured_board_number(config)
     if configured == board:
         return None
-    reason = (
+    holds_state = board_status.role(config, substrate_map) == "source"
+    holds_state_reason = (
         "the substrate map binds the state to the board, so every command reads an "
         "open issue's position from its card on the configured board, and an issue "
         f"filed onto board {board} would have a position no command reads "
         "([project-management:DEC-070-filing-another-board]). Nothing was filed."
     )
     if configured is None:
+        reason = (
+            holds_state_reason
+            if holds_state
+            else (
+                "with no number for the configured board, every board a filing names "
+                f"is another ({_ONLY_CONFIGURED_BOARD}). Nothing was filed."
+            )
+        )
         return (
             f"error: --board {board} is refused: {reason}\n"
-            "  project/config.yaml gives no board number (`projects_v2_board_id`, under "
-            "`has_projects_v2_board: true`), so there is no configured board to file "
-            "onto. Set it there; `pkit pm pre-check` checks it."
+            "  project/config.yaml declares a board (`has_projects_v2_board: true`) but "
+            "gives no number for it (`projects_v2_board_id`), so the filing has no board "
+            "to file onto. That is the fault to mend: set the number there; `pkit pm "
+            "pre-check` checks it."
+        )
+    if holds_state:
+        return (
+            f"error: --board {board} names a board other than the configured one, "
+            f"board {configured}, and is refused: {holds_state_reason}\n"
+            f"  → To file the issue onto board {configured}, leave --board out.\n"
+            f"  → To have it on board {board} too, file it, then {_card_added_after(board)}. "
+            "That card carries no position."
         )
     return (
         f"error: --board {board} names a board other than the configured one, "
-        f"board {configured}, and is refused: {reason}\n"
+        f"board {configured}, and is refused: every issue belongs on the configured "
+        "board, which every command reads and writes, so an issue filed onto board "
+        f"{board} would have no card where every command looks for one "
+        f"({_ONLY_CONFIGURED_BOARD}). Nothing was filed.\n"
         f"  → To file the issue onto board {configured}, leave --board out.\n"
-        f"  → To have it on board {board} too, file it, then add a card there by "
-        f"GitHub's own means: `gh project item-add {board} --owner <owner> --url "
-        "<the issue's url>`. That card carries no position."
+        f"  → To have it on board {board} too, file it, then {_card_added_after(board)}. "
+        "That card is the project's own: no command reads or writes it."
+    )
+
+
+def _card_added_after(board: int) -> str:
+    """The way out a refusal names for an issue wanted on ``board``: a card added
+    there after filing, by the host's own means."""
+    return (
+        f"add a card there by GitHub's own means: `gh project item-add {board} "
+        "--owner <owner> --url <the issue's url>`"
     )
 
 
@@ -1752,19 +1812,6 @@ class BoardFirst:
     @property
     def board(self) -> str:
         return board_status.board_name(self.config)
-
-
-def _filing_board(config: dict, board: int | None) -> dict:
-    """The configuration naming the board this filing adds the issue to.
-
-    A `--board` naming another board stands in for the configured one in the
-    filing's own reads and writes ([pkit:ADR-096], Boundaries), so the
-    configured board's stored node, a name of that board alone, is left out."""
-    if board is None or str(board) == str(config.get("projects_v2_board_id")):
-        return config
-    named = dict(config, projects_v2_board_id=board)
-    named.pop("projects_v2_node_id", None)
-    return named
 
 
 def _first_state(

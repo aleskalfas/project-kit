@@ -513,18 +513,31 @@ def test_a_place_holds_rule_sets_as_the_backbone_s_answer_marks_it(
     rule_sets: Any, held: bool
 ) -> None:
     """Read from the answer's `rule_sets`, never from the path: a place the answer
-    does not mark, or an answer without the key, holds none."""
-    place = {"source": "project", "declared": True, "written": OLD_RULE_SETS}
+    marks `null` holds none, and an answer without the key is one the reading cannot
+    tell anything from (ADR-097 point 3)."""
+    place = {
+        "source": "project",
+        "declared": True,
+        "pointer": "/friction/places/0",
+        "written": OLD_RULE_SETS,
+        "location": None,
+        "encloses": [],
+        "type": None,
+    }
     answer = {
         "schema_version": 1,
         "roots": {"user": "docs", "internal": "tech-docs"},
-        "places": [place if rule_sets is None else {**place, "rule_sets": rule_sets}],
+        "places": [{**place, "rule_sets": rule_sets}],
         "files": [],
         "artefacts": [],
         "types": {},
+        "held": [],
+        "held_files": [],
     }
     (read,) = artefacts.reading_of(answer).places
     assert read.rule_sets is held
+    with pytest.raises(artefacts.Unreadable, match=r"`places\[0\]\.rule_sets` is missing"):
+        artefacts.reading_of({**answer, "places": [place]})
 
 
 @pytest.mark.parametrize(

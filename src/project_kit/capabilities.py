@@ -176,7 +176,8 @@ _COMPONENT_AREAS: dict[ComponentKind, str] = {"adapter": "adapters", "capability
 # no-shared-files invariant, COR-001): never overwritten or removed on
 # refresh, and never seeded from the source either — the source's own
 # `project/` tree is that project's instance data, not a template (#812).
-# See `_copy_capability_tree`.
+# See `_copy_capability_tree`. A folder is that tier in whatever case its name is
+# written (`_is_project_tier`).
 _CAPABILITY_PROJECT_SUBTREE = "project"
 # What an install stubs in that tier, so the folder is there to be written into.
 _PROJECT_STUB = ".gitkeep"
@@ -405,7 +406,7 @@ def landing_held(target_root: Path, name: str) -> str | None:
     landing = target_root / ".pkit" / "capabilities" / name
     if not landing.is_dir():
         return None
-    if not any(entry.name != _CAPABILITY_PROJECT_SUBTREE for entry in landing.iterdir()):
+    if not any(not _is_project_tier(entry.name) for entry in landing.iterdir()):
         return None
     if find_capability_in_repo(target_root, name) is not None:
         return f"the capability {name!r} authored in this repository at .pkit/capabilities/{name}/"
@@ -2276,7 +2277,7 @@ def _remove_fetched_copy(target_root: Path, name: str) -> Path | None:
     if not cap_dir.is_dir():
         return None
     for entry in cap_dir.iterdir():
-        if entry.name == _CAPABILITY_PROJECT_SUBTREE:
+        if _is_project_tier(entry.name):
             continue
         if entry.is_dir() and not entry.is_symlink():
             shutil.rmtree(entry)
@@ -2570,16 +2571,27 @@ def _collect_existing_artifact_names(
     return out
 
 
+def _is_project_tier(name: str) -> bool:
+    """True iff *name*, a folder at a capability's root, is its ``project/`` tier.
+
+    The name is compared ignoring case: on a filesystem that ignores case, such
+    as macOS's default, ``PROJECT/`` is the same folder, so a copy that wrote a
+    source's ``PROJECT/manifest.yaml`` would overwrite the project's own manifest.
+    """
+    return name.casefold() == _CAPABILITY_PROJECT_SUBTREE
+
+
 def _capability_owned(rel: PurePath) -> bool:
     """Ownership predicate for a capability tree (relative to the capability root).
 
     The capability's **top-level** ``project/`` subtree is adopter-owned (the
     no-shared-files invariant, COR-001) — positional, matching the
-    ``.pkit/<area>/project/`` convention `_is_kit_propagated_path` enforces.
-    A ``project`` segment nested below a kit-owned subdir is *not* adopter-
-    owned (it refreshes), by the same positional rule.
+    ``.pkit/<area>/project/`` convention `_is_kit_propagated_path` enforces,
+    and in any case (`_is_project_tier`). A ``project`` segment nested below a
+    kit-owned subdir is *not* adopter-owned (it refreshes), by the same
+    positional rule.
     """
-    return bool(rel.parts) and rel.parts[0] == _CAPABILITY_PROJECT_SUBTREE
+    return bool(rel.parts) and _is_project_tier(rel.parts[0])
 
 
 def _copy_capability_tree(

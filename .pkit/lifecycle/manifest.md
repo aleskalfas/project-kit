@@ -49,7 +49,7 @@ pkit:
         - src/project_kit/router.py
         - .pkit/capabilities/living-docs/scripts/validate.py
         - .pkit/capabilities/living-docs/scripts/resolve-source.py
-      record: [COR-010, COR-013, COR-017, COR-019, COR-021, COR-030, COR-031, "COR-033#P7", COR-036, COR-038, COR-041, COR-049, COR-050, COR-051, COR-052, COR-053, "COR-054#2", COR-055, COR-056, COR-061, "COR-062#2", "COR-070#2", COR-073, ADR-009, ADR-050, ADR-056, ADR-057, ADR-058, ADR-059, ADR-065, ADR-066, ADR-076, ADR-088, ADR-040]
+      record: [COR-010, COR-013, COR-017, COR-019, COR-021, COR-030, COR-031, "COR-033#P7", COR-036, COR-038, COR-041, COR-049, COR-050, COR-051, COR-052, COR-053, "COR-054#2", COR-055, COR-056, COR-061, "COR-062#2", "COR-070#2", COR-073, ADR-009, ADR-050, ADR-056, ADR-057, ADR-058, ADR-059, ADR-065, ADR-066, ADR-076, ADR-088, ADR-040, "ADR-097#2", "ADR-097#3"]
 ---
 
 # Manifest schema
@@ -132,12 +132,13 @@ backend_state:
     name: adopter-kit
 ```
 
-An externally-sourced capability's manifest records its pin beside its version, the source and the ref it was installed from:
+An externally-sourced capability's manifest records its pin beside its version: its source, its ref and the commit the ref named at install:
 
 ```yaml
 pin:
   source: git@github.com:example/capabilities.git
   ref: v1.4.0               # a tag, or a commit's full id
+  commit: 9fceb02d0ae598e95dc970b74767f19372d61af8   # the commit's full id
 ```
 
 Its sections:
@@ -145,7 +146,11 @@ Its sections:
 - **`schema_version`:** the version of *this* component-manifest schema. Bumping it triggers a component manifest-schema migration.
 - **`component`:** kind, name, recorded version, install timestamp.
 - **`requires_backbone`:** a semver range pinned to this version of the component. It is recorded into the manifest at install and upgrade, so the next upgrade run can verify compatibility.
-- **`pin`:** the git source and the ref an externally-sourced capability's install fetched, a tag or a commit's full id. Install writes it, and `sync` reads it to bring the copy to the pin, writing no manifest. Moving a pin is not built yet. A source that carries a credential is refused at install, so none is recorded here.
+- **`pin`:** what an externally-sourced capability's install fetched, in three keys. Install writes it, and `sync` reads it to bring the copy to the pin, writing no manifest. Moving a pin is not built yet.
+  - **`source`:** the git source.
+  - **`ref`:** the ref the install fetched, a tag or a commit's full id.
+  - **`commit`:** the full id of the commit the ref named. Sync takes that commit only: where the tag now names another, it keeps the copy and warns. A pin that records no `commit`, as one written by hand may, follows its tag.
+  - **No credential** is passed in an argument, recorded here or printed, since a source whose URL carries one is refused at install.
 - **`backend_state`:** opaque backend identifiers the kit cannot rederive, such as board UUIDs and webhook IDs. It is empty, `{}`, for components that have none.
   - **`backend_state.skipped`:** in a capability's manifest, the skills and agents the project chose to skip on a naming collision (COR-017), each as a `{kind, name}` entry. A refresh reads them back from here, and leaves those artefacts out of its copy. A skip chosen in a transition is recorded here before the copy, so a transition a migration stops does not ask again. A name recorded here is never a new collision ([`upgrade-flow.md`, "A new collision"](upgrade-flow.md#a-new-collision) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
   - **A restamp** changes the version, the timestamp and the range. It replaces `skipped` with the skips in force, and keeps every other key of `backend_state`. It reads the manifest after the capability's migrations, so a key a migration wrote stays. A manifest that does not parse, such as one left with merge-conflict markers, is replaced by a new one, and the refresh says so.
@@ -957,10 +962,12 @@ Each of these is the `packages` member's error:
 
 **Reading one point from a script.** `pkit connections resolve <address> --json` prints the same resolution of one point as a stable document ([the CLI README, "Connections commands"](../cli/README.md#connections-resolve-address---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). It is how a component's own script reads a point it defines, before applying the value itself. A capability script runs in its own environment and does not import the backbone. The consumer, not the point, knows what the value is applied to.
 
-- **A consumer dispatches on `outcome`, never on `why`.** `outcome` says how the resolution ended, as one value from a closed set: `resolved`, `unfilled`, `collision` and the rest the CLI README lists. `why` is that ending's sentence for people, and its wording is no contract. The filler states alone cannot tell the endings apart: a collision looks like a point nothing fills.
+- **A consumer dispatches on `outcome`, never on `why`.** `outcome` says how the resolution ended, as one value from a listed set: `resolved`, `unfilled`, `collision` and the rest the CLI README lists. `why` is that ending's sentence for people, and its wording is no contract. The filler states alone cannot tell the endings apart: a collision looks like a point nothing fills.
   - A consumer that turns a rule off when nothing fills the point reads `unfilled`, not the absence of a taken filler.
   - A value it does not know means it could not tell how the point ended: never `resolved`, never `unfilled`.
-- **`resolved` does not say every filler answered.** A point that resolved with an inert filler among several is `resolved` too. So a consumer that only reports checks that no `fillers[].state` is `inert` before it draws a finding from an entry's absence. What an inert filler would have supplied is unknown, not absent (COR-052 point 6).
+- **`resolved` does not say every filler answered.** A point that resolved with an inert filler among several is `resolved` too. So a consumer that only reports checks two things before it draws a finding from an entry's absence:
+  - The document lists `fillers`.
+  - Each `fillers[].state` is `taken` or `passed over`. A filler in any other state, `inert` or one the consumer does not know, may not have answered. What such a filler would have supplied is unknown, not absent (COR-052 point 6).
 - **The command resolves that point alone.** Only its fillers are asked, so no other point's command filler starts. Reading one point costs what that point costs, however many others the project has. `pkit validate` and `pkit status` still resolve every point.
   - Within one run, each point resolves at most once, whichever reader asks first, sharing the run's one wiring and filler files.
   - Points never read one another, so a point resolved alone is the point resolved among all.

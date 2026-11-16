@@ -6,7 +6,7 @@ date: 2026-05-24
 author: Ales Kalfas
 ---
 
-> **Partially superseded by [project-management:DEC-070-filing-another-board].** Where the substrate map binds the state to the board, filing refuses a board other than the configured one. Overturned there: the per-invocation override at filing in "Multi-board adopters at v1". It stands for every other project.
+> **Partially superseded by [project-management:DEC-070-filing-another-board] and [project-management:DEC-071-filing-only-configured-board].** Wherever a board is configured, filing refuses a board other than the configured one: where the substrate map binds the state to the board (DEC-070), and in every other project with a board (DEC-071). Overturned: the per-invocation override at filing in "Multi-board adopters at v1".
 
 ## Context
 

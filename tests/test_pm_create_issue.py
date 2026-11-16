@@ -1459,32 +1459,6 @@ def test_a_failed_link_alone_keeps_its_code_where_every_required_write_was_made(
     assert board.adds == [42]
 
 
-def test_a_filing_that_names_another_board_reads_that_board_by_its_number(
-    ci, tmp_path, monkeypatch
-) -> None:
-    """`--board` stands in for the configured board in the filing's reads and
-    writes: its read asks that board by its number, never by the configured
-    board's stored node ([pkit:ADR-096], Boundaries)."""
-    calls: list[list[str]] = []
-    board = _status_kept_filing(
-        ci, tmp_path, monkeypatch, axes=MIRRORED, calls=calls, extra=("--board", "9")
-    )
-    board.graph.number = 9
-    root = Path(ci.sys.argv[ci.sys.argv.index("--capability-root") + 1])
-    config_path = root / "project" / "config.yaml"
-    config_path.write_text(
-        config_path.read_text(encoding="utf-8") + "projects_v2_node_id: PVT_configured\n",
-        encoding="utf-8",
-    )
-
-    assert ci.main() == 0
-
-    reads = [argv for argv in calls if is_seam_read(argv)]
-    assert reads and all("board: node(id:" not in query_of(argv) for argv in reads)
-    assert {flag_value(argv, "number") for argv in reads} == {"9"}
-    assert board.adds == [42]
-
-
 def test_a_stored_node_addresses_the_filings_read_and_must_agree(
     ci, tmp_path, monkeypatch, capsys
 ) -> None:
@@ -1538,17 +1512,40 @@ def test_no_first_status_is_written_where_the_state_degrades(ci, tmp_path, monke
     assert not [argv for argv in board.calls if argv[2:3] == ["field-list"]]
 
 
-# --- a board other than the configured one (DEC-070, #3254) ------------------
-# Where the map binds the state to the board, every command reads an open issue's
-# position from its card on the configured board, board 7 here, so a `--board`
-# naming another is refused before anything is run or asked, the foreign-repo
-# question included. Elsewhere the option goes on, as DEC-019 has it.
+# --- a board option that does not name the configured board (DEC-070, DEC-071) ---
+# Every issue belongs on the configured board, board 7 here, and every command
+# but filing reads and writes that board alone, so a `--board` naming another is
+# refused in every project before anything is run or asked, the foreign-repo
+# question included, and so is any `--board` where no board is configured. A
+# number below 1 is refused first, with a message of its own.
 
 #: The configured board, as `_stage_capability_tree` writes it.
 CONFIGURED_BOARD = "has_projects_v2_board: true\nprojects_v2_board_id: 7\n"
 
+#: A board declared with no number.
+NO_BOARD_NUMBER = "has_projects_v2_board: true\n"
+
 #: What the refusal says wherever the configuration names a board.
 ANOTHER_BOARD = "names a board other than the configured one"
+
+#: What the refusal says where the board holds the state.
+HOLDS_THE_STATE = "the substrate map binds the state to the board"
+
+#: The map that leaves the state out, so it degrades.
+STATE_DEGRADES: dict = {axis: binding for axis, binding in BOARD_AXES.items() if axis != "state"}
+
+#: Each map under which the board does not hold the state.
+STATE_OFF_THE_BOARD = [
+    pytest.param(LABEL_STATE, id="state-on-labels"),
+    pytest.param(None, id="no-map"),
+    pytest.param(STATE_DEGRADES, id="state-degrades"),
+]
+
+#: Each map, the one under which the board holds the state among them.
+EVERY_MAP = [pytest.param(BOARD_AXES, id="board-holds-state"), *STATE_OFF_THE_BOARD]
+
+#: A filing at the terminal, and a dry run.
+FILING_OR_DRY_RUN = [pytest.param((), id="filing"), pytest.param(("--dry-run",), id="dry-run")]
 
 
 def _filing_onto_board(
@@ -1563,11 +1560,10 @@ def _filing_onto_board(
 ):
     """Stage a filing with `--board board` at a terminal, without `--yes`, in a
     project whose config declares ``board_config``. The board that answers is
-    the one the option names, which a filing that goes on reads by its number
-    ([pkit:ADR-096], Boundaries). Return the board, every command run and every
-    question asked, the foreign-repo guard's among them."""
+    board 7, the configured one, which a filing that goes on reads. Return the
+    board, every command run and every question asked, the foreign-repo guard's
+    among them."""
     board_world = _status_kept_filing(ci, tmp_path, monkeypatch, axes=axes)
-    board_world.graph.number = board
     root = tmp_path / ".pkit" / "capabilities" / "project-management"
     config = root / "project" / "config.yaml"
     config.write_text(f"workstreams: [spyre]\n{board_config}", encoding="utf-8")
@@ -1605,9 +1601,19 @@ def _gh_calls(ran: list[list[str]]) -> list[list[str]]:
     return [argv for argv in ran if argv[:1] == ["gh"] and argv[1:3] != ["api", "user"]]
 
 
-@pytest.mark.parametrize(
-    "extra", [pytest.param((), id="filing"), pytest.param(("--dry-run",), id="dry-run")]
-)
+def _refused_before_anything(ci, ran: list[list[str]], asked: list[str], capsys) -> str:
+    """Run the staged filing, hold that it is refused for its options before
+    anything is run or asked and before any board is read, and return what it
+    said on standard error."""
+    assert ci.main() == 2
+
+    assert _gh_calls(ran) == [] and asked == []
+    captured = capsys.readouterr()
+    assert "about to create issue" not in captured.out
+    return captured.err
+
+
+@pytest.mark.parametrize("extra", FILING_OR_DRY_RUN)
 def test_another_board_is_refused_where_the_board_holds_the_state(
     ci, tmp_path, monkeypatch, capsys, extra
 ) -> None:
@@ -1615,82 +1621,161 @@ def test_another_board_is_refused_where_the_board_holds_the_state(
         ci, tmp_path, monkeypatch, axes=BOARD_AXES, board=9, extra=extra
     )
 
-    assert ci.main() == 2
+    err = _refused_before_anything(ci, ran, asked, capsys)
 
-    assert _gh_calls(ran) == [] and asked == []
-    captured = capsys.readouterr()
-    assert "about to create issue" not in captured.out
-    err = captured.err
-    assert f"--board 9 {ANOTHER_BOARD}, board 7, and is refused" in err
+    assert f"--board 9 {ANOTHER_BOARD}, board 7, and is refused: {HOLDS_THE_STATE}" in err
     assert "every command reads an open issue's position from its card on the configured" in err
     assert "To file the issue onto board 7, leave --board out." in err
     assert "`gh project item-add 9 --owner <owner> --url <the issue's url>`" in err
+    assert "That card carries no position." in err
 
 
-@pytest.mark.parametrize(
-    "board_config",
-    [
-        pytest.param("has_projects_v2_board: true\n", id="no-board-number"),
-        pytest.param("", id="no-board-declared"),
-    ],
-)
-def test_with_no_configured_board_number_the_refusal_names_that_fault(
-    ci, tmp_path, monkeypatch, capsys, board_config
+@pytest.mark.parametrize("extra", FILING_OR_DRY_RUN)
+@pytest.mark.parametrize("axes", STATE_OFF_THE_BOARD)
+def test_another_board_is_refused_where_the_board_does_not_hold_the_state(
+    ci, tmp_path, monkeypatch, capsys, axes, extra
 ) -> None:
+    """Every issue belongs on the configured board, which every command reads
+    and writes, so the refusal reaches every project with a board (DEC-071
+    point 1), in that case's own words (point 3)."""
+    _, ran, asked = _filing_onto_board(ci, tmp_path, monkeypatch, axes=axes, board=9, extra=extra)
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert (
+        f"--board 9 {ANOTHER_BOARD}, board 7, and is refused: every issue belongs on the "
+        "configured board, which every command reads and writes, so an issue filed onto "
+        "board 9 would have no card where every command looks for one"
+    ) in err
+    assert "To file the issue onto board 7, leave --board out." in err
+    assert "`gh project item-add 9 --owner <owner> --url <the issue's url>`" in err
+    assert "That card is the project's own: no command reads or writes it." in err
+    assert HOLDS_THE_STATE not in err
+
+
+@pytest.mark.parametrize("extra", FILING_OR_DRY_RUN)
+@pytest.mark.parametrize("axes", EVERY_MAP)
+def test_where_no_board_is_configured_any_board_option_is_refused(
+    ci, tmp_path, monkeypatch, capsys, axes, extra
+) -> None:
+    """The project gives no board to compare the option with, and a filing
+    adds the issue to no board, so the option would do nothing (DEC-071 point
+    2). The message says so, and the board's holding the state is no part of
+    it, since no board is configured to hold it (point 3)."""
     _, ran, asked = _filing_onto_board(
-        ci, tmp_path, monkeypatch, axes=BOARD_AXES, board=7, board_config=board_config
+        ci, tmp_path, monkeypatch, axes=axes, board=7, board_config="", extra=extra
     )
 
-    assert ci.main() == 2
+    err = _refused_before_anything(ci, ran, asked, capsys)
 
-    assert _gh_calls(ran) == [] and asked == []
-    err = capsys.readouterr().err
-    assert "--board 7 is refused: the substrate map binds the state to the board" in err
-    assert "gives no board number" in err
+    assert (
+        "--board 7 is refused: project/config.yaml configures no board "
+        "(`has_projects_v2_board`), so a filing adds the issue to no board"
+    ) in err
+    assert "To file the issue, leave --board out." in err
+    assert "`gh project item-add 7 --owner <owner> --url <the issue's url>`" in err
+    assert HOLDS_THE_STATE not in err and ANOTHER_BOARD not in err
+
+
+@pytest.mark.parametrize("axes", EVERY_MAP)
+def test_with_no_board_number_the_refusal_names_that_fault(
+    ci, tmp_path, monkeypatch, capsys, axes
+) -> None:
+    """Every board a filing names is another where the configuration gives no
+    number. The message names the missing number as the fault, and says the
+    board holds the state where the map binds the state to the board, and
+    nowhere else (DEC-071 point 3)."""
+    _, ran, asked = _filing_onto_board(
+        ci, tmp_path, monkeypatch, axes=axes, board=7, board_config=NO_BOARD_NUMBER
+    )
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert "--board 7 is refused: " in err
+    assert (
+        "project/config.yaml declares a board (`has_projects_v2_board: true`) but gives no "
+        "number for it (`projects_v2_board_id`), so the filing has no board to file onto. "
+        "That is the fault to mend"
+    ) in err
     assert "leave --board out" not in err
+    assert (HOLDS_THE_STATE in err) == (axes is BOARD_AXES)
 
 
 @pytest.mark.parametrize(
     "board_id",
     [pytest.param("7", id="a-number"), pytest.param("'7'", id="a-string")],
 )
+@pytest.mark.parametrize("axes", EVERY_MAP)
 def test_the_configured_boards_own_number_goes_on(
-    ci, tmp_path, monkeypatch, capsys, board_id
+    ci, tmp_path, monkeypatch, capsys, axes, board_id
 ) -> None:
     """The two are compared as numbers, so a number the configuration writes as a
     string names the same board as the option."""
     board_config = f"has_projects_v2_board: true\nprojects_v2_board_id: {board_id}\n"
     board, ran, _ = _filing_onto_board(
-        ci, tmp_path, monkeypatch, axes=BOARD_AXES, board=7, board_config=board_config
+        ci, tmp_path, monkeypatch, axes=axes, board=7, board_config=board_config
     )
 
     assert ci.main() == 0
 
     assert _issue_created(ran)
     assert board.adds == [42]
-    assert ANOTHER_BOARD not in capsys.readouterr().err
+    assert "is refused" not in capsys.readouterr().err
 
 
-@pytest.mark.parametrize(
-    "axes",
-    [
-        pytest.param(LABEL_STATE, id="state-on-labels"),
-        pytest.param(None, id="no-map"),
-        pytest.param(
-            {axis: binding for axis, binding in BOARD_AXES.items() if axis != "state"},
-            id="state-degrades",
-        ),
-    ],
-)
-def test_another_board_is_not_refused_where_the_state_is_off_the_board(
-    ci, tmp_path, monkeypatch, capsys, axes
+#: Each project's case, as its configuration and map make it. ``{board}`` stands
+#: for the option's own number, so the last case configures a board whose number
+#: is the option's: the option is refused there only if the check of a number
+#: below 1 comes before the comparison with the configured board.
+EVERY_CASE = [
+    pytest.param(BOARD_AXES, CONFIGURED_BOARD, id="board-holds-state"),
+    pytest.param(LABEL_STATE, CONFIGURED_BOARD, id="state-on-labels"),
+    pytest.param(STATE_DEGRADES, CONFIGURED_BOARD, id="state-degrades"),
+    pytest.param(BOARD_AXES, NO_BOARD_NUMBER, id="no-board-number"),
+    pytest.param(None, "", id="no-board"),
+    pytest.param(
+        BOARD_AXES,
+        "has_projects_v2_board: true\nprojects_v2_board_id: {board}\n",
+        id="configured-board-of-that-number",
+    ),
+]
+
+
+@pytest.mark.parametrize("extra", FILING_OR_DRY_RUN)
+@pytest.mark.parametrize(("axes", "board_config"), EVERY_CASE)
+def test_a_number_below_1_is_refused_first_in_every_project(
+    ci, tmp_path, monkeypatch, capsys, axes, board_config, extra
 ) -> None:
-    _, ran, _ = _filing_onto_board(ci, tmp_path, monkeypatch, axes=axes, board=9)
+    """No board has such a number, so the option is refused with a message of its
+    own, which takes the place of the case's own, DEC-070's where the board holds
+    the state among them (DEC-071 point 3)."""
+    _, ran, asked = _filing_onto_board(
+        ci,
+        tmp_path,
+        monkeypatch,
+        axes=axes,
+        board=0,
+        board_config=board_config.format(board=0),
+        extra=extra,
+    )
 
-    assert ci.main() == 0
+    err = _refused_before_anything(ci, ran, asked, capsys)
 
-    assert _issue_created(ran)
-    assert ANOTHER_BOARD not in capsys.readouterr().err
+    assert (
+        "--board 0 is refused: no board has the number 0, since a board's number is 1 or more"
+    ) in err
+    assert "Leave --board out to file the issue as project/config.yaml has it." in err
+    for case_said in (ANOTHER_BOARD, HOLDS_THE_STATE, "configures no board", "gives no number"):
+        assert case_said not in err
+
+
+def test_a_negative_number_is_refused_as_below_1(ci, tmp_path, monkeypatch, capsys) -> None:
+    _, ran, asked = _filing_onto_board(ci, tmp_path, monkeypatch, axes=BOARD_AXES, board=-1)
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert "--board -1 is refused: no board has the number -1" in err
+    assert ANOTHER_BOARD not in err
 
 
 def _hooks_module(ci):

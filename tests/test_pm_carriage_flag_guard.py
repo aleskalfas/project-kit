@@ -77,9 +77,11 @@ ALLOWED_READS: dict[str, tuple[int, str]] = {
     ),
     "create-issue.py": (
         1,
-        "MEMBERSHIP — the DEC-019 auto-add to the configured board, plus its "
-        "pre-flight display line. Explicitly NOT carriage (DEC-062 point 1: the "
-        "flag governs which board it is and that every issue belongs on it).",
+        "MEMBERSHIP — whether a board is configured, on which every issue belongs "
+        "(DEC-019): it judges `--board` against that board before anything is "
+        "written (DEC-071), then drives the auto-add to it, plus its pre-flight "
+        "display line. Explicitly NOT carriage (DEC-062 point 1: the flag governs "
+        "which board it is and that every issue belongs on it).",
     ),
     "pre-check.py": (
         2,
