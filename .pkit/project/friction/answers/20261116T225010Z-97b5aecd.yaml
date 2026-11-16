@@ -88,7 +88,10 @@ answers:
       - 20261116T073934Z-de939802.yaml
       - 20261116T075435Z-97191300.yaml
       - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261116T110629Z-7871f194.yaml
     revalidated:
-      at: 2026-11-16T12:40:48Z
+      at: 2026-11-16T22:50:10Z
       outcome: unchanged
-      unchanged-because: "The change adds only DEC-075, a proposed record on what the forward cascade does at an ancestor it cannot place, and changes no code and no README text. Read with the two revalidations made apart on the base, on filing's board option and on the readings of a version that is not the integer 1, neither of which touches the cascade, the README still describes the cascade as built: an ancestor its Status or the engine does not place is not written and stops the walk. That stays true until the change that builds DEC-075 lands and updates that account."
+      unchanged-because: "The change adds only DEC-075, a proposed record on what the forward cascade does at an ancestor it cannot place and on writing only from reads made after the move, and changes no code and no README text. Judged with the two revalidations answered apart on the base, which still hold: the board sync's has the README say that sync-board reads every card, an archived one included, and adds a card where the board holds the state only at a terminal or with the switch on, and the documents' contracts' links each command's --json document to the section that states it. Neither touches the forward cascade, so the README still describes the cascade as built: an ancestor its Status or the engine does not place is not written and stops the walk. That stays true until the change that builds DEC-075 lands and updates that account."
