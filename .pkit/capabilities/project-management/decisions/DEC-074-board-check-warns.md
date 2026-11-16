@@ -1,7 +1,7 @@
 ---
 id: DEC-074
 title: Pre-check's board check warns where the board does not answer
-status: proposed
+status: accepted
 date: 2026-11-14
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
