@@ -109,7 +109,7 @@ def _capability(tmp_path: Path, workstreams: str = "schema_version: 1\nworkstrea
 def _installed(tmp_path: Path) -> Path:
     """`_capability` with the capability's schemas, as a command that reads them needs."""
     capability = _capability(tmp_path)
-    shutil.copytree(SCHEMAS, capability / "schemas")
+    shutil.copytree(SCHEMAS, capability / "schemas", ignore=shutil.ignore_patterns("__pycache__"))
     return capability
 
 
