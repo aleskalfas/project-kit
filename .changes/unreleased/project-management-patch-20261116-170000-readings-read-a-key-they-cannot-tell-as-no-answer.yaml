@@ -15,7 +15,8 @@ body: >
   anything from, never a default. Before, a lookup without `resolved` was left
   out rather than read as unknown, a default branch of another source was read
   as not declared, an altered artefact without its `base` was read as added, a
-  confined run without its `check` as one refused before its clone, a status
+  confined run without its `check` as one refused before its clone, a refused
+  call without its `tool` as `?` and one without its `input` as empty, a status
   without its journal as an empty journal, a position without `indeterminate`
   as a determined one, and a file without `excluded` as left in. A point
   resolved with a filler in a state pm does not know is unresolved, and drift

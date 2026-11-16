@@ -25,7 +25,7 @@ from project_kit import agent_runs as runs
 from project_kit import data_points as dp
 from project_kit import decisions_check_diff as check_diff
 from project_kit import default_branch as db
-from project_kit.agent_confinement import Check
+from project_kit.agent_confinement import CLEAN, Check
 from project_kit.validators import Finding, Severity
 from tests import analysis_repo as ar
 from tests import document_contracts as contracts
@@ -792,53 +792,6 @@ def test_project_management_drift_reads_the_rules_of_a_fixer_s_run_as_their_cont
 
 (pm_agent_runs,) = load("project-management", "agent_runs")
 
-_RUN = {
-    "schema_version": "int",
-    "agent": "str",
-    "runner": "str|null",
-    "ending": "str",
-    "exit_code": "int|null",
-    "output": "str",
-    "diagnostics": "str",
-    "reason": "str",
-    "refused_calls": "list",
-    "confined": "bool",
-    "excluded": "list",
-}
-
-#: The document `pkit agents run --json` prints, as the CLI reference gives it ("Agent
-#: runs"), until the command's documents have their contracts (#3315). An unconfined
-#: run prints the confined run's keys too, each null or empty.
-AGENTS_RUN = Contract(
-    name="pkit agents run --json",
-    version=1,
-    forms={
-        "unconfined": Form(
-            keys={**_RUN, "commit": "null", "check": "null", "files": "null"},
-        ),
-        "confined": Form(
-            keys={
-                **_RUN,
-                "commit": "str",
-                "check": "object|null",
-                "check.verdict": "str",
-                "check.changes": "list",
-                "check.changes[]": "str",
-                "files": "str|null",
-                "excluded[]": "list",
-                "excluded[][]": "str",
-            }
-        ),
-    },
-    # The calls the harness refused, as the runner reports them: pm prints each as it
-    # comes, and reads no key of one as an answer.
-    payloads=frozenset({"refused_calls"}),
-    sets={
-        "ending": frozenset({"finished", "not-started", "timed-out", "refused", "no-answer"}),
-        "check.verdict": frozenset({"clean", "breach", "not-run"}),
-    },
-)
-
 
 def _breached(outcome: Outcome, base: Outcome) -> bool:
     """A check of the clone pm cannot read is read as a breach, and its files set aside."""
@@ -848,7 +801,7 @@ def _breached(outcome: Outcome, base: Outcome) -> bool:
 
 PROJECT_MANAGEMENT_AGENT_RUN = Caller(
     name="project-management's reading of `pkit agents run --json`",
-    contract=AGENTS_RUN,
+    contract=component_documents.AGENTS_RUN,
     read=pm_agent_runs._from_document,
     untold=lambda outcome: isinstance(outcome, tuple) and outcome[0] is None,
     nothing=lambda: pm_agent_runs._from_document({}),
@@ -866,41 +819,19 @@ PROJECT_MANAGEMENT_AGENT_RUN = Caller(
 )
 
 
-def _run_documents() -> dict[str, list[dict[str, Any]]]:
-    """A run of each ending, and a confined run of each verdict, as the backbone
-    prints them."""
-    refused = ({"tool": "Bash", "input": "rm -rf /"},)
-    finished = runs.AgentRun(
-        "reviewer", runs.FINISHED, "claude-code", 0, "done", refused_calls=refused
+def _run_documents() -> list[dict[str, Any]]:
+    """A finished run, unconfined, and confined with all its parts as the run's contract
+    test builds it, as the backbone prints them."""
+    confined = component_documents._ended(runs.FINISHED, Check(CLEAN, ("a.md",)))
+    unconfined = dataclasses.replace(
+        confined, confined=False, commit=None, check=None, files=None, excluded=()
     )
-    unconfined = [finished.as_json()] + [
-        runs.AgentRun("reviewer", ending, None, None, reason="why").as_json()
-        for ending in sorted(set(runs.ENDINGS) - {runs.FINISHED})
-    ]
-    confined = [
-        dataclasses.replace(
-            finished,
-            confined=True,
-            commit="c" * 40,
-            check=check,
-            files=None if check is None else Path("/tmp/files"),
-            excluded=(("uv", "run", "x"),),
-        ).as_json()
-        for check in (
-            Check("clean", ("a.md",)),
-            Check("breach", ("b.md",)),
-            Check("not-run"),
-            None,
-        )
-    ]
-    return {"unconfined": unconfined, "confined": confined}
+    return [unconfined.as_json(), confined.as_json()]
 
 
 def test_project_management_reads_an_agent_s_run_as_its_contract_says() -> None:
-    held = _run_documents()
-    contracts.check(AGENTS_RUN, held)
-    for form in held.values():
-        check(PROJECT_MANAGEMENT_AGENT_RUN, form[0])
+    for document in _run_documents():
+        check(PROJECT_MANAGEMENT_AGENT_RUN, document)
 
 
 pm_move_journal, pm_history, pm_move_issue = load(

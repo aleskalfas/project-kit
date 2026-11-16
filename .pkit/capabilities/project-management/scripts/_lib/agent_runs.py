@@ -277,11 +277,14 @@ def _confined_keys(document: Mapping[str, Any]) -> dict[str, Any] | str:
     excluded = document.get("excluded")
     if not isinstance(refused, list) or not isinstance(excluded, list):
         return "no refused_calls or excluded that is a list"
+    calls = tuple(_call(c) for c in refused)
+    if None in calls:
+        return "a refused call that does not give its tool and input"
     return {
         "check": verdict,
         "changes": changes,
         "files": files,
-        "refused_calls": tuple(_call(c) for c in refused),
+        "refused_calls": calls,
         "excluded": tuple(" ".join(e) if isinstance(e, list) else str(e) for e in excluded),
     }
 
@@ -290,11 +293,15 @@ def _confined_keys(document: Mapping[str, Any]) -> dict[str, Any] | str:
 _UNREAD = object()
 
 
-def _call(value: Any) -> str:
-    """A refused call as one line: its tool and what it was called with."""
-    if isinstance(value, Mapping):
-        return f"{value.get('tool', '?')}: {value.get('input', '')}".strip()
-    return str(value)
+def _call(value: Any) -> str | None:
+    """A refused call as one line, its tool and what it was called with, or None
+    where it does not give both as text (ADR-097 point 3)."""
+    if not isinstance(value, Mapping):
+        return None
+    tool, given = value.get("tool"), value.get("input")
+    if not isinstance(tool, str) or not isinstance(given, str):
+        return None
+    return f"{tool}: {given}".strip()
 
 
 def _stop(process: subprocess.Popen[bytes]) -> None:
