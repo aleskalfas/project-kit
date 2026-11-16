@@ -329,9 +329,9 @@ def _watch(contract: Contract, document: Mapping[str, Any], log: list[tuple[str,
     """`document`, every object of it but a payload's watched (`_Watched`)."""
 
     def wrap(value: Any, shape: str | None, path: str, at: Locator) -> Any:
+        if path and _name(shape, path) in contract.payloads:
+            return value
         if isinstance(value, Mapping):
-            if path and _name(shape, path) in contract.payloads:
-                return value
             items: dict[str, Any] = {}
             for key, item in value.items():
                 inner_shape, inner = _child(contract, shape, path, str(key))
@@ -348,10 +348,10 @@ def _with_unknown_keys(contract: Contract, document: Mapping[str, Any]) -> dict[
     """`document` with `UNKNOWN_KEY` in every object of it whose keys are own keys."""
 
     def add(value: Any, shape: str | None, path: str) -> Any:
+        name = _name(shape, path)
+        if path and name in contract.payloads:
+            return copy.deepcopy(value)
         if isinstance(value, Mapping):
-            name = _name(shape, path)
-            if path and name in contract.payloads:
-                return copy.deepcopy(value)
             items: dict[str, Any] = {}
             for key, item in value.items():
                 inner_shape, inner = _child(contract, shape, path, str(key))

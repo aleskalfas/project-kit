@@ -1323,10 +1323,22 @@ def _reader(documents: dict[tuple[str, ...], Any], seen: list[tuple[list[str], A
 
 
 _POINT = {
+    "schema_version": 1,
+    "defined": True,
     "outcome": "resolved",
-    "fillers": [{"name": "living-docs", "source": "contribution", "supplies": "value"}],
+    "why": "",
+    "fillers": [
+        {
+            "name": "living-docs",
+            "source": "contribution",
+            "supplies": "value",
+            "state": "taken",
+            "reason": "",
+        }
+    ],
     "entries": [
         {
+            "id": "living-docs:page",
             "origin": "living-docs",
             "value": {
                 "id": "living-docs:page",
@@ -1342,20 +1354,36 @@ _TYPES = {"living-docs:page": {"component": "living-docs"}}
 def _documents(changes: dict[tuple[str, ...], Any] | None = None) -> dict[tuple[str, ...], Any]:
     documents: dict[tuple[str, ...], Any] = {
         ("pkit", "connections", "resolve"): _POINT,
-        ("pkit", "friction", "artefacts"): {"types": _TYPES, "artefacts": []},
-        ("pkit", "friction", "check"): {"artefacts": [], "findings": []},
-        ("pkit", "agents", "rules"): {"refused": None, "forms": ["`pkit friction explain …`"]},
+        ("pkit", "friction", "artefacts"): {"schema_version": 1, "types": _TYPES, "artefacts": []},
+        ("pkit", "friction", "check"): {"schema_version": 1, "artefacts": [], "findings": []},
+        ("pkit", "agents", "rules"): _rules(None, ["`pkit friction explain …`"]),
     }
     documents.update(changes or {})
     return documents
+
+
+def _rules(refused: str | None, forms: list[str]) -> dict[str, Any]:
+    """`pkit agents rules --json`, its rules refused or projecting `forms`."""
+    return {
+        "schema_version": 1,
+        "rules_of": "project-management:fix-drift",
+        "refused": refused,
+        "forms": forms,
+    }
 
 
 def _settled(commit: str | None, problem: str | None = None) -> dict[str, Any]:
     branch = {"name": "main", "source": "default", "ref": "origin/main", "commit": commit}
     return {
         "schema_version": 1,
-        "default_branch": {**branch, "problem": problem},
-        "base": {"ref": "origin/main", "tip": commit, "fork": None, "problem": None},
+        "default_branch": {**branch, "problem": problem, "unborn": False},
+        "base": {
+            "ref": "origin/main",
+            "tip": commit,
+            "fork": None,
+            "problem": None,
+            "resolved": None,
+        },
     }
 
 
@@ -1404,11 +1432,18 @@ def test_a_copy_with_no_deployed_agents_checks_them_in_the_checkout(drift, tmp_p
     ("changes", "why"),
     [
         (
-            {("pkit", "connections", "resolve"): {"outcome": "inert", "why": "a filler broke"}},
+            {
+                ("pkit", "connections", "resolve"): {
+                    **_POINT,
+                    "resolved": False,
+                    "outcome": "inert-fail",
+                    "why": "a filler broke",
+                }
+            },
             "does not resolve",
         ),
         (
-            {("pkit", "agents", "rules"): {"refused": "no deny of every call"}},
+            {("pkit", "agents", "rules"): _rules("no deny of every call", [])},
             "the rules of a fixer's run are refused",
         ),
     ],

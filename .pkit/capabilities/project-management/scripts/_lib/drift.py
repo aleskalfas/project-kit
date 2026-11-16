@@ -61,6 +61,7 @@ from typing import Any, BinaryIO
 
 from _lib import agent_runs, backbone, default_branch, fixers
 from _lib import agents as agent_files
+from _lib import document_keys as keys
 
 #: The command, and the run whose rules confine each fixer (ADR-066 point 5).
 VERB = fixers.DRIFT_VERB
@@ -139,6 +140,26 @@ _ANCHOR_FINDINGS = {
     "unresolved-kind": "an anchor of a kind nothing installed resolves",
     "no-answer": "an anchor whose resolver gave no answer",
 }
+
+#: Every kind of finding the whole-repository check reports (the CLI reference,
+#: `friction check --all`). A finding of another kind on an artefact is one pm cannot
+#: judge, so no fixer takes the artefact (ADR-097 point 3).
+FINDING_KINDS = frozenset(
+    {
+        "stale",
+        "deferred",
+        "left-out",
+        "dead-anchor",
+        "unresolved-kind",
+        "no-answer",
+        "over-broad",
+        "shared-id",
+        "whole-and-parts",
+        "unreachable",
+        "unreadable",
+        "answered-apart",
+    }
+)
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -388,17 +409,10 @@ def read_at(
         raise Stop(
             f"the {fixers.POINT} point does not resolve, so no fixer starts: {point.why}{detail}"
         )
-    artefacts = _json(["pkit", "friction", "artefacts", "--json"], copy, run)
-    types = artefacts.get("types")
+    artefacts = listed_of(_json(["pkit", "friction", "artefacts", "--json"], copy, run))
 
     def registered() -> Mapping[str, str]:
-        if not isinstance(types, Mapping):
-            raise fixers.Unreadable("`pkit friction artefacts --json` lists no type registries")
-        return {
-            str(name): str(declared.get("component") or "")
-            for name, declared in types.items()
-            if isinstance(declared, Mapping)
-        }
+        return fixers.types_of(artefacts)
 
     tracked = (copy / ".claude" / "agents").is_dir()
     definitions = copy if tracked or checkout is None else checkout
@@ -410,28 +424,118 @@ def read_at(
         raise Stop(
             f"the grant list at {commit[:12]} cannot be read, so no fixer starts: {exc}"
         ) from exc
-    check = _json(["pkit", "friction", "check", "--all", "--json"], copy, run)
-    rules = _json(["pkit", "agents", "rules", RULES_OF, "--json"], copy, run)
-    if rules.get("refused"):
-        raise Stop(
-            f"the rules of a fixer's run are refused at {commit[:12]}, so no fixer starts: "
-            f"{rules['refused']}"
-        )
-    forms = tuple(str(f) for f in rules.get("forms") or [])
+    check = checked_of(_json(["pkit", "friction", "check", "--all", "--json"], copy, run))
+    forms = forms_of(_json(["pkit", "agents", "rules", RULES_OF, "--json"], copy, run), commit)
     setups = {agent: setup_fingerprint(copy, agent) for agent in point.agents}
     return Reading(commit, point, checked, answers, check, artefacts, forms, setups)
 
 
 def explain(copy: Path, name: str, run: Runner = backbone.run) -> Mapping[str, Any]:
     """`pkit friction explain <name> --json` at the working copy."""
-    return _json(["pkit", "friction", "explain", name, "--json"], copy, run)
+    return explained_of(_json(["pkit", "friction", "explain", name, "--json"], copy, run))
+
+
+# --- reading the backbone's documents by their keys (ADR-097 point 3) ----------------
+#
+# Each document is read once, as it arrives: every key the plan, the fingerprints and
+# the upstreams read below is there, of its type, or the document is one pm cannot
+# read and `Stop` says why. So the readings below never take a key the backbone did
+# not give for a default.
+
+
+def _readable(
+    argv: str, document: Mapping[str, Any], read: Callable[[], None], *, absent: int | None = None
+) -> None:
+    """`read` over `document`, a key it cannot tell anything from a Stop. A document
+    without `schema_version` is of version `absent`: 1 for one that gained the key after
+    it first shipped (the CLI reference), and none for another."""
+    version = document.get("schema_version", absent)
+    if type(version) is not int or version != 1:
+        raise Stop(f"`{argv}` answered schema_version {version!r}; pm reads 1")
+    try:
+        read()
+    except keys.Untold as exc:
+        raise Stop(f"`{argv}` answered a document pm cannot read: {exc}") from exc
+
+
+def checked_of(check: Mapping[str, Any]) -> Mapping[str, Any]:
+    """The whole-repository check, `pkit friction check --all --json`, each artefact's
+    location and state and each finding's kind and location read."""
+
+    def read() -> None:
+        for where, report in keys.objects(check, "artefacts", ""):
+            keys.text(report, "location", where)
+            keys.text(report, "state", where)
+        for where, finding in keys.objects(check, "findings", ""):
+            keys.text(finding, "kind", where)
+            keys.text(finding, "location", where)
+
+    _readable("pkit friction check --all --json", check, read, absent=1)
+    return check
+
+
+def listed_of(artefacts: Mapping[str, Any]) -> Mapping[str, Any]:
+    """The discovery, `pkit friction artefacts --json`, each artefact's location, id,
+    type, tie and anchors read."""
+
+    def read() -> None:
+        for where, item in keys.objects(artefacts, "artefacts", ""):
+            keys.text(item, "location", where)
+            keys.text(item, "id", where)
+            keys.text_or_null(item, "type", where)
+            keys.listed(item, "type_conflict", where)
+            anchors = keys.mapping(item, "anchors", where)
+            for kind in anchors:
+                keys.texts(anchors, kind, f"{where}.anchors")
+
+    _readable("pkit friction artefacts --json", artefacts, read)
+    return artefacts
+
+
+def explained_of(explained: Mapping[str, Any]) -> Mapping[str, Any]:
+    """One artefact's friction, `pkit friction explain --json`, its revalidation point
+    and each finding's kind, anchor and commits read."""
+
+    def read() -> None:
+        point = keys.mapping_or_null(explained, "revalidation_point", "")
+        if point is not None:
+            keys.text(point, "commit", "revalidation_point")
+        for where, finding in keys.objects(explained, "findings", ""):
+            keys.one_of(finding, "kind", where, FINDING_KINDS)
+            anchor = keys.mapping_or_null(finding, "anchor", where)
+            if anchor is not None:
+                keys.text(anchor, "kind", f"{where}.anchor")
+                keys.text(anchor, "value", f"{where}.anchor")
+            for inner, commit in keys.objects(finding, "commits", where):
+                keys.text(commit, "commit", inner)
+
+    _readable("pkit friction explain --json", explained, read, absent=1)
+    return explained
+
+
+def forms_of(rules: Mapping[str, Any], commit: str) -> tuple[str, ...]:
+    """The forms a fixer's brief names, from `pkit agents rules --json` at `commit`.
+    Raises Stop where the rules are refused, or cannot be read."""
+    found: list[tuple[str | None, tuple[str, ...]]] = []
+
+    def read() -> None:
+        found.append((keys.text_or_null(rules, "refused", ""), keys.texts(rules, "forms", "")))
+
+    _readable(f"pkit agents rules {RULES_OF} --json", rules, read)
+    ((refused, forms),) = found
+    if refused:
+        raise Stop(
+            f"the rules of a fixer's run are refused at {commit[:12]}, so no fixer starts: "
+            f"{refused}"
+        )
+    return forms
 
 
 def upstreams_at(copy: Path, run: Runner = backbone.run) -> dict[str, list[str]]:
     """Each artefact at the working copy, by location, with the locations of the
     artefacts it anchors on, read from `pkit friction artefacts --json`. Applying
     accepted proposals follows it, upstream first (DEC-056 point 6)."""
-    artefacts = _json(["pkit", "friction", "artefacts", "--json"], copy, run)
+    artefacts = listed_of(_json(["pkit", "friction", "artefacts", "--json"], copy, run))
     by_key = _artefact_index(artefacts)
     return {
         str(item["location"]): _upstreams(item, by_key)
@@ -580,6 +684,25 @@ def _upstreams(item: Mapping[str, Any], by_key: Mapping[str, Mapping[str, Any]])
     return out
 
 
+def judged(check: Mapping[str, Any]) -> tuple[list[tuple[str, str]], dict[str, str]]:
+    """Each artefact the check reports, by location, with its state; and why the plan
+    lists an artefact rather than take it, by location and by file, for an anchor
+    finding validation reports and a finding of a kind pm does not know."""
+    reports = [(str(r["location"]), str(r["state"])) for r in check["artefacts"]]
+    flagged: dict[str, str] = {}
+    for finding in check["findings"]:
+        kind, location = str(finding["kind"]), str(finding["location"])
+        if kind in _ANCHOR_FINDINGS:
+            why = f"it has {_ANCHOR_FINDINGS[kind]}, which validation reports"
+        elif kind not in FINDING_KINDS:
+            why = f"the check could not judge it (a finding of the kind {kind!r})"
+        else:
+            continue
+        flagged.setdefault(location.partition("#")[0], why)
+        flagged.setdefault(location, why)
+    return reports, flagged
+
+
 def plan(
     reading: Reading,
     index: Mapping[str, Any],
@@ -599,25 +722,16 @@ def plan(
     `explained(name)` reads an artefact's friction; `classes` maps each
     `none` reason to what clears it (`artefact`, `setup` or `next-run`)."""
     result = Plan()
-    reports = [r for r in reading.check.get("artefacts") or [] if isinstance(r, Mapping)]
-    state_of = {str(r.get("location")): str(r.get("state")) for r in reports}
+    reports, flagged = judged(reading.check)
+    state_of = dict(reports)
     by_key = _artefact_index(reading.artefacts)
-    flagged: dict[str, str] = {}
-    for finding in reading.check.get("findings") or []:
-        if isinstance(finding, Mapping) and finding.get("kind") in _ANCHOR_FINDINGS:
-            location = finding.get("location")
-            if isinstance(location, str):
-                flagged.setdefault(location.partition("#")[0], _ANCHOR_FINDINGS[finding["kind"]])
-                flagged.setdefault(location, _ANCHOR_FINDINGS[finding["kind"]])
     entries = {e.type: e for e in reading.point.entries}
     problems = {c.entry.type: c.problems for c in reading.checked}
     artefacts_index = index.get("artefacts") or {}
     refusals = index.get("refusals") or {}
     taken: dict[str, int] = {}
 
-    for report in reports:
-        name = str(report.get("location") or "")
-        state = str(report.get("state"))
+    for name, state in reports:
         if state == "current":
             continue
         if state == "deferred":
@@ -627,7 +741,7 @@ def plan(
             result.listed.append(Listed(name, f"the check could not judge it ({state})"))
             continue
         if name in flagged:
-            result.listed.append(Listed(name, f"it has {flagged[name]}, which validation reports"))
+            result.listed.append(Listed(name, flagged[name]))
             continue
         item = by_key.get(name) or {}
         artefact_type = item.get("type")

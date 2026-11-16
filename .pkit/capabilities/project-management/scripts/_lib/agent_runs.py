@@ -233,9 +233,13 @@ def _from_document(document: Mapping[str, Any]) -> tuple[AgentRun | None, str]:
         return None, f"an exit_code that is not an integer, {exit_code!r}"
     if ending == FINISHED and exit_code is None:
         return None, "a finished run with no exit_code"
+    if "exit_code" not in document:
+        return None, "no exit_code"
     texts: dict[str, str] = {}
     for key in ("output", "diagnostics", "reason"):
-        value = document.get(key, "")
+        if key not in document:
+            return None, f"no {key}"
+        value = document[key]
         if not isinstance(value, str):
             return None, f"a {key} that is not a string"
         texts[key] = value
@@ -247,26 +251,32 @@ def _from_document(document: Mapping[str, Any]) -> tuple[AgentRun | None, str]:
 
 def _confined_keys(document: Mapping[str, Any]) -> dict[str, Any] | str:
     """A confined run's keys, which a backbone adds to its document (ADR-066
-    point 2): absent, an unconfined run's. A null check is a run refused before
-    its clone was made, so nothing was checked. A check that cannot be read is
-    read as a breach, so the run's files are set aside."""
-    if not document.get("confined"):
+    point 2), and none for an unconfined run's. A null check is a run refused
+    before its clone was made, so nothing was checked. A check that cannot be
+    read, missing included, is read as a breach, so the run's files are set aside
+    (ADR-097 point 3): never as a clean clone."""
+    confined = document.get("confined")
+    if not isinstance(confined, bool):
+        return "no confined that is true or false"
+    if not confined:
         return {}
-    check = document.get("check")
+    check = document.get("check", _UNREAD)
     verdict, changes = BREACH, ("the backbone's check of the clone cannot be read",)
     if check is None:
         verdict, changes = NOT_RUN, ()
     elif isinstance(check, Mapping) and check.get("verdict") in (CLEAN, BREACH, NOT_RUN):
-        verdict = str(check["verdict"])
-        raw = check.get("changes") or []
-        changes = tuple(str(c) for c in raw) if isinstance(raw, list) else changes
-    files = document.get("files")
+        raw = check.get("changes")
+        if isinstance(raw, list) and all(isinstance(c, str) for c in raw):
+            verdict, changes = str(check["verdict"]), tuple(raw)
+    if "files" not in document:
+        return "a confined run with no files"
+    files = document["files"]
     if files is not None and not isinstance(files, str):
         return "a files that is not a path"
-    refused = document.get("refused_calls") or []
-    excluded = document.get("excluded") or []
+    refused = document.get("refused_calls")
+    excluded = document.get("excluded")
     if not isinstance(refused, list) or not isinstance(excluded, list):
-        return "refused_calls or excluded that is not a list"
+        return "no refused_calls or excluded that is a list"
     return {
         "check": verdict,
         "changes": changes,
@@ -274,6 +284,10 @@ def _confined_keys(document: Mapping[str, Any]) -> dict[str, Any] | str:
         "refused_calls": tuple(_call(c) for c in refused),
         "excluded": tuple(" ".join(e) if isinstance(e, list) else str(e) for e in excluded),
     }
+
+
+#: A key the document does not give, told from one it gives as null.
+_UNREAD = object()
 
 
 def _call(value: Any) -> str:

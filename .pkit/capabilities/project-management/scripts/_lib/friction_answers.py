@@ -136,8 +136,10 @@ except ImportError:  # pragma: no cover
 # shares it, whichever form loaded them.
 try:
     from _lib import backbone
+    from _lib import document_keys as keys
 except ImportError:  # pragma: no cover
     import backbone  # type: ignore[no-redef]
+    import document_keys as keys  # type: ignore[no-redef]
 
 #: The heading directly above the region an earlier run of these commands wrote into
 #: a description: no command writes it (DEC-065 point 1), and each finds and strips it.
@@ -242,10 +244,10 @@ def settings_change(merge_base: str, head: str) -> tuple[Setting, ...] | str:
     if isinstance(after, str):
         return after
     found: list[Setting] = []
-    places = (_places(before), _places(after))
+    places = (before[0], after[0])
     if places[0] != places[1]:
         found.append(Setting(PLACES, *places))
-    standing = (_standing(before), _standing(after))
+    standing = (before[1], after[1])
     changed = {
         path
         for path in standing[0].keys() & standing[1].keys()
@@ -262,7 +264,12 @@ def settings_change(merge_base: str, head: str) -> tuple[Setting, ...] | str:
     return tuple(found)
 
 
-def _discovery_at(commit: str) -> Mapping[str, Any] | str:
+#: The places discovery reads, as a person reads them, and whether `friction.exclude`
+#: leaves each file out, by its path.
+Discovery = tuple[tuple[str, ...], dict[str, bool]]
+
+
+def _discovery_at(commit: str) -> Discovery | str:
     """The backbone's discovery at `commit`, run as the change check is (unrouted),
     or why it could not be read."""
     command = f"`pkit friction artefacts --json --at {commit}`"
@@ -288,22 +295,40 @@ def _discovery_at(commit: str) -> Mapping[str, Any] | str:
         document = json.loads(proc.stdout or "")
     except ValueError:
         return f"{command}: its answer is not JSON"
-    if not isinstance(document, dict) or document.get("schema_version", 1) != SCHEMA_VERSION:
+    return discovery_of(document, command)
+
+
+#: Why discovery skips a place, as the backbone names it.
+PLACE_SKIPS = ("malformed", "outside-repository")
+
+
+def discovery_of(document: Any, command: str) -> Discovery | str:
+    """The places and the files' standing a discovery document gives, or why it gives
+    none pm can read: a key it reads missing, null where the CLI reference does not
+    print it null, of another type, or a reason for a skip pm does not know, never a
+    default such as a file left in (ADR-097 point 3)."""
+    version = document.get("schema_version") if isinstance(document, dict) else None
+    if type(version) is not int or version != SCHEMA_VERSION:
         return f"{command}: its answer is not a document of version {SCHEMA_VERSION}"
-    return document
+    try:
+        return _places(document), _standing(document)
+    except keys.Untold as exc:
+        return f"{command}: its answer is one pm cannot read: {exc}"
 
 
 def _places(document: Mapping[str, Any]) -> tuple[str, ...]:
     """Every place discovery reads, in walk order: its path, and who declares it
     where that is not the project, or why it is skipped."""
     out: list[str] = []
-    for place in document.get("places") or []:
-        place = _mapping(place)
-        text = str(place.get("path") or place.get("written") or "?")
-        source = str(place.get("source") or "")
-        notes = [source] if source and source != "project" else []
-        skipped = _mapping(place.get("skipped")).get("reason")
-        notes += [f"skipped: {skipped}"] if skipped else []
+    for where, place in keys.objects(document, "places", ""):
+        written = keys.text_or_null(place, "written", where)
+        text = keys.text_or_null(place, "path", where) or written or "?"
+        source = keys.text(place, "source", where)
+        notes = [source] if source != "project" else []
+        skipped = keys.mapping_or_null(place, "skipped", where)
+        if skipped is not None:
+            reason = keys.one_of(skipped, "reason", f"{where}.skipped", PLACE_SKIPS)
+            notes.append(f"skipped: {reason}")
         out.append(text + (f" ({', '.join(notes)})" if notes else ""))
     return tuple(out)
 
@@ -311,9 +336,8 @@ def _places(document: Mapping[str, Any]) -> tuple[str, ...]:
 def _standing(document: Mapping[str, Any]) -> dict[str, bool]:
     """Each file discovery read, and whether `friction.exclude` leaves it out."""
     return {
-        str(_mapping(item).get("path")): bool(_mapping(item).get("excluded"))
-        for item in document.get("files") or []
-        if _mapping(item).get("path")
+        keys.text(item, "path", where): keys.flag(item, "excluded", where)
+        for where, item in keys.objects(document, "files", "")
     }
 
 

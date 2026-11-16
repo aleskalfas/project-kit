@@ -11,21 +11,26 @@ same contract its command is.
 
 from __future__ import annotations
 
+import dataclasses
 import subprocess
 import sys
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from project_kit import agent_runs as runs
 from project_kit import data_points as dp
+from project_kit import decisions_check_diff as check_diff
 from project_kit import default_branch as db
+from project_kit.agent_confinement import Check
+from project_kit.validators import Finding, Severity
 from tests import analysis_repo as ar
 from tests import document_contracts as contracts
 from tests import test_backbone_documents as documents
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.caller_contracts import Caller, Outcome, check, raises, same
+from tests.caller_contracts import UNKNOWN_VALUE, Caller, Outcome, check, raises, same
 from tests.document_contracts import Contract, Form
 from tests.in_process import load
 
@@ -522,3 +527,579 @@ def test_software_analysis_reads_the_evidence_point_as_its_contract_says() -> No
         _point(("UC-001@c#suite.a", "UC-002@c#suite.b"), taken, passed_over),
     ):
         check(SOFTWARE_ANALYSIS_EVIDENCE, document)
+
+
+# --- project-management ---------------------------------------------------------------------
+
+(pm_default_branch, pm_ruled, pm_decision_ids, pm_doc_check, pm_fixers, pm_drift) = load(
+    "project-management",
+    "default_branch",
+    "ruled_artefacts",
+    "decision_ids",
+    "doc_check",
+    "fixers",
+    "drift",
+)
+
+PROJECT_MANAGEMENT_BASE = Caller(
+    name="project-management's reading of `pkit repository base --json`",
+    contract=documents.REPOSITORY_BASE,
+    read=pm_default_branch.reading_of,
+    untold=raises(pm_default_branch.Unanswered),
+    nothing=lambda: pm_default_branch._ask(None, _no_document),
+)
+
+
+def test_project_management_reads_the_default_branch_and_base_as_its_contract_says() -> None:
+    for document in _repository_bases():
+        check(PROJECT_MANAGEMENT_BASE, document)
+
+
+PROJECT_MANAGEMENT_ALTERED = Caller(
+    name="project-management's reading of `pkit rule-sets altered --json`",
+    contract=documents.RULE_SETS_ALTERED,
+    read=pm_ruled.alteration_of,
+    untold=lambda outcome: not outcome.ok,
+    nothing=lambda: pm_ruled.ruled_altered("a" * 40, "b" * 40, run=_no_document),
+)
+
+
+def test_project_management_reads_what_a_change_altered_as_its_contract_says(
+    make_adopter_repo: Any,
+) -> None:
+    for document in documents._altered_documents(make_adopter_repo()):
+        check(PROJECT_MANAGEMENT_ALTERED, document)
+
+
+PROJECT_MANAGEMENT_DECISIONS = Caller(
+    name="project-management's reading of `pkit refs lookup --json`",
+    contract=documents.REFS_LOOKUP,
+    read=pm_decision_ids.reading_of,
+    untold=lambda outcome: isinstance(outcome, pm_decision_ids.NotChecked),
+    nothing=lambda: pm_decision_ids.lookup(list(documents.LOOKED_UP), run=_no_document),
+)
+
+
+def test_project_management_reads_whether_a_record_holds_an_id_as_its_contract_says(
+    make_adopter_repo: Any,
+) -> None:
+    make_adopter_repo()
+    printed = documents._printed(
+        documents._cli("refs", "lookup", documents.JSON_OPTION, *documents.LOOKED_UP)
+    )
+    check(PROJECT_MANAGEMENT_DECISIONS, printed)
+
+
+def _obligations(document: Mapping[str, Any]) -> Any:
+    """What pm's documentation check takes from the point: whether it resolved, its
+    obligations by how each is met, and its removals."""
+    point = pm_doc_check.parse_point(document)
+    if not point.resolved:
+        return point
+    split = pm_doc_check.split(point, "project-management")
+    return point.resolved, split, pm_doc_check.removed(point), point.inert
+
+
+def _obligation_point(*states: dp.FillerState) -> dict[str, Any]:
+    """The doc-check point resolved with an obligation from pm's own filler, a
+    contributed one and a removal, its fillers in `states`."""
+    obligations = (("o1", "project-management"), ("o2", "a-capability"))
+    document = _point((), *states)
+    document["entries"] = [
+        {
+            "id": entry,
+            "origin": origin,
+            "replaces": [],
+            "value": {"source": "mapping" if origin == "project-management" else origin},
+        }
+        for entry, origin in obligations
+    ]
+    document["removals"] = [{"id": "o3", "reason": "not here", "removed_from": ["a-capability"]}]
+    return document
+
+
+PROJECT_MANAGEMENT_DOC_CHECK = Caller(
+    name="project-management's reading of the doc-check point, `pkit connections resolve`",
+    contract=documents.DATA_POINT,
+    read=_obligations,
+    untold=lambda outcome: (
+        raises(pm_doc_check.PointUnreadable)(outcome) or getattr(outcome, "resolved", True) is False
+    ),
+    nothing=lambda: pm_doc_check.read_point(run=_no_document),
+    # The document gained the key after it first shipped (the CLI reference).
+    readings={"missing:schema_version": same},
+)
+
+
+def test_project_management_reads_the_documentation_obligations_as_their_contract_says() -> None:
+    taken, passed_over = dp.FillerState.TAKEN, dp.FillerState.PASSED_OVER
+    for document in (_obligation_point(taken), _obligation_point(taken, passed_over)):
+        check(PROJECT_MANAGEMENT_DOC_CHECK, document)
+
+
+def _fixer_point(*states: dp.FillerState) -> dict[str, Any]:
+    """The fixers point resolved with a project's entry and a contribution's, its
+    fillers in `states`."""
+    document = _point((), *states)
+    document["entries"] = [
+        {"id": kind, "origin": origin, "replaces": [], "value": {"id": kind, "agent": "fixer"}}
+        for kind, origin in (("guide", "project filler"), ("page", "a-capability"))
+    ]
+    return document
+
+
+PROJECT_MANAGEMENT_FIXERS = Caller(
+    name="project-management's reading of the fixers point, `pkit connections resolve`",
+    contract=documents.DATA_POINT,
+    read=pm_fixers.point_of,
+    untold=lambda outcome: (
+        raises(pm_fixers.Unreadable)(outcome) or getattr(outcome, "resolved", True) is False
+    ),
+    nothing=lambda: pm_fixers.read_point(run=_no_document),
+    # The document gained the key after it first shipped (the CLI reference).
+    readings={"missing:schema_version": same},
+)
+
+
+def test_project_management_reads_the_fixers_point_as_its_contract_says() -> None:
+    taken, passed_over = dp.FillerState.TAKEN, dp.FillerState.PASSED_OVER
+    for document in (_fixer_point(taken), _fixer_point(taken, passed_over)):
+        check(PROJECT_MANAGEMENT_FIXERS, document)
+
+
+PROJECT_MANAGEMENT_TYPES = Caller(
+    name="project-management's reading of the types `pkit friction artefacts --json` lists",
+    contract=documents.FRICTION_ARTEFACTS,
+    read=pm_fixers.types_of,
+    untold=raises(pm_fixers.Unreadable),
+    nothing=lambda: pm_fixers.read_types(run=_no_document),
+)
+
+
+def test_project_management_reads_the_declared_types_as_their_contract_says(
+    make_adopter_repo: Any,
+) -> None:
+    repo = documents._evidence_adopter(make_adopter_repo)
+    for document in documents._artefacts_states(repo):
+        check(PROJECT_MANAGEMENT_TYPES, document)
+
+
+def _not_judged(outcome: Outcome, base: Outcome) -> bool:
+    """A state pm does not know is kept, and the plan lists its artefact as not judged."""
+    del base
+    return isinstance(outcome, tuple) and (
+        any(state == UNKNOWN_VALUE for _location, state in outcome[0])
+        or any("could not judge" in why for why in outcome[1].values())
+    )
+
+
+PROJECT_MANAGEMENT_DRIFT_CHECK = Caller(
+    name="project-management's drift reading of `pkit friction check --all --json`",
+    contract=documents.REPOSITORY_CHECK,
+    read=lambda document: pm_drift.judged(pm_drift.checked_of(document)),
+    untold=raises(pm_drift.Stop),
+    nothing=lambda: pm_drift._json(["pkit", "friction", "check"], Path("."), _no_document),
+    # The check gained `schema_version` after it first shipped (the CLI reference).
+    readings={
+        "missing:schema_version": same,
+        "unknown:report:state": _not_judged,
+        "unknown:finding:kind": _not_judged,
+    },
+)
+
+
+def test_project_management_drift_reads_the_whole_repository_check_as_its_contract_says(
+    repository_checks: list[dict[str, Any]],
+) -> None:
+    for document in repository_checks:
+        check(PROJECT_MANAGEMENT_DRIFT_CHECK, document)
+
+
+def _upstreams(document: Mapping[str, Any]) -> dict[str, tuple[Any, ...]]:
+    """What drift reads of each artefact discovery found: its id, type, whether its type
+    is tied, and the artefacts it anchors on."""
+    by_key = pm_drift._artefact_index(pm_drift.listed_of(document))
+    return {
+        key: (
+            item["id"],
+            item["type"],
+            bool(item["type_conflict"]),
+            tuple(pm_drift._upstreams(item, by_key)),
+        )
+        for key, item in by_key.items()
+    }
+
+
+PROJECT_MANAGEMENT_DRIFT_ARTEFACTS = Caller(
+    name="project-management's drift reading of `pkit friction artefacts --json`",
+    contract=documents.FRICTION_ARTEFACTS,
+    read=_upstreams,
+    untold=raises(pm_drift.Stop),
+    nothing=lambda: pm_drift.upstreams_at(Path("."), run=_no_document),
+)
+
+
+def test_project_management_drift_reads_the_artefacts_document_as_its_contract_says(
+    make_adopter_repo: Any,
+) -> None:
+    repo = documents._evidence_adopter(make_adopter_repo)
+    for document in documents._artefacts_states(repo):
+        check(PROJECT_MANAGEMENT_DRIFT_ARTEFACTS, document)
+
+
+PROJECT_MANAGEMENT_DRIFT_EXPLAIN = Caller(
+    name="project-management's drift reading of `pkit friction explain --json`",
+    contract=documents.FRICTION_EXPLAIN,
+    read=lambda document: (
+        pm_drift.friction_fingerprint(pm_drift.explained_of(document)),
+        pm_drift.commits_behind(document),
+    ),
+    untold=raises(pm_drift.Stop),
+    nothing=lambda: pm_drift.explain(Path("."), "guide", run=_no_document),
+    # The document gained `schema_version` after it first shipped (the CLI reference).
+    readings={"missing:schema_version": same},
+)
+
+
+def test_project_management_drift_reads_an_explanation_as_its_contract_says(
+    explained: list[dict[str, Any]],
+) -> None:
+    for document in explained:
+        check(PROJECT_MANAGEMENT_DRIFT_EXPLAIN, document)
+
+
+PROJECT_MANAGEMENT_DRIFT_RULES = Caller(
+    name="project-management's drift reading of `pkit agents rules --json`",
+    contract=documents.AGENTS_RULES,
+    read=lambda document: pm_drift.forms_of(document, "c" * 40),
+    untold=raises(pm_drift.Stop),
+    nothing=lambda: pm_drift._json(["pkit", "agents", "rules"], Path("."), _no_document),
+)
+
+
+def test_project_management_drift_reads_the_rules_of_a_fixer_s_run_as_their_contract_says(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    answered, _refused = documents._rules_documents(monkeypatch)
+    check(PROJECT_MANAGEMENT_DRIFT_RULES, answered)
+
+
+(pm_agent_runs,) = load("project-management", "agent_runs")
+
+_RUN = {
+    "schema_version": "int",
+    "agent": "str",
+    "runner": "str|null",
+    "ending": "str",
+    "exit_code": "int|null",
+    "output": "str",
+    "diagnostics": "str",
+    "reason": "str",
+    "refused_calls": "list",
+    "confined": "bool",
+    "excluded": "list",
+}
+
+#: The document `pkit agents run --json` prints, as the CLI reference gives it ("Agent
+#: runs"), until the command's documents have their contracts (#3315). An unconfined
+#: run prints the confined run's keys too, each null or empty.
+AGENTS_RUN = Contract(
+    name="pkit agents run --json",
+    version=1,
+    forms={
+        "unconfined": Form(
+            keys={**_RUN, "commit": "null", "check": "null", "files": "null"},
+        ),
+        "confined": Form(
+            keys={
+                **_RUN,
+                "commit": "str",
+                "check": "object|null",
+                "check.verdict": "str",
+                "check.changes": "list",
+                "check.changes[]": "str",
+                "files": "str|null",
+                "excluded[]": "list",
+                "excluded[][]": "str",
+            }
+        ),
+    },
+    # The calls the harness refused, as the runner reports them: pm prints each as it
+    # comes, and reads no key of one as an answer.
+    payloads=frozenset({"refused_calls"}),
+    sets={
+        "ending": frozenset({"finished", "not-started", "timed-out", "refused", "no-answer"}),
+        "check.verdict": frozenset({"clean", "breach", "not-run"}),
+    },
+)
+
+
+def _breached(outcome: Outcome, base: Outcome) -> bool:
+    """A check of the clone pm cannot read is read as a breach, and its files set aside."""
+    del base
+    return isinstance(outcome, tuple) and outcome[0] is not None and outcome[0].breached
+
+
+PROJECT_MANAGEMENT_AGENT_RUN = Caller(
+    name="project-management's reading of `pkit agents run --json`",
+    contract=AGENTS_RUN,
+    read=pm_agent_runs._from_document,
+    untold=lambda outcome: isinstance(outcome, tuple) and outcome[0] is None,
+    nothing=lambda: pm_agent_runs._from_document({}),
+    readings={
+        f"{way}:{name}": _breached
+        for way, name in (
+            ("missing", "check"),
+            ("missing", "check.verdict"),
+            ("null", "check.verdict"),
+            ("unknown", "check.verdict"),
+            ("missing", "check.changes"),
+            ("null", "check.changes"),
+        )
+    },
+)
+
+
+def _run_documents() -> dict[str, list[dict[str, Any]]]:
+    """A run of each ending, and a confined run of each verdict, as the backbone
+    prints them."""
+    refused = ({"tool": "Bash", "input": "rm -rf /"},)
+    finished = runs.AgentRun(
+        "reviewer", runs.FINISHED, "claude-code", 0, "done", refused_calls=refused
+    )
+    unconfined = [finished.as_json()] + [
+        runs.AgentRun("reviewer", ending, None, None, reason="why").as_json()
+        for ending in sorted(set(runs.ENDINGS) - {runs.FINISHED})
+    ]
+    confined = [
+        dataclasses.replace(
+            finished,
+            confined=True,
+            commit="c" * 40,
+            check=check,
+            files=None if check is None else Path("/tmp/files"),
+            excluded=(("uv", "run", "x"),),
+        ).as_json()
+        for check in (
+            Check("clean", ("a.md",)),
+            Check("breach", ("b.md",)),
+            Check("not-run"),
+            None,
+        )
+    ]
+    return {"unconfined": unconfined, "confined": confined}
+
+
+def test_project_management_reads_an_agent_s_run_as_its_contract_says() -> None:
+    held = _run_documents()
+    contracts.check(AGENTS_RUN, held)
+    for form in held.values():
+        check(PROJECT_MANAGEMENT_AGENT_RUN, form[0])
+
+
+pm_move_journal, pm_history, pm_move_issue = load(
+    "project-management", "move_journal", "history.py", "move-issue.py"
+)
+
+#: The keys of `pkit process status --json` pm reads of an issue, as the process
+#: engine's page gives them ("The operations"), until the command's documents have
+#: their contracts (#3315). The journal's entries are the engine's records, each of a
+#: kind of its own, read as the engine writes them.
+PROCESS_STATUS = Contract(
+    name="pkit process status --json",
+    forms={
+        "status": Form(
+            keys={
+                "position": "object",
+                "position.state": "str|null",
+                "position.indeterminate": "bool",
+                "journal_logging": "object",
+                "journal_logging.enabled": "bool",
+                "journal_logging.committed": "bool",
+                "journal": "list",
+            }
+        )
+    },
+    payloads=frozenset({"journal"}),
+)
+
+#: An engine from before the setting gives no `journal_logging`, and kept a journal.
+_BEFORE_THE_SETTING = {"missing:journal_logging": same, "missing:journal_logging.enabled": same}
+
+PROJECT_MANAGEMENT_JOURNAL = Caller(
+    name="project-management's reading of an issue's journal, `pkit process status --json`",
+    contract=PROCESS_STATUS,
+    read=pm_move_journal.Journal.of,
+    untold=lambda outcome: outcome is None,
+    nothing=lambda: pm_move_journal.Journal.of(None),
+    readings=_BEFORE_THE_SETTING,
+)
+
+PROJECT_MANAGEMENT_HISTORY = Caller(
+    name="project-management's history of an issue, `pkit process status --json`",
+    contract=PROCESS_STATUS,
+    read=lambda document: pm_history._read_journal_from(document),
+    untold=lambda outcome: outcome is None,
+    nothing=lambda: pm_history._read_journal_from(None),
+    readings=_BEFORE_THE_SETTING,
+)
+
+PROJECT_MANAGEMENT_POSITION = Caller(
+    name="project-management's reading of where an issue is, `pkit process status --json`",
+    contract=PROCESS_STATUS,
+    read=lambda document: (
+        pm_move_issue._position_from_status(document),
+        pm_move_issue._journal_length_from_status(document),
+    ),
+    # Where the engine cannot tell where the issue is, or how long its journal is, the
+    # move falls back to its own inference, and the audit key to none.
+    untold=lambda outcome: outcome == (None, None),
+    nothing=lambda: (
+        pm_move_issue._position_from_status(None),
+        pm_move_issue._journal_length_from_status(None),
+    ),
+    readings={
+        **{
+            f"{way}:{name}": lambda outcome, base: outcome == (None, base[1])
+            for way in ("missing", "null")
+            for name in ("position", "position.state", "position.indeterminate")
+        },
+        **{
+            name: lambda outcome, base: outcome == (base[0], None)
+            for name in (
+                "missing:journal",
+                "null:journal",
+                "null:journal_logging",
+                "null:journal_logging.enabled",
+            )
+        },
+        **_BEFORE_THE_SETTING,
+    },
+)
+
+
+def test_project_management_reads_an_issue_s_status_as_its_contract_says() -> None:
+    document = {
+        "position": {"state": "ready", "indeterminate": False},
+        "journal_logging": {"enabled": True, "committed": False},
+        "journal": [{"from": "Backlog", "to": "Ready", "actor": "someone"}],
+    }
+    indeterminate = {**document, "position": {"state": None, "indeterminate": True}}
+    contracts.check(PROCESS_STATUS, {"status": [document, indeterminate]})
+    for caller in (PROJECT_MANAGEMENT_JOURNAL, PROJECT_MANAGEMENT_HISTORY):
+        check(caller, document)
+    check(PROJECT_MANAGEMENT_POSITION, document)
+
+
+(pm_accepted_records,) = load("project-management", "accepted_records")
+
+#: The document `pkit decisions check-diff --json` prints, as the decisions README
+#: gives it ("Refining an accepted record"), until the command's documents have their
+#: contracts (#3315).
+DECISIONS_CHECK_DIFF = Contract(
+    name="pkit decisions check-diff --json",
+    version=1,
+    forms={
+        "compared": Form(
+            keys={
+                "schema_version": "int",
+                "base": "object|null",
+                "base.ref": "str",
+                "base.fork": "str",
+                "base.tip": "str",
+                "head": "str|null",
+                "compared": "int",
+                "errors": "int",
+                "findings": "list",
+                "findings[]": "object",
+                "findings[].severity": "str",
+                "findings[].location": "str",
+                "findings[].message": "str",
+                "accepted_changes": "list",
+                "accepted_changes[]": "object",
+                "accepted_changes[].path": "str",
+                "accepted_changes[].record": "str",
+                "accepted_changes[].points": "list",
+                "accepted_changes[].points[]": "object",
+                "accepted_changes[].points[].id": "str",
+                "accepted_changes[].points[].change": "str",
+                "accepted_changes[].points[].title": "str",
+                "accepted_changes[].fields": "list",
+                "accepted_changes[].fields[]": "str",
+                "accepted_changes[].shared_text": "bool",
+                "accepted_changes[].other_text": "bool",
+                "accepted_changes[].list_form": "bool",
+                "accepted_changes[].removed": "bool",
+            }
+        )
+    },
+    sets={
+        "findings[].severity": frozenset({"error", "warning"}),
+        "accepted_changes[].points[].change": frozenset(
+            {check_diff.ADDED, check_diff.ALTERED, check_diff.RETIRED, check_diff.REMOVED}
+        ),
+    },
+)
+
+PROJECT_MANAGEMENT_ACCEPTED_RECORDS = Caller(
+    name="project-management's reading of `pkit decisions check-diff --json`",
+    contract=DECISIONS_CHECK_DIFF,
+    read=lambda document: pm_accepted_records.read(document, "check-diff"),
+    untold=lambda outcome: outcome.problem is not None,
+    nothing=lambda: pm_accepted_records.read(None, "check-diff"),
+)
+
+
+def test_project_management_reads_the_accepted_records_a_change_alters_as_its_contract_says() -> (
+    None
+):
+    changed = check_diff.ChangedRecord(
+        "decisions/project/PRJ-001-x.md",
+        "PRJ-001",
+        points=tuple(
+            check_diff.PointChange(str(n), change, f"Point {n}")
+            for n, change in enumerate(
+                sorted(DECISIONS_CHECK_DIFF.sets["accepted_changes[].points[].change"]), start=1
+            )
+        ),
+        fields=("title",),
+        shared=True,
+    )
+    report = check_diff.Report(
+        "origin/main",
+        "f" * 40,
+        "t" * 40,
+        3,
+        (
+            Finding("decisions/project/PRJ-002-y.md", "a point taken", Severity.ERROR),
+            Finding("decisions/project/PRJ-003-z.md", "a point moved", Severity.WARNING),
+        ),
+        (
+            changed,
+            check_diff.ChangedRecord("decisions/project/PRJ-004-w.md", "PRJ-004", removed=True),
+        ),
+    )
+    document = check_diff.as_json(report, None)
+    contracts.check(
+        DECISIONS_CHECK_DIFF, {"compared": [document, check_diff.as_json(None, "h" * 40)]}
+    )
+    check(PROJECT_MANAGEMENT_ACCEPTED_RECORDS, document)
+
+
+(pm_friction_answers,) = load("project-management", "friction_answers")
+
+PROJECT_MANAGEMENT_DISCOVERY = Caller(
+    name="project-management's reading of `pkit friction artefacts --json --at`",
+    contract=documents.FRICTION_ARTEFACTS,
+    read=lambda document: pm_friction_answers.discovery_of(document, "artefacts"),
+    untold=lambda outcome: isinstance(outcome, str),
+    nothing=lambda: pm_friction_answers.discovery_of(None, "artefacts"),
+)
+
+
+def test_project_management_reads_what_the_change_check_is_asked_about_as_its_contract_says(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = documents._evidence_adopter(make_adopter_repo)
+    for document in documents._artefacts_states(repo):
+        check(PROJECT_MANAGEMENT_DISCOVERY, document)
