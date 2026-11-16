@@ -67,7 +67,8 @@ Exports:
     ProjectLookup / BoardFieldsRead / ItemLookup — the three read results
     ItemValueRead                   — one issue's card, and the option it holds
     IssueCardsRead                  — the listed issues' cards, each as an ItemValueRead
-    ItemsRead / BoardItem           — a walk of the board's cards
+    ItemsRead / BoardItem           — a walk of the board's cards, each marked archived or not
+    CardRead                        — one card, read by the id an add answered with
     NO_BOARD                        — why a read is refused with no board configured
     EVERY_ARCHIVED_STATE            — the argument by which a walk of the cards reads them all
     FIELD_REREAD_QUERY              — back-fill's fresh read of one card's values
@@ -84,6 +85,7 @@ Exports:
     read_item_value(...)            — one issue's card and the option it holds in one field
     read_items(...)                 — every card, with the option it holds in one field
     read_items_with_option(...)     — the cards whose value is one option
+    read_card(...)                  — one card by its item id, and the option it holds
     find_field / field_names / field_type / is_single_select
     option_id / option_names        — name → id matching over a read field
 """
@@ -598,7 +600,9 @@ class BoardItem:
     `withheld` marks a card whose issue lies in a repository the credential may
     not read: the board returns it with nothing of its issue. `value_read` says
     whether the board returned the card's value in the field read, which for a
-    withheld card it may not ([pkit:ADR-096] point 2).
+    withheld card it may not ([pkit:ADR-096] point 2). `archived` says whether
+    the card is archived, which the board's views hide: an archived card is a
+    card all the same (ADR-096 point 5).
     """
 
     item_id: str
@@ -612,6 +616,7 @@ class BoardItem:
     option_name: str | None = None
     withheld: bool = False
     value_read: bool = True
+    archived: bool = False
 
 
 @dataclass(frozen=True)
@@ -652,8 +657,8 @@ _WITHHELD = "REDACTED"
 
 def _items_selection(field_name: str | None) -> str:
     """One page of the walk, asked of the board beside its names: each card, an
-    archived one included, its type, what it holds, and the single-select option
-    it holds in one field."""
+    archived one included and marked so, its type, what it holds, and the
+    single-select option it holds in one field."""
     value = (
         " fieldValueByName(name: $field) { ... on ProjectV2ItemFieldSingleSelectValue "
         "{ optionId name } }"
@@ -662,7 +667,7 @@ def _items_selection(field_name: str | None) -> str:
     )
     return (
         f"items(first: 100, after: $after, {EVERY_ARCHIVED_STATE}) {{ pageInfo "
-        "{ hasNextPage endCursor } nodes { id type content { __typename "
+        "{ hasNextPage endCursor } nodes { id type isArchived content { __typename "
         "... on Issue { id number title body state repository { nameWithOwner } } "
         f"... on PullRequest {{ number title }} ... on DraftIssue {{ title }} }}{value} }} }}"
     )
@@ -796,6 +801,7 @@ def _board_item(item: Any, *, value_asked: bool = True) -> BoardItem | None:
     value = value if isinstance(value, dict) else {}
     option = value.get("optionId")
     option_name = value.get("name")
+    archived = item.get("isArchived") is True
     if item.get("type") == _WITHHELD:
         return BoardItem(
             item_id=item_id,
@@ -803,6 +809,7 @@ def _board_item(item: Any, *, value_asked: bool = True) -> BoardItem | None:
             option_name=option_name if isinstance(option_name, str) else None,
             withheld=True,
             value_read=value_asked and value_read,
+            archived=archived,
         )
     content = item.get("content") if isinstance(item.get("content"), dict) else {}
     number = content.get("number")
@@ -820,6 +827,93 @@ def _board_item(item: Any, *, value_asked: bool = True) -> BoardItem | None:
         closed=str(content.get("state") or "").upper() == "CLOSED",
         option_id=option if isinstance(option, str) and option else None,
         option_name=option_name if isinstance(option_name, str) else None,
+        archived=archived,
+    )
+
+
+# ----- one card, by the id an add answered with ------------------------------
+
+
+@dataclass(frozen=True)
+class CardRead:
+    """Outcome of reading one card on the configured board by its item id.
+
+    Three answers, kept apart ([pkit:ADR-096] point 4): ``ok=False`` is a board
+    that did not answer, with why in ``error``; ``ok=True, found=False`` is a
+    board that answered, in the same request, with no such card on it; and
+    ``ok=True, found=True`` is the card, with the single-select option it holds
+    in the field read, ``option_name=None`` for none."""
+
+    ok: bool
+    found: bool = False
+    option_id: str | None = None
+    option_name: str | None = None
+    archived: bool = False
+    error: str | None = None
+    named: bool = False
+
+
+def _card_selection(field_name: str | None) -> str:
+    """The card asked for by its item id, beside the board's own read: the board
+    it lies on, whether it is archived, and the option it holds in one field."""
+    value = (
+        " fieldValueByName(name: $field) { ... on ProjectV2ItemFieldSingleSelectValue "
+        "{ optionId name } }"
+        if field_name is not None
+        else ""
+    )
+    return (
+        "card: node(id: $item) { ... on ProjectV2Item { id isArchived project { id }"
+        f"{value} }} }}"
+    )
+
+
+def read_card(
+    config: dict[str, Any],
+    *,
+    item_id: str,
+    project_node_id: str,
+    field_name: str | None = None,
+    owner: str | None = None,
+    gh_call: GhCall | None = None,
+) -> CardRead:
+    """The card whose item id is ``item_id``, as the board holds it now, and the
+    option it holds in the single-select ``field_name`` where one is named.
+
+    The id is one the board answered an add with ([pkit:ADR-096] point 3), so
+    the read decides nothing of which card is an issue's: it reads a card it
+    knows already, not the issue's own cards, which can lag an add just made.
+    One GraphQL request carries the board's own read, addressed by
+    ``project_node_id`` and counted only where its answer names the configured
+    board, beside the card. The card counts as not found only where the board
+    answered: no card by that id, or one that lies on another board."""
+    if board_number(config) is None:
+        return CardRead(ok=False, error=NO_BOARD, named=True)
+    board = configured_board(config, owner=_owner(config, owner, gh_call), node=project_node_id)
+    assert board is not None
+    selection, variables, flags = board_answer.board_selection(board)
+    variables.append("$item: ID!")
+    flags += ["-f", f"item={item_id}"]
+    if field_name is not None:
+        variables.append("$field: String!")
+        flags += ["-f", f"field={field_name}"]
+    query = f"query({', '.join(variables)}) {{ {selection} {_card_selection(field_name)} }}"
+    reply = board_answer.send(query, flags, config, gh_call=_graphql(gh_call))
+    node, unanswered = board_answer.card_answer(board, reply)
+    if unanswered is not None:
+        return CardRead(ok=False, error=unanswered.said, named=unanswered.named)
+    if node is None:
+        return CardRead(ok=True, found=False)
+    value = node.get("fieldValueByName")
+    value = value if isinstance(value, dict) else {}
+    option = value.get("optionId")
+    name = value.get("name")
+    return CardRead(
+        ok=True,
+        found=True,
+        option_id=option if isinstance(option, str) and option else None,
+        option_name=name if isinstance(name, str) and name else None,
+        archived=node.get("isArchived") is True,
     )
 
 

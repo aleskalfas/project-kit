@@ -50,6 +50,7 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/pr_merge.py
         - .pkit/capabilities/project-management/scripts/_lib/membership.py
         - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
+        - .pkit/capabilities/project-management/scripts/_lib/sync_switch.py
         - .pkit/capabilities/project-management/agents/pm-reviewer.md
         - .pkit/capabilities/project-management/schemas/review-contributions.yaml
       record:
@@ -78,6 +79,7 @@ pkit:
         - project-management:DEC-067#1
         - project-management:DEC-067#3
         - project-management:DEC-067#4
+        - project-management:DEC-072#3
         - COR-013
         - COR-017
         - COR-021
@@ -219,6 +221,7 @@ pkit:
 - **9f.** A [rule](../../../../core/glossary.md#term-rule--rule) the base accepted after the head left it binds on what the change alters. So the merge with the base requires a reviewer the head does not. The system names each such reviewer and the merge of the base, merges nothing and exits `1` ([DEC-064 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-064-base-merge-named.md#8-when-the-reviewers-the-merge-requires-are-read)). The developer merges the base into the branch and pushes, and the path rejoins at step 1.
 - **12a.** The head is not the one the [authorisation](../../../glossary.md#term-authorisation--authorisation) named. The system stops before it checks anything, unless each edit since that head lies in answer files the change adds. Then the authorisation covers the later head ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 - **12b.** An updated document has no sentence, or a later head leaves out of date what the authorised head did not. The system stops ready, and merges nothing ([DEC-065 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#4-what-the-landing-command-prints)).
+- **12c.** The change turns on the project's setting `sync_board.adds_with_no_terminal`, or the system cannot read whether it does. A run authorised up front stops ready, says what turning the setting on means, and merges nothing. The merge authoriser authorises the merge at a terminal, answering the question the system asks there ([project-management DEC-072 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-072-sync-gives-missing-cards.md#3-where-the-board-holds-the-state-it-adds-cards-only-in-a-run-at-a-terminal-or-with-the-projects-switch-on-and-reads-each-back)).
 - **13a.** A required reviewer's latest verdict is missing or stale. The system refuses the merge, and lists each reviewer it still needs. It names `pkit pm review-pr <N>`, with the [Task](../../../glossary.md#term-task--task)'s number, to run them again ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 
 - **13b.** A [checkbox](../../../glossary.md#term-checkbox--checkbox) of an [issue](../../../glossary.md#term-issue--issue) the pull request closes is unticked. The system refuses the merge, listing each one ([DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)). The use case ends.

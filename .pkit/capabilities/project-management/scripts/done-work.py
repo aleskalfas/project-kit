@@ -294,6 +294,7 @@ from _lib import (
     merge_queue,
     pr_merge,
     session_guard,
+    sync_switch,
 )
 
 # The position and transition-table readers move-issue and start-work use, so
@@ -541,6 +542,7 @@ def run(
     pinned_head: str | None = None,
     merged_only: bool = False,
     branch_reading: issue_branch.Reading | None = None,
+    switch: sync_switch.Hold | None = None,
 ) -> DoneWorkRun:
     """Run done-work on `argv` (default: the command line), and say how it
     ended (`DoneWorkRun`) — for a verb that composes this one (`land-work`,
@@ -556,7 +558,9 @@ def run(
     way the PR lookups tell an answer of "none" from no answer, which ends the
     run :data:`UNREADABLE` before anything is changed. It may also hand over
     `branch_reading`, the issue's branch as it read it (`_lib.issue_branch`,
-    #1608), so the run neither reads it again nor finds another.
+    #1608), so the run neither reads it again nor finds another, and `switch`,
+    what it found of whether the change turns on the sync's switch
+    (`_lib.sync_switch`), so the run does not read it from the host again.
     """
     if pinned_head is not None and not pinned_head:
         raise ValueError("pinned_head names no head: pass the PR head to land, or None")
@@ -692,7 +696,9 @@ def run(
         action="store_true",
         help=(
             "The authorisation to merge. Without it, done-work asks at a terminal, and "
-            "off one it refuses (exit 2) once its gates have run, merging nothing."
+            "off one it refuses (exit 2) once its gates have run, merging nothing. It does "
+            "not cover a change that turns on `sync_board.adds_with_no_terminal`, which is "
+            "merged only on the person's yes at a terminal (DEC-072 point 3)."
         ),
     )
     session_guard.add_override_argument(parser)
@@ -1181,6 +1187,18 @@ def run(
     # The head named is the one the merge is pinned to, so a push after the
     # question fails the merge rather than land a head nobody named.
     merging = gate_result.head_oid or pr_head
+    # A change that turns on the sync's switch is held until the person
+    # authorises this merge themselves, at a terminal: an authorisation given up
+    # front does not cover it, and the person is told what turning it on means
+    # ([project-management:DEC-072-sync-gives-missing-cards] point 3).
+    if switch is None:
+        switch = _switch_hold(merging, str(pr.get("baseRefName") or ""), capability_root, config)
+    if switch.held:
+        if args.yes or not sys.stdin.isatty():
+            named = f"PR #{pr_number} at {short_sha(merging)}"
+            refusal = switch.refusal(named, f"pkit pm done-work {args.issue_number}")
+            return _ended(DECLINED, 2, refusal)
+        print(switch.said())
     if not args.yes:
         if not sys.stdin.isatty():
             return _ended(DECLINED, 2, _no_authorisation(args.issue_number, pr_number, merging))
@@ -1426,6 +1444,12 @@ def _head_not_pinned(issue_number: int, pr_number: object, head: str, pinned_hea
         f"and review were for that head. Nothing was posted or merged, and "
         f"#{issue_number} stays where it is."
     )
+
+
+def _switch_hold(head: str, base: str, capability_root: Path, config: dict) -> sync_switch.Hold:
+    """Whether merging ``head`` into ``base`` turns on the sync's switch, read
+    from the host, which holds both whether or not this clone does."""
+    return sync_switch.on_host(head, base, capability_root, config)
 
 
 def _no_authorisation(issue_number: int, pr_number: object, head: str) -> str:
