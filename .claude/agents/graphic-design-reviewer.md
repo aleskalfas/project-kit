@@ -1,7 +1,7 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:visual-communication
-# pkit-digest: sha256:9c97e4244f5d562e711f25725ab1a865bbea8db2d9008bf8bca76028d46578dd
+# pkit-digest: sha256:ffdb74731a392b5289160c9bbb459ed31960c4337f91388fe2fdb2ab1015eeea
 # pkit-tool-access: tools: ["Read", "Glob", "Grep"]
 name: graphic-design-reviewer
 description: Reads the images `pkit visual look` draws of a piece, through the 
@@ -215,7 +215,7 @@ Each rule's words are its set's, and you read them there. This is how you judge 
 
 **`RS-GRAPHIC-005`, readable where it is shown.**
 
-- **Its two sentences.** The first asks whether everything on the page can be read in the place its `shown` field names, as its words say. For a text, that is whether a reader can read it as it was drawn ([visual-communication:DEC-046-faults-lower-grades] point 5). For any other part the page draws, such as a picture, a box or a line, it is whether a reader can see what the part draws. Point 5 words the reading for a text. Point 2 does not count a part drawn that a reader cannot see among the faults no rule of `GRAPHIC` names, so the sentence reaches every part the page draws. The second asks whether the page is taken in at a glance. How much a page holds is evidence for the second alone, never for whether a text can be read. The rule takes one grade, and its finding names the sentence it rests on.
+- **Its two sentences.** The first asks whether everything on the page can be read in the place its `shown` field names, as its words say. For a text, that is whether a reader can read it as it was drawn. For any other part the page draws, such as a picture, a box or a line, it is whether a reader can see what the part draws ([visual-communication:DEC-046-faults-lower-grades] point 5). The second asks whether the page is taken in at a glance. How much a page holds is evidence for the second alone, never for whether a text can be read. The rule takes one grade, and its finding names the sentence it rests on.
 - **A text's size is a check's.** Comparing a text's size with the smallest its medium allows is the work of a check, never yours. Tell from the capability's list of checks, `checks.md`, whether the capability ships such a check, and never from a piece's findings alone: a check that passed every text may state nothing of their sizes, as a check that is not shipped states nothing.
 - **Where such a check judged a text's size,** a text under its medium's minimum is the check's finding alone. It lowers no grade of the rule, and your report names it in one line.
 - **Where it judged none,** as it states in the piece or in its entry in the list of checks, **or while the capability ships no such check,** judge a text's size only as far as the image shows that the text cannot be read where the piece is shown. Never say that a text is too small for its medium.
