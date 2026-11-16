@@ -470,9 +470,7 @@ def test_the_squash_defaults_document_holds_its_contract(host: fake.HostingServi
     printed = document_of(invoke("pull-request", "squash-defaults", JSON_OPTION))
     named = [
         landing.squash_defaults_document(gh=_defaults(title, message))
-        for title, message in zip(
-            sorted(_SQUASH_TITLES), ("COMMIT_MESSAGES", "BLANK"), strict=True
-        )
+        for title, message in zip(sorted(_SQUASH_TITLES), ("COMMIT_MESSAGES", "BLANK"), strict=True)
     ]
     host.squash_defaults = None
     unreadable = document_of(invoke("pull-request", "squash-defaults", JSON_OPTION))
@@ -569,9 +567,7 @@ def _by_event(documents: Sequence[Mapping[str, Any]]) -> dict[str, list[Mapping[
 def test_the_wait_documents_hold_their_contract(host: fake.HostingService) -> None:
     _queue(host)
     host.progress = [fake.at(1), fake.lands()]
-    printed = documents_of(
-        invoke("pull-request", "wait", PR_ARGUMENT, "--head", HEAD, JSON_OPTION)
-    )
+    printed = documents_of(invoke("pull-request", "wait", PR_ARGUMENT, "--head", HEAD, JSON_OPTION))
     readings = _readings()
     built = [landing.wait_reading_document(PR, reading) for reading in readings]
     built += [
