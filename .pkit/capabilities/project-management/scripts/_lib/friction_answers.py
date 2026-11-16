@@ -349,7 +349,10 @@ class Derivation:
     """The change check's document at one head and the friction settings the
     change alters, or why they could not be read. `needs_checkout` says `problem`
     is the backbone's refusal to run an anchor's resolver away from the head, kept
-    because the caller asked for no temporary checkout (`from_checkout=False`)."""
+    because the caller asked for no temporary checkout (`from_checkout=False`).
+
+    A command's document reaches `document` only once `check_of` has read each key
+    the properties here read, so they read it as `check_of` found it."""
 
     head: str
     document: Mapping[str, Any] | None = None
@@ -417,8 +420,9 @@ def checked(
     the commit, and the check refuses so elsewhere: on that refusal alone the
     check runs again from a temporary checkout of `head`, removed afterwards; any
     other failure is kept as it is. Never a pass on a guess: a base or a head that
-    could not be fetched, no document, and a document of another version or
-    without `answers` all make the derivation unreadable, with why.
+    could not be fetched, no document, and a document of another version, without
+    `answers`, or that cannot be read by its keys (`check_of`) all make the
+    derivation unreadable, with why.
 
     That second run starts the resolvers `head` holds, under this account, so it is
     code from the pull request's head. A reader anyone may run on a head they have
@@ -532,20 +536,106 @@ def _run_check(
         document = json.loads(proc.stdout or "")
     except ValueError:
         return _NoDocument(f"{command}: {why}, with no JSON document")
+    return check_of(document, command, why)
+
+
+#: Each refusal the change check states in place of its answer, by its kind: only the
+#: refusal to run an anchor's resolver away from the head (`RESOLVER_ELSEWHERE`).
+_REFUSALS = (RESOLVER_ELSEWHERE,)
+#: Each answer the change check lists the change as writing (`answers[].answer`),
+#: beside null: another is one whose standing this cannot tell.
+_WRITTEN_ANSWERS = ("updated", "unchanged", "deferred", "unanchored", "revisited")
+#: Each outcome of a revisit entry (`answers[].outcome`, `REVISITED`), beside null:
+#: `updated` for a target revisited by changing it.
+_REVISIT_OUTCOMES = ("updated", "unchanged", "deferred")
+
+
+def check_of(document: Any, command: str, why: str = "") -> Mapping[str, Any] | _NoDocument:
+    """The change check's document `command` printed, every key this module reads in
+    it read (ADR-097 point 3), or why there is none to read: `why` is what the run
+    said, for its refusal to run an anchor's resolver away from the head.
+
+    A key read here that is missing, null where the CLI reference does not print it
+    null, or of another type, a value of a set it decides on that it does not know, a
+    refusal of another kind, and a version other than `SCHEMA_VERSION` are each no
+    document, never a default such as an empty list or a check that did not fail. The
+    check gained `schema_version` after it first shipped, so a document without it
+    reads as version 1 (the CLI reference). The readers of the document this returns
+    — `Derivation`'s, `Merged`'s, `told` and the rest — read only what this read: a
+    document reaches them only from here."""
     if not isinstance(document, dict):
         return _NoDocument(f"{command}: its answer is not a document")
     version = document.get("schema_version", SCHEMA_VERSION)
-    if version != SCHEMA_VERSION:
+    if type(version) is not int or version != SCHEMA_VERSION:
         return _NoDocument(
             f"{command}: it answered schema_version {version!r}; this reads {SCHEMA_VERSION}"
         )
-    if _mapping(document.get("refused")).get("kind") == RESOLVER_ELSEWHERE:
-        return _NoDocument(f"{command}: {why}", elsewhere=True)
-    if not isinstance(document.get("answers"), list):
-        return _NoDocument(
-            f"{command}: its document lists no answers — the backbone predates the list"
-        )
+    try:
+        if "refused" in document:
+            refused = keys.mapping(document, "refused", "")
+            keys.one_of(refused, "kind", "refused", _REFUSALS)
+            return _NoDocument(f"{command}: {why}", elsewhere=True)
+        if "answers" not in document:
+            return _NoDocument(
+                f"{command}: its document lists no answers — the backbone predates the list"
+            )
+        _read_check(document)
+    except keys.Untold as exc:
+        return _NoDocument(f"{command}: its document cannot be read: {exc}")
     return document
+
+
+def _read_check(document: Mapping[str, Any]) -> None:
+    """Read every key this module reads in the change check's answer, raising
+    `keys.Untold` at the first that cannot be read: whether it failed, the base it
+    compared against, each finding's kind, each answer the change wrote, each
+    revalidation a merge would leave answered apart, and the files it could not
+    read."""
+    keys.flag(document, "failed", "")
+    base = keys.mapping_or_null(document, "base", "")
+    if base is not None:
+        keys.text(base, "commit", "base")
+        keys.text(base, "tip", "base")
+        keys.flag(base, "outdated", "base")
+    for where, finding in keys.objects(document, "findings", ""):
+        # A kind pm does not name is not among those it names (`Merged.failing`), and
+        # the check's `failed` still decides.
+        keys.text(finding, "kind", where)
+    for where, entry in keys.objects(document, "answers", ""):
+        _read_answer(entry, where)
+    for where, item in keys.objects(document, "answered_apart_at_tip", ""):
+        keys.text(item, "location", where)
+        for at, revalidation in keys.objects(item, "revalidations", where):
+            for key in ("file", "at", "outcome", "unchanged_because"):
+                keys.text_or_null(revalidation, key, at)
+    keys.texts(document, "unreadable", "")
+
+
+def _read_answer(entry: Mapping[str, Any], where: str) -> None:
+    """Read every key `_read_entry`, `listed_paths` and `counted_told` read in one
+    answer: the revisit's own keys only on a revisit entry, the one kind that carries
+    them."""
+    answer = keys.one_of_or_null(entry, "answer", where, _WRITTEN_ANSWERS)
+    keys.text(entry, "location", where)
+    _read_anchor_keys(entry, "anchor", where)
+    keys.text_or_null(entry, "reason", where)
+    for at, kept in keys.objects(entry, "kept", where):
+        _read_anchor_keys(kept, "anchor", at)
+        keys.text_or_null(kept, "reason", at)
+    keys.flag(entry, "asked", where)
+    keys.text_or_null(entry, "file", where)
+    if answer == REVISITED:
+        keys.one_of_or_null(entry, "outcome", where, _REVISIT_OUTCOMES)
+        _read_anchor_keys(entry, "target", where)
+        keys.texts(entry, "links", where)
+
+
+def _read_anchor_keys(entry: Mapping[str, Any], key: str, where: str) -> None:
+    """Read the anchor at `key`, `{kind, value}` or null."""
+    anchor = keys.mapping_or_null(entry, key, where)
+    if anchor is not None:
+        keys.text(anchor, "kind", keys.at(where, key))
+        keys.text(anchor, "value", keys.at(where, key))
 
 
 # --- a later head an authorisation covers ------------------------------------------
@@ -604,33 +694,38 @@ def covers(since: str, head: str, base: str) -> Coverage:
         document = json.loads(proc.stdout or "")
     except ValueError:
         return Coverage(problem=f"{command}: its answer is not JSON")
-    if not isinstance(document, dict) or document.get("schema_version") != SINCE_SCHEMA_VERSION:
+    return coverage_of(document, command)
+
+
+def coverage_of(document: Any, command: str) -> Coverage:
+    """The backbone's document `command` printed, read by its keys (ADR-097 point 3):
+    a version other than `SINCE_SCHEMA_VERSION`, or of none, and a key it rests on that
+    is missing, null where the CLI reference does not print it null, or of another type,
+    are each no answer, never a pass. A change the document names outside the answer
+    files that names no path is a merge's (`outside[].path` null)."""
+    if not isinstance(document, Mapping):
+        return Coverage(problem=f"{command}: its answer is not a document")
+    version = document.get("schema_version")
+    if type(version) is not int or version != SINCE_SCHEMA_VERSION:
         return Coverage(
             problem=f"{command}: its answer is not a document of version {SINCE_SCHEMA_VERSION}"
         )
-    return _coverage(document, command)
-
-
-def _coverage(document: Mapping[str, Any], command: str) -> Coverage:
-    """The backbone's document read, every field it rests on checked: a document missing
-    one is no answer."""
-    since, head = document.get("since"), document.get("head")
-    covered, inside, outside = (document.get(k) for k in ("all_inside", "inside", "outside"))
-    if not (
-        isinstance(since, str)
-        and isinstance(head, str)
-        and isinstance(covered, bool)
-        and isinstance(inside, list)
-        and isinstance(outside, list)
-    ):
-        return Coverage(problem=f"{command}: its document lacks what an answer needs")
+    try:
+        since, head = keys.text(document, "since", ""), keys.text(document, "head", "")
+        covered = keys.flag(document, "all_inside", "")
+        inside = keys.texts(document, "inside", "")
+        outside = [
+            (keys.text_or_null(o, "path", at), keys.text(o, "commit", at), keys.text(o, "why", at))
+            for at, o in keys.objects(document, "outside", "")
+        ]
+        reason = keys.text_or_null(document, "reason", "")
+    except keys.Untold as exc:
+        return Coverage(problem=f"{command}: its document lacks what an answer needs: {exc}")
     lines = [
-        f"{shown(str(_mapping(o).get('path') or 'the merge'))} "
-        f"({str(_mapping(o).get('commit'))[:SHORT]}: {shown(str(_mapping(o).get('why')))})"
-        for o in outside
+        f"{shown(path or 'the merge')} ({commit[:SHORT]}: {shown(why)})"
+        for path, commit, why in outside
     ]
-    reason = document.get("reason")
-    if isinstance(reason, str) and reason:
+    if reason:
         lines.insert(0, shown(reason))
     if covered != (not lines and reason is None):
         return Coverage(
@@ -676,7 +771,10 @@ class Merged:
     own check read that tip — and `conflicts` the files a merge conflicts in, which
     leave nothing to check. `needs_checkout` says `problem` is the backbone's refusal
     to run an anchor's resolver away from the merge, kept because the caller asked
-    for no temporary checkout (`from_checkout=False`)."""
+    for no temporary checkout (`from_checkout=False`).
+
+    As with `Derivation`, a command's document reaches `document` only once
+    `check_of` has read it by its keys."""
 
     head: str
     tip: str = ""
@@ -941,10 +1039,27 @@ def _folder_at(root: Path, run: Any) -> str | None:
         document = json.loads(proc.stdout or "") if proc.returncode == 0 else None
     except ValueError:
         return None
-    if not isinstance(document, Mapping) or document.get("schema_version", 1) != SCHEMA_VERSION:
+    return folder_of(document)
+
+
+def folder_of(document: Any) -> str | None:
+    """The answers' folder the whole-repository check's document gives (`answers.folder`),
+    read by its keys (ADR-097 point 3), or None where it cannot be told: a version other
+    than `SCHEMA_VERSION`, an `answers` or a `folder` missing, null or of another type,
+    and a folder that is no repository-relative path. The check gained `schema_version`
+    after it first shipped, so a document without it reads as version 1, and gained
+    `answers` within that version, so a document without it is a `pkit` too old to give
+    the folder (the CLI reference)."""
+    if not isinstance(document, Mapping):
         return None
-    folder = _mapping(document.get("answers")).get("folder")
-    if not isinstance(folder, str) or not folder.strip("/") or folder.startswith("/"):
+    version = document.get("schema_version", SCHEMA_VERSION)
+    if type(version) is not int or version != SCHEMA_VERSION:
+        return None
+    try:
+        folder = keys.text(keys.mapping(document, "answers", ""), "folder", "answers")
+    except keys.Untold:
+        return None
+    if not folder.strip("/") or folder.startswith("/"):
         return None
     return folder.strip("/")
 
@@ -1058,7 +1173,7 @@ class _Entry:
     label: str
     anchor: _Anchor | None
     reason: str | None
-    kept: tuple[tuple[_Anchor, str | None], ...]
+    kept: tuple[tuple[_Anchor | None, str | None], ...]
     updated: bool = False
     sentence: str | None = None
     asked: bool = True
@@ -1070,10 +1185,12 @@ class _Entry:
 
 def _read_entry(entry: Mapping[str, Any], sentences: Mapping[str, str] | None = None) -> _Entry:
     answer, reason = entry.get("answer"), entry.get("reason")
-    kept: list[tuple[_Anchor, str | None]] = []
+    kept: list[tuple[_Anchor | None, str | None]] = []
     for item in entry.get("kept") or []:
         words = _mapping(item).get("reason")
-        held = _read_anchor(_mapping(item).get("anchor")) or _Anchor("None", "None")
+        # A kept deferral the check names no anchor for is told without one, never as
+        # an anchor named "None".
+        held = _read_anchor(_mapping(item).get("anchor"))
         kept.append((held, shown(str(words)) if words is not None else None))
     location = shown(str(entry.get("location") or entry.get("artefact") or "?"))
     updated = answer == UPDATED

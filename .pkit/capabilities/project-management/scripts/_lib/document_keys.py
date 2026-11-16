@@ -134,6 +134,15 @@ def one_of(entry: Mapping[str, Any], key: str, where: str, values: Iterable[str]
     return found
 
 
+def one_of_or_null(
+    entry: Mapping[str, Any], key: str, where: str, values: Iterable[str]
+) -> str | None:
+    """The string at `key`, one of `values`, or `None` where the contract prints it
+    null."""
+    found = value(entry, key, where)
+    return None if found is None else one_of(entry, key, where, values)
+
+
 def _each(entry: Mapping[str, Any], key: str, where: str, kind: type, said: str) -> list[Any]:
     items = listed(entry, key, where)
     for index, item in enumerate(items):
