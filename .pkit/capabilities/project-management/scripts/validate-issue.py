@@ -887,14 +887,15 @@ def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     """Fetch issue title/body/labels/assignees via `gh issue view`, with the
     issue's node id and url, by which its card on the board is read
-    (:func:`_read_membership`). The issue's own list of cards is not asked: it
-    names no board, so it cannot tell the configured board from another, and
-    its empty answer cannot tell no card from none visible ([pkit:ADR-096]
-    point 5)."""
+    (:func:`_read_membership`), and its number and state, by which a missing
+    card's finding names the sync (:func:`_card_remedy`). The issue's own list
+    of cards is not asked: it names no board, so it cannot tell the configured
+    board from another, and its empty answer cannot tell no card from none
+    visible ([pkit:ADR-096] point 5)."""
     return gh_get_issue(
         issue_number,
         config,
-        fields="id,url,title,body,labels,assignees",
+        fields="id,number,url,state,title,body,labels,assignees",
     )
 
 
@@ -919,16 +920,12 @@ def _read_membership(config: dict, issue: dict) -> board_fields.ItemLookup:
 def _card_remedy(issue: dict, config: dict, substrate_map: axis_labels.SubstrateMap | None) -> str:
     """What gives the issue its missing card, as a sentence the finding ends on:
     the sync, run for the issue ([project-management:DEC-072-sync-gives-missing-cards]
-    point 4). Empty for a closed issue, which the sync gives no card, and where the
-    issue's number cannot be read from it."""
-    if str(issue.get("state") or "").upper() == "CLOSED":
+    point 4). Empty unless the issue's read shows it open, since the sync gives a
+    closed issue no card, and where the read carries no number."""
+    if str(issue.get("state") or "").upper() != "OPEN":
         return ""
     number = issue.get("number")
     if not isinstance(number, int):
-        url = issue.get("url")
-        tail = url.rstrip("/").rsplit("/", 1)[-1] if isinstance(url, str) else ""
-        number = int(tail) if tail.isdigit() else None
-    if number is None:
         return ""
     holds = board_status.role(config, substrate_map) == "source"
     return f" {missing_card.remedy(number, board_holds_state=holds)}."
