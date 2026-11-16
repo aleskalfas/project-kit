@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Any
 
 from _lib import backbone
+from _lib import document_keys as keys
 from _lib.model import Unreadable
 
 #: The point, by its address.
@@ -93,17 +94,57 @@ def read_evidence(root: Path, run: backbone.Runner = subprocess.run) -> Evidence
     return evidence_of(document)
 
 
+#: The version of the point's document this reading understands. A document without
+#: `schema_version` comes from a backbone that predates the key: version 1 (the CLI
+#: reference, `connections resolve`).
+DOCUMENT_VERSION = 1
+
+#: The states of a filler that answered, or was not meant to (COR-052 point 6).
+ANSWERED = frozenset({"taken", "passed over"})
+
+
 def evidence_of(document: Mapping[str, Any]) -> Evidence:
-    """The `pkit connections resolve --json` document as Evidence."""
-    if document.get("defined") is False:
-        return Evidence(False, why=f"it is not defined: {document.get('why', '')}")
-    if not document.get("resolved"):
-        return Evidence(False, why=str(document.get("why") or "it does not resolve"))
-    entries = {
-        str(entry["id"]): Held(entry["value"], str(entry.get("origin", "")))
-        for entry in document.get("entries") or []
-        if isinstance(entry, Mapping)
-        and isinstance(entry.get("id"), str)
-        and isinstance(entry.get("value"), Mapping)
-    }
+    """The `pkit connections resolve --json` document as Evidence. It is read by its keys
+    (ADR-097 point 3): the point holds its entries only where it resolved with each
+    filler `taken` or `passed over`, since a filler in a state this reading does not know
+    may not have answered. That, a key the reading needs that is missing, null or of
+    another type, and a version it does not know each leave the point unresolved, with
+    why. An entry whose value is not an object is no evidence, as before."""
+    command = f"`pkit connections resolve {POINT} --json`"
+    version = document.get("schema_version", DOCUMENT_VERSION)
+    if type(version) is not int or version != DOCUMENT_VERSION:
+        return Evidence(
+            False,
+            why=f"{command} answered schema_version {version!r}; this capability reads "
+            f"{DOCUMENT_VERSION}",
+        )
+    try:
+        return _evidence(document)
+    except keys.Untold as exc:
+        return Evidence(
+            False, why=f"{command} answered a document this capability cannot read: {exc}"
+        )
+
+
+def _evidence(document: Mapping[str, Any]) -> Evidence:
+    if not keys.flag(document, "defined", ""):
+        return Evidence(False, why=f"it is not defined: {keys.text(document, 'why', '')}")
+    if not keys.flag(document, "resolved", ""):
+        return Evidence(False, why=keys.text(document, "why", "") or "it does not resolve")
+    untold = [
+        f"{keys.text(filler, 'name', where)} ({keys.text(filler, 'state', where)})"
+        for where, filler in keys.objects(document, "fillers", "")
+        if keys.text(filler, "state", where) not in ANSWERED
+    ]
+    if untold:
+        return Evidence(
+            False,
+            why=f"a filler's evidence cannot be told, since its state is not one in which "
+            f"it answered: {'; '.join(untold)}",
+        )
+    entries: dict[str, Held] = {}
+    for where, entry in keys.objects(document, "entries", ""):
+        value, origin = keys.value(entry, "value", where), keys.text(entry, "origin", where)
+        if isinstance(value, Mapping):
+            entries[keys.text(entry, "id", where)] = Held(value, origin)
     return Evidence(True, entries=entries)

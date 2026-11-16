@@ -21,9 +21,10 @@ import pytest
 
 from project_kit import data_points as dp
 from project_kit import default_branch as db
+from tests import analysis_repo as ar
 from tests import document_contracts as contracts
 from tests import test_backbone_documents as documents
-from tests.adopter_repo import AdopterRepo
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.caller_contracts import Caller, Outcome, check, raises, same
 from tests.document_contracts import Contract, Form
 from tests.in_process import load
@@ -322,3 +323,202 @@ def test_visual_communication_reads_where_the_branch_left_its_base_as_its_contra
     # A base that resolves to no commit gives no fork to vary: the look back refuses it.
     for document in _repository_bases()[:2]:
         check(VISUAL_COMMUNICATION_BASE, document)
+
+
+# --- software-analysis ----------------------------------------------------------------------
+
+sa_backbone, sa_model, sa_reading, sa_check, sa_evidence = load(
+    "software-analysis", "backbone", "model", "reading", "check", "evidence"
+)
+
+SOFTWARE_ANALYSIS_SETTLED = Caller(
+    name="software-analysis's reading of `pkit repository base --json`",
+    contract=documents.REPOSITORY_BASE,
+    read=sa_backbone.settled_of,
+    untold=raises(sa_model.Unreadable),
+    nothing=lambda: sa_backbone.settled(Path("."), run=_no_document),
+)
+
+
+def test_software_analysis_reads_what_is_settled_as_its_contract_says() -> None:
+    for document in _repository_bases():
+        check(SOFTWARE_ANALYSIS_SETTLED, document)
+
+
+def _sa_reach(*, preview: bool) -> Caller:
+    return Caller(
+        name="software-analysis's reading of `pkit rule-sets reach --json`",
+        contract=documents.RULE_SETS_REACH,
+        read=lambda document: sa_backbone.reach_of(document, preview=preview),
+        untold=raises(sa_model.Unreadable),
+        nothing=lambda: sa_backbone.reach(Path("."), run=_no_document, preview=preview),
+        # `preview` came within version 1: its absence is a backbone too old to preview,
+        # whose answer is the one without the preview (the CLI reference).
+        readings={} if preview else {"missing:preview": same},
+    )
+
+
+def test_software_analysis_reads_where_rules_bind_as_its_contract_says(
+    make_adopter_repo: Any,
+) -> None:
+    for document in documents._reach_states(make_adopter_repo()):
+        check(_sa_reach(preview=document["preview"]), document)
+
+
+def _sa_records(asked: tuple[str, ...]) -> Caller:
+    return Caller(
+        name="software-analysis's reading of where records lie, `pkit refs lookup --json`",
+        contract=documents.REFS_LOOKUP,
+        read=lambda document: sa_backbone.record_files_of(document, asked),
+        untold=raises(sa_model.Unreadable),
+        nothing=lambda: sa_backbone.RecordFiles(Path("."), run=_no_document).file(asked[0]),
+    )
+
+
+def _sa_citations(asked: tuple[str, ...]) -> Caller:
+    return Caller(
+        name="software-analysis's reading of where citations lead, `pkit refs lookup --json`",
+        contract=documents.REFS_LOOKUP,
+        read=lambda document: sa_backbone.found_of(document, asked),
+        untold=raises(sa_model.Unreadable),
+        nothing=lambda: sa_backbone.lookup(Path("."), asked, run=_no_document),
+    )
+
+
+def test_software_analysis_reads_where_records_and_citations_lie_as_its_contract_says(
+    make_adopter_repo: Any,
+) -> None:
+    make_adopter_repo()
+    printed = documents._printed(
+        documents._cli("refs", "lookup", documents.JSON_OPTION, *documents.LOOKED_UP)
+    )
+    check(_sa_records(documents.LOOKED_UP), printed)
+    check(_sa_citations(documents.LOOKED_UP), printed)
+
+
+def _analysis_document(repo: AdopterRepo) -> dict[str, Any]:
+    """`pkit friction artefacts --json` over the analysis's places, holding each kind of
+    artefact: an actor, terms, use cases in an area and out of one, a journey,
+    requirements of each kind, a revalidation record held, and a file in no place."""
+    ar.stamped(repo, "term", "suite")
+    ar.stamped(repo, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
+    requirement = "---\nid: {id}\ntitle: T\nstatus: active\n---\n\n# {id} · Quality · T\n"
+    repo.write(
+        {
+            f"{ar.RECORDS}/2026-10-12-run-suite.md": "---\nchange: '#1'\n---\n",
+            f"{ar.QUALITY}/REQ-004-quick.md": requirement.format(id="REQ-004"),
+            f"{ar.FUNCTIONAL}/reports/REQ-002-approved.md": requirement.format(id="REQ-002"),
+            f"{ar.CONSTRAINTS}/REQ-001-country.md": requirement.format(id="REQ-001"),
+            f"{ar.ANALYSIS}/requirements/REQ-009-loose.md": requirement.format(id="REQ-009"),
+        }
+    )
+    return documents._printed(documents._cli("friction", "artefacts", documents.JSON_OPTION))
+
+
+def _not_looked(outcome: Outcome, base: Outcome) -> bool:
+    """The location's unplaced files read as not looked at: the check says it could not
+    look, and never that no such file is there (#1724)."""
+    del base
+    return getattr(outcome, "unplaced", ()) is None and outcome.outside_kinds is None
+
+
+#: The keys of the analysis location's unplaced files: one the answer does not give in
+#: full leaves that question alone untold, as the check reads it.
+_UNPLACED = (
+    "unplaced",
+    "unplaced{}{}.path",
+    "unplaced{}{}.files",
+    "unplaced{}{}.files[].path",
+    "unplaced{}{}.files[].excluded",
+)
+
+SOFTWARE_ANALYSIS_ANALYSIS = Caller(
+    name="software-analysis's reading of `pkit friction artefacts --json`",
+    contract=documents.FRICTION_ARTEFACTS,
+    read=sa_model.analysis_of,
+    untold=raises(sa_model.Unreadable),
+    nothing=lambda: sa_backbone.read_analysis(Path("."), run=_no_document),
+    readings={f"{way}:{name}": _not_looked for name in _UNPLACED for way in ("missing", "null")},
+)
+
+
+def test_software_analysis_reads_the_analysis_as_its_contract_says(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    del pkit_on_path
+    repo = ar.installed(make_adopter_repo, monkeypatch, then=ar.prepare_seeded)
+    check(SOFTWARE_ANALYSIS_ANALYSIS, _analysis_document(repo))
+
+
+def _as_read(anchor: Any, *_path: Any) -> Any:
+    """A changed path anchor as read against no files: unchanged."""
+    return anchor
+
+
+def _anchor_not_judged(outcome: Outcome, base: Outcome) -> bool:
+    """An anchor in a state the reading does not know is kept, and read as not judged."""
+    del base
+    return any(not anchor.judged for anchor in getattr(outcome, "anchors", ()))
+
+
+def _sa_evidence_of(artefact: str) -> Caller:
+    return Caller(
+        name="software-analysis's reading of `pkit friction explain --json` for the evidence",
+        contract=documents.FRICTION_EXPLAIN,
+        read=lambda document: sa_reading.reading_of(
+            sa_backbone.explained_of(document), artefact, _as_read
+        ),
+        untold=raises(sa_model.Unreadable),
+        nothing=lambda: sa_backbone.explain(Path("."), artefact, run=_no_document),
+        # The document gained `schema_version` after it first shipped (the CLI reference).
+        readings={"missing:schema_version": same, "unknown:anchors[].state": _anchor_not_judged},
+    )
+
+
+SOFTWARE_ANALYSIS_REVALIDATED = Caller(
+    name="software-analysis's reading of `pkit friction explain --json` for its revalidations",
+    contract=documents.FRICTION_EXPLAIN,
+    read=lambda document: sa_check.last_revalidated(sa_backbone.explained_of(document)),
+    untold=raises(sa_model.Unreadable),
+    nothing=lambda: sa_backbone.explain(Path("."), "guide", run=_no_document),
+    # The document gained the key after it first shipped (the CLI reference).
+    readings={"missing:schema_version": same},
+)
+
+
+@pytest.fixture
+def explained(committed_adopter: AdopterRepo, answers_in_files: None) -> list[dict[str, Any]]:
+    """`pkit friction explain --json` as its contract's test builds it: the guide as a
+    run gives it, excluded with every part, and with its answers read alone."""
+    del answers_in_files
+    documents._friction_history(committed_adopter)
+    return documents._explain_documents(committed_adopter.root)
+
+
+def test_software_analysis_reads_an_explanation_as_its_contract_says(
+    explained: list[dict[str, Any]],
+) -> None:
+    for document in explained:
+        check(SOFTWARE_ANALYSIS_REVALIDATED, document)
+        if document["state"] in sa_reading._READ_STATES:
+            check(_sa_evidence_of("guide"), document)
+
+
+SOFTWARE_ANALYSIS_EVIDENCE = Caller(
+    name="software-analysis's reading of the evidence point, `pkit connections resolve --json`",
+    contract=documents.DATA_POINT,
+    read=sa_evidence.evidence_of,
+    untold=lambda outcome: not outcome.resolved,
+    nothing=lambda: sa_evidence.read_evidence(Path("."), run=_no_document),
+    # The document gained the key after it first shipped (the CLI reference).
+    readings={"missing:schema_version": same},
+)
+
+
+def test_software_analysis_reads_the_evidence_point_as_its_contract_says() -> None:
+    taken, passed_over = dp.FillerState.TAKEN, dp.FillerState.PASSED_OVER
+    for document in (
+        _point(("UC-001@c#suite.a",), taken),
+        _point(("UC-001@c#suite.a", "UC-002@c#suite.b"), taken, passed_over),
+    ):
+        check(SOFTWARE_ANALYSIS_EVIDENCE, document)
