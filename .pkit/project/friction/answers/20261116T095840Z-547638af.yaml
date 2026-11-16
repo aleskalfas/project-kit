@@ -128,7 +128,7 @@ answers:
     revalidated:
       at: 2026-11-16T10:00:56Z
       outcome: unchanged
-      unchanged-because: create-issue changes only what a filing says where its card's add fails, now naming the sync run for the new issue, and, where the board holds the state, the Status the filing would have written. This use case says nothing of the board, so its planning, review and filing steps stand.
+      unchanged-because: create-issue changes only what a filing says where its card's add fails, now naming the sync run for the new issue, or, where the host's answer gave no number for it, the sync run for the whole board, and, where the board holds the state, the Status the filing would have written. This use case says nothing of the board, so its planning, review and filing steps stand.
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
     read:
       - 20261101T152616Z-c96602dc.yaml
@@ -169,7 +169,7 @@ answers:
     revalidated:
       at: 2026-11-16T10:00:59Z
       outcome: unchanged
-      unchanged-because: create-issue changes only what a filing says where its card's add fails, now naming the sync run for the new issue, and the corpus read in containment.py also returns the numbers of the state issues it leaves out. This use case says nothing of the board or of that read, so each step stands.
+      unchanged-because: create-issue changes only what a filing says where its card's add fails, now naming the sync run for the new issue, or, where the host's answer gave no number for it, the sync run for the whole board, and the corpus read in containment.py also returns the numbers of the state issues it leaves out. This use case says nothing of the board or of that read, so each step stands.
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
     read:
       - 20261101T152616Z-c96602dc.yaml
@@ -209,7 +209,7 @@ answers:
     revalidated:
       at: 2026-11-16T10:01:03Z
       outcome: unchanged
-      unchanged-because: create-issue changes only what a filing says where its card's add fails, now naming the sync run for the new issue. This use case files its issues as UC-063 does and says nothing of the board, so each step stands.
+      unchanged-because: create-issue changes only what a filing says where its card's add fails, now naming the sync run for the new issue, or, where the host's answer gave no number for it, the sync run for the whole board. This use case files its issues as UC-063 does and says nothing of the board, so each step stands.
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
     read:
       - 20261026T152835Z-e6e43fac.yaml
@@ -709,7 +709,7 @@ answers:
     revalidated:
       at: 2026-11-16T10:01:53Z
       outcome: unchanged
-      unchanged-because: create-issue changes only what a filing says where its card's add fails, now naming the sync run for the new issue. The README's account of create-issue refusing before bootstrap, and the output it shows, stand.
+      unchanged-because: create-issue changes only what a filing says where its card's add fails, now naming the sync run for the new issue, or, where the host's answer gave no number for it, the sync run for the whole board. The README's account of create-issue refusing before bootstrap, and the output it shows, stand.
   - artefact: .pkit/capabilities/project-management/README.md
     read:
       - 20261026T013726Z-d41bac9b.yaml

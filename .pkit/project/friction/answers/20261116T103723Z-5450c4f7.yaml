@@ -138,7 +138,7 @@ answers:
     revalidated:
       at: 2026-11-16T10:41:23Z
       outcome: unchanged
-      unchanged-because: "Judged with the three changes answered apart, which still hold: UC-063's agent files each issue of the approved plan with create-issue and no --board, so the refusal of a board option that does not name the configured board never meets it, and a resolve document whose outcome is a list or a mapping, or whose schema_version is true, false or 1.0, reads as a data point that cannot be read, which variants 3b and 8b already cover. This change alters only what a filing says where its card's add fails: it names the sync run for the new issue and, where the board holds the state, the Status the filing would have written. The use case says nothing of the board, so its steps, variants and guarantees stand."
+      unchanged-because: "Judged with the three changes answered apart, which still hold: UC-063's agent files each issue of the approved plan with create-issue and no --board, so the refusal of a board option that does not name the configured board never meets it, and a resolve document whose outcome is a list or a mapping, or whose schema_version is true, false or 1.0, reads as a data point that cannot be read, which variants 3b and 8b already cover. This change alters only what a filing says where its card's add fails: it names the sync run for the new issue, or, where the host's answer gave no number for it, the sync run for the whole board, and, where the board holds the state, the Status the filing would have written. The use case says nothing of the board, so its steps, variants and guarantees stand."
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
     read:
       - 20261101T152616Z-c96602dc.yaml
@@ -184,7 +184,7 @@ answers:
     revalidated:
       at: 2026-11-16T10:41:27Z
       outcome: unchanged
-      unchanged-because: "Judged with the four changes answered apart, which still hold: DEC-071's refusal of a board option that does not name the configured board comes before anything is written or asked, and UC-060's path passes none, so steps 4 to 13 run as written; in step 10 a cited use-case id the point lacks is warned of only where its fillers are listed and each is taken or passed over, and one whose point is partly checked, whose outcome is not text, whose schema_version is true, false or 1.0, or whose lookup entry cannot be read is named as not checked, and none stops the filing. This change alters only what a filing says where its card's add fails, now naming the sync run for the new issue, and has the corpus read in containment.py also return the numbers of the state issues it leaves out. UC-060 says nothing of the card's add or of that read, so each step and guarantee stands."
+      unchanged-because: "Judged with the four changes answered apart, which still hold: DEC-071's refusal of a board option that does not name the configured board comes before anything is written or asked, and UC-060's path passes none, so steps 4 to 13 run as written; in step 10 a cited use-case id the point lacks is warned of only where its fillers are listed and each is taken or passed over, and one whose point is partly checked, whose outcome is not text, whose schema_version is true, false or 1.0, or whose lookup entry cannot be read is named as not checked, and none stops the filing. This change alters only what a filing says where its card's add fails, now naming the sync run for the new issue, or, where the host's answer gave no number for it, the sync run for the whole board, and has the corpus read in containment.py also return the numbers of the state issues it leaves out. UC-060 says nothing of the card's add or of that read, so each step and guarantee stands."
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
     read:
       - 20261101T152616Z-c96602dc.yaml
@@ -226,7 +226,7 @@ answers:
     revalidated:
       at: 2026-11-16T10:37:52Z
       outcome: unchanged
-      unchanged-because: "Judged with the change answered apart, which still holds: UC-083 files the approved plan's issues as UC-063 does, with no owner or into a Milestone's pool and never with --board, so create-issue's refusal of a board option that does not name the configured board never meets it. This change alters only what a filing says where its card's add fails, now naming the sync run for the new issue, and none of UC-083's steps, variants or guarantees names a board or a card, so each stands."
+      unchanged-because: "Judged with the change answered apart, which still holds: UC-083 files the approved plan's issues as UC-063 does, with no owner or into a Milestone's pool and never with --board, so create-issue's refusal of a board option that does not name the configured board never meets it. This change alters only what a filing says where its card's add fails, now naming the sync run for the new issue, or, where the host's answer gave no number for it, the sync run for the whole board, and none of UC-083's steps, variants or guarantees names a board or a card, so each stands."
   - artefact: README.md
     read:
       - 20261025T221340Z-215a759f.yaml
@@ -369,7 +369,7 @@ answers:
     revalidated:
       at: 2026-11-16T10:38:22Z
       outcome: unchanged
-      unchanged-because: "Judged with the four changes answered apart, which still hold: the comparison row names a capability installed from a repository you name, the upgrade story reads the latest release by full reference, the status and install lines are as they were, the page says nothing of the marks the CLI reference's sections gained, and the filing example, run before bootstrap with no --board, still meets create-issue's prerequisites gate, which comes before the board option is judged and before any board is read. This change alters create-issue only in what a filing says where its card's add fails, now naming the sync run for the new issue, which the page does not show, so none of those statements moves."
+      unchanged-because: "Judged with the four changes answered apart, which still hold: the comparison row names a capability installed from a repository you name, the upgrade story reads the latest release by full reference, the status and install lines are as they were, the page says nothing of the marks the CLI reference's sections gained, and the filing example, run before bootstrap with no --board, still meets create-issue's prerequisites gate, which comes before the board option is judged and before any board is read. This change alters create-issue only in what a filing says where its card's add fails, now naming the sync run for the new issue, or, where the host's answer gave no number for it, the sync run for the whole board, which the page does not show, so none of those statements moves."
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
     read:
       - 20261026T152835Z-e6e43fac.yaml
