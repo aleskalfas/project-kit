@@ -88,7 +88,43 @@ answers:
       - 20261116T073934Z-de939802.yaml
       - 20261116T075435Z-97191300.yaml
       - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
     revalidated:
-      at: 2026-11-16T13:45:15Z
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: DEC-074, accepted in this change, has pre-check's board check read the board on each run and warn where the board does not answer, fail a configuration that declares a board and gives no board number its schema admits, and give each check's outcome under a key that stays, and has the skill's first step show pre-check's warnings; DEC-017 and DEC-037 take the edits it names. The change builds none of it, so pre-check, the skill and back-fill still run as the README describes them. The README's table of what pre-check covers, its account of Step 0 under 'Verify with pre-check', and the pre-check row under 'When the board does not answer', which leaves to project-kit#3193 whether the check reads the board, change with DEC-074's build, project-kit#3243, which brings pre-check, the skill and the README to the record together.
+  - artefact: tech-docs/analysis/project-management/requirements/constraints/REQ-040-github-and-gh.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T215333Z-1b18b920.yaml
+    revalidated:
+      at: 2026-11-16T22:32:30Z
       outcome: unchanged
-      unchanged-because: "Judged with the README's two re-checks on main made apart, and with this change. #3300's build left the README saying that create-issue refuses a --board that does not name the configured board, in every project, before it reads any board (DEC-071), and #3330's fix has the readings of backbone documents refuse a schema_version that is not the integer 1. Neither changed pre-check, the skill's first step or back-fill, and this change edits no passage of the README. The change adds DEC-074, a proposed record deciding that pre-check's board check warns where the board does not answer, fails a configuration that declares a board and gives no board number its schema admits, that the skill's first step shows pre-check's warnings, and that a caller reads each check's outcome in pre-check's report by a key that stays. It names edits to DEC-017, DEC-037 and ADR-031 made once it is accepted, and makes none of them here. It builds nothing, so pre-check, the skill and back-fill behave as the README describes them: its table of what pre-check covers, its account of Step 0, and the row for pre-check under 'When the board does not answer', which still says the board check passes on a stored node id and leaves to project-kit#3193 whether it reads the board. Those passages change with DEC-074's build, project-kit#3243. Filing's refusal where the board does not answer, which DEC-074 rests on, is the one 'Filing an issue onto the board' gives, and the --board refusal comes before it. The README's account of back-fill where the board does not answer is back-fill's own read, which DEC-074 leaves standing, and names no member of its gate."
+      unchanged-because: "DEC-017 takes DEC-074's edits in this change: its board check warns where the board does not answer and fails a configuration that declares a board and gives no board number its schema admits, the skill's first step shows pre-check's warnings, and its reason for migrate's refusal names only the drift migrate's plan reads. None touches the check that gh auth status succeeds on the project's host, or the capability's working on GitHub alone through gh, so the statement, its measure and what verifies it stand."
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-041-gates-before-writing.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T233254Z-07e46ecd.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+    revalidated:
+      at: 2026-11-16T22:32:35Z
+      outcome: unchanged
+      unchanged-because: "DEC-017 takes DEC-074's edits in this change: its board check warns where the board does not answer and fails a configuration that declares a board and gives no board number its schema admits, and the skill's first step shows pre-check's warnings and decides nothing from them, the gate read from the exit code alone. The first check this requirement measures is the bootstrap gate each command runs before it writes, which reads no board, and the second is DEC-021's membership check, so neither moves, and the rationale's gate held by the commands rather than by an agent's reading of a report stands as DEC-017 keeps it."
