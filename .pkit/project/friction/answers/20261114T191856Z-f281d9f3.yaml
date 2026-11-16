@@ -384,12 +384,16 @@ answers:
       - 20261113T181005Z-1533807d.yaml
       - 20261113T194652Z-522f1d81.yaml
       - 20261113T221124Z-bd48f436.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261115T224511Z-687cfec6.yaml
+      - 20261115T225309Z-fb593e04.yaml
+      - 20261116T071805Z-ffb1106a.yaml
     revalidated:
       deferred:
         - anchor:
             kind: record
             value: ADR-065
-          reason: "The page describes the upgrade as built, which moves no pin and runs no copy refusal. #3203 brings the copy refusal's line into step 1's list as its own answer on this page, since it builds that refusal into the upgrade code the page anchors, and the open #3229 brings the page's other passages in line with ADR-065 points 4, 6 and 7 once it builds the pin's move."
+          reason: "The page describes the upgrade as built, with main's install from another repository in it: a transition reads an externally-sourced capability's range from its copy alone, moves no pin, and runs no copy refusal. The refined ADR-065 points 4, 6 and 7 add to step 1 the refusal of a copy out of line and the fetch of a moved pin, to step 3 the landing of that content, to the gates and the collision flow a moved pin's content, and let such a pin move down. The open #3229 builds them and brings the page's step 1, its gates, its collisions and its per-component upgrade in line."
   - artefact: .pkit/release/README.md
     read:
       - 20261025T221340Z-215a759f.yaml
