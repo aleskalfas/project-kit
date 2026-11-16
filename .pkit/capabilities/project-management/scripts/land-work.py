@@ -278,6 +278,7 @@ from _lib import (
     required_reviewers,
     ruled_artefacts,
     session_guard,
+    sync_switch,
 )
 from _lib.agent_verdicts import (
     APPROVED,
@@ -567,6 +568,11 @@ class _AnswersEnd:
     #: out of date, as the `ready:` line says it, or "": it left less, or what it
     #: left could not be read (`_left_moved`).
     left_moved: str = ""
+    #: Whether the change turns on the sync's switch, read from git objects where
+    #: the head left its base and at the head: a run authorised up front holds,
+    #: and the person authorises the merge themselves at a terminal
+    #: ([project-management:DEC-072-sync-gives-missing-cards] point 3).
+    switch: sync_switch.Hold = sync_switch.NOT_HELD
 
     def phrase(self) -> str:
         """What the `ready:` line says of the lines above it —
@@ -727,7 +733,9 @@ def _parser() -> argparse.ArgumentParser:
             "a terminal, done-work asks, naming the head. A change with friction answers "
             "merges under it as any other does. A finding to judge stops the run at "
             "`ready:` unless the run found its verdict when it started, standing for "
-            "the head."
+            "the head. A change that turns on `sync_board.adds_with_no_terminal` stops it "
+            "at `ready:` too: it merges only on the person's yes at a terminal (DEC-072 "
+            "point 3)."
         ),
     )
     parser.add_argument(
@@ -822,7 +830,7 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
         + _unlisted_hold(head, answers)
         + _unsaid_hold(head, answers)
     )
-    if args.yes and (to_judge.held is not None or holds):
+    if args.yes and (to_judge.held is not None or holds or answers.switch.held):
         return _ready(args, head, review, config, answers, to_judge, reading, holds)
     if not args.yes and not _interactive():
         return _ready(args, head, review, config, answers, to_judge, reading)
@@ -1688,11 +1696,23 @@ def _answers(
         unlisted=unlisted,
         unsaid=tuple(friction_answers.unsaid(document, fed.sentences)),
         left_moved=_left_moved(head, document),
+        switch=_switch_hold(derived, head, capability_root),
     )
     count = friction_answers.documents(derived.answers)
     written = _with_grants(friction_answers.affected(count, settings=bool(settings)), grants)
     _say(f"{STEP}: {written}{_remove_list(args, head, body, config, capability_root)}")
     return end
+
+
+def _switch_hold(
+    derived: friction_answers.Derivation, head: _Head, capability_root: Path
+) -> sync_switch.Hold:
+    """Whether the change turns on the sync's switch, read from git objects: where
+    the head left its base, as the change check names it, and the head
+    ([project-management:DEC-072-sync-gives-missing-cards] point 3)."""
+    return sync_switch.between_commits(
+        derived.merge_base, derived.head or head.oid, capability_root
+    )
 
 
 def _refuse_closing_references(sentences: Mapping[str, str], head: _Head) -> None:
@@ -2502,10 +2522,18 @@ def _ready(
         return code
     for line in answers.told:
         print(f"  {line}")
+    merge = f"with: pkit pm land-work {head.issue} --yes --expect-head {head.oid}"
+    if answers.switch.held:
+        # No authorisation given up front covers it (DEC-072 point 3).
+        print(f"  {answers.switch.said()}")
+        uncovered += (
+            f"; held for `{sync_switch.NAME}`, which an authorisation given up front "
+            "does not cover (above)"
+        )
+        merge = f"at a terminal, authorising it yourself, with: pkit pm land-work {head.issue}"
     _end(
         f"ready: {short_sha(head.oid)} — CI passed, {review.approval}{answers.phrase()}"
-        f"{to_judge.phrase()}{uncovered}; merge "
-        f"with: pkit pm land-work {head.issue} --yes --expect-head {head.oid}"
+        f"{to_judge.phrase()}{uncovered}; merge {merge}"
     )
     return EXIT_READY
 
@@ -2524,7 +2552,8 @@ def _merge(
     for line in answers.told if answers is not None else ():
         print(f"  {line}")
     argv = [str(args.issue_number), *_passed_through(args, review=False)]
-    end = _run_done_work(argv, head, config, reading, merging=not args.dry_run)
+    switch = answers.switch if answers is not None else None
+    end = _run_done_work(argv, head, config, reading, merging=not args.dry_run, switch=switch)
     if end.kind == done_work.PLANNED:
         _end("merge: (dry-run) done-work's plan is above")
         return EXIT_MERGED
@@ -2542,14 +2571,15 @@ def _run_done_work(
     reading: issue_branch.Reading,
     *,
     merging: bool,
+    switch: sync_switch.Hold | None = None,
 ) -> Any:
     """How done-work's run ended (`done_work.DoneWorkRun`), handed the issue's
-    branch as this run read it. When it raised, the run stops, with what
-    GitHub reports of the PR."""
+    branch as this run read it, and what this run found of the sync's switch.
+    When it raised, the run stops, with what GitHub reports of the PR."""
     try:
         if head is None:
             return done_work.run(argv, merged_only=True, branch_reading=reading)
-        return done_work.run(argv, pinned_head=head.oid, branch_reading=reading)
+        return done_work.run(argv, pinned_head=head.oid, branch_reading=reading, switch=switch)
     except (Exception, SystemExit) as exc:
         issue = int(argv[0])
         failed = _done_work_failed(_described(exc), issue, head, config, merging=merging)

@@ -1389,7 +1389,13 @@ def _rules(refused: str | None, forms: list[str]) -> dict[str, Any]:
 
 
 def _settled(commit: str | None, problem: str | None = None) -> dict[str, Any]:
-    branch = {"name": "main", "source": "default", "ref": "origin/main", "commit": commit}
+    branch = {
+        "name": "main",
+        "source": "default",
+        "ref": "origin/main",
+        "commit": commit,
+        "resolved": "remote" if commit else None,
+    }
     return {
         "schema_version": 1,
         "default_branch": {**branch, "problem": problem, "unborn": False},

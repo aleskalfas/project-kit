@@ -71,11 +71,13 @@ from _lib import (
     axis_carriage,
     axis_labels,
     board_fields,
+    board_status,
     body_parent_ref,
     body_rules,
     bootstrap_gate,
     classification_rules,
     decision_ids,
+    missing_card,
     title_rules,
     use_case_citations,
 )
@@ -660,7 +662,8 @@ def _validate_issue(
                 Finding(
                     sev,
                     "board_membership.missing",
-                    "issue is not on the configured Projects v2 board. Mandatory per DEC-019.",
+                    "issue is not on the configured Projects v2 board. Mandatory per DEC-019."
+                    + _card_remedy(issue, config, substrate_map),
                 )
             )
         elif not card.ok:
@@ -911,6 +914,24 @@ def _read_membership(config: dict, issue: dict) -> board_fields.ItemLookup:
         config, repository_owner=board_fields.url_owner(url if isinstance(url, str) else None)
     )
     return board_fields.resolve_item_id(config, issue_node_id=node, owner=owner)
+
+
+def _card_remedy(issue: dict, config: dict, substrate_map: axis_labels.SubstrateMap | None) -> str:
+    """What gives the issue its missing card, as a sentence the finding ends on:
+    the sync, run for the issue ([project-management:DEC-072-sync-gives-missing-cards]
+    point 4). Empty for a closed issue, which the sync gives no card, and where the
+    issue's number cannot be read from it."""
+    if str(issue.get("state") or "").upper() == "CLOSED":
+        return ""
+    number = issue.get("number")
+    if not isinstance(number, int):
+        url = issue.get("url")
+        tail = url.rstrip("/").rsplit("/", 1)[-1] if isinstance(url, str) else ""
+        number = int(tail) if tail.isdigit() else None
+    if number is None:
+        return ""
+    holds = board_status.role(config, substrate_map) == "source"
+    return f" {missing_card.remedy(number, board_holds_state=holds)}."
 
 
 def _print_findings(issue_number: int, issue: dict, findings: list[Finding]) -> None:

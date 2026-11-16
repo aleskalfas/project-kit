@@ -1250,7 +1250,7 @@ def test_a_first_status_not_written_is_one_line_and_the_issue_stands(
     assert board.adds == [42] and board.edits == []
     assert (
         "[warn] #42: the board's Status was not set to 'Todo': the board's Status field has "
-        "no 'Todo' option; the issue is filed, and `sync-board` sets it"
+        "no 'Todo' option; the issue is filed, and `pkit pm sync-board 42` sets it"
     ) in capsys.readouterr().err
 
 
@@ -1414,7 +1414,9 @@ def test_a_card_not_added_leaves_the_issue_filed_and_exits_for_a_later_step(
     ci, tmp_path, monkeypatch, capsys, axes
 ) -> None:
     """The card is a write the filing requires (DEC-019): not added, the issue
-    stands, the message leads with it, and the code says a later step failed."""
+    stands, the message leads with it, and the code says a later step failed. It
+    names the sync, run for the issue, as what adds the card, and, where the board
+    holds the state, the Status the filing would have written (DEC-072 point 4)."""
     board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=axes)
     board.fail_adds.add(42)
 
@@ -1422,8 +1424,21 @@ def test_a_card_not_added_leaves_the_issue_filed_and_exits_for_a_later_step(
 
     err = capsys.readouterr().err
     assert "[failed] https://github.com/acme/repo/issues/42 is filed" in err
-    assert "its card was not added to board #7: HTTP 502: Bad Gateway" in err
+    assert (
+        "its card was not added to board #7: HTTP 502: Bad Gateway. "
+        "`pkit pm sync-board 42` adds its card"
+    ) in err
     assert "do not file it again" in err
+    assert "gh project item-add" not in err
+    if axes is BOARD_AXES:
+        assert (
+            "only in a run at a terminal or with the project's switch "
+            "`sync_board.adds_with_no_terminal` on, and its Status is then set on the board, "
+            "since the card the sync adds carries none: set it to 'Todo', the state the issue "
+            "was filed into"
+        ) in err
+    else:
+        assert "sync_board.adds_with_no_terminal" not in err
 
 
 def test_a_card_not_added_beside_a_failed_link_names_both_and_takes_its_own_code(

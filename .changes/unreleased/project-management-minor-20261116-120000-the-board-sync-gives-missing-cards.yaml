@@ -1,0 +1,27 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  `sync-board` now gives each open issue with no card its card in every project
+  with a board, and writes a Status only where the board's Status is the
+  projection of each issue's state (DEC-072, #3301). Where the board holds the
+  state, or the state degrades, it used to refuse and read nothing; it now adds
+  the missing cards and writes no Status, so an added issue's position stays
+  undetermined until a person sets its card's Status on the board. Where the
+  board holds the state, its plan and report also name each open issue whose
+  card does not place it and each whose only card is archived, a run adds cards
+  only at a terminal or with the new switch `sync_board.adds_with_no_terminal`
+  on in `project/config.yaml` (off by default, counted only as the shared
+  remote's copy of the default branch holds it), and it reads each added card
+  back, naming each that shows a Status it did not write. Where the state
+  degrades, a run with no terminal and `--yes` now adds cards where it refused
+  before. Issue numbers after the command limit a run to those issues.
+  `done-work`, `merge-pr` and `land-work` hold a change that turns the switch on
+  until the person authorises the merge at a terminal: `--yes` does not cover
+  it. Each message that reports a missing card, such as `set-field`'s refusal,
+  the membership check, the back-fill's blocked write and a filing whose add
+  failed, now names `pkit pm sync-board <N>` in place of `gh project item-add`.
+  The board read seam gains a read of one card by its id, and marks each card
+  its walk returns archived or not. Nothing a project holds changes, so no
+  migration is owed.

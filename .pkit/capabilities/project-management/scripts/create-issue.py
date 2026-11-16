@@ -151,6 +151,7 @@ from _lib import (
     containment,
     decision_ids,
     instance_claims,
+    missing_card,
     pools,
     provenance,
     session_guard,
@@ -1023,15 +1024,15 @@ def main() -> int:
         board_item_id, why = _gh_add_to_board(board_id, issue_url, config, owner=board_first.owner)
         if board_item_id is None:
             later_failed.append(
-                f"its card was not added to {board_first.board}: {why}. Add it with "
-                f"`gh project item-add {board_id} --owner {board_first.owner or '<owner>'} "
-                f"--url {issue_url}`"
-            )
-            if board_first.role == "source":
-                later_failed[-1] += (
-                    ", then set its Status: the board carries the state, so the issue's "
-                    "position cannot be read until it has a card and a Status (DEC-051 point 6)"
+                _add_not_made(
+                    board_first,
+                    why,
+                    number=new_issue_number,
+                    url=issue_url,
+                    configured=board_config is config,
+                    workflow=workflow,
                 )
+            )
         elif new_issue_number is not None:
             failure = _set_first_status(new_issue_number, board_item_id, board_first, workflow)
             if failure is not None:
@@ -1898,6 +1899,37 @@ def _gh_add_to_board(
     if proc.returncode != 0:
         return None, " ".join((proc.stderr or "no stderr").split())
     return board_answer.added_card(proc.stdout, issue_url)
+
+
+def _add_not_made(
+    board_first: BoardFirst,
+    why: str,
+    *,
+    number: int | None,
+    url: str,
+    configured: bool,
+    workflow: dict,
+) -> str:
+    """What a filing says of a card it could not add, the board's words ``why``
+    among it: the sync, run for the issue, where the issue was filed onto the
+    configured board, and, where the board holds the state, the Status the filing
+    would have written, the state it filed the issue into, for the person to set on
+    the card ([project-management:DEC-072-sync-gives-missing-cards] point 4). A
+    filing onto another board, which the sync does not reach, names the host's
+    own add."""
+    said = f"its card was not added to {board_first.board}: {why}"
+    if not configured or number is None:
+        board = board_fields.board_number(board_first.config)
+        return (
+            f"{said}. Add it with `gh project item-add {board} --owner "
+            f"{board_first.owner or '<owner>'} --url {url}`"
+        )
+    holds = board_first.role == "source"
+    said += f". {missing_card.remedy(number, board_holds_state=holds)}"
+    if holds and board_first.state is not None:
+        name = board_status.option_name(workflow, board_first.state) or board_first.state
+        said += f": set it to {name!r}, the state the issue was filed into"
+    return said
 
 
 def _set_first_status(

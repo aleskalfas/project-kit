@@ -2089,13 +2089,15 @@ def test_board_membership_answered_with_no_card_is_missing(
     vi, issue_types, titles, body_format, board_config
 ) -> None:
     """The board answered, a witness showing it, and the issue has no card: the
-    drift DEC-019 names."""
+    drift DEC-019 names, with the sync run for the issue as what adds its card
+    (DEC-072 point 4)."""
     lookup = vi.board_fields.ItemLookup(ok=True, item_id=None)
-    labels = _labels(
-        _membership_findings(vi, issue_types, titles, body_format, board_config, lookup)
-    )
+    findings = _membership_findings(vi, issue_types, titles, body_format, board_config, lookup)
+    labels = _labels(findings)
     assert "board_membership.missing" in labels
     assert "board_membership.unverified" not in labels
+    missing = next(f for f in findings if f.label == "board_membership.missing")
+    assert missing.detail.endswith(" `pkit pm sync-board 7` adds its card.")
 
 
 def test_board_membership_with_a_card_is_clean(
