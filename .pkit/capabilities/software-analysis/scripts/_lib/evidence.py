@@ -99,17 +99,21 @@ def read_evidence(root: Path, run: backbone.Runner = subprocess.run) -> Evidence
 #: reference, `connections resolve`).
 DOCUMENT_VERSION = 1
 
-#: The states of a filler that answered, or was not meant to (COR-052 point 6).
-ANSWERED = frozenset({"taken", "passed over"})
+#: The states the backbone gives a filler (COR-052 point 6; the CLI reference,
+#: `connections resolve`): one that answered, one that was meant to and could not, and
+#: one not asked.
+FILLER_STATES = frozenset({"taken", "inert", "passed over"})
 
 
 def evidence_of(document: Mapping[str, Any]) -> Evidence:
     """The `pkit connections resolve --json` document as Evidence. It is read by its keys
-    (ADR-097 point 3): the point holds its entries only where it resolved with each
-    filler `taken` or `passed over`, since a filler in a state this reading does not know
-    may not have answered. That, a key the reading needs that is missing, null or of
-    another type, and a version it does not know each leave the point unresolved, with
-    why. An entry whose value is not an object is no evidence, as before."""
+    (ADR-097 point 3): the point holds its entries where it resolved with each filler in
+    a state this reading knows. An `inert` filler supplied nothing, and the point's
+    `fallback` policy keeps the rest, so its entries are read; a filler in a state this
+    reading does not know may have answered, so the point is unresolved. That, a key the
+    reading needs that is missing, null or of another type, and a version it does not
+    know each leave the point unresolved, with why. An entry whose value is not an object
+    is no evidence, as before."""
     command = f"`pkit connections resolve {POINT} --json`"
     version = document.get("schema_version", DOCUMENT_VERSION)
     if type(version) is not int or version != DOCUMENT_VERSION:
@@ -134,13 +138,13 @@ def _evidence(document: Mapping[str, Any]) -> Evidence:
     untold = [
         f"{keys.text(filler, 'name', where)} ({keys.text(filler, 'state', where)})"
         for where, filler in keys.objects(document, "fillers", "")
-        if keys.text(filler, "state", where) not in ANSWERED
+        if keys.text(filler, "state", where) not in FILLER_STATES
     ]
     if untold:
         return Evidence(
             False,
-            why=f"a filler's evidence cannot be told, since its state is not one in which "
-            f"it answered: {'; '.join(untold)}",
+            why=f"a filler's evidence cannot be told, since its state is not one this "
+            f"capability knows: {'; '.join(untold)}",
         )
     entries: dict[str, Held] = {}
     for where, entry in keys.objects(document, "entries", ""):

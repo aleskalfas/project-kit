@@ -77,15 +77,18 @@ def _lookups() -> dict[str, Any]:
     return document_of(invoke("refs", "lookup", JSON_OPTION, *LOOKED_UP))
 
 
-def _point(entries: tuple[str, ...], *states: dp.FillerState) -> dict[str, Any]:
-    """A `union` point's document, resolved with `entries`, its fillers in `states`."""
+def _point(
+    entries: tuple[str, ...], *states: dp.FillerState, inert_policy: str = "fail"
+) -> dict[str, Any]:
+    """A `union` point's document, resolved with `entries`, its fillers in `states`, under
+    `inert_policy`: only `fallback` resolves with a filler `inert`."""
     sources = (dp.FillerSource.DEFAULT, dp.FillerSource.CONTRIBUTION, dp.FillerSource.PROJECT)
     return dp.point_document(
         dp.ResolvedPoint(
             address="pkit::a-role:a-point",
             provider="a-provider",
             policy="union",
-            inert_policy="fail",
+            inert_policy=inert_policy,
             participation="always",
             fillers=tuple(
                 dp.Filler(source, f"filler {i}", "value", state, "why")
@@ -505,8 +508,18 @@ def test_software_analysis_reads_the_evidence_point_as_its_contract_says() -> No
     for document in (
         _point(("UC-001@c#suite.a",), taken),
         _point(("UC-001@c#suite.a", "UC-002@c#suite.b"), taken, passed_over),
+        # The point's policy is `fallback`: a filler that cannot answer leaves the rest.
+        _point(("UC-001@c#suite.a",), taken, dp.FillerState.INERT, inert_policy="fallback"),
     ):
         check(SOFTWARE_ANALYSIS_EVIDENCE, document)
+
+
+def test_software_analysis_keeps_the_evidence_of_the_fillers_beside_an_inert_one() -> None:
+    document = _point(
+        ("UC-001@c#suite.a",), dp.FillerState.TAKEN, dp.FillerState.INERT, inert_policy="fallback"
+    )
+    point = sa_evidence.evidence_of(document)
+    assert point.resolved and list(point.entries) == ["UC-001@c#suite.a"]
 
 
 # --- project-management ---------------------------------------------------------------------

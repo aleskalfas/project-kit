@@ -12,6 +12,8 @@ body: >
   cannot be read, and the evidence point is unresolved. Before, a file without
   `excluded` was read as included, an artefact without `kind` as a document, a
   lookup without `received` as not received, and a rule without `previewed` as
-  binding outside the preview. The evidence point holds its entries only where
-  each filler is `taken` or `passed over`. A location's unplaced files that
-  the answer does not give in full are still read as not looked at, as before.
+  binding outside the preview. A filler of the evidence point in a state the
+  capability does not know leaves the point unresolved, while an `inert` one
+  leaves the rest to count, as the point's `fallback` policy says. A
+  location's unplaced files that the answer does not give in full are still
+  read as not looked at, as before.
