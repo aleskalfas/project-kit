@@ -1,7 +1,7 @@
 ---
 id: DEC-046
 title: A fault lowers the grade of the rule whose words name it
-status: proposed
+status: accepted
 date: 2026-11-14
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
