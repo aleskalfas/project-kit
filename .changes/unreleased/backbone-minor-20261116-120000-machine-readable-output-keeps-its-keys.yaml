@@ -19,5 +19,5 @@ body: >
   that named no reading of a value a caller does not know are marked so until
   each gains its first value: a data point's filler `state`, the landing's
   warnings' `reason_kind`, the cross-repository guard's `verdict` and
-  `cleared`, and `repository base`'s two `source` keys. Nothing a command
-  prints changes.
+  `cleared`, and `repository base`'s two `source` keys. Other such sets carry
+  no mark yet. Nothing a command prints changes.
