@@ -293,3 +293,32 @@ def test_the_doc_examples_run_reads_its_pages_document_as_its_contract_says(
     document = de_selection.document(tmp_path, config, pages)
     contracts.check(DOC_EXAMPLES_SELECTION, {"answer": [document]})
     check(DOC_EXAMPLES_RUN, document)
+
+
+def _without_pkit(backbone: Any, read: Any) -> Any:
+    """What `read` answers where every `pkit` call through `backbone` exits without a
+    document."""
+    run, backbone._run = backbone._run, _no_document
+    try:
+        return read()
+    finally:
+        backbone._run = run
+
+
+# --- visual-communication -------------------------------------------------------------------
+
+vc_looks, vc_backbone = load("visual-communication", "looks", "backbone")
+
+VISUAL_COMMUNICATION_BASE = Caller(
+    name="visual-communication's reading of `pkit repository base --json`",
+    contract=documents.REPOSITORY_BASE,
+    read=vc_looks.fork_of,
+    untold=raises(vc_looks.pl.Refused),
+    nothing=lambda: _without_pkit(vc_backbone, lambda: vc_looks.base_commit(Path("."), None)),
+)
+
+
+def test_visual_communication_reads_where_the_branch_left_its_base_as_its_contract_says() -> None:
+    # A base that resolves to no commit gives no fork to vary: the look back refuses it.
+    for document in _repository_bases()[:2]:
+        check(VISUAL_COMMUNICATION_BASE, document)
