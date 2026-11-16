@@ -1,9 +1,0 @@
-component: project-management
-kind: none
-body: >
-  Record text only, drafted for the maintainer to accept (#3290): DEC-021,
-  DEC-020 and DEC-022 narrow the membership gate to the commands that mutate
-  external state, so a command that only reads and reports, such as
-  `validate-issue` in the post-check workflow, runs without it. No command
-  changes in this one: the build that drops the gate from the read-only
-  commands ships under a changeset of its own.
