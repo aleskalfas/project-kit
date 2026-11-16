@@ -491,8 +491,8 @@ UNSIGNED = [
 
 
 #: The labels of the checks of boxes (DEC-046 point 3). They ask the reviewer for attention
-#: on places of the reference pieces, such as a text a card insets beside its bar, whose
-#: centre lies half the bar's width from the card's, and fail nothing.
+#: on places of the reference pieces, such as a text whose insets at the top and the bottom
+#: of its card's box differ by 1.6 px, and fail nothing.
 BOX_LABELS = ("near-alignment", "box-overlap")
 
 #: The labels the tests of the reference pieces' checks read apart from the rest.

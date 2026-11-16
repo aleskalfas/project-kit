@@ -29,6 +29,10 @@ brand offers, and hardly chosen.
   on one line of an axis is not reported on another line of it, since that near miss follows
   from the line chosen, as an icon and a label centred in a row differ at their tops. One
   finding names every line of the axis on which the pair nearly lines up.
+- **A part another holds.** Where one of a pair holds the other, as a card's box holds its
+  head, the held part's insets on the two sides of each axis are compared, not their centres:
+  its left and right insets across, its top and bottom down. A part that lies on one edge of
+  the other within a pixel lines up on it, so is not reported on that axis.
 - **Gaps.** On each axis, each sibling's gap to the nearest sibling after it that stands
   beside it, sharing more than a pixel of its height across or of its width down. Gaps no
   more than a pixel apart are one spacing. One finding names two spacings of one group and
@@ -90,6 +94,12 @@ DOWN = "down"
 LINES = {
     ACROSS: ("left edges", "centres", "right edges"),
     DOWN: ("tops", "middles", "bottoms"),
+}
+
+#: The two sides of each axis on which a held part's insets lie, by name.
+SIDES = {
+    ACROSS: ("on the left", "on the right"),
+    DOWN: ("at the top", "at the bottom"),
 }
 
 
@@ -265,7 +275,11 @@ def _near(difference: float, step: Step) -> bool:
 
 def _near_lines(first: Box, second: Box, step: Step) -> Iterator[Finding]:
     """A finding for each axis on which `first` and `second` nearly line up: on no line of it
-    within a pixel of rounding, and on one or more of its lines within the step."""
+    within a pixel of rounding, and on one or more of its lines within the step. Where one
+    holds the other, their insets are compared instead (`_near_insets`)."""
+    if first.holds(second) or second.holds(first):
+        yield from _near_insets(first, second, step)
+        return
     for axis, names in LINES.items():
         apart = [abs(a - b) for a, b in zip(first.lines(axis), second.lines(axis), strict=True)]
         if any(difference <= ROUNDING for difference in apart):
@@ -279,6 +293,32 @@ def _near_lines(first: Box, second: Box, step: Step) -> Iterator[Finding]:
             ATTENTION,
             f"`{first.trace}` and `{second.trace}` nearly line up {axis}: {_and(said)}, more "
             f"than a pixel of rounding and less than {step.said()}",
+            where=first.trace,
+            fix=ALIGN_IT,
+            who=REVIEWER,
+        )
+
+
+def _near_insets(first: Box, second: Box, step: Step) -> Iterator[Finding]:
+    """A finding for each axis on which the part one of `first` and `second` holds has insets
+    that nearly agree: its insets from the other's edges on the axis's two sides differ by
+    more than a pixel of rounding and by less than the step. A part whose edge lies on the
+    other's edge, within a pixel, lines up on it, so is not reported on that axis."""
+    outer, inner = (first, second) if first.holds(second) else (second, first)
+    for axis, sides in SIDES.items():
+        insets = (inner.start(axis) - outer.start(axis), outer.end(axis) - inner.end(axis))
+        if min(insets) <= ROUNDING:
+            continue
+        difference = abs(insets[0] - insets[1])
+        if not _near(difference, step):
+            continue
+        said = [f"{_px(inset)} {side}" for side, inset in zip(sides, insets, strict=True)]
+        yield Finding(
+            NEAR_ALIGNMENT,
+            ATTENTION,
+            f"`{outer.trace}` holds `{inner.trace}` with insets {axis} that nearly agree: "
+            f"{_and(said)}, {_px(difference)} apart, more than a pixel of rounding and less "
+            f"than {step.said()}",
             where=first.trace,
             fix=ALIGN_IT,
             who=REVIEWER,

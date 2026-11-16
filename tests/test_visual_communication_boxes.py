@@ -3,8 +3,9 @@ boxes that overlap, among the siblings of each scene.
 
 - **Edges that nearly line up** (`near-alignment`): two siblings whose edges or centres on one
   axis differ by more than a pixel of rounding and by less than the brand's smallest step of
-  space, unless they line up on another line of that axis; and two spacings between the
-  siblings of a group that nearly agree.
+  space, unless they line up on another line of that axis; a part another holds whose insets
+  on the two sides of one axis differ by as much, unless it lies on an edge of that axis; and
+  two spacings between the siblings of a group that nearly agree.
 - **Boxes that overlap** (`box-overlap`): two siblings whose boxes overlap, where neither
   holds the other. A text drawn under its sibling is left out where the viewing step's report
   names each text a part covers (DEC-037 point 1).
@@ -147,18 +148,73 @@ def test_texts_a_little_off_one_left_edge_are_near() -> None:
     )
 
 
-def test_a_part_inset_a_little_in_the_box_that_holds_it_is_near() -> None:
-    """A box and the text it holds are siblings of one component: an inset of 2 px on one
-    side nearly lines the text up with the box's edge."""
-    card = group(
-        "figure/card",
-        element("figure/card/box", width=100, height=40),
-        element("figure/card/head", "text", x=2, y=10, width=90, height=20),
-        width=100,
-        height=40,
+def card(left: float, right: float, *, top: float = 10, bottom: float = 10) -> dict[str, Any]:
+    """A card whose box, 100 by 40 px, holds its head, a text set in from the box's edges by
+    `left` and `right` across and by `top` and `bottom` down: the two are siblings of one
+    component."""
+    head = element(
+        "figure/card/head",
+        "text",
+        x=left,
+        y=top,
+        width=100 - left - right,
+        height=40 - top - bottom,
     )
-    [message] = near(boxes.near_alignment(scene(card), STEP))
-    assert message.startswith("`figure/card/box` and `figure/card/head` nearly line up across: ")
+    box = element("figure/card/box", width=100, height=40)
+    return group("figure/card", box, head, width=100, height=40)
+
+
+def test_a_part_whose_insets_nearly_agree_in_the_box_that_holds_it_is_near() -> None:
+    [finding] = boxes.near_alignment(scene(card(6, 8)), STEP)
+    assert (finding.code, finding.level, finding.where, finding.who, finding.fix) == (
+        "near-alignment",
+        findings.ATTENTION,
+        "figure/card/box",
+        boxes.REVIEWER,
+        boxes.ALIGN_IT,
+    )
+    assert finding.message == (
+        "`figure/card/box` holds `figure/card/head` with insets across that nearly agree: 6 px "
+        "on the left and 8 px on the right, 2 px apart, more than a pixel of rounding and less "
+        "than the brand's smallest step of space, `space.1`, 4 px"
+    )
+
+
+def test_the_insets_of_a_held_part_are_compared_down_as_across() -> None:
+    [message] = near(boxes.near_alignment(scene(card(8, 8, top=9, bottom=12)), STEP))
+    assert message.startswith(
+        "`figure/card/box` holds `figure/card/head` with insets down that nearly agree: 9 px at "
+        "the top and 12 px at the bottom, 3 px apart, "
+    )
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "reported"),
+    [
+        (10, 13.9, True),
+        (10, 10.8, False),
+        (8, 4, False),
+        (2, 8, False),
+        (0, 3, False),
+        (0.5, 3.4, False),
+    ],
+    ids=[
+        "near",
+        "within-a-pixel",
+        "centres-near",
+        "an-edge-near",
+        "on-an-edge",
+        "on-an-edge-within-a-pixel",
+    ],
+)
+def test_a_held_part_is_near_only_where_its_insets_nearly_agree(
+    left: float, right: float, reported: bool
+) -> None:
+    """The held part's insets are compared, not its centre or its edges with the other's: a
+    head set in 8 px on the left and 4 px on the right has its centre 2 px from the box's,
+    and one set in 2 px on the left has its left edge 2 px from the box's, and neither is
+    near. A head on one of the box's edges lines up on it."""
+    assert bool(boxes.near_alignment(scene(card(left, right)), STEP)) is reported
 
 
 # --- gaps that nearly agree ---------------------------------------------------------------------
