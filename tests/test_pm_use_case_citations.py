@@ -486,6 +486,27 @@ def test_no_document_or_one_it_does_not_know_is_could_not_check_never_off(
     assert (severity, label) == ("warning", UNCHECKED)
 
 
+#: Why the point could not be checked where its document's `outcome` is not text.
+UNREADABLE_OUTCOME = "the backbone's document gives the point no outcome this reading can read"
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [pytest.param(["unfilled"], id="list"), pytest.param({"outcome": "unfilled"}, id="mapping")],
+)
+def test_an_outcome_this_reading_cannot_read_is_could_not_check(
+    uc: ModuleType, outcome: Any
+) -> None:
+    """An `outcome` that is not text is no outcome this reading can read (ADR-097
+    point 3): one notice that the citations were not checked, never a crash, and
+    never off for the `unfilled` it holds."""
+    reading = uc.read_point(_answering({**HAS_ENTRIES, "outcome": outcome}, code=1))
+    assert reading == uc.NotChecked(UNREADABLE_OUTCOME)
+    [(severity, label, detail)] = uc.findings(_body("UC-042"), "task", BODY_FORMAT, lambda: reading)
+    assert (severity, label) == ("warning", UNCHECKED)
+    assert UNREADABLE_OUTCOME in detail
+
+
 def _reader(uc: ModuleType, document: Mapping[str, Any]) -> Callable[[], Any]:
     return lambda: uc.reading_of(document)
 

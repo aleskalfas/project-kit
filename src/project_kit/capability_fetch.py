@@ -13,19 +13,27 @@ copying it and registering it are the caller's (`capabilities`, the CLI, sync).
   (ADR-090 point 2), so a source that asks a credential no helper of the
   person's answers fails at once. A URL that carries a credential is refused, so
   none is passed in an argument, recorded in a manifest or printed.
+- **Only the protocols a pin needs.** git reads the source over `https`,
+  `ssh`, `git` or a local path, and no other transport, whatever the person's
+  own `protocol.allow` setting turns on: the source is a manifest's, which
+  anyone who commits to the project can edit, and a transport such as `ext`
+  runs a command.
 - **A pin is a tag or a commit's full id.** A ref that names a branch is
   refused: a branch as a pin waits on #3229, which builds the transition that
-  moves a pin.
+  moves a pin. A pin that records the commit its install fetched takes that
+  commit only, so a tag moved at its source since is not followed (point 7).
 - **Exactly the commit's content.** The subtree's files are read from git's
   objects, never checked out, so no filter, line-ending conversion or export
   attribute of either repository changes a byte, and no hook runs. The
   subtree's `project/` tier is left out, since that tier is each project's own
-  (point 3).
+  (point 3), in whatever case its name is written: on a filesystem that ignores
+  case, `PROJECT/` is the same folder.
 
 Two failures, told apart for their callers (point 7): `FetchFailed`, a source
-that cannot be reached, a ref it does not hold or a credential it refuses, on
-which a command warns loudly and activates nothing; and `FetchRefused`, a pin or
-a subtree pkit does not take, which the command refuses.
+that cannot be reached, a ref it does not hold or no longer holds at the pin's
+commit, or a credential it refuses, on which a command warns loudly and
+activates nothing; and `FetchRefused`, a pin or a subtree pkit does not take,
+which the command refuses.
 """
 
 from __future__ import annotations
@@ -44,7 +52,7 @@ from project_kit.manifest import CapabilityPin
 
 # Where a capability is incubated in the repository that authors it (COR-031).
 SOURCE_SUBTREE = ".pkit/capabilities"
-# The capability's own tier, which no fetch takes (ADR-040 point 3).
+# The capability's own tier, which no fetch takes (ADR-040 point 3), in any case.
 _PROJECT_TIER = "project"
 # The issue that builds the version transition that moves an installed
 # capability's pin, with its fetch of a moved pin and a branch as a pin (ADR-040).
@@ -76,6 +84,11 @@ _GIT_LOCATORS = frozenset(
 )
 # git's switch for its terminal prompt (ADR-090 point 2).
 _TERMINAL_PROMPT = "GIT_TERMINAL_PROMPT"
+# git's list of the only transports it may use, which overrides every
+# `protocol.allow` setting, and the transports a pin needs: a local path is
+# git's `file`.
+_PROTOCOL_ALLOW_LIST = "GIT_ALLOW_PROTOCOL"
+_PIN_PROTOCOLS = "https:ssh:git:file"
 
 # The ref the fetched commit is kept under in the staging repository.
 _PINNED = "refs/pkit/pinned"
@@ -87,8 +100,9 @@ _CREDENTIAL_SHOWN = "<credential>"
 
 class FetchFailed(Exception):
     """The source could not be read at the pin: it cannot be reached, it holds no
-    such ref, or it refuses the credential (ADR-040 point 7). The caller warns
-    loudly and activates nothing."""
+    such ref, its ref now names another commit than the pin records, or it
+    refuses the credential (ADR-040 point 7). The caller warns loudly and
+    activates nothing."""
 
 
 class FetchRefused(Exception):
@@ -172,12 +186,14 @@ def fetch(pin: CapabilityPin, name: str, staging: Path) -> Fetched:
     source's tags and branches of that name are read (`git ls-remote`), which
     reaches the source with the person's credentials; a ref that names a tag is
     fetched as that tag, one that names a branch is refused, and one that is a
-    commit's full id is fetched as that commit; then the commit's
+    commit's full id is fetched as that commit; where the pin records a commit,
+    the commit fetched must be it; then the commit's
     `.pkit/capabilities/<name>/` is written under *staging*, its `project/` tier
     left out.
 
     Raises `FetchFailed` where the source cannot be reached, refuses the
-    credential, or holds no such tag or commit; `FetchRefused` for a pin pkit
+    credential, holds no such tag or commit, or its tag now names another commit
+    than the pin records; `FetchRefused` for a pin pkit
     does not take, a name that is no folder's, a ref that names a branch, a
     commit's abbreviated id, or a commit that holds no such capability, or holds
     in it a symbolic link or a submodule, which a capability's files never are.
@@ -210,6 +226,13 @@ def fetch(pin: CapabilityPin, name: str, staging: Path) -> Fetched:
     if resolved.returncode != 0:
         raise FetchRefused(f"{pin.ref} of {where} names no commit.")
     commit = resolved.stdout.decode().strip()
+    if pin.commit is not None and commit != pin.commit:
+        raise FetchFailed(
+            f"{pin.ref} of {where} now names commit {commit}, not {pin.commit}, the commit "
+            "the pin records: a pin takes only the commit its install fetched, so a tag "
+            "moved at its source is not followed. To take the new commit, uninstall the "
+            "capability and install it again"
+        )
     entries = _subtree_entries(staging, repo, commit, name, pin, where)
     dest = staging / "capabilities" / name
     _write_entries(staging, repo, entries, dest, pin, where)
@@ -254,7 +277,11 @@ def _subtree_entries(
     staging: Path, repo: Path, commit: str, name: str, pin: CapabilityPin, where: str
 ) -> list[tuple[str, str, PurePosixPath]]:
     """Each file of the commit's `.pkit/capabilities/<name>/` but its `project/` tier,
-    as (mode, object id, path relative to the subtree)."""
+    as (mode, object id, path relative to the subtree).
+
+    A first folder whose name folds to `project` in any case is that tier: on a
+    filesystem that ignores case it is the same folder, so a fetched
+    `PROJECT/manifest.yaml` would land on the project's own manifest."""
     prefix = PurePosixPath(SOURCE_SUBTREE) / name
     listed = _git_or_fail(
         staging,
@@ -270,7 +297,7 @@ def _subtree_entries(
         meta, _tab, raw_path = record.partition(b"\t")
         mode, _kind, oid = meta.decode().split(" ")
         rel = PurePosixPath(raw_path.decode("utf-8", errors="surrogateescape")).relative_to(prefix)
-        if rel.parts[0] == _PROJECT_TIER:
+        if rel.parts[0].casefold() == _PROJECT_TIER:
             continue
         if any(part in ("", ".", "..") for part in rel.parts):
             raise FetchRefused(f"{prefix}/{rel} of {where} at {pin.ref} is no path pkit writes.")
@@ -328,11 +355,14 @@ def _write_entries(
 
 
 def _environment() -> dict[str, str]:
-    """This process's environment for git, its locators removed and its terminal
-    prompt off, so the person's own credential helper, SSH key and URL rewrites
-    answer, and nothing waits at a terminal (ADR-040 point 2, ADR-090 point 2)."""
+    """This process's environment for git, its locators removed, its terminal
+    prompt off and its transports those a pin needs, so the person's own
+    credential helper, SSH key and URL rewrites answer, nothing waits at a
+    terminal (ADR-040 point 2, ADR-090 point 2), and no source a manifest names
+    reaches a transport that runs a command."""
     environment = {key: value for key, value in os.environ.items() if key not in _GIT_LOCATORS}
     environment[_TERMINAL_PROMPT] = "0"
+    environment[_PROTOCOL_ALLOW_LIST] = _PIN_PROTOCOLS
     return environment
 
 
