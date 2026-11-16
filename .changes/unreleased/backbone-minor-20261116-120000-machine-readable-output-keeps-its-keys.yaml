@@ -22,5 +22,5 @@ body: >
   `verdict` and `cleared`, `agents run`'s `ending` and the friction change
   check's answer `status`. Each capability marks its own sets so, and
   states the contract of each document its commands print, in its README or
-  in a page the command's entry there links to. Nothing a command prints
-  changes.
+  in a page of its own that the command's entry there links to for that
+  document. Nothing a command prints changes.
