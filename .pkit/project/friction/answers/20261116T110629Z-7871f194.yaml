@@ -78,9 +78,9 @@ answers:
       - 20261116T071805Z-ffb1106a.yaml
       - 20261116T072934Z-f7ff88d6.yaml
     revalidated:
-      at: 2026-11-16T11:06:29Z
+      at: 2026-11-16T14:40:00Z
       outcome: unchanged
-      unchanged-because: The change adds to project-management's show-issue and show-pr entry a link to the contract of their --json document; that show-issue is the one clean read the project-manager is routed to, in place of a piped gh issue view, is as before.
+      unchanged-because: "Judged with the two re-checks made apart, against all three changes. The CLI reference's sync section now also keeps an externally-sourced capability's copy where its tag names another commit than the pin records, and the reference marks each set of values that named no reading in the sections this page relies on, changing no key, value or meaning. This change adds to project-management's show-issue and show-pr entry a link to the contract of their --json document. What the page takes from them stands: sync creates the agent workspace and overwrites the backbone catalog, scaffold refuses a capability received as synced copies, agents run reads its rules at the commit the run is pinned to and agents rules shows them, and show-issue is the one clean read the project-manager is routed to, in place of a piped gh issue view."
   - artefact: .pkit/capabilities/living-docs/README.md
     read:
       - 20261026T012010Z-c6210192.yaml
@@ -162,9 +162,9 @@ answers:
       - 20261116T071805Z-ffb1106a.yaml
       - 20261116T072934Z-f7ff88d6.yaml
     revalidated:
-      at: 2026-11-16T11:06:43Z
+      at: 2026-11-16T14:40:01Z
       outcome: unchanged
-      unchanged-because: The change adds a sentence to project-management's list-fixers entry, in its section on granting the fixers, that points to the contract of the --json document; how a project is asked about a fixer, and how it grants or revokes one, is as before.
+      unchanged-because: "Judged with the two re-checks made apart, against all three changes. The CLI reference's \"From another repository\" now records the commit a ref named, limits the fetch's transports and leaves out a project folder in any case, and its sync section keeps an externally-sourced copy whose tag names another commit than the pin records. The page takes from them only that install copies living-docs in, deploys its skill and agent and provisions its query commands, and that sync deploys the skill, which stand. The reference also marks each set that named no reading in the sections the page relies on, such as repository base's resolved keys and the friction documents' answers and states, changing no key, value or meaning. The page reads head from repository base, which carries no mark, and already says its command never takes a page in a state it does not know for current. This change adds a sentence to project-management's list-fixers entry, in its section on granting the fixers, that points to the contract of the --json document; how a project is asked about a fixer, and how it grants or revokes one, is as before."
   - artefact: docs/capabilities/living-docs/050-fix-a-stale-page.md
     read:
       - 20261101T152616Z-c96602dc.yaml
@@ -300,9 +300,9 @@ answers:
       - 20261115T103656Z-b7cfd657.yaml
       - 20261115T180458Z-4e13664f.yaml
     revalidated:
-      at: 2026-11-16T11:06:53Z
+      at: 2026-11-16T14:40:02Z
       outcome: unchanged
-      unchanged-because: The change adds to doc-examples' README a section stating the contract of the pages document; how the console fences are run, the pages named, and what the run's exit codes mean, is as before.
+      unchanged-because: "Judged with the two re-checks made apart, against all three changes. The upgrade flow's guard section gained only that capabilities install --from calls the guard too, and when and how the guard stops is as it was, so sync still stops under a pkit at another version, as the page says. Project rule 5, on design loops, was added, while rule 2, which the page cites on running tests, keeps its number and text. tests/README.md gained a paragraph on the suite's own gh and on service_answers, beside the fixture the page sends test authors to, which leaves what the page says of that fixture and of running the suite as it was. This change adds to doc-examples' README a section stating the contract of the pages document, which the page does not describe; how the console fences are run, the pages named, and what the run's exit codes mean, is as before."
   - artefact: .pkit/capabilities/project-management/README.md
     read:
       - 20261026T013726Z-d41bac9b.yaml
