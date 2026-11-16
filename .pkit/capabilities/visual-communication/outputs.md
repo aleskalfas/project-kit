@@ -169,6 +169,7 @@ pkit:
         - visual-communication:DEC-042#9
         - visual-communication:DEC-042#10
         - visual-communication:DEC-030#2
+        - ADR-097
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
         - .pkit/capabilities/visual-communication/components.md#options
@@ -192,6 +193,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-browser
         - .pkit/capabilities/visual-communication/files.md#the-bar-and-the-bounds
         - .pkit/cli/README.md#validate
+        - .pkit/cli/README.md#machine-readable-output
       source:
         - html-page-print-runs
 ---
@@ -978,6 +980,23 @@ A refused run leaves its renderer's folder as it was. The fonts it held in a tem
 
 A version not yet released under a final or a published piece's lock refuses no run: the lock holds, and the piece draws.
 
+### What `pkit visual pages` prints
+
+`pkit visual pages <piece> --json` lists what a look can draw, as one JSON document. It keeps to the rule the CLI reference states for a document a command prints for a program ([Machine-readable output](../../cli/README.md#machine-readable-output)): a key, or a value of a set, may be added, one goes only as a breaking change of the capability, and none comes to mean anything else. The document carries no version. Where the command refuses, it prints none and exits 1.
+
+- **`piece`:** the piece's name, as given.
+- **`languages`:** the piece's languages, its source language first.
+- **`keys`:** the key of each of its combinations ([Keys of combinations](files.md#keys-of-combinations)).
+- **`drawn-by-default`:** what a look draws where no flag picks: `language`, the source language, and `key`, the first key in key order.
+- **`pages`:** for each language, by its name, the trace id of each page at the key drawn by default, in page order, so a page's number is its place from 1.
+- **`renderer`:** the renderer a look reads the piece through by default: `html` where the piece declares `html`, and `svg` otherwise ([named no reading](../../cli/README.md#machine-readable-output)).
+- **`tools.svg`:** the SVG renderer's tool, with its `name`, `resvg`, its `version`, and `wheel`, the version of the resvg-py wheel that holds it.
+- **`tools.html`:** the browser a look through the HTML renderer would start, which the command finds and never starts ([The browser](files.md#the-browser)):
+  - `program`: its path, or `null` where it finds none, so a look through the HTML renderer stops.
+  - `named`: whether the configuration names it.
+  - `looked`: each place it looked where it found none, and empty where it found one.
+  - `forced-palettes`: the palettes a look draws with `--forced-colours`, `light` and `dark` ([named no reading](../../cli/README.md#machine-readable-output); [Under forced colours](#under-forced-colours)).
+
 ### A pipeline's drawings
 
 A project's build pipeline may draw each piece's HTML pages on every change it checks, such as a pull request (DEC-024 point 5). An agent whose session cannot run the browser then reads those. Whether the pipeline does so is the project's choice. No setting of the capability's says so, and the capability ships no pipeline file.
@@ -1050,3 +1069,31 @@ Once whoever maintains the capability accepts a calibration's report, a refineme
 - **`model`:** the full name of the model the calibration's review ran on, with its effort where the harness has one.
 - **Each digest** is a SHA-256 of what it names, written `sha256:<hex>`, as [`calibration.schema.json`](schemas/calibration.schema.json) sets out.
 - **The reading** holds the same values as they stand now, in the data's shape: for the rules the bar covers, and the model the round's report names.
+
+### The verdict's document
+
+`pkit visual verdict <piece> --json` prints what the command answers as one JSON document. It keeps to the rule the CLI reference states for a document a command prints for a program ([Machine-readable output](../../cli/README.md#machine-readable-output)): a key, or a value of a set, may be added, one goes only as a breaking change of the capability, and none comes to mean anything else. The document carries no version. Where the command refuses, it prints none and exits 1.
+
+- **`piece`:** the piece's name, as given.
+- **`round`:** the number of the round whose report it read.
+- **`report`:** the path of the report's document it read, `round-<n>.yaml`, from the project's root ([Where the review's reports are kept](#where-the-reviews-reports-are-kept)).
+- **`bar`:** the bar as the configuration holds it, carried as it is written there, so its keys are the configuration's ([The bar and the bounds](files.md#the-bar-and-the-bounds)). `null` where the configuration holds no bar.
+- **`rules`:** each rule the bar covers, by its id, and empty where there is no bar.
+- **`verdict`:** `null` where no verdict is given. Otherwise:
+  - `meets`: whether the piece meets the bar.
+  - `pages`: each page the report names, in the order it first names it, with `page`, its id, `meets`, whether it meets the bar, and `failing`, each unmarked grade of it that fails the bar.
+  - `piece`: the piece as a whole, with `meets`, whether each unmarked grade it takes as a whole reaches the bar, and `failing`, each such grade that does not.
+  - `marked`: each marked grade, left out of the verdict.
+- **A grade,** in each of those lists:
+  - `rule`: the rule's id.
+  - `on`: where the grade lies, `page` with the page's id, or `piece`, `true`, for the piece as a whole.
+  - `grade`: `below competent`, `competent`, `professional` or `excellent` ([named no reading](../../cli/README.md#machine-readable-output)).
+  - `evidence`: the reviewer's evidence for it, in its words.
+  - `mark`: on a marked grade alone, `need` or `asker` ([named no reading](../../cli/README.md#machine-readable-output)). A grade without it is unmarked.
+- **`ends-the-loop`:** whether the verdict ends the designer's loop ([When it ends the loop](#when-it-ends-the-loop)).
+- **`why`:** each reason, in words, that no verdict is given or that the verdict ends no loop. Empty where it ends the loop.
+- **`reading`:** `null` where no verdict is given. Otherwise the reading the hold was compared on, in the shape of the accepted calibration's data ([The accepted calibration's data](#the-accepted-calibrations-data)):
+  - `rules`: each rule the bar covers, by its id, with `major`, the major of its set, and `text`, the digest of its text.
+  - `reviewer`: the digest of the reviewer's definition, or `null` where the capability ships none.
+  - `design-knowledge`: the digest of the design knowledge.
+  - `model`: the model the round's report names, with its `name`, and its `effort` only where the report names one.
