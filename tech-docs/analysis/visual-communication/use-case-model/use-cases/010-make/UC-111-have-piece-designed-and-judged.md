@@ -72,7 +72,7 @@ pkit:
 - **5b.** The project set a bar, and a calibration of the review is accepted that reaches it. The AI agent mends the piece alone, round after round, and the system renders and reviews it each round, until the review's grades meet the bar. The AI agent then polishes the piece within a bound, and hands the developer the last round that met the bar, with each grade that still blocks it and each question open. It changes every word that is not the developer's own, and asks the developer only where a fix would change the developer's words. The path ends there.
 
 > [!WARNING]
-> **Not built yet:** the system runs no command that gives the verdict, and the designer's loop does not end at a bar. [DEC-042 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-042-grades-bar-and-loop.md#6-the-loop-runs-to-the-bar-into-polish-within-a-bound) decides that it does, and #3148 tracks it.
+> **Not built yet:** the designer's loop does not end at a bar. [DEC-042 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-042-grades-bar-and-loop.md#6-the-loop-runs-to-the-bar-into-polish-within-a-bound) decides that it does, and #3148 tracks it.
 
 **Postconditions:** The piece is drawn, and each break of a rule the reviewer found is mended or left to the developer with its finding. Where variant 5b ran, the piece meets the bar the project set, or the developer holds the last round that met it with what blocks it.
 

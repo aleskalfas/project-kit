@@ -30,6 +30,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/intent.py
         - .pkit/capabilities/visual-communication/scripts/new.py
         - .pkit/capabilities/visual-communication/scripts/prune.py
+        - .pkit/capabilities/visual-communication/scripts/verdict.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
         - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
         - .pkit/capabilities/visual-communication/scripts/_lib/stamping.py
@@ -54,6 +55,7 @@ pkit:
         - .pkit/capabilities/visual-communication/releases/starter/releases.yaml
         - .pkit/capabilities/visual-communication/design-knowledge/README.md
         - .pkit/capabilities/visual-communication/schemas/review.schema.json
+        - .pkit/capabilities/visual-communication/schemas/calibration.schema.json
       record:
         - visual-communication:DEC-001#1
         - visual-communication:DEC-001#3
@@ -89,6 +91,7 @@ pkit:
         - visual-communication:DEC-042#4
         - visual-communication:DEC-042#6
         - visual-communication:DEC-042#9
+        - visual-communication:DEC-042#10
         - COR-017
         - COR-070#1
         - COR-073#3
@@ -161,6 +164,10 @@ pkit:
         - .pkit/capabilities/visual-communication/outputs.md#under-forced-colours
         - .pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings
         - .pkit/capabilities/visual-communication/outputs.md#where-the-reviews-reports-are-kept
+        - .pkit/capabilities/visual-communication/outputs.md#the-verdict
+        - .pkit/capabilities/visual-communication/outputs.md#when-no-verdict-is-given
+        - .pkit/capabilities/visual-communication/outputs.md#when-it-ends-the-loop
+        - .pkit/capabilities/visual-communication/outputs.md#the-accepted-calibrations-data
         - .pkit/rules/README.md#a-capabilitys-rules
         - .pkit/capabilities/visual-communication/checks.md#
         - .pkit/capabilities/visual-communication/checks.md#contents
@@ -186,7 +193,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 ## What this capability ships
 
 - **The commands** `pkit visual …`, also reachable as `pkit visual-communication …`. Each is described under [Commands](#commands).
-- **The file formats,** format 1: a schema for each kind of file a piece, a library or a command writes, under `schemas/`. Each file names its schema in its first lines ([The binding](files.md#the-binding)), so `pkit validate` checks its shape. Another gives the form of the reviewer's document, whose kept copies `pkit validate` does not check ([The binding](files.md#the-binding)).
+- **The file formats,** format 1: a schema for each kind of file a piece, a library or a command writes, under `schemas/`. Each file names its schema in its first lines ([The binding](files.md#the-binding)), so `pkit validate` checks its shape. Another gives the form of the reviewer's document, whose kept copies `pkit validate` does not check ([The binding](files.md#the-binding)). Another gives the form of the accepted calibration's data, which the capability ships once a calibration's report is accepted ([The accepted calibration's data](outputs.md#the-accepted-calibrations-data)).
 - **The foundations library:** a few shared roles, the shared axes, six colour families, and three top components: `figure`, for a figure, `deck`, for a presentation, and `site`, for a web page or a portal ([The foundations](files.md#the-foundations)). Its version being built adds an order's roles, the two ends a brand gives an order's colour steps and the text on them, apart from the families. Its versions 1.0.0 and 1.1.0 are released, each under `releases/foundations/<version>/`, and its version being built stays under `libraries/foundations/` ([The libraries the capability ships](files.md#the-libraries-the-capability-ships)). Release 1.1.0 is the first to hold `site`, and `pkit visual add foundations` takes it.
 - **The starter library:** patterns, such as `layers` and `network`, and blocks, such as `card` and `code`, each experimental. Its README lists each pattern by the question it answers, then each block ([The patterns, by the question they answer](libraries/starter/README.md#the-patterns-by-the-question-they-answer), [The blocks](libraries/starter/README.md#the-blocks)). `pkit visual add starter` brings it in. Its version 1.0.0 is released, under `releases/starter/1.0.0/`, and needs release 0.3.0. Its version being built stays under `libraries/starter/`. It adds the web parts, such as `header` and `form`, which draw a site's pages at every size ([The web parts, by their job on a page](libraries/starter/README.md#the-web-parts-by-their-job-on-a-page)). It draws each concept's sign beside its colour, and adds the pattern `legend`, which says what each colour and sign stands for ([Signs](libraries/starter/README.md#signs)). Its `layers` shades each level by its place, a step of an order, drawn by the block `level`, under foundations that declare an order's ends, as their version being built does ([An order's steps](libraries/starter/README.md#an-orders-steps), [Values, states and colour](components.md#values-states-and-colour)). So `pkit visual add starter --being-built` takes them. They need the foundations' release 1.1.0, which `pkit visual add foundations` takes.
 - **The neutral brand:** a brand to start from, with a value for every shared role and the fonts it draws in ([The neutral brand](files.md#the-neutral-brand)). It gives no logo. Its version being built gives a desktop's, a tablet's, a phone's and a projector's sizes, and an order's two ends, in greys. `pkit visual add neutral` brings it in. Its version 1.0.0 is released, under `releases/neutral/1.0.0/`, and its version being built stays under `libraries/neutral/`.
@@ -431,6 +438,17 @@ Gives the digest of a draft's text, and says whether a text still matches the di
 - **Refuses** a piece, its brief, a page, a field or a takeaway it cannot read.
 - **Exits** 0 when it printed the entry, or `--check` found a match; 1 when it refused ([Commands](#commands)); 2 on a usage error; 3 when `--check` found the text the asker's.
 
+### `pkit visual verdict <piece>`
+
+Gives the verdict against the project's bar from a round's review report, and says whether it ends the designer's loop ([The verdict](outputs.md#the-verdict)).
+
+- **Reads** the document the round's report opens with, as it is kept alone in the clone's local folder, the highest round kept unless `--round <n>` names one. It reads the bar from the capability's configuration alone.
+- **Prints** whether the piece meets the bar, each page with whether it meets it, each grade that fails it, each marked grade it leaves out, and the rules the bar covers. Then whether the verdict ends the loop, and each reason it does not ([When it ends the loop](outputs.md#when-it-ends-the-loop)). `--json` prints it as one document.
+- **Gives no verdict** where the configuration holds no bar, or the report leaves out a rule the bar covers, and says why ([When no verdict is given](outputs.md#when-no-verdict-is-given)).
+- **Ends the loop** only once whoever maintains the capability has accepted a calibration's report, on a bar that covers only rules with evidence of their own in it, and while nothing that could move the grades has changed since. Until then the verdict informs ([visual-communication:DEC-042-grades-bar-and-loop] points 9 and 10).
+- **Writes** nothing, and needs no network. [`pkit sync`](../../cli/README.md#sync) provisions it, as it does every query command.
+- **Exits** 0 when it answered, whatever the verdict; 1 when it refused ([When no verdict is given](outputs.md#when-no-verdict-is-given)); 2 on a usage error.
+
 ### `pkit visual before-after <piece>`
 
 Draws each of a piece's pages under two locks, and prints each page that differs. You ask for one of two looks.
@@ -559,7 +577,7 @@ Beside its findings, the reviewer grades each rule it reads, in one of four word
 - **Its report** opens with a document of a fixed form, held by the schema [`review.schema.json`](schemas/review.schema.json). It holds the grades and their marks, what the reviewer read before grading, and the full name of the model it ran on, with its effort where the harness has one ([visual-communication:DEC-042-grades-bar-and-loop] points 1 and 9).
 - **Kept whole, and its document alone.** The loop keeps each round's report as the reviewer wrote it, in the clone's local folder: the whole report, which a later round's review reads and which goes to you with the round the loop hands you, and beside it the document alone ([visual-communication:DEC-042-grades-bar-and-loop] points 4 and 6; [The clone's local folder](files.md#the-clones-local-folder); [Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept)).
 
-The reviewer grades by no bar ([visual-communication:DEC-042-grades-bar-and-loop] point 3).
+The reviewer grades by no bar ([visual-communication:DEC-042-grades-bar-and-loop] point 3). Whoever reads its report gives the verdict against the project's bar from its document, with [`pkit visual verdict`](#pkit-visual-verdict-piece).
 
 It needs a harness that reads images. Where the harness reads none, it stops and says so, and reports nothing as looked at.
 
@@ -571,4 +589,4 @@ use the same form.
 
 ## Dependencies
 
-No other capability. The commands run their scripts through `uv`, with the Python packages each script pins; `pkit sync` installs those of the check, so `pkit validate` runs it offline. It installs those of `pkit visual pages` too, which pins every package `pkit visual look` does, so that command draws with no network. The HTML renderer's pages need a browser of the Chromium family besides, which the capability does not install ([The HTML renderer's pages](outputs.md#the-html-renderers-pages)).
+No other capability. The commands run their scripts through `uv`, with the Python packages each script pins; `pkit sync` installs those of the check, so `pkit validate` runs it offline. It installs those of `pkit visual pages` too, which pins every package `pkit visual look` does, so that command draws with no network, and those of `pkit visual verdict`. The HTML renderer's pages need a browser of the Chromium family besides, which the capability does not install ([The HTML renderer's pages](outputs.md#the-html-renderers-pages)).

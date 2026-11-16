@@ -68,6 +68,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/roles.schema.json
         - .pkit/capabilities/visual-communication/schemas/notation.schema.json
         - .pkit/capabilities/visual-communication/schemas/review.schema.json
+        - .pkit/capabilities/visual-communication/schemas/calibration.schema.json
         - .pkit/capabilities/visual-communication/libraries/foundations/library.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
@@ -197,6 +198,7 @@ pkit:
         - visual-communication:DEC-042#3
         - visual-communication:DEC-042#6
         - visual-communication:DEC-042#7
+        - visual-communication:DEC-042#9
         - ADR-057#2
       artefact:
         - .pkit/cli/README.md#validate
@@ -395,9 +397,9 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 ```
 
-The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `brief`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports`, `code` and `review`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
+The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `brief`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports`, `code`, `review` and `calibration`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
 
-No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks the shape of each bound file it reads against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). The documents of the reviewer's kept reports name `visual-communication:review`, yet `pkit validate` checks none of them. They lie in the clone's local folder, which git ignores ([The clone's local folder](#the-clones-local-folder)), and the core's data validation reads only the files git sees (ADR-057 point 2). Nor does the check read them. Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
+No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks the shape of each bound file it reads against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). The documents of the reviewer's kept reports name `visual-communication:review`, yet `pkit validate` checks none of them. They lie in the clone's local folder, which git ignores ([The clone's local folder](#the-clones-local-folder)), and the core's data validation reads only the files git sees (ADR-057 point 2). Nor does the check read them. The accepted calibration's data, `calibration.yaml` in the capability's own folder, names `visual-communication:calibration`. The capability ships it once whoever maintains the capability accepts a calibration's report, and no command writes it ([The accepted calibration's data](outputs.md#the-accepted-calibrations-data) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
 
 ### How the files are read
 
