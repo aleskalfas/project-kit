@@ -1,0 +1,15 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit visual check` and `pkit visual render` measure the boxes of each scene's siblings,
+  the parts one group holds directly, in the scene's px (DEC-046 point 3; #3326). Two new
+  findings ask the reviewer, `graphic-design-reviewer`, for attention at `piece.yaml`, and
+  never fail. `near-alignment` names two siblings whose edges or centres on one axis differ
+  by more than a pixel of rounding and by less than the brand's smallest step of space at
+  the scene's key, unless they line up on another line of that axis, and two spacings of one
+  group that nearly agree. `box-overlap` names two siblings whose boxes overlap where neither
+  holds the other. Both leave lines out, and groups that draw only lines, such as a tie's. A
+  text the viewing step's report drops as covered, through a browser, is not reported again.
+  A piece's findings record takes the new findings at its next render.

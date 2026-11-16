@@ -490,6 +490,20 @@ UNSIGNED = [
 ]
 
 
+#: The labels of the checks of boxes (DEC-046 point 3). They ask the reviewer for attention
+#: on places of the reference pieces, such as a text a card insets beside its bar, whose
+#: centre lies half the bar's width from the card's, and fail nothing.
+BOX_LABELS = ("near-alignment", "box-overlap")
+
+#: The labels the tests of the reference pieces' checks read apart from the rest.
+APART = ("component-experimental", *SIGN_LABELS, *BOX_LABELS)
+
+
+def box_levels(judged: Iterable[tuple[Any, str]]) -> set[str]:
+    """The levels of the calls of the checks of boxes among a check's findings, `judged`."""
+    return {level for finding, level in judged if finding.code in BOX_LABELS}
+
+
 def on_signs(judged: Iterable[tuple[Any, str]]) -> list[tuple[str, str, str, str, str]]:
     """The calls for attention on concepts' signs among a check's findings, `judged`, as
     `UNSIGNED` gives each."""
@@ -506,17 +520,18 @@ def test_every_reference_piece_passes_the_check_under_the_test_brand(location: P
     """The test brand's newest version, the one the check of a version alone reads (DEC-019),
     states, once, that it gives `picture.logo` no value, and no piece states it (DEC-025
     point 9): a header draws with no logo. Beside it, the pieces ask for attention on the
-    concepts that map no sign."""
+    concepts that map no sign, and on the places the checks of boxes name."""
     report = checks.check(location)
     found = [
         (level, finding.code, finding.file, finding.where)
         for finding, level in report.judged
-        if finding.code != "component-experimental" and finding.code not in SIGN_LABELS
+        if finding.code not in APART
     ]
     assert found == [
         ("fact", "picture-role-unvalued", "visual/libraries/test-brand/1.1.0/", "picture.logo")
     ]
     assert on_signs(report.judged) == UNSIGNED
+    assert box_levels(report.judged) <= {"attention"}
     assert not report.failed()
     assert report.summary == [
         f"{len(COMPONENTS)} piece(s) in `visual`: the scenes of 0 read from their findings "
