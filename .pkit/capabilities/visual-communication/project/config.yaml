@@ -8,5 +8,5 @@ location: visual
 # once a calibration the capability's maintainer accepted lets the verdict end a loop
 # (DEC-042 points 9 and 10). A change to it needs the maintainer's own yes.
 bar:
-  covers: [COMM@1, GRAPHIC@1]
+  covers: [COMM@1, GRAPHIC@2]
   at-least: professional
