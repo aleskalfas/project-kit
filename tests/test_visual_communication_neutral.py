@@ -376,18 +376,20 @@ def texts(element: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
 def test_every_reference_render_passes_the_check_under_it(location: Path) -> None:
     """The brand's version states, once, that it gives `picture.logo` no value, and no
     piece states it (DEC-025 point 9). Beside it, the pieces ask for attention on the
-    concepts that map no sign, as under the test brand."""
+    concepts that map no sign, and on the places the checks of boxes name, as under the test
+    brand."""
     report = checks.check(location)
     found = [
         (level, finding.code, finding.file, finding.where)
         for finding, level in report.judged
-        if finding.code != "component-experimental" and finding.code not in starter.SIGN_LABELS
+        if finding.code not in starter.APART
     ]
     built = taken("neutral", being_built=True).version
     assert found == [
         ("fact", "picture-role-unvalued", f"visual/libraries/neutral/{built}/", "picture.logo")
     ]
     assert starter.on_signs(report.judged) == starter.UNSIGNED
+    assert starter.box_levels(report.judged) <= {"attention"}
     assert not report.failed()
 
 

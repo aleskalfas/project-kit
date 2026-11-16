@@ -687,7 +687,8 @@ def test_a_site_of_every_part_draws_under_both_brands_from_one_set_of_content_fi
     """The site places every web part, in its header, its main parts and its footer. Each
     brand draws it at each of its sizes with no finding, from the same content files, and it
     passes the check with no finding but the brand's fact that it gives no logo, beside the
-    reference pieces' calls for attention on their concepts' signs."""
+    reference pieces' calls for attention on their concepts' signs and on the places the
+    checks of boxes name, none of them in the site."""
     placed = {
         str(element.get("component", "")).removeprefix("starter/")
         for (name, _, _), scene in scenes.items()
@@ -702,8 +703,11 @@ def test_a_site_of_every_part_draws_under_both_brands_from_one_set_of_content_fi
     found = [
         (finding.code, finding.file)
         for finding, level in report.judged
-        if finding.code != "component-experimental" and finding.code not in starter.SIGN_LABELS
+        if finding.code not in starter.APART
     ]
     assert [code for code, _ in found] == ["picture-role-unvalued"]
     assert starter.on_signs(report.judged) == starter.UNSIGNED
+    assert starter.box_levels(report.judged) <= {"attention"}
+    boxed = {finding.file for finding, _ in report.judged if finding.code in starter.BOX_LABELS}
+    assert "visual/pieces/site/piece.yaml" not in boxed
     assert not report.failed()

@@ -95,8 +95,10 @@ class BoardTracker(Tracker):
     option name)`.
     `fail_reads` names the board reads that fail (`fields`, `items`, `card`),
     `fail_edits` the issues whose Status write fails, and `fail_adds` those whose
-    card cannot be added. `repository` is this repository's `owner/name`, and
-    `owner` the board's owner, the repository's unless a test sets another.
+    card cannot be added. `automation` is the Status the board's own automation
+    sets on a card when it is added, None for none. `repository` is this
+    repository's `owner/name`, and `owner` the board's owner, the repository's
+    unless a test sets another.
 
     The board answers the seam's GraphQL reads through `graph`
     (`tests/pm_board_graphql.py`), reading the cards held here: an issue's own
@@ -124,6 +126,7 @@ class BoardTracker(Tracker):
         self.fail_reads: set[str] = set()
         self.fail_edits: set[int] = set()
         self.fail_adds: set[int] = set()
+        self.automation: str | None = None
         self.graph = _TrackerBoard(self)
 
     # --- what a test sets up ------------------------------------------------
@@ -184,7 +187,7 @@ class BoardTracker(Tracker):
             if number in self.fail_adds:
                 return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
             self.adds.append(number)
-            self.card(number)
+            self.card(number, self.automation)
             return _done(argv, stdout=json.dumps({"id": self.cards[number]["id"]}))
         raise AssertionError(f"unexpected gh project call: {argv}")
 
@@ -228,6 +231,7 @@ class BoardTracker(Tracker):
         return {
             "id": card["id"],
             "type": "ISSUE",
+            "isArchived": card["archived"],
             "content": {
                 "__typename": "Issue",
                 "id": f"I_{number}",
@@ -271,13 +275,25 @@ def foreign_card(item_id: str, kind: str, number: int | None, repository: str = 
     if kind == "Issue":
         content.update(state="OPEN", body="", repository={"nameWithOwner": repository})
     kinds = {"Issue": "ISSUE", "PullRequest": "PULL_REQUEST", "DraftIssue": "DRAFT_ISSUE"}
-    return {"id": item_id, "type": kinds[kind], "content": content, "fieldValueByName": None}
+    return {
+        "id": item_id,
+        "type": kinds[kind],
+        "isArchived": False,
+        "content": content,
+        "fieldValueByName": None,
+    }
 
 
 def withheld_card(item_id: str) -> dict:
     """A card whose issue lies in a repository the credential may not read: the
     board returns it with nothing of its issue (ADR-096 point 2)."""
-    return {"id": item_id, "type": "REDACTED", "content": None, "fieldValueByName": None}
+    return {
+        "id": item_id,
+        "type": "REDACTED",
+        "isArchived": False,
+        "content": None,
+        "fieldValueByName": None,
+    }
 
 
 class _TrackerBoard(GraphBoard):
@@ -346,6 +362,20 @@ class _TrackerBoard(GraphBoard):
             if archived or not tracker.cards[number]["archived"]
         ]
         return [tracker._card_node(n) for n in walked] + tracker.foreign_cards
+
+    def card_by_id(self, item_id: str, value_field: str | None) -> dict[str, Any] | None:
+        tracker = self.tracker
+        number = next((n for n, card in tracker.cards.items() if card["id"] == item_id), None)
+        if number is None:
+            return None
+        card: dict[str, Any] = {
+            "id": item_id,
+            "isArchived": tracker.cards[number]["archived"],
+            "project": {"id": PROJECT_ID},
+        }
+        if value_field is not None:
+            card["fieldValueByName"] = tracker._value(number)
+        return card
 
 
 def _number(issue_id: str) -> int | None:

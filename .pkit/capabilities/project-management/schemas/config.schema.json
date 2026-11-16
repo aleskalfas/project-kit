@@ -302,6 +302,17 @@
         }
       }
     },
+    "sync_board": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The board sync's settings (DEC-072). Absent means every setting off.",
+      "properties": {
+        "adds_with_no_terminal": {
+          "type": "boolean",
+          "description": "The switch that lets a run of `pkit pm sync-board` with no terminal add the missing cards where the board holds the state (DEC-072 point 3). Off by default, and off unless it is `true`. Turning it on consents to the board's own automation setting a Status on each card such a run adds, which every command then reads as the issue's position, named only in that run's output, for every session that runs the sync in the project. It counts from the working tree the run starts from and from the shared remote's copy of the default branch together, never a local branch, so it is off in a project with no remote. Only a change the person authorises turns it on: each command of this capability that merges into the default branch holds such a change until the person authorises that merge themselves, at a terminal."
+        }
+      }
+    },
     "mesh_peers": {
       "type": "array",
       "items": {
