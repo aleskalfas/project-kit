@@ -3,7 +3,7 @@ kind: patch
 custom:
   category: Fixed
 body: >
-  pm reads the backbone's documents by their keys, as ADR-097 point 3 says:
+  Project-management reads the backbone's documents by their keys, as ADR-097 point 3 says:
   the default branch and base, what a change altered under a rule, whether a
   record holds a cited id, the documentation-check and fixers points, the
   declared types, the whole-repository check, discovery, an explanation and
