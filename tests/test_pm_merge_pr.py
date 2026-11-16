@@ -407,6 +407,9 @@ def _wire_merge_seams(
         )(),
     )
     monkeypatch.setattr(mp.session_guard, "enforce", lambda **kw: True)
+    # The hold on a change that turns on the sync's switch reads the host; this
+    # wiring's change turns nothing on (its hold: `tests/test_pm_sync_switch.py`).
+    monkeypatch.setattr(mp, "_switch_hold", lambda *a, **kw: mp.sync_switch.NOT_HELD)
     # This file targets merge-pr's CI / checkbox gates, not the #747 prerequisite gate (covered in
     # test_pm_bootstrap_gate*.py); the fake capability root above has no tree
     # to stamp, so neutralise the gate here.
@@ -844,6 +847,39 @@ def test_yes_off_a_terminal_merges(mp, monkeypatch):
     monkeypatch.setattr(sys.stdin, "isatty", lambda: False, raising=False)
     assert _run_merge_main(mp, monkeypatch, ["99", "--yes"]) == 0
     assert calls["merged"] is True
+
+
+@pytest.mark.parametrize("terminal", [False, True], ids=["off-a-terminal", "at-a-terminal"])
+def test_yes_does_not_merge_a_change_that_turns_on_the_syncs_switch(
+    mp, monkeypatch, capsys, terminal
+):
+    """An authorisation given up front does not cover a change that turns on the
+    sync's switch: the merge waits for the person, who is told what turning it on
+    means (DEC-072 point 3)."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    monkeypatch.setattr(mp, "_switch_hold", lambda *a, **kw: mp.sync_switch.Hold(turns_on=True))
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: terminal, raising=False)
+
+    assert _run_merge_main(mp, monkeypatch, ["99", "--yes"]) == 2
+
+    assert calls["merged"] is False
+    err = capsys.readouterr().err
+    assert "This change turns on `sync_board.adds_with_no_terminal`." in err
+    assert "runs `pkit pm merge-pr 99` at a terminal" in err
+
+
+def test_the_persons_yes_at_a_terminal_merges_a_change_that_turns_on_the_switch(
+    mp, monkeypatch, capsys
+):
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    monkeypatch.setattr(mp, "_switch_hold", lambda *a, **kw: mp.sync_switch.Hold(turns_on=True))
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    monkeypatch.setattr("builtins.input", lambda prompt="": "y")
+
+    assert _run_merge_main(mp, monkeypatch, ["99"]) == 0
+
+    assert calls["merged"] is True
+    assert "lets `pkit pm sync-board` add the missing cards" in capsys.readouterr().out
 
 
 def test_fork_pr_merge_passes_cross_repository_to_cleanup(mp, monkeypatch):

@@ -369,6 +369,38 @@ def test_field_write_blocked_when_issue_not_on_board(bf) -> None:
     assert "not on" in change.blocked_reason
 
 
+@pytest.mark.parametrize(
+    ("state", "holds", "said"),
+    [
+        pytest.param("OPEN", False, ": `pkit pm sync-board 11` adds its card", id="open"),
+        pytest.param(
+            "OPEN",
+            True,
+            ": `pkit pm sync-board 11` adds its card, only in a run at a terminal or with "
+            "the project's switch `sync_board.adds_with_no_terminal` on, and its Status is "
+            "then set on the board, since the card the sync adds carries none",
+            id="open-board-holds-the-state",
+        ),
+        pytest.param("CLOSED", False, "", id="closed"),
+    ],
+)
+def test_an_issue_off_the_board_is_told_the_sync_that_adds_its_card(
+    bf, state: str, holds: bool, said: str
+) -> None:
+    """An open issue off the board is told what gives it its card: the sync, run
+    for it, in the words the board's role takes; a closed one, which the sync
+    gives no card, is told none (DEC-072 point 4)."""
+    intent = bf.BackFillIntent(
+        kind="set-board-field", citation="c", field_id="F", single_select_option_id="O"
+    )
+    issues = [{"number": 11, "title": "eleven", "milestone": None, "state": state}]
+    [change] = bf._build_proposed_changes(
+        [intent], issues, {}, project_id="PROJ", target_repo=TARGET_REPO, board_holds_state=holds
+    )
+    reason = f"issue not on the configured Projects v2 board (no item id for {TARGET_REPO}#11)"
+    assert change.blocked_reason == reason + said
+
+
 # ----- R2: board item-id resolution is repo-discriminated ------------
 
 

@@ -2035,20 +2035,24 @@ _UNANSWERED = (
 )
 
 
-def _membership_issue() -> dict:
+def _membership_issue(state: str | None = "OPEN") -> dict:
+    """Issue 7 as its read gives it, in ``state``; None leaves the state out."""
     issue = _make_issue(
         title="[Task] Wire the sandbox allowlist",
         body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature"],
     )
-    issue.update(id="I_7", url="https://github.com/acme/repo/issues/7")
+    issue.update(id="I_7", number=7, url="https://github.com/acme/repo/issues/7")
+    if state is not None:
+        issue["state"] = state
     return issue
 
 
-def _membership_findings(vi, issue_types, titles, body_format, config, lookup):
-    """Validator output for an adopter whose membership reader answers ``lookup``."""
+def _membership_findings(vi, issue_types, titles, body_format, config, lookup, *, issue=None):
+    """Validator output for an adopter whose membership reader answers ``lookup``,
+    on ``issue``, else on open issue 7."""
     return vi._validate_issue(
-        issue=_membership_issue(),
+        issue=issue if issue is not None else _membership_issue(),
         issue_types=issue_types,
         titles=titles,
         body_format=body_format,
@@ -2089,13 +2093,44 @@ def test_board_membership_answered_with_no_card_is_missing(
     vi, issue_types, titles, body_format, board_config
 ) -> None:
     """The board answered, a witness showing it, and the issue has no card: the
-    drift DEC-019 names."""
+    drift DEC-019 names, with the sync run for the issue as what adds its card
+    (DEC-072 point 4)."""
     lookup = vi.board_fields.ItemLookup(ok=True, item_id=None)
-    labels = _labels(
-        _membership_findings(vi, issue_types, titles, body_format, board_config, lookup)
-    )
+    findings = _membership_findings(vi, issue_types, titles, body_format, board_config, lookup)
+    labels = _labels(findings)
     assert "board_membership.missing" in labels
     assert "board_membership.unverified" not in labels
+    missing = next(f for f in findings if f.label == "board_membership.missing")
+    assert missing.detail.endswith(" `pkit pm sync-board 7` adds its card.")
+
+
+@pytest.mark.parametrize(
+    "state", [pytest.param("CLOSED", id="closed"), pytest.param(None, id="state-not-read")]
+)
+def test_board_membership_missing_names_no_sync_unless_the_issue_is_open(
+    vi, issue_types, titles, body_format, board_config, state
+) -> None:
+    """The sync gives a closed issue no card, so a closed issue's missing card
+    names no sync; nor does a read that does not show the issue open (DEC-072
+    point 4)."""
+    lookup = vi.board_fields.ItemLookup(ok=True, item_id=None)
+    findings = _membership_findings(
+        vi, issue_types, titles, body_format, board_config, lookup, issue=_membership_issue(state)
+    )
+    missing = next(f for f in findings if f.label == "board_membership.missing")
+    assert missing.detail == (
+        "issue is not on the configured Projects v2 board. Mandatory per DEC-019."
+    )
+
+
+def test_the_issues_read_asks_its_number_and_state(vi, monkeypatch) -> None:
+    """The issue's read asks its number and state, by which a missing card's
+    finding names the sync, run for the issue, and only for an open one (DEC-072
+    point 4)."""
+    asked: list[str] = []
+    monkeypatch.setattr(vi, "gh_get_issue", lambda n, config, *, fields: asked.append(fields))
+    vi._gh_get_issue(7, {})
+    assert asked and {"number", "state"} <= set(asked[0].split(","))
 
 
 def test_board_membership_with_a_card_is_clean(

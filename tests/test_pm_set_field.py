@@ -333,7 +333,7 @@ def _board_state(sf, **overrides):
             },
         ),
         board_ref="Projects-v2 board #7",
-        membership_remediation="gh project item-add 7 --owner an-org --url URL",
+        membership_remediation="`pkit pm sync-board 42` adds its card",
     )
     defaults.update(overrides)
     return sf.BoardState(**defaults)
@@ -374,8 +374,9 @@ def test_plan_board_fields_matches_field_and_option_case_insensitively(sf) -> No
 
 def test_plan_board_fields_missing_card_refuses_with_the_add_command(sf) -> None:
     """Board membership is a post-creation step, so the card may be absent. The
-    decided behaviour is REFUSE with the exact remediation — adding the card is a
-    membership decision this verb does not make silently — never a no-op."""
+    decided behaviour is REFUSE, naming the sync run for the issue — adding the
+    card is a membership decision this verb does not make silently — never a
+    no-op (DEC-072 point 4)."""
     results, writes = sf._plan_board_fields(
         board_axes={"priority": "High"},
         state=_board_state(sf, item_id=None),
@@ -385,7 +386,7 @@ def test_plan_board_fields_missing_card_refuses_with_the_add_command(sf) -> None
     refusal = results[0]
     assert refusal.ok is False and refusal.changed is False
     assert "NO CARD" in refusal.message
-    assert "gh project item-add 7 --owner an-org --url URL" in refusal.message
+    assert "Add the card, then re-run: `pkit pm sync-board 42` adds its card." in refusal.message
     assert "NOT SET" in refusal.message
 
 
@@ -983,13 +984,29 @@ def test_read_board_state_gathers_the_three_ids(sf, monkeypatch) -> None:
     assert state.board_ref == "Projects-v2 board #7"
 
 
-def test_read_board_state_composes_the_exact_item_add_remediation(sf, monkeypatch) -> None:
-    """The missing-card refusal is only actionable if the command is runnable as
-    printed — board number, owner and issue URL all resolved."""
+def test_read_board_state_names_the_sync_run_for_the_issue(sf, monkeypatch) -> None:
+    """The missing card's remedy is the sync, run for the issue, which gives an
+    open issue its card in every project with a board (DEC-072 point 4)."""
     _stub_board_reads(sf, monkeypatch)
     state = sf._read_board_state(_BOARD_CONFIG, issue=_BOARD_ISSUE, issue_number=42)
+    assert state.membership_remediation == "`pkit pm sync-board 42` adds its card"
+
+
+def test_where_the_board_holds_the_state_the_remedy_says_who_sets_its_status(
+    sf, monkeypatch
+) -> None:
+    """Where the board holds the state, the sync adds the card only at a terminal
+    or with the project's switch on, and its Status is then set on the board,
+    since the card the sync adds carries none (DEC-072 point 4)."""
+    _stub_board_reads(sf, monkeypatch)
+    substrate_map = sf.axis_labels.SubstrateMap(axes={"state": {"board": True}})
+    state = sf._read_board_state(
+        _BOARD_CONFIG, issue=_BOARD_ISSUE, issue_number=42, substrate_map=substrate_map
+    )
     assert state.membership_remediation == (
-        "gh project item-add 7 --owner an-org --url https://github.com/an-org/r/issues/42"
+        "`pkit pm sync-board 42` adds its card, only in a run at a terminal or with the "
+        "project's switch `sync_board.adds_with_no_terminal` on, and its Status is then set "
+        "on the board, since the card the sync adds carries none"
     )
 
 
@@ -1009,7 +1026,6 @@ def test_read_board_state_without_a_default_owner_reads_the_issues_owners_board(
 
     assert state.error is None
     assert owners == [owner, owner]
-    assert f"--owner {owner} " in state.membership_remediation
 
 
 def test_read_board_state_surfaces_a_read_failure_verbatim(sf, monkeypatch) -> None:
@@ -1280,8 +1296,8 @@ def test_main_takes_a_workstream_the_file_holds_beyond_the_legacy_key(
 def test_main_missing_card_refuses_nonzero_and_writes_nothing(
     sf, tmp_path, monkeypatch, capsys
 ) -> None:
-    """The membership race: no card on the board ⇒ refusal with the `item-add`
-    remediation, non-zero exit, and NO write of any kind. Never a silent no-op."""
+    """The membership race: no card on the board ⇒ refusal naming the sync run
+    for the issue, non-zero exit, and NO write of any kind. Never a silent no-op."""
     root = _stage_capability_root(tmp_path, has_board=True)
     captured = _run_main(
         sf,
@@ -1297,7 +1313,7 @@ def test_main_missing_card_refuses_nonzero_and_writes_nothing(
     assert captured["board"] == [] and captured["labels"] == []
     assert "[refused] priority:" in out
     assert "[ok] priority:" not in out
-    assert "gh project item-add 7" in out
+    assert "`pkit pm sync-board 42` adds its card" in out
     assert "all fields already set" not in out
     assert "remain unset" in out
 
