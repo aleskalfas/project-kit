@@ -1,0 +1,9 @@
+component: project-management
+kind: none
+body: >
+  DEC-080, proposed with this change (#3385), decides that a key in the
+  project's configuration of this capability, on by default, authorises up
+  front every merge into the default branch whose review passes, and that the
+  landing command merges such a pull request in the run that finds it ready.
+  No command, schema or migration changes until the record is accepted and
+  built, so no surface moves.
