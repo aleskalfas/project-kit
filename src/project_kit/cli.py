@@ -7797,14 +7797,16 @@ def _refuse_collisions_off_terminal(
     default=None,
     help="Install the capability another git repository incubates at "
     ".pkit/capabilities/<name>/, fetched whole with your own git credentials "
-    "(COR-041, ADR-040). Pass it with --ref.",
+    "(COR-041, ADR-040). Pass it with --ref. Not available in this release: refused, "
+    "writing nothing, until #3349.",
 )
 @click.option(
     "--ref",
     metavar="TAG_OR_COMMIT",
     default=None,
     help="With --from: the tag, or the commit's full id, to install the capability at. "
-    "`pkit sync` keeps it there. A branch is refused: a branch pin waits on #3229.",
+    "`pkit sync` keeps it there. A branch is refused: a branch pin waits on #3229. Not "
+    "available in this release: refused, writing nothing, until #3349.",
 )
 @click.option(
     "--dry-run",
@@ -7861,10 +7863,15 @@ def install_capability_cmd(
     or refused: a refusal writes nothing, and a source that cannot be reached
     warns and installs nothing. A branch as a ref, and moving the pin of a
     capability already installed, wait on #3229.
+
+    Not available in this release: until #3349, --from and --ref are refused
+    before anything is read or written, --dry-run and --plan included.
     """
     refuse_inside_migration("capabilities install")
     from project_kit import capabilities as caps
 
+    if source_url is not None or ref is not None:
+        _refuse_install_from_another_repository()
     _plan_flags(plan, as_json)
     pin = _install_pin(source_url, ref)
 
@@ -7941,6 +7948,25 @@ def install_capability_cmd(
         plan=plan,
         as_json=as_json,
         force=force,
+    )
+
+
+def _refuse_install_from_another_repository() -> NoReturn:
+    """Refuse `--from` and `--ref` until #3349 lands (#3359).
+
+    The fetch takes the commit a pin records only while the pin's ref still
+    names it, and #3349 replaces that handling of a moved ref. So no release
+    ships an install from another repository before then. The refusal names
+    no source, which may carry a credential (ADR-040 point 2). Sync of a
+    capability already installed from another repository is not held. #3349
+    removes this refusal.
+    """
+    raise click.ClickException(
+        "installing a capability from another repository (--from, --ref) is not available "
+        "in this release. It waits on a later release, which changes how a fetch takes the "
+        "commit a pin records once the pin's ref has moved (#3349). Nothing was fetched or "
+        "written. A capability already installed from another repository is not held: "
+        "`pkit sync` keeps it at its pin as before."
     )
 
 
