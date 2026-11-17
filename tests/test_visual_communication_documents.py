@@ -185,6 +185,8 @@ VISUAL_VERDICT = Contract(
                 "reading.rules{}.text": "str",
                 "reading.reviewer": "str|null",
                 "reading.design-knowledge": "str",
+                "reading.code": "str",
+                "reading.checks": "str|null",
                 "reading.model": "object",
                 "reading.model.name": "str",
                 "reading.model.effort": "str",

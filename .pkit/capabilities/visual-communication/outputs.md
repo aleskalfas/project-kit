@@ -174,6 +174,8 @@ pkit:
         - visual-communication:DEC-062#1
         - visual-communication:DEC-062#2
         - visual-communication:DEC-063#1
+        - visual-communication:DEC-065#1
+        - visual-communication:DEC-065#2
         - ADR-097
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
@@ -1074,6 +1076,8 @@ The verdict ends the designer's loop at the bar only while the *hold* is on (DEC
   - a covered rule's text, by its digest. A rule the bar does not cover lapses nothing;
   - the reviewer's definition, the capability's own `agents/graphic-design-reviewer.md`, by its digest. Another definition of `graphic-design-reviewer`, in the project's own place for agents or in another capability's, lapses the hold too, since the command cannot tell which of them ran;
   - the design knowledge, by its digest;
+  - the capability's code, by its digest: each program file in its `scripts/` folder, those written in the language its commands run in. Each check the review reads lies there, with the values of its own it measures by, its reach and the viewing step's code that gives its findings ([Scenes](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). So does the rest of the code, such as the engine, the renderers and the versions of the dependencies a script pins, so every change to the code lapses the hold, one that moves no grade included. A compiled cache, a folder's marker or an editor's file beside the code lapses nothing (DEC-065 point 2);
+  - the capability's list of checks, `checks.md`, by the digest of its body, which the reviewer reads for what a check means. A change to its front matter alone lapses nothing;
   - the model the round's report names, or its effort, one named and the other not included.
 - **Data it cannot read.** Accepted data the command cannot read, or that its schema refuses.
 
@@ -1081,11 +1085,13 @@ A lapse only takes the hold away. The command starts nothing, and a new calibrat
 
 ### The accepted calibration's data
 
-Once whoever maintains the capability accepts a calibration's report, a refinement of DEC-042 writes the values the hold is compared on: `calibration.yaml`, in the capability's own folder, bound to `visual-communication:calibration` ([The binding](files.md#the-binding); [`calibration.schema.json`](schemas/calibration.schema.json)). Only that refinement's change writes them, and the command reads them. Until a report is accepted, the capability ships no such file.
+Once whoever maintains the capability accepts a calibration's report, a refinement of DEC-042 writes the values the hold is compared on: `calibration.yaml`, in the capability's own folder, bound to `visual-communication:calibration` ([The binding](files.md#the-binding); [`calibration.schema.json`](schemas/calibration.schema.json)). Only that refinement's change writes them, and the command reads them. Until a report is accepted, the capability ships no such file. That change edits no program file in `scripts/` and not the body of `checks.md`: an edit to either would make the state it lands differ from the data it writes, so the hold it records would lapse as it lands (DEC-065 point 2).
 
 - **`rules`:** each rule with evidence of its own in the accepted report, by its id, with the major of its set and the digest of its text.
 - **`reviewer`:** the digest of the reviewer's definition.
 - **`design-knowledge`:** the digest of the design knowledge.
+- **`code`:** the digest of the capability's code.
+- **`checks`:** the digest of the list of checks.
 - **`model`:** the full name of the model the calibration's review ran on, with its effort where the harness has one.
 - **Each digest** is a SHA-256 of what it names, written `sha256:<hex>`, as [`calibration.schema.json`](schemas/calibration.schema.json) sets out.
 - **The reading** holds the same values as they stand now, in the data's shape: for the rules the bar covers, and the model the round's report names.
@@ -1116,4 +1122,6 @@ Once whoever maintains the capability accepts a calibration's report, a refineme
   - `rules`: each rule the bar covers, by its id, with `major`, the major of its set, and `text`, the digest of its text.
   - `reviewer`: the digest of the reviewer's definition, or `null` where the capability ships none.
   - `design-knowledge`: the digest of the design knowledge.
+  - `code`: the digest of the capability's code.
+  - `checks`: the digest of the list of checks, or `null` where the capability ships none.
   - `model`: the model the round's report names, with its `name`, and its `effort` only where the report names one.
