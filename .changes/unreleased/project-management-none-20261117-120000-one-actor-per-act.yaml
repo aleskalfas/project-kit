@@ -3,19 +3,21 @@ kind: none
 body: >
   Design-ahead: the record DEC-078 decides that, in every project and under
   every credential, each act the commands record has one actor, the account
-  GitHub answers the credential acts as, which the engine's cross-authority
-  gate judges and the journal records for a move. No audit comment names an
-  authoriser beside the account that posts it, the comments of a --force
-  override and of a head named at a terminal among them, and no comment
-  carries an email, in its text or its hidden stamp; the default render's
-  metadata line shows no actor, and the bypass line reads "Bypassed:
-  <reason>". Where GitHub gives no login for the acting account, an act names
-  no actor: its audit record's actor is empty, the commands hand the move to
-  the engine with no actor where the engine takes none of its own, and none
-  where it would take one, and report each move the engine does not record,
-  refusing nothing for want of an actor. An audited move's comment key counts
-  moves made, journaled or not, so each audited move keeps its own comment.
-  Once accepted, it partially supersedes DEC-014, DEC-044, DEC-050 and
-  DEC-052, refines DEC-021, DEC-033, DEC-044, DEC-049, DEC-055 and DEC-067 in
-  place, and corrects facts in DEC-021 and DEC-047. It is accepted with or
-  after ADR-098. No behaviour changes until the record is built.
+  the backbone's reading of the acting account (ADR-094) names the credential
+  acts as, which the engine's cross-authority gate judges and the journal
+  records for a move. No audit comment names an authoriser beside the account
+  that posts it, and the comments of a --force override and of a head named
+  at a terminal name no person as having given the word. No comment carries
+  an email, in its text or its hidden stamp, an audit record's actor carries
+  no display name, the default render's metadata line shows no actor, and the
+  bypass line reads "Bypassed: <reason>". Where the reading names no account,
+  an act names no actor: its audit record's actor is empty, the commands hand
+  the move to the engine with no actor and report each move the engine does
+  not record, refusing nothing for want of an actor, and the capability runs
+  only on an engine that takes no actor of its own (ADR-098), its floor on
+  the backbone rising to that release. Where labels carry the state, an
+  audited move's comment key counts the moves made, journaled or not. Once
+  accepted, it partially supersedes DEC-014, DEC-044, DEC-050, DEC-052,
+  DEC-055 and DEC-067, refines DEC-021, DEC-033, DEC-044 and DEC-049 in place,
+  and corrects facts in DEC-021 and DEC-047. It is accepted with or after
+  ADR-094 and ADR-098. No behaviour changes until the record is built.
