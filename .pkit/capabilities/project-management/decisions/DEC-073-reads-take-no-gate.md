@@ -69,7 +69,7 @@ A command *only reads and reports* where no run of it writes: whatever its optio
 
 ### 3. A command that takes the gate keeps it on every run
 
-This record takes the gate off no command that can write, on any run. A command that takes it, whether it files, edits, comments, moves, assigns, closes, reopens, reviews, merges or writes the member list, or starts a command that does, takes it at its startup on every run, before any other work, its dry runs included, as DEC-021 decides. Behind a closed gate it refuses whoever no entry names, and whoever it cannot resolve. A workflow that runs such a command behind a closed gate passes only as DEC-021 lets CI pass: as a service identity added to the list, or by `PM_INVOKER_LOGIN` where its credential names no user's account.
+This record takes the gate off no command that can write, on any run. A command that takes it, whether it files, edits, comments, moves, assigns, closes, reopens, reviews, merges or writes the member list, or starts a command that does, takes it at its startup on every run, before any other work, its dry runs included, as DEC-021 decides. Behind a closed gate it refuses whoever no entry names, and whoever it cannot resolve. A workflow that runs such a command behind a closed gate passes only as DEC-021 lets CI pass (its Implications, "CI invocations").
 
 A command that both shows and writes, such as a view with one option that writes or one that writes on what it finds, can write, so it carries no declaration, and where it takes the gate it keeps it for its every run. Where its reads should be open to everyone, the remedy is to split it into a command that only reads and reports and one that writes, or to take the write out of its reads by the record that decides that write.
 
