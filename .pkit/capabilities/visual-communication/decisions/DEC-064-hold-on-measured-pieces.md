@@ -124,7 +124,7 @@ This point holds wherever the designer mends a piece, under a bar or not, as DEC
 ### 6. The command comes to tell from data a later record decides
 
 - **With the first such check, a reason and no data.** The change that lands a check that narrows the hold gives the command its reason of point 2. Until the command can tell, that reason holds under every bar that covers the check's rule.
-- **Then the command comes to tell.** A follow-up has it read whether the three conditions of point 2 hold of the round ([project-kit#FOLLOWUP]). The reason then holds only where one fails, or where the command cannot tell.
+- **Then the command comes to tell.** A follow-up has it read whether the three conditions of point 2 hold of the round ([project-kit#3372](https://github.com/aleskalfas/project-kit/issues/3372)). The reason then holds only where one fails, or where the command cannot tell.
 - **What the data must be.** Three things bind whichever source the follow-up takes:
   - **Of the round.** It describes the images that round's review read, and the lock they were drawn under. A file a later look replaces does not, once it is replaced.
   - **Given again.** Anyone gives the verdict again from the same report (DEC-042 point 1), so the data stays with the round.
@@ -277,7 +277,7 @@ A later consequence of that choice of DEC-046 point 5 is recognised as one by th
   - **Its test:** under such a bar the command ends no loop and gives the reason, with every other reason absent.
   - **Its pages.** The outputs page, "When it ends the loop", gains the reason, and the verdict's document carries it in `why`.
   - **The designer's body and the skill's page on a piece** come to say point 4, and that a round the hold does not reach ends the loop (point 2).
-- **The follow-up, [project-kit#FOLLOWUP],** has the command tell (point 6). It stands beside [project-kit#3296](https://github.com/aleskalfas/project-kit/issues/3296), which has the command compare the checks the review reads.
+- **The follow-up, [project-kit#3372](https://github.com/aleskalfas/project-kit/issues/3372),** has the command tell (point 6). It stands beside [project-kit#3296](https://github.com/aleskalfas/project-kit/issues/3296), which has the command compare the checks the review reads.
   - **It settles the source first,** in a record that refines point 6. That record also weighs whether the checks of boxes narrow the hold through their statement.
   - **Its scope takes in the three conditions of point 2:** whether the check measured each image clean, the review's line that it left the media out, and whether the piece's top and its brand are released.
   - **Until it lands,** no bar that covers `RS-GRAPHIC-005` gets the hold.

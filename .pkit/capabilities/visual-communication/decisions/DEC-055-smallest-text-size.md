@@ -435,7 +435,7 @@ A piece is held to the check only where it names a medium (point 9). On every ot
   - **Each shipped top's account** of the media its pages are made for, with the viewing ratio a room's value assumes.
   - **The account of the size axis's modes,** in the foundations' roles file and on the files' page. It comes to say that a mode names what a piece is drawn for, and the piece's media where it is shown.
   - **The command that starts a piece,** which takes the media as it takes where the piece is shown. The skill's page on a piece and the designer's agent file name the field beside `shown`.
-- **The hold** is DEC-064's. #3185 builds the command's reason, and a follow-up has the command tell where the check measured ([project-kit#FOLLOWUP]). DEC-064's Implications name both.
+- **The hold** is DEC-064's. #3185 builds the command's reason, and a follow-up has the command tell where the check measured ([project-kit#3372](https://github.com/aleskalfas/project-kit/issues/3372)). DEC-064's Implications name both.
 - **UC-111,** "Have a piece designed and judged by the principles of visual communication", anchors the piece's schema, so #3185's change answers for it. It is revised as DEC-064's Implications say.
 - **The foundations take a new version** whose tops declare their smallest sizes, released as the capability's shipped libraries are ([visual-communication:DEC-013-shipped-library-releases]).
 - **No migration.** The field and the key are additions, and nothing a project holds changes (COR-010).
