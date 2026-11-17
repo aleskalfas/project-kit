@@ -166,6 +166,7 @@ from _lib import (
     layout,
     location,
     names,
+    outlines,
     records,
     signs,
     tokens,
@@ -2673,9 +2674,7 @@ CONTENT_HIDDEN = SceneCheck(
 #: The check of contrast as drawn, a check of colour, with its reach, since the reviewer
 #: reads its silence (DEC-004 point 8, DEC-012 point 3, DEC-036 points 3 and 8, DEC-063 point
 #: 1). Its findings each name the combination they hold for, but one on a sign that paints
-#: nothing, which holds for every combination. It reads no path as a fill, and leaves out a
-#: whole text where one span of it lies over a picture: two departures from DEC-004 point 8,
-#: each stated as a clause until its fix.
+#: nothing, which holds for every combination.
 CONTRAST = SceneCheck(
     "contrast as drawn",
     colour=True,
@@ -2691,27 +2690,25 @@ CONTRAST = SceneCheck(
             "other marks: a sign part, which holds where its fill or its stroke reaches that "
             "level, and fails where it paints neither; and a run's sign, in the run's paint, "
             "with its span where the same fills lie under both (DEC-036 point 8)",
-            "as the fills under a point, each box or ellipse with a fill drawn before the text "
-            "or the sign that holds the point, a translucent one laid over the one under it, "
-            "and a run's ground over them (DEC-004 point 8, DEC-036 point 3)",
+            "as the fills under a point, each box, ellipse or path with a fill drawn before the "
+            "text or the sign that holds the point, a path holding it where its outline fills "
+            "it by its fill rule, a translucent one laid over the one under it, and a run's "
+            "ground over them (DEC-004 point 8, DEC-036 point 3)",
         ),
         leaves_out=(
-            "a span or a sign over a picture, where no box or ellipse with a fill is drawn "
-            "over the picture under its middle, which a reviewer judges (DEC-004 point 8)",
-            "every other span of a text one span of which lies so over a picture, though "
-            "DEC-004 point 8 has them measured: a departure, until its fix (DEC-004 point 8)",
-            "a span or a sign over nothing, under whose middle no box or ellipse with a fill "
-            "is drawn, and whose run draws no ground (DEC-063 point 1)",
+            "a span or a sign over a picture, where no box, ellipse or path with a fill is "
+            "drawn over the picture under its middle, and whose run draws no ground, which a "
+            "reviewer judges (DEC-004 point 8)",
+            "a span or a sign over nothing, under whose middle no box, ellipse or path with a "
+            "fill is drawn, and whose run draws no ground (DEC-063 point 1)",
             "a span or a sign painted with a colour role the brand lacks, or over a fill "
             "painted with one, which `unknown-colour` reports (DEC-063 point 1)",
             "a combination in which a run's paint, or every paint of a sign, has no colour, "
             "so it draws nothing there (DEC-063 point 1)",
             "a combination in which none of the fills under the middle of a span or a sign "
-            "that have a colour there is opaque, of the nine boxes and ellipses with a fill "
-            "drawn last before it under that middle, and the run's ground (DEC-063 point 1)",
-            "a fill a path draws under a span or a sign, which it reads as drawing nothing "
-            "there, though DEC-004 point 8 has a text measured against the fill under it: a "
-            "departure, until its fix (DEC-004 point 8)",
+            "that have a colour there is opaque, of the nine boxes, ellipses and paths with a "
+            "fill drawn last before it under that middle, and the run's ground "
+            "(DEC-063 point 1)",
             "the fills under a span or a sign elsewhere than under its middle (DEC-063 point 1)",
             "a text with no line, and a path with no outline, neither of which draws "
             "anything (DEC-063 point 1)",
@@ -3314,12 +3311,13 @@ def drawn_contrast(
     run is measured at WCAG's level for its size and weight, in its own paint. A sign is
     measured at WCAG's level for other marks: a sign part's path holds where its fill or its
     stroke reaches it, and a run's sign in the run's paint (`_sign_contrast`). The fill
-    under a run's span of a line, or under a sign, is that of the last box or ellipse drawn
-    before it that holds the span's or the sign's middle; a translucent one is laid over the
-    one under it. A text or a sign over a picture is not measured, nor one with nothing
-    under it. A fill with no colour in a combination draws nothing there, so what lies
-    under it shows; a paint of a run or a sign with none there draws nothing to measure
-    there, and the renderer reports the loss."""
+    under a run's span of a line, or under a sign, is that of the last box, ellipse or path
+    drawn before it that holds the span's or the sign's middle, a path where its outline
+    fills it; a translucent one is laid over the one under it. A span or a sign over a
+    picture is not measured, nor one with nothing under it, and a text's other spans are.
+    A fill with no colour in a combination draws nothing there, so what lies under it
+    shows; a paint of a run or a sign with none there draws nothing to measure there, and
+    the renderer reports the loss."""
     found = []
     for page in _pages(scene):
         painted: list[tuple[Mapping[str, Any], float, float]] = []
@@ -3331,6 +3329,7 @@ def drawn_contrast(
                 found.extend(_text_contrast(element, x, y, painted, colours, keys))
             elif kind == "path" and element.get("d"):
                 found.extend(_sign_contrast(element, x, y, painted, colours, keys))
+                painted.append((element, x, y))  # its fill lies under what is drawn after it
     return found
 
 
@@ -3376,10 +3375,10 @@ def _text_contrast(
                 stack = [*(stack or []), str(run["ground"])]
                 if sign is not None:
                     marked = [*(marked or []), str(run["ground"])]
-            if stack is None:
-                return []  # over a picture: a reviewer judges it
             at += span_width + float(ground.get("end", 0))
             look = (run.get("fill"), run.get("font-size"), run.get("font-weight"), stack)
+            # A span over a picture, None, is a reviewer's to judge, and one over nothing is
+            # not measured: either way the text's other spans are.
             if stack and look not in looks:
                 looks.append(look)
                 measured.append((run, stack, False))
@@ -3453,7 +3452,8 @@ def _sign_contrast(
     """A sign part's path measured against the fills under its middle, in each combination
     `keys` names, at WCAG's level for other marks: it holds where its fill or its stroke
     reaches that level (DEC-036 point 8). One that paints neither shows nothing, which
-    fails as well. One over a picture is not measured, nor one with nothing under it."""
+    fails as well. One over a picture is not measured, nor one with nothing under it. The
+    paths drawn before it are among those fills, and it among those of what follows."""
     width, height = float(path.get("width", 0)), float(path.get("height", 0))
     middle = (x + float(path.get("x", 0)) + width / 2, y + float(path.get("y", 0)) + height / 2)
     stack = _under(middle, painted)
@@ -3552,9 +3552,15 @@ def _ground(stack: Sequence[Mapping[str, Any]]) -> Mapping[str, Any] | None:
 
 
 def _holds(element: Mapping[str, Any], x: float, y: float, point: tuple[float, float]) -> bool:
+    """Whether `element`, drawn in a parent whose origin lies at `x y`, covers `point`: a
+    box or an image by its frame, an ellipse by the ellipse its frame bounds, and a path by
+    its outline and the rule that fills it, whose numbers lie in its parent's frame."""
     left, top = x + float(element.get("x", 0)), y + float(element.get("y", 0))
     width, height = float(element.get("width", 0)), float(element.get("height", 0))
     px, py = point
+    if element.get("type") == "path":
+        rule = str(element.get("fill-rule") or "nonzero")
+        return outlines.fills(str(element["d"]), rule, (px - x, py - y))
     if element.get("type") == "ellipse":
         if width <= 0 or height <= 0:
             return False

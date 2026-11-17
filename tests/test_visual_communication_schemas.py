@@ -54,7 +54,13 @@ def exports_with_copy(**fields: Any) -> dict[str, Any]:
 def test_each_kind_has_its_pair_and_the_shared_definitions_and_the_document_stand_alone() -> None:
     names = {path.name for path in SCHEMAS.iterdir()}
     wanted = {f"{kind}{suffix}" for kind in files.KINDS for suffix in (".yaml", ".schema.json")}
-    alone = {"defs.schema.json", "values.schema.json", "values-2.schema.json", ".gitkeep"}
+    alone = {
+        "defs.schema.json",
+        "values.schema.json",
+        "values-2.schema.json",
+        "look-report.schema.json",
+        ".gitkeep",
+    }
     assert names == wanted | alone
 
 
@@ -355,7 +361,7 @@ def test_the_configuration_refuses_a_browser_that_names_no_path(browser: object)
 @pytest.mark.parametrize(
     "bar",
     [
-        {"covers": ["COMM@1", "GRAPHIC@1"], "at-least": "professional"},
+        {"covers": ["COMM@1", "GRAPHIC@2"], "at-least": "professional"},
         {"covers": ["RS-COMM-003@1"], "at-least": "excellent"},
     ],
 )
