@@ -1,7 +1,7 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:visual-communication
-# pkit-digest: sha256:2ea1b7d3529546044c30797fce071119a70b3b3b469a10e9e5542b43b03c95b7
+# pkit-digest: sha256:7af88e5d6ec1813da3eb9694fb22ce3ee3a63ceda0e0911638ab000b104827e2
 # pkit-tool-access: tools: ["Read", "Glob", "Grep"]
 name: graphic-design-reviewer
 description: Reads the images `pkit visual look` draws of a piece, through the 
@@ -369,6 +369,8 @@ Open with the grades' document: one YAML document, fenced, bound to `visual-comm
 - the `model` you ran on, by its full name as your harness gives it, never an alias, and its `effort` where the harness has one. Where you cannot tell your model's full name, say so in `name`, and never guess it;
 - what you read before grading, and what you read after (`read-before-grading`, `read-after-grading`), by the kinds the schema names;
 - each grade, with its rule, its page or the piece, its evidence, its mark, its other cause and its difference from the round before, and each rule not graded, with why. A grade a fault holds names in its evidence each fault that holds it, by its id ("Grades"). The document has no field for the faults: their ids lie in the evidence.
+
+**Each value in words, as a block scalar.** Write each value of the document that is words as a folded block scalar, as `review.yaml` writes them: `>-` after its key, and its words on the lines below, each indented alike and further than the key. These are every `what`, `evidence`, `other-cause`, `names` and `why`, and the model's `name` and `effort`. A block scalar parses words that hold `: `, quote marks, a ` #` or a backslash. Written plain, a value that holds `: ` does not parse, and nor does one that opens with a quoted phrase and goes on after it. The command gives no verdict from a document that does not parse. A plain value also loses the words after a ` #`. Write the rest as plain values: the piece, the lock, the round, the rule ids, the page ids, the grades and the kinds.
 
 The report goes to your dispatcher as your reply, and you write no file. Whoever dispatched you keeps it as you wrote it, in two files of `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/`, local to the clone ([visual-communication:DEC-042-grades-bar-and-loop] points 4 and 6, [visual-communication:DEC-015-viewing-step-and-reviewer] point 4):
 
