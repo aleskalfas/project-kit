@@ -74,6 +74,14 @@ def test_yaml_that_does_not_parse_says_where_the_reading_stopped(
     assert isinstance(refused.value, reading.ReadError)
 
 
+def test_yaml_whose_reader_names_no_place_has_no_line_or_column() -> None:
+    """A character YAML does not allow stops the reader before it names a place (#3391)."""
+    with pytest.raises(reading.ParseError, match="does not parse as YAML") as refused:
+        reading.load_yaml("why: >-\n  The lead\x07 answers.\n", "x.yaml")
+    assert (refused.value.line, refused.value.column) == (None, None)
+    assert refused.value.problem
+
+
 def test_read_yaml_names_a_file_that_is_not_utf8(tmp_path: Path) -> None:
     path = tmp_path / "x.yaml"
     path.write_bytes(b"a: \xff\n")

@@ -17,9 +17,9 @@
 # rule takes a grade there, or lists it under `not-graded` with why.
 #
 # Each value in words is written as a folded block scalar, `>-` after its key and its words
-# on the lines below, so that it parses whatever its words hold. The evidence of
-# `RS-GRAPHIC-005` opens with a quoted phrase and holds `: `, which a plain value, or one in
-# quotes, does not parse with.
+# on the lines below, which parses words that hold `: `, quote marks, a ` #` or a
+# backslash. The evidence of `RS-GRAPHIC-005` holds `: `, and opens with a quoted phrase
+# and goes on after it. Written plain, a value that does either does not parse.
 
 pkit_schema: visual-communication:review
 schema_version: 1

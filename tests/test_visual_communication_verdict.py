@@ -9,8 +9,9 @@ Held here:
   gives the same verdict again;
 - **no verdict, or a refusal**: no bar gives no verdict, and nor does a report that grades
   a covered rule nowhere; what the verdict would rest on and cannot be read refuses, and a
-  report whose document does not parse is named so, with the line the reading stopped at,
-  while the same words as a block scalar give the verdict (#3391);
+  report whose document does not parse is named so, with the line the reading stopped at
+  where the reader names it and with none where it names none, while the same words as a
+  block scalar give the verdict (#3391);
 - **the hold**: ends no loop where no calibration's report is accepted, where the bar reaches
   past the accepted rules, and where anything point 9 names has lapsed, a change to the
   capability's code or to the body of its list of checks among it (DEC-065); ends it where
@@ -373,8 +374,8 @@ def written(copy: Copy, *evidence: str) -> int:
     return len(head) + 1
 
 
-#: Words a value in words may hold that a plain value, or one in quotes, does not parse with
-#: (#3391): a `: `, and a quoted phrase the value opens with and goes on after.
+#: Words a value in words may hold that a plain value does not parse with (#3391): a `: `,
+#: and a quoted phrase the value opens with and goes on after.
 UNPARSED = pytest.mark.parametrize(
     "words",
     ["The lead: it answers no question.", '"Two compete" for the eye, and the figure loses.'],
@@ -395,6 +396,21 @@ def test_a_report_whose_document_does_not_parse_is_named_with_the_line_it_stoppe
             f"{REVIEWS}/deck/round-1.yaml: the report's document does not parse as YAML, so no "
             f"verdict is read from it: the reading stopped at line {line}, column "
         ) in err
+
+
+def test_a_report_whose_document_does_not_parse_where_the_reader_names_no_place_gives_none(
+    copy: Copy,
+) -> None:
+    """A character YAML does not allow stops the reader before it names a line (#3391)."""
+    configured(copy, *COVERS)
+    written(copy, "evidence: >-", "  The lead\x07 answers no question.")
+    code, out, err = copy.run("deck")
+    assert (code, out) == (1, "")
+    assert (
+        f"{REVIEWS}/deck/round-1.yaml: the report's document does not parse as YAML, so no "
+        "verdict is read from it: "
+    ) in err
+    assert "the reading stopped at" not in err
 
 
 @UNPARSED

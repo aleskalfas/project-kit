@@ -9,8 +9,8 @@ Held here:
   the methodology's container kept free in each; and no bar, no value and no number but the
   format's and the round's;
 - **its words**: the reference instance writes each value the schema gives as words as a
-  folded block scalar, which parses whatever its words hold, as the reviewer's body asks
-  (#3391);
+  folded block scalar, which parses words that hold `: ` or open with a quoted phrase, as
+  the reviewer's body asks (#3391);
 - **the reviewer's body** lists a place for each rule the capability ships, and the places
   match what the rule-set files say they judge; its report opens with the document, then
   says what it looked at, then gives its findings;
@@ -421,9 +421,9 @@ def written_in_words(data: Any, keys: set[str]) -> Iterator[tuple[str, Any]]:
 
 
 def test_the_reference_instance_writes_each_value_in_words_as_a_block_scalar() -> None:
-    """A value in words written plain, or in quotes, does not parse where it holds `: ` or
-    opens with a quoted phrase and goes on after it, so the body has each written as a folded
-    block scalar, and the reference instance shows that form for every one (#3391)."""
+    """A value in words written plain does not parse where it holds `: ` or opens with a
+    quoted phrase and goes on after it, so the body has each written as a folded block
+    scalar, and the reference instance shows that form for every one (#3391)."""
     schema = json.loads((SCHEMAS / "review.schema.json").read_text(encoding="utf-8"))
     keys = words_keys(schema)
     assert keys == {"name", "effort", "what", "names", "evidence", "other-cause", "why"}

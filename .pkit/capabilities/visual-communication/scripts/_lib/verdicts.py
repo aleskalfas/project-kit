@@ -22,7 +22,7 @@ designer's loop (visual-communication DEC-042 points 1, 9 and 10).
   another piece or round than where it is kept; and a configuration that cannot be read, is
   not bound as the configuration, or holds a bar its schema refuses or the capability's
   check fails. A report whose document does not parse is named as such, with the line and
-  column where the reading stopped.
+  column where the reading stopped whenever the reader names them.
 
 Reads only, and needs no network.
 """
