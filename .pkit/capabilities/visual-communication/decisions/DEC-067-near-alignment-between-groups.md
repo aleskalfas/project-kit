@@ -1,7 +1,7 @@
 ---
 id: DEC-067
 title: Near alignment is checked between groups, and a text only where its lines stand, among siblings too
-status: proposed
+status: accepted
 date: 2026-11-17
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
