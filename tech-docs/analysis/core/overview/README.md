@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=5 fingerprint=sha256:92774904b4c5c5ad40c52c4cfc7a7c26cac50e29e6ab8e3fef6003b32a9e9279 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:0071859787ca7b72d16dd140841519d6010c6e2948c21756deb5d9a893e14bb8 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -113,7 +113,7 @@ Record a project's decisions and rules, and check, answer and land each change t
 - [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
 - [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md) ([not built yet](#not-built-yet): step 7, variant 3b)
-- [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md) ([not built yet](#not-built-yet): step 5)
+- [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md)
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md) ([not built yet](#not-built-yet): step 3, variant 2d)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
 - [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md) ([not built yet](#not-built-yet): step 2, step 7, variant 5b, variant 6a)
@@ -138,6 +138,7 @@ Release the backbone and each component on its own version, so projects can move
 - [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
 - [040 — Versions and synced copies](../domain-model/040-versions-and-copies.md)
 - [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+- [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
 - [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
 **Its requirements:**
@@ -256,8 +257,8 @@ Work within the system's limits, the permission model and the agent workspace, s
 | Actor | Who they are | Areas they act in |
 | --- | --- | --- |
 | [ACT-adopter — Adopter](../use-case-model/actors/ACT-adopter.md) | The person who adopts the methodology for a project and keeps its setup. | [020-set-up](#020-set-up), [050-adopt](#050-adopt), [060-report](#060-report) |
-| [ACT-ai-agent — AI agent](../use-case-model/actors/ACT-ai-agent.md) | An AI agent working under the methodology, acting on the system from outside. | [010-develop](#010-develop), [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release), [060-report](#060-report), [070-work-within-limits](#070-work-within-limits) |
-| [ACT-ci-pipeline — CI pipeline](../use-case-model/actors/ACT-ci-pipeline.md) | A project's continuous integration, acting on the system from outside. | [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release) |
+| [ACT-ai-agent — AI agent](../use-case-model/actors/ACT-ai-agent.md) | An AI agent working under the methodology, acting on the system from outside. | [010-develop](#010-develop), [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release), [050-adopt](#050-adopt), [060-report](#060-report), [070-work-within-limits](#070-work-within-limits) |
+| [ACT-ci-pipeline — CI pipeline](../use-case-model/actors/ACT-ci-pipeline.md) | A project's continuous integration, acting on the system from outside. | [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release), [050-adopt](#050-adopt) |
 | [ACT-component-author — Component author](../use-case-model/actors/ACT-component-author.md) | Someone who extends the system with a component (a capability or an adapter) rather than only using it. | [010-develop](#010-develop), [040-release](#040-release) |
 | [ACT-developer — Developer](../use-case-model/actors/ACT-developer.md) | The person who builds: decisions, rules, scratchpad notes, code and its documentation, one change at a time. | [010-develop](#010-develop), [030-change](#030-change) |
 | [ACT-merge-authoriser — Merge authoriser](../use-case-model/actors/ACT-merge-authoriser.md) | The person who authorises a change's merge into the default branch. | [030-change](#030-change) |
@@ -285,7 +286,7 @@ Each view of the domain model explains a group of related concepts:
 - [REQ-003 · Constraint · The backbone's CLI runs on Python 3.11 or later](../requirements/constraints/REQ-003-python-floor.md)
 - [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
 - [REQ-005 · Quality · A command that only reads or validates changes nothing in the project](../requirements/quality/REQ-005-reading-writes-nothing.md)
-- [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
+- [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation, a capability's default or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
 - [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`](../requirements/quality/REQ-009-preview-before-change.md)
 - [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
@@ -490,7 +491,8 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md): step 4, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md): variant 8a, decided by `COR-004`, tracked in `#1884`
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
-- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md): variant 3d, decided by `COR-041`, tracked in `#131`
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md): variant 3d, decided by `ADR-040#1`, tracked in `#3229`
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md): variant 3d, decided by `ADR-040#1`, tracked in `#3349`
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md): step 13, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-025 — Choose which installed capability provides a role](../use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md): step 3, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
@@ -505,7 +507,6 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/070-work-within-limits/UC-031-keep-per-machine-choices.md): variant 3a, decided by `COR-028#2`, tracked in `#1909`
 - [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md): variant 1d, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/070-work-within-limits/UC-033-find-why-prompted.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
-- [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md): step 5, decided by `ADR-061#8`, tracked in `#1257`
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md): step 3, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md): variant 2d, decided by `COR-004`, tracked in `#1884`
 - [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md): step 2, decided by `ADR-034#1`, tracked in `#1765`

@@ -1,0 +1,1395 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-loaded-file
+    read:
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+    revalidated:
+      at: 2026-11-09T10:32:19Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T224001Z-9d4b108d and main's 20261108T224418Z-a4df0e26 and 20261108T231929Z-eb90ad27, made apart. Main's two list an absent project.md in `pkit rule-sets loaded`, and report what an upgrade over a plain core.md binds. This change has validation check core's include in the host file. None of the three alters what a loaded file is or holds, so the term holds with all.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-loaded-rule-set
+    read:
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+    revalidated:
+      at: 2026-11-09T10:32:21Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T224001Z-9d4b108d and main's 20261108T224418Z-a4df0e26 and 20261108T231929Z-eb90ad27, made apart. Main's two list a plain project.md that no set generates, and change what an upgrade prints when core's set first arrives. This change adds a validation finding for a host file without core's include. A set, its loaded file and whom its rules bind on stand under all three.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-operational-rule
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+    revalidated:
+      at: 2026-11-09T10:32:24Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T224001Z-9d4b108d and main's 20261108T224418Z-a4df0e26 and 20261108T231929Z-eb90ad27, made apart. Main's two add no source of rules and no citation form, changing only what `rule-sets loaded` and an upgrade print. This change only checks that the host file holds core's include. The term's sources, citations and layers hold with all three.
+  - artefact: .pkit/lifecycle/manifest.md
+    revalidated:
+      at: 2026-11-09T10:32:26Z
+      outcome: unchanged
+      unchanged-because: The page shows the `loaded_rules` keys and points to the adapters README for what they declare. This change widens only the descriptions of `loaded_rules` and `line` in the package schema, no key or shape. ADR-076's refinements add a validation check of core's include, which the page does not describe, so it holds.
+  - artefact: .pkit/adapters/claude-code/README.md
+    read:
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:32:29Z
+      outcome: updated
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T053408Z-3b52273c.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:32:31Z
+      outcome: updated
+  - artefact: .pkit/lifecycle/upgrade-flow.md
+    revalidated:
+      at: 2026-11-09T10:32:33Z
+      outcome: unchanged
+      unchanged-because: The page says when the index is rendered, what refuses a file at its path, and what a step newly binds. This change adds a validation finding for a host file without core's include, and ADR-076's refinements concern that check. No lifecycle step the page names moves, so it holds.
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T020441Z-7e50a784.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:32:35Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's split the page, leaving pointers to manifest.md and upgrade-flow.md for the package schema and the index. This change adds a validation finding and widens two schema descriptions, neither of which the page states. Its pointers and its merge delivery of `CLAUDE.md` hold with both.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-instruction-file
+    read:
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+    revalidated:
+      at: 2026-11-09T10:32:37Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T224001Z-9d4b108d and main's 20261108T214544Z-1452f2b4, made apart. Main's merge now inserts only the includes a `CLAUDE.md` lacks. This change has validation read the file's bytes as that merge does. Neither alters what the instruction file is or does, so the term holds with both.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-rules-index
+    read:
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+    revalidated:
+      at: 2026-11-09T10:32:39Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T224001Z-9d4b108d and main's 20261108T224418Z-a4df0e26 and 20261108T231929Z-eb90ad27, made apart. Main's two change what `rule-sets loaded` lists and what an upgrade reports, and add no entry to the index. This change checks core's include beside the index's line. The index, what it lists and its place hold with all three.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T193339Z-5bd2a791.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T083359Z-579a84ef.yaml
+    revalidated:
+      at: 2026-11-09T10:32:41Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T074625Z-5e6cbb22 and 20261109T083359Z-579a84ef, made apart. Main's reword the first deny's note for a code runner ADR-025 point 5 leaves unread. They also add land-work's reviewer stop on a merge of the base. This change refines ADR-076's check of the host file. The page's line that `rules.md` reaches every session through the index holds with all three.
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231902Z-3d2033fe.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T005438Z-7c9426ae.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:32:43Z
+      outcome: updated
+  - artefact: .pkit/capabilities/evidence/README.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T014227Z-338d7992.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:32:45Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found the validate section changed only its links, beside the `refs` row's ignored override. This change adds the `rule-sets` row's error for a host file without core's include. Neither reaches `pkit evidence validate` or the checks the page names, so it holds with both.
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T061853Z-ad99d5f3.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T140220Z-88174d4e.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:32:47Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found the page's anchor moved to manifest.md, and the sync and validate sections changed only links. This change's new `rule-sets` error fails `pkit validate` like any error. The visual check's report and its error-only failure stand, so the page holds with both.
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:32:48Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T074625Z-5e6cbb22 and 20261109T075620Z-bee9e107, made apart. Main's found a grant of a wrapper still reaches the run, and that the CLI sections changed only links. This change edits only the validate section's `rule-sets` row, which is not the page's `doc-examples:examples` member. So the page holds with all three.
+  - artefact: .pkit/process/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:32:50Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's re-pointed the page's lifecycle links to manifest.md and component-registry.md, its words otherwise kept. This change adds the `rule-sets` row's error for a host file without core's include. The page's `depends-on` failure and the agent's category stand with both.
+  - artefact: .pkit/schemas/backbone-files.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T110104Z-48d747c9.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:32:52Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's re-pointed the page's lifecycle anchors and links to manifest.md. This change edits two descriptions in `package.schema.json` and the `rule-sets` row, no key or shape. The page's `package.schema.json` entry and the validator registry hold with both.
+  - artefact: .pkit/schemas/data-binding.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:32:55Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found the validate section changed only its links and its `refs` row. This change adds an error to the `rule-sets` row. Neither row is the `data` member's, so how adopter data binds to a schema holds with both.
+  - artefact: .pkit/schemas/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T020441Z-7e50a784.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:32:57Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T074625Z-5e6cbb22 and 20261109T075620Z-bee9e107, made apart. Main's reword three privileges' descriptions, and re-point the page's lifecycle links to the new pages. This change has the `rule-sets` pass check core's include, which the loaded rule sets section covers in general words. Each reaches its own passage, so the page holds with all three.
+  - artefact: .pkit/capabilities/living-docs/pages.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:32:59Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T074625Z-5e6cbb22 and 20261109T075620Z-bee9e107, made apart. Main's drop a DEC-001 sentence on a deny through uv run, and move only links. This change adds the `rule-sets` row's error for a host file without core's include. The `friction` and `packages` checks of a page stand, so it holds with all three.
+  - artefact: .pkit/capabilities/living-docs/spaces.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:01Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found only links and pointers moved in the sections the page cites. This change adds the `rule-sets` row's error for a host file without core's include. A space's places, anchors and configuration checks stand, so the page holds with both.
+  - artefact: .pkit/capabilities/living-docs/validation.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:03Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found the CLI sections the page cites moved only their links. This change adds an error to the `rule-sets` row. `pkit validate` still runs the page's check as `living-docs:spaces`, so it holds with both.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:05Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found the CLI sections the agent reads moved only their links. This change adds a `pkit validate` error, which the agent names rather than judges. What the agent reads and proposes holds with both.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:07Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found its anchors moved to manifest.md, and that living-docs declares no `runtime_ignore`. This change adds only the `rule-sets` row's error for a host file without core's include. The readers point, its history and the `friction` reports hold with both.
+  - artefact: .pkit/rules/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:09Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261105T225848Z-3e84e405.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T131742Z-47f9f143.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T184836Z-d3d0aa8b.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T005759Z-29300bbe.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T210953Z-944553cc.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:12Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found the rules README and CLI sections the page cites moved only links and pointers. This change adds the `rule-sets` row's error for a host file without core's include. The `visual-communication:check` member and the formats' shapes stand, so the page holds with both.
+  - artefact: .pkit/scratchpad/README.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231902Z-3d2033fe.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T005438Z-7c9426ae.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:14Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's re-pointed the seed paths link to upgrade-flow.md. This change adds the `rule-sets` row's error for a host file without core's include. The `scratchpad` member's error on a slug in two state folders stands, so the page holds with both.
+  - artefact: .pkit/skills/README.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:16Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's re-pointed the Deployment links to upgrade-flow.md and component-registry.md, keeping their words. This change adds the `validate` section's error for a host file without core's include. No passage of the page names that error, so it holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:18Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found the adapters README moved only links, and the adapter-author skill declares manifest.md. This change adds to the adapters README that `line:` also gives core's include. Step 10's `packages` and `schemas` checks stand, so the use case holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:20Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found the adapters and skills READMEs moved only their links into the lifecycle pages. This change adds two sentences on `line:` and core's include to the adapters README. How an adapter deploys a project's skill or agent definition holds with both.
+  - artefact: docs/process/README.md
+    read:
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T225513Z-2f7a79b4.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:22Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's re-pointed the guide's link on the connection block to manifest.md. This change adds the `rule-sets` row's error, which the guide's project, holding core's include, does not raise. Its fences' outputs stand, so the guide holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T10:33:24Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, made apart. Main's first two updated variant 1b's dry run, and the `.gitignore` render in steps 10 and 19. Main's other two found the report's key refusal and the override warning reach no step. This change checks core's include only in validation, and leaves the index's render. Each reaches its own step, so the use case holds with all five.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T222112Z-2ccbf735.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:26Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T224001Z-9d4b108d and main's 20261109T075620Z-bee9e107, made apart. Main's found 6b and 6d hold, the adapter adding only the includes `CLAUDE.md` lacks. This change has validation read those lines as the merge reads them. Nothing yet checks what the harness loads, so the assumption and the use case hold with both.
+  - artefact: docs/rules/README.md
+    read:
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225513Z-2f7a79b4.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:28Z
+      outcome: updated
+  - artefact: docs/skills/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:30Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found Deployment moved only links, and the guide's validate output holds no `overrides:`. This change adds an error for a host file without core's include, which the guide's fresh project does not raise. Its output and its warning stand, so the guide holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:32Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T074625Z-5e6cbb22 and 20261109T075620Z-bee9e107, made apart. Main's found step 11's deny still wins, and that the READMEs moved only links. This change adds two sentences on `line:` and core's include to the adapters README. `deploy-agents.sh` and the deploy mark stand, so the use case holds with all three.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+    revalidated:
+      at: 2026-11-09T10:33:34Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T002237Z-a02a7160, 20261109T004544Z-a16af972, 20261109T004555Z-08c0f8b6 and 20261109T014028Z-33dd8c89, made apart. Main's four found that `capabilities show`, the ignore render, the report's key refusal and the override warning leave the install's steps. This change checks core's include only in validation. A first install still gains all three includes, so the use case holds with all five.
+  - artefact: docs/decisions/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:36Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found the sections the guide anchors moved only links, its Surface rows unchanged. This change has `pkit validate` fail a `CLAUDE.md` without core's include. The walkthrough's project holds that include, so the guide holds with both.
+  - artefact: docs/schemas/README.md
+    read:
+      - 20261104T114749Z-6d317cb4.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:49Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found the sections the guide anchors moved only links, and `capabilities register` still binds a glob. This change adds the `rule-sets` row's error, which the guide's project does not raise. Its failures on a misspelt key stand, so the guide holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-029-get-result-whole.md
+    read:
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+    revalidated:
+      at: 2026-11-09T10:33:51Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T224001Z-9d4b108d and main's 20261107T145338Z-3834e35f, made apart. Main's found the adapters README moved only its links into the lifecycle pages. This change adds to it two sentences on `line:` and core's include. The support declaration a delegated result rests on holds with both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-030-work-unprompted.md
+    read:
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+    revalidated:
+      at: 2026-11-09T10:33:53Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T224001Z-9d4b108d and main's 20261107T145338Z-3834e35f and 20261107T153702Z-907fa2fc, made apart. Main's moved the adapters README's links, and updated 10c and 10e for git configuration and a runner's command. This change adds two sentences on `line:` and core's include to the adapters README. Where a harness enforces each permission dimension holds with all three.
+  - artefact: docs/agents/README.md
+    read:
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-09T10:33:55Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T231141Z-f080096e and main's 20261109T075620Z-bee9e107, made apart. Main's found the overlay and CLI sections moved only links, and `pkit agents` gained only a warning. This change adds the `validate` section's error for a host file without core's include. What the guide teaches of agent definitions holds with both.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T083359Z-579a84ef.yaml
+    revalidated:
+      at: 2026-11-09T10:33:58Z
+      outcome: unchanged
+      unchanged-because: Judged with this change's 20261108T224001Z-9d4b108d and main's 20261109T075620Z-bee9e107 and 20261109T083359Z-579a84ef, made apart. Main's moved only links, and added land-work's reviewer stop on a merge of the base, leaving the floors the page states. This change checks core's include beside the index's line. The index route the page names for its rules holds with all three.

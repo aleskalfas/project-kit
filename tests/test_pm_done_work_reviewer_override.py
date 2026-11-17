@@ -88,7 +88,9 @@ def av():
 
 CAP_ROOT = Path("/tmp/x/.pkit/capabilities/project-management")
 
+# When the PR's head arrived on the host, and its commit's own date.
 _COMMIT_TS = "2026-06-01T00:00:00Z"
+_VIEW_HEAD = "f" * 40
 _FRESH_TS = "2026-06-02T00:00:00Z"
 _STALE_TS = "2026-05-01T00:00:00Z"
 _VERDICT_MARKER = "<!-- pkit-verdict -->"
@@ -124,9 +126,19 @@ def _wire(
     closing_issue_labels=None,
     pr_author="author",
     commits=None,
+    pr_view=None,
 ):
     closing_issue_labels = closing_issue_labels or {}
     commits = [{"committedDate": _COMMIT_TS}] if commits is None else commits
+    view = {
+        "author": {"login": pr_author},
+        "comments": comments,
+        "commits": commits,
+        "headRefOid": _VIEW_HEAD,
+        "headRefName": "feat/99-x",
+        "headRepository": {"nameWithOwner": "owner/repo"},
+        **(pr_view or {}),
+    }
 
     monkeypatch.setattr(dw, "collect_contributions", lambda repo_root: collection)
 
@@ -140,16 +152,15 @@ def _wire(
                 stdout=json.dumps({"closingIssuesReferences": refs}),
                 stderr="",
             )
+        if args[:2] == ["gh", "api"] and "/activity" in joined:
+            moved = [{"after": view["headRefOid"], "timestamp": _COMMIT_TS}]
+            return subprocess.CompletedProcess(
+                args=args, returncode=0, stdout=json.dumps(moved), stderr=""
+            )
         return subprocess.CompletedProcess(
             args=args,
             returncode=0,
-            stdout=json.dumps(
-                {
-                    "author": {"login": pr_author},
-                    "comments": comments,
-                    "commits": commits,
-                }
-            ),
+            stdout=json.dumps(view),
             stderr="",
         )
 
@@ -168,8 +179,12 @@ REAL_CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 
 def _freshness(dw):
     """The gate's freshness rule for verdicts naming no reviewed head: fresh
-    when posted after the latest commit (`_COMMIT_TS`)."""
-    return dw.FreshnessRule(head_timestamp=_COMMIT_TS)
+    when posted after the head arrived (`_COMMIT_TS`)."""
+    from _lib.head_arrival import HeadArrival
+
+    return dw.FreshnessRule(
+        head_sha=_VIEW_HEAD, head_arrival=lambda: HeadArrival(timestamp=_COMMIT_TS)
+    )
 
 
 def _slot(dw, name, *, label=None, approved=False, overridden=False, verdict=None):
@@ -605,8 +620,8 @@ def test_all_slots_nudge_survives_a_gh_failure(dw, rc, monkeypatch) -> None:
     assert any("covers EVERY required reviewer" in w for w in result.warnings)
 
 
-def test_all_slots_nudge_survives_an_unresolvable_freshness_anchor(dw, rc, monkeypatch) -> None:
-    """Same for the freshness-anchor refusal (no commits ⇒ no anchor)."""
+def test_all_slots_nudge_survives_an_unknown_head(dw, rc, monkeypatch) -> None:
+    """Same for the refusal of an unknown head (no head named, no commits)."""
     _wire(
         dw,
         monkeypatch,
@@ -614,6 +629,7 @@ def test_all_slots_nudge_survives_an_unresolvable_freshness_anchor(dw, rc, monke
         comments=[],
         closing_issue_labels={42: []},
         commits=[],
+        pr_view={"headRefOid": ""},
     )
     result = dw._check_agent_gate(
         99,
@@ -624,7 +640,7 @@ def test_all_slots_nudge_survives_an_unresolvable_freshness_anchor(dw, rc, monke
         override_reviewers=("reviewer",),
     )
     assert result.passed is False
-    assert "freshness anchor is unknown" in result.refusal_message
+    assert "the PR's head is unknown" in result.refusal_message
     assert any("covers EVERY required reviewer" in w for w in result.warnings)
 
 
@@ -952,7 +968,7 @@ def test_state_stale_approved(dw, av) -> None:
     state, url = dw._describe_override_state(v, _freshness(dw))
     assert "stale APPROVED" in state
     # The state carries the freshness rule's reason.
-    assert "posted before the latest commit" in state
+    assert "posted before the head fffffff arrived" in state
     # A stale APPROVED is not a block, so no block-comment link.
     assert url is None
 

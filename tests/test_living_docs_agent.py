@@ -501,16 +501,10 @@ def test_storyboard_frames_and_sets_the_tone(storyboard):
 # --- the deployed copy ---------------------------------------------------------
 
 
-def _deploy_marker() -> str:
-    """The marker the deploy stamps as line 2, read from the script rather than restated."""
-    script = (ADAPTER / "deploy-agents.sh").read_text(encoding="utf-8")
-    match = re.search(r'^MARKER="(.+)"$', script, flags=re.MULTILINE)
-    assert match, "deploy-agents.sh no longer declares MARKER"
-    return match.group(1)
-
-
 def test_deployed_copy_matches_the_source():
-    """What the deploy would write from the source today is what is committed."""
+    """What the deploy would write from the source today is what is committed: the
+    resolver's text, with the mark the deploy has it write for the capability's
+    definition (ADR-087 point 4)."""
     completed = subprocess.run(
         [
             sys.executable,
@@ -518,15 +512,16 @@ def test_deployed_copy_matches_the_source():
             str(AGENT),
             "living-docs",
             str(OVERLAY),
+            "--mark",
+            "capability:living-docs",
         ],
+        cwd=REPO,
         capture_output=True,
         text=True,
         check=False,
     )
     assert completed.returncode == 0, completed.stderr
-    first, rest = completed.stdout.split("\n", 1)
-    expected = f"{first}\n{_deploy_marker()}\n{rest}"
-    assert DEPLOYED.read_text(encoding="utf-8") == expected, (
+    assert DEPLOYED.read_text(encoding="utf-8") == completed.stdout, (
         "stale deployed copy: run `bash .pkit/adapters/claude-code/deploy-agents.sh`"
     )
 

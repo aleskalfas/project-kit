@@ -1,6 +1,6 @@
 """Keep the tag `latest` on the highest release's commit (PRJ-004, #2052).
 
-`uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest`
+`uv tool install git+https://github.com/aleskalfas/project-kit.git@latest`
 installs the highest release because this script keeps `latest` there. The
 release-tag workflow (`.github/workflows/release-tag.yml`) runs it on every
 push to `main`, after it cut any tag the push needed:

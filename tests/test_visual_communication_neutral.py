@@ -4,12 +4,15 @@ foundations alone, so it draws the starter at its defaults (DEC-008, Implication
 holds no component, so each top draws its own layouts (DEC-009, Implications). It gives
 every shared role a value in every combination of its axes, and every pair the foundations
 and the starter declare reaches its level there. So do the shared text roles and each
-family's text on every fill a component lays them on, beyond the pairs declared. The
-starter's reference renders, drawn under it, pass the check, and each of their texts
-reaches its contrast as drawn in every combination (DEC-004 point 8). Its fonts and their
+family's text on every fill a component lays them on, beyond the pairs declared. It gives
+an order's two ends values of its own, its text keeping 5 to 1 on each, and the starter's
+components, drawn on its steps, fall below their contrast only where the starter's README
+says (DEC-032 points 2 and 8). The starter's reference renders, drawn under it, pass the
+check, and each of their texts reaches its contrast as drawn in every combination (DEC-004
+point 8). Its fonts and their
 licences are the files their upstream releases ship, unchanged, and each weight its
-typography roles use is a family of its own, whose file has that weight (DEC-012,
-Implications, "A weight's own file").
+typography roles use is a family of its own, whose file has that weight (DEC-012 point 4,
+"A weight's own file").
 
 The reference renders are the pieces under `tests/fixtures/visual-communication/starter/`,
 pinned here with the neutral brand in place of the test brand. Run in this process
@@ -19,6 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import itertools
+import json
 import math
 import shutil
 from collections.abc import Iterator, Mapping
@@ -28,6 +32,7 @@ from typing import Any
 import pytest
 from fontTools.ttLib import TTFont
 
+from tests import test_visual_communication_starter as starter
 from tests.in_process import load, run_main
 from tests.visual_communication_project import (
     CAPABILITY,
@@ -36,7 +41,12 @@ from tests.visual_communication_project import (
     TEST_NOTATION,
     bound,
     copy_library,
+    hold_shipped,
+    importable,
+    locked_at,
     project,
+    taken,
+    version_folder,
     write_list,
     yaml_text,
 )
@@ -91,24 +101,35 @@ def files_of(folder: Path) -> dict[str, bytes]:
 
 
 @pytest.fixture(scope="module")
-def brand() -> Any:
-    """The neutral brand, resolved with the foundations and the starter."""
-    scope = tokens.read_scope({"foundations": FOUNDATIONS, "starter": STARTER})
-    return tokens.read_brand(NEUTRAL, scope)
+def brand(location: Path) -> Any:
+    """The neutral brand being built, resolved with the foundations and the starter being
+    built, each read from its copy in `location`, whose folder names its version as a lock
+    does: so the brand names the foundations by their major, and gives their deck's tokens
+    values (DEC-008 point 4, DEC-035 point 7)."""
+    held = {
+        name: version_folder(location, name, taken(name, being_built=True).version)
+        for name in ("foundations", "starter", "neutral")
+    }
+    scope = tokens.read_scope({name: held[name] for name in ("foundations", "starter")})
+    return tokens.read_brand(held["neutral"], scope)
 
 
 # --- the copy, and what it names --------------------------------------------------------------
 
 
 def test_add_copies_it_whole_and_lists_it_shipped(tmp_path: Path) -> None:
+    """What the capability ships by default, as the tree holds it: the newest released
+    version, with its record's entry, or the version being built where none is released."""
+    ships = taken("neutral")
     root = project(tmp_path)
     added = run_main(add, "neutral", cwd=root)
     assert added.returncode == 0, added.stderr
-    assert files_of(root / "visual" / "libraries" / "neutral" / "1.0.0") == files_of(NEUTRAL)
+    copy = root / "visual" / "libraries" / "neutral" / ships.version
+    assert files_of(copy) == files_of(ships.folder)
     listed = read(root / "visual" / "libraries" / "libraries.yaml")
+    versions = {ships.version: ships.entry}
     assert listed == bound(
-        "libraries",
-        libraries={"neutral": {"source": {"kind": "shipped"}, "versions": UNRELEASED}},
+        "libraries", libraries={"neutral": {"source": {"kind": "shipped"}, "versions": versions}}
     )
 
 
@@ -122,11 +143,21 @@ def test_it_names_the_foundations_alone_opens_no_role_and_holds_no_component() -
 # --- its values -------------------------------------------------------------------------------
 
 
-def test_it_gives_every_shared_role_a_value_in_every_combination(brand: Any) -> None:
-    shared = read(FOUNDATIONS / "roles.yaml")["roles"]
+def test_it_gives_every_shared_role_but_its_logo_a_value_in_every_combination(
+    brand: Any,
+) -> None:
+    """It gives `picture.logo` no value, which no brand owes, so it does not export it, and
+    its version states so (DEC-025 points 4 and 9)."""
+    shared = {
+        role: declared
+        for role, declared in read(FOUNDATIONS / "roles.yaml")["roles"].items()
+        if declared["type"] != tokens.PICTURE
+    }
     assert brand.findings == ()
     assert len(brand.combinations()) == math.prod(len(a.modes) for a in brand.axes.values())
     assert set(shared) <= set(brand.roles)
+    assert "picture.logo" not in brand.roles
+    assert [(f.code, f.where) for f in brand.facts] == [("picture-role-unvalued", "picture.logo")]
     for role, combination in itertools.product(shared, brand.combinations()):
         assert brand.resolve(role, combination) is not None, (role, combination)
 
@@ -200,6 +231,55 @@ def test_a_shared_text_role_reaches_the_level_of_text_on_every_ground(brand: Any
     assert below == []
 
 
+#: The foundations' declaration of an order's roles (DEC-032 point 1): which role is each
+#: end, the text on every step, and the page's ground.
+ORDER = read(FOUNDATIONS / "roles.yaml")["order"]
+#: The least contrast its order's text keeps on each end, and the least its last end keeps
+#: from the page's ground, as its tokens' descriptions give them.
+TEXT_ON_ENDS = 5.0
+OFF_THE_PAGE = 1.35
+
+
+def test_it_gives_an_orders_ends_values_of_their_own_and_its_text_the_primary_text(
+    brand: Any,
+) -> None:
+    """So the steps of an order differ in each combination, where at the defaults every step
+    is the neutral family's fill (DEC-032 point 1)."""
+    for combination in brand.combinations():
+        first = brand.resolve(ORDER["first"], combination)
+        last = brand.resolve(ORDER["last"], combination)
+        neutral = brand.resolve("family.neutral.fill", combination)
+        assert first != last and neutral not in (first, last), combination
+        text = brand.resolve(ORDER["text"], combination)
+        assert text == brand.resolve("text-primary", combination), combination
+
+
+def test_its_orders_text_holds_its_margin_on_each_end_and_its_last_end_stands_off_the_page(
+    brand: Any,
+) -> None:
+    """Beyond the pairs and the two rules the check judges (DEC-004 point 8): the text keeps
+    5 to 1 on each end, so every step between keeps it, and the last end stands apart from
+    the page's ground, so a level on it shows its shape with no edge."""
+    for combination in brand.combinations():
+        for end in ("first", "last"):
+            on_end = contrast(brand, ORDER["text"], ORDER[end], combination)
+            assert on_end >= TEXT_ON_ENDS, (end, combination, round(on_end, 2))
+        off = contrast(brand, ORDER["last"], ORDER["ground"], combination)
+        assert off >= OFF_THE_PAGE, (combination, round(off, 2))
+
+
+def test_its_orders_text_reaches_the_level_of_text_on_every_ground(brand: Any) -> None:
+    """So a part painted in the order's text over a fill outside its family, such as a
+    card's text on the surface, keeps its contrast under it (DEC-032 point 8)."""
+    below = [
+        (ground, combination, round(ratio, 2))
+        for ground in grounds(brand)
+        for combination in brand.combinations()
+        if (ratio := contrast(brand, ORDER["text"], ground, combination)) < tokens.LEVELS["text"]
+    ]
+    assert below == []
+
+
 def test_each_familys_text_reaches_the_level_of_marks_on_every_ground(brand: Any) -> None:
     """A connector's line takes its family's text, and may lie on the background or on
     another family's fill, which no pair declares."""
@@ -227,25 +307,24 @@ def pinned_with_neutral(folder: Path) -> None:
 
 @pytest.fixture(scope="module")
 def location(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A location that holds the foundations, the starter and the neutral brand as the
-    capability ships them, the test notation, and the starter's reference pieces."""
-    root = project(tmp_path_factory.mktemp("neutral"))
-    copy_library(root, FOUNDATIONS, "foundations", "1.0.0")
-    copy_library(root, STARTER, "starter", "1.0.0")
-    copy_library(root, NEUTRAL, "neutral", "1.0.0")
+    """A location that holds the foundations, the starter and the neutral brand being built
+    as the capability ships them, the released version of their number where it is
+    released, the test notation, and the starter's reference pieces, each locked at the
+    versions being built."""
+    return reference_location(project(tmp_path_factory.mktemp("neutral")))
+
+
+def reference_location(root: Path) -> Path:
+    """The location of `location`, laid out in the project at `root`."""
     copy_library(root, TEST_NOTATION, "test-notation", "1.0.0")
-    write_list(
-        root,
-        {
-            "foundations": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
-            "starter": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
-            "neutral": {"source": {"kind": "shipped"}, "versions": UNRELEASED},
-            "test-notation": {"source": {"kind": "project"}, "versions": UNRELEASED},
-        },
-    )
+    write_list(root, {"test-notation": {"source": {"kind": "project"}, "versions": UNRELEASED}})
+    built = {
+        name: hold_shipped(root, name).version for name in ("foundations", "starter", "neutral")
+    }
     shutil.copytree(PIECES, root / "visual" / "pieces")
     for folder in (root / "visual" / "pieces").iterdir():
         pinned_with_neutral(folder)
+        locked_at(folder, built)
     return root
 
 
@@ -268,11 +347,22 @@ def colours_of(piece: Any) -> dict[str, Mapping[str, Any]]:
     }
 
 
-def scenes_of(piece: Any) -> Iterator[Mapping[str, Any]]:
-    """The scene of a piece in each of its languages."""
-    for _, result in piece.scenes():
+def scenes_of(piece: Any) -> Iterator[tuple[list[str], Mapping[str, Any]]]:
+    """The scene of a piece in each of its languages and at each of its sizes, with the keys
+    it is drawn in: each combination of the piece's modes at that size."""
+    for _, result in piece.scenes(facts=piece.piece.stand_ins):
         assert result.findings == []
-        yield result.scene.to_dict()
+        size = result.scene.size_key
+        yield [key for key in piece.keys if piece.size_key(key) == size], result.scene.to_dict()
+
+
+def with_steps(
+    scene: Mapping[str, Any], colours: Mapping[str, Any], served: list[str]
+) -> dict[str, Any]:
+    """The colours of a piece, `colours`, and the value of each step of an order `scene`
+    paints in each combination `served` names, which comes with the scene, never from the
+    document of values (DEC-032 point 5): what the check measures the scene's texts with."""
+    return {**colours, **checks._steps_of(scene, colours, served)}
 
 
 def texts(element: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
@@ -284,26 +374,193 @@ def texts(element: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
 
 
 def test_every_reference_render_passes_the_check_under_it(location: Path) -> None:
+    """The brand's version states, once, that it gives `picture.logo` no value, and no
+    piece states it (DEC-025 point 9). Beside it, the pieces ask for attention on the
+    concepts that map no sign, and on the places the checks of boxes name, as under the test
+    brand."""
     report = checks.check(location)
     found = [
-        (level, finding.code, finding.file, finding.message)
+        (level, finding.code, finding.file, finding.where)
         for finding, level in report.judged
-        if finding.code != "component-experimental"
+        if finding.code not in starter.APART
     ]
-    assert found == []
+    built = taken("neutral", being_built=True).version
+    assert found == [
+        ("fact", "picture-role-unvalued", f"visual/libraries/neutral/{built}/", "picture.logo")
+    ]
+    assert starter.on_signs(report.judged) == starter.UNSIGNED
+    assert starter.box_levels(report.judged) <= {"attention"}
     assert not report.failed()
+
+
+#: The neutral brand's version being built.
+BUILT_BRAND = taken("neutral", being_built=True).version
+#: The neutral brand's release the comparison of the foundations draws on their release 1.0.0.
+RELEASED_BRAND = taken("neutral").version
+#: The reference piece the tests of that comparison draw: one piece shows what it tells apart.
+COMPARED = "card"
+#: The roles the foundations being built add to their release 1.0.0 that the brand being
+#: built gives values of its own, beyond what their defaults alias: the length of a line, and
+#: an order's two ends (DEC-032 point 1). Its order's text is its primary text, as the neutral
+#: family's is.
+GIVEN = ["size.line", "family.order.first", "family.order.last"]
+
+
+def read_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def taken_back(built: Any, released: Any) -> Any:
+    """The tree of tokens `built`, each token the tree `released` holds at its path taken back
+    to the one `released` holds there, and each token `released` alone holds added."""
+    if not isinstance(built, dict) or not isinstance(released, dict) or "$value" in released:
+        return released
+    return {**built, **{key: taken_back(built.get(key), each) for key, each in released.items()}}
+
+
+def with_the_releases_look(root: Path) -> None:
+    """The copy of the neutral brand being built in the location at `root`, each token its
+    release gives taken back to the value it gives there, in each token file of that
+    release: so a comparison with the release finds what the version being built adds,
+    such as its sizes, and not a change of its look, which breaks nothing (DEC-003 point
+    6)."""
+    built = version_folder(root, "neutral", BUILT_BRAND)
+    released = version_folder(root, "neutral", RELEASED_BRAND)
+    for path in sorted((released / "tokens").glob("*.tokens.json")):
+        target = built / "tokens" / path.name
+        assert target.is_file(), f"the version being built holds no {path.name}"
+        target.write_text(
+            json.dumps(taken_back(read_json(target), read_json(path))), encoding="utf-8"
+        )
+
+
+def comparison_location(root: Path, only: str | None = None) -> Path:
+    """The location of `location`, laid out in the project at `root`, holding the reference
+    piece `only` alone where it names one, and beside the versions being built the
+    releases the comparison of the foundations draws on: the foundations' release 1.0.0,
+    the starter's newest release and the neutral brand's `RELEASED_BRAND`. The deck of the
+    foundations being built places its parts where their release places them
+    (`starter.DECK_PLACES`)."""
+    reference_location(root)
+    if only is not None:
+        for folder in (root / "visual" / "pieces").iterdir():
+            if folder.name != only:
+                shutil.rmtree(folder)
+    hold_shipped(root, "foundations", version="1.0.0")
+    hold_shipped(root, "starter", being_built=False)
+    starter.with_the_releases_deck_places(root)
+    assert hold_shipped(root, "neutral", being_built=False).version == RELEASED_BRAND
+    return root
+
+
+def compared(root: Path) -> dict[str, tuple[Any, Any]]:
+    """Each piece of the comparison location at `root` whose component the starter's release
+    holds, by name, drawn with that release twice: under the neutral brand being built, its
+    look taken back to its release's (`with_the_releases_look`), on the foundations being
+    built, as their release would show it (`starter.as_released`), and under the brand's
+    release on theirs. Each drawing is a document of values and the previews. The brand
+    being built gives `size.line`, which no piece that names no size reads, and an order's
+    ends, which no piece the starter's release draws takes a step of (`GIVEN`)."""
+    with_the_releases_look(root)
+    released, built = starter.on_each_foundations(root, brand={"neutral": RELEASED_BRAND}).values()
+    return {
+        name: ((starter.as_released(values, given=GIVEN), files), released[name])
+        for name, (values, files) in built.items()
+    }
+
+
+def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_release(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The neutral brand being built gives the sizes of the axis `device`, which the
+    foundations being built add to their release 1.0.0, and a piece that names none is
+    drawn at the default, `desktop` (DEC-021 points 2 and 9). Their deck places its lead
+    and its visual otherwise, which the comparison takes back (`starter.DECK_PLACES`), and
+    the brand being built may look otherwise than its release, which the comparison takes
+    back too (`with_the_releases_look`). So each reference piece of a component the
+    starter's release holds, drawn with that release, draws under it on them as under the
+    brand's release 1.0.0 on theirs, byte for byte: each preview, but for the foundations'
+    version they name, and its values, but for the role `size.site` they add, which the
+    brand gives as wide as its slide on a desktop, `size.line`, which no piece that names
+    no size reads, those of a run's sign and ground, at its smallest space, an order's,
+    whose ends it gives greys of their own and whose text is its neutral family's, and their
+    deck's title and lead, which the brand gives on a desktop in the types the deck drew them
+    in before. The starter being built reads roles
+    the foundations' release does not declare, and its web parts name the sizes, which that
+    release does not declare either."""
+    importable(monkeypatch, starter.svg)
+    assert BUILT_BRAND != RELEASED_BRAND
+    drawn = compared(comparison_location(project(tmp_path)))
+    assert sorted(drawn) == starter.ON_THE_RELEASE
+    for name, ((values, files), released) in drawn.items():
+        assert files, name
+        assert (values, files) == released, name
+
+
+def test_the_comparison_finds_a_default_size_that_draws_otherwise(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """What the comparison guards: a brand being built whose default size, `desktop`, gives
+    a body of its own, as large as on a projector, draws a piece that names no size
+    otherwise than its release, so the comparison finds it."""
+    importable(monkeypatch, starter.svg)
+    root = comparison_location(project(tmp_path), only=COMPARED)
+    built = version_folder(root, "neutral", BUILT_BRAND)
+    body = read_json(built / "tokens" / "projector.tokens.json")["type"]["body"]
+    desktop = {"type": {"$type": "typography", "body": body}}
+    (built / "tokens" / "desktop.tokens.json").write_text(json.dumps(desktop), encoding="utf-8")
+    resolver = read_json(built / "neutral.resolver.json")
+    resolver["modifiers"]["device"]["contexts"]["desktop"] = [
+        {"$ref": "tokens/desktop.tokens.json"}
+    ]
+    (built / "neutral.resolver.json").write_text(json.dumps(resolver), encoding="utf-8")
+    [(drawn, released)] = compared(root).values()
+    assert drawn != released
+
+
+def test_the_comparison_passes_a_change_of_the_brands_look(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A change of how the brand being built looks breaks nothing (DEC-003 point 6), so the
+    comparison passes one: its accent pointed at another hue, and its body set larger."""
+    importable(monkeypatch, starter.svg)
+    root = comparison_location(project(tmp_path), only=COMPARED)
+    built = version_folder(root, "neutral", BUILT_BRAND)
+    path = built / "tokens" / "base.tokens.json"
+    base = read_json(path)
+    base["scheme"]["accent"]["$value"] = "{palette.purple.600}"
+    base["type"]["body"]["$value"]["fontSize"]["value"] = 18
+    path.write_text(json.dumps(base), encoding="utf-8")
+    [(drawn, released)] = compared(root).values()
+    assert drawn == released
 
 
 def test_each_text_of_the_reference_renders_reaches_its_contrast_in_every_combination(
     brand: Any, drawn: Mapping[str, Any]
 ) -> None:
+    """A piece that names no size is drawn at the brand's default size alone, in every
+    combination of its other axes (DEC-021 point 2). A web part's piece is drawn at each
+    size it names, a desktop, a tablet and a phone, so a field in error and a button that
+    cannot be pressed reach theirs in each. The brand's fourth size, a projector, raises
+    only the types, and no reference piece names it. A text on a step of an order, as on
+    each level of layers, is measured in the step's value (`with_steps`)."""
     measured = 0
-    expected = [keys.key_of(each, brand.axes) for each in brand.combinations()]
+    sizes = pl.size_axes(brand.axes)
+    every = [keys.key_of(each, brand.axes) for each in brand.combinations()]
     for name, piece in drawn.items():
+        named = read(PIECES / name / "piece.yaml").get("modes") or {}
+        expected = [
+            keys.key_of(each, brand.axes)
+            for each in brand.combinations()
+            if all(each[axis] in named.get(axis, [sizes[axis].default]) for axis in sizes)
+        ]
+        assert sizes and len(expected) < len(every), name
         assert sorted(piece.keys) == sorted(expected), name
         colours = colours_of(piece)
-        for scene in scenes_of(piece):
-            assert checks.drawn_contrast(scene, colours, piece.keys) == [], name
+        for served, scene in scenes_of(piece):
+            assert checks.drawn_contrast(scene, with_steps(scene, colours, served), served) == [], (
+                name
+            )
             measured += sum(1 for _ in texts(scene))
     assert measured > 0
 
@@ -315,11 +572,140 @@ def test_the_measure_of_a_text_reads_each_combination(drawn: Mapping[str, Any]) 
     colours = colours_of(card)
     last = sorted(card.keys)[-1]
     weak = {**colours["text-secondary"], last: colours["surface"][last]}
-    [scene, *_] = scenes_of(card)
+    [(_, scene), *_] = scenes_of(card)
     found = checks.drawn_contrast(scene, {**colours, "text-secondary": weak}, card.keys)
     assert found
     assert all(finding.code == "contrast-drawn" for finding in found)
     assert all(f"`{last}`" in finding.message for finding in found)
+
+
+# --- the starter's components on an order's steps ---------------------------------------------
+
+#: How many levels each slide of the audit draws, so its steps run from the first end to the
+#: last through three between.
+AUDITED_PLACES = 5
+
+#: Each starter component that paints from its colour family, so that a place of a list may
+#: give it a step, with the words for its options it is audited with, and the fields of one
+#: level it draws (DEC-032 point 8). Each part that lies on its fill is drawn.
+AUDITED: dict[str, tuple[dict[str, str], dict[str, Any]]] = {
+    "level": (
+        {},
+        {"head": "A level", "text": ["Plain, then ", {"text": "strong", "style": "strong"}]},
+    ),
+    "card": (
+        {"fill": "tint", "bar": "left"},
+        {
+            "head": "A card",
+            "tag": "tag",
+            "text": ["Plain, then ", {"text": "strong", "style": "strong"}],
+        },
+    ),
+    "tag": ({}, {"label": "A tag"}),
+    "group": ({}, {"head": "A group", "tag": "tag", "items": [{"id": "item", "head": "An item"}]}),
+    "code": (
+        {},
+        {
+            "head": "A code block",
+            "text": [
+                {"text": "$ ", "style": "prompt"},
+                {"text": "pkit status", "style": "command"},
+                {"text": "  # a comment\n", "style": "comment"},
+                "plain output",
+            ],
+        },
+    ),
+    "aside": ({}, {"head": "An aside", "command": "$ pkit status", "text": "Its text."}),
+    "button": ({}, {"label": "A button"}),
+    "field": ({}, {"label": "A field", "value": "Its value", "note": "Its note."}),
+    "header": (
+        {"fill": "tint"},
+        {"title": "A header", "links": [{"id": "link", "label": "A link"}]},
+    ),
+    "section": ({"fill": "tint"}, {"head": "A section", "text": "Its text."}),
+}
+
+#: What the audit finds below its contrast on the neutral brand's steps, each as the
+#: component drawn as a level, and the part and the paint of what falls below: a part painted
+#: with a shared role over the step (the starter's README, *An order's steps*). No part
+#: painted in the order's text over a fill outside its family is drawn on a step.
+FAILS_ON_STEPS = {
+    ("code", "text", "accent"),
+    ("code", "text", "text-secondary"),
+    ("header", "navigation/links[link]/label", "accent"),
+}
+
+
+def audit_location(root: Path) -> Path:
+    """A location that holds the foundations, the starter and the neutral brand being built,
+    and for each component of `AUDITED` a figure, named for the component, that draws it as
+    each level of a `layers` that gives its levels the steps, in every combination of the
+    brand's value axes. A figure is as tall as what it holds."""
+    built = {
+        name: hold_shipped(root, name).version for name in ("foundations", "starter", "neutral")
+    }
+    for name, (words, fields) in AUDITED.items():
+        levels = [{"id": f"level-{place}", **fields} for place in range(1, AUDITED_PLACES + 1)]
+        body = {
+            "use": "starter/layers",
+            "level": {"use": f"starter/{name}", **words},
+            "levels": levels,
+        }
+        folder = root / "visual" / "pieces" / name
+        folder.mkdir(parents=True)
+        content = bound("content", body=body)
+        (folder / "content.en.yaml").write_text(yaml_text(content), encoding="utf-8")
+        piece = bound(
+            "piece",
+            top="foundations/figure",
+            brand="neutral",
+            languages=["en"],
+            audience="The starter's owner, who audits its components on an order's steps.",
+            shown="In the capability's tests.",
+            explains=False,
+            exports=[],
+            state="draft",
+            modes={"colour-scheme": ["light", "dark"], "contrast": ["standard", "high"]},
+            lock=built,
+        )
+        (folder / "piece.yaml").write_text(yaml_text(piece), encoding="utf-8")
+    return root
+
+
+def below_on_steps(name: str, piece: Any) -> set[tuple[str, str, str]]:
+    """What falls below its contrast in the figure that draws the component `name` as each
+    level of a `layers`, as drawn, as `FAILS_ON_STEPS` gives each: the component, the part
+    within a level, and the paint of the run that falls below."""
+    colours = colours_of(piece)
+    found: set[tuple[str, str, str]] = set()
+    for served, scene in scenes_of(piece):
+        runs = {
+            str(text["id"]): {run["fill"] for paragraph in text["paragraphs"] for run in paragraph}
+            for text in texts(scene)
+        }
+        for finding in checks.drawn_contrast(scene, with_steps(scene, colours, served), served):
+            assert finding.code == "contrast-drawn", finding
+            part = finding.where.partition("/body/levels[")[2].partition("]/")[2]
+            paints = runs[finding.where]
+            found |= {(name, part, paint) for paint in paints if f"`{paint}`" in finding.message}
+    return found
+
+
+def test_the_starters_components_on_an_orders_steps_fall_below_only_where_its_readme_says(
+    tmp_path: Path,
+) -> None:
+    """The starter's owner audits its components on the steps before a release that makes
+    them `layers`' default (DEC-032 point 8). Drawn as each level of a `layers` on the
+    neutral brand's steps, in every combination of its value axes, only a part painted with
+    a shared role over the step falls below its contrast: a code block's prompts, comments
+    and commands, and a tinted header's links. Every text and sign each other component lays
+    on the step is in the order's text, which keeps its contrast."""
+    root = audit_location(project(tmp_path))
+    found: set[tuple[str, str, str]] = set()
+    for name in AUDITED:
+        piece = pl.read_piece(root, "visual", name)
+        found |= below_on_steps(name, pl.Project(piece, piece.lock, pl.Held(root, "visual")))
+    assert found == FAILS_ON_STEPS
 
 
 # --- its fonts --------------------------------------------------------------------------------
@@ -371,8 +757,8 @@ def test_each_family_it_names_has_its_file(brand: Any) -> None:
 
 def test_each_typography_roles_weight_is_the_weight_of_its_familys_file(brand: Any) -> None:
     """A family's one file measures and draws it whatever its weight, so a weight its file
-    does not have would be drawn in another (DEC-012, Implications, "A weight's own file").
-    Each weight is so a family of its own."""
+    does not have would be drawn in another (DEC-012 point 4, "A weight's own file", and
+    DEC-004 point 9). Each weight is so a family of its own."""
     measured = 0
     for role, combination in itertools.product(brand.valued, brand.combinations()):
         if brand.type_of(role) != "typography":

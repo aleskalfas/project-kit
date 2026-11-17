@@ -1,7 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  DEC-013 decides when a library the capability ships counts as released, and
-  how its release is fixed (#2592). The record designs ahead: the shipped
-  folder, the release of a shipped version and the command that brings one
-  in change in later pull requests, so no surface moves yet.

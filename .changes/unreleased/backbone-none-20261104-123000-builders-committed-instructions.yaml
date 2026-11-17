@@ -1,3 +1,0 @@
-component: backbone
-kind: none
-body: Project rule 2 in `.pkit/rules/project.md`, project-kit's own and never synced, points to `CONTRIBUTING.md` for the fast gates and names the documentation tests a builder runs, and the project's agent overlay names its conventions corpus (#2641). Nothing an adopter receives changes.

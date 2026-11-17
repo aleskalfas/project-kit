@@ -1,0 +1,10 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The starter's version being built, 1.1.0, gives its `table` the option `inset`,
+  its words `own`, the default, and `none`. With `none` the table sets no inset of
+  its own, so its head and its rows reach the edges of the width it gets: on a
+  slide, whose layout keeps the margin, its first column starts on the title's
+  edge. A table that names no `inset` draws as before.

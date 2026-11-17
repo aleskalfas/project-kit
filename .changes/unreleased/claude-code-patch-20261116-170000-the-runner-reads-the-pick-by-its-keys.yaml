@@ -1,0 +1,8 @@
+component: claude-code
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The agent runner reads the deploy's pick of an agent's definition by its
+  keys, as ADR-097 point 3 says: a pick that does not say whether a place
+  ships the agent refuses the run, where before it was read as a shipped name.

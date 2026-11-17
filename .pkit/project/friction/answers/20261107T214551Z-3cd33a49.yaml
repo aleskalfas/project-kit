@@ -1,0 +1,95 @@
+answers:
+  - artefact: .pkit/release/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261104T164143Z-37e80644.yaml
+    revalidated:
+      at: 2026-11-07T21:45:51Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+    revalidated:
+      at: 2026-11-07T21:45:53Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+    revalidated:
+      at: 2026-11-07T21:46:04Z
+      outcome: unchanged
+      unchanged-because: release-pr.yml now names its branch and writes the PR body through scripts/release_pr.py. A release step that moves no backbone still takes a branch named after the run id, as variant 1a says, and the body still shows each migration-dir warning whole, as variant 2a says. The long-changelog link and the branch a failed run left behind concern the backbone's release branch and the changelog section, which UC-008 carries.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-008-release-breaking-backbone-change.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-07T21:46:40Z
+      outcome: unchanged
+      unchanged-because: "UC-008 gained variants 3b, a branch a failed run left behind, and 6a, a changelog entry too long for the release pull request's body. In 6a the body still holds each migration-dir warning whole, so step 2's need holds: the body shows the folder's warning for the maintainer to judge. The changelog entry the maintainer reads at UC-008 step 8 is still the release's, on the pushed branch."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-002-upgrade-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-07T21:46:42Z
+      outcome: unchanged
+      unchanged-because: UC-008 gained variants 3b, the branch a failed run left behind, and 6a, a changelog entry too long for the release pull request's body. Both concern how the release pull request is opened, not the release tag on the distribution's repository that this journey needs from UC-008, which is cut as before.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-006-start-on-new-machine.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+    revalidated:
+      at: 2026-11-07T21:46:43Z
+      outcome: unchanged
+      unchanged-because: UC-008 gained variants 3b, the branch a failed run left behind, and 6a, a changelog entry too long for the release pull request's body. Both concern how the release pull request is opened, not the release tag or the tag latest this journey needs from UC-008, which are cut and moved as before.

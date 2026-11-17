@@ -10,9 +10,10 @@ from typing import Any
 import click
 import pytest
 
-from project_kit import install, router, sync
+from project_kit import install, router, session_guard, sync
 from project_kit.manifest import read_backbone_manifest, read_kit_version, write_backbone_manifest
 from tests.adopter_repo import MakeAdopterRepo
+from tests.agent_definitions_support import stage_picker
 
 # The backbone version an installed fixture records: the real source kit's. A
 # fake source a capability test stages carries it too, since sync refuses a
@@ -84,6 +85,57 @@ def test_sync_self_host_runs_deploy_primitives_only(monkeypatch: pytest.MonkeyPa
     assert called["workspace"] == 1
     # And provisioning (#1092): it readies the checkout for an offline validate.
     assert called["provision"] == 1
+
+
+_SESSION_WARNING = "⚠ WARNING: this session's project folder"
+
+
+def test_sync_warns_last_where_the_session_started_elsewhere(
+    installed_target: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A repository cloned into a folder below the session's: the harness loads
+    nothing sync writes there until a session starts at the root (#3005)."""
+    monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(installed_target.parent))
+
+    sync.run_sync(installed_target)
+
+    out = capsys.readouterr().out
+    warning = out.partition(_SESSION_WARNING)[2]
+    assert warning and "`pkit sync`" in warning
+    assert out.rstrip().endswith(f"until a session starts at {installed_target}.")
+
+
+@pytest.mark.parametrize("anchor", ["root", None])
+def test_sync_does_not_warn_at_the_root_or_outside_any_session(
+    installed_target: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    anchor: str | None,
+) -> None:
+    if anchor == "root":
+        monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(installed_target))
+
+    sync.run_sync(installed_target)
+
+    out = capsys.readouterr().out
+    assert "Sync complete." in out
+    assert _SESSION_WARNING not in out
+
+
+def test_self_host_sync_warns_where_the_session_started_elsewhere(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The self-host branch writes the harness's files too, so it warns the same."""
+    source_repo = install.find_source_kit().parent
+    monkeypatch.chdir(source_repo)
+    monkeypatch.setattr(sync, "regenerate_derivable_state", lambda _ctx: None)
+    monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(tmp_path))
+
+    sync.run_sync(source_repo)
+
+    out = capsys.readouterr().out
+    assert "Self-host sync complete" in out
+    assert out.rstrip().endswith(f"until a session starts at {source_repo}.")
 
 
 def test_sync_renders_runtime_ignore_on_normal_path(installed_target: Path) -> None:
@@ -371,6 +423,78 @@ def test_sync_invokes_installed_adapter_primitives(
     assert "deploy-agents.sh" in calls
 
 
+# --- hook needs, which every deploy warns of (COR-013 point 4, #2467) ---
+
+_CONSUMER_AGENT = (
+    "---\nname: consumer\ndescription: Test.\nneeds: [workflow.do-thing]\n---\n\n"
+    "# Consumer\n\nCalls `workflow.do-thing`.\n"
+)
+
+
+def _need_warnings(output: str) -> list[str]:
+    return [line for line in output.splitlines() if "needs hook" in line]
+
+
+def test_sync_warns_of_a_hook_need_no_provider_answers(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The deploy names the agent and the hook, and the sync still completes."""
+    agent = installed_target / ".pkit" / "agents" / "project" / "consumer.md"
+    agent.write_text(_CONSUMER_AGENT, encoding="utf-8")
+    capsys.readouterr()
+
+    sync.run_sync(installed_target, dry_run=True)
+    assert _need_warnings(capsys.readouterr().out) == [], "a dry run deploys nothing"
+
+    sync.run_sync(installed_target)
+
+    output = capsys.readouterr().out
+    assert _need_warnings(output) == [
+        "  warning      agent 'consumer' (.pkit/agents/project/consumer.md) needs hook "
+        "'workflow.do-thing', which no skill answers and no package provides (COR-013 point 4)."
+    ]
+    assert "Sync complete." in output
+
+
+def test_sync_says_nothing_of_a_hook_need_a_skill_answers(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (installed_target / ".pkit" / "agents" / "project" / "consumer.md").write_text(
+        _CONSUMER_AGENT, encoding="utf-8"
+    )
+    skills = installed_target / ".pkit" / "skills" / "project"
+    skills.mkdir(parents=True, exist_ok=True)
+    (skills / "doer.md").write_text(
+        "---\nname: doer\ndescription: Test.\nanswers: [workflow.do-thing]\n---\n\n"
+        "# Doer\n\nAnswers `workflow.do-thing`.\n",
+        encoding="utf-8",
+    )
+    capsys.readouterr()
+
+    sync.run_sync(installed_target)
+
+    output = capsys.readouterr().out
+    assert _need_warnings(output) == []
+    assert "Sync complete." in output
+
+
+def test_the_hook_need_report_fails_nothing_on_a_front_matter_it_cannot_read(
+    installed_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    skills = installed_target / ".pkit" / "skills" / "project"
+    skills.mkdir(parents=True, exist_ok=True)
+    (skills / "broken.md").write_text("---\nname: [broken\n---\n\n# Broken\n", encoding="utf-8")
+    ctx = install.InstallContext(
+        target_root=installed_target, source_kit=install.find_source_kit(), dry_run=False
+    )
+
+    install.report_unsatisfied_needs(ctx)
+
+    assert capsys.readouterr().out.startswith(
+        "  warning      hook needs not checked: a front matter or package.yaml could not be read ("
+    )
+
+
 # Each seed path a project deleted (ADR-065 point 11), relative to the project root.
 _SEED_PATHS = (
     ".pkit/agents/project",
@@ -450,8 +574,9 @@ def _stage_capability_in_source(
 
     Mirrors the layout `pkit capabilities install` expects in source:
     package.yaml + skills/ + decisions/. Also stamps a VERSION, at the version
-    the installed fixture records so sync's guard lets it run, and the
-    decisions/ scaffold the source-kit-missing guard reads.
+    the installed fixture records so sync's guard lets it run, the
+    decisions/ scaffold the source-kit-missing guard reads, and the picker with
+    the records' reader, which sync loads from its source (ADR-087 point 2).
 
     ``version`` sets the capability's package.yaml version, letting a test
     stage a source that is older / equal / newer than an installed copy —
@@ -466,6 +591,7 @@ def _stage_capability_in_source(
         version_file.write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
     # Sync's _refuse_if_source_kit_missing equivalent wants decisions/.
     (source_kit / "decisions").mkdir(parents=True, exist_ok=True)
+    stage_picker(source_kit)
     (cap_dir / "package.yaml").write_text(
         f"""component:
   kind: capability
@@ -565,6 +691,7 @@ def test_sync_warns_when_capability_no_longer_in_source(
     # equivalent doesn't trip and sync's guard reads the recorded version.
     (fake_source_b / "decisions").mkdir()
     (fake_source_b / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
+    stage_picker(fake_source_b)
 
     sync.run_sync(installed_target)
     out = capsys.readouterr().out
@@ -872,9 +999,9 @@ def test_sync_reads_every_record_before_it_copies_anything(
         caps._copy_capability_tree,
     )
 
-    def _read(target_root: Path, name: str) -> caps.CapabilityRecord:
+    def _read(target_root: Path, name: str, **kwargs: Any) -> caps.CapabilityRecord:
         events.append(f"read {name}")
-        return read(target_root, name)
+        return read(target_root, name, **kwargs)
 
     def _copy_area(*args: Any, **kwargs: Any) -> None:
         events.append("copy")
@@ -894,6 +1021,22 @@ def test_sync_reads_every_record_before_it_copies_anything(
     assert events.count("copy capability") == 2
     first_copy = events.index("copy")
     assert all(event.startswith("copy") for event in events[first_copy:]), events
+
+
+def test_sync_restores_the_records_reader_a_projects_tree_lacks(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Sync reads the records through the reader its own release brings, so a project
+    whose tree lacks the reader syncs, and the sync copies the reader back (ADR-087
+    points 2 and 5)."""
+    root = make_adopter_repo(capabilities=("evidence",)).root
+    reader = Path("lifecycle") / "capability_records.py"
+    (root / ".pkit" / reader).unlink()
+
+    sync.run_sync(root)
+
+    shipped = install.find_source_kit() / reader
+    assert (root / ".pkit" / reader).read_bytes() == shipped.read_bytes()
 
 
 def test_sync_reads_the_installed_package_when_no_manifest_records_a_version(
@@ -1063,6 +1206,7 @@ def test_sync_skips_source_reconciliation_for_incubated_capability(
     fake_source.mkdir(parents=True)
     (fake_source / "decisions").mkdir()
     (fake_source / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
+    stage_picker(fake_source)
     monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
 
@@ -1096,6 +1240,7 @@ def test_sync_still_registers_incubated_capability_after_run(
     fake_source.mkdir(parents=True)
     (fake_source / "decisions").mkdir()
     (fake_source / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
+    stage_picker(fake_source)
     monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
 
@@ -1168,6 +1313,7 @@ def test_sync_dry_run_does_not_refresh_incubated_capability(
     fake_source.mkdir(parents=True)
     (fake_source / "decisions").mkdir()
     (fake_source / "VERSION").write_text(f"{_INSTALLED_BACKBONE}\n", encoding="utf-8")
+    stage_picker(fake_source)
     monkeypatch.setattr(install, "find_source_kit", lambda: fake_source)
     monkeypatch.setattr(sync.install, "find_source_kit", lambda: fake_source)
 
@@ -1603,12 +1749,40 @@ def test_sync_stops_when_the_content_is_behind_the_pin_the_pin_running(
     )
 
 
+def test_sync_names_upgrade_pre_where_the_recorded_target_is_a_candidate_above_it(
+    installed_target: Path,
+) -> None:
+    """A move onto a release candidate cut short leaves the candidate recorded as the
+    target, above the pin's code: the guard names `pkit upgrade --pre`, which hands
+    over to that candidate, since no other release finishes the move (ADR-065 point
+    8, ADR-092 point 7)."""
+    candidate = "999.0.0rc1"
+    _record_states(installed_target, candidate, _INSTALLED_BACKBONE)
+    _write_pin(installed_target, _INSTALLED_BACKBONE)
+    before = _tree_bytes(installed_target)
+
+    message = _refusal(installed_target)
+
+    assert (
+        f"this pkit is {_INSTALLED_BACKBONE}, older than this project's content ({candidate}"
+        in (message)
+    )
+    assert (
+        f"This project records the release candidate {candidate} as its target: run `pkit "
+        f"upgrade --pre`, which hands over to {candidate}, whose own upgrade finishes the "
+        "move. No other release finishes it"
+    ) in message
+    assert f"`pkit pin {candidate}`" not in message
+    assert _tree_bytes(installed_target) == before
+
+
 def test_sync_under_the_routers_fallback_names_reconnecting_not_a_bare_upgrade(
     installed_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Pinned, the router could not fetch the pin and ran this pkit: the message names
-    reconnecting, the pin through uvx, an HTTPS install of the pin, and moving on
-    purpose with `pkit unpin` first, never a bare `pkit upgrade`."""
+    reconnecting, the pin through uvx, and moving on purpose with `pkit unpin`
+    first, never a bare `pkit upgrade`. It names no install of the pin by hand,
+    which fetches from the URL the router fetches from (ADR-090 point 1)."""
     _record_states(installed_target, _OLDER, _OLDER)
     _write_pin(installed_target, _OLDER)
     monkeypatch.setenv(router._PIN_UNRESOLVED_ENV, _OLDER)
@@ -1619,7 +1793,8 @@ def test_sync_under_the_routers_fallback_names_reconnecting_not_a_bare_upgrade(
     assert f"This project pins pkit {_OLDER}, which the router could not fetch" in message
     assert "Reconnect and run `pkit sync` again" in message
     assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{_OLDER} project-kit sync`" in message
-    assert f"`uv tool install --force {router.DISTRIBUTION_HTTPS_URL}@v{_OLDER}`" in message
+    assert "uv tool install" not in message
+    assert "SSH" not in message
     assert "`pkit unpin`, then `pkit upgrade`" in message
     assert "Run `pkit upgrade`" not in message
 

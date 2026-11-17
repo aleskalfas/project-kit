@@ -1,0 +1,28 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-10T23:41:49Z
+      outcome: unchanged
+      unchanged-because: In this change, the test that the deployed copy of analysis-resolver matches its source builds the expected copy with the resolver's mark for the capability's definition, as the deploy now writes it, rather than splicing in the mark line itself. The tests that find the definition grants Read, Glob, Grep, Bash and Write alone, owns no path and hands each command that writes to the person are unchanged, so the requirement holds.

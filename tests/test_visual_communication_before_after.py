@@ -21,7 +21,10 @@ from tests.test_visual_communication_pipeline import (
     changed_tests,
     drawing_project,
     every_file,
+    exported_up_to,
+    filled,
     stamped,
+    today,
     write_picture,
 )
 from tests.visual_communication_project import (
@@ -36,7 +39,19 @@ from tests.visual_communication_project import (
     yaml_text,
 )
 
-script, export_script, svg, seam, framing, backbone, before_after, libraries, looks, reading = load(
+(
+    script,
+    export_script,
+    svg,
+    seam,
+    framing,
+    backbone,
+    before_after,
+    libraries,
+    looks,
+    reading,
+    pl,
+) = load(
     "visual-communication",
     "before-after.py",
     "export.py",
@@ -48,6 +63,7 @@ script, export_script, svg, seam, framing, backbone, before_after, libraries, lo
     "libraries",
     "looks",
     "reading",
+    "pipeline",
 )
 
 FOLDER = f"{before_after.FOLDER}/{PIECE}"
@@ -551,17 +567,44 @@ def test_where_the_two_locks_are_one_it_says_so_and_stops_nothing(tmp_path: Path
     assert sorted(drawn(root, "before")) == FILES
 
 
-def test_a_number_the_piece_shows_drops_out_of_what_differs(tmp_path: Path) -> None:
-    """Both drawings take one filling of an export's facts, so two locks that draw alike
-    differ in no page, though the piece shows its version and its date."""
-    root = stamped(tmp_path, "number", state="published")
+@pytest.mark.parametrize("shows", ["number", "date"])
+def test_a_number_the_piece_shows_drops_out_of_what_differs(tmp_path: Path, shows: str) -> None:
+    """Both drawings take one filling of an export's facts, what a preview fills, so two
+    locks that draw alike differ in no page, though the piece shows its version's number or
+    its date (DEC-016 point 5)."""
+    root = stamped(tmp_path, shows, state="published")
+    exported_up_to(root, 41)
     other_brand(root)
+    before = today()
     said = lines(run(root, PIECE, "--ahead"))
     assert said[1] == (
         "after: what a run would propose: foundations 1.0.0, test-brand 1.1.0, tests 1.0.0"
     )
     assert said[2:] == SAME
-    assert all(b"v88" in data for data in drawn(root, "before").values())
+    texts = {before, today()} if shows == "date" else {"v42"}
+    for side in ("before", "after"):
+        for data in drawn(root, side).values():
+            assert any(f">{text}<".encode() in data for text in texts)
+
+
+def test_a_final_pieces_drawings_take_the_stand_ins_and_say_so(tmp_path: Path) -> None:
+    root = stamped(tmp_path, "number", state="final")
+    said = lines(run(root, PIECE, "--ahead"))
+    assert said[-1] == (
+        "before-and-after: a final piece has no next export, so a stand-in shows: `version` at "
+        "`figure/body/number`"
+    )
+    assert all(b">v88<" in data for data in drawn(root, "after").values())
+
+
+def test_both_drawings_take_one_filling(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root = stamped(tmp_path, "number", state="published")
+    other_brand(root)
+    taken = filled(monkeypatch, pl)
+    lines(run(root, PIECE, "--ahead"))
+    assert len(taken) == 2
+    assert taken[0] == taken[1]
+    assert taken[0].version == "v1"
 
 
 def test_a_page_that_does_not_differ_is_not_printed(tmp_path: Path) -> None:

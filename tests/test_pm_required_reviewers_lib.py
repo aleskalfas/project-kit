@@ -1538,3 +1538,80 @@ def test_reached_floors_reads_each_floor_its_own_way(rr) -> None:
         ruled_artefacts=lambda: rr._Unresolvable("boom"),
     )
     assert isinstance(found, rr._RuledArtefactsUnresolvable) and found.reason == "boom"
+
+
+# ---- the reviewers a floor requires (#2661) ------------------------------
+#
+# land-work's check of the merge reads which reviewers the ruled-artefact floor
+# requires, the contributions read as the resolution reads them, before it asks
+# the backbone about the merge (DEC-064 point 8).
+
+
+def test_floor_reviewers_names_the_reviewers_of_that_floor_alone(rr, rc) -> None:
+    collection = rc.ContributionCollection(
+        rules=(*_ruled_collection(rc).rules, *_se_collection(rc).rules),
+        capabilities_walked=("living-docs", _SE),
+    )
+
+    def floor(kind: str) -> Any:
+        return rr.floor_reviewers(kind, REPO, collect_contributions=lambda _root: collection)
+
+    assert floor(rc.FLOOR_TOUCHES_RULED_ARTEFACT) == (_RULES,)
+    assert floor(rc.FLOOR_TOUCHES_CODE) == ("code-reviewer", "security-reviewer", "docs-reviewer")
+
+
+def test_floor_reviewers_names_none_where_no_contribution_names_the_floor(rr, rc) -> None:
+    assert (
+        rr.floor_reviewers(
+            rc.FLOOR_TOUCHES_RULED_ARTEFACT,
+            REPO,
+            collect_contributions=lambda _root: _se_collection(rc),
+        )
+        == ()
+    )
+
+
+def test_floor_reviewers_leaves_out_an_opted_out_contribution(rr, rc) -> None:
+    opt_out = {"capability": "living-docs", "reviewer": _RULES, "reason": "Reviewed by hand."}
+    opt_outs = _OO.read_opt_outs({"review": {"agents": {"contributed_opt_out": [opt_out]}}})
+    assert (
+        rr.floor_reviewers(
+            rc.FLOOR_TOUCHES_RULED_ARTEFACT,
+            REPO,
+            opt_outs=opt_outs,
+            collect_contributions=lambda _root: _ruled_collection(rc),
+        )
+        == ()
+    )
+
+
+@pytest.mark.parametrize(
+    ("collection", "opt_outs", "kind"),
+    [
+        ("undeployed", [], "collection-error"),
+        ("ruled", [_DOCS_OPT_OUT], "opt-out-invalid"),
+        ("ruled", "not a list", "opt-out-invalid"),
+    ],
+    ids=["undeployed agent", "opt-out naming nothing installed", "malformed opt-outs"],
+)
+def test_floor_reviewers_fails_as_the_resolution_fails(rr, rc, collection, opt_outs, kind) -> None:
+    """What fails the resolution on the contributions fails this too (DEC-032 D5), and
+    the resolution fails the same way."""
+    collected = (
+        _design_collection(rc, deployed=False)
+        if collection == "undeployed"
+        else _ruled_collection(rc)
+    )
+    config = {"review": {"agents": {"contributed_opt_out": opt_outs}}}
+    found = rr.floor_reviewers(
+        rc.FLOOR_TOUCHES_RULED_ARTEFACT,
+        REPO,
+        opt_outs=_OO.read_opt_outs(config),
+        collect_contributions=lambda _root: collected,
+    )
+    assert isinstance(found, rr.RequiredReviewersError)
+    assert found.kind == kind
+    resolved = _resolve(
+        rr, baseline=[], collection=collected, closing=[], opt_outs=opt_outs, ruled=()
+    )
+    assert not resolved.ok and resolved.error.kind == kind

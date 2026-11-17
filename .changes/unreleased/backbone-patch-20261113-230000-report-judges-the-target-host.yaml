@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit report` judges `gh`'s authentication on the host it files the report
+  to alone: the host `gh` reaches for the report target, `GH_HOST`, else the
+  one host `gh` is logged in to, else github.com. Another host that fails,
+  such as one whose keychain read times out, no longer sends a report by link
+  rather than through `gh`, nor makes `pkit report`, `report show` and
+  `report submit` act as though `gh` were not signed in. A `gh` too old for
+  `gh auth status --json` cannot list its hosts, and is judged on every host,
+  as before.

@@ -29,9 +29,9 @@ pkit:
         - .pkit/process/shape.md#detection-modes-core
         - .pkit/process/connections.md#the-generated-depends-on-list
         - .pkit/agents/README.md#write-carrying-categories
-        - .pkit/lifecycle/README.md#how-a-registered-command-is-run
-        - .pkit/lifecycle/README.md#validation-the-package-schema
-        - .pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4
+        - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
+        - .pkit/lifecycle/manifest.md#validation-the-package-schema
+        - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
         - .pkit/cli/README.md#process-commands
         - .pkit/cli/README.md#process-new-capabilityprocess-id-flags
         - .pkit/cli/README.md#process-couple-addr---state-s---upstream-addr---relation-r---mode-m---why-prose---version-n---mandatory-reason
@@ -191,13 +191,13 @@ A predicate's `run:` names a command that the owning capability registers in its
 
 #### How a predicate is run
 
-The engine runs the resolved script through the backbone's one command runner, under the predicate policy. The runner is the lookup and bounded run that the validator registry's query runner shares ([the lifecycle README, "How a registered command is run"](../lifecycle/README.md#how-a-registered-command-is-run)).
+The engine runs the resolved script through the backbone's one command runner, under the predicate policy. The runner is the lookup and bounded run that the validator registry's query runner shares ([the lifecycle reference, "How a registered command is run"](../lifecycle/manifest.md#how-a-registered-command-is-run)).
 
 - **Its arguments:** explicit argv, the subject and `--json`.
 - **Where it runs:** with the working directory at the repository's root.
 - **Its environment:** unchanged but for the run's deadline. A predicate may reach the network, so no offline marker is set.
 - **Its bound:** the backbone's thirty-second command bound, in a process group of its own. Overrunning kills the whole group, so the interpreter that a `uv run --script` shebang starts as a grandchild stops too.
-- **Inside another run:** bounded by the time that run has left, in the outermost run's group (the lifecycle README's "A run inside a run").
+- **Inside another run:** bounded by the time that run has left, in the outermost run's group (the lifecycle reference's "A run inside a run").
 
 #### How an answer is read
 
@@ -205,7 +205,7 @@ The engine reads one JSON object from standard output, and reads it by the kind 
 
 - **An `inferred` detection, and a `deterministic` gate:** the engine uses the predicate's `result`. So it does for every other predicate that answers `{result, reason}`: an entry guard, an invariant's `check`, a `resume_when`, and a cascade's `membership`.
 - **A `classified` detection:** the engine reads `{state, reason}` by the rules in [the shape page's "Detection modes"](shape.md#detection-modes-core), and ignores any `result`. It is the one reading of `state`, and it applies to position resolution alone.
-- **An `authorisation-artifact` gate:** the engine reads `{exists, produced_by}`, and computes the gate's result itself. The gate passes when `exists` is true, and `produced_by` is not null and differs from the actor. The engine enforces this cross-authority rule, and ignores any `result` the predicate supplies, so a predicate cannot override it.
+- **An `authorisation-artifact` gate:** the engine reads `{exists, produced_by}`, and computes the gate's result itself. The gate passes when `exists` is true, and `produced_by` is a string, not empty or blank, that differs from the actor. A `produced_by` missing, null, empty, blank or not a string names no producer: the gate stays shut, and its reason says so. The engine enforces this cross-authority rule, and ignores any `result` the predicate supplies, so a predicate cannot override it.
 - **How `result` and `exists` are read:** by their truth value. `false`, `null`, `0`, an empty string and an empty list or object read as false. Any other value reads as true, the string `"false"` included, so answer with JSON's `true` and `false`.
 
 Predicates must be read-only. `status` runs them live, so a predicate that changes anything is a bug with side-effects.
@@ -379,7 +379,7 @@ Each subject's journal is an append-only JSON Lines file in the owning capabilit
 - **Written** only where the project turns journal logging on.
 - **Its path** is the engine's, and its ignore pattern is the backbone's. A capability does not declare either.
 - **A sync** leaves it in place, since the subtree is the project's.
-- **Uninstalling** a methodology-shipped capability deletes its folder, journals included ([the lifecycle README, "Uninstall"](../lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4)). Committed journals survive in version control's history.
+- **Uninstalling** a methodology-shipped capability deletes its folder, journals included ([the lifecycle reference, "Uninstall"](../lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4)). Committed journals survive in version control's history.
 
 #### The ignore rules follow the setting
 
@@ -397,7 +397,7 @@ A capability that still declares the pattern in its own `runtime_ignore` is olde
 # dropped: <capability> '<entry>' — the backbone owns the journal pattern while journals are committed
 ```
 
-- **Validation warns on the entry then** ([the lifecycle README, "Validation: the package schema"](../lifecycle/README.md#validation-the-package-schema)). It names the cure for where the package comes from:
+- **Validation warns on the entry then** ([the lifecycle reference, "Validation: the package schema"](../lifecycle/manifest.md#validation-the-package-schema)). It names the cure for where the package comes from:
   - a methodology-shipped capability: upgrade it with the backbone
   - an externally sourced capability: move its pin to a release that drops the entry
   - the project's own capability: drop the entry

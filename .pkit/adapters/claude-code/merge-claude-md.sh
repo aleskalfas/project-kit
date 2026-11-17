@@ -12,9 +12,13 @@
 #   - CLAUDE.md doesn't exist: creates a minimal host with the three lines.
 #   - CLAUDE.md holds core's include but not the index's line: inserts the
 #     index's line directly after core's include.
-#   - CLAUDE.md lacks core's include: inserts core's, the index's and the
-#     project's lines after the first H1, or prepends a minimal header with them
-#     if there is no H1. The existing content is NEVER clobbered.
+#   - CLAUDE.md lacks core's include: inserts only the lines it does not hold,
+#     keeping the three in their order. Where it holds the index's line, core's
+#     include goes directly before it, and the project's, if absent, directly
+#     after it; where it holds the project's line alone, core's and the index's
+#     lines go directly before it. Where it holds none of the three, inserts them
+#     after the first H1, or prepends a minimal header with them if there is no
+#     H1. The existing content is NEVER clobbered.
 #   - core's include sits only in fenced code or a code span, where Claude Code
 #     imports nothing: inserts nothing and reports it. Only the project can say
 #     where its include belongs, so the project's own edit mends it.
@@ -174,7 +178,61 @@ if only_in_code "$CLAUDE_MD" "$CORE_INCLUDE"; then
     exit 0
 fi
 
-# ── CLAUDE.md lacks core's include — insert after the first H1 ────────────
+# ── Lacks core's include but holds a later line — insert only what is missing
+# The three keep their order around the first line held, the anchor: the index's
+# line where the file holds it, else the project's. Core's include goes directly
+# before the index's line, and the project's, if absent, directly after it;
+# before the project's line alone go core's include and the index's line. Each
+# inserted line takes the anchor's line ending.
+HAS_INDEX=0
+HAS_PROJECT=0
+if holds "$CLAUDE_MD" "$INDEX_INCLUDE"; then HAS_INDEX=1; fi
+if holds "$CLAUDE_MD" "$PROJECT_INCLUDE"; then HAS_PROJECT=1; fi
+
+if [ "$HAS_INDEX" = 1 ] || [ "$HAS_PROJECT" = 1 ]; then
+    if [ "$HAS_INDEX" = 1 ]; then
+        ANCHOR="$INDEX_INCLUDE"
+        BEFORE="$CORE_INCLUDE"
+        AFTER=""
+        ADDED="$CORE_INCLUDE added before $INDEX_INCLUDE"
+        if [ "$HAS_PROJECT" = 0 ]; then
+            AFTER="$PROJECT_INCLUDE"
+            ADDED="$ADDED, $PROJECT_INCLUDE after it"
+        fi
+    else
+        ANCHOR="$PROJECT_INCLUDE"
+        BEFORE="$CORE_INCLUDE $INDEX_INCLUDE"
+        AFTER=""
+        ADDED="$CORE_INCLUDE and $INDEX_INCLUDE added before $PROJECT_INCLUDE"
+    fi
+    TMP=$(mktemp)
+    awk -v anchor="$ANCHOR" -v before="$BEFORE" -v after="$AFTER" "$AWK_LIB"'
+        {
+            raw = $0; text = raw; cr = (sub(/\r$/, "", text) ? "\r" : "")
+            marker = fence_marker(text)
+            if (marker != "") {
+                if (fence == marker) fence = ""; else if (fence == "") fence = marker
+                print raw
+                next
+            }
+            if (!done && fence == "" && trimmed(text) == anchor) {
+                n = split(before, lines, " ")
+                for (i = 1; i <= n; i++) printf "%s%s\n", lines[i], cr
+                print raw
+                n = split(after, lines, " ")
+                for (i = 1; i <= n; i++) printf "%s%s\n", lines[i], cr
+                done = 1
+                next
+            }
+            print raw
+        }
+    ' "$CLAUDE_MD" > "$TMP"
+    write_through "$CLAUDE_MD" "$TMP"
+    status "insert" "CLAUDE.md ($ADDED)"
+    exit 0
+fi
+
+# ── CLAUDE.md holds none of the three — insert after the first H1 ─────────
 # Strategy:
 #   1. Find the line number of the first `# ` heading (Markdown H1) outside
 #      fenced code.

@@ -1,0 +1,63 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+# The design system its job and its form come from (DEC-022 point 4): the GOV.UK Design
+# System's service navigation.
+about: >-
+  The way to a site's other pages: its links, in a row on a wide page and in a column on a
+  phone, each drawn by the link unless the content names another. In a row the links
+  stand at the start of the row or at its end, each as wide as its label. It fills the
+  width it is given, and keeps its links from either edge by an inset of its own.
+
+fields:
+  type: object
+  required: [links]
+  properties:
+    links:
+      type: array
+      minItems: 1
+      description: The links, in their order, each with the fields of the component that draws it.
+      items: {type: object}
+    link:
+      type: object
+      description: >-
+        The component that draws each link that names none, with words for its options:
+        the link unless the content names another.
+
+lists:
+  links: {component: link}
+
+options:
+  # Where the links of a row stand: at its start, or at its end.
+  align: [start, end]
+
+values:
+  # The inset from either edge: a large spacing on a wide page, the inset on a phone.
+  margin: {by: ":device", desktop: "=@starter.margin", phone: "=@starter.inset"}
+  inner: "=:width - margin - margin"
+
+parts:
+  # One list, two parts: a row on a wide page, a column on a phone (DEC-021 point 4).
+  links:
+    repeat: links
+    when: {by: ":device", desktop: true, phone: false}
+    draw: starter/link
+    x: "=margin"
+    width: "=inner"
+    row:
+      gap: "=@starter.margin"
+      sizes: own
+      justify-content: {by: align, start: start, end: end}
+      align-items: center
+  links-phone:
+    repeat: links
+    when: {by: ":device", desktop: false, phone: true}
+    draw: starter/link
+    x: "=margin"
+    width: "=inner"
+    column: {align-items: start}
+
+preferred:
+  # One of the two parts is drawn, the other has no height.
+  height: "=links.bottom + links-phone.bottom"

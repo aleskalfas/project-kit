@@ -1,0 +1,24 @@
+pkit_schema: visual-communication:piece
+schema_version: 1
+
+# The reference renders of the row (DEC-007 point 3): rows whose cells take each span, in
+# English and in German, whose compound words stress its text, at each size the test brand
+# gives. Pinned with the test brand and the starter, so only a person moves what they
+# draw.
+top: foundations/site
+brand: test-brand
+languages: [en, de]
+audience: The starter's owner, who reviews the row against its job and its form.
+shown: In the capability's tests, as the reference renders of the row.
+explains: false
+exports: [svg]
+state: draft
+pinned: true
+modes:
+  colour-scheme: [light, dark]
+  contrast: [standard, high]
+  device: [desktop, tablet, phone]
+lock:
+  foundations: 1.1.0
+  starter: 1.1.0
+  test-brand: 1.1.0

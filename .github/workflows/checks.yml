@@ -27,6 +27,10 @@ name: checks
 # aggregator without its test suite, and no slice starts (ADR-067). The quick
 # checks run beside it, so a review starts as soon in that form, and their lines
 # run twice. Every other run, and every doubt, is full.
+#
+# On a pull request, in both forms, one more job draws each piece's HTML pages on
+# the runner's browser, and keeps them for an agent whose session cannot run one
+# (visual-communication DEC-024 point 5). `checks` does not wait on it.
 
 on:
   pull_request:
@@ -463,3 +467,62 @@ jobs:
         env:
           PKIT_NEEDS: ${{ toJSON(needs) }}
         run: python scripts/ci_parts.py verdict short
+
+  # Each piece's HTML pages, drawn on the runner's Chrome on every pull request, and
+  # kept for an agent whose session cannot run a browser (visual-communication
+  # DEC-024 point 5). It draws the pull request's own head commit, not the merge the
+  # parts check, and keeps the drawings as the artefact `visual-drawings-<head>`,
+  # with each look's images, frames, page files and report. A look that does not
+  # draw fails this job, so a stop never reads as a clean run; its report is kept
+  # all the same. `checks` does not wait on it. It starts once the quick checks have
+  # ended, whatever became of them, so a run holds no more runners at once than its
+  # parts do (ADR-078 point 9). It runs the pull request's own scripts, so it holds
+  # no secret, and its token only reads. It passes no flag and no setting that bears
+  # on the browser's own sandbox, and runs the look as the project writes it
+  # (`scripts/visual_drawings.py`).
+  drawings:
+    name: draw each piece's HTML pages
+    needs: quick
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the pull request's head commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project (clean resolve)
+        run: uv sync
+
+      - name: Sync (provisions the query commands)
+        run: uv run pkit sync
+
+      - name: Draw each piece's HTML pages
+        id: draw
+        env:
+          PKIT_DRAWN_COMMIT: ${{ github.event.pull_request.head.sha }}
+        run: uv run python scripts/visual_drawings.py "$RUNNER_TEMP/visual-drawings"
+
+      # Kept whatever became of the looks, a stop's report among them, under the
+      # name an agent fetches them by: the commit drawn.
+      - name: Keep the drawings, named by the commit drawn
+        if: ${{ !cancelled() && steps.draw.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-drawings-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/visual-drawings/
+          if-no-files-found: ignore
+          retention-days: 30

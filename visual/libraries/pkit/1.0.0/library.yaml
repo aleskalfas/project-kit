@@ -2,7 +2,8 @@ pkit_schema: visual-communication:library
 schema_version: 1
 
 # project-kit's notation: the concepts its pieces tell apart by meaning, each mapped to a
-# colour family the foundations declare (visual-communication DEC-004 point 10, PRJ-012
+# colour family the foundations declare and to a sign, a shape the foundations declare or
+# an icon of its own (visual-communication DEC-004 point 10, DEC-036 point 1, PRJ-012
 # point 3). project-kit keeps it and never ships it. Not released yet, so it may still
 # change.
 name: pkit

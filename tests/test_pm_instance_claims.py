@@ -33,6 +33,11 @@ from tests.pm_state_issue_fakes import FakeRepo
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
+#: Why `gh api user` named no account, as the identity carries it (#3162), and
+#: the report a line words from it.
+FORBIDDEN = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+CANNOT_TELL = f"pkit cannot tell which account is acting, since {FORBIDDEN}"
+
 
 @pytest.fixture(scope="module")
 def ic():
@@ -665,6 +670,101 @@ def test_say_guard_puts_a_refusal_on_stderr_and_a_pass_nowhere(ic, capsys) -> No
     assert err == "[refused] no\n"
 
 
+# ---- an account pkit cannot tell (#3162) -----------------------------------------
+#
+# Where `gh api user` refuses, as under a GitHub App installation's token
+# (#3004), the clone carries why. A line that claims nothing, or keeps or refuses
+# since the claim may be this clone's own, says pkit cannot tell, and why. What
+# each function writes is as it was.
+
+
+def _untold(ic, root: Path):
+    """Instance 2, whose account pkit cannot tell."""
+    return ic.Clone(2, "comment", None, root, login_cause=FORBIDDEN)
+
+
+def test_a_numbered_clone_carries_why_its_account_cannot_be_told(
+    ic, root: Path, no_topology
+) -> None:
+    importlib.import_module("_lib.instance_identity").write_instance_id(root, 2)
+    assert ic.this_clone(root, None, login_cause=FORBIDDEN) == _untold(ic, root)
+
+
+def test_a_claim_says_why_it_claims_nothing(ic, root: Path) -> None:
+    gh = FakeGitHub()
+    gh.add(7)
+    result = ic.claim(7, _untold(ic, root), {}, run=gh)
+    assert result.outcome == ic.NOT_CLAIMED
+    assert result.line == f"[note] ownership: #7 is not claimed: {CANNOT_TELL}."
+    assert gh.calls == []
+
+
+def test_the_plan_says_why_nothing_is_claimed(ic, root: Path) -> None:
+    clone = _untold(ic, root)
+    assert ic.claim_plan(clone) == f"not claimed: {CANNOT_TELL}"
+    assert ic.claim_plan(clone, "someone-else", filing=True) == f"not claimed: {CANNOT_TELL}"
+
+
+def test_the_guard_says_why_an_owner_of_this_clones_number_may_be_its_own(ic, root: Path) -> None:
+    gh = FakeGitHub()
+    gh.add(7, assignees=("someone-else",))
+    gh.post(7, _stamp(ic, "claim", 2), author="someone-else")
+    decision = _guard(ic, gh, _untold(ic, root))
+    assert decision.refused
+    assert decision.line.startswith(
+        f"[refused] edit-issue #7: #7 is owned by instance 2 of @someone-else, and "
+        f"{CANNOT_TELL}, and this clone is instance 2. The clash guard refuses"
+    )
+    assert gh.writes() == []
+
+
+def test_the_guard_gives_no_cause_for_an_owner_of_another_number(ic, root: Path) -> None:
+    gh = FakeGitHub()
+    gh.add(7, assignees=("someone-else",))
+    gh.post(7, _stamp(ic, "claim", 3), author="someone-else")
+    decision = _guard(ic, gh, _untold(ic, root))
+    assert decision.refused
+    assert "cannot tell" not in decision.line
+
+
+def test_a_bypass_posts_the_audit_comment_it_posted_before(ic, root: Path) -> None:
+    gh = FakeGitHub()
+    gh.add(7, assignees=("someone-else",))
+    gh.post(7, _stamp(ic, "claim", 2), author="someone-else")
+    assert _guard(ic, gh, _untold(ic, root), bypass="why").bypassed
+    (audit,) = _audits(gh)
+    assert "The clash guard was bypassed: #7 is owned by instance 2 of @someone-else, and " in (
+        audit
+    )
+    assert "cannot tell" not in audit
+
+
+def test_a_release_says_why_a_claim_it_keeps_may_be_this_clones(ic, root: Path) -> None:
+    gh = FakeGitHub()
+    gh.add(7, assignees=("someone-else",))
+    gh.post(7, _stamp(ic, "claim", 2), author="someone-else")
+    result = ic.release(7, _untold(ic, root), {}, run=gh)
+    assert result.outcome == ic.NOT_RELEASED
+    assert result.line == (
+        "[note] ownership: #7 is owned by @someone-else's instance 2, which only that "
+        f"account's clone can release, and {CANNOT_TELL}."
+    )
+    assert _events(gh, 7) == ["claim 2"]
+
+
+def test_an_owner_this_clone_may_be_says_why_it_is_not_released(ic, root: Path) -> None:
+    gh = FakeGitHub()
+    gh.add(7, assignees=("someone-else",))
+    gh.post(7, _stamp(ic, "claim", 1), author="someone-else")
+    kept = ic.cannot_release(7, _untold(ic, root), {}, capability_root=root, login=None, run=gh)
+    assert kept == ic.Unreleasable(
+        "#7 is owned by instance 1 of @someone-else, a claim on the comment log that only a "
+        f"clone of @someone-else can release (DEC-043 point 3), and {CANNOT_TELL}",
+        "run this from a clone of @someone-else, or once that account's clone released it",
+    )
+    assert gh.writes() == []
+
+
 # ---- a project with a topology of seats (DEC-059) -------------------------------
 
 
@@ -1112,7 +1212,10 @@ def test_a_seat_the_topology_does_not_hold_refuses(ic, root, monkeypatch) -> Non
 
 @pytest.mark.parametrize(
     ("login", "key", "said"),
-    [("me", "", "keeps no key"), ("", "k2", "GitHub account could not be resolved")],
+    [
+        ("me", "", "and it keeps no key, so"),
+        ("", "k2", "and pkit cannot tell which account is acting, so"),
+    ],
 )
 def test_a_clone_with_no_key_or_account_cannot_confirm_its_seat(
     ic, root, monkeypatch, login, key, said
@@ -1122,6 +1225,21 @@ def test_a_clone_with_no_key_or_account_cannot_confirm_its_seat(
     snapshot_with(ic, monkeypatch, snap, hint="worker-2", key=key or None)
     with pytest.raises(ic.Unconfirmed, match=said):
         ic.this_clone(root, login or None)
+
+
+def test_a_seat_whose_account_pkit_cannot_tell_says_why_it_is_not_confirmed(
+    ic, root, monkeypatch
+) -> None:
+    """The refusal words the identity's report, with its cause (#3162)."""
+    _snap, repo = _seated(ic)
+    snap = seat_snapshot(ic, _doc(), repo, login="", key="k2")
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2", key="k2")
+    with pytest.raises(ic.Unconfirmed) as refused:
+        ic.this_clone(root, None, login_cause=FORBIDDEN)
+    assert str(refused.value) == (
+        f"this clone took the seat worker-2, and {CANNOT_TELL}, so its seat cannot be "
+        "confirmed on the seat's state issue."
+    )
 
 
 def test_a_retired_seat_is_released_at_its_clones_next_command(

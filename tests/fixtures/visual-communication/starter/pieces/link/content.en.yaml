@@ -1,0 +1,12 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: links
+    layout: standard
+    main:
+      use: starter/navigation
+      links:
+        - {id: home, label: Home}
+        - {id: records, label: Records}
+        - {id: release, label: Release notes}

@@ -1,0 +1,20 @@
+pkit_schema: visual-communication:piece
+schema_version: 1
+
+# A site of three pages, a portal (DEC-022 point 1), drawn in the neutral brand on a desktop
+# and on a phone. Two pages take the layout `standard` and the site's header and footer,
+# each as tall as its content, and one is drawn by its own component, with neither.
+top: foundations/site
+brand: neutral
+languages: [en]
+audience: The capability's tests, which draw a portal at two sizes.
+shown: In the capability's tests, as a site of three pages.
+explains: false
+exports: [html, pdf]
+state: draft
+modes:
+  device: [desktop, phone]
+lock:
+  foundations: 1.1.0
+  neutral: 1.1.0
+  starter: 1.0.0

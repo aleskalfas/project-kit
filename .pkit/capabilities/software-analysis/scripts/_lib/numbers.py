@@ -47,7 +47,9 @@ except when the working tree numbers nothing: there is nothing to compare, and
 no base is read (point 4) — but for the default branch, when the project has a
 numbering setting to check against its history. When the base moved on after
 this branch left it — the only case in which it can have taken a number since
-— that is reported, never failed, as the change check reports an outdated base.
+— that is reported, never failed, as the change check reports an outdated base,
+and with no remedy: whether and how a branch takes in its base is the project's
+workflow to decide (COR-050 point 12).
 
 An id the project's numbering setting frees is free again, and taken by
 neither side: the rule is the stamp's, read from one home
@@ -324,8 +326,11 @@ def _resolve(named: backbone.Base) -> Base:
 
 
 def _outdated(base: Base) -> str:
+    """The fact of an outdated base, and no remedy, as the change check reports one:
+    whether and how a branch takes in its base is the project's workflow to decide
+    (COR-050 point 12)."""
     return (
         f"the base {base.ref} is at {base.tip[: backbone.SHORT]}, which is not an ancestor of "
         f"HEAD: it moved on after this branch left it at {base.commit[: backbone.SHORT]}; "
-        f"numbers were compared with its tip — merge or rebase onto {base.ref}, then run again"
+        "numbers were compared with its tip"
     )

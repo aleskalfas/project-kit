@@ -80,7 +80,7 @@ CHANGES_REQUESTED = "CHANGES_REQUESTED"
 # the base branch's head at the time — `<!-- pkit-verdict sha=<oid>
 # base=<oid> -->` (#1179) — which is what the freshness rule reads
 # (`_lib.verdict_freshness`). The bare form is still a marker: a verdict
-# carrying it has no recorded head and is fresh by the latest commit's time.
+# carrying it has no recorded head and is fresh by when the PR's head arrived.
 # A marker naming a head but no base predates the base pin; its base is not
 # checked.
 VERDICT_MARKER = "<!-- pkit-verdict -->"
@@ -193,24 +193,6 @@ class Verdict:
     url: str = ""
     sha: str = ""
     base: str = ""
-
-
-def latest_commit_timestamp(commits: list) -> str:
-    """The PR head commit's timestamp — the freshness anchor for a verdict
-    that names no reviewed head (DEC-028 "Stale-verdict handling").
-
-    `commits` is the `gh pr view --json commits` array, oldest first, so the
-    last entry is the head; its `committedDate` (falling back to
-    `authoredDate`) is the instant such a verdict must post-date to be fresh.
-    Returns "" when no timestamp is resolvable: the gate then refuses, and the
-    freshness rule holds a verdict that names no head stale.
-    """
-    if not commits:
-        return ""
-    last = commits[-1]
-    if not isinstance(last, dict):
-        return ""
-    return str(last.get("committedDate") or last.get("authoredDate") or "")
 
 
 def parse_verdict_line(first_line: str) -> tuple[str | None, str, str | None]:

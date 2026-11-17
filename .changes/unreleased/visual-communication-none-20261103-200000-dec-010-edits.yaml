@@ -1,7 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  DEC-001, DEC-002, DEC-003, DEC-005 and DEC-009 state in place what
-  DEC-010 decides of them (#2536). The records design ahead: the code that
-  reads a list's component field, its items' arrangement fields and a
-  page's layout lands in later pull requests, so no surface moves yet.

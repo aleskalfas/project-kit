@@ -9,7 +9,11 @@ Three readers of the one wiring resolver (`connections`, ADR-057 points 2 and
   (`accepts`, `offers`), its extensions (`contributes`, `subscribes`,
   `depends-on`), and what would connect here — for an installed capability
   the live wiring's bindings to and from it, for one not installed the
-  bindings of the wiring the project would have with it installed.
+  bindings of the wiring the project would have with it installed. Beside
+  them, the loaded rule set it ships, with each accepted rule by id and
+  title, read where its files are now as install reads it
+  (`loaded_rules.read_component`): installing it is the consent to them
+  (COR-070 point 3).
 - **The plans.** An install plan and an uninstall plan are the difference
   between the live wiring and the wiring the resolver computes for the
   installed set plus or minus the capability (`connections.resolve_wiring_with`),
@@ -60,6 +64,7 @@ from project_kit import backbone_schemas as bs
 from project_kit import capabilities as caps
 from project_kit import cli_render
 from project_kit import connections as cx
+from project_kit import loaded_rules as lr
 from project_kit.friction_discovery import (
     bare_type_collisions,
     declared_types,
@@ -620,6 +625,22 @@ class RoleView:
 
 
 @dataclass(frozen=True)
+class RuleView:
+    id: str
+    title: str
+
+
+@dataclass(frozen=True)
+class LoadedSetView:
+    """The loaded rule set a capability ships, with its accepted rules: those installing
+    it consents to (COR-070 point 3)."""
+
+    citation: str  # the set as cited, `<capability>:<SET>`
+    version: str | None
+    rules: tuple[RuleView, ...]
+
+
+@dataclass(frozen=True)
 class CapabilityView:
     name: str
     version: str | None
@@ -631,12 +652,14 @@ class CapabilityView:
     offers: tuple[PointView, ...]
     extensions: tuple[ExtensionView, ...]
     connections: tuple[ConnectionView, ...]
+    loaded_rules: LoadedSetView | None  # None where it ships no loaded set
 
 
 def show(target_root: Path, candidate: Candidate) -> CapabilityView:
     """The candidate's connections from its package metadata, and what would
     connect here: the live wiring when it is installed, else the wiring the
-    project would have with it installed."""
+    project would have with it installed. With them, its loaded set, read from
+    its files where they are now, as install reads it before the copy."""
     if candidate.installed:
         wiring = cx.resolve_wiring(target_root)
     else:
@@ -654,7 +677,15 @@ def show(target_root: Path, candidate: Candidate) -> CapabilityView:
         offers=tuple(_point_view(p) for p in declared.points if p.kind is not cx.PointKind.DATA),
         extensions=tuple(_extension_view(c) for c in declared.counterparts),
         connections=_connections_of(wiring, name),
+        loaded_rules=_loaded_set_view(lr.read_component(name, candidate.component_dir)),
     )
+
+
+def _loaded_set_view(reading: lr.SetReading | None) -> LoadedSetView | None:
+    if reading is None:
+        return None
+    rules = tuple(RuleView(rule_id, title) for rule_id, (title, _s) in reading.rules.items())
+    return LoadedSetView(reading.citation, reading.version, rules)
 
 
 def _role_view(wiring: cx.Wiring, role: str) -> RoleView:
@@ -851,7 +882,23 @@ def render_show(view: CapabilityView) -> str:
     lines.extend(_section("Points it offers", [_point_text(p) for p in view.offers]))
     lines.extend(_section("Extensions", [_extension_text(e) for e in view.extensions]))
     lines.extend(_section("What connects here", [_connection_text(c) for c in view.connections]))
+    lines.extend(_loaded_rules_section(view.loaded_rules))
     return "\n".join(lines) + "\n"
+
+
+def _loaded_rules_section(loaded: LoadedSetView | None) -> list[str]:
+    """The loaded set's accepted rules, counted, under a line naming the set and its
+    version; `none` where the capability ships no loaded set, as `_section` says it."""
+    if loaded is None:
+        return _section("Loaded rules", [])
+    rows = [f"{rule.id}  {rule.title}" for rule in loaded.rules] or ["none accepted"]
+    return [
+        "",
+        "  " + cli_render.style("heading", f"Loaded rules ({len(loaded.rules)})"),
+        f"    {loaded.citation} {loaded.version or 'no version'} — installing the capability "
+        f"is the consent to its rules (COR-070 point 3):",
+        *(f"      {row}" for row in rows),
+    ]
 
 
 def render_install_plan(plan: InstallPlan) -> str:

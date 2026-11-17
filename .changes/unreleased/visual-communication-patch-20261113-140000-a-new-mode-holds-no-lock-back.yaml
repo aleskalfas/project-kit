@@ -1,0 +1,15 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A draft's render no longer holds back newer foundations that add a mode the
+  piece is drawn in (#3093), such as the projector of the axis `device`. The
+  lock's search compared the piece's placings under the two versions at
+  different size keys, since under the older foundations it placed the piece at
+  the default size, so every tie's end looked lost. It now places the piece
+  under a version only at the keys of the modes it names that the version's
+  foundations hold, and compares only at the keys the lock places it at, so a
+  mode the lock's foundations lack loses nothing. Versions whose foundations
+  lack a mode the lock places the piece in still lose each end the lock finds
+  there, and the fault names the foundations.

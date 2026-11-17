@@ -65,8 +65,12 @@ def rc():
 # collect_contributions is stubbed, so the actual path is never read.
 CAP_ROOT = Path("/tmp/x/.pkit/capabilities/project-management")
 
-# A commit timestamp every verdict comment post-dates (freshness anchor).
+# When the PR's head arrived on the host: every verdict comment post-dates it
+# (the anchor of a verdict naming no head, #2930). The head commit's own date
+# is the same instant, so a test that moves one shows which is read.
 _COMMIT_TS = "2026-06-01T00:00:00Z"
+# The PR's head, unless a test's view names another.
+_VIEW_HEAD = "f" * 40
 _FRESH_TS = "2026-06-02T00:00:00Z"
 # A second fresh timestamp strictly after _FRESH_TS (for latest-by-timestamp).
 _LATER_TS = "2026-06-03T00:00:00Z"
@@ -121,6 +125,7 @@ def _wire(
     commits=None,
     changed_files=("README.md",),
     pr_view=None,
+    arrived: str | None = _COMMIT_TS,
 ):
     """Stub collect_contributions + the gh layer for one gate check.
 
@@ -134,8 +139,9 @@ def _wire(
         malformed JSON.
       * `issue_fetch_none` — a set of issue numbers whose `gh_get_issue`
         returns None (label fetch failed).
-      * `commits` — override the commits payload (e.g. `[]` to remove the
-        freshness anchor).
+      * `commits` — override the commits payload.
+      * `arrived` — when GitHub's activity on the head branch says the head
+        arrived; None makes that read fail.
 
     `changed_files` is the PR's diff (the paginated files API, one file per
     page entry), read only when a floor-carrying contribution is installed.
@@ -144,6 +150,15 @@ def _wire(
     """
     closing_issue_labels = closing_issue_labels or {}
     commits = [{"committedDate": _COMMIT_TS}] if commits is None else commits
+    view = {
+        "author": {"login": pr_author},
+        "comments": comments,
+        "commits": commits,
+        "headRefOid": _VIEW_HEAD,
+        "headRefName": "feat/99-x",
+        "headRepository": {"nameWithOwner": "owner/repo"},
+        **(pr_view or {}),
+    }
 
     monkeypatch.setattr(dw, "collect_contributions", lambda repo_root: collection)
 
@@ -178,18 +193,20 @@ def _wire(
                 stdout=_files_api_pages(list(changed_files)),
                 stderr="",
             )
-        # gh pr view --json author,comments,commits,headRefOid,baseRefOid
+        if args[:2] == ["gh", "api"] and "/activity" in joined:
+            if arrived is None:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=1, stdout="", stderr="HTTP 403: Forbidden"
+                )
+            moved = [{"after": view["headRefOid"], "timestamp": arrived}]
+            return subprocess.CompletedProcess(
+                args=args, returncode=0, stdout=json.dumps(moved), stderr=""
+            )
+        # gh pr view --json author,comments,commits,headRefOid,baseRefOid,...
         return subprocess.CompletedProcess(
             args=args,
             returncode=0,
-            stdout=json.dumps(
-                {
-                    "author": {"login": pr_author},
-                    "comments": comments,
-                    "commits": commits,
-                    **(pr_view or {}),
-                }
-            ),
+            stdout=json.dumps(view),
             stderr="",
         )
 
@@ -619,39 +636,76 @@ def test_pr_closes_nothing_still_baseline_only(dw, rc, monkeypatch) -> None:
     assert "design-reviewer" not in result.passed_via
 
 
-# ---- FAIL-CLOSED: freshness anchor unestablishable (#145 finding 3) ------
+# ---- FAIL-CLOSED: the head, and when it arrived (#145 finding 3, #2930) -------
 
 
-def test_fail_closed_no_commit_timestamp_refuses(dw, rc, monkeypatch) -> None:
-    """No commits returned → no freshness anchor → REFUSE.
+def test_fail_closed_unknown_head_refuses(dw, rc, monkeypatch) -> None:
+    """No head named and no commits returned → the head is unknown → REFUSE.
 
-    Previously the freshness guard was skipped when latest_commit_ts was
-    empty, accepting every (possibly-stale) verdict. An unestablishable
-    freshness anchor must fail closed (DEC-032 D5)."""
+    Every verdict is judged against the PR's head, so an unknown head must
+    fail closed (DEC-032 D5), never skip the freshness check."""
     _wire(
         dw,
         monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
         commits=[],
+        pr_view={"headRefOid": ""},
     )
     result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
     assert result.passed is False
-    assert "freshness anchor is unknown" in result.refusal_message
+    assert "the PR's head is unknown" in result.refusal_message
 
 
-def test_fail_closed_commit_missing_timestamp_fields_refuses(dw, rc, monkeypatch) -> None:
-    """A commit with neither committedDate nor authoredDate → REFUSE."""
+def test_a_commit_with_no_date_is_judged_by_its_arrival(dw, rc, monkeypatch) -> None:
+    """The head commit's own dates are not read: one that carries none is
+    judged by when it arrived, like any other."""
     _wire(
         dw,
         monkeypatch,
         collection=rc.ContributionCollection(rules=()),
         comments=[_local_verdict_comment("reviewer", "APPROVED")],
-        commits=[{"oid": "abc123"}],
+        commits=[{"oid": _VIEW_HEAD}],
+    )
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is True, result.refusal_message
+
+
+def test_a_commit_dated_before_the_verdict_and_pushed_after_it_refuses(dw, rc, monkeypatch) -> None:
+    """The head commit is dated before the verdict, and GitHub records it
+    arriving after: the verdict never saw it, whatever the commit's dates say."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[_local_verdict_comment("reviewer", "APPROVED", ts=_FRESH_TS)],
+        commits=[{"oid": _VIEW_HEAD, "committedDate": _COMMIT_TS, "authoredDate": _COMMIT_TS}],
+        arrived=_LATER_TS,
     )
     result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
     assert result.passed is False
-    assert "freshness anchor is unknown" in result.refusal_message
+    assert (
+        f"no reviewed head recorded; posted before the head fffffff arrived at {_LATER_TS}"
+        in result.refusal_message
+    )
+
+
+def test_an_arrival_that_cannot_be_read_refuses_saying_why(dw, rc, monkeypatch) -> None:
+    """GitHub's activity on the head branch cannot be read: a verdict naming
+    no head is stale, and the refusal says why (fail closed)."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[_local_verdict_comment("reviewer", "APPROVED")],
+        arrived=None,
+    )
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert (
+        "no reviewed head recorded; when the head fffffff arrived cannot be read: "
+        "gh api repos/owner/repo/activity failed: HTTP 403: Forbidden"
+    ) in result.refusal_message
 
 
 _UNREAD_AUTHORS = [
@@ -1248,7 +1302,8 @@ def test_malformed_not_code_refuses(dw, rc, monkeypatch) -> None:
 _REVIEWED = "a" * 40
 _HEAD = "b" * 40
 _BASE = "c" * 40
-# Posted before the latest commit: under the commit-time rule it would be stale.
+# Posted before the head arrived: judged by that arrival, as a verdict naming
+# no head is, it would be stale.
 _BEFORE_THE_COMMIT = "2026-05-01T00:00:00Z"
 
 
@@ -1491,13 +1546,14 @@ def test_changes_that_cannot_be_read_stale_the_verdict(dw, rc, monkeypatch) -> N
     assert "rebased or force-pushed" in result.refusal_message
 
 
-def test_a_verdict_naming_no_head_is_judged_by_the_commit_time(
+def test_a_verdict_naming_no_head_is_judged_by_the_head_s_arrival(
     dw,
     rc,
     monkeypatch,
 ) -> None:
     """The fallback: a verdict without a reviewed head is fresh after the
-    latest commit and stale before it, its staleness named in the refusal."""
+    head arrived on the host and stale before it, its staleness named in the
+    refusal."""
     _wire(
         dw,
         monkeypatch,
@@ -1509,7 +1565,8 @@ def test_a_verdict_naming_no_head_is_judged_by_the_commit_time(
     result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
     assert result.passed is False
     assert (
-        "(stale APPROVED — no reviewed head recorded; posted before the latest commit)"
+        "(stale APPROVED — no reviewed head recorded; posted before the head bbbbbbb "
+        f"arrived at {_COMMIT_TS})"
     ) in result.refusal_message
 
 

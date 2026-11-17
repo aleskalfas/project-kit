@@ -1,0 +1,125 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+# The design systems its form comes from (DEC-007 point 3): Material Design's card, IBM
+# Carbon's tile and the GOV.UK Design System's summary card.
+about: >-
+  A box with rounded corners that holds a head, a tag and a text, each where the content
+  gives it, one under another. It is as wide as it is given, and as tall as what it
+  holds. Plain, it lies on the surface; tinted, on its colour family's fill, its text in
+  the family's text. A bar along its top or its left side may mark it in the family's
+  line. Where its concept has a sign, the sign stands at the end of its head's row, or of
+  its first row where it has no head, and a run of its text that names a concept with a
+  sign starts with that sign.
+
+fields:
+  type: object
+  properties:
+    head:
+      type: string
+      description: What the card is about, in a few words.
+      x-pkit-prose: true
+    tag:
+      type: string
+      description: A short label under the head, such as a name the card stands for.
+    text:
+      type: string
+      description: >-
+        What the card says, in a sentence or two. It may be given as runs, each plain or
+        strong.
+      x-pkit-prose: true
+      x-pkit-runs: [plain, strong]
+
+options:
+  # What the card lies on: the surface, or its colour family's fill.
+  fill: [plain, tint]
+  # A bar in the family's line along one side, or none.
+  bar: [none, top, left]
+
+colour: neutral
+
+values:
+  # Where what the card holds starts, inside its edge and its left bar, and how wide it
+  # is. Its top is the same with any bar, so the heads of a row of cards stand at one
+  # height, and it clears a top bar, however thick a brand makes it.
+  left: "=bar-left.right + @starter.inset"
+  top: "=max(@starter.inset, @starter.bar + @space.2)"
+  inner: "=:width - left - @starter.inset"
+  # The head's row holds the head and, at its end, the sign, with a gap between them where
+  # the sign is drawn. Where the card has no head, the sign ends the row of what comes
+  # first, which leaves room for it. `over` is how far the sign reaches below the head: its
+  # whole height where there is no head, nothing where the head is as tall. `beside` is
+  # the room what stands below the head leaves it: the sign's side, since a sign is
+  # square, and the gap between them.
+  heading: "=max(head.height, sign.height)"
+  over: "=heading - head.height"
+  beside: "=over + min(over, @space.2)"
+
+parts:
+  box:
+    box:
+      fill: {by: fill, plain: surface, tint: ":colour.fill"}
+      stroke: {by: fill, plain: line, tint: ":colour.line"}
+      stroke-width: "=@starter.edge"
+      rx: "=@starter.corner"
+    width: "=:width"
+    height: "=:height"
+  bar-top:
+    when: {bar: [top]}
+    box: {fill: ":colour.line", rx: "=@starter.corner"}
+    width: "=:width"
+    height: "=@starter.bar"
+  bar-left:
+    when: {bar: [left]}
+    box: {fill: ":colour.line", rx: "=@starter.corner"}
+    width: "=@starter.bar"
+    height: "=:height"
+  # The concept's sign, at the end of the head's row, so the heads of a row of cards stand
+  # at one place across, whichever draws a sign, or of the first row of what the card
+  # holds where it has no head. It is centred on the head's row, and takes the family's
+  # text, the member a brand makes legible, since a sign needs 3:1 against what it lies
+  # on. A card whose family comes from no concept with a sign draws none, and the sign
+  # then has no size.
+  sign:
+    sign: {fill: ":colour.text"}
+    x: "=:width - @starter.inset - sign.width"
+    y: "=top + (heading - sign.height) / 2"
+    width: "=@starter.sign"
+    height: "=@starter.sign"
+  # Each of the head, the tag and the text keeps a gap from what stands above it only
+  # where both are drawn: a part not drawn has no height.
+  head:
+    when: head
+    text:
+      content: head
+      style: starter.type.head
+      fill: {by: fill, plain: text-primary, tint: ":colour.text"}
+    x: "=left"
+    y: "=top"
+    width: "=inner - sign.width - min(sign.width, @space.2)"
+  tag:
+    when: tag
+    use: starter/tag
+    fields: {label: tag}
+    x: "=left"
+    y: "=top + head.height + min(head.height, tag.height, @space.2)"
+  # A run style reads the family only where the card is tinted, so its text lies on the
+  # family's own fill; on the surface, each takes a shared role. A run that names a
+  # concept with a sign starts with it, in the run's paint.
+  text:
+    when: text
+    text:
+      content: text
+      style: {by: text, plain: type.body, strong: starter.type.strong}
+      fill:
+        by: text
+        plain: {by: fill, plain: text-secondary, tint: ":colour.text"}
+        strong: {by: fill, plain: text-primary, tint: ":colour.text"}
+      sign: true
+    x: "=left"
+    y: "=tag.bottom + min(max(head.height, tag.height), text.height, @space.2)"
+    width: "=inner - beside"
+
+preferred:
+  height: "=max(text.bottom, sign.bottom) + @starter.inset"

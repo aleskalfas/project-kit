@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "notation.schema.json",
   "title": "A notation's concepts — visual-communication capability",
-  "description": "Formal shape of a notation's `notation.yaml` (DEC-001 point 5, DEC-004 point 10): the concepts of one subject, each mapped to a colour family the foundations declare, never to a value, so each brand colours a concept its own way. Content names a concept read with the notation's name, `<notation>/<concept>`. Format 1 maps a concept to its colour family alone. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of a notation's `notation.yaml` (DEC-001 point 5, DEC-004 point 10): the concepts of one subject, each mapped to a colour family the foundations declare, never to a value, so each brand colours a concept its own way. Content names a concept read with the notation's name, `<notation>/<concept>`. Format 1 maps a concept to its colour family, and may give it a sign beside its colour: an icon the notation holds, or a shape the foundations declare (DEC-036 point 1). Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -21,7 +21,7 @@
       "const": 1
     },
     "concepts": {
-      "description": "Each concept of the notation's subject, by its name, mapped to the colour family that paints it.",
+      "description": "Each concept of the notation's subject, by its name, mapped to the colour family that paints it, and to its sign where it has one.",
       "type": "object",
       "propertyNames": {
         "$ref": "defs.schema.json#/$defs/name"
@@ -35,6 +35,14 @@
         "properties": {
           "colour": {
             "description": "A colour family the foundations declare, by its name; never a value.",
+            "$ref": "defs.schema.json#/$defs/name"
+          },
+          "icon": {
+            "description": "The concept's icon, an outline the notation holds: its sign (DEC-036 point 1).",
+            "$ref": "defs.schema.json#/$defs/outline"
+          },
+          "shape": {
+            "description": "A shape the foundations declare, by its name: the concept's sign where it holds no icon (DEC-036 point 1).",
             "$ref": "defs.schema.json#/$defs/name"
           }
         }

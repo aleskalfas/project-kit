@@ -1,0 +1,309 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+    revalidated:
+      at: 2026-11-07T14:45:19Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+    revalidated:
+      at: 2026-11-07T14:45:20Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T061853Z-ad99d5f3.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T140220Z-88174d4e.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+    revalidated:
+      at: 2026-11-07T14:45:22Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T035615Z-a1d5b3e3.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+    revalidated:
+      at: 2026-11-07T14:45:31Z
+      outcome: unchanged
+      unchanged-because: Judged with the seven answers on this page made apart. 20261107T124642Z-7a8e773a and 20261107T124703Z-4b574535 found the renderers, the code writers and each output true against DEC-021's edits and a scene for each size key. 20261106T151937Z-c65fc01f has pkit visual upgrade write a new version in the record of exports and the current copy. 20261107T134444Z-767c8326 and 20261107T135441Z-82c14d62 write code in each combination of the axes a writer spells, a size at its default reported as a loss, and give the JSON document the keys of each size a brand gives. 20261107T134514Z-b7b499b1 found the viewing step true against DEC-022's bands, and 20261107T140950Z-26b2d33c names pkit visual take-up in the refusals of a final piece. This change lets a component's switch or when follow a size, names size:<axis> among a value's sources, adds three findings, and has the lock search, which upgrade runs too, place a piece at each size key. No code writer reads a component, no renderer reads a source, and the page names no finding or held-back version, so its passages on upgrade, written code, the viewing step and take-up hold beside this change, and the eight stand together.
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261105T225848Z-3e84e405.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T131742Z-47f9f143.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+    revalidated:
+      at: 2026-11-07T14:45:40Z
+      outcome: unchanged
+      unchanged-because: Judged with the eight answers on this page made apart. 20261106T013502Z-01dc9885, 20261107T124642Z-7a8e773a and 20261107T124703Z-4b574535 found the reviewer's deployment, the starter's entry and the commands' lines true, with a scene for each key over the size axes. 20261106T151937Z-c65fc01f added pkit visual upgrade, which moves a published lock by the search a draft's render runs and prints each newer version it did not take, with why. 20261107T134444Z-767c8326 and 20261107T135441Z-82c14d62 give a brand only the sizes it gives, and let write-code write one that gives a size. 20261107T134514Z-b7b499b1 found the starter, look and the reviewer true against DEC-022, and 20261107T140950Z-26b2d33c added pkit visual take-up. This change lets a component's switch or when follow a size, and has that search place a piece at each size key, so a version held back is said at the key it is lost at. Render's line that it states the lock's facts, and upgrade's that it prints why it did not take a version, cover that. A piece names only sizes its brand gives, so render still draws each combination the piece names. No starter component names a size, and no command, flag, exit code or written file changes, so the nine stand together.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-experimental
+    read:
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T135641Z-7da14fce.yaml
+    revalidated:
+      at: 2026-11-07T14:45:50Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261107T134444Z-767c8326, made apart, which found that the release's comparison reading a new shared axis, and a size a brand comes to give, as additions leaves this term alone. This change adds a switch and a when by a size axis to what any component may hold, whatever its status. Neither reaches what a later library version may do to an experimental component, so the two stand together.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-stable
+    read:
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T135641Z-7da14fce.yaml
+    revalidated:
+      at: 2026-11-07T14:45:52Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261107T134444Z-767c8326, made apart, which found the release's comparison changed only in how it reads axes, never in how it compares components. This change adds a switch and a when by a size axis, which refuse no component file accepted before. A stable component still breaks only in a version with a new major number, so the two stand together.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-local-component
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T135641Z-7da14fce.yaml
+    revalidated:
+      at: 2026-11-07T14:45:53Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T151937Z-c65fc01f, made apart, which found that pipeline.py's loss of write_lock, as upgrade came, leaves a local component as it was. This change lets a local component read a size axis as a library component does, and has the lock search, which upgrade runs too, place its piece at each size key. Neither changes that a local component is made inside one piece and used by that piece alone, so the two stand together.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-piece
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T135641Z-7da14fce.yaml
+    revalidated:
+      at: 2026-11-07T14:45:55Z
+      outcome: unchanged
+      unchanged-because: Judged with 20261106T151937Z-c65fc01f, made apart, which found that how a lock reaches piece.yaml, now that upgrade proposes a published piece's move, leaves a piece as it was. This change has the lock search, a draft's render's and upgrade's alike, place a piece at each key over the size axes it names, and lets its components follow those sizes. A piece still keeps its content as data and takes its look from libraries, so the two stand together.

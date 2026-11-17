@@ -1,7 +1,8 @@
 """The check: what the project's visual work breaks, within the project's validation
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
 and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
-points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
+points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-018 points 1, 2, 4
+and 5, DEC-019 point 8, DEC-030 point 5, DEC-042 point 3).
 
 **File-level findings, every run:**
 
@@ -9,6 +10,13 @@ points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
   name, and of the configuration: a file that names no schema, or another one, fails (a
   file at another format number the core's data validation reports, so this check does
   not repeat it);
+- the project's bar, against the rule sets the review grades: a bar that covers what the
+  review does not grade, or at a major other than the one the project pins for the set, or
+  the set's own where it pins none, fails (`bar.findings`, DEC-042 point 3);
+- without a piece named, the designer's grant, read from the agents overlay as the deploy
+  reads it, against the location the configuration records: a path inside the
+  methodology's folder fails, and so does a grant that does not cover the location
+  (`grant_findings`, DEC-030 point 5);
 - the library folder and its list (`libraries.Held.findings`), and each copy of a library
   the capability ships against what the installed capability ships under its number
   (`copies.compare`, DEC-013 point 6);
@@ -18,35 +26,59 @@ points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7).
   final or a published piece's lock; and, read with the content, a key that both an item's
   component and its list declare, which fails where an item carries it and is stated as a
   fact where none does (DEC-010 points 2 and 9);
+- a published piece's lock behind a newer released version the installed capability reads,
+  a fact read from the lock and the list alone, outside the lock's findings, so it stops
+  nothing and refuses no export (`behind_findings`, DEC-003 point 9, DEC-019 point 8);
 - each library version checked alone, once: the newest version the project holds of
   each major of each library, resolved with the newest version the project holds of each
-  major it names. A brand is read over its base, a component library's own roles are
-  judged, and so is each arrangement field of its patterns that its list's default
-  component also declares, the components read through an environment of the engine
-  that no piece or brand stands behind (`pipeline.LibraryEnv`, DEC-010 point 9); the
-  foundations' declarations are read. What it shows lies in the version; a
-  version that names majors no versions fit, or one the project holds no version of,
-  cannot be checked alone, which is a finding. A check of one piece runs no such pass;
+  major it names. A brand is read over its base, a component library's own roles and its
+  components' tokens are judged, and so is each arrangement field of its patterns that its
+  list's default component also declares, and each token a component declares and its
+  file reads nowhere (`unread_tokens`, DEC-035 point 9), the components read through an
+  environment of the engine that no piece or brand stands behind (`pipeline.LibraryEnv`,
+  DEC-010 point 9); the foundations' declarations are read, and their components' tokens
+  judged as a library's. What it shows lies in the version; a version that names majors
+  no versions fit, or one the project holds no version of, cannot be checked alone, which
+  is a finding. A shape of the foundations that is no closed outline within its square
+  fails there (DEC-036 point 8). A check of one piece runs no such pass;
 - the libraries each piece locks, read under its lock: the own roles of each component
   library, and the brand, with its open roles, fonts and declared pairs. A fault the
   version shows alone too lies in the version, reported once; one only the lock's
   combination of versions shows lies at the piece's lock, and its level stands;
 - the name of each library a piece locks, against the top groups of the shared roles of
   the foundations it locks (DEC-004 points 7 and 11);
-- each notation a piece names, against the colour families of the foundations it locks:
-  a library that is no notation, a file that cannot be read, a concept that maps to no
-  colour family the foundations declare (DEC-004 points 10 and 11);
+- each notation a piece names, against the colour families and the shapes of the
+  foundations it locks: a library that is no notation, a file that cannot be read, a
+  concept that maps to no colour family the foundations declare, a sign that cannot be read
+  or an icon that is no closed outline within its square; and a concept that maps no sign,
+  which asks the notation's owner for attention (DEC-004 points 10 and 11, DEC-036 point
+  8);
 - the ids in each content file, a list of runs skipped, and each content file against the
   fields and options of the components it fills, each list of runs against the words of
-  its field's run styles, the nearest known key or word named (DEC-012 points 1, 2 and 8).
+  its field's run styles, the nearest known key or word named (DEC-012 points 1, 2 and 8);
+- each page and key path a piece's brief names, against the content of its source language
+  (`briefs.findings`, DEC-029 point 5);
+- the formats each piece names: two that write files of one name, `svg` and `svg-modes`
+  (`same_name_findings`), and, read with the content, a format of switching files whose file
+  cannot hold a value axis's mode that parts the piece's combinations (`unpaired_findings`).
+  Each fails, and an export refuses the piece (DEC-018 points 2 and 4).
 
 **Scene findings** (`scene_findings`): what computing a piece's scenes finds, in every
 language and at every key over the size axes, a finding that differs by key naming the key
 it holds at: the engine's own (overflow, a component that gets less than it asks for, two
 owners of a value, a loop, a missing exposed part or point, a page inside a page, a
-concept the piece's notations do not hold), a produced picture that is missing, contrast
-as drawn, a colour role the brand lacks, each loss of the renderers that draw the piece
-that nobody accepted, and the components it uses that are experimental or deprecated. A
+concept the piece's notations do not hold, a switch or a `when` by a size that reads no
+size axis a piece can name), a produced picture that is missing, contrast as drawn, a
+text's and a sign's, a concept left to its colour and concepts of one sign, each of which
+asks for attention (`signs.findings`, DEC-036 point 8), a colour role the brand lacks,
+each loss of the renderers that draw the piece that nobody accepted, the components it
+uses that are experimental or deprecated, content drawn at
+one key and not at another, a fact at the key that hides it (DEC-021 points 5 and 7), and,
+for a piece that exports switching files, a page with no ground of its own in a
+combination its file holds, which asks for attention and never fails (`_no_ground`,
+DEC-018 point 5). At the piece, each drawing of its brand's chain that a brand nearer the
+root keeps from drawing is a fact, and a top a brand holds, drawn under a brand that is
+neither that brand nor built on it, asks for attention (`_brand_forms`, DEC-034 point 4). A
 render keeps them in the piece's `findings.yaml`, keyed by a fingerprint of every file
 they were computed from. The check reads that record while its key verifies, and computes
 the scenes now otherwise. It computes no more once the validator's bound
@@ -80,7 +112,11 @@ reads and before a lock finding stops the piece, so each of these stands beside 
 - a published piece fails where it declares no format, where it has no current copy of its
   own, where a file of that copy is missing or holds another hash, or where something the
   version that wrote the copy read has changed (`published_findings`). So it is held to that
-  version, and not to the last. A copy made over a stale output asks for attention;
+  version, and not to the last. A copy made over a stale output asks for attention. A copy
+  made with a number or a date let through fails, at the component the text did not fit,
+  so it asks for attention in a released library, naming its owner (DEC-016 point 6). A
+  copy made with an element of a switching file let through asks for attention, naming
+  whoever maintains the capability (DEC-018 point 1);
 - a draft with a file of its own current copy standing asks for attention, whatever the file
   holds (`standing_findings`);
 - a final piece raises none of these, since no export can mend its copy (`_final`).
@@ -115,16 +151,24 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
 from _lib import (
+    bar,
+    boxes,
+    briefs,
     code,
+    colour_steps,
     copies,
     current_copy,
     exports,
     fingerprint,
     framing,
+    grant,
+    keys,
     layout,
     location,
     names,
+    outlines,
     records,
+    signs,
     tokens,
 )
 from _lib import pipeline as pl
@@ -162,6 +206,7 @@ from _lib.libraries import (
     MajorsConflict,
     Version,
     kind_within,
+    newer_than,
     newest_of_majors,
     readable,
 )
@@ -169,6 +214,7 @@ from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml, sha256
 from _lib.root import CONFIG, SHIPPED
 from _lib.scene import SceneResult
+from _lib.scene_checks import SIZES, Found, Reach, SceneCheck
 from _lib.shipped import read as read_shipped
 
 #: The renderer that draws every piece's previews.
@@ -186,6 +232,11 @@ LARGE = 24.0
 LARGE_BOLD = 18.66
 BOLD = 700
 
+#: The finding on a text or a sign below the contrast it must reach as drawn, and the level
+#: a sign must reach, WCAG's for other marks (DEC-004 point 8, DEC-036 point 8).
+CONTRAST_DRAWN = "contrast-drawn"
+MARKS = "marks"
+
 #: The colour a text with no fill is drawn in.
 BLACK = {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1}
 
@@ -193,8 +244,13 @@ BLACK = {"colorSpace": "srgb", "components": [0, 0, 0], "alpha": 1}
 #: stops no drawing (`viewing.opened`).
 LOCK_NOT_RELEASED = "lock-not-released"
 
-#: What a finding on a final piece says where only a move of its lock would mend it.
-NO_MOVE = "no move reaches a final piece's lock: a copy of the piece takes it up again"
+#: The fact that a published piece's lock is behind a newer released version the installed
+#: capability reads (DEC-003 point 9, DEC-019 point 8). It lies outside `lock_findings`, so it
+#: stops no other finding of the piece and refuses no export.
+LOCK_BEHIND = "lock-behind"
+
+#: What the fact that a lock is behind says of fit, which it does not judge.
+OUTDATED = "`pkit visual outdated` says whether a move takes it, and why not"
 
 #: The findings on what a piece's state owes of its current copy (DEC-017 point 6).
 PUBLISHED_NO_FORMAT = "published-no-format"
@@ -204,7 +260,25 @@ COPY_FILE_CHANGED = "current-copy-file-changed"
 COPY_STALE = "current-copy-stale"
 COPY_UNREADABLE = "current-copy-unreadable"
 COPY_OVER_STALE = "current-copy-over-stale"
+COPY_LET_THROUGH = "current-copy-let-through"
+COPY_DIFFERING = "current-copy-differing"
 COPY_STANDING = "current-copy-standing"
+
+#: The finding on the designer's grant against the recorded location (DEC-030 point 5).
+GRANT = "grant"
+
+#: The findings on formats a piece cannot take (DEC-018 points 2 and 4): two that write files
+#: of one name, and a format of switching files whose file cannot hold the piece's modes.
+EXPORTS_SAME_NAME = "exports-same-name"
+EXPORTS_UNPAIRED = "exports-unpaired-mode"
+
+#: The finding on a page of a switching file with no ground of its own in a mode it holds
+#: (DEC-018 point 5).
+SWITCHING_NO_GROUND = "switching-no-ground"
+
+#: Who corrects a switching file that paints a combination otherwise than its renderer's
+#: one-key file: the fault is the capability's (DEC-018 point 1).
+CAPABILITY = "whoever maintains the capability, who corrects the SVG renderer in a release"
 
 #: The findings on what a final piece owes of the version handed out (DEC-017 point 6), and on
 #: a record of exports that cannot be read, which makes a piece final (DEC-017 point 3).
@@ -247,9 +321,11 @@ def deadline_from(environ: Mapping[str, str]) -> float | None:
 
 
 def check(root: Path, *, only: str | None = None, deadline: float | None = None) -> Report:
-    """The check of the project at `root`: every piece, or the piece `only`."""
+    """The check of the project at `root`: every piece, or the piece `only`. The
+    configuration is judged in every run, and the designer's grant in every run without a
+    piece named."""
     found: list[Finding] = []
-    config = _config_findings(root)
+    config = _config_findings(root) + (grant_findings(root) if only is None else [])
     try:
         where = location.for_reading(root)
     except location.LocationRefused as exc:
@@ -284,9 +360,10 @@ def _config_findings(root: Path) -> list[Finding]:
     except ReadError as exc:
         return [Finding("file-unreadable", FAILS, str(exc), file=CONFIG)]
     problem = _binding(data, "config")
-    return (
+    bound = (
         [Finding("binding", FAILS, f"the configuration {problem}", file=CONFIG)] if problem else []
     )
+    return bound + bar.findings(root, data)
 
 
 def _binding(data: Any, kind: str) -> str | None:
@@ -295,6 +372,57 @@ def _binding(data: Any, kind: str) -> str | None:
     if isinstance(data, Mapping) and data.get("pkit_schema") == schema_of(kind):
         return None
     return binding_problem(data, kind)
+
+
+def grant_findings(root: Path) -> list[Finding]:
+    """The designer's grant, read from the agents overlay as the deploy reads it, against
+    the location the configuration records (DEC-030 point 5). Each fails, where the project
+    corrects it in its overlay: a path inside the methodology's folder, and a grant none of
+    whose paths covers the recorded location. A grant that names no path, an empty one
+    included, fails nothing, and with no location recorded there is none to cover. An
+    overlay that cannot be read fails, since the check owes an answer it cannot give."""
+    try:
+        given = grant.granted(root)
+    except (ReadError, OSError) as exc:
+        said = f"the agents overlay cannot be read, so the designer's grant is not checked: {exc}"
+        return [Finding(GRANT, FAILS, said, file=grant.OVERLAY, fix="mend the file")]
+    if given is None or not given.paths:
+        return []
+    try:
+        recorded = location.configured(root)
+    except location.LocationRefused:
+        recorded = None  # the check reports it as `location`
+    at = {path: grant.relative(root, path) for path in given.paths}
+    found: list[Finding] = []
+    inside = {path for path, rel in at.items() if rel and grant.in_methodology(rel)}
+    if inside:
+        said = (
+            f"the designer's grant names {_shown(inside)}, inside the methodology's folder "
+            f"`{grant.METHODOLOGY}/`, where the visual work never lies"
+        )
+        fix = f"take {_shown(inside)} out of {given.line}"
+        found.append(Finding(GRANT, FAILS, said, file=grant.OVERLAY, where=given.key, fix=fix))
+    if recorded is not None and not any(rel and grant.covers(rel, recorded) for rel in at.values()):
+        said = (
+            f"the designer's grant names {_shown(set(given.paths))}, which does not cover the "
+            f"location `{recorded}` the configuration records, so the designer cannot write "
+            f"the visual work"
+        )
+        fix = _grant_fix(given, recorded)
+        found.append(Finding(GRANT, FAILS, said, file=grant.OVERLAY, where=given.key, fix=fix))
+    return found
+
+
+def _grant_fix(given: grant.Grant, recorded: str) -> str:
+    """What moves the designer's grant to the recorded location: for the top-level line,
+    the command that moves it while it stays as written (COR-073 point 5), else an edit."""
+    edit = f"name `{recorded}/` there, or `[]` to switch the designer off"
+    if given.overridden:
+        return f"in {given.line}, {edit}"
+    return (
+        f"run `pkit agents reconcile --write`, which moves {given.line} to `{recorded}/` while "
+        f"it stays as pkit wrote it; otherwise {edit}"
+    )
 
 
 class _Run:
@@ -456,9 +584,12 @@ class _Run:
             self.counts["unchecked"] += 1
             return
         self.found.extend(id_findings(piece))
+        self.found.extend(brief_findings(piece))
         lock = lock_findings(self.held, piece)
         self.found.extend(lock)
         self._copy(piece)
+        self.found.extend(same_name_findings(piece))
+        self.found.extend(behind_findings(self.held, piece))
         if lock:
             self.counts["unchecked"] += 1
             return
@@ -473,6 +604,7 @@ class _Run:
             self.counts["unchecked"] += 1
             return
         self._lock_found(piece, [*project.scope.findings, *project.brand.findings])
+        self.found.extend(unpaired_findings(project))
         self._library_names(project)
         self._notation_findings(project)
         self.found.extend(content_findings(project))
@@ -575,7 +707,9 @@ class _Run:
         point 1). A brand is read over its base, a component library's own roles are
         judged, and its patterns too, against their lists' default components, read
         through an environment of the engine that no piece or brand stands behind
-        (`default_clashes`, DEC-010 point 9); the foundations' declarations are read; a
+        (`default_clashes`, DEC-010 point 9); a brand's components are judged as a
+        component library's are, and its drawings as drawings (`drawing_findings`,
+        DEC-034 point 10); the foundations' declarations are read; a
         notation is checked under each lock alone. Each finding lies in the version. A
         version that names majors no versions fit, or one of which the project holds no
         version, cannot be checked alone, which is the finding it shows.
@@ -623,20 +757,43 @@ class _Run:
         folders = {other.name: other.folder for other in chosen.values()}
         try:
             if name == FOUNDATIONS:
-                tokens.read_scope(folders, root=self.root)
-                found: Sequence[Finding] = []
+                scope = tokens.read_scope(folders, root=self.root)
+                env = pl.LibraryEnv(chosen, scope)
+                found: Sequence[Finding] = [
+                    *scope.findings_of(name),
+                    *unread_tokens(self.held, library, env),
+                    *drawing_findings(self.held, library, env),
+                ]
             elif library.kind == "components":
                 scope = tokens.read_scope(folders, root=self.root)
                 env = pl.LibraryEnv(chosen, scope)
-                found = [*scope.findings_of(name), *default_clashes(self.held, library, env)]
+                found = [
+                    *scope.findings_of(name),
+                    *default_clashes(self.held, library, env),
+                    *unread_tokens(self.held, library, env),
+                    *drawing_findings(self.held, library, env),
+                ]
             elif library.kind == "brand" and FOUNDATIONS in folders:
-                found = tokens.read_brand(
+                scope = tokens.read_scope(folders, root=self.root)
+                brand = tokens.read_brand(
                     library.folder,
-                    tokens.read_scope(folders, root=self.root),
+                    scope,
                     fonts=self.root / self.location / pl.FONTS,
                     root=self.root,
                     locked=folders,
-                ).findings
+                )
+                # Each component it holds is judged as a component library's is, a drawing
+                # as a drawing, and the forms it draws over its base (DEC-009 point 9,
+                # DEC-034 points 1 and 10).
+                env = pl.LibraryEnv(chosen, scope)
+                # What the version alone states, which no piece's lock reads (DEC-025 point 9).
+                found = [
+                    *brand.findings,
+                    *brand.facts,
+                    *default_clashes(self.held, library, env),
+                    *unread_tokens(self.held, library, env),
+                    *drawing_findings(self.held, library, env, brand),
+                ]
             else:
                 found = []
         except tokens.TokenError as exc:
@@ -671,14 +828,18 @@ class _Run:
 
     def _notation_findings(self, project: pl.Project) -> None:
         """The findings of each notation the piece names, once for each version and
-        foundations: a notation is read against the colour families of the foundations the
-        piece locks (DEC-004 points 10 and 11). A file the binding pass already reports is
-        not reported again (one owner per finding, DEC-002 point 6)."""
+        foundations: a notation is read against the colour families and the shapes of the
+        foundations the piece locks (DEC-004 points 10 and 11, DEC-036 point 8). A finding
+        two foundations read alike, such as a concept that maps no sign, is reported once. A
+        file the binding pass already reports is not reported again (one owner per finding,
+        DEC-002 point 6)."""
         against = project.label(pl.FOUNDATIONS)
         for notation in project.notations.values():
             if f"{notation.label} {against}" not in self.notations:
                 self.notations.add(f"{notation.label} {against}")
-                self.found.extend(f for f in notation.findings if f.file not in self.unbound)
+                for finding in notation.findings:
+                    if finding.file not in self.unbound:
+                        self._once(finding)
 
     def _scenes(self, project: pl.Project, unmade: set[str]) -> None:
         piece = project.piece
@@ -734,6 +895,22 @@ def _at_lock(finding: Finding, piece: pl.Piece) -> Finding:
     )
 
 
+def unread_tokens(held: Held, library: Library, env: pl.LibraryEnv) -> list[Finding]:
+    """Each component token a component of the library version declares that its own file
+    reads nowhere (`layout.unread_token_findings`, DEC-035 point 9), each component read
+    through `env`. A component that cannot be read is the scene's to report."""
+    ctx = layout.Context(env, "")
+    found = []
+    for path in held.files(library.name, library.version):
+        if path.parent != library.folder / pl.COMPONENTS or path.suffix != ".yaml":
+            continue
+        component = ctx.component(f"{library.name}/{path.stem}")
+        if component is not None:
+            file = path.relative_to(held.root).as_posix()
+            found.extend(layout.unread_token_findings(component, file=file, library=library.label))
+    return found
+
+
 def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Finding]:
     """What each pattern of the library version declares for a list against the list's
     default component, the `draw` of a part that repeats over the list, a drawing of a
@@ -741,10 +918,12 @@ def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Fi
     declares as a field or an option is read by neither (`arrangement-clash`, `end-clash`;
     DEC-010 points 2 and 9, DEC-011 point 8). A list of ties whose default component takes
     no ends draws no tie by default (`tie-default`, DEC-011 points 1 and 8). The pattern
-    chose both, so each is the pattern's to mend, in its file. Each component of the version
-    is read through `env`, which reads the default component from the versions the library
-    is checked alone with. A component that cannot be read, and a default that names none,
-    are the scene's to report."""
+    chose both, so each is the pattern's to mend, in its file. A brand's drawing declares no
+    list's fields, its top's to declare, and chose only the default component, so a clash
+    in it lies at the part's `draw` (DEC-011 point 8). Each component of the version is read
+    through `env`, which reads the default component from the versions the library is
+    checked alone with. A component that cannot be read, and a default that names none, are
+    the scene's to report."""
     ctx = layout.Context(env, "")
     found = []
     for path in held.files(library.name, library.version):
@@ -760,6 +939,9 @@ def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Fi
                 code, FAILS, message, file=file, where=where, fix=fix, library=library.label
             )
 
+        # What a brand's drawing chose of a list is its default component alone.
+        drawing = component.draws is not None
+        other = "draw the list with another component, in a version of its own"
         for at, part, listed, draw, drawn, declared in _list_defaults(ctx, component):
             for name in declared.arrangement:
                 what = _declared_as(drawn, name)
@@ -767,12 +949,13 @@ def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Fi
                     found.append(
                         fails(
                             "arrangement-clash",
-                            f"{at}lists.{listed}.arrangement.{name}",
+                            f"{at}parts.{part}.draw"
+                            if drawing
+                            else f"{at}lists.{listed}.arrangement.{name}",
                             f"`{name}` is an arrangement field of `{listed}`, and `{draw}`, which "
                             f"draws its items by default, declares it as {what}: neither reads "
                             "it on an item",
-                            "rename the arrangement field, or draw the list with another "
-                            "component, in a version of its own",
+                            other if drawing else f"rename the arrangement field, or {other}",
                         )
                     )
             if declared.ends is None:
@@ -793,14 +976,62 @@ def default_clashes(held: Held, library: Library, env: pl.LibraryEnv) -> list[Fi
                     found.append(
                         fails(
                             "end-clash",
-                            f"{at}lists.{listed}.ends",
+                            f"{at}parts.{part}.draw" if drawing else f"{at}lists.{listed}.ends",
                             f"`{name}` is an end field of `{listed}`, and `{draw}`, which draws "
                             f"its ties by default, declares it as {what}: neither reads it, so "
                             "no tie it draws has that end",
-                            "rename the end field, or draw the list with another component, "
-                            "in a version of its own",
+                            other if drawing else f"rename the end field, or {other}",
                         )
                     )
+    return found
+
+
+def drawing_findings(
+    held: Held, library: Library, env: pl.LibraryEnv, brand: tokens.Brand | None = None
+) -> list[Finding]:
+    """What the version alone shows of the drawings among its components (DEC-034 points 1,
+    2, 5 and 10), each component read through `env`. A component of a library that is no
+    brand that declares `draws` fails, since only a brand's component draws a layout. A
+    brand's drawing is read against the top it names, from the versions the brand is
+    checked alone with, and each finding the engine makes of it fails in its file: a key of
+    what the content gives, a top or a layout there is none of, a size it may not write, a
+    field it shows by no part named after it, and a token of its top it reads. So does one
+    whose top a brand holds (`pipeline.held_top_findings`, DEC-034 point 4). Given `brand`,
+    the version read over its base, what it shows of the forms it draws is judged too
+    (`pipeline.brand_findings`, DEC-009 point 9). A top's own drawing that shows a field by
+    no part named after it asks the top's owner for attention, and never fails
+    (`layout.own_drawing_findings`). A component that cannot be read is the scene's to
+    report."""
+    ctx = layout.Context(env, "")
+    found: list[Finding] = []
+    drawings: dict[str, str] = {}
+    for path in held.files(library.name, library.version):
+        if path.parent != library.folder / pl.COMPONENTS or path.suffix != ".yaml":
+            continue
+        use, file = f"{library.name}/{path.stem}", path.relative_to(held.root).as_posix()
+        try:
+            data = env.component(use)
+        except KeyError:
+            continue
+        if layout.DRAWS in data and library.kind != "brand":
+            found.append(layout.held_drawing_finding(use, file=file, library=library.label))
+        elif layout.DRAWS in data:
+            drawings[use] = file
+            drawing = ctx.component(use)
+            found.extend(pl.held_top_findings(drawing, env, file=file, library=library.label))
+        else:
+            component = ctx.component(use)
+            if component is not None and component.top:
+                found.extend(
+                    layout.own_drawing_findings(component, file=file, library=library.label)
+                )
+    if brand is not None:
+        shown = f"{library.folder.relative_to(held.root).as_posix()}/"
+        found.extend(pl.brand_findings(brand, ctx, env, shown=shown))
+    for finding in ctx.findings:
+        use = finding.extra.get("component")
+        if isinstance(use, str) and use in drawings and finding.library == library.label:
+            found.append(dataclasses.replace(finding, file=drawings[use]))
     return found
 
 
@@ -849,6 +1080,7 @@ def kind_of(inside: str) -> str | None:
             (pl.PIECE_FILE,): "piece",
             (pl.FINDINGS_FILE,): "findings",
             (pl.EXPORTS_FILE,): "exports",
+            (fingerprint.BRIEF,): briefs.KIND,
         }
         if tuple(within) in single:
             return single[tuple(within)]
@@ -918,6 +1150,16 @@ def _code_findings(root: Path, location_path: str) -> list[Finding]:
 # --- the lock -----------------------------------------------------------------------------------
 
 
+def no_move(piece: str) -> str:
+    """What a finding on the final piece `piece` says where only a move of its lock would mend
+    it: no move reaches that lock, and the command that copies the piece takes it up again
+    (DEC-017 points 5 and 8)."""
+    return (
+        f"no move reaches a final piece's lock: {copies.take_up_command(piece)} takes it up again "
+        f"as a new draft"
+    )
+
+
 def _lock_fix(piece: pl.Piece, mend: str) -> str:
     """What mends a fault at a piece's lock, by who moves that lock (DEC-003 point 8): a
     draft's render, and nothing else. Nothing moves a final piece's, and no state leads out
@@ -962,7 +1204,7 @@ def lock_findings(held: Held, piece: pl.Piece) -> list[Finding]:
     def moved(code: str, message: str) -> Finding:
         """A finding only a move of the lock would mend."""
         if final:
-            return Finding(code, FACT, message, file=file, where="lock", fix=NO_MOVE)
+            return Finding(code, FACT, message, file=file, where="lock", fix=no_move(piece.name))
         return fails(code, message)
 
     lock = piece.lock
@@ -1082,7 +1324,7 @@ def _not_released(held: Held, piece: pl.Piece, name: str, version: Version) -> F
     if not final:
         return dataclasses.replace(finding, fix=_lock_fix(piece, ""))
     if source is None:
-        return dataclasses.replace(finding, level=FACT, fix=NO_MOVE)
+        return dataclasses.replace(finding, level=FACT, fix=no_move(piece.name))
     return dataclasses.replace(
         finding,
         level=ATTENTION,
@@ -1104,20 +1346,88 @@ def _shipped_under(name: str, version: Version) -> copies.Source | None:
         return None
 
 
+def behind_findings(held: Held, piece: pl.Piece) -> list[Finding]:
+    """The facts that a published piece's lock is behind a newer released version the
+    installed capability reads, of any major (`libraries.newer_than`, DEC-003 point 9,
+    DEC-019 point 8). Each library behind takes one for the newest such version of the lock's
+    major, which names the command that proposes the move, and one for the newest of a later
+    major, which a person takes on purpose, by naming it. Each names `pkit visual outdated`
+    for whether a move takes it. It is read from the lock and the list of libraries alone and
+    judges no fit, so it stays while a version stands that no default move takes. It fails
+    nothing, and no other state raises it: a final piece never comes here."""
+    if not current_copy.keeps(piece) or piece.final:
+        return []
+    file = piece.file(pl.PIECE_FILE)
+    upgrade = f"pkit visual upgrade {piece.name}"
+    found = []
+    for newer in newer_than(held, piece.lock):
+        lead = f"the published piece `{piece.name}` locks {newer.name}@{newer.locked}, behind"
+        if newer.within is not None:
+            said = f"{lead} {newer.name}@{newer.within}, a released version of its major"
+            fix = f"run `{upgrade}`, which proposes the move; {OUTDATED}"
+            found.append(Finding(LOCK_BEHIND, FACT, said, file=file, where="lock", fix=fix))
+        if newer.later is not None:
+            said = f"{lead} {newer.name}@{newer.later}, a released version of a later major"
+            fix = (
+                f"a later major is taken on purpose, by naming it: "
+                f"`{upgrade} {newer.name}@{newer.later}`; {OUTDATED}"
+            )
+            found.append(Finding(LOCK_BEHIND, FACT, said, file=file, where="lock", fix=fix))
+    return found
+
+
 # --- what a state owes of a current copy --------------------------------------------------------
 
 
 def _no_format(piece: pl.Piece) -> Finding:
     """The finding on a published piece that declares no format (DEC-017 point 6)."""
-    formats = " or ".join(f"`{form}`" for form in exports.RENDERERS)
     return Finding(
         PUBLISHED_NO_FORMAT,
         FAILS,
         f"the published piece `{piece.name}` declares no format under `exports`",
         file=piece.file(pl.PIECE_FILE),
         where="exports",
-        fix=f"declare one there: {formats}",
+        fix=f"declare one there: {exports.formats_said()}",
     )
+
+
+def same_name_findings(piece: pl.Piece) -> list[Finding]:
+    """A failing finding for each two formats the piece names that write files of one name, as
+    `svg-modes` and `svg` do (DEC-018 point 2). An export refuses such a piece."""
+    return [
+        Finding(
+            EXPORTS_SAME_NAME,
+            FAILS,
+            f"`{piece.name}` names both `{one_key}` and `{form}` under `exports`, which write "
+            f"files of one name",
+            file=piece.file(pl.PIECE_FILE),
+            where="exports",
+            fix=f"name one of them; a piece that needs a file of one fixed mode names `{one_key}`, "
+            f"and a second piece serves a page",
+        )
+        for one_key, form in exports.same_names(piece.exports)
+    ]
+
+
+def unpaired_findings(project: pl.Project) -> list[Finding]:
+    """A failing finding for each value axis's mode of no pair a format of switching files
+    reads that parts two combinations the piece names (DEC-018 point 4). No switching file can
+    hold it, and an export refuses such a piece."""
+    piece = project.piece
+    return [
+        Finding(
+            EXPORTS_UNPAIRED,
+            FAILS,
+            f"`{piece.name}` exports as `{form}`, whose switching file holds a value axis's modes "
+            f"by the reader's signals, and reads no pair of `{axis}`'s mode `{mode}`, which "
+            f"its combinations differ in",
+            file=piece.file(pl.PIECE_FILE),
+            where="modes",
+            fix=f"draw `{axis}`'s mode `{mode}` in a piece of its own, or export this piece as "
+            f"`{exports.SWITCHING[form]}`",
+        )
+        for form, axis, mode in exports.unpaired(project)
+    ]
 
 
 def published_findings(
@@ -1130,7 +1440,12 @@ def published_findings(
     or None where it names none (`current_copy.own`), among the record's `versions` (DEC-006
     point 8, DEC-017 points 5 and 6): a copy that is whole, and that nothing it read has
     changed since. It reads the version that wrote the copy, not the last, so a piece set
-    back to published is held to it. A copy made over a stale output asks for attention."""
+    back to published is held to it. A copy made over a stale output asks for attention. A
+    copy made with a number or a date let through fails in the library version of the
+    component the text did not fit, so it asks for attention in a released one, naming its
+    owner, until a version that fits writes the copy (DEC-016 point 6). A copy made with an
+    element of a switching file let through asks for attention, and names whoever maintains
+    the capability as the fault's owner (DEC-018 point 1)."""
     record = piece.file(pl.EXPORTS_FILE)
     if entry is None:
         said = f"the published piece `{piece.name}` has no current copy of its own"
@@ -1178,6 +1493,41 @@ def published_findings(
                 where=current_copy.FIELD,
                 fix=f"run {pl.produce_command(piece.name, output)}, then {fix}",
                 who=AUTHOR,
+            )
+        )
+    for each in current_copy.written_differing(entry, versions):
+        said = (
+            f"the current copy of `{piece.name}`, which version {number} wrote, was made with "
+            f"{current_copy.differing_said(each)} let through, which paints that combination "
+            f"otherwise than the SVG renderer's file of it"
+        )
+        found.append(
+            Finding(
+                COPY_DIFFERING,
+                ATTENTION,
+                said,
+                file=record,
+                where=current_copy.FIELD,
+                fix=f"once a release of the capability draws it alike, {fix}",
+                who=CAPABILITY,
+            )
+        )
+    for each in current_copy.written_let_through(entry, versions):
+        said = (
+            f"the current copy of `{piece.name}`, which version {number} wrote, was made with "
+            f"{current_copy.let_through_said(each)} let through, which does not fit"
+        )
+        component = each["component"]
+        version = each.get("version", "")
+        found.append(
+            Finding(
+                COPY_LET_THROUGH,
+                FAILS,
+                said,
+                file=record,
+                where=current_copy.FIELD,
+                fix=f"give the text room in `{component}`, then {fix}",
+                library=f"{component.partition('/')[0]}@{version}" if version else "",
             )
         )
     return found
@@ -1341,7 +1691,10 @@ def _other_state(piece: pl.Piece, number: int) -> Finding:
         f"`{piece.name}` is {piece.state}",
         file=piece.file(pl.PIECE_FILE),
         where="state",
-        fix=f"set its state back to {copies.FINAL}, and copy the piece for new work",
+        fix=(
+            f"set its state back to {copies.FINAL}, and for new work run "
+            f"{copies.take_up_command(piece.name)}, which takes it up again as a new draft"
+        ),
     )
 
 
@@ -1443,6 +1796,23 @@ def id_findings(piece: pl.Piece) -> list[Finding]:
     return found
 
 
+def brief_findings(piece: pl.Piece) -> list[Finding]:
+    """What the piece's brief names that its content lacks (DEC-029 point 5), its pages
+    found through its top's declaration, read as the check of ids reads a component, before
+    the lock is checked (`briefs.findings`)."""
+    return briefs.findings(piece, top_of(piece))
+
+
+def top_of(piece: pl.Piece, lock: Mapping[str, str] | None = None) -> Mapping[str, Any] | None:
+    """The data of the piece's top component, read as the check of ids reads a component,
+    under `lock`, or under the piece's own lock where it is None; None where it cannot be
+    read."""
+    try:
+        return _Locked(piece, lock).component(piece.top)
+    except KeyError:
+        return None
+
+
 def _shown(ids: set[str]) -> str:
     return ", ".join(f"`{item}`" for item in sorted(ids))
 
@@ -1473,10 +1843,12 @@ class _Locked:
     """The components a piece's lock names, and its own, read before its lock is checked:
     what the check of ids needs to know which lists of the content hold runs. A component
     that a use, the lock or its file does not lead to, or that cannot be read as a
-    mapping, is none, and the lock's check and the scene report why."""
+    mapping, is none, and the lock's check and the scene report why. `lock` stands in for
+    the piece's own, where given."""
 
-    def __init__(self, piece: pl.Piece) -> None:
+    def __init__(self, piece: pl.Piece, lock: Mapping[str, str] | None = None) -> None:
         self.piece = piece
+        self.lock = piece.lock if lock is None else lock
         self.read: dict[str, Mapping[str, Any] | None] = {}
 
     def component(self, use: str) -> Mapping[str, Any]:
@@ -1497,7 +1869,7 @@ class _Locked:
             path = piece.folder / pl.COMPONENTS / f"{name}.yaml"
         else:
             try:
-                version = Version.parse(piece.lock.get(library))
+                version = Version.parse(self.lock.get(library))
             except ValueError:
                 return None
             folder = piece.root / piece.location / FOLDER / library / str(version)
@@ -2251,10 +2623,10 @@ def rooted(finding: Finding, piece: pl.Piece) -> Finding:
 
 
 def computed(project: pl.Project) -> list[Finding]:
-    """The scene findings of a piece, its scenes computed now; a font that refuses the
-    render is one."""
+    """The scene findings of a piece, its scenes computed now with the stand-ins, so every
+    machine finds the same (DEC-016 point 5); a font that refuses the render is one."""
     try:
-        results = project.scenes()
+        results = project.scenes(facts=project.piece.stand_ins)
     except MissingFont as exc:
         return [
             Finding(
@@ -2269,42 +2641,286 @@ def computed(project: pl.Project) -> list[Finding]:
     return scene_findings(project, results)
 
 
+#: The checks the engine makes as it computes a scene, each finding the engine's own, such as
+#: a text that overflows or a component that gets less than it asks for (DEC-005 point 14).
+ENGINE = SceneCheck("what the engine finds as it computes a scene")
+
+#: The fact of content a piece draws at one key over the size axes and not at another
+#: (DEC-021 points 5 and 7).
+SIZE_HIDDEN = "size-hidden"
+
+#: The check of content a size hides, with its reach, since the reviewer reads its silence
+#: (DEC-021 point 5, DEC-063 point 1).
+CONTENT_HIDDEN = SceneCheck(
+    "content a size hides",
+    frozenset({SIZES}),
+    id="content-a-size-hides",
+    labels=(SIZE_HIDDEN,),
+    reach=Reach(
+        measures=(
+            "each value of the content, by the key path a part's source names, that the "
+            "scenes of a language draw at one key over the size axes and not at another, "
+            "stated at each key that does not draw it, the content below it named with it "
+            "(DEC-021 point 5)",
+        ),
+        leaves_out=(
+            "content no key over the size axes of its language draws (DEC-063 point 1)",
+            "a part a component draws from no value of the content, such as its own text, a "
+            "fact of an export or a brand's picture (DEC-063 point 1)",
+        ),
+    ),
+)
+
+#: The check of contrast as drawn, a check of colour, with its reach, since the reviewer
+#: reads its silence (DEC-004 point 8, DEC-012 point 3, DEC-036 points 3 and 8, DEC-063 point
+#: 1). Its findings each name the combination they hold for, but one on a sign that paints
+#: nothing, which holds for every combination.
+CONTRAST = SceneCheck(
+    "contrast as drawn",
+    colour=True,
+    id="contrast-as-drawn",
+    labels=(CONTRAST_DRAWN,),
+    reach=Reach(
+        measures=(
+            "each run of a text a page draws, in the run's own paint, black where it has "
+            "none, at WCAG's level for the run's size and weight, against the fills under the "
+            "middle of each span of the run, in each combination its scene serves "
+            "(DEC-004 point 8, DEC-012 point 3)",
+            "each sign a page draws, against the fills under its middle, at WCAG's level for "
+            "other marks: a sign part, which holds where its fill or its stroke reaches that "
+            "level, and fails where it paints neither; and a run's sign, in the run's paint, "
+            "with its span where the same fills lie under both (DEC-036 point 8)",
+            "as the fills under a point, each box, ellipse or path with a fill drawn before the "
+            "text or the sign that holds the point, a path holding it where its outline fills "
+            "it by its fill rule, a translucent one laid over the one under it, and a run's "
+            "ground over them (DEC-004 point 8, DEC-036 point 3)",
+        ),
+        leaves_out=(
+            "a span or a sign over a picture, where no box, ellipse or path with a fill is "
+            "drawn over the picture under its middle, and whose run draws no ground, which a "
+            "reviewer judges (DEC-004 point 8)",
+            "a span or a sign over nothing, under whose middle no box, ellipse or path with a "
+            "fill is drawn, and whose run draws no ground (DEC-063 point 1)",
+            "a span or a sign painted with a colour role the brand lacks, or over a fill "
+            "painted with one, which `unknown-colour` reports (DEC-063 point 1)",
+            "a combination in which a run's paint, or every paint of a sign, has no colour, "
+            "so it draws nothing there (DEC-063 point 1)",
+            "a combination in which none of the fills under the middle of a span or a sign "
+            "that have a colour there is opaque, of the nine boxes, ellipses and paths with a "
+            "fill drawn last before it under that middle, and the run's ground "
+            "(DEC-063 point 1)",
+            "the fills under a span or a sign elsewhere than under its middle (DEC-063 point 1)",
+            "a text with no line, and a path with no outline, neither of which draws "
+            "anything (DEC-063 point 1)",
+        ),
+    ),
+)
+
+#: The checks that run on each scene alone, beside the engine's and the two above.
+UNKNOWN_COLOUR = SceneCheck("a paint with a colour role the brand lacks")
+LOSSES = SceneCheck("what a renderer that draws the piece loses of it, unaccepted")
+STATUSES = SceneCheck("components the piece uses that are experimental or deprecated")
+NO_GROUND = SceneCheck("a page of a switching file with no ground of its own", colour=True)
+
+#: The checks that read a piece's scenes together: a top as wide at a size as at the default,
+#: which compares sizes, and what the piece states of the forms its brand's chain draws its
+#: tops in, which holds in every language and at every key.
+SIZE_WIDTHS = SceneCheck("a top as wide at a size as at the default", frozenset({SIZES}))
+BRAND_FORMS = SceneCheck("the forms the brand's chain draws the piece's tops in")
+
+#: Every scene check, in the order a scene's findings are found: the report of the viewing
+#: step names each that states a reach, and reads from each the axes it compares across
+#: (DEC-062 points 1 and 2, DEC-063 point 1).
+SCENE_CHECKS = (
+    ENGINE,
+    CONTENT_HIDDEN,
+    CONTRAST,
+    UNKNOWN_COLOUR,
+    LOSSES,
+    STATUSES,
+    NO_GROUND,
+    boxes.NEAR_ALIGNMENT_CHECK,
+    boxes.BOX_OVERLAP_CHECK,
+    SIZE_WIDTHS,
+    BRAND_FORMS,
+    signs.LEFT_TO_COLOUR,
+    signs.ONE_SIGN,
+)
+
+
 def scene_findings(
     project: pl.Project, results: Sequence[tuple[str, SceneResult]]
 ) -> list[Finding]:
-    """What computing a piece's scenes found, each finding once, in a fixed order; files
-    relative to the piece's folder, or to a library version's folder where the finding
-    lies in one (the findings record keeps them so).
+    """What computing a piece's scenes found, as the findings record keeps it: each finding
+    of every scene check, scene by scene (`found_in`), merged as a render merges them
+    (`merged`)."""
+    return merged(results, found_in(project, results))
+
+
+def found_in(
+    project: pl.Project,
+    results: Sequence[tuple[str, SceneResult]],
+    stops: dict[tuple[str, str], str] | None = None,
+) -> list[Found]:
+    """Each finding of every scene check, as the check gives it in each scene, before the
+    render's merges (DEC-062 point 1, DEC-063 point 1): files relative to the piece's folder,
+    or to a library version's folder where the finding lies in one, as the findings record
+    keeps them.
 
     Each scene is computed at one key over the size axes, and contrast is measured on it in
-    each combination it serves. A finding the scenes of every key find alike is reported
-    once, as it reads. Any other is reported for each key whose scenes find it, its message
-    opening with that key, so a finding takes no field for its size."""
-    piece = project.piece
-    document = project.values()
+    each combination it serves, each step of an order it paints in its value there, which
+    comes with the scene (`_steps_of`, DEC-032 point 5). Content a scene draws at one key and
+    not at another is stated at the key that hides it (`_hidden`). The checks of boxes read
+    each scene's siblings, edges that nearly line up by the brand's smallest step of space at
+    its key, and boxes that overlap (`_of_boxes`, DEC-046 point 3). A size at which the top is
+    as wide as at the default asks for attention (`_widths`). What the piece states of the
+    forms its brand's chain draws its tops in holds at every key (`_brand_forms`). The checks
+    of signs read every scene: a concept left to its colour, in each scene that draws it so,
+    and concepts of one sign, in each language (`signs`, DEC-036 point 8).
+
+    Where `stops` is given, an error the checks' code raises on a scene is kept there, by the
+    scene's language and key over the size axes, with what it said, and the scene gives no
+    finding; one the checks that read the scenes together raise is kept for every scene.
+    With no `stops`, it is raised, as on a render."""
     colours = {
         path: token["values"]
-        for path, token in document["tokens"].items()
+        for path, token in project.values()["tokens"].items()
         if token["type"] == "color"
     }
+    scenes = [(language, result, result.scene.to_dict()) for language, result in results]
+    shown = {
+        (language, result.scene.size_key): _content_shown(scene)
+        for language, result, scene in scenes
+    }
+    steps: dict[str, boxes.Step | None] = {}
+    found: list[Found] = []
+    for language, result, scene in scenes:
+        try:
+            found.extend(_in_scene(project, language, result, scene, colours, shown, steps))
+        except Exception as exc:
+            if stops is None:
+                raise
+            stops[language, result.scene.size_key] = _error_said(exc)
+    try:
+        found.extend(_over_scenes(project, scenes))
+    except Exception as exc:
+        if stops is None:
+            raise
+        for language, result, _ in scenes:
+            stops.setdefault((language, result.scene.size_key), _error_said(exc))
+    return found
+
+
+def _error_said(error: Exception) -> str:
+    """An error the checks' code raised, in words: its kind, and what it said."""
+    return f"{type(error).__name__}: {error}" if str(error) else type(error).__name__
+
+
+def _in_scene(
+    project: pl.Project,
+    language: str,
+    result: SceneResult,
+    scene: Mapping[str, Any],
+    colours: Mapping[str, Mapping[str, Any]],
+    shown: Mapping[tuple[str, str], set[str]],
+    steps: dict[str, boxes.Step | None],
+) -> list[Found]:
+    """What the checks that run on each scene alone find in one scene, in a fixed order: the
+    engine's own findings, content the scene's size hides, contrast as drawn, colour roles the
+    brand lacks, the renderers' unaccepted losses, components' statuses, pages with no ground
+    of their own, and the checks of boxes."""
+    piece = project.piece
+    size = result.scene.size_key
+    served = [key for key in project.keys if project.size_key(key) == size]
+    content = pl.content_file(language)
+    drawn = {**colours, **_steps_of(scene, colours, served)}
+    if size not in steps:
+        steps[size] = _space_step(project, size)
+    checked: list[tuple[SceneCheck, Finding]] = [
+        *((ENGINE, _placed(finding, content, project)) for finding in result.findings),
+        *((CONTENT_HIDDEN, finding) for finding in _hidden(language, size, shown)),
+        *((CONTRAST, finding) for finding in drawn_contrast(scene, drawn, served)),
+        *((UNKNOWN_COLOUR, finding) for finding in _unknown_colours(scene, drawn)),
+        *((LOSSES, loss_finding(loss)) for loss in _unaccepted(piece, scene)),
+        *((STATUSES, finding) for finding in _statuses(scene, project.env)),
+        *((NO_GROUND, finding) for finding in _no_ground(piece, scene, drawn, served)),
+        *_of_boxes(scene, steps[size]),
+    ]
+    pages = [str(page) for page in scene.get("pages", [])]
+    return [_found(check, finding, language, size, pages) for check, finding in checked]
+
+
+def _over_scenes(
+    project: pl.Project, scenes: Sequence[tuple[str, SceneResult, Mapping[str, Any]]]
+) -> list[Found]:
+    """What the checks that read a piece's scenes together find: a top as wide at a size as
+    at the default, at that size in every language; the forms the brand's chain draws its
+    tops in, in every language and at every key; a concept left to its colour, in each scene
+    that draws it so; and concepts of one sign, at every key of each language."""
+    found = [
+        Found(finding, SIZE_WIDTHS, None, size)
+        for size, finding in _widths(project, [(language, r) for language, r, _ in scenes])
+    ]
+    found.extend(Found(finding, BRAND_FORMS, None, None) for finding in _brand_forms(project))
+    for language, result, scene in scenes:
+        pages = [str(page) for page in scene.get("pages", [])]
+        found.extend(
+            _found(signs.LEFT_TO_COLOUR, _placed(finding, "", project), language, size, pages)
+            for size in (result.scene.size_key,)
+            for finding in signs.left_to_colour(result.shown)
+        )
+    languages = {pl.content_file(language): language for language, _, _ in scenes}
+    shown = [(pl.content_file(language), result.shown) for language, result, _ in scenes]
+    found.extend(
+        Found(_placed(finding, "", project), signs.ONE_SIGN, languages[content], None)
+        for content, finding in signs.one_sign(shown)
+    )
+    return found
+
+
+def _found(
+    check: SceneCheck, finding: Finding, language: str, size: str, pages: Sequence[str]
+) -> Found:
+    """`finding` as `check` gives it in the scene of `language` at the key over the size axes
+    `size`, whose pages are `pages`: on the page its place lies on, where it lies on one, its
+    place its trace id where the check keeps one, else where it points; with each combination
+    it names, where its check is one of colour."""
+    place = str(finding.extra.get("place") or finding.where)
+    page = next((each for each in pages if place == each or _below_trace(place, each)), None)
+    combinations = tuple(str(key) for key in finding.extra.get("combinations", ()))
+    return Found(finding, check, language, size, combinations, page)
+
+
+#: The checks whose findings the render merges over the piece's scenes, apart from those of
+#: each scene alone: in this order, after them.
+_OVER_SCENES = (SIZE_WIDTHS, BRAND_FORMS, signs.LEFT_TO_COLOUR, signs.ONE_SIGN)
+
+
+def merged(results: Sequence[tuple[str, SceneResult]], found: Sequence[Found]) -> list[Finding]:
+    """The render's merges of the findings `found` gives scene by scene, over the scenes of
+    `results`, each finding once, in a fixed order (DEC-062 point 1).
+
+    A finding in what a field of the top draws, read alike on several pages of a scene, is
+    reported once, naming its pages (`_once_on_pages`). One that the scenes of every key over
+    the size axes find alike is reported once, as it reads, in whichever language finds it.
+    Any other is reported for each key whose scenes find it, its message opening with that
+    key, so a finding takes no field for its size. A concept left to its colour is reported
+    once for each version of what draws it (`signs.once_for_each_version`). What the checks
+    that read the scenes together find is reported as they give it."""
+    shared = {(language, result.scene.size_key): result.shared for language, result in results}
     by_size: dict[str, dict[tuple[str, str, str, str, str], Finding]] = {
         size: {} for size in dict.fromkeys(result.scene.size_key for _, result in results)
     }
-    for language, result in results:
-        size = result.scene.size_key
-        served = [key for key in project.keys if project.size_key(key) == size]
-        content = pl.content_file(language)
-        found = [_placed(finding, content, project) for finding in result.findings]
-        scene = result.scene.to_dict()
-        found.extend(drawn_contrast(scene, colours, served))
-        found.extend(_unknown_colours(scene, colours))
-        for renderer in renderers(piece):
-            declared = seam.declaration(renderer, seam.RENDERER)
-            for loss in losses(scene, declared):
-                if not accepted(loss, piece.accepted_losses):
-                    found.append(loss_finding(loss))
-        found.extend(_statuses(scene, project.env))
-        for finding in found:
+    in_scene: dict[tuple[str, str], list[Finding]] = {}
+    over: dict[SceneCheck, list[Finding]] = {check: [] for check in _OVER_SCENES}
+    for each in found:
+        if each.check in over:
+            over[each.check].append(each.finding)
+        else:
+            assert each.language is not None and each.size is not None
+            in_scene.setdefault((each.language, each.size), []).append(each.finding)
+    for (language, size), scene_found in in_scene.items():
+        for finding in _once_on_pages(scene_found, shared[language, size]):
             by_size[size].setdefault(_mark(finding), finding)
     unique: dict[tuple[str, str, str, str, str], Finding] = {}
     for size, found_at in by_size.items():
@@ -2314,17 +2930,279 @@ def scene_findings(
             else:
                 sized = dataclasses.replace(finding, message=f"`{size}`: {finding.message}")
                 unique.setdefault(_mark(sized), sized)
+    for finding in [
+        *over[SIZE_WIDTHS],
+        *over[BRAND_FORMS],
+        *signs.once_for_each_version(over[signs.LEFT_TO_COLOUR]),
+        *over[signs.ONE_SIGN],
+    ]:
+        unique.setdefault(_mark(finding), finding)
     return sorted(unique.values(), key=lambda f: (f.file, f.where, f.code, f.message))
+
+
+def _steps_of(
+    scene: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any]], keys: Sequence[str]
+) -> dict[str, dict[str, Any]]:
+    """The value of each step of an order `scene` paints, by its name, in each combination
+    `keys` names, spread from that combination's own ends, whose values `colours` gives by
+    key (DEC-032 point 5). Each step holds every key, as each role does: None in one where
+    one of its ends has no colour (`colour_steps.values_at`)."""
+    found: dict[str, dict[str, Any]] = {}
+    for key in keys:
+        at = {role: by_key.get(key) for role, by_key in colours.items()}
+        for name, value in colour_steps.values_at(scene, at).items():
+            found.setdefault(name, dict.fromkeys(keys))[key] = value
+    return found
+
+
+def _of_boxes(
+    scene: Mapping[str, Any], step: boxes.Step | None
+) -> list[tuple[SceneCheck, Finding]]:
+    """What the checks of boxes find among the siblings of `scene`, each with its check, at
+    the piece's own file, as it names no component (DEC-046 point 3): edges that nearly line
+    up by `step`, the brand's smallest step of space at the scene's key, or the fact that
+    nothing can be near at that key, and boxes that overlap."""
+    found = [
+        *((boxes.NEAR_ALIGNMENT_CHECK, finding) for finding in boxes.near_alignment(scene, step)),
+        *((boxes.BOX_OVERLAP_CHECK, finding) for finding in boxes.overlaps(scene)),
+    ]
+    return [(check, dataclasses.replace(finding, file=pl.PIECE_FILE)) for check, finding in found]
+
+
+def _space_step(project: pl.Project, size: str) -> boxes.Step | None:
+    """The brand's smallest step of space at the key over the size axes `size`, every value
+    axis at its default, as the scene at that key reads each role (`boxes.smallest_step`): of
+    the shared steps of space the brand gives a value."""
+    env, scope = project.env.at(size), project.brand.scope
+    values = {}
+    for path in scope.roles:
+        if boxes.STEP.fullmatch(path) and not scope.owner.get(path):
+            try:
+                values[path] = env.role(path)
+            except KeyError:
+                continue
+    return boxes.smallest_step(values)
+
+
+#: The finding on a piece drawn at a size at which its top is as wide as at the default
+#: (DEC-022 points 3 and 8).
+SIZE_WIDTH = "size-width"
+
+
+def _widths(
+    project: pl.Project, results: Sequence[tuple[str, SceneResult]]
+) -> list[tuple[str, Finding]]:
+    """A call for attention for each key over the size axes, other than the default, at
+    which the piece's top is as wide as at the default, with that key: its shape follows the
+    size, and its width does not (DEC-022 point 3). It lies at the piece and names the brand,
+    which gives the widths, and no component (DEC-022 point 8). The top's width at a key is
+    its scene's, and at the default, where no scene was computed there, the width its top
+    gets."""
+    widths: dict[str, float] = {}
+    for _, result in results:
+        top = result.scene.children[:1]
+        if top and "width" in top[0].properties:
+            widths.setdefault(result.scene.size_key, float(top[0].properties["width"]))
+    sized = [key for key in widths if key != keys.DEFAULT_KEY]
+    if not sized:
+        return []
+    default = widths.get(keys.DEFAULT_KEY)
+    if default is None:
+        default = _top_width(project, keys.DEFAULT_KEY)
+    if default is None or default <= 0:
+        return []
+    brand = project.label(project.piece.brand)
+    return [
+        (
+            key,
+            Finding(
+                SIZE_WIDTH,
+                ATTENTION,
+                f"`{key}`: the top is {default:g} px wide, as at the default size: the brand "
+                f"{brand} gives its width no other value at this size, so its shape follows "
+                "the size and its width does not",
+                file=pl.PIECE_FILE,
+                where="brand",
+                fix="draw the piece in a brand that gives the top's width at each size it "
+                "names, or ask the brand's owner to; where the piece means one width at every "
+                "size, leave it",
+                who="the piece's author",
+            ),
+        )
+        for key in sized
+        if abs(widths[key] - default) <= layout.TOLERANCE
+    ]
+
+
+#: The call for attention on a piece whose top a brand holds, drawn under a brand that is
+#: neither that brand nor built on it (DEC-034 point 4). The fact a piece states for each
+#: drawing of its brand's chain that draws nothing, since a brand nearer the root serves its
+#: top, is `layout.DRAWING_BASE_SERVES` (DEC-009 points 4 and 9, DEC-034 point 8).
+TOP_OF_OTHER_BRAND = "top-of-other-brand"
+
+
+def _brand_forms(project: pl.Project) -> list[Finding]:
+    """What the piece states of the forms its brand's chain draws its tops in. Each drawing
+    a brand nearer the root keeps from drawing is a fact at the piece's lock, which pairs the
+    two versions (`pipeline.brand_drawings`). A piece whose top a brand holds, drawn under a
+    brand that is neither that brand nor built on it, asks its author for attention, naming
+    the top and both brands, and never fails: its top is drawn by its own drawing, the
+    holding brand's form, in its own brand's values (DEC-034 point 4)."""
+    found = [
+        Finding(
+            layout.DRAWING_BASE_SERVES,
+            FACT,
+            f"the drawing `{use}` draws nothing under this lock: {kept.by}, which its brand "
+            f"builds on, serves `{kept.top}`, and keeps its form",
+            file=pl.PIECE_FILE,
+            where="lock",
+        )
+        for use, kept in sorted(project.kept.items())
+    ]
+    top = project.piece.top
+    holder = top.partition("/")[0]
+    chain = {brand.name for brand in pl.chain_of(project.brand)}
+    if holder not in chain and project.kind(holder) == "brand":
+        held, brand = project.label(holder), project.label(project.piece.brand)
+        found.append(
+            Finding(
+                TOP_OF_OTHER_BRAND,
+                ATTENTION,
+                f"the top `{top}` is the form of the brand {held}, and the piece's brand "
+                f"{brand} is neither that brand nor built on it: the top is drawn by its own "
+                f"drawing, in the values of {brand}",
+                file=pl.PIECE_FILE,
+                where="top",
+                fix=f"draw the piece under `{holder}` or a brand built on it; where its form is "
+                f"meant to be {held}'s in the values of {brand}, leave it",
+                who=AUTHOR,
+            )
+        )
+    return found
+
+
+def _top_width(project: pl.Project, size_key: str) -> float | None:
+    """The width the piece's top gets at the key over the size axes `size_key`, in its
+    source language; None where it cannot be computed, whose finding a scene reports."""
+    language = project.piece.languages[0]
+    sizes = pl.sizes_at(project.scope.axes, size_key)
+    ctx = layout.Context(project.env.at(size_key), language, project.piece.stand_ins, sizes)
+    top = layout.place_top(ctx, project.piece.top, project.piece.contents[language])
+    if top is None:
+        return None
+    width: float | None = ctx.attempt(lambda: top.get("size", "width"), None)
+    return width
+
+
+#: What stands for a page's trace where two findings on two pages are read alike.
+PAGE = "<page>"
+
+
+def _once_on_pages(found: Sequence[Finding], shared: Mapping[str, Sequence[str]]) -> list[Finding]:
+    """`found`, where each finding in what a field of the top draws on a page (`shared`, by
+    page) that is read the same on several pages is reported once, naming its pages (DEC-022
+    point 8). Two such findings read alike where they differ only in the page's trace, where
+    they lie and in their message. The one kept is the first page's."""
+    kept: list[Finding] = []
+    alike: dict[tuple[str, str, str, str, str], list[tuple[str, Finding]]] = {}
+    for finding in found:
+        page = next(
+            (
+                page
+                for page, traces in shared.items()
+                for trace in traces
+                if finding.where == trace or _below_trace(finding.where, trace)
+            ),
+            None,
+        )
+        if page is None:
+            kept.append(finding)
+            continue
+        read = dataclasses.replace(
+            finding,
+            where=PAGE + finding.where[len(page) :],
+            message=finding.message.replace(f"{page}/", f"{PAGE}/"),
+        )
+        alike.setdefault(_mark(read), []).append((page, finding))
+    for held in alike.values():
+        pages = list(dict.fromkeys(page for page, _ in held))
+        first = held[0][1]
+        if len(pages) > 1:
+            named = ", ".join(f"`{page}`" for page in pages)
+            first = dataclasses.replace(
+                first, message=f"{first.message}; read the same on the pages {named}"
+            )
+        kept.append(first)
+    return kept
+
+
+def _below_trace(trace: str, other: str) -> bool:
+    """Whether the trace id `trace` lies below `other`: a part, an item or a run of it."""
+    return trace.startswith(other) and trace[len(other) : len(other) + 1] in ("/", "[", "#")
+
+
+def _hidden(language: str, size: str, shown: Mapping[tuple[str, str], set[str]]) -> list[Finding]:
+    """Content the scenes of `language` draw at another key over the size axes and not at
+    `size`, by its key path, each a fact in the content file, so a reviewer sees what a
+    reader at that size does not get (DEC-021 point 5). `shown` holds the key paths each
+    scene draws, by its language and its key. A path below another that is hidden too is
+    left out: the one above names it."""
+    here = shown[language, size]
+    elsewhere: dict[str, list[str]] = {}
+    for (other_language, other), paths in shown.items():
+        if other_language == language and other != size:
+            for path in paths - here:
+                elsewhere.setdefault(path, []).append(other)
+    return [
+        Finding(
+            SIZE_HIDDEN,
+            FACT,
+            f"`{path}` is drawn at {', '.join(f'`{key}`' for key in at)}, and not at this size",
+            file=pl.content_file(language),
+            where=path,
+        )
+        for path, at in sorted(elsewhere.items())
+        if not any(_below(path, other) for other in elsewhere)
+    ]
+
+
+def _below(path: str, other: str) -> bool:
+    """Whether the key path `path` lies below `other`: a key, an item or a run of it."""
+    return path.startswith(other) and path[len(other) : len(other) + 1] in (".", "[", "#")
+
+
+def _content_shown(value: Any) -> set[str]:
+    """The key path of each value of the content a scene draws: each source a property, or
+    a run, names in the content."""
+    found: set[str] = set()
+    if isinstance(value, Mapping):
+        for key, each in value.items():
+            if key == "sources" and isinstance(each, Mapping):
+                found.update(
+                    source[len(layout.CONTENT) :]
+                    for source in each.values()
+                    if isinstance(source, str) and source.startswith(layout.CONTENT)
+                )
+            else:
+                found |= _content_shown(each)
+    elif isinstance(value, list):
+        for each in value:
+            found |= _content_shown(each)
+    return found
 
 
 def _placed(finding: Finding, content: str, project: pl.Project) -> Finding:
     """An engine finding placed in the file a person edits to mend it: the piece's own file
     where it lies in what the piece names (`piece`), its top or its lock (DEC-008 point 9);
     the file of the component it names (`component`), the piece's own in its `components/`
-    and a library's in the locked version's; with neither, the content file. A missing
-    picture gets why, and the command that makes it."""
+    and a library's in the locked version's; with neither, the content file. One the engine
+    already placed in a file keeps it, as a finding on a picture file lies at the file, in
+    the piece or in the version (DEC-025 point 9). A missing picture gets why, and the
+    command that makes it."""
     library, _, name = str(finding.extra.get("component") or "").partition("/")
     versioned, _, version = finding.library.partition("@")
+    if finding.file:
+        return finding
     if finding.extra.get("piece"):
         finding = dataclasses.replace(finding, library="", file=pl.PIECE_FILE)
     elif library == names.PIECE and name:
@@ -2360,6 +3238,64 @@ def _walk(
             )
 
 
+def draws_ground(page: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any]]) -> bool:
+    """Whether `page` draws a ground of its own in the colours `colours`: a box of an opaque
+    colour over its whole frame. Where it draws none, an image of it lies on what the reader
+    of it shows around it: white through the SVG renderer's viewing step, the browser's own
+    ground through the HTML renderer's, and a page's around a switching file (DEC-015 point 5,
+    DEC-018 point 5, DEC-023 point 7). The viewing step reads it so too."""
+    width, height = float(page["width"]), float(page["height"])
+    for element, x, y in _walk(page.get("children", [])):
+        colour = colours.get(element.get("fill") or "")
+        if element.get("type") == "box" and colour and float(colour.get("alpha", 1)) >= 1:
+            left, top = x + float(element.get("x", 0)), y + float(element.get("y", 0))
+            right, bottom = left + float(element["width"]), top + float(element["height"])
+            if left <= 0 and top <= 0 and right >= width and bottom >= height:
+                return True
+    return False
+
+
+def _no_ground(
+    piece: pl.Piece,
+    scene: Mapping[str, Any],
+    colours: Mapping[str, Mapping[str, Any]],
+    served: Sequence[str],
+) -> list[Finding]:
+    """For a piece that exports switching files, a call for attention on each page that draws
+    no ground of its own in a combination its file holds, naming the page and those
+    combinations (DEC-018 point 5). A page shows the file on its own ground, so dark text
+    could meet a dark page. It never fails, and repeats until the page has a ground.
+    `colours` holds each colour role's value by key, and `served` the keys the scene
+    serves."""
+    if not any(form in exports.SWITCHING for form in piece.exports):
+        return []
+    found = []
+    for page in _pages(scene):
+        bare = [
+            key
+            for key in served
+            if not draws_ground(page, {role: by_key[key] for role, by_key in colours.items()})
+        ]
+        if bare:
+            named = " and ".join(f"`{key}`" for key in bare)
+            found.append(
+                Finding(
+                    SWITCHING_NO_GROUND,
+                    ATTENTION,
+                    f"the page `{page['id']}` draws no ground of its own in {named}, so a page "
+                    f"that shows its switching file shows its own ground under it, and a text "
+                    f"may meet a ground of its own colour",
+                    file=pl.PIECE_FILE,
+                    where=str(page["id"]),
+                    fix="give the page a ground of an opaque colour over its whole frame, in its "
+                    "component or its brand, in each mode its file holds",
+                    who=AUTHOR,
+                    extra={"combinations": tuple(bare)},
+                )
+            )
+    return found
+
+
 def _pages(scene: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
     wanted = set(scene.get("pages", []))
     for element, _, _ in _walk(scene.get("children", [])):
@@ -2370,12 +3306,18 @@ def _pages(scene: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
 def drawn_contrast(
     scene: Mapping[str, Any], colours: Mapping[str, Mapping[str, Any]], keys: Sequence[str]
 ) -> list[Finding]:
-    """Each run of each text of a scene measured against the fill under it, in each
-    combination `keys` names, at WCAG's level for the run's size and weight, in the run's
-    own paint (DEC-004 point 8, DEC-012 point 3). The fill under a run's span of a line is
-    that of the last box or ellipse drawn before the text that holds the span's middle; a
-    translucent one is laid over the one under it. A text over a picture is not measured,
-    nor one with nothing under it."""
+    """Each run of each text of a scene, and each sign, measured against the fill under it,
+    in each combination `keys` names (DEC-004 point 8, DEC-012 point 3, DEC-036 point 8). A
+    run is measured at WCAG's level for its size and weight, in its own paint. A sign is
+    measured at WCAG's level for other marks: a sign part's path holds where its fill or its
+    stroke reaches it, and a run's sign in the run's paint (`_sign_contrast`). The fill
+    under a run's span of a line, or under a sign, is that of the last box, ellipse or path
+    drawn before it that holds the span's or the sign's middle, a path where its outline
+    fills it; a translucent one is laid over the one under it. A span or a sign over a
+    picture is not measured, nor one with nothing under it, and a text's other spans are.
+    A fill with no colour in a combination draws nothing there, so what lies under it
+    shows; a paint of a run or a sign with none there draws nothing to measure there, and
+    the renderer reports the loss."""
     found = []
     for page in _pages(scene):
         painted: list[tuple[Mapping[str, Any], float, float]] = []
@@ -2385,6 +3327,9 @@ def drawn_contrast(
                 painted.append((element, x, y))
             elif kind == "text" and element.get("lines"):
                 found.extend(_text_contrast(element, x, y, painted, colours, keys))
+            elif kind == "path" and element.get("d"):
+                found.extend(_sign_contrast(element, x, y, painted, colours, keys))
+                painted.append((element, x, y))  # its fill lies under what is drawn after it
     return found
 
 
@@ -2399,8 +3344,9 @@ def _text_contrast(
     left, width = x + float(text["x"]), float(text["width"])
     step = float(text["line-height"])
     paragraphs = text.get("paragraphs") or [[{}]]
-    # Each look of a run and the fills under its spans, in the order first met.
-    measured: list[tuple[Mapping[str, Any], list[str]]] = []
+    # Each look of a run and the fills under its spans, in the order first met, and each
+    # look of a run's sign where it lies on other fills than its span's text.
+    measured: list[tuple[Mapping[str, Any], list[str], bool]] = []
     looks: list[tuple[Any, ...]] = []
     for index, line in enumerate(text["lines"]):
         runs = paragraphs[line.get("paragraph", 0)] or [{}]
@@ -2408,23 +3354,41 @@ def _text_contrast(
         at = {"middle": left + (width - drawn) / 2, "end": left + width - drawn}.get(
             str(text.get("text-anchor")), left
         )
-        middle = y + float(text["y"]) + index * step + step / 2
+        top = y + float(text["y"]) + index * step
+        middle = top + step / 2
         # A line with no span is measured at its start, in its paragraph's first run.
         spans = line.get("spans") or [{"run": 0, "width": 0}]
         for span in spans:
             run = runs[int(span.get("run", 0))]
             span_width = float(span.get("width", 0))
+            # A run's ground and sign take room beside its text, and the ground is the fill
+            # each is measured against (DEC-036 point 3).
+            ground, sign = span.get("ground") or {}, span.get("sign")
+            at += float(ground.get("start", 0))
+            marked: list[str] | None = None
+            if sign is not None:
+                size = float(sign["size"])
+                marked = _under((at + size / 2, top + float(sign["top"]) + size / 2), painted)
+                at += size + float(sign["gap"])
             stack = _under((at + span_width / 2, middle), painted)
-            if stack is None:
-                return []  # over a picture: a reviewer judges it
-            at += span_width
+            if ground and run.get("ground") is not None:
+                stack = [*(stack or []), str(run["ground"])]
+                if sign is not None:
+                    marked = [*(marked or []), str(run["ground"])]
+            at += span_width + float(ground.get("end", 0))
             look = (run.get("fill"), run.get("font-size"), run.get("font-weight"), stack)
+            # A span over a picture, None, is a reviewer's to judge, and one over nothing is
+            # not measured: either way the text's other spans are.
             if stack and look not in looks:
                 looks.append(look)
-                measured.append((run, stack))
+                measured.append((run, stack, False))
+            # A sign on the fills of its text is measured with it, at a level as strict.
+            if marked and marked != stack and (run.get("fill"), marked) not in looks:
+                looks.append((run.get("fill"), marked))
+                measured.append((run, marked, True))
     found = []
-    for run, stack in measured:
-        found.extend(_run_contrast(text, run, stack, colours, keys))
+    for run, stack, of_sign in measured:
+        found.extend(_run_contrast(text, run, stack, colours, keys, sign=of_sign))
     return found
 
 
@@ -2434,9 +3398,12 @@ def _run_contrast(
     stack: Sequence[str],
     colours: Mapping[str, Mapping[str, Any]],
     keys: Sequence[str],
+    *,
+    sign: bool = False,
 ) -> list[Finding]:
     """A run of a text measured against one stack of fills under it, in its own paint, at
-    WCAG's level for its size and weight."""
+    WCAG's level for its size and weight; or, where `sign`, the run's sign, at the level
+    for other marks (DEC-036 point 8)."""
     role = run.get("fill")
     if role is not None and role not in colours:
         return []  # a colour role the brand lacks is a finding of its own
@@ -2445,26 +3412,92 @@ def _run_contrast(
     size, weight = float(run.get("font-size", 0)), run.get("font-weight")
     bold = isinstance(weight, (int, float)) and weight >= BOLD
     level = "large-text" if size >= LARGE or (size >= LARGE_BOLD and bold) else "text"
+    what = f"a text of {size:g} px"
+    if sign:
+        level, what = MARKS, "the sign of a run"
     minimum = tokens.LEVELS[level]
     found = []
     for key in keys:
-        ground = _ground([colours[fill][key] for fill in stack])
-        if ground is None:
-            continue
+        shown = _drawn_fills(stack, colours, key)
+        ground = _ground([colours[fill][key] for fill in shown])
         ink = colours[role][key] if role is not None else BLACK
+        if ground is None or ink is None:
+            continue
         ratio = tokens.contrast_ratio(ink, ground)
         if ratio < minimum:
             found.append(
                 Finding(
-                    "contrast-drawn",
+                    CONTRAST_DRAWN,
                     FAILS,
-                    f"`{role or 'black'}` on `{stack[-1]}` has the contrast {ratio:.2f} in "
-                    f"the combination `{key}`, below the {minimum} a text of {size:g} px "
-                    f"needs (`{level}`)",
+                    f"`{role or 'black'}` on `{shown[-1]}` has the contrast {ratio:.2f} in "
+                    f"the combination `{key}`, below the {minimum} {what} needs (`{level}`)",
                     file=pl.PIECE_FILE,
                     where=str(text["id"]),
                     fix="change the colour roles of the text or of what lies under it, in "
                     "the component, its content's `override`, or the brand",
+                    extra={"combinations": (key,)},
+                )
+            )
+    return found
+
+
+def _sign_contrast(
+    path: Mapping[str, Any],
+    x: float,
+    y: float,
+    painted: Sequence[tuple[Mapping[str, Any], float, float]],
+    colours: Mapping[str, Mapping[str, Any]],
+    keys: Sequence[str],
+) -> list[Finding]:
+    """A sign part's path measured against the fills under its middle, in each combination
+    `keys` names, at WCAG's level for other marks: it holds where its fill or its stroke
+    reaches that level (DEC-036 point 8). One that paints neither shows nothing, which
+    fails as well. One over a picture is not measured, nor one with nothing under it. The
+    paths drawn before it are among those fills, and it among those of what follows."""
+    width, height = float(path.get("width", 0)), float(path.get("height", 0))
+    middle = (x + float(path.get("x", 0)) + width / 2, y + float(path.get("y", 0)) + height / 2)
+    stack = _under(middle, painted)
+    if not stack or any(fill not in colours for fill in stack):
+        return []  # over a picture, over nothing, or over a colour the brand lacks
+    paints = [path.get("fill")]
+    if float(path.get("stroke-width", 1)) > 0:
+        paints.append(path.get("stroke"))
+    inks = [str(role) for role in paints if role is not None]
+    fix = (
+        "change the colour roles of the sign or of what lies under it, in the component, its "
+        "content's `override`, or the brand"
+    )
+    where = str(path["id"])
+    if not inks:
+        message = "the sign paints neither a fill nor a stroke, so it shows nothing"
+        return [Finding(CONTRAST_DRAWN, FAILS, message, file=pl.PIECE_FILE, where=where, fix=fix)]
+    if any(role not in colours for role in inks):
+        return []  # a colour role the brand lacks is a finding of its own
+    minimum, found = tokens.LEVELS[MARKS], []
+    for key in keys:
+        shown = _drawn_fills(stack, colours, key)
+        ground = _ground([colours[fill][key] for fill in shown])
+        inked = [role for role in inks if colours[role][key] is not None]
+        if ground is None or not inked:
+            continue
+        ratios = [tokens.contrast_ratio(colours[role][key], ground) for role in inked]
+        if max(ratios) < minimum:
+            measured = " and ".join(
+                f"`{role}` ({ratio:.2f})" for role, ratio in zip(inked, ratios, strict=True)
+            )
+            message = (
+                f"the sign paints {measured} on `{shown[-1]}` in the combination `{key}`, and "
+                f"none reaches the {minimum} a sign needs (`{MARKS}`)"
+            )
+            found.append(
+                Finding(
+                    CONTRAST_DRAWN,
+                    FAILS,
+                    message,
+                    file=pl.PIECE_FILE,
+                    where=where,
+                    fix=fix,
+                    extra={"combinations": (key,)},
                 )
             )
     return found
@@ -2490,6 +3523,14 @@ def _under(
     return stack
 
 
+def _drawn_fills(
+    stack: Sequence[str], colours: Mapping[str, Mapping[str, Any]], key: str
+) -> list[str]:
+    """The fills of `stack` that draw in the combination `key`, bottom first: one with no
+    colour there draws nothing, so what lies under it shows."""
+    return [fill for fill in stack if colours[fill][key] is not None]
+
+
 def _ground(stack: Sequence[Mapping[str, Any]]) -> Mapping[str, Any] | None:
     """The colour a stack of fills shows, bottom first; None when nothing opaque lies under
     a translucent one."""
@@ -2511,9 +3552,15 @@ def _ground(stack: Sequence[Mapping[str, Any]]) -> Mapping[str, Any] | None:
 
 
 def _holds(element: Mapping[str, Any], x: float, y: float, point: tuple[float, float]) -> bool:
+    """Whether `element`, drawn in a parent whose origin lies at `x y`, covers `point`: a
+    box or an image by its frame, an ellipse by the ellipse its frame bounds, and a path by
+    its outline and the rule that fills it, whose numbers lie in its parent's frame."""
     left, top = x + float(element.get("x", 0)), y + float(element.get("y", 0))
     width, height = float(element.get("width", 0)), float(element.get("height", 0))
     px, py = point
+    if element.get("type") == "path":
+        rule = str(element.get("fill-rule") or "nonzero")
+        return outlines.fills(str(element["d"]), rule, (px - x, py - y))
     if element.get("type") == "ellipse":
         if width <= 0 or height <= 0:
             return False
@@ -2531,7 +3578,9 @@ def _unknown_colours(
         painted = [element]
         for runs in element.get("paragraphs", []) if element.get("type") == "text" else []:
             painted.extend(runs)  # each run of a text holds its own paint (DEC-012)
-        for prop, role in [(p, each.get(p)) for each in painted for p in ("fill", "stroke")]:
+        # A run's ground is a paint too (DEC-036 point 3).
+        props = ("fill", "stroke", "ground")
+        for prop, role in [(p, each.get(p)) for each in painted for p in props]:
             if role is not None and role not in colours:
                 found.append(
                     Finding(
@@ -2600,10 +3649,26 @@ def renderers(piece: pl.Piece) -> list[str]:
 def losses(scene: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[seam.Loss]:
     """What a renderer will lose of a scene, known from its declaration before it runs
     (DEC-005 point 9): a primitive it does not draw it refuses, and a property it does not
-    draw it leaves out."""
+    draw it leaves out. One whose format has a physical page and does not map the physical
+    size the scene's root holds onto it draws each page at its own unit, an approximation
+    it names at the top; one whose format has none loses nothing (DEC-034 point 3)."""
     plugin = str(declaration["name"])
     draws: Mapping[str, Mapping[str, Any]] = declaration.get("draws", {})
     found: list[seam.Loss] = []
+    physical = scene.get("physical-size")
+    held: Mapping[str, Any] = declaration.get("physical-size", {})
+    if isinstance(physical, Mapping) and held.get("page") is True and held.get("maps") is not True:
+        children = scene.get("children") or [{}]
+        size = f"{physical.get('width')} by {physical.get('height')} mm"
+        found.append(
+            seam.Loss(
+                plugin,
+                str(children[0].get("id", "")),
+                seam.APPROXIMATED,
+                f"the {plugin} renderer draws each page at its own unit, not at the top's "
+                f"physical size of {size}",
+            )
+        )
     for element, _, _ in _walk(scene.get("children", [])):
         kind, what = str(element.get("type")), str(element.get("id"))
         if kind not in draws:
@@ -2626,9 +3691,22 @@ def losses(scene: Mapping[str, Any], declaration: Mapping[str, Any]) -> list[sea
 
 def loss_finding(loss: seam.Loss) -> Finding:
     """A renderer's loss nobody accepted, which asks the piece's author for attention
-    (DEC-005 point 14), at the trace of what it loses. Whether the piece accepts a loss,
-    `accepted` says (`findings.accepted`)."""
-    return _loss_finding(loss, "renderer", file=pl.PIECE_FILE, where=loss.what)
+    (DEC-005 point 14), at the trace of what it loses, which keeps the loss's plugin and what
+    it loses. Whether the piece accepts a loss, `accepted` says (`findings.accepted`)."""
+    found = _loss_finding(loss, "renderer", file=pl.PIECE_FILE, where=loss.what)
+    return dataclasses.replace(found, extra={"plugin": loss.plugin, "what": loss.what})
+
+
+def _unaccepted(piece: pl.Piece, scene: Mapping[str, Any]) -> list[seam.Loss]:
+    """What each renderer that draws `piece` loses of `scene`, known from its declaration
+    before it runs, that the piece does not accept (DEC-005 point 9)."""
+    found = []
+    for renderer in renderers(piece):
+        declared = seam.declaration(renderer, seam.RENDERER)
+        found.extend(
+            loss for loss in losses(scene, declared) if not accepted(loss, piece.accepted_losses)
+        )
+    return found
 
 
 # --- the validator's document -------------------------------------------------------------------

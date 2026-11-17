@@ -4,7 +4,7 @@ name: Planner
 status: active
 summary: "The person who plans a project's work at the level of its outcomes."
 needs:
-  - Plan an intent against my project's use cases into an EPIC and its work, which are filed once I approve the plan.
+  - Plan an intent against my project's use cases into an EPIC and its work, which are filed once I approve the batch plan.
   - Define the Milestones and long-lived workstreams the work falls into, and have a date-based Milestone roll its open work forward when it closes.
   - Plan my intent into Tasks that one agent can each finish, ordered where one Task needs another Task's work.
   - See which agent works on which issue, without visiting each agent.
@@ -24,7 +24,7 @@ pkit:
 
 The person who plans a project's work at the level of its outcomes. An [EPIC](../../glossary.md#term-epic--epic) is filed only on their authority.
 
-- **Human role:** only a person may commit the [project](../../../core/glossary.md#term-project--project) to an outcome. The project-manager agent plans and files on their direction, and files a whole plan only once they approve it ([project-management DEC-008](../../../../../.pkit/capabilities/project-management/decisions/DEC-008-pm-and-implementer-roles.md) and [DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+- **Human role:** only a person may commit the [project](../../../core/glossary.md#term-project--project) to an outcome. The project-manager agent plans and files on their direction, and files a whole [batch plan](../../glossary.md#term-batch-plan--batch-plan) only once they approve it ([project-management DEC-008](../../../../../.pkit/capabilities/project-management/decisions/DEC-008-pm-and-implementer-roles.md) and [DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 - **Occasions:**
   - when an outcome is framed
   - when work is scheduled

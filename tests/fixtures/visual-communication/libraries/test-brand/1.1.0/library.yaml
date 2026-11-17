@@ -1,0 +1,19 @@
+pkit_schema: visual-communication:library
+schema_version: 1
+
+# The brand the capability's tests draw with (DEC-004 Implications), at the sizes: version
+# 1.0.0 with the three sizes of the size axis `device`, desktop, tablet and phone, each but
+# the desktop from a token file of its own, and a site's width at each, 1440, 768 and 320
+# px (DEC-022 point 5). It needs foundations that declare `device` and `size.site`, so a
+# test that holds their release 1.0.0 draws with version 1.0.0. No project locks it. Its
+# fonts are Source Sans Pro, and Source Code Pro for code, committed unchanged with their
+# licences in fonts/.
+name: test-brand
+version: 1.1.0
+kind: brand
+needs-release: 0.1.0
+builds-on:
+  - {name: foundations, major: 1}
+dtcg: "2025.10"
+resolver: test-brand.resolver.json
+open: [accent, space]

@@ -17,8 +17,8 @@ pkit:
         - .pkit/schemas/README.md#rule-set-files
         - .pkit/schemas/backbone-files.md#rule-set-files
         - .pkit/decisions/README.md#rule-sets--a-separate-family-with-the-same-guarantees
-        - .pkit/lifecycle/README.md#the-capabilities-rules-index
-        - .pkit/lifecycle/README.md#what-a-step-newly-binds
+        - .pkit/lifecycle/upgrade-flow.md#the-capabilities-rules-index
+        - .pkit/lifecycle/upgrade-flow.md#what-a-step-newly-binds
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#validate
@@ -70,7 +70,7 @@ A session reaches each layer's rules through the project's `CLAUDE.md`, which in
 - **`capabilities.md`** is rendered by the backbone, and nobody edits it ("The capabilities' rules index" below).
 - **`project.md`** is the project's own, and no sync, install or upgrade writes it. `pkit init` writes none, so the project creates it with its first rule.
 - **A capability's two files** arrive with it, by install, sync or upgrade, and the project edits neither. A capability the project authors itself is the exception: there the project writes the set and generates `rules.md` ("A capability's rules" below).
-- **The includes:** `CLAUDE.md` holds `@.pkit/rules/core.md`, `@.pkit/rules/capabilities.md` and `@.pkit/rules/project.md`, in that order. The adapter's merge keeps the first two present, and inserts the third only together with the first.
+- **The includes:** `CLAUDE.md` holds `@.pkit/rules/core.md`, `@.pkit/rules/capabilities.md` and `@.pkit/rules/project.md`, in that order. The adapter's merge keeps the first two present, and inserts the third only together with the first. `pkit validate` fails a `CLAUDE.md` that lacks the first, as it fails one that lacks the second ("The capabilities' rules index" below). An include written only in code counts as lacking (the CLI reference, `validate`).
 - **Sessions that load none of them:** some kinds of session load no rules file, such as Claude Code's built-in Explore and Plan agents. So hand the methodology's work to an agent whose definition does not set `omitClaudeMd` ([the Claude Code adapter's README, "Harness support"](../adapters/claude-code/README.md#harness-support-harness-supportyaml)).
 
 ## How the layers stand
@@ -97,7 +97,7 @@ Core's rules are a *loaded rule set* (COR-068). Its accepted rules bind on the w
 A capability may ship operational rules of its own, as one loaded rule set in its `rule-sets/` folder (COR-070). They bind on a session's work wherever the capability is installed.
 
 - **Consent:** installing the capability is the project's consent to its rules, as it is to the project rule set its install declares. No rule is accepted again in the project.
-- **What a step says:** install, sync and upgrade name, for each loaded set they deliver, core's among them, the rules they newly bind, change or retire. That is information, not a gate ([the lifecycle reference, "What a step newly binds"](../lifecycle/README.md#what-a-step-newly-binds)).
+- **What a step says:** install, sync and upgrade name, for each loaded set they deliver, core's among them, the rules they newly bind, change or retire. That is information, not a gate ([the lifecycle reference's upgrade flow, "What a step newly binds"](../lifecycle/upgrade-flow.md#what-a-step-newly-binds)).
 - **Its loaded file** is `.pkit/capabilities/<name>/rules.md`. `pkit rule-sets generate` writes it from the set where the capability is authored, and validation checks it there as it checks `core.md`.
 - **Its preface** names the capability and says how its rules stand, since a session loads the file, not the records. Validation fails a capability's loaded set whose preface does not name the capability, where the set is authored. The preface includes these sentences, its names filled in:
 
@@ -120,7 +120,7 @@ The index, `capabilities.md` beside this file, is how a session reaches each ins
   - an index out of step with the registered capabilities
   - an entry whose file is missing
   - a `CLAUDE.md` without the line
-- **Note:** what counts as the index at its path is the lifecycle reference's ([its "The capabilities' rules index"](../lifecycle/README.md#the-capabilities-rules-index)).
+- **Note:** what counts as the index at its path is the lifecycle reference's ([its "The capabilities' rules index"](../lifecycle/upgrade-flow.md#the-capabilities-rules-index)).
 
 ## Each rules file's budget
 

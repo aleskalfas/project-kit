@@ -35,6 +35,7 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.agent_definitions_support import stage_picker
 
 # The version an installed fixture records: the real source kit's.
 _PROJECTS_VERSION = read_kit_version(install.find_source_kit())
@@ -60,6 +61,7 @@ def kit_source(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.Mon
     (source / "capabilities").mkdir(parents=True)
     (source / "decisions").mkdir()
     (source / "VERSION").write_text(f"{_PROJECTS_VERSION}\n", encoding="utf-8")
+    stage_picker(source)
     monkeypatch.setattr(cli_mod, "find_source_kit", lambda: source)
     return source
 

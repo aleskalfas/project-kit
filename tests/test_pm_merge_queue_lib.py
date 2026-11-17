@@ -258,7 +258,7 @@ def test_a_reading_without_a_deciding_field_is_unreadable(mq, pkit, key) -> None
     document = _read_document(_QUEUED)
     del document["reading"][key]
     pkit.answers(document)
-    with pytest.raises(mq.Unreadable, match=f"the backbone's reading has no `{key}`"):
+    with pytest.raises(mq.Unreadable, match=f"`reading.{key}` is missing"):
         mq.read(496, {})
 
 
@@ -267,7 +267,7 @@ def test_a_reading_with_a_deciding_field_of_another_type_is_unreadable(mq, pkit,
     document = _read_document(_QUEUED)
     document["reading"][key] = 1 if key == "head_oid" else "yes"
     pkit.answers(document)
-    with pytest.raises(mq.Unreadable, match=f"has a `{key}` that is not a"):
+    with pytest.raises(mq.Unreadable, match=f"`reading.{key}` is .*, not"):
         mq.read(496, {})
 
 
@@ -287,7 +287,7 @@ def test_a_wait_reading_without_a_deciding_field_is_unreadable(mq, pkit) -> None
     event = _event(_QUEUED)
     del event["reading"]["queued"]
     pkit.answers(event, _end("merged", _MERGED))
-    with pytest.raises(mq.Unreadable, match="has no `queued`"):
+    with pytest.raises(mq.Unreadable, match=r"`reading\.queued` is missing"):
         mq.wait_for_merge(496, {}, timeout_seconds=60, on_change=lambda r: None)
 
 
@@ -303,6 +303,30 @@ def test_a_request_that_does_not_say_whether_it_was_accepted_is_unreadable(
     pkit.answers(document)
     with pytest.raises(mq.Unreadable, match="does not say whether the request was accepted"):
         mq.request(["merge", "42", "--subject", "fix: x"], {})
+
+
+#: The backbone's guard, as a request's document states it where it let the request
+#: through.
+_CLEARED = {
+    "verdict": "same-repo",
+    "undetermined_kind": None,
+    "anchor": "/work/project",
+    "target": "/work/project",
+    "cleared": "same-repo",
+}
+
+
+def _request_document(accepted: bool | None, exit_code: int | None, reason: str) -> Any:
+    """A merge request's document, as the backbone writes it: every key present."""
+    return {
+        "schema_version": 1,
+        "pull_request": 42,
+        "accepted": accepted,
+        "exit_code": exit_code,
+        "reason": reason,
+        "reason_kind": None,
+        "guard": _CLEARED,
+    }
 
 
 # --- how the backbone's run is read ----------------------------------------------
@@ -399,11 +423,7 @@ def test_a_wait_is_bounded_by_its_own_limit_plus_a_margin(mq, monkeypatch, secon
 def test_every_call_that_acts_runs_with_the_pinned_gh_host(mq, pkit, call, argv) -> None:
     """Not only the reading: each request, and the wait, reach the host the
     adopter's config pins (DEC-023)."""
-    pkit.answers(
-        {"schema_version": 1, "pull_request": 42, "accepted": True, "exit_code": 0, "reason": ""}
-        if argv[1] != "wait"
-        else _end("merged", _MERGED)
-    )
+    pkit.answers(_request_document(True, 0, "") if argv[1] != "wait" else _end("merged", _MERGED))
     call(mq, {"gh": {"host": "ghe.example"}})
     assert pkit.asked() == [{"argv": argv, "gh_host": "ghe.example"}]
 
@@ -412,18 +432,10 @@ def test_every_call_that_acts_runs_with_the_pinned_gh_host(mq, pkit, call, argv)
 
 
 def test_a_request_reads_what_it_came_to(mq, pkit) -> None:
-    pkit.answers(
-        {
-            "schema_version": 1,
-            "pull_request": 42,
-            "accepted": False,
-            "exit_code": 1,
-            "reason": "Head sha didn't match",
-        },
-        code=1,
-    )
+    pkit.answers(_request_document(False, 1, "Head sha didn't match"), code=1)
     outcome = mq.request(["enqueue", "42", "--head", "sha"], {})
-    assert outcome == mq.Outcome(False, 1, "Head sha didn't match")
+    said = {"verdict": "same-repo", "anchor": "/work/project", "target": "/work/project"}
+    assert outcome == mq.Outcome(False, 1, "Head sha didn't match", guard=said)
     assert pkit.asked()[0]["argv"] == ["pull-request", "enqueue", "42", "--head", "sha", "--json"]
 
 
@@ -452,7 +464,23 @@ def test_a_request_the_backbones_guard_refused_says_so(mq, pkit) -> None:
     )
     outcome = mq.request(["merge", "42", "--subject", "fix: x"], {})
     assert (outcome.accepted, outcome.reason_kind) == (False, mq.FOREIGN_REPOSITORY)
-    assert outcome.guard == guard
+    # What pm says of the comparison where the guard refused: nothing it decides on.
+    assert outcome.guard == {
+        "verdict": "diverged",
+        "anchor": "/work/project",
+        "target": "/work/other",
+    }
+
+
+#: The backbone's guard where the session has no anchor, as a request's document
+#: states it.
+_UNANCHORED = {
+    "verdict": "undetermined",
+    "undetermined_kind": "noncoverage",
+    "anchor": None,
+    "target": None,
+    "cleared": "undetermined",
+}
 
 
 def _settled_document(accepted: bool | None, reason_kind: str | None) -> dict[str, Any]:
@@ -464,7 +492,7 @@ def _settled_document(accepted: bool | None, reason_kind: str | None) -> dict[st
         "exit_code": None,
         "reason": "the merge of PR #42 got no answer (…)",
         "reason_kind": reason_kind,
-        "guard": {"verdict": "undetermined", "cleared": "undetermined"},
+        "guard": _UNANCHORED,
     }
 
 
@@ -581,18 +609,28 @@ def test_an_unconfirmed_deletion_reads_as_unconfirmed_with_no_tip(mq, pkit) -> N
     ("document", "why"),
     [
         (_deletion_document("landed"), "says no way the deletion ended"),
-        ({k: v for k, v in _deletion_document("gone").items() if k != "tip"}, "has no `tip`"),
-        (_deletion_document("kept", tip=7), "a `tip` that is not text"),
+        ({k: v for k, v in _deletion_document("gone").items() if k != "tip"}, "`tip` is missing"),
+        (_deletion_document("kept", tip=7), "`tip` is a number, not a string"),
         (
             {k: v for k, v in _deletion_document("deleted").items() if k != "merged_head"},
-            "has no `merged_head`",
+            "`merged_head` is missing",
+        ),
+        (
+            _deletion_document("kept", tip="sha-later", reason_kind="a-new-kind", reason="why"),
+            "`reason_kind` is 'a-new-kind', a value this reading does not know",
         ),
     ],
-    ids=["unknown-outcome", "missing-field", "field-of-another-type", "no-merged-head"],
+    ids=[
+        "unknown-outcome",
+        "missing-field",
+        "field-of-another-type",
+        "no-merged-head",
+        "unknown-reason",
+    ],
 )
 def test_a_deletion_document_pm_cannot_read_is_no_answer(mq, pkit, document, why) -> None:
-    """An unknown `outcome`, or a missing or mistyped field, is no answer: the
-    branch may have been deleted, or not."""
+    """An unknown `outcome` or `reason_kind`, or a missing or mistyped field, is no
+    answer: the branch may have been deleted, or not."""
     pkit.answers(document)
     with pytest.raises(mq.Unreadable, match=why):
         mq.deletion(["42", "--expect", "sha-merged"], {})

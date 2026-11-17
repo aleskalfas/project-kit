@@ -303,8 +303,9 @@ def run_main(rw, monkeypatch):
     """Returns `run(issue, *, pr=None, body="filled", head=LISTED, derived=None,
     derives=None, sources=None, fork=False, move_rc=0, reviewer=None, engine=None,
     config=None, move=None, dry_run=False, instance=None, github=None, extra=(),
-    findings=(), comments=(), comment_rc=0)` →
-    `(rc, gh_calls, moves)`. `pr` is the open PR on the branch (None: none yet), `body`
+    findings=(), comments=(), comment_rc=0, members=(), invoker=None)` →
+    `(rc, gh_calls, moves)`. `members` is the roster, and `invoker` the identity
+    resolved, by default `me`'s. `pr` is the open PR on the branch (None: none yet), `body`
     its description, None for one gh cannot read, and `head` its head. The body
     validator finds `findings` in the description, by default nothing, and the author's
     sentences are read from it as they stand. `comments` are the PR's comments, and
@@ -343,6 +344,8 @@ def run_main(rw, monkeypatch):
         findings: tuple[object, ...] = (),
         comments: tuple[dict, ...] = (),
         comment_rc: int = 0,
+        members: tuple[dict, ...] = (),
+        invoker: object = None,
     ):
         gh_calls: list[list[str]] = []
         moves: list[str] = []
@@ -408,10 +411,13 @@ def run_main(rw, monkeypatch):
         monkeypatch.setattr(rw.session_guard, "enforce", lambda **k: True)
         monkeypatch.setattr(rw, "load_adopter_config", lambda _r: dict(config or {}))
         (engine or FakeEngine()).install(monkeypatch)
-        monkeypatch.setattr(rw, "_read_members", lambda *a: [])
-        monkeypatch.setattr(
-            rw, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+        monkeypatch.setattr(rw, "_read_members", lambda *a: list(members))
+        resolved = (
+            SimpleNamespace(github_login="me", unresolved_cause=None)
+            if invoker is None
+            else invoker
         )
+        monkeypatch.setattr(rw, "resolve_invoker_identity", lambda **k: resolved)
         monkeypatch.setattr(rw, "check_membership", lambda *a: SimpleNamespace(allowed=True))
         monkeypatch.setattr(rw.axis_labels, "load_substrate_map", lambda _r: None)
         monkeypatch.setattr(rw, "_gh_get_issue", lambda _n, _c: issue)
@@ -473,6 +479,40 @@ def test_opens_a_ready_pr_and_moves_from_in_progress(run_main, capsys) -> None:
     out, err = capsys.readouterr()
     assert "[ok] PR ready" in out
     assert "[failed]" not in err
+
+
+#: A project that asks its members of role PM for the review (DEC-027).
+_HUMAN_REVIEW = {"review": {"mode": "human", "human_review": {"reviewer_role": "PM"}}}
+_PMS = ({"github_login": "me", "role": "PM"}, {"github_login": "alice", "role": "PM"})
+
+
+def test_human_review_leaves_the_author_out_of_its_reviewers(run_main, capsys) -> None:
+    rc, _gh_calls, _moves = run_main(
+        _task(["state:in-progress"]), config=_HUMAN_REVIEW, members=_PMS
+    )
+    assert rc == 0
+    out, err = capsys.readouterr()
+    assert "  human-mode reviewers (role=PM): @alice\n" in out
+    assert "cannot tell" not in err
+
+
+def test_human_review_says_why_it_leaves_no_author_out_where_pkit_cannot_tell(
+    run_main, rw, capsys
+) -> None:
+    """The account acting stands for the author; where `gh api user` refuses,
+    no member is left out, and a warning says so, and why (#3162)."""
+    forbidden = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+    unresolved = rw.Identity(github_login=None, email=None, unresolved_cause=forbidden)
+    rc, _gh_calls, _moves = run_main(
+        _task(["state:in-progress"]), config=_HUMAN_REVIEW, members=_PMS, invoker=unresolved
+    )
+    assert rc == 0
+    out, err = capsys.readouterr()
+    assert (
+        f"  [warn] pkit cannot tell which account is acting, since {forbidden}, so the "
+        "author is not left out of the reviewers of role='PM'.\n"
+    ) in err
+    assert "  human-mode reviewers (role=PM): @me, @alice\n" in out
 
 
 def test_rerun_in_review_leaves_a_ready_pr_alone(run_main) -> None:
@@ -673,7 +713,7 @@ def test_bypass_owner_posts_its_reason_first_and_once(run_main, rw, monkeypatch,
     github = _owned_by_instance_3(rw)
     move = MoveIssueInProcess(monkeypatch, _task(["state:review"]))
     # The child runs as the same person as review-work, as a real child does.
-    me = SimpleNamespace(github_login="me")
+    me = SimpleNamespace(github_login="me", unresolved_cause=None)
     monkeypatch.setattr(move.module, "resolve_invoker_identity", lambda config=None: me)
     rc, gh_calls, _moves = run_main(
         _task(["state:in-progress"]),

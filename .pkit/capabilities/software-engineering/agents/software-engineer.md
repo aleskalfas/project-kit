@@ -45,7 +45,7 @@ On every task, **before writing code**:
 2. **Default to cheap-upfront robustness** *only as a floor when the corpus is silent*: prefer naming a value used more than once, extracting a function written more than once, and leaving clear seams — these cost almost nothing now and save costly rework. **Do not** speculatively abstract for futures that may never arrive (YAGNI); over-engineering is as much a defect as duplication. (When the corpus speaks to any of this, the corpus wins.)
 3. **Write the code**, applying the corpus.
 4. **Surface genuine judgment calls** rather than guessing. When a choice is genuinely ambiguous — a real design fork the corpus doesn't settle — name it and the trade-off; don't silently pick and bury it.
-5. **Self-check, then hand off to the reviewers** (below).
+5. **Self-check, then hand off to the reviewers** (below), committing only the paths your change touched ("Committing your change" below).
 
 ## When you build a walking skeleton
 
@@ -92,6 +92,14 @@ An installed component may declare a link on the place that holds an artefact. T
 - **Write its entry** with `pkit friction revisit`: `unchanged`, why the target still stands against your change, or `deferred`, naming the open follow-up that revisits it.
 
 Where your change made untrue a target that is not yours to change, such as a record another owner keeps, write a `deferred` entry, naming the follow-up for its owner. An entry answers only where your change wrote its reason, so write a reason new to this change. Changing only an entry's outcome answers nothing, and is not yours to write.
+
+## Committing your change
+
+Stage and commit only the paths your change touched, each by name, and never the whole working tree. Those paths include each file a command wrote for your change, such as the answer files the friction writers write ("Friction answers" above). Never stage in a form that takes in every change in the working tree, such as `git add -A`, `git add .`, `git add -u` or `git commit -a`.
+
+A working tree may hold more than your change: another repository cloned inside it, a file a person or another session left there, or a tool's output. A commit of the whole tree takes each of them in, on whatever machine it runs. Naming your paths keeps them out, so the commit holds your change and nothing else.
+
+Before each commit, read `git status`, and compare each path it lists with the paths your change touched. Where you find a path changed that your change did not touch, leave it out of the commit and change nothing in it. Name it in your hand-off, so the person decides what becomes of it.
 
 ## What you are not
 

@@ -77,6 +77,7 @@ LIST = "list"  # `gh pr list`
 CHECKS = "checks"  # `gh pr checks`
 ISSUE = "issue"  # `gh issue view`
 ISSUE_MERGES = "issue-merges"  # the GraphQL read of the PRs that close an issue
+CONTENTS = "contents"  # a file at a ref: the sync's switch, which no world here turns on
 UNKNOWN = "unknown"  # a request the fake does not model: answered with exit 1
 
 #: The requests a landing makes of the service — the reading, the squash
@@ -274,6 +275,9 @@ class HostingService:
     in_queue: bool = False
     #: The PR's place and state in the queue; None before the queue reports one.
     entry: tuple[int, str] | None = None
+    #: Other PRs in the base's queue, by number, first in the queue first, at
+    #: positions from 1 on — ahead of the PR wherever it is queued later.
+    queue_ahead: list[int] = field(default_factory=list)
     eta_seconds: int | None = 300
     #: Auto-merge holds the PR until its own checks pass.
     auto_merge: bool = False
@@ -527,6 +531,11 @@ class HostingService:
         if kind == ISSUE:
             fields = (_option(args, "--json") or "").split(",")
             return _done(args, stdout=json.dumps({f: self.issue.get(f) for f in fields if f}))
+        if kind == CONTENTS:
+            # No world here holds the capability's configuration at a ref, so the
+            # sync's switch is off and no merge is held for it (DEC-072 point 3).
+            body = json.dumps({"message": "Not Found", "status": "404"})
+            return _done(args, 1, stdout=body, stderr="gh: Not Found (HTTP 404)")
         if kind == ISSUE_MERGES:
             merged = [self._merged_node()] if self.state == "MERGED" else []
             issue = {
@@ -645,9 +654,24 @@ class HostingService:
         if self.in_queue and self.entry is not None:
             position, state = self.entry
             entry = {"position": position, "state": state, "estimatedTimeToMerge": self.eta_seconds}
+        queue: dict[str, Any] | None = None
+        if rules.queue:
+            nodes = [
+                {"position": at, "pullRequest": {"number": number}}
+                for at, number in enumerate(self.queue_ahead, start=1)
+            ]
+            if entry is not None:
+                nodes.append(
+                    {"position": entry["position"], "pullRequest": {"number": self.number}}
+                )
+            queue = {
+                "configuration": {"mergeMethod": rules.method},
+                "entries": {"nodes": nodes},
+            }
         return {
             "id": self.node_id,
             "state": self.state,
+            "body": self.body,
             "mergedAt": self.merged_at or None,
             "mergeCommit": {"oid": self.merge_commit} if self.merge_commit else None,
             "headRefOid": self.head_oid,
@@ -655,7 +679,7 @@ class HostingService:
             "isCrossRepository": self.cross_repository,
             "isMergeQueueEnabled": rules.queue,
             "isInMergeQueue": self.in_queue,
-            "mergeQueue": {"configuration": {"mergeMethod": rules.method}} if rules.queue else None,
+            "mergeQueue": queue,
             "mergeQueueEntry": entry,
             "autoMergeRequest": {"enabledAt": "2026-10-01T10:00:00Z"} if self.auto_merge else None,
             "timelineItems": {"nodes": list(self.timeline)},
@@ -1071,6 +1095,12 @@ def _kind(args: list[str]) -> str:
         return UNKNOWN
     if args[:2] == ["api", "repos/{owner}/{repo}"]:
         return DEFAULTS
+    if (
+        args[:1] == ["api"]
+        and len(args) > 1
+        and args[1].startswith("repos/{owner}/{repo}/contents/")
+    ):
+        return CONTENTS
     kinds: Mapping[tuple[str, str], str] = {
         ("pr", "view"): VIEW,
         ("pr", "list"): LIST,

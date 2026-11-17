@@ -31,8 +31,12 @@ merge:
     the CI gate that posts the audit-comment template to the PR before
     merging. The CI override is deliberately its own flag, separate from
     any general `--bypass`, so overriding another gate never silently
-    clears a red CI. A rollup with no checks, which GitHub answers for a
-    project that runs none, passes. A rollup the PR's answer leaves out,
+    clears a red CI. A rollup with no checks is what GitHub answers for a
+    project that runs none, and for a head just pushed, before its checks
+    started: it passes only where the PR's base branch requires no check,
+    by its protection and its rulesets, and is refused as a pending check
+    otherwise, naming the cause — the checks the base requires, or why
+    they could not be read (#1965). A rollup the PR's answer leaves out,
     carries as null, or carries as anything but a list of checks is no
     answer, never one of no checks: the gate refuses (exit 2), names why
     and writes nothing, and `--bypass-ci` does not clear it (#1952).
@@ -143,13 +147,13 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, merge_queue, pr_merge, session_guard
+from _lib import bootstrap_gate, merge_queue, pr_merge, session_guard, sync_switch
 from _lib.audit import bypass_audit_key, render_ci_bypass_audit_body
 
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
 # shared with close-issue, done-work and the engine predicate.
 from _lib.checkbox_gate import unticked_boxes as _unticked_boxes
-from _lib.ci_checks import evaluate_ci_gate
+from _lib.ci_checks import RequiredChecks, evaluate_ci_gate, read_required_checks
 from _lib.comment import post_audit_once
 from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
@@ -245,7 +249,9 @@ def main() -> int:
         action="store_true",
         help=(
             "The authorisation to merge. Without it, merge-pr asks at a terminal, and off "
-            "one it refuses (exit 2) once its gates have run, merging nothing."
+            "one it refuses (exit 2) once its gates have run, merging nothing. It does not "
+            "cover a change that turns on `sync_board.adds_with_no_terminal`, which is merged "
+            "only on the person's yes at a terminal (DEC-072 point 3)."
         ),
     )
     session_guard.add_override_argument(parser)
@@ -385,7 +391,9 @@ def main() -> int:
     # the merge proceeds. Only --bypass-ci clears a non-green CI — no other
     # bypass silently lands a red check. Checks that cannot be read are no
     # answer, never an answer of no checks: the gate refuses before anything
-    # is written, `--bypass-ci` or not (#1952).
+    # is written, `--bypass-ci` or not (#1952). No check reported is also what
+    # GitHub answers for a head just pushed, before its checks started, so it
+    # passes only where the base requires none, and is pending otherwise (#1965).
     rollup = _read_rollup(pr)
     if rollup.problem:
         print(
@@ -397,12 +405,17 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
-    ci_gate = evaluate_ci_gate(list(rollup.checks))
+    required = (
+        None if rollup.checks else _read_required_checks(str(pr.get("baseRefName") or ""), config)
+    )
+    ci_gate = evaluate_ci_gate(list(rollup.checks), required)
     if not ci_gate.passing:
         if not args.bypass_ci:
+            cause = f"  {ci_gate.cause}.\n" if ci_gate.cause else ""
             print(
                 "\n[refused] CI-status gate: the PR's checks are not all green.\n"
                 f"  failing/pending: {', '.join(ci_gate.failing_checks)}\n"
+                f"{cause}"
                 "  → wait for the checks to pass, or override this CI gate "
                 'explicitly with `--bypass-ci "<reason>"` (posts an audit '
                 "comment).",
@@ -419,8 +432,10 @@ def main() -> int:
             "  ci-status: [bypass-ci] checks not green "
             f"({', '.join(ci_gate.failing_checks)}); reason: {args.bypass_ci.strip()}"
         )
+    elif ci_gate.no_checks:
+        print(f"  ci-status: green (no check reported, and {base} requires none)")
     else:
-        print(f"  ci-status: green{' (no checks configured)' if ci_gate.no_checks else ''}")
+        print("  ci-status: green")
 
     head = str(pr.get("headRefOid") or "")
     if args.dry_run:
@@ -444,6 +459,16 @@ def main() -> int:
     # point 3): `--yes`, or a yes to a question naming the head the merge is
     # pinned to. Off a terminal with no `--yes`, nobody can be asked (#1760).
     named = f"PR #{args.pr_number} at {head[:7] or 'unknown'}"
+    # A change that turns on the sync's switch is held until the person
+    # authorises this merge themselves, at a terminal: an authorisation given up
+    # front does not cover it, and the person is told what turning it on means
+    # ([project-management:DEC-072-sync-gives-missing-cards] point 3).
+    switch = _switch_hold(head, str(pr.get("baseRefName") or ""), capability_root, config)
+    if switch.held:
+        if args.yes or not sys.stdin.isatty():
+            print(switch.refusal(named, f"pkit pm merge-pr {args.pr_number}"), file=sys.stderr)
+            return 2
+        print(switch.said())
     if not args.yes:
         if not sys.stdin.isatty():
             print(
@@ -934,6 +959,12 @@ def _post_ci_bypass_audit(
 # ---- gh wrappers ----------------------------------------------------
 
 
+def _switch_hold(head: str, base: str, capability_root: Path, config: dict) -> sync_switch.Hold:
+    """Whether merging ``head`` into ``base`` turns on the sync's switch, read
+    from the host, which holds both whether or not this clone does."""
+    return sync_switch.on_host(head, base, capability_root, config)
+
+
 def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
     try:
         proc = gh_run(
@@ -973,9 +1004,9 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
 
 @dataclass(frozen=True)
 class _RollupReading:
-    """The PR's checks, as `gh pr view` answered them — none for a project that
-    runs no checks — or, in `problem`, why the answer carries none, which is
-    not an answer of no checks (#1952, as done-work's since #1946)."""
+    """The PR's checks, as `gh pr view` answered them — none where no check has
+    reported — or, in `problem`, why the answer carries none, which is not an
+    answer of no checks (#1952, as done-work's since #1946)."""
 
     checks: tuple[dict, ...] = ()
     problem: str = ""
@@ -985,14 +1016,21 @@ def _read_rollup(pr: dict) -> _RollupReading:
     """Read the PR's `statusCheckRollup` for the CI-status gate (#498).
 
     GitHub answers an empty rollup for a PR no check reported on, which the
-    gate passes as a project that runs no checks. A rollup the answer leaves
-    out, carries as null, or carries as anything but a list of checks is no
-    answer: `problem` names it, and the gate refuses on it (#1952).
+    gate passes only where the PR's base requires no check (#1965). A rollup
+    the answer leaves out, carries as null, or carries as anything but a list
+    of checks is no answer: `problem` names it, and the gate refuses on it
+    (#1952).
     """
     rollup = pr.get("statusCheckRollup")
     if not isinstance(rollup, list) or not all(isinstance(check, dict) for check in rollup):
         return _RollupReading(problem="gh's answer carries no statusCheckRollup")
     return _RollupReading(tuple(rollup))
+
+
+def _read_required_checks(base: str, config: dict) -> RequiredChecks:
+    """Read the checks the PR's base branch requires, for a rollup with no
+    check (#1965), through the pm `gh` helper (`_lib.ci_checks`)."""
+    return read_required_checks(base, config, gh_run)
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:

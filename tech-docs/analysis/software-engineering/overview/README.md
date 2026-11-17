@@ -1,6 +1,6 @@
 # Overview of the analysis of software-engineering
 
-<!-- pkit:overview reads=5 fingerprint=sha256:7482bd10daefaea26da60472776047cc0a02730a1cbb6b429a6d7a94f9b1f8fc -->
+<!-- pkit:overview reads=5 fingerprint=sha256:a5d79ecf23efa4901722fd319a68c609d9defc5e8eb9cdc68634c949013cf352 -->
 
 [software-engineering exists so code that agents write follows a project's own conventions, and code is reviewed before it merges](../../../../.pkit/capabilities/software-engineering/decisions/DEC-003-purpose.md).
 
@@ -30,6 +30,7 @@ Review each change before it merges, so no merge rests on code or an answer that
 **Its use cases:**
 
 - [UC-080 — Have a change's answers checked by a reviewer other than their writer](../use-case-model/use-cases/020-review/UC-080-check-answers.md) ([not built yet](#not-built-yet): variant 1b)
+- [UC-112 — Have a change's code reviewed for correctness and security](../use-case-model/use-cases/020-review/UC-112-review-code.md)
 
 **Its journeys:** none.
 

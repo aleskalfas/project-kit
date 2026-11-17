@@ -400,7 +400,7 @@ def test_alone_the_contributions_are_inert_and_their_fillers_never_run(
         f"What connects here (3)\n    out software-analysis contributes {READERS}: "
         f"no active provider\n    out software-analysis contributes {FIXERS_POINT}: "
         f"no active provider\n    out software-analysis contributes {USE_CASE_POINT}: "
-        "no active provider\n"
+        "no active provider\n\n  Loaded rules (0)\n    none\n"
     )
 
 

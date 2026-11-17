@@ -36,6 +36,10 @@ pkit:
         - COR-010
         - COR-053#8
         - COR-059#3
+        - COR-028
+        - COR-039
+        - PRJ-004
+        - ADR-063
       artefact:
         - UC-082
         - UC-091
@@ -58,7 +62,7 @@ pkit:
 2. [UC-091](../use-cases/040-work-in-parallel/UC-091-measure-topologies.md) — Measure one topology against another on comparable work
    - **Needs from step 1 (UC-082):** each topology to compare, set up in turn. Each topology is committed on the [default branch](../../../core/glossary.md#term-default-branch--default-branch), so the branch's history shows which topology was in force for each [pull request](../../../core/glossary.md#term-pull-request--pull-request) ([DEC-059 point 1](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)).
    - **Needs from [UC-092](../use-cases/040-work-in-parallel/UC-092-take-seat.md) (outside this journey):** each seat of the topology taken by a [clone](../../glossary.md#term-clone--clone), whose agent acts as that seat's agent. A seat that no clone takes has no agent, so none of the topology's work is done in that seat.
-   - **Needs from [UC-083](../use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md) (outside this journey):** the Tasks of each plan the planner approved, each [Task](../../glossary.md#term-task--task) filed with the workstream of the Task's work. These Tasks are the work a topology does.
+   - **Needs from [UC-083](../use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md) (outside this journey):** the Tasks of each [batch plan](../../glossary.md#term-batch-plan--batch-plan) the planner approved, each [Task](../../glossary.md#term-task--task) filed with the workstream of the Task's work. These Tasks are the work a topology does.
    - **Needs from [UC-084](../use-cases/040-work-in-parallel/UC-084-take-next-task.md) (outside this journey):** each Task a worker agent took and built, with the Task's pull request open. A topology's time runs from the topology's first pull request.
    - **Needs from [UC-087](../use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md) (outside this journey):** what each next piece of the work needs from an earlier piece, landed on the default branch. The next piece's Task can start only after that landing. So the last merge of a topology's work comes only once every piece is handed on.
    - **Needs from [UC-089](../use-cases/040-work-in-parallel/UC-089-land-alongside-others.md) (outside this journey):** each Task's pull request merged, with the [verdict](../../glossary.md#term-verdict--verdict) of each review round naming the [head](../../../core/glossary.md#term-head--head) that round reviewed ([DEC-028](../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). A pull request still open gives no time to the pull request's merge, so all the work compared must have landed.
@@ -68,9 +72,9 @@ pkit:
 **Variants:**
 
 - **1a.** The adopter runs one [topology](../../glossary.md#term-topology--topology) only, with no other topology to compare. The path ends after step 1, while the agents work.
-- **1b.** The adopter adds [pools](../../glossary.md#term-pool--pool) of workers to the topology. The adopter does so only once every [clone](../../glossary.md#term-clone--clone) that may take a [seat](../../glossary.md#term-seat--seat) runs code that reads the pools, since older code ignores them. No check enforces that order, so the operator keeps it ([DEC-061 point 9](../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#9-code-that-cannot-read-the-topology-in-full-uses-none-of-the-authority-it-grants)).
+- **1b.** The adopter adds [pools](../../glossary.md#term-pool--pool) to the topology. The adopter does so only once every [clone](../../glossary.md#term-clone--clone) that may take a [seat](../../glossary.md#term-seat--seat) runs code that reads the pools, since older code ignores them. No check enforces that order, so the operator keeps it ([DEC-061 point 9](../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#9-code-that-cannot-read-the-topology-in-full-uses-none-of-the-authority-it-grants)).
 - **2a.** The topology set up last serves the [project](../../../core/glossary.md#term-project--project) better. That topology is already in place, so the path ends after step 2.
-- **3a.** The figures show one [Milestone](../../glossary.md#term-milestone--milestone)'s work short of workers, in a topology that declares pools. The adopter moves workers from one pool to another by editing the seats' pools, a reviewed [change](../../../core/glossary.md#term-change--change) like any other ([DEC-061 point 1](../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
+- **3a.** The figures show one [Milestone](../../glossary.md#term-milestone--milestone)'s work short of workers, in a topology that declares pools. The adopter moves a seat from one pool to another by editing the seats' pools, a reviewed [change](../../../core/glossary.md#term-change--change) like any other ([DEC-061 point 1](../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
 
 **Postconditions:** The [project](../../../core/glossary.md#term-project--project) runs the [topology](../../glossary.md#term-topology--topology) that served the project better. For each topology compared, the adopter holds the time from the topology's first [pull request](../../../core/glossary.md#term-pull-request--pull-request) to the topology's last merge. The adopter also holds each pull request's review rounds.
 

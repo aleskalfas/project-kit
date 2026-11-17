@@ -2,8 +2,9 @@
 
 The engine (`formula`, `layout`, `text`, `scene`) knows nothing of the working folder,
 pieces, the library list or the configuration. It reads every component, role, colour
-family, concept, font and produced picture through an `Env`, which the pipeline builds
-from the project's files, and which the engine's tests stand in for with an in-memory one.
+family, an order's roles, concept, concept's sign, font, produced picture, picture file and
+picture role through an `Env`, which the pipeline builds from the project's files, and
+which the engine's tests stand in for with an in-memory one.
 """
 
 from __future__ import annotations
@@ -11,6 +12,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
+
+from _lib.outlines import Outline
+from _lib.pictures import Judged, Picture
 
 
 class MissingFont(Exception):
@@ -69,6 +73,23 @@ class UnvaluedRole(KeyError):
         self.named = named
 
 
+class OrderRoles(Protocol):
+    """An order's roles as the foundations declare them (DEC-032 point 1): the role of its
+    first end, of its last end, and of the text on every step."""
+
+    @property
+    def first(self) -> str: ...
+
+    @property
+    def last(self) -> str: ...
+
+    @property
+    def text(self) -> str: ...
+
+    @property
+    def roles(self) -> tuple[str, str, str]: ...
+
+
 @dataclass(frozen=True)
 class PictureInfo:
     """A produced output of the piece, as its record keeps it (DEC-006 points 2-3).
@@ -108,9 +129,36 @@ class Env(Protocol):
         """A produced output of the piece. Raises `KeyError` where the piece has none."""
         ...
 
+    def picture_file(self, holder: str, name: object, *, named: str, where: str) -> Judged:
+        """The picture file `name` names, found by its bare name and read (DEC-025 points 2,
+        5 and 9): in the piece's own `pictures/` where `holder` is `piece`, else in the
+        `pictures/` of the version the lock names of the library `holder`. It comes with its
+        findings, each lying where `pictures.Folder` places it: one on the file itself at the
+        file, and one on the name, which `named` gives in words, at `where`, in no file, so
+        the engine places it in what named it, the content or a component."""
+        ...
+
+    def picture_role(self, token_path: str) -> Picture | None:
+        """The picture a brand gives the picture role at `token_path`, read, at the scene's
+        key over the size axes (DEC-025 points 4 and 7): the file of its first combination
+        of the value axes there, as every combination there gives a file of one proportion,
+        or none. None where the brand gives the role no file there, which no brand owes, or
+        where its file cannot be read, which is the brand's own finding. Its file in each
+        combination reaches a renderer from the document of values, never through the
+        scene. Raises `KeyError` for a path that holds no role, and `ValueError`, saying
+        so, for a role of another type than `picture`."""
+        ...
+
     def family(self, name: str) -> dict[str, str]:
         """A colour family the foundations declare: each member mapped to a colour role
         (DEC-004 point 10). Raises `KeyError` where they declare no such family."""
+        ...
+
+    def order(self) -> OrderRoles | None:
+        """An order's roles, which the foundations declare as data: the engine reads an
+        order's ends from them, never from a role's name (DEC-032 point 1). None where the
+        foundations declare none, as every version before them does, so a place takes no
+        step (DEC-032 point 3)."""
         ...
 
     def concept(self, name: str) -> str | None:
@@ -119,6 +167,12 @@ class Env(Protocol):
         in it, cannot be read, which is a finding in the notation. Raises `UnknownConcept`,
         a `KeyError`, where the piece names no such notation, or its notation holds no such
         concept."""
+        ...
+
+    def sign(self, name: str) -> Outline | None:
+        """The sign of a concept, by its name as `concept` reads it: its icon, or else its
+        shape (DEC-036 point 1); None where it maps neither, or its notation, or the concept
+        in it, cannot be read. Raises `UnknownConcept` as `concept` does."""
         ...
 
     def library_version(self, library: str) -> str:

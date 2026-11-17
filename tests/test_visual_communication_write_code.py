@@ -15,7 +15,7 @@ from tests.in_process import load, run_main
 from tests.visual_communication_project import (
     CAPABILITY,
     CONFIG,
-    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
     TEST_BRAND,
     bound,
     copy_library,
@@ -51,7 +51,7 @@ def declare(root: Path, **fields: object) -> None:
 @pytest.fixture
 def root(tmp_path: Path) -> Path:
     found = project(tmp_path)
-    copy_library(found, FOUNDATIONS, "foundations", "1.0.0")
+    copy_library(found, RELEASED_FOUNDATIONS, "foundations", "1.0.0")
     copy_library(found, TEST_BRAND, "test-brand", "1.0.0")
     declare(found)
     return found

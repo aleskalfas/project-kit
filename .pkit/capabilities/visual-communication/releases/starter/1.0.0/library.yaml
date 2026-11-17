@@ -1,0 +1,15 @@
+pkit_schema: visual-communication:library
+schema_version: 1
+
+# The starter: the component library to start from (DEC-007). Its patterns arrange items,
+# each for one job a visual does, and its blocks draw them. Every component is
+# experimental. Its own roles each default along a chain that ends at a shared role, so
+# any brand draws it (DEC-008 point 2). The README beside this file lists its components
+# by job. A released version never changes: a change is a new version (DEC-003
+# point 6).
+name: starter
+version: 1.0.0
+kind: components
+needs-release: 0.3.0
+builds-on:
+  - {name: foundations, major: 1}

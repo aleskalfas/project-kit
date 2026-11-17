@@ -3,11 +3,18 @@ and combination of modes (visual-communication DEC-005 points 4, 5, 9 and 10, DE
 point 7).
 
 - **What it draws** is its declaration (`pdf_declaration.py`): every primitive of format
-  1's scene but the image. It draws only what it declares, so the losses the capability
-  reads from the declaration before it runs are the ones it makes.
-- **Pages.** Each page of the scene, in the scene's order, is a page of the file, as large
-  as the page's frame. Each px of the scene is 0.75 pt of the page, CSS's 96 px to the
-  inch, as the declaration's `unit` says.
+  1's scene, the image and the path among them. It draws only what it declares, so the losses the
+  capability reads from the declaration before it runs are the ones it makes.
+- **Pages.** Each page of the scene, in the scene's order, is a page of the file. Where the
+  scene's root holds the physical size of the piece's top, every page is that size, at 72
+  pt to 25.4 mm, and is drawn by one scale for the whole page: the page's width in pt over
+  its width in px (DEC-034 point 3). Its height follows its width in that proportion, so
+  the scale fits it too. Elsewhere a page is as large as its frame, each px of the scene
+  0.75 pt of the page, CSS's 96 px to the inch, as the declaration's `unit` says.
+- **The largest page.** A page of PDF is at most `LARGEST` pt on a side, as readers hold it.
+  A page larger, such as a phone's page of a long site at 0.75 pt to a px, is drawn smaller,
+  its proportions kept, its long side `LARGEST` pt. The page is reported, as drawn otherwise
+  (DEC-022 point 7). Every other page draws as before.
 - **Colours** stay roles in the scene. The renderer takes each from the brand's resolved
   values in the combination it draws (`colours`), as DeviceRGB, with an opacity where the
   colour is translucent. A role with no colour there is left out, and reported.
@@ -25,18 +32,45 @@ point 7).
   its run's font, size and paint (DEC-012). Each span is shaped again with HarfBuzz from
   the committed file, in pieces of one font each, as the engine shaped it (DEC-005 point
   4), and its glyphs are placed at the advances shaped.
-- **A line**, or a tie's connector through each of its points, is stroked as the SVG
-  renderer strokes it; an arrowhead is the triangle it draws, five strokes long, its tip
-  at the line's end, in the line's stroke. A line that holds neither its ends nor its
+- **A run's sign and ground** (DEC-036 point 3) take the room the engine gave them beside
+  the span's text, which the line's width, its anchor and each span after them count. Each
+  piece of a ground is drawn behind the text in its role, its corners rounded where the
+  ground starts and ends and square where a line breaks it, and each sign is its outline,
+  moved to its square, filled by its rule in its run's paint. A sign that holds no such
+  outline is refused, and left out.
+- **A line**, or a tie's connector through each of its points, is stroked along the course
+  the SVG renderer draws (`canvas.course`): each turn of a connector that holds a radius
+  is a cubic Bézier curve of its arc, and an end that carries an arrowhead stops at the
+  head's base. An arrowhead is the triangle that renderer draws, five strokes long, its
+  tip at the line's end, in the line's stroke. A line that holds neither its ends nor its
   points is refused, and left out.
 - **Shapes.** A box's stroke lies inside its frame. Rounded corners and ellipses are cubic
-  Bézier curves.
+  Bézier curves. A path, such as a concept's sign, is drawn from the outline the engine
+  mapped into its frame, its moves, lines, cubic curves and closes, filled by its rule,
+  nonzero or even-odd, its stroke on its outline. A path that holds no such outline is
+  refused, and left out.
+- **A picture** is drawn from the file its image shows in the combination drawn
+  (`seam.Shown`), whatever its source, and from nothing else (DEC-025 point 7). It is
+  drawn whole, centred, as large as its frame allows, as the scene's `xMidYMid meet` says
+  (DEC-025 point 6). The picture reader (`_lib.pictures`) reads its size and its colour
+  profile, which goes into the file with it, so a viewer draws it as a browser does
+  (DEC-025 point 5). A JPEG is embedded as its own bytes (`/DCTDecode`). A PNG with no
+  transparency, or a palette's, embeds its image data as the file holds it (`/FlateDecode`
+  with the PNG predictors), and one colour a grey or an RGB PNG names transparent is a
+  colour key (`/Mask`). An alpha channel, and the alpha a palette gives, are decoded
+  (`_lib.png`) and drawn as a soft mask (`/SMask`). A PNG embedded as the file holds it is
+  seen to decode first. Each picture lies once in the file, however often it is drawn. An
+  image handed no picture, or one that cannot be read or decoded, such as a PNG too large to
+  decode, is left out, and reported.
 
-Output is fixed for a version: lengths are written to 1/100 px and colours to 1/10 000,
-objects in one order, the streams uncompressed, with no date and no random id: the file's
-`/ID` is taken from its own bytes. So the same scene and values give the same bytes on
-every machine. A change that could give another output raises the version, and the
-reference outputs pinned to it in the tests catch one made without it (DEC-005 point 9).
+Output is fixed for a version: lengths are written to 1/100 px, a page's scale to six
+decimals and colours to 1/10 000, objects in one order, the streams uncompressed, with no
+date and no random id: the file's `/ID` is taken from its own bytes. A picture's data is the
+file's own, and what the renderer decodes, a soft mask and the colours of a PNG with alpha,
+is written uncompressed too, so it rests on no build of zlib. So the same scene and values
+give the same bytes on every machine. A change that could give another output raises the
+version, and the reference outputs pinned to it in the tests catch one made without it
+(DEC-005 point 9).
 """
 
 from __future__ import annotations
@@ -44,6 +78,7 @@ from __future__ import annotations
 import hashlib
 import io
 import logging
+import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -53,14 +88,39 @@ import uharfbuzz as hb
 from fontTools import subset
 from fontTools.ttLib import TTFont
 
+from _lib import pictures, png
+from _lib.canvas import (
+    HEAD,
+    Course,
+    Head,
+    Placed,
+    course,
+    ground_path,
+    heads,
+    marked,
+    placed,
+    room,
+    route,
+    shows,
+    unshown,
+)
 from _lib.plugins import seam
 from _lib.plugins.pdf_declaration import DECLARATION
 
 NAME: str = DECLARATION["name"]
 VERSION: str = DECLARATION["version"]
 
-#: How many pt of the page each px of the scene is (the declaration's `unit`).
+#: How many pt of the page each px of the scene is (the declaration's `unit`), on a page
+#: with no physical size.
 SCALE: float = DECLARATION["unit"]["scale"]
+
+#: How many pt of the page a millimetre of a physical size is: 72 pt to the inch, which is
+#: 25.4 mm.
+PT_PER_MM = 72 / 25.4
+
+#: The most pt a page of the file takes on a side: the largest page readers of PDF hold, at
+#: the user unit every file here keeps. At `SCALE`, 19,200 px of the scene.
+LARGEST = 14400.0
 
 #: A line's two ends, each of which may carry an arrowhead.
 ENDS = ("start", "end")
@@ -103,13 +163,13 @@ def render(
     key: str,
     colours: Mapping[str, Mapping[str, Any]],
     font_file: Callable[[str], Path],
-    pictures: Mapping[str, Path],
+    pictures: Mapping[str, seam.Shown],
 ) -> Drawn:
     """`scene` (`Scene.to_dict()`) drawn in the combination `key` as one PDF file: `colours`
     gives each colour role's value there, in canonical form; `font_file` the committed file
-    of a font family. `pictures`, the file of each produced output's variant, is handed to
-    every renderer; this one refuses the image, so it reads none."""
-    document = _Document(scene, key, colours, font_file)
+    of a font family; `pictures` the picture each image shows there, by the image's trace id
+    (`seam.Shown`), whatever its source."""
+    document = _Document(scene, key, colours, font_file, pictures)
     for trace in scene.get("pages", []):
         element = _find(scene.get("children", []), trace)
         if element is not None:
@@ -403,6 +463,104 @@ class _Shown:
 Part = str | _Shown
 
 
+# --- pictures -----------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _Image:
+    """A picture as the file embeds it: its size in pixels; its data, and the entries that
+    name the data's filter and its parameters, none for data written as it is; its bits for
+    each sample; whether its colours are grey, else RGB; its palette, where its samples are
+    indices into one; the ICC profile its colours are drawn by; and its transparency, as the
+    one colour it names transparent (`key`), or as an alpha for each pixel, one byte each,
+    row after row (`mask`)."""
+
+    width: int
+    height: int
+    data: bytes
+    filter: str
+    bits: int
+    grey: bool
+    profile: bytes | None
+    palette: bytes = b""
+    key: tuple[int, ...] | None = None
+    mask: bytes | None = None
+
+
+#: Each picture read in this process, by the SHA-256 of its file's bytes, its name and the
+#: kind it was handed as: the picture as a file embeds it, or why it cannot be drawn.
+_IMAGES: dict[tuple[str, str, str], _Image | str] = {}
+
+#: Each kind of picture, as a message names it.
+_KIND_SAID = {seam.PNG: "PNG", seam.JPEG: "JPEG"}
+
+
+def _picture(data: bytes, shown: seam.Shown, mark: str) -> _Image | str:
+    """The picture whose file, handed as `shown`, holds `data`, whose SHA-256 is `mark`, as
+    the file embeds it; or why it cannot be drawn. Each is read once in the process."""
+    held = (mark, shown.file.name, shown.kind)
+    if held not in _IMAGES:
+        _IMAGES[held] = _read_picture(data, shown)
+    return _IMAGES[held]
+
+
+def _read_picture(data: bytes, shown: seam.Shown) -> _Image | str:
+    """A picture read by the picture reader, of the kind it was handed as: a JPEG as its own
+    bytes, a PNG as `_png` embeds it. What cannot be drawn is said in words: a file the
+    reader refuses, or a PNG that cannot be decoded."""
+    name = shown.file.name
+    try:
+        read = pictures.read(data, name)
+    except pictures.Refused as refused:
+        return refused.message
+    except ValueError as exc:
+        return str(exc)
+    if read.kind != shown.kind:
+        return f"`{name}` is no {_KIND_SAID[shown.kind]} by its bytes"
+    if read.kind == pictures.JPEG:
+        return _Image(
+            read.width, read.height, data, " /Filter /DCTDecode", 8, read.grey, read.profile
+        )
+    try:
+        return _png(png.read(data), read)
+    except png.Undecodable as exc:
+        return f"`{name}` cannot be decoded: {exc}"
+
+
+def _png(decoded: png.Png, read: pictures.Picture) -> _Image:
+    """A PNG as the file embeds it. One of a colour type with alpha is decoded, its colours
+    and its alpha apart, each written as it is. Any other keeps its image data as the file
+    holds it, which the PNG predictors undo, once it is seen to decode; a palette's alpha is
+    decoded to a soft mask, and one colour a grey or an RGB picture names transparent is a
+    colour key. So no file holds a picture the decoder refuses. Raises png.Undecodable."""
+    if decoded.colour in png.WITH_ALPHA:
+        colours, alpha = png.alpha_apart(decoded, png.samples(decoded))
+        return _Image(
+            decoded.width, decoded.height, colours, "", 8, read.grey, read.profile, mask=alpha
+        )
+    predicted = (
+        f" /Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors {decoded.channels} "
+        f"/BitsPerComponent {decoded.depth} /Columns {decoded.width} >>"
+    )
+    if png.has_palette_alpha(decoded):
+        mask = png.palette_alpha(decoded, png.samples(decoded))
+    else:
+        png.check(decoded)
+        mask = None
+    return _Image(
+        decoded.width,
+        decoded.height,
+        decoded.data,
+        predicted,
+        decoded.depth,
+        read.grey,
+        read.profile,
+        palette=decoded.palette,
+        key=png.colour_key(decoded),
+        mask=mask,
+    )
+
+
 # --- a document ---------------------------------------------------------------------------------
 
 
@@ -416,18 +574,22 @@ class _Document:
         key: str,
         colours: Mapping[str, Mapping[str, Any]],
         font_file: Callable[[str], Path],
+        shown: Mapping[str, seam.Shown],
     ) -> None:
         self.scene = scene
         self.key = key
         self.colours = colours
         self.font_file = font_file
+        self.shown = shown
         self.losses: list[seam.Loss] = []
         self.traces: list[str] = []
-        self._pages: list[tuple[float, float, list[Part]]] = []
+        self._pages: list[tuple[_Sheet, list[Part]]] = []
         self._faces: dict[str, _Face] = {}
         self._fonts: dict[str, _Font] = {}
         # Each opacity the pages take, by the operand it sets and its value: its name.
         self._opacities: dict[tuple[str, str], str] = {}
+        # Each picture the pages draw, by the SHA-256 of its file: its name, and the picture.
+        self._images: dict[str, tuple[str, _Image]] = {}
 
     def _lose(self, what: str, did: str, why: str) -> None:
         loss = seam.Loss(NAME, what, did, why)
@@ -439,7 +601,18 @@ class _Document:
     def page(self, element: Mapping[str, Any]) -> None:
         self.traces.append(element["id"])
         parts = [part for child in element.get("children", []) for part in self._element(child)]
-        self._pages.append((float(element["width"]), float(element["height"]), parts))
+        width, height = float(element["width"]), float(element["height"])
+        sheet = _sheet(width, height, self.scene.get("physical-size"))
+        if sheet.fit < 1:
+            measures = " by ".join(number(side) for side in sheet.measures)
+            self._lose(
+                element["id"],
+                seam.APPROXIMATED,
+                f"the page measures {measures} pt, past the {number(LARGEST)} pt a page of PDF "
+                f"takes on a side, so it is drawn {number(sheet.fit, 4)} as large, its "
+                "proportions kept",
+            )
+        self._pages.append((sheet, parts))
 
     def _element(self, element: Mapping[str, Any]) -> list[Part]:
         kind = element.get("type")
@@ -479,9 +652,12 @@ class _Document:
         name = self._opacities.setdefault(mark, f"A{len(self._opacities)}")
         return f"/{name} gs"
 
-    def _shape(self, element: Mapping[str, Any], path: str | None) -> list[Part]:
-        """A closed shape filled and stroked as its paints say; nothing where it takes
-        neither, or has no `path` since it has no size, its paints still read."""
+    def _shape(
+        self, element: Mapping[str, Any], path: str | None, *, even_odd: bool = False
+    ) -> list[Part]:
+        """A closed shape filled and stroked as its paints say, its fill by the even-odd rule
+        where `even_odd`, else by the nonzero; nothing where it takes neither, or has no
+        `path` since it has no size, its paints still read."""
         fill = self._paint(element, "fill")
         stroke = self._paint(element, "stroke")
         width = float(element.get("stroke-width", 1))
@@ -497,6 +673,8 @@ class _Document:
             ops += [self._opacity("CA", stroke[1])] if stroke[1] < 1 else []
             ops += [f"{stroke[0]} RG", f"{number(width)} w"]
         paint = "B" if fill and stroke else "f" if fill else "S"
+        if fill and even_odd:
+            paint += "*"
         return [f"{' '.join(ops)}\n{path}{paint}\nQ\n"]
 
     def _box(self, element: Mapping[str, Any]) -> list[Part]:
@@ -514,27 +692,33 @@ class _Document:
         cx, cy = float(element["x"]) + rx, float(element["y"]) + ry
         return self._shape(element, _ellipse(cx, cy, rx, ry) if rx > 0 and ry > 0 else None)
 
+    def _path(self, element: Mapping[str, Any]) -> list[Part]:
+        """A path, such as a concept's sign (DEC-036 point 1): the outline the engine mapped
+        into its frame, filled by its rule. A path that holds no outline of moves, lines,
+        cubic curves and closes is refused, as an element the renderer does not draw is."""
+        path = _outline(element.get("d"))
+        if path is None:
+            self._lose(
+                element["id"],
+                seam.REFUSED,
+                "the path holds no outline, `d`, of moves, lines, cubic curves and closes",
+            )
+            return []
+        return self._shape(element, path, even_odd=element.get("fill-rule") == "evenodd")
+
     def _line(self, element: Mapping[str, Any]) -> list[Part]:
-        """A line, or a tie's connector through each of its points, stroked, with an
-        arrowhead at each end that carries one, in the stroke's colour. A line that holds
-        neither its ends nor its points is refused, as an element the renderer does not
-        draw is."""
-        points = element.get("points")
-        if not points and any(end not in element for end in ENDS_OF_LINE):
+        """A line, or a tie's connector through each of its points, stroked along its
+        course, its turns round where it holds a radius, with an arrowhead at each end that
+        carries one, in the stroke's colour, where the line stops (`canvas.course`). A line
+        that holds neither its ends nor its points is refused, as an element the renderer
+        does not draw is."""
+        if not element.get("points") and any(end not in element for end in ENDS_OF_LINE):
             self._lose(
                 element["id"],
                 seam.REFUSED,
                 f"the line holds neither its ends, `{' '.join(ENDS_OF_LINE)}`, nor its points",
             )
             return []
-        route = (
-            [(float(p["x"]), float(p["y"])) for p in points]
-            if points
-            else [
-                (float(element["x1"]), float(element["y1"])),
-                (float(element["x2"]), float(element["y2"])),
-            ]
-        )
         stroke = self._paint(element, "stroke")
         width = float(element.get("stroke-width", 1))
         if stroke is None or width <= 0:
@@ -544,18 +728,51 @@ class _Document:
         if alpha < 1:
             ops.append(self._opacity("CA", alpha))
         ops += [f"{rgb} RG", f"{number(width)} w"]
-        path = f"{_point(*route[0])} m " + "".join(f"{_point(*p)} l " for p in route[1:])
-        drawn = [f"{' '.join(ops)}\n{path}S\n"]
-        heads = [
-            _arrowhead(route, which, width)
-            for which in ENDS
-            if element.get(f"marker-{which}") == "arrow"
-        ]
-        if heads:
+        traced = course(route(element), float(element.get("rx", 0)), heads(element))
+        drawn = [f"{' '.join(ops)}\n{_course(traced)}S\n"]
+        if traced.heads:
             fill = [self._opacity("ca", alpha)] if alpha < 1 else []
-            drawn.append(f"{' '.join([*fill, f'{rgb} rg'])}\n{''.join(heads)}")
+            arrows = [
+                _arrowhead(traced.heads[which], width) for which in ENDS if which in traced.heads
+            ]
+            drawn.append(f"{' '.join([*fill, f'{rgb} rg'])}\n{''.join(arrows)}")
         drawn.append("Q\n")
         return ["".join(drawn)]
+
+    def _image(self, element: Mapping[str, Any]) -> list[Part]:
+        """An image, its picture drawn whole, centred and as large as its frame allows, its
+        first row at the top. Nothing where its frame or the picture fitted has no size. One
+        handed no picture in this combination, or one that cannot be read or decoded, is
+        left out, and reported."""
+        trace = str(element["id"])
+        shown = self.shown.get(trace)
+        if shown is None or not shown.file.is_file():
+            self._lose(trace, seam.LEFT_OUT, unshown(element, self.key, self.scene.get("piece")))
+            return []
+        try:
+            data = shown.file.read_bytes()
+        except OSError as exc:
+            why = f"`{shown.file.name}` cannot be read: {exc.strerror or exc}"
+            self._lose(trace, seam.LEFT_OUT, f"{shows(element)} cannot be drawn: {why}")
+            return []
+        mark = hashlib.sha256(data).hexdigest()
+        image = _picture(data, shown, mark)
+        if isinstance(image, str):
+            self._lose(trace, seam.LEFT_OUT, f"{shows(element)} cannot be drawn: {image}")
+            return []
+        x, y = float(element["x"]), float(element["y"])
+        width, height = float(element["width"]), float(element["height"])
+        scale = min(width / image.width, height / image.height)
+        drawn_width, drawn_height = image.width * scale, image.height * scale
+        if number(drawn_width) == "0" or number(drawn_height) == "0":
+            return []
+        name = self._images.setdefault(mark, (f"I{len(self._images)}", image))[0]
+        left = x + (width - drawn_width) / 2
+        bottom = y + (height + drawn_height) / 2
+        return [
+            f"q {number(drawn_width)} 0 0 {number(-drawn_height)} {_point(left, bottom)} cm "
+            f"/{name} Do Q\n"
+        ]
 
     def _text(self, element: Mapping[str, Any]) -> list[Part]:
         x, width = float(element["x"]), float(element["width"])
@@ -565,31 +782,70 @@ class _Document:
         step = float(element["line-height"])
         paragraphs = element.get("paragraphs") or [[{}]]
         parts: list[Part] = []
+        marks: list[Part] = []
         look = _Look()
         for index, line in enumerate(element.get("lines", [])):
             runs = paragraphs[line.get("paragraph", 0)]
-            pieces = []
-            for span in line.get("spans", []):
-                run = runs[span["run"]]
-                pieces += [
+            spans = [(span, runs[span["run"]]) for span in line.get("spans", [])]
+            shaped = [
+                [
                     (run, face, font, glyphs)
                     for face, font, glyphs in self._pieces(element, run, span["text"])
                 ]
-            total = sum(_advance(face, glyphs, run) for run, face, _, glyphs in pieces)
+                for span, run in spans
+            ]
+            widths = [
+                sum(_advance(face, glyphs, run) for run, face, _, glyphs in pieces)
+                for pieces in shaped
+            ]
+            total = sum(widths) + sum(room(span) for span, _ in spans)
             pen = at - {"middle": total / 2, "end": total}.get(anchor, 0.0)
             baseline = y + float(line["baseline"]) + index * step
-            for run, face, font, glyphs in pieces:
-                # A piece with no font is left out, and keeps its place in the line.
-                if font is not None:
-                    size = float(run.get("font-size", 0))
-                    paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
-                    parts.append(look.change(self, font, size, paint))
-                    parts.append(f"1 0 0 -1 {_point(pen, baseline)} Tm\n")
-                    parts.append(_Shown(font, glyphs, size))
-                pen += _advance(face, glyphs, run)
+            where = placed(spans, pen, widths) if marked(line) else None
+            if where is not None:
+                marks += self._marks(element, baseline - float(line["baseline"]), where)
+            for place, pieces in enumerate(shaped):
+                if where is not None:
+                    pen = where.starts[place]
+                for run, face, font, glyphs in pieces:
+                    # A piece with no font is left out, and keeps its place in the line.
+                    if font is not None:
+                        size = float(run.get("font-size", 0))
+                        paint = self._paint({"id": element["id"], "fill": run.get("fill")}, "fill")
+                        parts.append(look.change(self, font, size, paint))
+                        parts.append(f"1 0 0 -1 {_point(pen, baseline)} Tm\n")
+                        parts.append(_Shown(font, glyphs, size))
+                    pen += _advance(face, glyphs, run)
         if not any(isinstance(part, _Shown) for part in parts):
-            return []
-        return ["q BT\n", *parts, "ET Q\n"]
+            return marks
+        return [*marks, "q BT\n", *parts, "ET Q\n"]
+
+    def _marks(self, element: Mapping[str, Any], top: float, where: Placed) -> list[Part]:
+        """The grounds and the signs of a line whose top lies at `top`, drawn before its
+        text, so behind it (DEC-036 point 3): each piece of a ground in its role, its corners
+        rounded where the ground starts and ends, and each sign its outline, moved to its
+        square, filled by its rule in its run's paint."""
+        drawn: list[Part] = []
+        for piece in where.grounds:
+            if piece.role is not None:
+                ground = {"id": element["id"], "fill": piece.role}
+                drawn += self._shape(ground, _outline(ground_path(piece, top)))
+        for left, span, run in where.signs:
+            sign = span["sign"]
+            outline = _outline(sign["d"])
+            if outline is None:
+                self._lose(
+                    element["id"],
+                    seam.REFUSED,
+                    "a run's sign holds no outline, `d`, of moves, lines, cubic curves and closes",
+                )
+                continue
+            filled = {"id": element["id"], "fill": run.get("fill")}
+            shape = self._shape(filled, outline, even_odd=sign.get("fill-rule") == "evenodd")
+            if shape:
+                moved = f"q 1 0 0 1 {_point(left, top + float(sign['top']))} cm\n"
+                drawn += [moved, *shape, "Q\n"]
+        return drawn
 
     def _pieces(
         self, element: Mapping[str, Any], run: Mapping[str, Any], text: str
@@ -654,11 +910,15 @@ class _Document:
 
         catalog, tree, info, resources = (add(""), add(""), add(""), add(""))
         fonts = {font.resource: _embedded(font, add) for font in self._fonts.values()}
+        profiles: dict[bytes, int] = {}
+        images = {
+            name: _embedded_image(image, add, profiles) for name, image in self._images.values()
+        }
         kids = []
-        for width, height, parts in self._pages:
-            content = _stream(_content(width, height, parts).encode("latin-1"))
+        for sheet, parts in self._pages:
+            content = _stream(_content(sheet, parts).encode("latin-1"))
             contents = add(content)
-            box = f"[0 0 {number(width * SCALE)} {number(height * SCALE)}]"
+            box = f"[0 0 {' '.join(number(side) for side in sheet.box)}]"
             kids.append(
                 add(
                     f"<< /Type /Page /Parent {tree} 0 R /MediaBox {box} "
@@ -680,8 +940,13 @@ class _Document:
             f"/{name} << /Type /ExtGState /{operand} {value} >>"
             for (operand, value), name in self._opacities.items()
         )
+        # A file that draws no picture names no images, so its resources are as before.
+        drawn = " ".join(f"/{name} {ref} 0 R" for name, ref in images.items())
+        xobjects = f" /XObject << {drawn} >>" if images else ""
         objects[resources - 1] = (
-            f"<< /Font << {font_list} >> /ExtGState << {opacities} >> >>".encode("latin-1")
+            f"<< /Font << {font_list} >> /ExtGState << {opacities} >>{xobjects} >>".encode(
+                "latin-1"
+            )
         )
         return _file(objects, catalog, info)
 
@@ -745,6 +1010,37 @@ def _rectangle(x: float, y: float, width: float, height: float, rx: float) -> st
     )
 
 
+#: The commands of a path's outline as the engine writes it, each with the operator that
+#: draws it and how many numbers it takes.
+_OUTLINE = {"M": ("m", 2), "L": ("l", 2), "C": ("c", 6), "Z": ("h", 0)}
+
+
+def _outline(data: Any) -> str | None:
+    """The path of a path's outline, `data`, as the engine writes it: absolute moves, lines,
+    cubic curves and closes, each a letter and its numbers, a move first. None where `data`
+    is no such outline."""
+    words = data.split() if isinstance(data, str) else []
+    if not words or words[0] != "M":
+        return None
+    drawn: list[str] = []
+    at = 0
+    while at < len(words):
+        if words[at] not in _OUTLINE:
+            return None
+        operator, count = _OUTLINE[words[at]]
+        given = words[at + 1 : at + 1 + count]
+        try:
+            numbers = [float(word) for word in given]
+        except ValueError:
+            return None
+        if len(numbers) != count or not all(math.isfinite(n) for n in numbers):
+            return None
+        points = [_point(numbers[i], numbers[i + 1]) for i in range(0, count, 2)]
+        drawn.append(" ".join([*points, operator]) + "\n")
+        at += 1 + count
+    return "".join(drawn)
+
+
 def _ellipse(cx: float, cy: float, rx: float, ry: float) -> str:
     """An ellipse's path: four cubic Bézier curves, one for each quarter."""
     kx, ky = rx * KAPPA, ry * KAPPA
@@ -757,32 +1053,79 @@ def _ellipse(cx: float, cy: float, rx: float, ry: float) -> str:
     )
 
 
-def _arrowhead(route: Sequence[tuple[float, float]], which: str, width: float) -> str:
-    """The arrowhead at one end of a route, as the SVG renderer's marker draws it: a
-    triangle five strokes long and five wide, its tip at the end, pointing away from the
-    line along its last stretch, or across to the right where the line has no length."""
-    ordered = list(route) if which == "end" else list(reversed(route))
-    tip = ordered[-1]
-    dx, dy = 1.0, 0.0
-    for before in reversed(ordered[:-1]):
-        length = ((tip[0] - before[0]) ** 2 + (tip[1] - before[1]) ** 2) ** 0.5
-        if length > 0:
-            dx, dy = (tip[0] - before[0]) / length, (tip[1] - before[1]) / length
-            break
-    else:
-        if which == "start":
-            dx = -1.0
-    back = (tip[0] - 5 * width * dx, tip[1] - 5 * width * dy)
-    side = (-dy * 2.5 * width, dx * 2.5 * width)
-    left = (back[0] + side[0], back[1] + side[1])
-    right = (back[0] - side[0], back[1] - side[1])
+def _course(traced: Course) -> str:
+    """A line's course as a path: its points joined by lines, and each turn drawn round a
+    cubic Bézier curve of its arc."""
+    at = _point(*traced.points[0])
+    path = [f"{at} m "]
+    for place, point in enumerate(traced.points[1:], start=1):
+        arc = traced.arcs.get(place)
+        towards = _point(*(arc.start if arc is not None else point))
+        if towards != at:  # no line to where the path already stands
+            path.append(f"{towards} l ")
+        if arc is not None:
+            (one, two), towards = arc.controls, _point(*arc.end)
+            path.append(f"{_point(*one)} {_point(*two)} {towards} c ")
+        at = towards
+    return "".join(path)
+
+
+def _arrowhead(head: Head, width: float) -> str:
+    """An arrowhead, as the SVG renderer's marker draws it: a triangle `HEAD` strokes long
+    and as wide, its base where the line stops, its tip pointing away from the line."""
+    (bx, by), (dx, dy) = head.base, head.towards
+    tip = (bx + HEAD * width * dx, by + HEAD * width * dy)
+    side = (-dy * HEAD / 2 * width, dx * HEAD / 2 * width)
+    left = (bx + side[0], by + side[1])
+    right = (bx - side[0], by - side[1])
     return f"{_point(*left)} m {_point(*tip)} l {_point(*right)} l h f\n"
 
 
-def _content(width: float, height: float, parts: Sequence[Part]) -> str:
-    """A page's content: the scene's px mapped onto the page's pt, down the page as the
-    scene runs, with SVG's miter limit, then what the page draws."""
-    head = f"{number(SCALE)} 0 0 {number(-SCALE)} 0 {number(height * SCALE)} cm 4 M\n"
+@dataclass(frozen=True)
+class _Sheet:
+    """How one page of the scene lies on a page of the file: the page's size in pt before it
+    is fitted, `measures`; how large it is drawn, as a share of that size, `fit`; how many pt
+    of the page each px of the scene is, fitted, `scale`; and how far above the page's foot
+    the scene's top lies, in pt, `top`."""
+
+    measures: tuple[float, float]
+    fit: float
+    scale: float
+    top: float
+
+    @property
+    def box(self) -> tuple[float, float]:
+        """The page's size in pt, as drawn."""
+        return self.measures[0] * self.fit, self.measures[1] * self.fit
+
+
+def _sheet(width: float, height: float, physical: Any) -> _Sheet:
+    """How a page of `width` by `height` px is drawn. Where `physical`, the physical size the
+    scene's root holds, is given, the page is that size, and its width sets one scale for
+    the whole page (DEC-034 point 3). Elsewhere each px is `SCALE` pt. Either way a page
+    whose long side would pass `LARGEST` pt is fitted to it."""
+    if isinstance(physical, Mapping) and width > 0:
+        measures = (float(physical["width"]) * PT_PER_MM, float(physical["height"]) * PT_PER_MM)
+        fit = _fit(*measures)
+        return _Sheet(measures, fit, measures[0] / width * fit, measures[1] * fit)
+    measures = (width * SCALE, height * SCALE)
+    fit = _fit(*measures)
+    scale = SCALE * fit
+    return _Sheet(measures, fit, scale, height * scale)
+
+
+def _fit(width: float, height: float) -> float:
+    """How large a page of `width` by `height` pt is drawn, as a share of its size: 1, or less
+    where its long side would pass `LARGEST` pt."""
+    longest = max(width, height)
+    return LARGEST / longest if longest > LARGEST else 1.0
+
+
+def _content(sheet: _Sheet, parts: Sequence[Part]) -> str:
+    """A page's content: the scene's px mapped onto the page's pt at the sheet's scale, down
+    the page as the scene runs, with SVG's miter limit, then what the page draws."""
+    scale = sheet.scale
+    head = f"{number(scale, 6)} 0 0 {number(-scale, 6)} 0 {number(sheet.top)} cm 4 M\n"
     drawn = (
         part.font.shown(part.glyphs, part.size) + "\n" if isinstance(part, _Shown) else part
         for part in parts
@@ -830,6 +1173,33 @@ def _embedded(font: _Font, add: Callable[[str | bytes], int]) -> int:
         f"<< /Type /Font /Subtype /Type0 /BaseFont {name} /Encoding /Identity-H "
         f"/DescendantFonts [{descendant} 0 R] /ToUnicode {unicode} 0 R >>"
     )
+
+
+def _embedded_image(
+    image: _Image, add: Callable[[str | bytes], int], profiles: dict[bytes, int]
+) -> int:
+    """A picture, embedded, as its objects: its colour profile, once in the file however many
+    pictures carry it (`profiles`, each profile's number by its bytes), its soft mask, and
+    the image, drawn smoothed where it is scaled, as a browser draws it. Gives the image's
+    number."""
+    space = "/DeviceGray" if image.grey else "/DeviceRGB"
+    if image.profile is not None:
+        if image.profile not in profiles:
+            channels = 1 if image.grey else 3
+            entries = f" /N {channels} /Alternate {space}"
+            profiles[image.profile] = add(_stream(image.profile, entries))
+        space = f"[/ICCBased {profiles[image.profile]} 0 R]"
+    if image.palette:
+        top = len(image.palette) // 3 - 1
+        space = f"[/Indexed {space} {top} <{image.palette.hex().upper()}>]"
+    size = f" /Type /XObject /Subtype /Image /Width {image.width} /Height {image.height}"
+    entries = f"{size} /ColorSpace {space} /BitsPerComponent {image.bits} /Interpolate true"
+    if image.mask is not None:
+        grey = f"{size} /ColorSpace /DeviceGray /BitsPerComponent 8 /Interpolate true"
+        entries += f" /SMask {add(_stream(image.mask, grey))} 0 R"
+    elif image.key is not None:
+        entries += f" /Mask [{' '.join(f'{sample} {sample}' for sample in image.key)}]"
+    return add(_stream(image.data, entries + image.filter))
 
 
 def _widths(widths: Sequence[tuple[int, str]]) -> str:

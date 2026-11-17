@@ -1,0 +1,101 @@
+answers:
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+    revalidated:
+      at: 2026-11-07T13:23:38Z
+      outcome: unchanged
+      unchanged-because: "The change adds to start-work's help in package.yaml and to its docstring the refusal, exit 2, of code that cannot read the topology in full and the warning of a Task outside the seat's pools; its behaviour is unchanged, and the README already says both: start-work refuses with exit 2 on such a topology, and warns of a Task outside the seat's pools, never a gate."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+    revalidated:
+      at: 2026-11-07T13:23:54Z
+      outcome: unchanged
+      unchanged-because: The change edits only start-work.py's docstring, naming the exit 2 refusal of code that cannot read the topology in full and the warning of a Task outside the seat's pools, which the code already gave; no behaviour changes, so the start through start-work in step 4 and the variants on an unreadable topology and on pools still hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+    revalidated:
+      at: 2026-11-07T13:23:56Z
+      outcome: unchanged
+      unchanged-because: The change edits only start-work.py's docstring, naming the exit 2 refusal of code that cannot read the topology in full and the warning of a Task outside the seat's pools, which the code already gave; no behaviour changes, so step 6 and its variants 6e and 6f, which describe both, still hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+    revalidated:
+      at: 2026-11-07T13:24:09Z
+      outcome: unchanged
+      unchanged-because: The change edits only start-work.py's docstring, naming the exit 2 refusal of code that cannot read the topology in full and the warning of a Task outside the seat's pools, which the code already gave; no behaviour changes, so the start, the clash guard and its refusals that write nothing, as this use case tells them, still hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+    revalidated:
+      at: 2026-11-07T13:24:12Z
+      outcome: unchanged
+      unchanged-because: The change edits only start-work.py's docstring, naming the exit 2 refusal of code that cannot read the topology in full and the warning of a Task outside the seat's pools, which the code already gave; no behaviour changes, so how a new session takes up the Task its clone claimed, as this use case tells it, still holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+    revalidated:
+      at: 2026-11-07T13:24:15Z
+      outcome: unchanged
+      unchanged-because: The change edits only start-work.py's docstring, naming the exit 2 refusal of code that cannot read the topology in full and the warning of a Task outside the seat's pools, which the code already gave; no behaviour changes, so the lead's start of the Task in step 1, before it starts a helper agent, still holds.

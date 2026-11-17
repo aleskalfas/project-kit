@@ -27,14 +27,14 @@ import importlib.util
 import json
 import os
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from ruamel.yaml import YAML
 
-from project_kit import cli_render, lifecycle_ownership
+from project_kit import cli_render, harness_support, lifecycle_ownership
 
 if TYPE_CHECKING:
     from packaging.version import Version
@@ -662,11 +662,42 @@ def diff(target_root: Path, agent: str | None) -> tuple[str, bool]:
     return "\n".join(lines) + "\n", not extra
 
 
+#: An adapter's enforcement declaration, in the adapter's folder (COR-028 point 3).
+ENFORCEMENT_DECLARATION = "permission-enforcement.yaml"
+
+
+def _unenforced_by_adapter(target_root: Path) -> list[tuple[str, list[str] | None]]:
+    """Each adapter the backbone manifest registers, in its order, with the
+    dimensions its enforcement declaration declares enforced `none`. None where
+    the adapter declares nothing: no declaration in its folder, or one that names
+    no dimension, which is never read as every dimension enforced. A registered
+    name that is no plain name is never read as a path."""
+    found: list[tuple[str, list[str] | None]] = []
+    for adapter in harness_support.registered_adapters(target_root):
+        raw: Any = None
+        if harness_support.is_adapter(target_root, adapter):
+            path = target_root / ".pkit" / "adapters" / adapter / ENFORCEMENT_DECLARATION
+            raw = _load_yaml(path).get("dimensions")
+        if not isinstance(raw, Mapping) or not raw:
+            found.append((adapter, None))
+            continue
+        dimensions = cast(Mapping[str, Any], raw)
+        unenforced = [
+            name
+            for name, spec in dimensions.items()
+            if isinstance(spec, Mapping)
+            and cast(Mapping[str, Any], spec).get("enforcement") == "none"
+        ]
+        found.append((adapter, unenforced))
+    return found
+
+
 def _gap_report(target_root: Path, proj: dict[str, Any]) -> list[str]:
     """The shared out-of-harness gap report: model intent that does NOT realize
     into session-wide settings — grants the hook enforces at runtime, grants no
-    native layer expresses, and adapter-declared unenforceable dimensions. Used
-    by both `diff` and `apply` so the two never describe the gap differently."""
+    native layer expresses, and the dimensions each registered adapter declares
+    unenforceable, or that it declares nothing. Used by both `diff` and `apply`
+    so the two never describe the gap differently."""
     out: list[str] = []
     if proj["runtime"]:
         out.append(
@@ -678,17 +709,21 @@ def _gap_report(target_root: Path, proj: dict[str, Any]) -> list[str]:
             f"  {len(proj['unprojectable'])} grant(s) no native layer expresses "
             f"(scoped / recognizer-shape — see ADR-004)"
         )
-    enf = _load_yaml(
-        target_root / ".pkit" / "adapters" / "claude-code" / "permission-enforcement.yaml"
-    )
-    unenforceable = [
-        d for d, spec in enf.get("dimensions", {}).items() if spec.get("enforcement") == "none"
-    ]
-    if unenforceable:
-        out.append(
-            f"⚠ not natively enforceable (declare + enforce out-of-harness): "
-            f"{', '.join(unenforceable)}"
-        )
+    declared = _unenforced_by_adapter(target_root)
+    # A lone adapter's line needs no name; beside another, each names its adapter.
+    named = len(declared) > 1
+    for adapter, unenforced in declared:
+        if unenforced is None:
+            out.append(
+                f"⚠ {adapter} declares nothing (no dimension in its "
+                f"{ENFORCEMENT_DECLARATION}): none is known to be enforced"
+            )
+        elif unenforced:
+            by = f" by {adapter}" if named else ""
+            out.append(
+                f"⚠ not natively enforceable{by} (declare + enforce out-of-harness): "
+                f"{', '.join(unenforced)}"
+            )
     return out
 
 

@@ -2,9 +2,10 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 
 # The card's reference renders (DEC-007 point 3): each word of each of its options, and
-# each run word of its text, drawn once, in English and in German, whose compound words
-# and diacritics stress its text. Pinned with the test brand, the starter and the test
-# notation, so only a person moves what they draw.
+# each run word of its text, drawn once, and the sign of a concept that has one, at the
+# end of its head's row and before a run that names it, in English and in German, whose
+# compound words and diacritics stress its text. Pinned with the test brand, the starter
+# and the test notation, so only a person moves what they draw.
 top: foundations/deck
 brand: test-brand
 notations: [test-notation]

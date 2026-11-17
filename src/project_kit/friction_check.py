@@ -3867,18 +3867,22 @@ def _dormant_context(
 
 
 def _outdated_message(base: BaseState, head: HeadState) -> str:
+    """The fact of an outdated base, and no remedy: whether and how a branch takes in
+    its base is the project's workflow to decide (COR-050 point 12)."""
     return (
         f"the base {base.ref} is at {base.tip[:SHORT]}, which is not an ancestor of "
         f"{head.name}: it moved on after this branch left it at {base.commit[:SHORT]}; results "
-        f"hold only against an up-to-date base — merge or rebase onto {base.ref}, then run again"
+        "hold only against an up-to-date base"
     )
 
 
 # --- output --------------------------------------------------------------------------
 
-#: The version of the document `render_json` returns. A change a reader could break
-#: against — a key removed, renamed or given another meaning — raises it; a key added
-#: does not. A document without it comes from a backbone that predates it: version 1.
+#: The version of the document `render_json` returns. It rises only when one of the
+#: document's own keys, or a value of one of its sets, goes, a break the changeset
+#: declares at `major`; never for a key or a value added. No key or value comes to
+#: mean anything else, in place or by coming back (ADR-097 points 4 and 5). A
+#: document without it comes from a backbone that predates it: version 1.
 CHANGE_SCHEMA_VERSION = 1
 
 

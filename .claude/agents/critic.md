@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: core
+# pkit-digest: sha256:0d83df2c5ed19ec2bd114d0200936ea9eb548dc5779ec5f5721ae59af1b166f4
+# pkit-tool-access: tools: ["Read", "Glob", "Grep", "WebFetch"]
 name: critic
 description: Adversarial second opinion on unbaked work — drafts, designs, 
   plans, decisions. Invoked by the primary agent before showing substantive 

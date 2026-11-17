@@ -2,6 +2,8 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
+#   "jsonschema==4.26.0",
+#   "referencing==0.37.0",
 #   "ruamel.yaml==0.19.1",
 #   "uharfbuzz==0.57.0",
 #   "fonttools==4.68.0",
@@ -36,7 +38,7 @@ Two kinds of library, released on the same steps where they share them:
 3. **The release it needs** is the capability's current version, written into the
    version's `library.yaml` before the hash is worked out, so the hash covers it.
 
-**A shipped library's release first** (DEC-013 point 1, in the order of its Implications):
+**A shipped library's release first** (DEC-013 point 1), in this order:
 
 1. refuses where the methodology holds the capability's folder as a synced copy, by the
    methodology's own answer (`shipped.synced_copy`);
@@ -153,7 +155,8 @@ def _read_in_full(
     other finding is printed."""
     read = full_read.read(held, name, version)
     found = list(read.findings)
-    if read.library is not None and read.scope is not None and read.library.kind == "components":
+    kinds = ("components", "brand")
+    if read.library is not None and read.scope is not None and read.library.kind in kinds:
         env = pl.LibraryEnv(read.versions, read.scope)
         found.extend(checks.default_clashes(held, read.library, env))
     _judge(read.label, [(finding, finding.level) for finding in found], "read in full", shown)

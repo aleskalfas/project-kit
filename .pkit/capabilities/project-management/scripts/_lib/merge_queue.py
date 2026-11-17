@@ -26,9 +26,20 @@ what GitHub answered, and what the backbone concludes from it (merged, queued,
 whether the queue dropped the PR at its current head, the phrase that
 describes where it stands) — so pm never derives any of it again. When the
 backbone cannot answer — no `pkit`, a backbone that predates the command, a
-run past its bound, an answer pm cannot read, a reading without a field a
-decision rests on — the reading is :class:`Unreadable`, with the cause, as
-when GitHub cannot be read: nothing merges on a guess.
+run past its bound, an answer that is not JSON — the reading is
+:class:`Unreadable`, with the cause, as when GitHub cannot be read: nothing
+merges on a guess.
+
+**Each document is read by its keys** (ADR-097 point 3): `reading_of`,
+`squash_defaults_of`, `wait_line_of`, `outcome_of` and `deletion_of`, one for
+each document. A key pm does not read it ignores. A key it reads that is
+missing, null where the CLI reference does not print it null, or of another
+type, a value it does not know of a set it decides on, and a version other
+than :data:`VERSION`, make the document :class:`Unreadable`, never a default
+such as false or empty. GitHub's own words a reading passes on — the PR's
+state, the queue's merge method and its entry's state — are kept as GitHub
+gives them, a word pm does not know among them: pm decides on none of them,
+since the backbone's conclusions are its answer.
 """
 
 from __future__ import annotations
@@ -48,12 +59,14 @@ from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import IO, Any
 
+from _lib import document_keys as keys
 from _lib.gh import gh_env
 
 #: The backbone's pull-request command, and the version of its documents pm
 #: reads — another is refused rather than misread.
 ARGV = ("pkit", "pull-request")
 VERSION = 1
+VERSION_KEY = "schema_version"
 
 #: How long pm waits for each of the backbone's answers, by subcommand, in
 #: seconds. The backbone bounds each of its own `gh` calls (a reading, a
@@ -91,6 +104,11 @@ SQUASH = "SQUASH"
 PR_TITLE = "PR_TITLE"
 PR_BODY = "PR_BODY"
 
+# Every squash-commit title and message GitHub names, as the backbone passes
+# them on: another is one pm cannot tell the convention's from.
+_SQUASH_TITLES = (PR_TITLE, "COMMIT_OR_PR_TITLE")
+_SQUASH_MESSAGES = (PR_BODY, "COMMIT_MESSAGES", "BLANK")
+
 # The backbone's wait limits, as its reference states them, for this
 # capability's messages: a wait that follows the queue's estimate waits that
 # long plus the margin, never longer than the cap. A test holds them equal to
@@ -103,6 +121,11 @@ MERGED = "merged"
 STILL_QUEUED = "queued"
 LEFT = "left"
 HEAD_MOVED = "head-moved"
+_WAIT_ENDS = (MERGED, STILL_QUEUED, LEFT, HEAD_MOVED)
+
+# The lines of a wait's stream, by their `event`: a reading taken, and its end.
+_READING_EVENT = "reading"
+_END_EVENT = "end"
 
 
 class Unreadable(Exception):
@@ -198,6 +221,15 @@ HAS_MERGED = "merged"
 # was made is not known.
 _UNCONFIRMED_KINDS = (UNANSWERED, NOT_READ)
 
+# Every `reason_kind` each request's document names, beside null: another is
+# one pm cannot tell what the request came to by.
+_MERGE_KINDS = (FOREIGN_REPOSITORY, NOT_MADE, UNANSWERED)
+_REQUEST_KINDS: Mapping[str, tuple[str, ...]] = {
+    "merge": _MERGE_KINDS,
+    "enqueue": _MERGE_KINDS,
+    "dequeue": (*_MERGE_KINDS, HAS_MERGED, NOT_READ),
+}
+
 
 @dataclass(frozen=True)
 class Outcome:
@@ -217,13 +249,12 @@ class Outcome:
     #: refused the request, which was then not made; :data:`NOT_MADE` or
     #: :data:`UNANSWERED` when the request got no answer and the backbone
     #: settled it by reading; :data:`NOT_READ` or :data:`HAS_MERGED` for a
-    #: dequeue (above); "" otherwise — and from a backbone whose document does
-    #: not say.
+    #: dequeue (above); "" otherwise, where the document's is null.
     reason_kind: str = ""
-    #: The backbone's guard as its document states it — `verdict` (the
-    #: comparison alone), `undetermined_kind`, `anchor`, `target`, `cleared`
-    #: (how it let the request through; null when it refused) — or None when
-    #: it does not.
+    #: What the backbone's guard compared, as its document states it, for a
+    #: message: `verdict` (the comparison alone), and the `anchor` and the
+    #: `target`, each null where the guard names none (`_guard`). pm decides
+    #: nothing on it. None only for an outcome no document stated.
     guard: Mapping[str, Any] | None = None
 
 
@@ -241,6 +272,19 @@ _DELETION_ENDS = (DELETED, KEPT, GONE, REFUSED, UNCONFIRMED)
 
 #: The `reason_kind` of a deletion refused because the PR's head is in a fork.
 CROSS_REPOSITORY = "cross-repository"
+
+# Every `reason_kind` a deletion's document names, beside null.
+_DELETION_KINDS = (
+    "tip-moved",
+    "open-pull-request",
+    "deletion-refused",
+    UNANSWERED,
+    "not-merged",
+    CROSS_REPOSITORY,
+    "expect-mismatch",
+    NOT_READ,
+    FOREIGN_REPOSITORY,
+)
 
 
 @dataclass(frozen=True)
@@ -271,9 +315,16 @@ def read(pr_number: int, config: dict[str, Any]) -> Reading:
     """Where PR `pr_number` stands with its base branch's merge queue, as the
     backbone reads it for the working directory's repository. Raises
     :class:`Unreadable` when GitHub, or the backbone, cannot answer."""
-    document = _first(["read", str(pr_number)], config)
+    return reading_of(_first(["read", str(pr_number)], config))
+
+
+def reading_of(document: Mapping[str, Any]) -> Reading:
+    """The reading `pkit pull-request read --json` states. Raises
+    :class:`Unreadable` with the backbone's `unreadable`, or when the document
+    cannot be read by its keys."""
+    _of_version(document)
     _raise_unreadable(document)
-    return decode_reading(document.get("reading"))
+    return decode_reading(_value(document, "reading", "the reading"))
 
 
 def squash_commit_defaults(config: dict[str, Any]) -> tuple[str, str]:
@@ -282,12 +333,24 @@ def squash_commit_defaults(config: dict[str, Any]) -> tuple[str, str]:
     `COMMIT_MESSAGES` or `BLANK`). A merge queue composes its squash commit
     from these and ignores what the merge command asks for. Raises
     :class:`Unreadable` when they cannot be read."""
-    document = _first(["squash-defaults"], config)
+    return squash_defaults_of(_first(["squash-defaults"], config))
+
+
+def squash_defaults_of(document: Mapping[str, Any]) -> tuple[str, str]:
+    """The squash-commit title and message `pkit pull-request squash-defaults
+    --json` states. A name GitHub has not been known to give is no default pm
+    can tell the convention's from: :class:`Unreadable`."""
+    _of_version(document)
     _raise_unreadable(document)
-    title, message = document.get("title"), document.get("message")
-    if not (isinstance(title, str) and isinstance(message, str)):
-        raise Unreadable("the backbone's answer names no squash-commit defaults")
-    return title, message
+    try:
+        return (
+            keys.one_of(document, "title", "", _SQUASH_TITLES),
+            keys.one_of(document, "message", "", _SQUASH_MESSAGES),
+        )
+    except keys.Untold as exc:
+        raise Unreadable(
+            f"the backbone's answer names no squash-commit defaults pm can read: {exc}"
+        ) from None
 
 
 def wait_for_merge(
@@ -309,7 +372,8 @@ def wait_for_merge(
     each reading whose description changed, as the backbone takes it. The
     backbone's run is bounded by the wait's own limit plus
     :data:`WAIT_MARGIN_SECONDS`. Raises :class:`Unreadable` when a reading
-    cannot be taken, or the wait does not say how it ended.
+    cannot be taken, a line of the wait cannot be read (`wait_line_of`), or
+    the wait does not say how it ended.
     """
     args = ["wait", str(pr_number)]
     if head_oid:
@@ -322,26 +386,50 @@ def wait_for_merge(
         _answers(args, config, timeout_seconds=limit + WAIT_MARGIN_SECONDS)
     ) as documents:
         for document in documents:
-            if document.get("event") == "reading":
-                on_change(decode_reading(document.get("reading")))
-                continue
-            _raise_unreadable(document)
-            how = document.get("ended")
-            if how not in (MERGED, STILL_QUEUED, LEFT, HEAD_MOVED):
-                raise Unreadable(
-                    f"the backbone's answer says no way the wait ended (`ended`: {how!r})"
-                )
-            ended = Wait(str(how), decode_reading(document.get("reading")))
+            line = wait_line_of(document)
+            if isinstance(line, Reading):
+                on_change(line)
+            else:
+                ended = line
     if ended is None:
         raise Unreadable("the backbone's wait ended without saying how")
     return ended
 
 
+def wait_line_of(document: Mapping[str, Any]) -> Reading | Wait:
+    """One line of `pkit pull-request wait --json`, by its `event`: the reading
+    a `reading` line states, or how the wait ended, from its `end`. Raises
+    :class:`Unreadable` with the backbone's `unreadable`, and for a line it
+    cannot read by its keys: an `event` pm does not know among them, which
+    says nothing pm can wait on."""
+    _of_version(document)
+    try:
+        event = keys.one_of(document, "event", "", (_READING_EVENT, _END_EVENT))
+    except keys.Untold as exc:
+        raise Unreadable(f"the backbone's wait wrote a line pm cannot read: {exc}") from None
+    if event == _READING_EVENT:
+        return decode_reading(_value(document, "reading", "the wait's reading"))
+    _raise_unreadable(document)
+    try:
+        how = keys.one_of(document, "ended", "", _WAIT_ENDS)
+    except keys.Untold as exc:
+        raise Unreadable(f"the backbone's answer says no way the wait ended: {exc}") from None
+    return Wait(how, decode_reading(_value(document, "reading", "how the wait ended")))
+
+
 def request(args: list[str], config: dict[str, Any]) -> Outcome:
     """A merge request the backbone makes (`merge`, `enqueue`, `dequeue`), and
-    what it came to. Raises :class:`Unreadable` when the backbone gives no
-    answer, or one that does not say whether the request was accepted — the
-    request may then have been made, or not.
+    what it came to (`outcome_of`). Raises :class:`Unreadable` when the
+    backbone gives no answer, or one pm cannot read — the request may then
+    have been made, or not."""
+    return outcome_of(_first(args, config), args[0])
+
+
+def outcome_of(document: Mapping[str, Any], command: str) -> Outcome:
+    """What the request `command` (`merge`, `enqueue` or `dequeue`) came to, as
+    its document states it. Raises :class:`Unreadable` when it does not say
+    whether the request was accepted, or cannot be read by its keys: a
+    `reason_kind` the command's document does not name among them.
 
     The backbone runs the cross-repository guard before the request; a
     request it refused is not accepted, with `reason_kind`
@@ -352,120 +440,127 @@ def request(args: list[str], config: dict[str, Any]) -> Outcome:
     :data:`UNANSWERED` — or, for a dequeue the service answered,
     :data:`NOT_READ`: the only answers whose `accepted` is null, which say
     whether it was made is not known."""
-    document = _first(args, config)
-    accepted = document.get("accepted")
-    reason_kind = _text(document.get("reason_kind"))
-    unconfirmed = "accepted" in document and accepted is None and reason_kind in _UNCONFIRMED_KINDS
-    if not (isinstance(accepted, bool) or unconfirmed):
+    _of_version(document)
+    try:
+        accepted = keys.flag_or_null(document, "accepted", "")
+    except keys.Untold as exc:
+        raise Unreadable(
+            f"the backbone's answer does not say whether the request was accepted: {exc}"
+        ) from None
+    try:
+        reason_kind = keys.one_of_or_null(document, "reason_kind", "", _REQUEST_KINDS[command])
+        outcome = Outcome(
+            accepted=accepted,
+            exit_code=keys.number_or_null(document, "exit_code", ""),
+            reason=keys.text(document, "reason", ""),
+            reason_kind=reason_kind or "",
+            guard=_guard(keys.mapping(document, "guard", "")),
+        )
+    except keys.Untold as exc:
+        raise Unreadable(
+            f"the backbone's answer about the {command} cannot be read: {exc}"
+        ) from None
+    if accepted is None and reason_kind not in _UNCONFIRMED_KINDS:
         raise Unreadable(
             f"the backbone's answer does not say whether the request was accepted "
-            f"(`accepted`: {accepted!r})"
+            f"(`accepted`: None, `reason_kind`: {reason_kind!r})"
         )
-    exit_code = document.get("exit_code")
-    guard = document.get("guard")
-    return Outcome(
-        accepted=accepted if isinstance(accepted, bool) else None,
-        exit_code=exit_code if isinstance(exit_code, int) else None,
-        reason=str(document.get("reason") or ""),
-        reason_kind=reason_kind,
-        guard=guard if isinstance(guard, Mapping) else None,
-    )
+    return outcome
 
 
-# The fields of a deletion's document, each a string or null.
-_DELETION_FIELDS = ("branch", "tip", "reason_kind", "reason", "merged_head")
+def _guard(guard: Mapping[str, Any]) -> Mapping[str, Any]:
+    """What pm says of the backbone's guard where it refused a request: its
+    verdict, as the guard words it, and the session's anchor and the target it
+    compared, each null where the guard names none. pm decides nothing on them,
+    so a verdict it does not know is said as the guard gives it."""
+    where = "guard"
+    return {
+        "verdict": keys.text(guard, "verdict", where),
+        "anchor": keys.text_or_null(guard, "anchor", where),
+        "target": keys.text_or_null(guard, "target", where),
+    }
 
 
 def deletion(args: list[str], config: dict[str, Any]) -> BranchDeletion:
     """The backbone's deletion of a merged PR's head branch (`delete-branch`,
-    with `args` after the subcommand's name), and what it came to. Raises
-    :class:`Unreadable` when the backbone gives no answer, or one that names
-    no way the deletion ended or lacks one of its fields — the branch may then
-    have been deleted, or not.
+    with `args` after the subcommand's name), and what it came to
+    (`deletion_of`). Raises :class:`Unreadable` when the backbone gives no
+    answer, or one pm cannot read — the branch may then have been deleted, or
+    not."""
+    return deletion_of(_first(["delete-branch", *args], config))
+
+
+def deletion_of(document: Mapping[str, Any]) -> BranchDeletion:
+    """What the deletion came to, as `pkit pull-request delete-branch --json`
+    states it. Raises :class:`Unreadable` when the document names no way the
+    deletion ended, or cannot be read by its keys: a `reason_kind` it does not
+    name among them.
 
     The backbone runs the cross-repository guard before it reads the PR; a
     deletion it refused there is :data:`REFUSED`, its `reason_kind`
     :data:`FOREIGN_REPOSITORY`."""
-    document = _first(["delete-branch", *args], config)
-    ended = document.get("outcome")
-    if ended not in _DELETION_ENDS:
-        raise Unreadable(
-            f"the backbone's answer says no way the deletion ended (`outcome`: {ended!r})"
+    _of_version(document)
+    try:
+        ended = keys.one_of(document, "outcome", "", _DELETION_ENDS)
+    except keys.Untold as exc:
+        raise Unreadable(f"the backbone's answer says no way the deletion ended: {exc}") from None
+    try:
+        return BranchDeletion(
+            outcome=ended,
+            branch=keys.text_or_null(document, "branch", "") or "",
+            tip=keys.text_or_null(document, "tip", "") or "",
+            reason_kind=keys.one_of_or_null(document, "reason_kind", "", _DELETION_KINDS) or "",
+            reason=keys.text_or_null(document, "reason", "") or "",
+            merged_head=keys.text_or_null(document, "merged_head", "") or "",
         )
-    for key in _DELETION_FIELDS:
-        if key not in document:
-            raise Unreadable(f"the backbone's answer about the deletion has no `{key}`")
-        if document[key] is not None and not isinstance(document[key], str):
-            raise Unreadable(
-                f"the backbone's answer about the deletion has a `{key}` that is not text: "
-                f"{document[key]!r}"
-            )
-    return BranchDeletion(
-        outcome=str(ended),
-        branch=_text(document.get("branch")),
-        tip=_text(document.get("tip")),
-        reason_kind=_text(document.get("reason_kind")),
-        reason=_text(document.get("reason")),
-        merged_head=_text(document.get("merged_head")),
-    )
-
-
-# The fields of a reading a decision rests on, and their type. Read as false
-# or empty when missing, each would fail open — a missing `has_queue` merges
-# around the queue, a missing `dropped_head` enqueues a dropped head again —
-# so a reading without one, or with one of another type, is no reading.
-_DECIDING: Mapping[str, type] = {
-    "has_queue": bool,
-    "merged": bool,
-    "queued": bool,
-    "dropped_head": bool,
-    "head_oid": str,
-}
+    except keys.Untold as exc:
+        raise Unreadable(
+            f"the backbone's answer about the deletion cannot be read: {exc}"
+        ) from None
 
 
 def decode_reading(value: object) -> Reading:
-    """The reading a backbone document states. Raises :class:`Unreadable` when
-    it states none, or lacks a field a decision rests on (`has_queue`,
-    `merged`, `queued`, `dropped_head`, `head_oid`) or carries one of another
-    type."""
+    """The reading a backbone document states, wherever it holds one. Raises
+    :class:`Unreadable` when it states none, or one with a field :class:`Reading`
+    holds that cannot be read by its key. Read as false or empty when missing,
+    a field would fail open: a missing `has_queue` merges around the queue, a
+    missing `dropped_head` enqueues a dropped head again. A key the reading
+    holds that pm does not read, such as `ahead`, it ignores."""
     if not isinstance(value, Mapping):
         raise Unreadable("the backbone's answer names no reading")
     doc: Mapping[str, Any] = value
-    for key, kind in _DECIDING.items():
-        if key not in doc:
-            raise Unreadable(f"the backbone's reading has no `{key}`")
-        if not isinstance(doc[key], kind):
-            raise Unreadable(
-                f"the backbone's reading has a `{key}` that is not a {kind.__name__}: {doc[key]!r}"
-            )
-    removal = doc.get("removal")
-    return Reading(
-        has_queue=doc["has_queue"],
-        merge_method=_text(doc.get("merge_method")),
-        pr_id=_text(doc.get("pr_id")),
-        pr_state=_text(doc.get("pr_state")),
-        merged_at=_text(doc.get("merged_at")),
-        head_oid=doc["head_oid"],
-        in_queue=doc.get("in_queue") is True,
-        position=_int_or_none(doc.get("position")),
-        entry_state=_text(doc.get("entry_state")),
-        eta_seconds=_int_or_none(doc.get("eta_seconds")),
-        waiting_to_enter=doc.get("waiting_to_enter") is True,
-        ever_queued=doc.get("ever_queued") is True,
-        removal=(
-            Removal(
-                at=_text(removal.get("at")),
-                reason=_text(removal.get("reason")),
-                head_oid=_text(removal.get("head_oid")),
-            )
-            if isinstance(removal, Mapping)
-            else None
-        ),
-        merged=doc["merged"],
-        queued=doc["queued"],
-        squashes=doc.get("squashes") is True,
-        dropped_head=doc["dropped_head"],
-        description=_text(doc.get("description")),
+    where = "reading"
+    try:
+        removal = keys.mapping_or_null(doc, "removal", where)
+        return Reading(
+            has_queue=keys.flag(doc, "has_queue", where),
+            merge_method=keys.text(doc, "merge_method", where),
+            pr_id=keys.text(doc, "pr_id", where),
+            pr_state=keys.text(doc, "pr_state", where),
+            merged_at=keys.text(doc, "merged_at", where),
+            head_oid=keys.text(doc, "head_oid", where),
+            in_queue=keys.flag(doc, "in_queue", where),
+            position=keys.number_or_null(doc, "position", where),
+            entry_state=keys.text(doc, "entry_state", where),
+            eta_seconds=keys.number_or_null(doc, "eta_seconds", where),
+            waiting_to_enter=keys.flag(doc, "waiting_to_enter", where),
+            ever_queued=keys.flag(doc, "ever_queued", where),
+            removal=None if removal is None else _removal(removal, keys.at(where, "removal")),
+            merged=keys.flag(doc, "merged", where),
+            queued=keys.flag(doc, "queued", where),
+            squashes=keys.flag(doc, "squashes", where),
+            dropped_head=keys.flag(doc, "dropped_head", where),
+            description=keys.text(doc, "description", where),
+        )
+    except keys.Untold as exc:
+        raise Unreadable(f"the backbone's reading cannot be read: {exc}") from None
+
+
+def _removal(removal: Mapping[str, Any], where: str) -> Removal:
+    return Removal(
+        at=keys.text(removal, "at", where),
+        reason=keys.text(removal, "reason", where),
+        head_oid=keys.text(removal, "head_oid", where),
     )
 
 
@@ -477,10 +572,31 @@ def _first(args: list[str], config: dict[str, Any]) -> dict[str, Any]:
     return documents[0]
 
 
+def _of_version(document: Mapping[str, Any]) -> None:
+    """Refuse a document of another version than :data:`VERSION`, or of none:
+    the pull-request documents carried theirs from their first release."""
+    version = document.get(VERSION_KEY)
+    if type(version) is not int or version != VERSION:
+        raise Unreadable(f"the backbone answered schema_version {version!r}; pm reads {VERSION}")
+
+
+def _value(document: Mapping[str, Any], key: str, what: str) -> Any:
+    """The value at `key` of the document itself, null included."""
+    try:
+        return keys.value(document, key, "")
+    except keys.Untold as exc:
+        raise Unreadable(f"the backbone's answer names no {what}: {exc}") from None
+
+
 def _raise_unreadable(document: Mapping[str, Any]) -> None:
-    unreadable = document.get("unreadable")
-    if unreadable:
-        raise Unreadable(str(unreadable))
+    """Raise :class:`Unreadable` with why the backbone could not read GitHub,
+    where its document says (`unreadable`, null where it could)."""
+    try:
+        unreadable = keys.text_or_null(document, "unreadable", "")
+    except keys.Untold as exc:
+        raise Unreadable(f"the backbone's answer cannot be read: {exc}") from None
+    if unreadable is not None:
+        raise Unreadable(unreadable or "the backbone could not read GitHub, and gave no reason")
 
 
 # The two streams of a run, as `_answers` tells their lines apart.
@@ -512,7 +628,7 @@ def _answers(
 
     Raises :class:`Unreadable`, naming the cause, when the backbone gives no
     readable answer: no `pkit`, a `pkit` without the command, a run past its
-    bound, a document that is not JSON or of another version.
+    bound, a line that is not a JSON object.
     """
     argv = [*ARGV, *args, "--json"]
     command = f"`{' '.join([*ARGV, *args[:1]])}`"
@@ -593,14 +709,14 @@ def _pump(name: str, stream: IO[str] | None, lines: queue.Queue[tuple[str, str |
 
 
 def _document(line: str, command: str) -> dict[str, Any]:
-    """One line of the backbone's answer, as a document of the version pm reads."""
+    """One line of the backbone's answer, as a JSON object: each reading refuses
+    one of another version than pm reads (`_of_version`)."""
     try:
         document = json.loads(line)
     except ValueError:
         raise Unreadable(f"{command}: its answer is not JSON") from None
-    version = document.get("schema_version") if isinstance(document, dict) else None
-    if version != VERSION:
-        raise Unreadable(f"{command} answered schema_version {version!r}; pm reads {VERSION}")
+    if not isinstance(document, dict):
+        raise Unreadable(f"{command}: its answer is not a document")
     return document
 
 
@@ -637,11 +753,3 @@ def _kill_group(proc: subprocess.Popen[str]) -> None:
 def _which(env: Mapping[str, str]) -> str:
     """The `pkit` a run finds on `env`'s PATH, as a path."""
     return shutil.which(ARGV[0], path=env.get("PATH")) or "not found on PATH"
-
-
-def _text(value: object) -> str:
-    return value if isinstance(value, str) else ""
-
-
-def _int_or_none(value: object) -> int | None:
-    return value if isinstance(value, int) and not isinstance(value, bool) else None

@@ -16,7 +16,7 @@ Standard library only. Knows nothing of the working folder, pieces or libraries.
 from __future__ import annotations
 
 import itertools
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from typing import Protocol
 
 DEFAULT_KEY = "default"
@@ -68,6 +68,14 @@ def parse_key(key: str, axes: Mapping[str, AxisLike]) -> dict[str, str]:
         seen.append(axis)
         combination[axis] = mode
     return combination
+
+
+def narrowed(key: str, axes: Collection[str]) -> str:
+    """The key of the part of the combination `key` names on the axes `axes`: its segments
+    of every other axis left out, such as a brand's own axis where only shared axes are
+    read. Checks nothing of the segments it keeps."""
+    kept = [segment for segment in key.split("+") if segment.partition(".")[0] in axes]
+    return "+".join(kept) if key != DEFAULT_KEY and kept else DEFAULT_KEY
 
 
 def combinations(

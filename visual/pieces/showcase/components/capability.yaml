@@ -1,0 +1,67 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+# A capability in the role it plays: one block for every capability on the connect page,
+# whether it fills a slot or opens one. It is the page's one solid shape, filled with its
+# concept's text colour and lettered in its concept's fill, the pair the foundations
+# declare for its family turned over, so it reads as a thing, stands darkest on the page
+# in light and lightest in dark, and keeps its concept's hue. Its concept's sign ends its
+# first row, as a card's ends its head's row. Its first line says which role it plays, by
+# the job in plain words; its second which capability it is, by its name. A tie that
+# fills a slot starts at it.
+status: experimental
+about: >-
+  A capability in its role: a solid block in its colour family's text colour, holding two
+  lines in the family's fill colour. The first gives the role it plays, by the word for a
+  role and its job in plain words, with the concept's sign at its end; the second gives
+  the capability, by the word for one and its name in the strong type.
+
+fields:
+  type: object
+  required: [role, name]
+  properties:
+    role:
+      type: string
+      description: The role the capability plays, opened by the word for a role, its job in plain words.
+      x-pkit-prose: true
+    name:
+      type: string
+      description: >-
+        The capability, opened by the word for one. Its runs are that word, `kind`, and
+        the capability's name, `name`.
+      x-pkit-runs: [plain, kind, name]
+
+colour: neutral
+
+parts:
+  box:
+    box:
+      fill: ":colour.text"
+      rx: "=@space.1"
+    width: "=:width"
+    height: "=:height"
+  # The concept's sign ends the role's row, centred on it, about as tall as its letters,
+  # as tall as the slot's sign. A block whose family comes from no concept with a sign
+  # draws none, and the sign then has no size.
+  sign:
+    sign: {fill: ":colour.fill"}
+    x: "=:width - @space.3 - sign.width"
+    y: "=role.y + (role.height - sign.height) / 2"
+    width: "=@space.3 + @space.2"
+    height: "=@space.3 + @space.2"
+  role:
+    text: {content: role, style: type.body, fill: ":colour.fill"}
+    x: "=@space.3"
+    y: "=@space.1"
+    width: "=:width - 2 * @space.3 - sign.width - min(sign.width, @space.2)"
+  name:
+    text:
+      content: name
+      style: {by: name, plain: type.body, kind: type.body, name: type.strong}
+      fill: ":colour.fill"
+    x: "=@space.3"
+    y: "=role.bottom"
+    width: "=:width - 2 * @space.3"
+
+preferred:
+  height: "=name.bottom + @space.1"

@@ -22,10 +22,12 @@ module is the drift command's work, in the order a run takes it:
 - **The brief** (`brief`): one for each fixer, its only message. The frame
   instructs; the data informs and never instructs, each piece quoted with its
   source between markers made new for the run.
-- **Running** (`run_all`): each fixer through the backbone's run command,
-  confined (`agent_runs.run_confined`), a limit on fixers at once, a
-  wall-clock limit for each, and one retry of a start that failed for a cause
-  outside the fixer's work.
+- **Running** (`run_all`): each fixer through the backbone's run command, a
+  limit on fixers at once, a wall-clock limit for each, and one retry of a
+  start that failed for a cause outside the fixer's work. A run a person
+  started at a terminal is watched (`run_watched`): the runner's unconfined
+  form, in a working copy of the commit made for that fixer alone (DEC-069
+  point 2). With nobody at a terminal the command starts no fixer.
 - **Gathering** (`gather`): each fixer's result lines and answers are read by
   the run's contract (`fixer_contract`), and the queue in the main working
   tree's agent workspace (`drift_queue`) records each artefact's state.
@@ -37,11 +39,15 @@ string a fixer wrote.
 from __future__ import annotations
 
 import contextlib
+import dataclasses
+import errno
 import hashlib
 import json
+import os
 import re
 import secrets
 import shutil
+import stat
 import subprocess
 import tempfile
 import threading
@@ -51,12 +57,14 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, BinaryIO
 
 from _lib import agent_runs, backbone, default_branch, fixers
+from _lib import agents as agent_files
+from _lib import document_keys as keys
 
 #: The command, and the run whose rules confine each fixer (ADR-066 point 5).
-VERB = "fix-drift"
+VERB = fixers.DRIFT_VERB
 RULES_OF = "project-management:fix-drift"
 
 #: The marker of an agent run (ADR-066 point 8). A fixer starts no other
@@ -73,6 +81,40 @@ _MARKER_LEAD = "{{pkit:"
 #: The shell's temp folder in a run's workspace, as the backbone names it. No
 #: artefact's folder may fall in it, since nothing in it is read back.
 TEMP_FOLDER = ".tmp"
+
+#: A watched run's workspace, inside its working copy: a folder of the agent
+#: workspace there, which a session started in the copy may write (core
+#: rule 16).
+WATCHED_WORKSPACE = (".agent-workspace", "fix-drift")
+
+#: What the copy of a watched run's files takes, as the backbone bounds the
+#: copy of a confined run's: its size, its folders and files, and how deep its
+#: folders go.
+COPY_LIMIT_BYTES = 64 * 1024 * 1024
+COPY_LIMIT_ENTRIES = 10_000
+COPY_LIMIT_DEPTH = 32
+
+#: How the copy opens a folder and a file: never through a link (the
+#: backbone's `agent_confinement`).
+_FOLDER_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+_FILE_FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+_NEW_FILE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+
+#: What git's own guard reads as `.git`: any case, trailing dots and spaces,
+#: an NTFS stream, the short name, and the characters HFS+ ignores.
+_HFS_IGNORED = frozenset(
+    chr(code)
+    for code in (*range(0x200C, 0x2010), *range(0x202A, 0x202F), *range(0x206A, 0x2070), 0xFEFF)
+)
+_NTFS_GIT = re.compile(r"(?:\.git|git~1)[. ]*(?:[:\\].*)?", re.DOTALL)
+
+#: Where a session started in a folder finds an agent's deployed definition.
+DEPLOYED = (".claude", "agents")
+
+#: The backbone's manifest: a folder that holds it is a project's root, so the
+#: backbone runs the runner that project registers for a run there (ADR-066
+#: point 1).
+MANIFEST = (".pkit", "manifest.yaml")
 
 #: The bounds (DEC-056 point 4), each set as the review command sets its own:
 #: a flag, else a variable, else the default.
@@ -98,6 +140,26 @@ _ANCHOR_FINDINGS = {
     "unresolved-kind": "an anchor of a kind nothing installed resolves",
     "no-answer": "an anchor whose resolver gave no answer",
 }
+
+#: Every kind of finding the whole-repository check reports (the CLI reference,
+#: `friction check --all`). A finding of another kind on an artefact is one pm cannot
+#: judge, so no fixer takes the artefact (ADR-097 point 3).
+FINDING_KINDS = frozenset(
+    {
+        "stale",
+        "deferred",
+        "left-out",
+        "dead-anchor",
+        "unresolved-kind",
+        "no-answer",
+        "over-broad",
+        "shared-id",
+        "whole-and-parts",
+        "unreachable",
+        "unreadable",
+        "answered-apart",
+    }
+)
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -196,11 +258,18 @@ def name_problem(name: str) -> str | None:
         return "its name is no plain path inside the repository: it holds a `.` or `..` part"
     if parts[0] == TEMP_FOLDER:
         return f"its folder would fall in the shell's temp folder, `{TEMP_FOLDER}`"
-    if any(part.rstrip(". ").lower() in (".git", "git~1") for part in parts):
+    if any(names_git(part) for part in parts):
         return "its folder holds a part the copy of a run's files refuses, such as `.git`"
     if "/" in entry:
         return "its name is no plain path inside the repository: its entry holds a `/`"
     return None
+
+
+def names_git(part: str) -> bool:
+    """Whether a file system may read one part of a path as `.git`, as git's
+    own guard judges it, and the backbone's copy of a run's files."""
+    stripped = "".join(char for char in part if char not in _HFS_IGNORED)
+    return any(_NTFS_GIT.fullmatch(form.casefold()) for form in (part, stripped))
 
 
 def plain(text: str) -> str:
@@ -256,8 +325,8 @@ def pin_commit(repo_root: Path, run: Runner = backbone.run) -> str:
 @contextlib.contextmanager
 def copy_at(repo_root: Path, commit: str, run: Runner = subprocess.run) -> Iterator[Path]:
     """A detached working copy of `commit`, outside the person's checkout, for
-    the command's own reading; removed on every exit. The fixers run in clones
-    of their own, which the backbone makes (ADR-066 point 7)."""
+    the command's own reading; removed on every exit. Each watched fixer runs
+    in a clone of its own (`clone_at`, ADR-066 point 10)."""
     parent = Path(tempfile.mkdtemp(prefix="pkit-drift-"))
     copy = parent / "copy"
     added = run(
@@ -324,7 +393,9 @@ def read_at(
     repository tracks its deployed agents, and in the person's `checkout`
     otherwise, since a project that keeps them out of git has none at the
     commit. The runner checks the definition at the commit again, as the
-    deploy resolves it, before the run starts (ADR-066 point 3)."""
+    deploy resolves it, before a confined run starts (ADR-066 point 3). A
+    watched run of a name no place of the methodology ships is refused where
+    the commit deploys none (`definition_at_commit`)."""
 
     def at_copy(argv: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         return run(list(argv), **{**kwargs, "cwd": str(copy)})
@@ -338,17 +409,10 @@ def read_at(
         raise Stop(
             f"the {fixers.POINT} point does not resolve, so no fixer starts: {point.why}{detail}"
         )
-    artefacts = _json(["pkit", "friction", "artefacts", "--json"], copy, run)
-    types = artefacts.get("types")
+    artefacts = listed_of(_json(["pkit", "friction", "artefacts", "--json"], copy, run))
 
     def registered() -> Mapping[str, str]:
-        if not isinstance(types, Mapping):
-            raise fixers.Unreadable("`pkit friction artefacts --json` lists no type registries")
-        return {
-            str(name): str(declared.get("component") or "")
-            for name, declared in types.items()
-            if isinstance(declared, Mapping)
-        }
+        return fixers.types_of(artefacts)
 
     tracked = (copy / ".claude" / "agents").is_dir()
     definitions = copy if tracked or checkout is None else checkout
@@ -360,25 +424,119 @@ def read_at(
         raise Stop(
             f"the grant list at {commit[:12]} cannot be read, so no fixer starts: {exc}"
         ) from exc
-    check = _json(["pkit", "friction", "check", "--all", "--json"], copy, run)
-    rules = _json(["pkit", "agents", "rules", RULES_OF, "--json"], copy, run)
-    if rules.get("refused"):
-        raise Stop(f"no fixer can be confined at {commit[:12]}: {rules['refused']}")
-    forms = tuple(str(f) for f in rules.get("forms") or [])
+    check = checked_of(_json(["pkit", "friction", "check", "--all", "--json"], copy, run))
+    forms = forms_of(_json(["pkit", "agents", "rules", RULES_OF, "--json"], copy, run), commit)
     setups = {agent: setup_fingerprint(copy, agent) for agent in point.agents}
     return Reading(commit, point, checked, answers, check, artefacts, forms, setups)
 
 
 def explain(copy: Path, name: str, run: Runner = backbone.run) -> Mapping[str, Any]:
     """`pkit friction explain <name> --json` at the working copy."""
-    return _json(["pkit", "friction", "explain", name, "--json"], copy, run)
+    return explained_of(_json(["pkit", "friction", "explain", name, "--json"], copy, run))
+
+
+# --- reading the backbone's documents by their keys (ADR-097 point 3) ----------------
+#
+# Each document is read once, as it arrives: every key the plan, the fingerprints and
+# the upstreams read below is there, of its type, or the document is one pm cannot
+# read and `Stop` says why. So the readings below never take a key the backbone did
+# not give for a default.
+
+
+def _readable(
+    argv: str, document: Mapping[str, Any], read: Callable[[], None], *, absent: int | None = None
+) -> None:
+    """`read` over `document`, a key it cannot tell anything from a Stop. A document
+    without `schema_version` is of version `absent`: 1 for one that gained the key after
+    it first shipped (the CLI reference), and none for another."""
+    version = document.get("schema_version", absent)
+    if type(version) is not int or version != 1:
+        raise Stop(f"`{argv}` answered schema_version {version!r}; pm reads 1")
+    try:
+        read()
+    except keys.Untold as exc:
+        raise Stop(f"`{argv}` answered a document pm cannot read: {exc}") from exc
+
+
+def checked_of(check: Mapping[str, Any]) -> Mapping[str, Any]:
+    """The whole-repository check, `pkit friction check --all --json`, each artefact's
+    location and state and each finding's kind and location read: a finding's location
+    is null where it names no artefact, as the contract allows."""
+
+    def read() -> None:
+        for where, report in keys.objects(check, "artefacts", ""):
+            keys.text(report, "location", where)
+            keys.text(report, "state", where)
+        for where, finding in keys.objects(check, "findings", ""):
+            keys.text(finding, "kind", where)
+            keys.text_or_null(finding, "location", where)
+
+    _readable("pkit friction check --all --json", check, read, absent=1)
+    return check
+
+
+def listed_of(artefacts: Mapping[str, Any]) -> Mapping[str, Any]:
+    """The discovery, `pkit friction artefacts --json`, each artefact's location, id,
+    type, tie and anchors read."""
+
+    def read() -> None:
+        for where, item in keys.objects(artefacts, "artefacts", ""):
+            keys.text(item, "location", where)
+            keys.text(item, "id", where)
+            keys.text_or_null(item, "type", where)
+            keys.listed(item, "type_conflict", where)
+            anchors = keys.mapping(item, "anchors", where)
+            for kind in anchors:
+                keys.texts(anchors, kind, f"{where}.anchors")
+
+    _readable("pkit friction artefacts --json", artefacts, read)
+    return artefacts
+
+
+def explained_of(explained: Mapping[str, Any]) -> Mapping[str, Any]:
+    """One artefact's friction, `pkit friction explain --json`, its revalidation point
+    and each finding's kind, anchor and commits read."""
+
+    def read() -> None:
+        point = keys.mapping_or_null(explained, "revalidation_point", "")
+        if point is not None:
+            keys.text(point, "commit", "revalidation_point")
+        for where, finding in keys.objects(explained, "findings", ""):
+            keys.one_of(finding, "kind", where, FINDING_KINDS)
+            anchor = keys.mapping_or_null(finding, "anchor", where)
+            if anchor is not None:
+                keys.text(anchor, "kind", f"{where}.anchor")
+                keys.text(anchor, "value", f"{where}.anchor")
+            for inner, commit in keys.objects(finding, "commits", where):
+                keys.text(commit, "commit", inner)
+
+    _readable("pkit friction explain --json", explained, read, absent=1)
+    return explained
+
+
+def forms_of(rules: Mapping[str, Any], commit: str) -> tuple[str, ...]:
+    """The forms a fixer's brief names, from `pkit agents rules --json` at `commit`.
+    Raises Stop where the rules are refused, or cannot be read."""
+    found: list[tuple[str | None, tuple[str, ...]]] = []
+
+    def read() -> None:
+        found.append((keys.text_or_null(rules, "refused", ""), keys.texts(rules, "forms", "")))
+
+    _readable(f"pkit agents rules {RULES_OF} --json", rules, read)
+    ((refused, forms),) = found
+    if refused:
+        raise Stop(
+            f"the rules of a fixer's run are refused at {commit[:12]}, so no fixer starts: "
+            f"{refused}"
+        )
+    return forms
 
 
 def upstreams_at(copy: Path, run: Runner = backbone.run) -> dict[str, list[str]]:
     """Each artefact at the working copy, by location, with the locations of the
     artefacts it anchors on, read from `pkit friction artefacts --json`. Applying
     accepted proposals follows it, upstream first (DEC-056 point 6)."""
-    artefacts = _json(["pkit", "friction", "artefacts", "--json"], copy, run)
+    artefacts = listed_of(_json(["pkit", "friction", "artefacts", "--json"], copy, run))
     by_key = _artefact_index(artefacts)
     return {
         str(item["location"]): _upstreams(item, by_key)
@@ -527,6 +685,28 @@ def _upstreams(item: Mapping[str, Any], by_key: Mapping[str, Mapping[str, Any]])
     return out
 
 
+def judged(check: Mapping[str, Any]) -> tuple[list[tuple[str, str]], dict[str, str]]:
+    """Each artefact the check reports, by location, with its state; and why the plan
+    lists an artefact rather than take it, by location and by file, for an anchor
+    finding validation reports and a finding of a kind pm does not know. A finding with
+    no location names no artefact, so it keeps none from a fixer."""
+    reports = [(str(r["location"]), str(r["state"])) for r in check["artefacts"]]
+    flagged: dict[str, str] = {}
+    for finding in check["findings"]:
+        kind, location = str(finding["kind"]), finding["location"]
+        if location is None:
+            continue
+        if kind in _ANCHOR_FINDINGS:
+            why = f"it has {_ANCHOR_FINDINGS[kind]}, which validation reports"
+        elif kind not in FINDING_KINDS:
+            why = f"the check could not judge it (a finding of the kind {kind!r})"
+        else:
+            continue
+        flagged.setdefault(location.partition("#")[0], why)
+        flagged.setdefault(location, why)
+    return reports, flagged
+
+
 def plan(
     reading: Reading,
     index: Mapping[str, Any],
@@ -546,25 +726,16 @@ def plan(
     `explained(name)` reads an artefact's friction; `classes` maps each
     `none` reason to what clears it (`artefact`, `setup` or `next-run`)."""
     result = Plan()
-    reports = [r for r in reading.check.get("artefacts") or [] if isinstance(r, Mapping)]
-    state_of = {str(r.get("location")): str(r.get("state")) for r in reports}
+    reports, flagged = judged(reading.check)
+    state_of = dict(reports)
     by_key = _artefact_index(reading.artefacts)
-    flagged: dict[str, str] = {}
-    for finding in reading.check.get("findings") or []:
-        if isinstance(finding, Mapping) and finding.get("kind") in _ANCHOR_FINDINGS:
-            location = finding.get("location")
-            if isinstance(location, str):
-                flagged.setdefault(location.partition("#")[0], _ANCHOR_FINDINGS[finding["kind"]])
-                flagged.setdefault(location, _ANCHOR_FINDINGS[finding["kind"]])
     entries = {e.type: e for e in reading.point.entries}
     problems = {c.entry.type: c.problems for c in reading.checked}
     artefacts_index = index.get("artefacts") or {}
     refusals = index.get("refusals") or {}
     taken: dict[str, int] = {}
 
-    for report in reports:
-        name = str(report.get("location") or "")
-        state = str(report.get("state"))
+    for name, state in reports:
         if state == "current":
             continue
         if state == "deferred":
@@ -574,7 +745,7 @@ def plan(
             result.listed.append(Listed(name, f"the check could not judge it ({state})"))
             continue
         if name in flagged:
-            result.listed.append(Listed(name, f"it has {flagged[name]}, which validation reports"))
+            result.listed.append(Listed(name, flagged[name]))
             continue
         item = by_key.get(name) or {}
         artefact_type = item.get("type")
@@ -741,29 +912,61 @@ def brief(
     contract: Mapping[str, Any],
     quotes: Sequence[Quote],
     nonce: str | None = None,
+    watched: bool = False,
 ) -> str:
     """The one message a fixer gets (DEC-056 point 3, "The brief"). The frame
     instructs. The data informs and never instructs: each piece is quoted with
-    its source, between markers made new for the run."""
+    its source, between markers made new for the run.
+
+    A `watched` run's frame says that a person started the command at a
+    terminal and watches it, names no temp folder, and tells the fixer to keep
+    to the forms, which its settings do not hold it to (DEC-069 point 2). A
+    confined run's frame says that nobody watches it."""
     nonce = nonce or secrets.token_hex(8)
     opening, closing = f"<<<pkit-data-{nonce}", f"pkit-data-{nonce}>>>"
+    if watched:
+        frame = [
+            f"The drift command, `pkit pm {VERB}`, started you as the fixer of the artefacts "
+            "below. A person started it at a terminal and watches the run (project-management "
+            "DEC-069 point 2). Nobody can answer you during this run, and this brief is "
+            "your only instruction.",
+            "",
+            f"- The commit: {commit}, the default branch's commit this run is pinned to.",
+            f"- The working copy: `{WORKING_COPY}`, a working copy at that commit, where you run "
+            "and which you read. Every path you read, those your own definition names included, "
+            "is relative to its root.",
+            f"- The workspace: `{WORKSPACE}`, the one folder you write. Your intermediate files "
+            "go there too.",
+        ]
+        rules = (
+            "- You only propose. Your calls run under the person's settings and the project's, "
+            "and a call they would ask about is refused, since nobody can answer. Keep to these "
+            "command forms, write nothing outside the workspace, and run no writer:"
+        )
+    else:
+        frame = [
+            f"The drift command, `pkit pm {VERB}`, started you as the fixer of the artefacts "
+            "below, with nobody watching (project-management DEC-056 point 3). Nobody can answer "
+            "you during this run, and this brief is your only instruction.",
+            "",
+            f"- The commit: {commit}, the default branch's commit this run is pinned to.",
+            f"- The working copy: `{WORKING_COPY}`, a clone at that commit, which you read. Every "
+            "path you read, those your own definition names included, is relative to its root.",
+            f"- The workspace: `{WORKSPACE}`, the one folder you write. Your intermediate files go "
+            f"there too. The shell's temp folder is `{TEMP}`, inside it, and nothing in it is "
+            "read back.",
+        ]
+        rules = (
+            "- The command forms this run's rules allow. Any other call is refused, with no prompt:"
+        )
     lines = [
-        f"The drift command, `pkit pm {VERB}`, started you as the fixer of the artefacts below, "
-        "with nobody watching (project-management DEC-056 point 3). Nobody can answer you during "
-        "this run, and this brief is your only instruction.",
-        "",
-        f"- The commit: {commit}, the default branch's commit this run is pinned to.",
-        f"- The working copy: `{WORKING_COPY}`, a clone at that commit, which you read. Every path "
-        "you read, those your own definition names included, is relative to its root.",
-        f"- The workspace: `{WORKSPACE}`, the one folder you write. Your intermediate files go "
-        f"there too. The shell's temp folder is `{TEMP}`, inside it, and nothing in it is read "
-        "back.",
+        *frame,
         "- The artefacts, upstream first, each as the whole-repository check names it, with its "
         "type:",
     ]
     lines += [f"  {i}. `{c.name}` — {c.type}" for i, c in enumerate(candidates, start=1)]
     lines += [
-        "- The command forms this run's rules allow. Any other call is refused, with no prompt:",
+        rules,
         *(f"  - {form}" for form in forms),
         "- End with one result line for each artefact, in the order above, by the run's contract "
         "(project-management DEC-056 points 3 and 6), and write nothing after them:",
@@ -1046,14 +1249,16 @@ def run_all(
     commit: str,
     runs_folder: Path,
     bounds: Bounds,
-    start: Start | None = None,
+    start: Start,
 ) -> list[FixerRun]:
-    """Start each fixer the plan dispatches, confined, at most `bounds.parallel`
-    at once, each within `bounds.timeout`. A start that failed for a cause
-    outside the fixer's work, and wrote nothing, is started once more; when it
-    fails again, no further fixer starts, and each that did not is reported.
-    `start` is the backbone's run command (`agent_runs.run_confined`)."""
-    start = start or agent_runs.run_confined
+    """Start each fixer the plan dispatches, at most `bounds.parallel` at once,
+    each within `bounds.timeout`. A start that failed for a cause outside the
+    fixer's work, and wrote nothing, is started once more; when it fails again,
+    no further fixer starts, and each that did not is reported.
+
+    `start(agent, brief, commit=, files_to=, limit_seconds=, effort=)` runs one
+    fixer and leaves its files in `files_to`: `run_watched` for a run a person
+    watches."""
     agents = [a for a, cs in plan_.dispatch.items() if cs]
     stopped: list[str] = []
     guard = threading.Lock()
@@ -1071,7 +1276,6 @@ def run_all(
                 agent,
                 briefs[agent],
                 commit=commit,
-                rules_of=RULES_OF,
                 files_to=files,
                 limit_seconds=bounds.timeout,
                 effort=bounds.effort,
@@ -1091,6 +1295,351 @@ def run_all(
     workers = max(1, min(len(agents), bounds.parallel or len(agents) or 1))
     with ThreadPoolExecutor(max_workers=workers) as pool:
         return list(pool.map(one, agents))
+
+
+Copy = Callable[[Path, str], contextlib.AbstractContextManager[Path]]
+
+
+def run_watched(
+    agent: str,
+    brief: str,
+    *,
+    commit: str,
+    files_to: Path,
+    limit_seconds: int,
+    effort: str | None = None,
+    repo_root: Path,
+    copy: Copy | None = None,
+    start: Callable[..., agent_runs.AgentRun] | None = None,
+) -> agent_runs.AgentRun:
+    """Run one fixer watched (DEC-069 point 2): through the backbone's run
+    command in the runner's unconfined form, as the review command runs its
+    reviewers, in a clone of `commit` made for this fixer alone (`clone_at`),
+    never in the person's checkout. The fixer runs under the person's settings
+    and the project's there, and writes its workspace inside the clone, where a
+    session started in the clone may write (`WATCHED_WORKSPACE`). A commit that
+    holds anything at the workspace's first folder refuses the run, and the
+    workspace is made as folders of its own. The agent's definition that runs
+    is the commit's: the backbone runs the runner the clone registers, which
+    picks a shipped agent's definition in the clone, and the harness finds any
+    other in the copy the commit deploys. For a name no place ships, a commit
+    that deploys none refuses the run (`definition_at_commit`). The run asks
+    the backbone to carry the person's local settings, the one file the clone
+    takes from the checkout, into the clone: the adapter's runner knows which
+    file holds them, and copies it before the harness starts (ADR-066 points 1
+    and 10).
+
+    The drift command names the run's folders in the brief itself, since the
+    backbone fills a brief's markers only for a confined run. Once the run
+    ends, the workspace's files are copied into `files_to` (`copy_files`), and
+    the clone is removed. An entry the copy refuses sets the run's files aside,
+    as a breach does. Nothing else checks a watched run. Never raises for what
+    the run did; an interrupt removes the clone, then propagates."""
+    copy = copy or clone_at
+    start = start or agent_runs.run_agent
+    try:
+        with copy(repo_root, commit) as working_copy:
+            workspace = make_watched_workspace(working_copy)
+            if isinstance(workspace, agent_runs.AgentRun):
+                return workspace
+            refusal = definition_at_commit(working_copy, agent)
+            if refusal is not None:
+                return refusal
+            run = start(
+                agent,
+                fill_folders(brief, working_copy=working_copy, workspace=workspace),
+                folder=working_copy,
+                limit_seconds=limit_seconds,
+                effort=effort,
+                local_settings=True,
+            )
+            refused = copy_files(workspace, files_to)
+    except Stop as stop:
+        return agent_runs.AgentRun(agent_runs.NOT_STARTED, reason=str(stop))
+    if refused:
+        return dataclasses.replace(
+            run, check=agent_runs.BREACH, changes=tuple(refused), files=str(files_to)
+        )
+    return dataclasses.replace(run, files=str(files_to))
+
+
+@contextlib.contextmanager
+def clone_at(repo_root: Path, commit: str, run: Runner = subprocess.run) -> Iterator[Path]:
+    """A clone of the repository at `commit`, detached, for one watched fixer:
+    outside the person's checkout, with a git folder of its own, so nothing the
+    fixer does to the clone reaches the person's references, hooks or
+    configuration, and it holds no hook. Git reads the repository's objects by
+    reference and writes none of them, and the clone keeps no remote to push
+    to. Removed on every exit."""
+    parent = Path(tempfile.mkdtemp(prefix="pkit-fixer-"))
+    clone = parent / "copy"
+    at = ["git", "-C", str(clone)]
+    cloning = ["git", "clone", "--quiet", "--shared", "--no-checkout", "--template=", "--"]
+    steps = (
+        [*cloning, str(repo_root), str(clone)],
+        [*at, "remote", "remove", "origin"],
+        [*at, "-c", "advice.detachedHead=false", "checkout", "--quiet", "--detach", commit],
+    )
+    try:
+        for argv in steps:
+            done = run(argv, capture_output=True, text=True, check=False)
+            if done.returncode != 0:
+                said = (done.stderr or "").strip().splitlines()
+                raise Stop(
+                    f"a clone of {commit[:12]} cannot be made" + (f": {said[-1]}" if said else "")
+                )
+        yield clone
+    finally:
+        shutil.rmtree(parent, ignore_errors=True)
+
+
+def make_watched_workspace(working_copy: Path) -> Path | agent_runs.AgentRun:
+    """A watched run's workspace in `working_copy`, made as folders of its own;
+    or the refused run, where the commit holds anything at its first folder or
+    a folder cannot be made (ADR-060's guards)."""
+    first = WATCHED_WORKSPACE[0]
+    if os.path.lexists(working_copy / first):
+        return agent_runs.AgentRun(
+            agent_runs.REFUSED,
+            reason=f"the commit holds something at `{first}`, where the run's workspace goes",
+        )
+    workspace = working_copy
+    try:
+        for part in WATCHED_WORKSPACE:
+            workspace = workspace / part
+            workspace.mkdir(mode=0o700)
+    except OSError as exc:
+        return agent_runs.AgentRun(
+            agent_runs.REFUSED,
+            reason=f"the run's workspace, {workspace}, cannot be made: {exc.strerror or exc}",
+        )
+    return workspace
+
+
+def definition_at_commit(working_copy: Path, agent: str) -> agent_runs.AgentRun | None:
+    """None where the definition a watched run of `agent` runs is the one at
+    the commit; else the refused run (DEC-069 point 2).
+
+    For a name some place of the methodology ships, in a clone that is a
+    project's root, the backbone runs the runner the clone registers, and that
+    runner passes the definition it picks in the clone itself (ADR-066 points 1
+    and 10). So the run needs no deployed copy. For any other name, the harness
+    loads the agent by its name, so the commit must deploy it, as a file in
+    folders of their own, where the harness finds it in the clone. A project
+    that keeps its deployed definitions out of git has none at the commit, and
+    the harness would find the person's own, which may not have merged."""
+    if working_copy.joinpath(*MANIFEST).is_file() and agent_files.agent_is_shipped(
+        working_copy, agent
+    ):
+        return None
+    relative = Path(*DEPLOYED, f"{agent}.md")
+    shown = relative.as_posix()
+    held = (working_copy / DEPLOYED[0], working_copy.joinpath(*DEPLOYED), working_copy / relative)
+    if any(path.is_symlink() for path in held):
+        return agent_runs.AgentRun(
+            agent_runs.REFUSED, reason=f"the commit holds a symbolic link on the way to `{shown}`"
+        )
+    if not held[-1].is_file():
+        return agent_runs.AgentRun(
+            agent_runs.REFUSED,
+            reason=f"no place of the methodology ships {agent}, and the commit deploys no "
+            f"definition of it at `{shown}`, so a watched run would run one that may not "
+            "have merged",
+        )
+    return None
+
+
+def fill_folders(brief: str, *, working_copy: Path, workspace: Path) -> str:
+    """A watched run's brief with its folders named in place of their markers.
+    Quoted data holds no marker (`neutralised`), so only the frame changes."""
+    return brief.replace(WORKING_COPY, str(working_copy)).replace(WORKSPACE, str(workspace))
+
+
+def copy_files(workspace: Path, files_to: Path) -> list[str]:
+    """Copy a watched run's workspace into `files_to`, with the guards of the
+    backbone's copy of a confined run's files (`agent_confinement.copy_files`,
+    ADR-066 point 7). Returns each entry refused, one line each, and copies
+    the rest.
+
+    Each folder and file is opened from its parent folder, following no link,
+    on both sides. So a process the run left behind cannot swap a link in for a
+    folder and have it followed. Only folders and regular files are copied. A
+    link is refused, as is anything else, a file with more than one link, a
+    name a file system may read as `.git`, and an entry that already exists in
+    `files_to`. The copy is bounded in bytes, entries and depth. And since the
+    fixer's settings may let it write the queue, a `files_to` that is not empty
+    when the copy starts refuses the copy whole: what is in it skipped these
+    guards."""
+    copier = _Copy(bytes_left=COPY_LIMIT_BYTES)
+    try:
+        target = os.open(files_to, _FOLDER_FLAGS)
+    except OSError as exc:
+        return [f"refused: the run's folder in the queue: {_why_not_opened(exc)}"]
+    try:
+        try:
+            written = sorted(os.listdir(target))
+        except OSError as exc:
+            return [
+                f"refused: the run's folder in the queue: cannot be read: {exc.strerror or exc}"
+            ]
+        if written:
+            return [
+                f"refused: {_shown(name)}: written during the run into the run's folder in the "
+                "queue, not copied from its workspace"
+                for name in written
+            ]
+        try:
+            handle = os.open(workspace, _FOLDER_FLAGS)
+        except OSError as exc:
+            return [f"refused: .: {_why_not_opened(exc)}"]
+        try:
+            copier.folder(handle, target, "", 0)
+        finally:
+            os.close(handle)
+    finally:
+        os.close(target)
+    return copier.refused
+
+
+def _shown(name: str) -> str:
+    """A path as a line of the copy shows it: as it is, or quoted with its
+    escapes where it holds a character that is not printable."""
+    return name if name.isprintable() else repr(name)
+
+
+def _why_not_opened(exc: OSError) -> str:
+    """Why an entry could not be opened, as a line of the copy names it."""
+    if exc.errno == errno.ELOOP:  # what opening a link without following it gives
+        return "a symbolic link"
+    if exc.errno == errno.ENOTDIR:  # a folder swapped for something else, a link too
+        return "no longer a folder when it was opened"
+    return f"cannot be read: {exc.strerror or exc}"
+
+
+@dataclass
+class _Copy:
+    """One copy of a watched run's files: what is left of its byte bound, the
+    entries it has met, and what it refused."""
+
+    bytes_left: int
+    entries: int = 0
+    stopped: bool = False
+    refused: list[str] = field(default_factory=list[str])
+
+    def refuse(self, name: str, why: str) -> None:
+        self.refused.append(f"refused: {_shown(name)}: {why}")
+
+    def folder(self, handle: int, target: int, rel: str, depth: int) -> None:
+        """Copy what the open folder `handle` holds into the open folder
+        `target`. `rel` names the folder from the workspace, at depth 0."""
+        try:
+            with os.scandir(handle) as listing:
+                names = sorted(entry.name for entry in listing)
+        except OSError as exc:
+            self.refuse(rel or ".", f"cannot be read: {exc.strerror or exc}")
+            return
+        for name in names:
+            if self.stopped:
+                return
+            path = f"{rel}/{name}" if rel else name
+            self.entries += 1
+            if self.entries > COPY_LIMIT_ENTRIES:
+                self.refuse(
+                    path,
+                    f"it and every entry after it: past the bound of {COPY_LIMIT_ENTRIES} "
+                    "entries on the run's files",
+                )
+                self.stopped = True
+                return
+            if names_git(name):
+                self.refuse(path, "a name a file system may read as .git")
+                continue
+            try:
+                held = os.stat(name, dir_fd=handle, follow_symlinks=False)
+            except OSError as exc:
+                self.refuse(path, f"cannot be read: {exc.strerror or exc}")
+                continue
+            if stat.S_ISLNK(held.st_mode):
+                self.refuse(path, "a symbolic link")
+            elif stat.S_ISDIR(held.st_mode):
+                self.subfolder(handle, name, target, path, depth + 1)
+            elif stat.S_ISREG(held.st_mode):
+                self.file(handle, name, target, path)
+            else:
+                self.refuse(path, "not a regular file")
+
+    def subfolder(self, parent: int, name: str, target: int, path: str, depth: int) -> None:
+        """Copy the folder `name` of the open folder `parent` into a new folder
+        of the same name in the open folder `target`, each opened from its
+        parent."""
+        if depth > COPY_LIMIT_DEPTH:
+            self.refuse(path, f"past the bound of {COPY_LIMIT_DEPTH} folders deep")
+            return
+        try:
+            handle = os.open(name, _FOLDER_FLAGS, dir_fd=parent)
+        except OSError as exc:
+            self.refuse(path, _why_not_opened(exc))
+            return
+        try:
+            try:
+                os.mkdir(name, 0o700, dir_fd=target)
+                made = os.open(name, _FOLDER_FLAGS, dir_fd=target)
+            except OSError as exc:
+                self.refuse(path, f"cannot be written: {exc.strerror or exc}")
+                return
+            try:
+                self.folder(handle, made, path, depth)
+            finally:
+                os.close(made)
+        finally:
+            os.close(handle)
+
+    def file(self, parent: int, name: str, target: int, path: str) -> None:
+        """Copy the file `name` of the open folder `parent`, judged by what was
+        opened, into a new file of the open folder `target`."""
+        try:
+            handle = os.open(name, _FILE_FLAGS, dir_fd=parent)
+        except OSError as exc:
+            self.refuse(path, _why_not_opened(exc))
+            return
+        with os.fdopen(handle, "rb") as reader:
+            held = os.fstat(reader.fileno())
+            if not stat.S_ISREG(held.st_mode):
+                self.refuse(path, "not a regular file")
+            elif held.st_nlink > 1:
+                self.refuse(path, "a file with more than one link")
+            elif held.st_size > self.bytes_left:
+                self.refuse(path, self._past_the_bytes())
+            else:
+                copied = self._write(reader, target, name)
+                if isinstance(copied, str):
+                    self.refuse(path, copied)
+                else:
+                    self.bytes_left -= copied
+
+    def _write(self, reader: BinaryIO, target: int, name: str) -> int | str:
+        """Write what `reader` holds into `name`, a new file of the open folder
+        `target`. The bytes written, or why not, the file then removed."""
+        try:
+            written = os.open(name, _NEW_FILE_FLAGS, 0o600, dir_fd=target)
+        except OSError as exc:
+            return f"cannot be written: {exc.strerror or exc}"
+        size = 0
+        with os.fdopen(written, "wb") as writer:
+            while chunk := reader.read(1024 * 1024):
+                size += len(chunk)
+                if size > self.bytes_left:
+                    break
+                writer.write(chunk)
+        if size > self.bytes_left:
+            with contextlib.suppress(OSError):
+                os.unlink(name, dir_fd=target)
+            return self._past_the_bytes()
+        return size
+
+    @staticmethod
+    def _past_the_bytes() -> str:
+        return f"past the bound of {COPY_LIMIT_BYTES} bytes on the run's files"
 
 
 # --- gathering -----------------------------------------------------------------------

@@ -484,6 +484,32 @@ def test_submit_confirms_posts_stamps_and_cleans(target: Path, monkeypatch) -> N
 
 
 @pytest.mark.usefixtures("at_a_terminal")
+def test_submit_refuses_before_it_posts_a_note_that_came_to_hold_a_stamp_field(
+    target: Path, monkeypatch
+) -> None:
+    # #2923: the note gained `reported:` after it was staged; the post would leave it twice.
+    note = _note(target, "# Note\n\nclean note body\n")
+    draft_id = _stage_via_cli(target, "--scratchpad", note.name)
+    note.write_text(
+        note.read_text(encoding="utf-8").replace("started:", "reported: not yet\nstarted:"),
+        encoding="utf-8",
+    )
+    posted = {"v": False}
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    monkeypatch.setattr(
+        rep,
+        "file_report_via_gh",
+        lambda *a, **k: posted.__setitem__("v", True) or "x",
+    )
+    res = CliRunner().invoke(main, ["report", "submit", draft_id], input="y\n")
+    assert res.exit_code == 1, res.output
+    assert "'reported' on line 4" in res.output
+    assert posted["v"] is False
+    assert rep.load_staged(target, draft_id) is not None
+    assert note.is_file()
+
+
+@pytest.mark.usefixtures("at_a_terminal")
 def test_submit_decline_keeps_draft_and_posts_nothing(target: Path, monkeypatch) -> None:
     draft_id = _stage_via_cli(target)
     posted = {"v": False}

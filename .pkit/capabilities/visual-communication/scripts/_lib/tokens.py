@@ -1,31 +1,53 @@
 """Brands: their design tokens and Resolver document in the DTCG format 2025.10, the
-foundations' declarations of the shared roles, axes, colour families and pairs (DEC-004),
-and the own roles of the component libraries resolved with a brand (DEC-008).
+foundations' declarations of the shared roles, axes, colour families, shapes, an order's
+roles and pairs (DEC-004, DEC-032 point 1, DEC-036 point 1),
+the own roles of the component libraries resolved with a brand (DEC-008), and the
+component tokens of their components (DEC-035).
 
 **The foundations' declarations** (`roles.yaml`, format `roles`) name each shared role with
 its type, and a default that aliases an older role where it has one; each shared axis with
 its kind, its modes and its default; the colour families, each a mapping of its members to
-colour roles; and the pairs of colour roles that must contrast, at WCAG's levels. A shared
-role carries no value, so it is no DTCG token.
+colour roles; the shapes a notation maps a concept to, each an outline by its name
+(`outlines`); an order's roles, where they declare them (`Order`): which colour role is the
+first end, which the last, which the text on every step and which the page's ground, the
+first three in no family, and no family named `order`; and the pairs of colour roles that
+must contrast, at WCAG's levels. A shared role carries no value, so it is no DTCG token. A
+role of the type `picture` takes a picture file of the brand as its value; it carries no
+default, and no brand owes it a value (DEC-025 point 4).
 
 **A component library's own roles** (`roles.yaml` of a library of kind `components` other
 than the foundations, `read_own_roles`) lie under a group of its name, none under the group
 of component tokens (DEC-004 point 7). Each has a type, and may carry a default: an alias
 to another of its own roles, or to a role of a library it builds on, the shared roles
 included, of the same type, never to a value or a component token (DEC-008 point 3). Its
-pairs each name one of its own roles. It declares no axes and no colour families, which
-the foundations' alone are. What is wrong in it never refuses it: it is kept as its
-findings, each naming its version, and a role or a pair that cannot be read is left out.
+pairs each name one of its own roles. It declares no axes, no colour families, no shapes,
+no order's roles and no picture role, which the foundations' alone are. What is wrong in it
+never refuses it: it is kept as its findings, each naming its version, and a role or a pair
+that cannot be read is left out.
+
+**A component token** (`read_component_tokens`) is declared in its component's own file,
+under `tokens`, by its name alone, as `{type, default}`: its path is
+`component.<library>.<component>.<name>`. Its type is any a role takes but a picture, and
+its default, always given, aliases what a library's own role's default may alias, never a
+component token (DEC-035 points 1, 2 and 4). It is resolved as a library's own role is, so
+the scope holds it among its library's roles, and tells it apart (`Scope.tokens`). A token
+that cannot be read is left out, its finding in its component's file. No pair names one
+(DEC-035 point 8). Only its component reads it, which the engine judges where it reads the
+component (`layout`). The foundations ship components too, so theirs declare tokens at
+`component.foundations`, as any library's do, though the foundations have no own roles.
 
 **A scope** (`Scope`) is the roles one resolution reads: the foundations' and the own roles
 of each component library resolved with them, one version of each, under a lock or as a
 version is checked alone (DEC-008 point 1). It judges each library's defaults and pairs
 against the libraries it builds on there: a default that aliases a component token, a
-role of another type or of a library it does not build on, a default that leads nowhere
-or a loop of defaults, each fails; a pair that, its own roles replaced by their defaults,
-falls on no pair the foundations, the library or a library it builds on declares at a
-level as strict fails; a role whose chain of defaults does not end at a shared role is
-stated as a fact. A role's type reads from the scope with no brand.
+role of an order (DEC-032 point 6), a role of another type or of a library it does not
+build on, a default that leads nowhere or a loop of defaults, each fails; a pair that, its
+own roles replaced by their defaults, falls on no pair the foundations, the library or a
+library it builds on declares at a level as strict fails; a role whose chain of defaults
+does not end at a shared role is stated as a fact. A role's type reads from the scope with
+no brand. It holds each component library, one that declares neither an own role nor a
+component token among them, since a brand that names a library draws its tops too (DEC-009
+point 3).
 
 **A brand** is one library version of kind `brand`. Its `library.yaml` names the DTCG
 version, its Resolver document, its open roles, and the brand it builds on as its base, if
@@ -42,35 +64,75 @@ format may add:
 - *The Resolver document* has `version`, `sets` and `modifiers`, and `resolutionOrder`
   naming each set and modifier once as `{"$ref": "#/sets/<n>"}` or
   `{"$ref": "#/modifiers/<n>"}`; later wins. A source is `{"$ref": "<token file>"}`, a
-  file of the brand's version folder. Each modifier is a shared axis: its contexts are the
-  axis's modes, and its default the axis's. A brand may leave out an axis it does not vary.
+  file of the brand's version folder. A modifier is a shared axis the brand varies:
+  its contexts are the modes it gives, the axis's default among them, and its default the
+  axis's (DEC-004 point 1). A brand may leave out an axis it does not vary. A modifier may
+  hold `$extensions`. One that names its kind in the capability's extension key,
+  `{"kind": "value"}` or `{"kind": "size"}`, is an axis of the brand's own (DEC-004 point
+  2): its contexts are its modes, two or more, its default one of them. Only a brand that
+  builds on no other declares one, and none takes a shared axis's name (`own-axis-name`),
+  so a new shared axis breaks such a brand (DEC-004 point 5).
 - *Fonts* lie in the capability's extension key, `pkit.visual-communication`, on a
   `fontFamily` token: `files` maps each family to its file in the brand's version folder,
   or to `{"hash": "sha256:<hex>"}` for a file in the location's `fonts/`; `measure` says
   how it is measured, `file` alone in format 1.
+- *A picture role's value* is an empty group at the role's path, with no `$type`, since
+  DTCG has no type for a file (DEC-025 point 4). Its `$extensions` name the file in the
+  capability's extension key, `{"file": "<name>"}`, by its bare name in the version's
+  `pictures/`. It aliases nothing, no token aliases it, and it merges as a token does.
+
+**The axes a brand has** (DEC-004 point 2, DEC-021 point 2), which its keys span:
+
+- *every shared value axis, whole:* a mode the brand does not give takes its values at
+  the axis's default, and in a brand built on another its base's values there. So a new
+  mode of the foundations reads no released brand as broken;
+- *a shared size axis only where it gives one:* a brand with no base has one where a
+  modifier varies it, with the modes that modifier gives. A brand built on another has
+  its base's sizes. So a brand that gives no size keeps its combinations when the
+  foundations declare a size axis, and a piece that names a size it lacks is refused,
+  the refusal naming the brand, and its base, that do not give it (`combinations_of`);
+- *each axis of its own, whole,* in a brand with no base, and a brand built on it keeps
+  it. An `Axis` of a brand's own is `own`. A key, a combination and a name in code read it
+  as they read a shared one (DEC-004 point 3).
 
 **Resolution** merges the brand's sources in resolution order for a combination, over the
-roles' defaults, then resolves aliases. Every shared role must resolve in every
-combination, to its declared type; a loop or a dangling alias fails; a value axis that
-changes anything but a colour fails. Open roles name roles the brand may give values, or
-groups of them by whole segments.
+roles' defaults, then resolves aliases. Every shared role but a picture role must resolve
+in every combination, to its declared type; a loop or a dangling alias fails; a value axis
+that changes anything but a colour or a picture fails. A picture role's value names a file
+of the version's `pictures/`, found by its exact name as version control lists the folder,
+and read as any picture file is (`pictures.Folder`), or that is a finding in the version.
+Open roles name roles the brand may give values, or groups of them by whole segments.
+
+**A picture role's file in each combination** (`Brand.given`, DEC-025 point 4) is the file
+of the brand version that gives the role its value there, the brand's own or a base's,
+since a picture role aliases nothing. Within one key over the size axes, a brand gives a
+picture role a file in every combination of the value axes, or in none, and the files it
+gives there share one proportion of width to height, so one scene serves every value mode.
+A brand that breaks either is at fault where its own values take part
+(`picture-role-modes`, `picture-role-proportion`); where its base's alone do, the base's
+own finding says so.
 
 **A brand and a library's own roles** (DEC-008 points 1 and 4 to 6):
 
-- *reached only where named:* a brand reaches a library's roles, to give one a value, open
-  it or alias it, only where its `builds-on` names that library by the major the scope's
-  version fits (`named`). A token it holds under the name of a library it names gives one
-  of its roles a value; one that names none of them, or is of another type, is a finding.
-  Under the name of a library it does not name, a token stays private, and where the scope
-  holds that library, as under a lock, it asks for attention;
+- *reached only where named:* a brand reaches a library's roles and its components'
+  tokens, to give one a value, open it or alias it, only where its `builds-on` names that
+  library by the major the scope's version fits (`named`). A token it holds under the name
+  of a library it names, or under `component.<library>`, gives one of its roles, or of its
+  components' tokens, a value; one that names none of them, or is of another type, is a
+  finding. Under the name of a library it does not name, or under `component.<library>`, a
+  token stays private, and where the scope holds that library, as under a lock, it asks
+  for attention. A token under `component.<the brand's own name>` stays private, with no
+  finding (DEC-035 point 7);
 - *defaults below every brand:* a default lies under the base's tokens and the brand's own
   sources, and is resolved after the merge, so it follows the value the brand gives the
   role it aliases. A role whose chain of defaults reaches no value has none under the
   brand; a brand that names its library gives each of its roles with no default a value
   in every combination, or that is a finding;
 - *exports:* a brand exports, beside the shared roles, each role of a library it names
-  that it or its base gives a value (`roles`). Every role with a value under it, a role
-  left at its default included, is `valued`, which the document of values holds;
+  that it or its base gives a value (`roles`). It exports a shared picture role only
+  where it or its base gives it a value (DEC-025 point 4), and such a role is `pictured`.
+  Every role with a value under it but a picture role, a role left at its default
+  included, is `valued`. The document of values holds both;
 - *pairs:* a library's pair is judged at a brand only where the brand's values reach it,
   through a value the brand or its base gives a library's role along either role's chain
   of defaults, and then in every combination; at its defaults it is its library's to
@@ -89,8 +151,9 @@ its major is the one the entry names. In each combination:
 - *each library's private tokens stay its own:* an alias reaches the exported roles and
   the tokens of the library that writes it, never a token its base keeps private, which
   fails. So a base may reshape its private tokens freely;
-- *the base's axes:* the brand varies values on its base's axes, by their names and modes.
-  A modifier for another axis, a context for another mode, or another default fails;
+- *the base's axes:* the brand varies values on its base's axes, by their names and modes,
+  its base's sizes and its own axes among them. A modifier for another axis, one that
+  declares an axis of its own, a context for another mode, or another default fails;
 - *chains narrow:* the brand's open roles name only roles its base opens to it (format 1
   has no brand's own roles), so each link of a chain opens at most what the last opens.
   A base opens a role of a library only where it names that library, and a brand built on
@@ -98,15 +161,20 @@ its major is the one the entry names. In each combination:
 
 A brand that cannot be resolved raises TokenError, carrying its findings. One that can is
 a Brand, whose `findings` hold what is wrong but leaves it usable: an open role it does
-not have, a value for a role its base does not open, a font file nothing holds, a declared
-pair below its contrast, a token under a library's name that gives none of its roles a
-value, a role of a library it names that it leaves with no value. A library's own
-`roles.yaml` is no brand's: its findings are the scope's (`Scope.findings`), each naming
-the library's version. Every finding of a brand names the brand's version as where it
-lies, so its level is read where it lies (DEC-002 point 7); a fault of the lock, a base it
-names at another major or not at all, names none, and always fails. A brand's findings
-hold its base's too, each naming the base's version; a pair or a font family is judged at
-the brand only where the brand's values change what the base gives.
+not have, a value for a role its base does not open, a font file nothing holds, a picture
+file nothing holds or the capability does not read, a picture role given in some value
+combinations of a key and not in others or given files of two proportions there, a
+declared pair below its contrast, an order's text between its two ends or a first end that
+stands out less from the page's ground than the last (DEC-032 point 2), a
+token under a library's name that gives none of its roles a value, a role of a library it
+names that it leaves with no value. Its `facts` hold what its version alone states: each
+shared picture role it gives no value (DEC-025 point 9). A library's own `roles.yaml` is
+no brand's: its findings are the scope's (`Scope.findings`), each naming the library's
+version. Every finding of a brand names the brand's version as where it lies, so its level
+is read where it lies (DEC-002 point 7); a fault of the lock, a base it names at another
+major or not at all, names none, and always fails. A brand's findings hold its base's too,
+each naming the base's version; a pair, an order's ends or a font family is judged at the
+brand only where the brand's values change what the base gives.
 
 Knows nothing of the working folder, pieces, the list or the configuration.
 """
@@ -114,19 +182,21 @@ Knows nothing of the working folder, pieces, the list or the configuration.
 from __future__ import annotations
 
 import hashlib
+import math
 import re
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from _lib import keys
+from _lib import keys, pictures
 from _lib.env import MissingFont, UnvaluedRole
 from _lib.files import FileError, read_bound
 from _lib.findings import ATTENTION, FACT, FAILS, Finding
 from _lib.libraries import FOUNDATIONS, LibraryError, read_library
-from _lib.names import COMPONENT, is_name, is_segment, is_token_path
-from _lib.reading import ReadError, read_json
+from _lib.names import COMPONENT, ORDER, is_name, is_segment, is_token_path
+from _lib.outlines import CLOSE_IT, SIGN_OUTLINE, Outline, read_outline
+from _lib.reading import ReadError, read_json, read_yaml
 
 #: The capability's extension key in DTCG files (DEC-004 point 1).
 EXTENSION = "pkit.visual-communication"
@@ -137,6 +207,19 @@ DTCG_VERSIONS = ("2025.10",)
 #: The DTCG types format 1 reads.
 TYPES = ("color", "dimension", "fontFamily", "fontWeight", "number", "typography")
 
+#: The type of a picture role, whose value is a picture file of the brand's version
+#: (DEC-025 point 4). DTCG has no type for a file, so no token takes it.
+PICTURE = "picture"
+
+#: The types a role may have: the DTCG types format 1 reads, and a picture.
+ROLE_TYPES = (*TYPES, PICTURE)
+
+#: The folder of a brand's version that holds the files its picture roles name.
+PICTURES = pictures.FOLDER
+
+#: The keys a picture role's group may hold (DEC-025 point 4): no `$type` and no child.
+_PICTURE_KEYS = ("$description", "$extensions", "$deprecated")
+
 #: The members of a typography value, each with its type.
 TYPOGRAPHY = {
     "fontFamily": "fontFamily",
@@ -146,11 +229,18 @@ TYPOGRAPHY = {
     "lineHeight": "number",
 }
 
-#: The kinds of value a value axis may change (DEC-004 point 2): colours alone in format 1.
-VALUE_AXIS_TYPES = ("color",)
+#: The kinds of value a value axis may change (DEC-004 point 2): colours and pictures in
+#: format 1.
+VALUE_AXIS_TYPES = ("color", PICTURE)
 
 #: The axes' kinds.
 AXIS_KINDS = ("value", "size")
+
+#: The key of the capability's extension point on a modifier that declares an axis of the
+#: brand's own, which gives the axis's kind (DEC-004 points 1 and 2).
+KIND = "kind"
+
+_MODIFIER_KEYS = ("contexts", "default", "description", "$extensions")
 
 #: The contrast each level of a pair must reach (WCAG 2.2: 1.4.3 and 1.4.11).
 LEVELS = {"text": 4.5, "large-text": 3.0, "marks": 3.0}
@@ -163,6 +253,23 @@ _HASH = re.compile(r"^sha256:[0-9a-f]{64}$")
 _TOKEN_KEYS = ("$value", "$type", "$description", "$extensions", "$deprecated")
 _GROUP_KEYS = ("$type", "$description", "$extensions", "$deprecated")
 _RESOLVER_KEYS = ("version", "name", "description", "sets", "modifiers", "resolutionOrder")
+
+#: The folder of a component library's version that holds its components, one file each.
+COMPONENTS = "components"
+
+#: The key of a component's file that declares its component tokens, and the keys of each
+#: token's declaration (DEC-035 point 1).
+TOKENS = "tokens"
+_DECLARATION_KEYS = ("type", "default")
+
+#: The finding on a component token that cannot be read: `tokens` of another shape, a
+#: token's name that is no name, a declaration that is not `{type, default}`, or a type
+#: no role takes or a picture (DEC-035 points 2, 4 and 9).
+TOKEN_SHAPE = "component-token-shape"
+
+#: The keys of the declaration of an order's roles, under the foundations' `roles.yaml` key
+#: `ORDER`, a name no colour family takes, each naming a colour role (DEC-032 point 1).
+ORDER_KEYS = ("first", "last", "text", "ground")
 
 
 class TokenError(Exception):
@@ -186,12 +293,14 @@ class RoleWithoutValue(UnknownRole, UnvaluedRole):
 
 @dataclass(frozen=True)
 class Axis:
-    """A shared axis: its name, its kind (`value` or `size`), its modes and its default."""
+    """An axis: its name, its kind (`value` or `size`), its modes and its default; `own`,
+    whether it is a brand's own rather than shared (DEC-004 point 2)."""
 
     name: str
     kind: str
     modes: tuple[str, ...]
     default: str
+    own: bool = False
 
 
 @dataclass(frozen=True)
@@ -202,6 +311,30 @@ class Role:
     path: str
     type: str
     default: str | None = None
+
+
+@dataclass(frozen=True)
+class ComponentToken:
+    """A component token as its component declares it in its own file (DEC-004 point 7,
+    DEC-035 points 1, 2 and 4): its token path, `component.<library>.<component>.<name>`,
+    its type, the role its default aliases, the name of the component that declares it,
+    and its file as findings name it."""
+
+    path: str
+    type: str
+    default: str
+    component: str
+    file: str
+
+    @property
+    def name(self) -> str:
+        """The name the component gives the token, the last segment of its path."""
+        return self.path.rpartition(".")[2]
+
+    @property
+    def where(self) -> str:
+        """Its declaration's key path in its component's file."""
+        return f"{TOKENS}.{self.name}"
 
 
 @dataclass(frozen=True)
@@ -220,28 +353,75 @@ class Pair:
 
 
 @dataclass(frozen=True)
+class Order:
+    """An order's roles as the foundations declare them (DEC-032 point 1): `first`, the end
+    an order's first place takes; `last`, the end its last place takes; `text`, the text on
+    every step; and `ground`, the shared role of the page's ground, from which the first end
+    stands out at least as much as the last (DEC-004 point 8)."""
+
+    first: str
+    last: str
+    text: str
+    ground: str
+
+    @property
+    def roles(self) -> tuple[str, str, str]:
+        """The roles of an order, its two ends and its text. The ground is the page's."""
+        return (self.first, self.last, self.text)
+
+
+@dataclass(frozen=True)
+class GivenPicture:
+    """The file a brand gives a picture role in one combination (DEC-025 point 4): its bare
+    name, `name`, and the brand version whose `pictures/` holds it, the brand's own or a
+    base's, as `<brand>@<version>` and by its folder."""
+
+    name: str
+    library: str
+    folder: Path
+
+    @property
+    def brand(self) -> str:
+        """The name of the brand whose version holds the file."""
+        return self.library.partition("@")[0]
+
+    @property
+    def path(self) -> Path:
+        return self.folder / PICTURES / self.name
+
+
+@dataclass(frozen=True)
 class Declarations:
     """A library's declarations, its `roles.yaml`: the foundations' shared roles, axes,
-    colour families and pairs (DEC-004), or a component library's own roles and pairs
-    (DEC-008 point 8).
+    colour families, shapes, an order's roles and pairs (DEC-004, DEC-032 point 1, DEC-036
+    point 1), or a component library's own roles and pairs (DEC-008 point 8).
 
+    - `order`: an order's roles, where the foundations declare them; None in a version
+      that declares none, as every version before them, and in a library's own roles.
     - `label`: `<name>@<version>` of the library they lie in, and `file` the file as
       findings name it.
     - `own`: for a library other than the foundations, its name, the group its own roles
       lie under; "" for the foundations, whose roles are shared.
     - `builds_on`: the libraries it builds on, by name.
-    - `findings`: what is wrong in a library's own roles that leaves the rest usable. The
-      foundations' declarations hold none: what is wrong in them refuses them.
+    - `tokens`: the component tokens its components declare, by token path (DEC-035
+      points 1 and 2), the foundations' components among them.
+    - `findings`: what is wrong in a library's own roles, or in its components' tokens,
+      that leaves the rest usable. The foundations' declarations hold only a shape that
+      is no closed outline within its square, and the findings of their components'
+      tokens: anything else wrong in their `roles.yaml` refuses them.
     """
 
     roles: dict[str, Role]
     axes: dict[str, Axis]
     families: dict[str, dict[str, str]]
     pairs: tuple[Pair, ...]
+    shapes: dict[str, Outline] = field(default_factory=dict)
+    order: Order | None = None
     label: str = ""
     file: str = ""
     own: str = ""
     builds_on: tuple[str, ...] = ()
+    tokens: dict[str, ComponentToken] = field(default_factory=dict)
     findings: tuple[Finding, ...] = ()
 
     @property
@@ -262,7 +442,9 @@ class Declarations:
 def read_declarations(path: Path, *, library: str = "", shown: str = "") -> Declarations:
     """The foundations' declarations in the `roles.yaml` at `path`. `library` is
     `<name>@<version>` of the library they lie in, and `shown` the file's path as findings
-    name it. Raises TokenError."""
+    name it. Raises TokenError. A shape that is no closed outline within its square is a
+    finding they hold, which refuses nothing, since the shape still draws (DEC-036 point
+    8)."""
     file = shown or path.as_posix()
     problems = _Problems(file, library)
     try:
@@ -272,16 +454,39 @@ def read_declarations(path: Path, *, library: str = "", shown: str = "") -> Decl
     roles = _read_roles(data.get("roles"), problems)
     axes = _read_axes(data.get("axes", {}), problems)
     families = _read_families(data.get("families", {}), roles, problems)
+    shapes = _read_shapes(data.get("shapes", {}), problems)
+    order = _read_order(data.get(ORDER), roles, families, problems)
     pairs = _read_pairs(data.get("pairs", []), roles, problems)
     if problems.found:
         raise TokenError(problems.found)
+    unclosed = tuple(
+        replace(
+            problems.finding(SIGN_OUTLINE, f"the shape `{name}` {fault}", f"shapes.{name}"),
+            fix=CLOSE_IT,
+        )
+        for name, shape in shapes.items()
+        if (fault := shape.fault()) is not None
+    )
     return Declarations(
-        roles=roles, axes=axes, families=families, pairs=pairs, label=library, file=file
+        roles=roles,
+        axes=axes,
+        families=families,
+        pairs=pairs,
+        shapes=shapes,
+        order=order,
+        label=library,
+        file=file,
+        findings=unclosed,
     )
 
 
 #: What a library other than the foundations does not declare, with what it is for.
-_FOUNDATIONS_ONLY = {"axes": "the shared axes", "families": "the colour families"}
+_FOUNDATIONS_ONLY = {
+    "axes": "the shared axes",
+    "families": "the colour families",
+    "shapes": "the shapes",
+    ORDER: "an order's ends and its text",
+}
 
 
 def read_own_roles(
@@ -295,7 +500,7 @@ def read_own_roles(
     """The own roles and pairs of the component library `name`, in the `roles.yaml` at
     `path` (DEC-004 point 7, DEC-008 point 8): each role under the group of its name, none
     under the group of component tokens, and each pair naming one of them. It declares no
-    axes and no colour families: the foundations' alone are. `library` and `shown` are as
+    axes, no colour families and no shapes: the foundations' alone are. `library` and `shown` are as
     for `read_declarations`, and `builds_on` names the libraries it builds on.
 
     Never raises: what is wrong is kept as the declarations' `findings`, and a role or a
@@ -334,6 +539,89 @@ def read_own_roles(
     )
 
 
+def read_component_tokens(
+    folder: Path, *, name: str, library: str = "", root: Path | None = None
+) -> tuple[dict[str, ComponentToken], tuple[Finding, ...]]:
+    """The component tokens each component of the version of the library `name` at
+    `folder` declares under `tokens` in its own file, by token path, each at
+    `component.<name>.<component>.<token>`, with what is wrong in them (DEC-035 points 1, 2
+    and 4). `library` is `<name>@<version>`, and findings name files relative to `root`
+    when given.
+
+    Never raises: a token whose name is not a name, whose declaration is not `{type,
+    default}`, whose type no role takes or is a picture, or that carries no default or one
+    that is no alias, is left out, its finding kept. Whether its default holds the `Scope`
+    judges. A component's file that cannot be read adds nothing: the engine reports it
+    where it reads the component."""
+    found: dict[str, ComponentToken] = {}
+    problems: list[Finding] = []
+    for path in sorted((folder / COMPONENTS).glob("*.yaml")):
+        component = path.stem
+        try:
+            data = read_yaml(path)
+        except ReadError:
+            continue
+        if not is_name(component) or not isinstance(data, Mapping) or TOKENS not in data:
+            continue
+        file = path.relative_to(root).as_posix() if root is not None else path.as_posix()
+        said = _Problems(file, library)
+        declared = data[TOKENS]
+        if not isinstance(declared, Mapping):
+            said.add(
+                TOKEN_SHAPE,
+                f"`{name}/{component}`: `{TOKENS}` is not a mapping of each token's name to its "
+                f"declaration, `{{type, default}}`",
+                TOKENS,
+            )
+        for token, decl in (declared if isinstance(declared, Mapping) else {}).items():
+            token_path = f"{COMPONENT}.{name}.{component}.{token}"
+            where = f"{TOKENS}.{token}"
+            what = f"`{name}/{component}`: the token `{token}`"
+            if not is_name(token):
+                said.add(
+                    TOKEN_SHAPE,
+                    f"{what} is not a name of lower-case words joined by hyphens: one name "
+                    f"follows the component's in a token's path",
+                    where,
+                )
+            elif not isinstance(decl, Mapping) or not set(decl) <= set(_DECLARATION_KEYS):
+                said.add(TOKEN_SHAPE, f"{what} is not declared as `{{type, default}}`", where)
+            elif decl.get("type") == PICTURE:
+                said.add(
+                    TOKEN_SHAPE,
+                    f"{what} is of the type `{PICTURE}`, which no component token takes: only "
+                    f"the foundations declare a picture role",
+                    where,
+                )
+            elif decl.get("type") not in TYPES:
+                said.add(TOKEN_SHAPE, f"{what} names no type of {', '.join(TYPES)}", where)
+            elif "default" not in decl:
+                said.add(
+                    "role-default",
+                    f"{what} carries no default, and a component token always carries one, an "
+                    f"alias to a role",
+                    where,
+                )
+            else:
+                alias = _alias_of(decl["default"])
+                if alias is None:
+                    said.add(
+                        "role-default", f"{what} has a default that is no alias `{{role}}`", where
+                    )
+                else:
+                    found[token_path] = ComponentToken(
+                        token_path, decl["type"], alias, component, file
+                    )
+        problems.extend(said.found)
+    return found, tuple(problems)
+
+
+def _alias_of(value: Any) -> str | None:
+    """The token path an alias `{a.b}` names; None where `value` is no alias."""
+    match = _ALIAS.match(value) if isinstance(value, str) else None
+    return match.group(1) if match is not None else None
+
+
 def _read_roles(raw: Any, problems: _Problems, own: str = "") -> dict[str, Role]:
     """The roles `raw` maps; `own` names the library whose own roles they are, or is ""
     for the shared roles."""
@@ -360,12 +648,28 @@ def _read_roles(raw: Any, problems: _Problems, own: str = "") -> dict[str, Role]
                 where,
             )
             continue
-        if not isinstance(spec, Mapping) or spec.get("type") not in TYPES:
+        if not isinstance(spec, Mapping) or spec.get("type") not in ROLE_TYPES:
             problems.add(
-                "role-type", f"the role `{path}` names no type of {', '.join(TYPES)}", where
+                "role-type", f"the role `{path}` names no type of {', '.join(ROLE_TYPES)}", where
+            )
+            continue
+        if own and spec["type"] == PICTURE:
+            problems.add(
+                "role-picture",
+                f"the role `{path}` is of the type `{PICTURE}`, and only the foundations "
+                f"declare a picture role, so the capability does not read it",
+                where,
             )
             continue
         default = spec.get("default")
+        if default is not None and spec["type"] == PICTURE:
+            problems.add(
+                "role-default",
+                f"the picture role `{path}` carries a default, and a picture role carries "
+                f"none, since no brand owes it a value",
+                where,
+            )
+            continue
         target = None
         if default is not None:
             match = _ALIAS.match(default) if isinstance(default, str) else None
@@ -451,6 +755,13 @@ def _read_families(
                 "family-shape", f"the family `{name}` is not a name with its members", where
             )
             continue
+        if name == ORDER:
+            problems.add(
+                "family-shape",
+                f"the family `{name}` takes the name of an order's roles, which no family takes",
+                where,
+            )
+            continue
         for member, role in members.items():
             if not is_name(member) or roles.get(role) is None or roles[role].type != "color":
                 problems.add(
@@ -460,6 +771,77 @@ def _read_families(
                 )
         families[name] = dict(members)
     return families
+
+
+def _read_shapes(raw: Any, problems: _Problems) -> dict[str, Outline]:
+    """The shapes `raw` declares, each an outline by its name (DEC-036 point 1)."""
+    if not isinstance(raw, Mapping):
+        problems.add("shapes-shape", "`shapes` is not a mapping of shapes", "shapes")
+        return {}
+    shapes: dict[str, Outline] = {}
+    for name, spec in raw.items():
+        where = f"shapes.{name}"
+        if not is_name(name):
+            problems.add(
+                "shape-shape",
+                f"`{name}` is not a shape's name of lower-case words joined by hyphens",
+                where,
+            )
+            continue
+        outline = read_outline(spec)
+        if isinstance(outline, str):
+            problems.add("shape-shape", f"the shape `{name}` {outline}", where)
+            continue
+        shapes[name] = outline
+    return shapes
+
+
+def _read_order(
+    raw: Any,
+    roles: Mapping[str, Role],
+    families: Mapping[str, Mapping[str, str]],
+    problems: _Problems,
+) -> Order | None:
+    """An order's roles as `raw` declares them (DEC-032 point 1), or None where it declares
+    none: four different colour roles, `first`, `last`, `text` and `ground`, of which the
+    order's own three lie in no colour family."""
+    if raw is None:
+        return None
+    if not isinstance(raw, Mapping) or set(raw) != set(ORDER_KEYS):
+        keys = ", ".join(f"`{key}`" for key in ORDER_KEYS)
+        problems.add(
+            "order-shape", f"`{ORDER}` is not a mapping of {keys}, each to a colour role", ORDER
+        )
+        return None
+    named = tuple(raw[key] for key in ORDER_KEYS)
+    stray = [
+        key
+        for key, role in zip(ORDER_KEYS, named, strict=True)
+        if not isinstance(role, str) or role not in roles or roles[role].type != "color"
+    ]
+    for key in stray:
+        problems.add("order-shape", f"`{ORDER}.{key}` names no colour role", f"{ORDER}.{key}")
+    if stray:
+        return None
+    if len(set(named)) != len(named):
+        problems.add(
+            "order-shape",
+            f"`{ORDER}` names one role twice: an order's two ends, its text and the page's "
+            f"ground are four roles",
+            ORDER,
+        )
+        return None
+    order = Order(*named)
+    for family, members in families.items():
+        for member, role in members.items():
+            if role in order.roles:
+                problems.add(
+                    "order-shape",
+                    f"the member `{member}` of the family `{family}` is `{role}`, a role of an "
+                    f"order, which no family holds",
+                    f"families.{family}.{member}",
+                )
+    return order
 
 
 def _read_pairs(
@@ -478,6 +860,17 @@ def _read_pairs(
             problems.add("pair-shape", f"pair {index} names no level of {', '.join(LEVELS)}", where)
             continue
         text, under = spec.get("text"), spec.get("under")
+        token = next(
+            (r for r in (text, under) if isinstance(r, str) and r.split(".")[0] == COMPONENT),
+            None,
+        )
+        if own and token is not None:
+            problems.add(
+                "pair-shape",
+                f"pair {index} names `{token}`, a component token: no pair names one",
+                where,
+            )
+            continue
         named = [r for r in (text, under) if r in roles] if own else [text, under]
         if own and is_token_path(text) and is_token_path(under) and not named:
             problems.add("pair-shape", f"pair {index} names none of the library's own roles", where)
@@ -496,35 +889,54 @@ def _read_pairs(
 
 class Scope:
     """The roles one resolution reads (DEC-008 point 1): the foundations' shared roles, and
-    the own roles of each component library resolved with them, one version of each, as
-    their declarations give them. A role's type reads from it with no brand.
+    the own roles of each component library resolved with them, and the component tokens
+    of its components, one version of each, as their declarations give them. A role's type
+    reads from it with no brand.
 
-    - `foundations`: the foundations' declarations; `axes`, `families` and `top_groups`
-      are theirs.
-    - `libraries`: each component library's declarations of its own roles, by its name.
-    - `roles`: every role, by its token path; `owner`, the library whose own role each is,
-      or "" for a shared role.
-    - `defaults`: the default of each own role that holds (DEC-008 point 3): an alias to a
-      role its library may reach, its own or one of a library it builds on, the shared
-      roles included where it builds on the foundations, of its type, never a component
-      token, in no loop. A default that does not hold is its library's finding, and
-      gives the role no value.
+    - `foundations`: the foundations' declarations; `axes`, `families`, `shapes` and
+      `top_groups` are theirs.
+    - `libraries`: each component library's declarations of its own roles and of its
+      components' tokens, by its name, a library that declares neither among them, so a
+      brand names it (DEC-009 point 3). The foundations' lie among them where the scope
+      holds their version, with their components' tokens and no role, since their roles
+      are shared (DEC-035 points 1 and 7).
+    - `roles`: every role, by its token path, each component token among them; `owner`,
+      the library whose own role or component token each is, or "" for a shared role.
+    - `tokens`: each component token, by its token path (DEC-035 points 1 and 2). It is
+      resolved as a library's own role is (DEC-035 point 4), so the rest of the scope
+      reads it as one, but for the release's comparison and the reading of its library's
+      roles, which tell the two apart.
+    - `defaults`: the default of each own role and component token that holds (DEC-008
+      point 3, DEC-035 point 4): an alias to a role its library may reach, its own or one
+      of a library it builds on, the shared roles included where it builds on the
+      foundations, of its type, never a component token, in no loop. A default that does
+      not hold is its library's finding, and gives the role no value.
     - `pairs`: the foundations' pairs, then each library's that names colour roles it may
       reach.
 
-    Its findings (`findings_of`) are each library's: those its file holds, then those its
+    Its findings (`findings_of`) are each library's: those its files hold, then those its
     defaults and pairs show here. Each names the library's version."""
 
     def __init__(self, foundations: Declarations, libraries: Iterable[Declarations] = ()) -> None:
         self.foundations = foundations
         self.libraries = {declared.own: declared for declared in libraries if declared.own}
+        if foundations.label:
+            self.libraries[FOUNDATIONS] = replace(
+                foundations, roles={}, axes={}, families={}, pairs=(), shapes={}
+            )
         self.roles: dict[str, Role] = dict(foundations.roles)
         self.owner: dict[str, str] = dict.fromkeys(foundations.roles, "")
+        self.tokens: dict[str, ComponentToken] = {}
         for name, declared in sorted(self.libraries.items()):
             for path, role in declared.roles.items():
                 if path not in self.roles:
                     self.roles[path] = role
                     self.owner[path] = name
+            for path, token in declared.tokens.items():
+                if path not in self.roles:
+                    self.roles[path] = Role(path=path, type=token.type, default=token.default)
+                    self.owner[path] = name
+                    self.tokens[path] = token
         self.defaults: dict[str, str] = {}
         self._found: dict[str, list[Finding]] = {
             name: list(declared.findings) for name, declared in self.libraries.items()
@@ -545,6 +957,14 @@ class Scope:
     @property
     def families(self) -> dict[str, dict[str, str]]:
         return self.foundations.families
+
+    @property
+    def shapes(self) -> dict[str, Outline]:
+        return self.foundations.shapes
+
+    @property
+    def order(self) -> Order | None:
+        return self.foundations.order
 
     @property
     def top_groups(self) -> tuple[str, ...]:
@@ -576,11 +996,11 @@ class Scope:
         return [finding for name in sorted(self._found) for finding in self._found[name]]
 
     def reach(self, name: str) -> set[str]:
-        """The roles the library `name` may alias or pair with: its own, and those of each
-        library it builds on that the scope holds, the shared roles where it builds on the
-        foundations (DEC-008 point 3)."""
+        """The roles the library `name` may alias or pair with: its own, the shared roles
+        for the foundations, and those of each library it builds on that the scope holds,
+        the shared roles where it builds on the foundations (DEC-008 point 3)."""
         declared = self.libraries[name]
-        reached = set(declared.roles)
+        reached = set(self.foundations.roles if name == FOUNDATIONS else declared.roles)
         for other in declared.builds_on:
             if other == FOUNDATIONS:
                 reached.update(self.foundations.roles)
@@ -588,20 +1008,47 @@ class Scope:
                 reached.update(self.libraries[other].roles)
         return reached
 
-    def _add(self, name: str, code: str, message: str, where: str, level: str = FAILS) -> None:
+    def _add(
+        self, name: str, code: str, message: str, where: str, level: str = FAILS, file: str = ""
+    ) -> None:
+        """A finding of the library `name`, in `file`, or else in its `roles.yaml`."""
         declared = self.libraries[name]
         self._found[name].append(
-            Finding(code, level, message, file=declared.file, where=where, library=declared.label)
+            Finding(
+                code,
+                level,
+                message,
+                file=file or declared.file,
+                where=where,
+                library=declared.label,
+            )
         )
 
+    def _declared(self, name: str) -> list[tuple[str, Role, str, str]]:
+        """Each own role of the library `name`, then each component token of its components
+        the scope holds, in path order, with the file and the key path its declaration lies
+        at: its `roles.yaml`, or its component's file (DEC-035 point 1)."""
+        declared = self.libraries[name]
+        own = [
+            (path, role, declared.file, f"roles.{path}")
+            for path, role in sorted(declared.roles.items())
+        ]
+        return own + [
+            (path, self.roles[path], token.file, token.where)
+            for path, token in sorted(declared.tokens.items())
+            if self.tokens.get(path) is token
+        ]
+
     def _check_defaults(self, name: str) -> None:
-        """Each default of the library's own roles, against the roles it may reach."""
+        """Each default of the library's own roles and of its components' tokens, against
+        the roles it may reach (DEC-008 point 3, DEC-035 point 4). None aliases a role of
+        an order (DEC-032 point 6)."""
         reach = self.reach(name)
-        for path, role in sorted(self.libraries[name].roles.items()):
+        ordered = self.order.roles if self.order is not None else ()
+        for path, role, file, where in self._declared(name):
             target = role.default
             if target is None:
                 continue
-            where = f"roles.{path}"
             if target == COMPONENT or target.startswith(f"{COMPONENT}."):
                 self._add(
                     name,
@@ -609,6 +1056,16 @@ class Scope:
                     f"the default of `{path}` aliases `{target}`, a component token: a role "
                     f"defaults to a role, never to the token of one part",
                     where,
+                    file=file,
+                )
+            elif target in ordered:
+                self._add(
+                    name,
+                    "role-default",
+                    f"the default of `{path}` aliases `{target}`, a role of an order: a brand "
+                    f"tunes an order's colours for its steps alone, so no default aliases one",
+                    where,
+                    file=file,
                 )
             elif target in reach and self.roles[target].type != role.type:
                 self._add(
@@ -617,6 +1074,7 @@ class Scope:
                     f"the default of `{path}` aliases `{target}`, of type "
                     f"`{self.roles[target].type}`, not `{role.type}`",
                     where,
+                    file=file,
                 )
             elif target in reach:
                 self.defaults[path] = target
@@ -628,6 +1086,7 @@ class Scope:
                     f"the default of `{path}` aliases `{target}`, a role of `{holder}`, which "
                     f"`{name}` does not build on",
                     where,
+                    file=file,
                 )
             else:
                 self._add(
@@ -636,6 +1095,7 @@ class Scope:
                     f"the default of `{path}` aliases `{target}`, which neither `{name}` nor a "
                     f"library it builds on declares",
                     where,
+                    file=file,
                 )
 
     def _check_loops(self) -> None:
@@ -717,11 +1177,11 @@ class Scope:
         return kept
 
     def _state_ends(self, name: str) -> None:
-        """A fact for each own role whose chain of defaults ends at no shared role, so only
-        a brand that gives a value along it draws it (DEC-008 point 9). A role whose own
-        default does not hold has its failing finding instead."""
-        declared = self.libraries[name]
-        for path, role in sorted(declared.roles.items()):
+        """A fact for each own role, and each component token, whose chain of defaults ends
+        at no shared role, so only a brand that gives a value along it draws it (DEC-008
+        point 9, DEC-035 point 9). One whose own default does not hold has its failing
+        finding instead."""
+        for path, role, file, where in self._declared(name):
             if role.default is not None and path not in self.defaults:
                 continue
             end, seen = path, {path}
@@ -740,19 +1200,23 @@ class Scope:
                 "role-brand-only",
                 f"{said}, so it ends at no shared role: only a brand that gives it a value "
                 f"draws it",
-                f"roles.{path}",
+                where,
                 level=FACT,
+                file=file,
             )
 
 
 def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scope:
     """The scope of the library versions whose folders `folders` gives, by name: the
-    foundations' declarations, and the own roles of each other library of kind `components`
-    whose folder holds a `roles.yaml` (DEC-008 point 8). A library whose `library.yaml`
-    cannot be read adds nothing, its own check reporting it. Where `folders` holds no
-    foundations, as for a library that builds on none, the scope holds no shared role.
-    Findings name files relative to `root` when given. Raises TokenError for the
-    foundations' declarations."""
+    foundations' declarations and the component tokens their components declare, and each
+    other library of kind `components`, with the own roles its `roles.yaml` declares
+    (DEC-008 point 8) and the component tokens its components declare (DEC-035 point 1). A
+    library that declares neither lies in the scope all the same, with none, since a brand
+    that names it draws its tops (DEC-009 point 3). A library whose `library.yaml` cannot
+    be read adds nothing, its own check reporting it. Where `folders` holds no foundations,
+    as for a library that builds on none, the scope holds no shared role. Findings name
+    files relative to `root` when given. Raises TokenError for the foundations'
+    declarations."""
 
     def shown(path: Path) -> str:
         return path.relative_to(root).as_posix() if root is not None else path.as_posix()
@@ -760,13 +1224,17 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
     foundations = Declarations(roles={}, axes={}, families={}, pairs=())
     if FOUNDATIONS in folders:
         roles = folders[FOUNDATIONS] / "roles.yaml"
-        foundations = read_declarations(
-            roles, library=f"{FOUNDATIONS}@{roles.parent.name}", shown=shown(roles)
+        label = f"{FOUNDATIONS}@{roles.parent.name}"
+        foundations = read_declarations(roles, library=label, shown=shown(roles))
+        tokens, problems = read_component_tokens(
+            folders[FOUNDATIONS], name=FOUNDATIONS, library=label, root=root
+        )
+        foundations = replace(
+            foundations, tokens=tokens, findings=(*foundations.findings, *problems)
         )
     own = []
     for name, folder in sorted(folders.items()):
-        path = folder / "roles.yaml"
-        if name == FOUNDATIONS or not path.is_file():
+        if name == FOUNDATIONS:
             continue
         try:
             library = read_library(folder)
@@ -774,15 +1242,30 @@ def read_scope(folders: Mapping[str, Path], *, root: Path | None = None) -> Scop
             continue
         if library.kind != "components":
             continue
-        own.append(
-            read_own_roles(
+        builds_on = [need.name for need in library.builds_on]
+        tokens, problems = read_component_tokens(
+            folder, name=library.name, library=library.label, root=root
+        )
+        path = folder / "roles.yaml"
+        if path.is_file():
+            declared = read_own_roles(
                 path,
                 name=library.name,
                 library=library.label,
                 shown=shown(path),
-                builds_on=[need.name for need in library.builds_on],
+                builds_on=builds_on,
             )
-        )
+        else:
+            declared = Declarations(
+                roles={},
+                axes={},
+                families={},
+                pairs=(),
+                label=library.label,
+                own=library.name,
+                builds_on=tuple(builds_on),
+            )
+        own.append(replace(declared, tokens=tokens, findings=(*declared.findings, *problems)))
     return Scope(foundations, own)
 
 
@@ -844,19 +1327,30 @@ class Brand:
 
     - `name`, `version`, `label` (`<name>@<version>`): as its `library.yaml` gives them.
     - `scope`: the roles it is resolved against.
-    - `axes`: the shared axes, each a key's axis, whether the brand varies it or not.
+    - `axes`: the axes it has, each a key's axis: every shared value axis, whole, whether
+      it varies it or not, each shared size axis it or its base gives, with the modes
+      given (DEC-021 point 2), and each axis of its own or its base's, whole (DEC-004 point
+      2). They are the axes and modes it exports (DEC-004 point 5).
     - `named`: the libraries of the scope it names among those it builds on, by the major
-      their version fits, whose roles it reaches (DEC-008 point 4).
-    - `roles`: the token paths it exports, in path order: the shared roles, and each role
-      of a library it names that it or its base gives a value (DEC-008 point 5).
+      their version fits, whose roles it reaches (DEC-008 point 4) and whose tops it draws
+      (DEC-009 point 3).
+    - `roles`: the token paths it exports, in path order: the shared roles, each shared
+      picture role only where it or its base gives it a value (DEC-025 point 4), and each
+      role of a library it names that it or its base gives a value (DEC-008 point 5).
     - `valued`: every role with a value in every combination, in path order: its exports,
-      and each other role of the scope's libraries, at its default. The document of values
-      holds these (DEC-005 point 7).
+      and each other role of the scope's libraries, at its default. A picture role is none
+      of them, since no brand owes one (DEC-025 point 4).
+    - `pictured`: each picture role it or its base gives a file in some combination, in
+      path order (`given`). The document of values holds these beside `valued` (DEC-005
+      point 7, DEC-025 point 4).
     - `open`: its open roles, as its `library.yaml` lists them.
     - `opened`: the roles a brand built on it may give values: those its open roles name,
       narrowed to those its base opens to it.
     - `base`: the brand it builds on as its base, read, or None.
     - `findings`: what is wrong, leaving it usable: its own, then its base's.
+    - `facts`: what its version states, and no piece: each shared picture role it gives no
+      value, once (DEC-025 point 9). The check of the version alone reports them, apart
+      from `findings`, which a piece's lock reads too.
     """
 
     def __init__(
@@ -866,33 +1360,42 @@ class Brand:
         version: str,
         folder: Path,
         scope: Scope,
+        axes: dict[str, Axis],
         named: frozenset[str],
         roles: tuple[str, ...],
         valued: tuple[str, ...],
+        pictured: tuple[str, ...],
         open_roles: tuple[str, ...],
         opened: frozenset[str],
         base: Brand | None,
         views: dict[str, _View],
         resolved: dict[str, dict[str, _Resolved]],
         hidden: dict[str, dict[str, _Resolved]],
+        given: dict[str, dict[str, GivenPicture]],
+        pictures_folder: pictures.Folder,
         fonts: dict[str, Path | None],
         findings: tuple[Finding, ...],
+        facts: tuple[Finding, ...],
     ) -> None:
         self.name = name
         self.version = version
         self.folder = folder
         self.scope = scope
-        self.axes = dict(scope.axes)
+        self.axes = axes
         self.named = named
         self.roles = roles
         self.valued = valued
+        self.pictured = pictured
         self.open = open_roles
         self.opened = opened
         self.base = base
         self.findings = findings
+        self.facts = facts
         self._views = views
         self._resolved = resolved
         self._hidden = hidden
+        self._given = given
+        self._pictures = pictures_folder
         self._fonts = fonts
 
     @property
@@ -903,16 +1406,34 @@ class Brand:
         """The value of the role at `token_path` in `combination` (an axis left out takes
         its default), aliases resolved, in canonical form: a colour `{colorSpace,
         components, alpha}`, a dimension `{value, unit}`, a font family a list of names, a
-        typography its five members so, a number. Raises RoleWithoutValue for a role the
-        scope declares that has no value under the brand, UnknownRole for a path it holds
-        no role at, and keys.BadKey for a combination the axes do not hold."""
+        typography its five members so, a number. Raises RoleWithoutValue for a library's
+        role that has no value under the brand, UnknownRole for a path it holds no role at
+        or a picture role, whose file only an image shows (`given`), so no formula or paint
+        reads it, and keys.BadKey for a combination the axes do not hold."""
         if token_path not in self.valued:
-            if token_path in self.scope.roles:
+            if token_path in self.scope.roles and self.scope.owner[token_path]:
                 library = self.scope.owner[token_path]
                 raise RoleWithoutValue(token_path, library, named=self.names(library))
             raise UnknownRole(token_path)
         key = keys.key_of(combination, self.axes)
         return self._resolved[key][token_path].value
+
+    def given(self, token_path: str, combination: Mapping[str, str]) -> GivenPicture | None:
+        """The file the brand, or a base below it, gives the picture role at `token_path` in
+        `combination` (an axis left out takes its default); None where it gives the role
+        none there, which no brand owes (DEC-025 point 4). Raises UnknownRole for a path
+        that holds no picture role, and keys.BadKey for a combination the axes do not hold."""
+        if self.scope.roles.get(token_path, Role("", "")).type != PICTURE:
+            raise UnknownRole(token_path)
+        return self._given[keys.key_of(combination, self.axes)].get(token_path)
+
+    def picture_of(self, given: GivenPicture, named: str = "") -> pictures.Judged:
+        """The file `given` names, read from the `pictures/` of the brand version that holds
+        it, as that version judges it (`pictures.Folder.judge`), with its findings, which
+        `named` names in words."""
+        if given.library != self.label and self.base is not None:
+            return self.base.picture_of(given, named)
+        return self._pictures.judge(given.name, named=named, file="", where="")
 
     def names(self, library: str) -> bool:
         """Whether the brand, or a brand of the chain below it, names the library `library`
@@ -955,6 +1476,39 @@ class Brand:
         """Every combination of the axes' modes, in key order."""
         return keys.combinations({axis.name: axis.modes for axis in self.axes.values()}, self.axes)
 
+    def combinations_of(self, named: Mapping[str, Iterable[str]]) -> list[dict[str, str]]:
+        """Every combination of the modes a piece names for each axis, `named`, an axis it
+        names none of taken at its default, in key order (`keys.combinations`). Raises
+        keys.BadKey for an axis or a mode the brand does not have. Of a shared size axis it
+        lacks, or a size of one, the refusal says the brand does not give it, since a brand
+        has a size only where it or its base gives it (DEC-021 point 2)."""
+        for axis, modes in named.items():
+            shared = self.scope.axes.get(axis)
+            if shared is None or shared.kind != "size":
+                continue
+            if axis not in self.axes:
+                raise keys.BadKey(
+                    f"`{axis}` is a size axis that {self._not_giving()}: leave it out to draw "
+                    f"the piece at its default, `{shared.default}`, or draw it in a brand that "
+                    f"gives the axis"
+                )
+            given = self.axes[axis].modes
+            if isinstance(modes, (list, tuple)):
+                for mode in modes:
+                    if mode in shared.modes and mode not in given:
+                        raise keys.BadKey(
+                            f"`{mode}` is a size of `{axis}` that {self._not_giving()} (the "
+                            f"brand's sizes: {', '.join(given)})"
+                        )
+        return keys.combinations(named, self.axes)
+
+    def _not_giving(self) -> str:
+        """Who does not give a size the brand lacks, in words: the brand, and its base where
+        it builds on one."""
+        if self.base is None:
+            return f"the brand {self.label} does not give"
+        return f"neither the brand {self.label} nor its base {self.base.label} gives"
+
 
 def read_brand(
     folder: Path,
@@ -963,12 +1517,15 @@ def read_brand(
     fonts: Path | None = None,
     root: Path | None = None,
     locked: Mapping[str, Path] | None = None,
+    walked: bool = False,
 ) -> Brand:
     """The brand whose version folder is `folder`, read and checked against `scope`, or
     against the foundations' declarations alone, over its base when it marks one. `fonts`
     is the location's folder of fonts a brand names by hash. `locked` gives the version
     folder of each library the lock names, by its name; a base is read from it. Findings
     name files relative to `root` when given, else to the version folder they lie in.
+    `walked` finds each picture file as it lies, not as git lists it, for a location a
+    command built in the clone's local folder, which git ignores (`pictures.Folder`).
     Raises TokenError."""
     shown = _shown(folder, root)
     try:
@@ -977,7 +1534,7 @@ def read_brand(
         raise TokenError([_unreadable(exc, folder, shown)]) from exc
     if isinstance(scope, Declarations):
         scope = Scope(scope)
-    reader = _BrandReader(folder, scope, library, shown, fonts, root, locked or {}, ())
+    reader = _BrandReader(folder, scope, library, shown, fonts, root, locked or {}, (), walked)
     return reader.read()
 
 
@@ -1026,6 +1583,7 @@ class _BrandReader:
         root: Path | None,
         locked: Mapping[str, Path],
         chain: tuple[str, ...],
+        walked: bool = False,
     ) -> None:
         self.folder = folder
         self.scope = scope
@@ -1038,9 +1596,17 @@ class _BrandReader:
         self.root = root
         self.locked = locked
         self.chain = chain
+        self.pictures = frozenset(
+            path for path, role in scope.foundations.roles.items() if role.type == PICTURE
+        )
+        self.walked = walked
+        self.picture_folder = pictures.Folder(
+            folder, shown, "the brand's version", self.label, walked=walked
+        )
         self.fatal: list[Finding] = []
         self.kept: list[Finding] = []
         self.flat: dict[str, dict[str, _Token]] = {}
+        self.own: dict[str, Axis] = {}
 
     # findings
 
@@ -1118,51 +1684,77 @@ class _BrandReader:
         if self.fatal or resolver is None:
             raise TokenError(self._unique(self.fatal))
         order, sets, modifiers = resolver
-        axes = self.scope.axes
+        axes = self._axes(modifiers, base)
         views: dict[str, _View] = {}
         resolved: dict[str, dict[str, _Resolved]] = {}
         hidden: dict[str, dict[str, _Resolved]] = {}
         everything = keys.combinations({axis.name: axis.modes for axis in axes.values()}, axes)
         for combination in everything:
             key = keys.key_of(combination, axes)
-            sources = self._sources(order, sets, modifiers, combination)
+            sources = self._sources(order, sets, modifiers, combination, base)
             views[key] = self._view(sources, base, key)
             resolved[key], hidden[key] = self._resolve_combination(views[key], key)
         if self.fatal:
             raise TokenError(self._unique(self.fatal))
-        self._check_value_axes(views, resolved, hidden)
+        self._check_value_axes(axes, views, resolved, hidden)
         if self.fatal:
             raise TokenError(self._unique(self.fatal))
         self._check_library_tokens()
         self._check_library_roles(resolved, base)
+        self._check_pictures()
+        given = self._given(views, resolved, base)
+        self._check_given(axes, given, base)
         open_roles, opened = self._check_open(library.get("open", []), base)
         fonts = self._read_fonts(resolved, hidden, base)
         self._check_pairs(views, resolved, base)
+        self._check_order(resolved, base)
         valued = tuple(
-            path for path in sorted(self.scope.roles) if all(path in r for r in resolved.values())
-        )
-        exported = tuple(
             path
-            for path in valued
-            if not self.scope.owner[path]
-            or any(path in view.roles and view.roles[path].owner for view in views.values())
+            for path in sorted(self.scope.roles)
+            if path not in self.pictures and all(path in r for r in resolved.values())
+        )
+        pictures = {path for path in self.pictures if any(path in g for g in given.values())}
+        exported = tuple(
+            sorted(
+                {
+                    path
+                    for path in valued
+                    if not self.scope.owner[path]
+                    or any(path in view.roles and view.roles[path].owner for view in views.values())
+                }
+                | pictures
+            )
         )
         return Brand(
             name=self.name,
             version=str(library.get("version")),
             folder=self.folder,
             scope=self.scope,
+            axes=axes,
             named=self.named,
             roles=exported,
             valued=valued,
+            pictured=tuple(sorted(pictures)),
             open_roles=open_roles,
             opened=opened,
             base=base,
             views=views,
             resolved=resolved,
             hidden=hidden,
+            given=given,
+            pictures_folder=self.picture_folder,
             fonts=fonts,
             findings=(*self._unique(self.kept), *(base.findings if base is not None else ())),
+            facts=tuple(
+                self._finding(
+                    "picture-role-unvalued",
+                    f"the brand gives the shared picture role `{path}` no value, which no "
+                    f"brand owes it",
+                    where=path,
+                    level=FACT,
+                )
+                for path in sorted(self.pictures - pictures)
+            ),
         )
 
     @staticmethod
@@ -1251,6 +1843,7 @@ class _BrandReader:
             self.root,
             self.locked,
             (*self.chain, self.name),
+            self.walked,
         )
         try:
             return reader.read()
@@ -1344,8 +1937,11 @@ class _BrandReader:
     def _read_modifiers(
         self, raw: Any, rel: str, base: Brand | None
     ) -> dict[str, dict[str, tuple[str, ...]]]:
-        """Each modifier, one of the shared axes; a brand built on another keeps its base's
-        axes, modes and defaults (DEC-004 point 6), and adds or changes none."""
+        """Each modifier by the contexts of the modes it gives (DEC-004 point 1): a shared
+        axis the brand varies, the axis's default among them, or, in a brand that builds on
+        no other, an axis of its own (`_read_own`), whose kind the capability's extension
+        point gives (DEC-004 point 2). A brand built on another keeps its base's axes, modes
+        and defaults (DEC-004 point 6), and adds or changes none."""
         if not isinstance(raw, Mapping):
             self._fail("resolver-shape", "`modifiers` is not an object", rel, "modifiers")
             return {}
@@ -1353,7 +1949,24 @@ class _BrandReader:
         modifiers = {}
         for name, spec in raw.items():
             where = f"modifiers.{name}"
+            if not isinstance(spec, Mapping) or set(spec) - set(_MODIFIER_KEYS):
+                self._fail(
+                    "resolver-shape",
+                    f"the modifier `{name}` holds more than `contexts`, `default`, "
+                    f"`description` and `$extensions`",
+                    rel,
+                    where,
+                )
+                continue
+            kind = self._own_kind(name, spec, rel, where)
+            if kind == "":
+                continue
             axis = axes.get(name)
+            if kind is not None:
+                axis = self._read_own(name, kind, spec, base, rel, where)
+                if axis is None:
+                    continue
+                self.own[name] = axis
             if axis is None and base is not None:
                 self._fail(
                     "base-axis",
@@ -1366,17 +1979,8 @@ class _BrandReader:
             if axis is None:
                 self._fail(
                     "brand-axis",
-                    f"the modifier `{name}` is no shared axis; format 1 reads no axis of a "
+                    f"the modifier `{name}` is no shared axis, and declares no axis of the "
                     f"brand's own (the shared axes: {', '.join(sorted(self.scope.axes))})",
-                    rel,
-                    where,
-                )
-                continue
-            if not isinstance(spec, Mapping) or set(spec) - {"contexts", "default", "description"}:
-                self._fail(
-                    "resolver-shape",
-                    f"the modifier `{name}` holds more than `contexts`, `default` and "
-                    f"`description`",
                     rel,
                     where,
                 )
@@ -1403,11 +2007,20 @@ class _BrandReader:
                     f"{where}.default",
                 )
                 continue
-            if not isinstance(contexts, Mapping) or set(contexts) != set(axis.modes):
+            if not isinstance(contexts, Mapping) or added:
                 self._fail(
                     "brand-axis",
-                    f"the modifier `{name}` must have one context for each mode of the axis: "
-                    f"{', '.join(axis.modes)}",
+                    f"the modifier `{name}` must have one context for each mode it gives, "
+                    f"each a mode of the axis: {', '.join(axis.modes)}",
+                    rel,
+                    f"{where}.contexts",
+                )
+                continue
+            if axis.default not in contexts:
+                self._fail(
+                    "brand-axis",
+                    f"the modifier `{name}` must give the axis's default, `{axis.default}`, "
+                    f"among its contexts",
                     rel,
                     f"{where}.contexts",
                 )
@@ -1423,8 +2036,133 @@ class _BrandReader:
             modifiers[name] = {
                 mode: self._read_sources(contexts[mode], rel, f"{where}.contexts.{mode}")
                 for mode in axis.modes
+                if mode in contexts
             }
         return modifiers
+
+    def _own_kind(self, name: str, spec: Mapping[str, Any], rel: str, where: str) -> str | None:
+        """The kind of the axis of the brand's own that the modifier `name` declares in the
+        capability's extension point, `{"kind": "value"}` or `{"kind": "size"}` (DEC-004
+        points 1 and 2); None where it declares none, as a modifier of a shared axis does,
+        and "" where its extension cannot be read, a finding."""
+        extensions = spec.get("$extensions", {})
+        if not isinstance(extensions, Mapping):
+            self._fail(
+                "resolver-shape",
+                f"`$extensions` of the modifier `{name}` is not an object",
+                rel,
+                f"{where}.$extensions",
+            )
+            return ""
+        if EXTENSION not in extensions:
+            return None
+        declared = extensions[EXTENSION]
+        if (
+            not isinstance(declared, Mapping)
+            or set(declared) != {KIND}
+            or declared[KIND] not in (AXIS_KINDS)
+        ):
+            self._fail(
+                "own-axis",
+                f"the modifier `{name}` declares an axis of the brand's own, and gives no kind of "
+                f"{', '.join(AXIS_KINDS)}: its `{EXTENSION}` holds `{KIND}` alone",
+                rel,
+                f"{where}.$extensions.{EXTENSION}",
+            )
+            return ""
+        return str(declared[KIND])
+
+    def _read_own(
+        self,
+        name: str,
+        kind: str,
+        spec: Mapping[str, Any],
+        base: Brand | None,
+        rel: str,
+        where: str,
+    ) -> Axis | None:
+        """The axis of the brand's own the modifier `name` declares, of `kind` (DEC-004 point
+        2): its modes are its contexts, in their order, two or more, and its default one of
+        them. A brand built on another adds none (point 6), and no axis of a brand's own
+        takes a shared axis's name, which a new shared axis may come to take (point 5).
+        None where it does not hold, a finding."""
+        if base is not None:
+            self._fail(
+                "base-axis",
+                f"the modifier `{name}` declares an axis of the brand's own, and a brand built "
+                f"on {base.label} adds no axis: it varies only its base's axes: "
+                f"{', '.join(sorted(base.axes))}",
+                rel,
+                f"{where}.$extensions",
+            )
+            return None
+        if name in self.scope.axes:
+            self._fail(
+                "own-axis-name",
+                f"the modifier `{name}` declares an axis of the brand's own by the name of a "
+                f"shared axis: rename the brand's axis, or leave out `{EXTENSION}` to vary the "
+                f"shared one",
+                rel,
+                f"{where}.$extensions",
+            )
+            return None
+        if not is_name(name):
+            self._fail(
+                "own-axis",
+                f"the axis `{name}` of the brand's own is not a name of lower-case words of "
+                f"letters and digits joined by hyphens",
+                rel,
+                where,
+            )
+            return None
+        contexts = spec.get("contexts")
+        if (
+            not isinstance(contexts, Mapping)
+            or len(contexts) < 2
+            or not all(is_name(mode) for mode in contexts)
+        ):
+            self._fail(
+                "own-axis",
+                f"the axis `{name}` of the brand's own must have one context for each of its "
+                f"modes, two or more, each a name of lower-case words",
+                rel,
+                f"{where}.contexts",
+            )
+            return None
+        default = spec.get("default")
+        if default not in contexts:
+            self._fail(
+                "own-axis",
+                f"the default of the axis `{name}` of the brand's own is not one of its modes: "
+                f"{', '.join(contexts)}",
+                rel,
+                f"{where}.default",
+            )
+            return None
+        return Axis(name=name, kind=kind, modes=tuple(contexts), default=str(default), own=True)
+
+    def _axes(
+        self, modifiers: Mapping[str, Mapping[str, tuple[str, ...]]], base: Brand | None
+    ) -> dict[str, Axis]:
+        """The axes the brand has (DEC-021 point 2, DEC-004 point 2): its base's, where it
+        builds on one; else every shared value axis, whole, and each shared size axis a
+        modifier varies, with the modes that modifier gives, in the order the foundations
+        declare them, then each axis of its own."""
+        if base is not None:
+            return dict(base.axes)
+        shared = {
+            name: axis
+            if axis.kind == "value"
+            else Axis(
+                name=name,
+                kind=axis.kind,
+                modes=tuple(mode for mode in axis.modes if mode in modifiers[name]),
+                default=axis.default,
+            )
+            for name, axis in self.scope.axes.items()
+            if axis.kind == "value" or name in modifiers
+        }
+        return {**shared, **self.own}
 
     def _read_sources(self, raw: Any, rel: str, where: str) -> tuple[str, ...]:
         if not isinstance(raw, list):
@@ -1575,7 +2313,9 @@ class _BrandReader:
             if not isinstance(child, Mapping):
                 self._fail("tokens-shape", f"`{path}` is neither a group nor a token", file, path)
                 continue
-            if "$value" in child:
+            if path in self.pictures:
+                self._picture(child, path, file)
+            elif "$value" in child:
                 self._token(child, path, group_type, file)
             else:
                 self._walk(child, path, group_type, file)
@@ -1618,6 +2358,36 @@ class _BrandReader:
             path, type_, node["$value"], extensions, file, owner=self.label, prefix=self.shown
         )
 
+    def _picture(self, node: Mapping[str, Any], path: str, file: str) -> None:
+        """The value of the picture role at `path` (DEC-025 point 4): an empty group, since
+        DTCG has no type for a file, whose `$extensions` name the file by its bare name in
+        the capability's extension key, `{"file": "<name>"}`, and alias nothing. It is kept
+        as a token of the type `picture`, so it merges as a token does."""
+        shape = (
+            f"`{path}` is a picture role, so its value is an empty group whose `$extensions` "
+            f'hold `{EXTENSION}` as `{{"file": "<name>"}}`'
+        )
+        stray = next((key for key in node if key not in _PICTURE_KEYS), None)
+        extensions = node.get("$extensions")
+        given = extensions.get(EXTENSION) if isinstance(extensions, Mapping) else None
+        if stray is not None or not isinstance(given, Mapping) or set(given) != {"file"}:
+            held = f", and it holds `{stray}`" if stray is not None else ""
+            self._fail("picture-shape", f"{shape}{held}", file, path)
+            return
+        name = given["file"]
+        if not pictures.is_bare_name(name):
+            self._fail(
+                pictures.NAME,
+                f"`{path}` names `{name}`, which is no picture file's bare name: "
+                f"{pictures.BARE_NAME}",
+                file,
+                path,
+            )
+            return
+        self.flat[file][path] = _Token(
+            path, PICTURE, name, {}, file, owner=self.label, prefix=self.shown
+        )
+
     # resolution
 
     def _sources(
@@ -1626,10 +2396,20 @@ class _BrandReader:
         sets: Mapping[str, tuple[str, ...]],
         modifiers: Mapping[str, Mapping[str, tuple[str, ...]]],
         combination: Mapping[str, str],
+        base: Brand | None,
     ) -> list[str]:
+        """The brand's sources for `combination`, in resolution order. At a mode a modifier
+        does not give, it takes the sources of the axis's default; in a brand built on
+        another, none, so its base's values hold there (DEC-004 point 2)."""
         files: list[str] = []
         for kind, name in order:
-            files.extend(sets[name] if kind == "sets" else modifiers[name][combination[name]])
+            if kind == "sets":
+                files.extend(sets[name])
+                continue
+            contexts, mode = modifiers[name], combination[name]
+            if mode not in contexts and base is None:
+                mode = self.scope.axes[name].default  # an axis of its own gives every mode
+            files.extend(contexts.get(mode, ()))
         return files
 
     def _view(self, sources: list[str], base: Brand | None, key: str) -> _View:
@@ -1728,6 +2508,8 @@ class _BrandReader:
                 self._fail_problem(problem)
         for role in self.scope.foundations.roles.values():
             found = resolved.get(role.path)
+            if role.path not in view.roles and role.type == PICTURE:
+                continue  # no brand owes a picture role a value (DEC-025 point 4)
             if role.path not in view.roles:
                 self._fail(
                     "role-missing",
@@ -1813,6 +2595,14 @@ class _BrandReader:
         target = self._alias(token.value)
         if target is not None:
             found = self._resolve(self._target(token, target, path, view), view, done, chain)
+            if found.type == PICTURE:
+                raise _Problem(
+                    "alias-type",
+                    f"`{path}` aliases `{target}`, a picture role, whose value is a group no "
+                    f"token aliases",
+                    token.shown,
+                    path,
+                )
             if token.type is not None and token.type != found.type:
                 raise _Problem(
                     "alias-type",
@@ -1830,7 +2620,9 @@ class _BrandReader:
                 token.shown,
                 path,
             )
-        if token.type == "typography":
+        if token.type == PICTURE:
+            value = token.value  # the file's bare name, read with its group (`_picture`)
+        elif token.type == "typography":
             value = self._typography(token, view, done, chain)
         else:
             value = _canonical(token.type, token.value, token.shown, path)
@@ -1926,13 +2718,14 @@ class _BrandReader:
 
     def _check_value_axes(
         self,
+        axes: Mapping[str, Axis],
         views: Mapping[str, _View],
         resolved: Mapping[str, Mapping[str, _Resolved]],
         hidden: Mapping[str, Mapping[str, _Resolved]],
     ) -> None:
-        """A value axis changes only colours. A library's role its library leaves at its
-        defaults changes only as the roles they alias do, which are judged themselves."""
-        axes = self.scope.axes
+        """A value axis of the brand's `axes` changes only colours. A library's role its
+        library leaves at its defaults changes only as the roles they alias do, which are
+        judged themselves."""
         for key in resolved:
             combination = keys.parse_key(key, axes)
             for axis in axes.values():
@@ -1961,7 +2754,8 @@ class _BrandReader:
                             continue
                         self._fail(
                             "value-axis-changes-size",
-                            f"the value axis `{axis.name}` may change only colours, but its mode "
+                            f"the value axis `{axis.name}` may change only colours and "
+                            f"pictures, but its mode "
                             f"`{combination[axis.name]}` changes `{path}`, a `{type_}`, in the "
                             f"combination `{key}`",
                             "",
@@ -1983,45 +2777,64 @@ class _BrandReader:
             path = self._alias(token.value) or ""
         return False
 
+    def _library_of(self, path: str) -> tuple[str, str]:
+        """The library a brand's token at `path` lies under, and the group it lies in: the
+        library's name, its own roles' group, or `component.<library>`, where the tokens of
+        its components lie (DEC-008 point 4, DEC-035 point 7). None, as "", for a token
+        under `component.<the brand's own name>`, where its own components' tokens lie,
+        and for one under `component` alone."""
+        segments = path.split(".")
+        if segments[0] != COMPONENT:
+            return segments[0], segments[0]
+        if len(segments) < 2 or segments[1] == self.name:
+            return "", ""
+        return segments[1], f"{COMPONENT}.{segments[1]}"
+
     def _check_library_tokens(self) -> None:
-        """Each of the brand's tokens under the name of a library of the scope (DEC-008
-        point 4): where the brand names the library, one that is none of its roles, or is
-        of another type, is a finding; where it does not, the token stays private and asks
-        for attention."""
+        """Each of the brand's tokens under the name of a library of the scope, or under
+        `component.<library>` (DEC-008 point 4, DEC-035 point 7): where the brand names the
+        library, one that is none of its roles or of its components' tokens, or is of
+        another type, is a finding; where it does not, the token stays private and asks for
+        attention. The foundations are judged under `component.foundations` alone, since
+        they have no own roles. A token under `component.<the brand's own name>` is private,
+        and judged here no further (#2573)."""
         for file, tokens in sorted(self.flat.items()):
             for path, token in tokens.items():
-                library = path.split(".")[0]
+                library, group = self._library_of(path)
                 declared = self.scope.libraries.get(library)
-                if declared is None:
+                under_tokens = group != library
+                if declared is None or not (under_tokens or declared.own):
                     continue
-                role = declared.roles.get(path)
+                role = (declared.tokens if under_tokens else declared.roles).get(path)
+                theirs = "its components' tokens" if under_tokens else "its roles"
                 if library not in self.named:
                     self._keep(
                         "library-token-private",
-                        f"`{path}` lies under `{library}`, which the brand does not name, by the "
+                        f"`{path}` lies under `{group}`, which the brand does not name, by the "
                         f"major of {declared.label}, among the libraries it builds on, so it stays "
                         f"private and gives `{library}` nothing",
                         file,
                         path,
                         ATTENTION,
-                        fix=f"name `{library}` in `builds-on` to give its roles values, or move "
+                        fix=f"name `{library}` in `builds-on` to give {theirs} values, or move "
                         f"`{path}` to a group of the brand's own",
                         who=f"the owner of the brand {self.name}",
                     )
                 elif role is None:
                     self._keep(
                         "library-token",
-                        f"`{path}` lies under `{library}`, which the brand names, but is none of "
-                        f"its roles: a token under a library the brand names gives one of its "
-                        f"roles a value, and the brand's private tokens lie in groups of its own",
+                        f"`{path}` lies under `{group}`, and the brand names `{library}`, but it "
+                        f"is none of {theirs}: a token there gives one of them a value, and the "
+                        f"brand's private tokens lie in groups of its own",
                         file,
                         path,
                     )
                 elif token.type is not None and token.type != role.type:
+                    noun = "component token" if under_tokens else "role"
                     self._keep(
                         "library-token",
-                        f"`{path}` is of type `{token.type}`, but the role `{path}` of `{library}` "
-                        f"is of type `{role.type}`, so it gives the role no value",
+                        f"`{path}` is of type `{token.type}`, but the {noun} `{path}` of "
+                        f"`{library}` is of type `{role.type}`, so it gives the {noun} no value",
                         file,
                         path,
                     )
@@ -2056,6 +2869,121 @@ class _BrandReader:
                 path,
                 fix=f"give `{path}` a value in every combination",
             )
+
+    def _check_pictures(self) -> None:
+        """Each file the brand's own picture values name, judged as any picture file is
+        (DEC-025 points 2, 5 and 9): found by its exact name as version control lists the
+        version's `pictures/`, no link, its bytes committed and of an encoding read. Each
+        finding lies in the version. A base's values are its base's to judge."""
+        folder = self.picture_folder
+        for file, tokens in sorted(self.flat.items()):
+            for path, token in sorted(tokens.items()):
+                if token.type == PICTURE:
+                    judged = folder.judge(
+                        token.value,
+                        named=f"the picture role `{path}`",
+                        file=f"{self.shown}{file}",
+                        where=path,
+                    )
+                    self.kept.extend(judged.findings)
+
+    def _given(
+        self,
+        views: Mapping[str, _View],
+        resolved: Mapping[str, Mapping[str, _Resolved]],
+        base: Brand | None,
+    ) -> dict[str, dict[str, GivenPicture]]:
+        """The file each picture role takes in each combination, by its key: the one its
+        token there names, in the `pictures/` of the brand version that writes the token,
+        this one or a base below it, since a picture role aliases nothing (DEC-025 point 4)."""
+        folders = {self.label: self.folder}
+        below = base
+        while below is not None:
+            folders[below.label] = below.folder
+            below = below.base
+        given: dict[str, dict[str, GivenPicture]] = {}
+        for key, values in resolved.items():
+            given[key] = {}
+            for path, found in values.items():
+                owner = views[key].roles[path].owner
+                if found.type == PICTURE and owner in folders:
+                    given[key][path] = GivenPicture(found.value, owner, folders[owner])
+        return given
+
+    def _check_given(
+        self,
+        axes: Mapping[str, Axis],
+        given: Mapping[str, Mapping[str, GivenPicture]],
+        base: Brand | None,
+    ) -> None:
+        """Within one key over the size axes, a picture role takes a file in every
+        combination of the value axes or in none, and the files it takes there share one
+        proportion of width to height (DEC-025 point 4), so one scene draws its image alike
+        in every value mode. Judged where the brand's own values take part; where its base's
+        alone do, the base's own check says so. A file that cannot be read has its own
+        finding, and takes no part in the proportion."""
+        by_size: dict[str, list[str]] = {}
+        for key in given:
+            combination = keys.parse_key(key, axes)
+            sized = {name: mode for name, mode in combination.items() if axes[name].kind == "size"}
+            by_size.setdefault(keys.key_of(sized, axes), []).append(key)
+        for path in sorted(self.pictures):
+            for size, group in by_size.items():
+                files = {key: given[key][path] for key in group if path in given[key]}
+                if not any(each.library == self.label for each in files.values()):
+                    continue
+                at = "" if size == keys.DEFAULT_KEY else f" at `{size}`"
+                if len(files) < len(group):
+                    some = ", ".join(f"`{key}`" for key in group if key in files)
+                    none = ", ".join(f"`{key}`" for key in group if key not in files)
+                    self._keep(
+                        "picture-role-modes",
+                        f"the brand gives the picture role `{path}` a file in {some}, and none "
+                        f"in {none}: within one key over the size axes, a picture role takes a "
+                        f"file in every combination of the value axes, or in none",
+                        "",
+                        path,
+                        fix=f"give `{path}` a file in every combination of the value axes{at}, "
+                        f"or in none",
+                    )
+                self._check_proportion(path, at, files, base)
+
+    def _check_proportion(
+        self, path: str, at: str, files: Mapping[str, GivenPicture], base: Brand | None
+    ) -> None:
+        """The files the picture role at `path` takes in the combinations of one key over
+        the size axes, `files` by key, share one proportion of width to height: a dark logo
+        may hold twice the pixels, never another shape (DEC-025 point 4)."""
+        shapes: dict[tuple[int, int], list[str]] = {}
+        seen: set[GivenPicture] = set()
+        for key, each in files.items():
+            if each in seen:
+                continue
+            seen.add(each)
+            if each.library == self.label or base is None:
+                read = self.picture_folder.judge(each.name, named="", file="", where="").picture
+            else:
+                read = base.picture_of(each).picture
+            if read is None or read.width <= 0 or read.height <= 0:
+                continue
+            divisor = math.gcd(read.width, read.height)
+            shape = (read.width // divisor, read.height // divisor)
+            shapes.setdefault(shape, []).append(
+                f"`{each.name}`, {read.width} × {read.height} pixels, in `{key}`"
+            )
+        if len(shapes) < 2:
+            return
+        said = "; ".join(said for held in shapes.values() for said in held)
+        self._keep(
+            "picture-role-proportion",
+            f"the picture role `{path}` takes files of {len(shapes)} proportions of width to "
+            f"height{at}: {said}. The files a picture role takes over the value axes share one "
+            f"proportion, since an image's height may come from it",
+            "",
+            path,
+            fix=f"save each file `{path}` takes{at} at one proportion of width to height: a "
+            f"mode's file may hold more pixels, never another shape",
+        )
 
     def _check_open(self, raw: Any, base: Brand | None) -> tuple[tuple[str, ...], frozenset[str]]:
         """The open roles as `open` lists them, and the roles they open: those each entry
@@ -2264,6 +3192,94 @@ class _BrandReader:
                         pair.text,
                     )
 
+    def _check_order(
+        self,
+        resolved: Mapping[str, Mapping[str, _Resolved]],
+        base: Brand | None,
+    ) -> None:
+        """An order's ends in every combination, where the foundations declare them (DEC-004
+        point 8, DEC-032 point 2), at their defaults as at a brand's values: the order's
+        text lies on one side of both ends, and the first end contrasts with the page's
+        ground at least as much as the last. A combination where the four colours are as
+        the base gives them is the base's to report, and one whose ground is translucent is
+        not measured. The order's text on each end is a declared pair, which `_check_pairs`
+        measures."""
+        order = self.scope.foundations.order
+        if order is None:
+            return
+        named = (order.first, order.last, order.text, order.ground)
+        for key, values in resolved.items():
+            if any(path not in values for path in named):
+                continue
+            colours = [values[path].value for path in named]
+            below = base._resolved[key] if base is not None else {}
+            if all(path in below for path in named) and colours == [
+                below[path].value for path in named
+            ]:
+                continue
+            first, last, text, ground = colours
+            if ground["alpha"] < 1:
+                continue
+            self._check_text_side(order, key, (first, last), text, ground)
+            self._check_first_end(order, key, first, last, ground)
+
+    def _check_text_side(
+        self,
+        order: Order,
+        key: str,
+        ends: tuple[Mapping[str, Any], Mapping[str, Any]],
+        text: Mapping[str, Any],
+        ground: Mapping[str, Any],
+    ) -> None:
+        """The order's text lighter than both ends, or darker than both, by WCAG's relative
+        luminance, each end laid over the ground and the text over each end, as drawn. Else
+        a step between the ends may come as light as the text."""
+        sides: list[float] = []
+        for end in ends:
+            under = _laid_over(end, ground)
+            drawn = _laid_over(text, under)
+            sides.append(_luminance(drawn["components"]) - _luminance(under["components"]))
+        if all(side > 0 for side in sides) or all(side < 0 for side in sides):
+            return
+        said = " and ".join(
+            f"{_compared(side)} `{role}`"
+            for side, role in zip(sides, (order.first, order.last), strict=True)
+        )
+        self._keep(
+            "order-text-between",
+            f"`{order.text}` is {said} in the combination `{key}`, so a step between the ends "
+            f"may come as light as it: an order's text is lighter than both its ends, or darker "
+            f"than both",
+            "",
+            order.text,
+            fix=f"give `{order.text}` a colour lighter than both ends in `{key}`, or darker than "
+            f"both",
+        )
+
+    def _check_first_end(
+        self,
+        order: Order,
+        key: str,
+        first: Mapping[str, Any],
+        last: Mapping[str, Any],
+        ground: Mapping[str, Any],
+    ) -> None:
+        """The first end's contrast with the page's ground at least the last's, by WCAG's
+        ratio, each end laid over the ground. Equal ends pass."""
+        stands_first, stands_last = contrast_ratio(first, ground), contrast_ratio(last, ground)
+        if stands_first >= stands_last or math.isclose(stands_first, stands_last):
+            return
+        self._keep(
+            "order-first-weaker",
+            f"`{order.first}` has the contrast {stands_first:.2f} with `{order.ground}`, the "
+            f"page's ground, in the combination `{key}`, below the {stands_last:.2f} of "
+            f"`{order.last}`: an order's first end stands out at least as much as its last",
+            "",
+            order.first,
+            fix=f"swap the colours of the two ends in `{key}`, or move `{order.first}` further "
+            f"from `{order.ground}`",
+        )
+
 
 def _families(*maps: Mapping[str, Mapping[str, _Resolved]]) -> set[str]:
     """The font families the resolved values name, in any combination."""
@@ -2358,13 +3374,27 @@ def _unit(value: Any) -> bool:
 def contrast_ratio(text: Mapping[str, Any], under: Mapping[str, Any]) -> float:
     """The WCAG contrast of the colour `text` drawn on the opaque colour `under`, both in
     canonical form: a translucent text is laid over `under` first."""
-    alpha = text["alpha"]
-    drawn = [
-        t * alpha + u * (1 - alpha)
-        for t, u in zip(text["components"], under["components"], strict=True)
-    ]
+    drawn = _laid_over(text, under)["components"]
     lighter, darker = sorted((_luminance(drawn), _luminance(under["components"])), reverse=True)
     return (lighter + 0.05) / (darker + 0.05)
+
+
+def _laid_over(top: Mapping[str, Any], under: Mapping[str, Any]) -> dict[str, Any]:
+    """The colour `top` laid over the opaque colour `under`, both in canonical form, as the
+    opaque colour drawn, in canonical form."""
+    alpha = top["alpha"]
+    components = [
+        t * alpha + u * (1 - alpha)
+        for t, u in zip(top["components"], under["components"], strict=True)
+    ]
+    return {"colorSpace": "srgb", "components": components, "alpha": 1}
+
+
+def _compared(side: float) -> str:
+    """How a colour's relative luminance stands to another's, `side` their difference."""
+    if side > 0:
+        return "lighter than"
+    return "darker than" if side < 0 else "as light as"
 
 
 def _luminance(components: Iterable[float]) -> float:

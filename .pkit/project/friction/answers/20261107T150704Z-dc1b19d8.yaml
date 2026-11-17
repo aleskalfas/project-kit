@@ -1,0 +1,462 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+    revalidated:
+      at: 2026-11-07T15:09:52Z
+      outcome: unchanged
+      unchanged-because: "DEC-025's edits have a picture made elsewhere lie in the piece's folder under a name its content gives, and a command that moves the lock onto another brand name it (DEC-001 point 3). They hold a picture role as an empty group that stands as its token, which no brand owes and a brand exports only where it gives it, and count a new top group of the shared roles as breaking (DEC-004 points 1, 5, 7 and 11, DEC-008 points 4 and 5). They have the full read read each picture file (DEC-014 point 1). This page, as main holds it, lists a piece's files with no pictures/ folder, the role types roles.yaml takes with no picture among them, what a brand owes and exports, the full read, and what the release's comparison counts as breaking. The code holds no picture file and no picture role, so each passage still holds of it. The comparison counts a new shared role with a default as an addition in any group, and no Task the record names yet builds its count of a new top group. The Tasks of Feature #2792 that declare the picture role and build the picture file change this page where they need. It replaces the re-checks made apart in 20261107T135441Z-82c14d62.yaml, whose change gave a brand only the sizes it gives, and had the comparison count a new shared axis, and a size a brand comes to give, as additions; 20261107T140950Z-26b2d33c.yaml, whose change added pkit visual take-up, which copies a final piece's folder whole as a pinned draft; and 20261107T142335Z-64833036.yaml, which found DEC-022's and DEC-023's edits leave the page's keys, top components and look's folders true. Together they hold: take-up would copy a pictures/ folder with the rest, and the comparison's lines on axes and sizes sit beside its line on shared roles, which this change leaves as the code has it."
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+    revalidated:
+      at: 2026-11-07T15:09:54Z
+      outcome: unchanged
+      unchanged-because: "DEC-025's edits have a scene's image show a picture made while preparing, a picture file of the piece or of a library, or a picture role, which stays a role, with only the first holding variants and points (DEC-005 point 5). They have a brand give every shared role but a picture role a value (DEC-008 point 4). This page, as main holds it, says an image part takes `produced`, required, and shows that output, and lists a scene's image with its output, its variants and its points. The code takes no other source for an image, and the foundations declare no picture role, so the page still holds of it. The Task of Feature #2792 that builds the picture file adds `content`, `file` and `role`, and changes this page. It replaces the re-checks made apart in 20261107T135441Z-82c14d62.yaml, which found a brand's narrowed axes leave the page's scenes, size keys and switches true; 20261107T140950Z-26b2d33c.yaml, which found take-up leaves how a component is read and a scene computed as they were; and 20261107T142335Z-64833036.yaml, which found DEC-022's and DEC-023's edits agree with one scene serving every value mode at its key. Together they hold, and none touches the image part or a scene's image."
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T035615Z-a1d5b3e3.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+    revalidated:
+      at: 2026-11-07T15:09:56Z
+      outcome: unchanged
+      unchanged-because: "DEC-025's edits have a scene's image show a picture made while preparing, a picture file or a picture role (DEC-005 point 5), and leave out of a brand's exports a shared picture role it gives no value (DEC-008 point 5). This page, as main holds it, has the SVG and HTML renderers embed a produced picture as PNG data and the PDF renderer refuse an image, and the code writers write what a brand exports. No piece can show a picture file and no brand holds a picture role in the code, so the page still holds. The Task of Feature #2792 that builds the picture file teaches the renderers a picture file, a JPEG and a colour profile, and changes this page. It replaces the re-checks made apart in 20261107T135441Z-82c14d62.yaml, whose change had the CSS writer write a brand that gives a size at the size axis's default, and the JSON writer hold each size's keys; 20261107T140950Z-26b2d33c.yaml, which found take-up leaves the page's exports and refusals true; and 20261107T142335Z-64833036.yaml, which found DEC-022's and DEC-023's edits leave the HTML renderer and the viewing step as the code has them. Together they hold: the writers' forms and losses the page lists are of the tokens a brand holds today, among which no picture role lies, and no renderer draws an image other than a produced one."
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T061853Z-ad99d5f3.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T140220Z-88174d4e.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+    revalidated:
+      at: 2026-11-07T15:09:58Z
+      outcome: unchanged
+      unchanged-because: "DEC-025's edits except a picture role from the finding of a role with no value in some combination, and add one for a picture role given in some value combinations of a key and not others, or in two proportions (DEC-004 point 11). They except it from what a brand owes a library (DEC-008 point 4), count a new top group of the shared roles as breaking (DEC-004 point 5), and have the full read read each picture file (DEC-014 point 1). This page, as main holds it, lists the findings the check makes today, a role with no value and the produced-picture findings among them, and what a release's full read refuses. The code declares no picture role and reads no picture file, so no finding the page names changes, and none it lacks can fire. The Tasks of Feature #2792 that declare the picture role and build the picture file add their findings to this page. It replaces the re-checks made apart in 20261107T134944Z-8d8d3cca.yaml, which found DEC-023's edits leave the loss row true while no renderer holds several modes in one file; 20261107T135441Z-82c14d62.yaml, whose change rewrote brand-axis for the modes a brand gives, and code-loss for a token a size changes; and 20261107T140950Z-26b2d33c.yaml, whose change named pkit visual take-up in the fixes on a final piece. Together they hold: none touches the rows on a role with no value, on the produced pictures or on the full read, which this change's edits reach."
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261105T225848Z-3e84e405.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T131742Z-47f9f143.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+    revalidated:
+      at: 2026-11-07T15:10:01Z
+      outcome: unchanged
+      unchanged-because: "DEC-025's edit has a picture made elsewhere lie in the piece's folder under a name its content gives, and a command that moves the piece's lock onto another brand name it (DEC-001 point 3). This page, as main holds it, says a piece keeps its content as data, and describes each command as it runs: no command takes a picture file, and none names one when a lock moves onto another brand. The code does neither yet, so the page still holds. The Task of Feature #2792 that builds the picture file changes the commands' passages where it adds that report. It replaces the re-checks made apart in 20261107T135441Z-82c14d62.yaml, which found a brand's narrowed axes leave the entries on brands, the writers and upgrade true; 20261107T140950Z-26b2d33c.yaml, whose change added the entry for pkit visual take-up and named it in export's refusal of a final piece; and 20261107T142335Z-64833036.yaml, which found DEC-022's and DEC-023's edits leave the entries for look and the reviewer true. Together they hold: take-up copies a piece's folder whole, which would take its pictures with it, and no entry says a command names a picture when a lock moves."
+  - artefact: .pkit/capabilities/visual-communication/libraries/starter/README.md
+    read:
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+    revalidated:
+      at: 2026-11-07T15:07:14Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edits except a picture role from a default and a major (DEC-008 point 2), and from what a brand owes a library it names (DEC-008 point 4). This page says the starter's three more shared roles carry no default, so every brand gives each a value, and that a brand that names the starter may give its own roles values. The starter reads no picture role, and none of those roles is one, so the page still holds of the library.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-brand
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134444Z-767c8326.yaml
+    revalidated:
+      at: 2026-11-07T15:07:16Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edit has a picture role's value lie in a brand's files as an empty group that names its file and stands as the role's token (DEC-004 point 1). The term defines a brand as the library that holds the values pieces are drawn in, such as their colours, fonts and sizes. A logo given to a picture role is such a value, so the definition, its example and its distinctions still hold.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+    revalidated:
+      at: 2026-11-07T15:07:17Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edit has a picture made elsewhere lie in the piece's folder under a name its content gives, and a command that moves the lock onto another brand name it (DEC-001 point 3). The term defines content as what a piece shows, kept as data apart from how it looks. A picture file a content field names is such content, so the definition, its example and its distinction from a layout still hold.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-model
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+    revalidated:
+      at: 2026-11-07T15:07:19Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edit to DEC-001 point 3 places a picture made elsewhere in the piece's folder, under a name its content gives, and has a command name it at a change of brand. It leaves that point's shared content, which a model is, as it stood, so the term's definition, its example and its distinctions still hold.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-piece
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124703Z-4b574535.yaml
+    revalidated:
+      at: 2026-11-07T15:10:03Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edit to DEC-001 point 3 places a picture made elsewhere in the piece's folder, under a name its content gives, and has a command that moves the piece's lock onto another brand name it. The term defines a piece as a visual item that keeps its content as data and takes its look from libraries. Its own picture is part of that content, so the definition, its example and its distinctions still hold. It replaces the re-checks made apart in 20261106T151937Z-c65fc01f.yaml, which found how a lock reaches piece.yaml changes nothing of the term, and 20261107T124703Z-4b574535.yaml, which found a scene computed for each key over the size axes changes neither the definition, the example nor the distinctions. Together they hold, since none of the three changes what a piece is.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-093-build-presentation.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+    revalidated:
+      at: 2026-11-07T15:07:23Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edit to DEC-001 point 3 places a picture made elsewhere in the piece's folder, under a name its content gives, and has a command name it at a change of brand. The use case rests on that point for a piece naming its brand and its notations, and for its content filling the slots of its layouts. A slide's picture in its steps is a component's drawing, not a picture file. So its steps still hold of every piece the system can hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-094-put-figure-in-page.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T024351Z-5424a227.yaml
+      - 20261106T024508Z-5f0b1c44.yaml
+      - 20261106T025530Z-6edd3f17.yaml
+      - 20261106T030639Z-cb240e44.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T131232Z-a68f64d0.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+    revalidated:
+      at: 2026-11-07T15:07:24Z
+      outcome: unchanged
+      unchanged-because: "DEC-025's edits place a picture made elsewhere in the piece's folder, named by its content, with a command naming it at a change of brand (DEC-001 point 3). They have a scene's image show a picture made while preparing, a picture file or a picture role (DEC-005 point 5). The use case rests on those points for a new piece naming its brand and its notations, and for a diagram being a page alone or part of a page. Neither changes, so its steps still hold. Its deferral on DEC-003 point 9 stays, for open #2767."
+      deferred:
+        - anchor:
+            kind: record
+            value: visual-communication:DEC-003#9
+          reason: "DEC-003 point 9 says the fact names the command that proposes the move only within the lock's majors, for a version the installed capability reads. Of a later major it says a person takes that version on purpose, by naming it. Variant 6b and its sentence of Sources say the system names that command for any new library version, so both are false of a later major and of a version the capability cannot read, and hold of the rest. Open #2767, which builds outdated, mends them and revalidates this use case with no deferral."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-095-draw-views-of-system.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+    revalidated:
+      at: 2026-11-07T15:07:26Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edit to DEC-001 point 3 places a picture made elsewhere in the piece's folder, under a name its content gives, and has a command name it at a change of brand. The use case rests on that point's shared content, read from a source the piece names, and on the stable id of an element a view names. Those stand as they were, so its steps still hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-098-switch-brand-or-mode.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+    revalidated:
+      at: 2026-11-07T15:07:28Z
+      outcome: unchanged
+      unchanged-because: "DEC-025's edit to DEC-001 point 3 places a picture made elsewhere in the piece's folder, under a name its content gives, and keeps that switching the brand reports it, now said by the command that moves the lock onto another brand. Variant 3a says the system names such a picture, which agrees. No command names one yet, so the variant states what the system is to do. DEC-025 has it come to read as that record decides, with the Task of Feature #2792 that builds the picture file, which also names each logo the new brand lacks."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-100-take-back-edits.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+    revalidated:
+      at: 2026-11-07T15:07:30Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edit to DEC-001 point 3 places a picture made elsewhere in the piece's folder, under a name its content gives, and has a command name it at a change of brand. The use case rests on that point's traces, back to the component that drew a part and the field it shows, and on an edit that cannot be placed being reported. Those stand as they were, so its steps still hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-101-give-second-language.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+    revalidated:
+      at: 2026-11-07T15:07:32Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edit to DEC-001 point 3 places a picture made elsewhere in the piece's folder, under a name its content gives, and has a command name it at a change of brand. The use case rests on a second language being a second content of the same shape and ids. A picture's name is a field's value, which each language may give its own (DEC-025 point 1), so the shape and the steps still hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+    revalidated:
+      at: 2026-11-07T15:07:34Z
+      outcome: unchanged
+      unchanged-because: "DEC-025's edits place a picture made elsewhere in the piece's folder, named by its content (DEC-001 point 3), and have a scene's image show a picture made while preparing, a picture file or a picture role (DEC-005 point 5). The use case rests on a piece declaring the files it is handed out as, an export run making each, and a PDF's text for each picture, its reading order and its structure. None of these changes, so its steps still hold. The Task of Feature #2792 that builds the picture file teaches the PDF renderer every image."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md
+    read:
+      - 20261103T140411Z-459661c4.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+    revalidated:
+      at: 2026-11-07T15:07:35Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edit to DEC-004 point 1 holds a picture role's value as an empty group at its path, which stands as the role's token. The use case rests on that point for a brand holding how it draws each layout of a kind of piece, with what it lacks reported. That stands as it was, so its steps still hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-105-make-brand.md
+    read:
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+    revalidated:
+      at: 2026-11-07T15:07:37Z
+      outcome: unchanged
+      unchanged-because: "DEC-025's edit to DEC-004 point 1 holds a picture role's value, such as a logo, as an empty group at its path that names the file and stands as the role's token. Step 2 has the developer give the brand pictures such as a logo, kept as design tokens, which agrees. No brand can give one yet, so the step states what the system is to do. DEC-025 has it come to read as that record decides, with the Tasks of Feature #2792 that declare `picture.logo` and build the picture file."
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-106-build-brand-on-brand.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+    revalidated:
+      at: 2026-11-07T15:07:39Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edit to DEC-004 point 11 excepts a picture role from the finding of a role with no value in some combination, and adds one for a picture role given in some value combinations of a key and not others, or in two proportions. The use case rests on that point for a value given to a role its base does not open failing validation. That stands as it was, so its steps still hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-107-use-brand-in-code.md
+    read:
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+    revalidated:
+      at: 2026-11-07T15:07:42Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edits to DEC-004 point 5 have a brand export a picture role only where it gives it a value, count a new top group of the shared roles as breaking, and a new picture role as not. The use case writes each value a brand exports, in each mode, and names each value a writer could not write. A picture role a brand exports is such a value, which the CSS writer reports as lost (DEC-025 point 4), so its steps still hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-010-give-talk.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+    revalidated:
+      at: 2026-11-07T15:07:44Z
+      outcome: unchanged
+      unchanged-because: DEC-025's edit to DEC-001 point 3 places a picture made elsewhere in the piece's folder, under a name its content gives, and has a command name it at a change of brand. The journey rests on that point for a second language being a second content of the same shape and ids. That stands, and each language may name its own picture (DEC-025 point 1), so the journey still holds.

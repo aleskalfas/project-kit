@@ -31,7 +31,8 @@ from typing import Any
 import pytest
 from ruamel.yaml import YAML
 
-from project_kit.agents import AGENT_TEMPLATE, agent_locations, find_agent_file
+from project_kit import agent_definitions
+from project_kit.agents import AGENT_TEMPLATE
 
 REPO = Path(__file__).resolve().parent.parent
 DEPLOYED = REPO / ".claude" / "agents"
@@ -78,19 +79,12 @@ def _split(path: Path) -> tuple[dict[str, Any], str]:
 
 
 def _shipped_agents() -> dict[str, Path]:
-    """Every agent the repository ships, by name; the first location in deploy order wins."""
+    """Every agent the repository ships, by name: the definition the picker names."""
     found: dict[str, Path] = {}
-    for _, location in agent_locations(REPO):
-        if not location.is_dir():
-            continue
-        for entry in sorted(location.iterdir()):
-            name = entry.stem if entry.suffix == ".md" else entry.name
-            path = find_agent_file(location, name)
-            if path is None or name in found:
-                continue
-            front, _ = _split(path)
-            if front.get("name") == name:
-                found[name] = path
+    for name, (_place, path) in agent_definitions.agents(agent_definitions.answer(REPO)).items():
+        front, _ = _split(path)
+        if front.get("name") == name:
+            found[name] = path
     return found
 
 

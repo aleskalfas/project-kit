@@ -1,0 +1,70 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  Code, as a terminal or a file shows it, in a monospace type on a box with rounded
+  corners, on its colour family's fill. Each line stands as written, never broken, under
+  a head where the content gives one. Its text runs plain, or as a prompt, a command or a
+  comment. It is as wide as its widest line, or its head.
+
+fields:
+  type: object
+  required: [text]
+  properties:
+    head:
+      type: string
+      description: What the code is, such as what a terminal shows or a file's name.
+      x-pkit-prose: true
+    text:
+      type: string
+      description: >-
+        The code, a line feed between its lines. It may be given as runs, each plain, a
+        prompt, a command or a comment.
+      x-pkit-runs: [plain, prompt, command, comment]
+
+colour: neutral
+
+parts:
+  box:
+    box:
+      fill: ":colour.fill"
+      stroke: ":colour.line"
+      stroke-width: "=@starter.edge"
+      rx: "=@starter.corner"
+    width: "=:width"
+    height: "=:height"
+  # The head and a plain run are the family's text on the family's fill, a pair the
+  # foundations declare. A prompt, a command and a comment take shared roles, which the
+  # contrast as drawn guards.
+  head:
+    when: head
+    text:
+      content: head
+      style: starter.type.head
+      fill: ":colour.text"
+    x: "=@starter.inset"
+    y: "=@starter.inset"
+  # Neither the head nor the code takes a width, so no line is broken: each stands as
+  # written, and the box is as wide as the widest.
+  text:
+    text:
+      content: text
+      style:
+        by: text
+        plain: starter.type.code
+        prompt: starter.type.code
+        command: starter.type.code
+        comment: starter.type.code
+      fill:
+        by: text
+        plain: ":colour.text"
+        prompt: text-secondary
+        command: accent
+        comment: text-secondary
+    x: "=@starter.inset"
+    y: "=head.bottom + min(head.height, @space.2)"
+
+preferred:
+  width: "=max(head.right, text.right) + @starter.inset"
+  height: "=text.bottom + @starter.inset"

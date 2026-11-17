@@ -271,7 +271,8 @@ def _told_at_head(pr: dict, number: int, capability_root: Path) -> list[str] | N
 def _summarise(pr: dict, freshness: FreshnessRule | None = None) -> dict:
     """The PR's methodology view. `freshness` judges each verdict; by default
     it is the rule for this PR with no floor-only reviewer, under which every
-    verdict is held to any change since the head it reviewed."""
+    verdict is held to any change since the head it reviewed, and one naming
+    no head is stale, as no reader of when the head arrived is given."""
     if freshness is None:
         freshness = PrReview(
             Resolution(),

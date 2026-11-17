@@ -1,14 +1,19 @@
-"""The JSON code writer: the values document itself as one file, spelling form 1
-(visual-communication DEC-004 point 4, DEC-005 points 7 to 9).
+"""The JSON code writer: the values document itself as one file, in each of its forms
+(visual-communication DEC-004 point 4, DEC-005 points 7 to 9, DEC-025 point 4).
 
-It reads the values document, version 1 (`_lib.values`), and writes it unchanged: it adds
-nothing, leaves nothing out and spells no name of its own. A token path stays as the brand
-exports it, and each set of values is named by the key of its combination. Its declaration,
-`json_declaration.py`, says what it takes: every value type and every kind of axis.
+It reads the values document, version 2 (`_lib.values`), and writes it as the version of
+the document its form is: it adds nothing, leaves out only what that version does not hold,
+and spells no name of its own. A token path stays as the brand exports it, and each set of
+values is named by the key of its combination. Its declaration, `json_declaration.py`, says
+what each form takes: every kind of axis, and every value type the form's version holds.
 
-**Form 1 is public.** Code outside the capability reads the file, so
-`schemas/values.schema.json` holds its shape. A later version of the document is a new form
-beside this one, and the writer keeps writing this one (DEC-005 point 8).
+**Each form is a version of the document.** Form 1 is version 1, which holds no picture
+role, so the command reports each as a loss before the writer runs and hands it none. Form 2
+is version 2, which holds a picture role's file. Each is public: code outside the capability
+reads the file, so `schemas/values.schema.json` holds form 1's shape, and
+`schemas/values-2.schema.json` form 2's. The writer keeps writing every form it shipped
+(DEC-005 point 8), and a brand that gives no picture role gets the same file of form 1 as
+before version 2 came.
 
 **The text, form 1.** The file's content is the document's fields in the order `values`
 gives them, each library and each token in the order of its name, and a token's values in
@@ -31,7 +36,7 @@ from typing import Any
 
 from _lib.plugins.json_declaration import DECLARATION
 from _lib.reading import ReadError, canonical_bytes, canonical_json
-from _lib.values import DOCUMENT
+from _lib.values import DOCUMENT, PICTURE, as_version
 from _lib.values import VERSION as DOCUMENT_VERSION
 
 NAME = DECLARATION["name"]
@@ -56,10 +61,12 @@ def write(
     form: int = 1,
     prefix: str | None = None,
 ) -> str:
-    """The file of `document`, the values document version 1, in spelling `form`. `axes` is
-    what the command hands every code writer; this one reads none of it, since the document
-    names each combination by its key. Raises JsonError, for a `prefix` too: the command
-    refuses a declaration that names one, and no name here takes one."""
+    """The file of `document`, the values document version 2, in spelling `form`: the
+    version of the document the form is. `axes` is what the command hands every code
+    writer; this one reads none of it, since the document names each combination by its
+    key. Raises JsonError, for a `prefix` too: the command refuses a declaration that names
+    one, and no name here takes one. So it does for a picture role handed to form 1, whose
+    version holds none: the command reports it as a loss and hands it none."""
     if form not in FORMS:
         forms = ", ".join(str(found) for found in FORMS)
         raise JsonError(f"the json writer {VERSION} writes form {forms}, not form {form}")
@@ -69,11 +76,18 @@ def write(
         raise JsonError(
             "the json writer takes no prefix: a token path stays as the brand exports it"
         )
+    held = as_version(document, form)
+    if len(held["tokens"]) != len(document["tokens"]):
+        pictured = sorted(set(document["tokens"]) - set(held["tokens"]))
+        raise JsonError(
+            f"form {form} of the json writer has no form for a {PICTURE} value, so it writes "
+            f"no {', '.join(f'`{path}`' for path in pictured)}"
+        )
     try:
-        canonical_bytes(document)
+        canonical_bytes(held)
     except ReadError as exc:
         raise JsonError(f"the document holds what a JSON file cannot: {exc}") from exc
-    return _spelled(_ordered(document), 0) + "\n"
+    return _spelled(_ordered(held), 0) + "\n"
 
 
 def _ordered(document: Mapping[str, Any]) -> dict[str, Any]:

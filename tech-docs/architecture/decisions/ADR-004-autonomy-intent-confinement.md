@@ -29,7 +29,7 @@ The proposed status is the acceptance-gate gesture per [PRJ-005](../../../.pkit/
 
 Intent is the permission model's existing surface. It splits by the granularity the harness can honour, per the prior pass:
 
-- *Tool-gating* is **per-agent** — agent frontmatter (`tools`/`disallowedTools`), native to the harness.
+- *Tool-gating* is **per-agent** — agent frontmatter (`tools`/`disallowedTools`), native to the harness (refinement per [ADR-085](ADR-085-agent-tool-access.md)).
 - *Command rules* are **session-wide** — the `permissions` block, a project-level union across installed agents; never per-agent.
 
 Intent is **pkit-owned** and double-locked per ADR-002: the fail-open PreToolUse hook carries the nuanced, evolving rules; the fail-closed native deny carries the non-negotiable denies.

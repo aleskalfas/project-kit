@@ -1514,6 +1514,25 @@ def test_altered_reads_a_named_head_and_the_cli_gives_the_document(repo: Adopter
     assert human.exit_code == 0 and f"changed   {GUIDES}/c.md" in human.output
 
 
+def test_altered_states_an_outdated_base_and_names_no_remedy(repo: AdopterRepo) -> None:
+    """The base moved on after the branch left it: the read view says so, and that
+    results hold only against an up-to-date base, as the change check's report does,
+    and leaves the remedy to the project's workflow (COR-050 point 12)."""
+    _start(repo)
+    repo.commit("change c", {f"{GUIDES}/c.md": page("C", body="Another body.")})
+    repo.checkout("main")
+    repo.commit("main moves on", {"README.md": "main moved\n"})
+    repo.checkout("feature")
+    document = reading.altered_document(repo.root, "main")
+    assert document["base"]["outdated"] is True
+    lines = reading.render_altered_human(document).splitlines()
+    assert lines[2] == (
+        "  the base moved on after this branch left it; results hold only against an "
+        "up-to-date base"
+    )
+    assert not [line for line in lines if "merge" in line or "rebase" in line]
+
+
 @pytest.mark.usefixtures("answers_in_files")
 def test_the_change_check_and_the_command_share_one_pairing(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch

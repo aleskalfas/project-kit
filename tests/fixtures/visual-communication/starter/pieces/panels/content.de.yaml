@@ -83,6 +83,16 @@ slides:
             - "ihr-projekt/\n"
             - "├── .pkit/"
             - {text: "        # die Methodik\n", style: comment}
+            - "│   ├── agents/\n"
+            - "│   ├── decisions/\n"
+            - "│   ├── permissions/\n"
+            - "│   ├── rules/\n"
+            - "│   ├── scratchpad/\n"
+            - "│   ├── skills/\n"
+            - "│   └── manifest.yaml\n"
+            - "├── .claude/"
+            - {text: "      # Ihre Einrichtung von Claude Code\n", style: comment}
+            - "│   └── settings.json\n"
             - "├── CLAUDE.md"
             - {text: "     # lädt die Regeln\n", style: comment}
             - "└── src/"

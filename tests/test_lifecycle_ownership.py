@@ -265,9 +265,43 @@ def test_undefined_remediation_rules_out_adopt_for_write_carrying() -> None:
     assert "pkit agents reconcile --write" in joined
 
 
-def test_undefined_remediation_absent_for_ordinary_categories() -> None:
+@pytest.mark.parametrize("category", sorted(own.CONVENTIONAL_FOLDER_CATEGORIES))
+def test_undefined_remediation_absent_for_a_category_with_a_conventional_folder(
+    category: str,
+) -> None:
     """None means "the generic `adopt` advice applies" — adopt CAN serve these."""
-    assert own.undefined_category_remediation("architecture-docs") is None
+    assert own.undefined_category_remediation(category) is None
+
+
+def test_undefined_remediation_names_no_adopt_without_a_conventional_folder() -> None:
+    """A project's own category has no folder for `adopt` to create, so `adopt`
+    would refuse: the lines name only what works (#2469)."""
+    lines = own.undefined_category_remediation("release-notes")
+    assert lines is not None
+    joined = "\n".join(lines)
+    assert "<release-notes>" in joined and "no conventional folder" in joined
+    assert ".pkit/agents/project/overlay.yaml" in joined  # set the paths there …
+    assert "pkit agents reconcile --write" in joined  # … or stub them first
+    assert "pkit sync" in joined
+    assert "adopt" not in joined
+
+
+def test_conventional_folder_categories_match_the_backbones_sub_paths() -> None:
+    """The deploy resolver names `adopt` for the categories this module lists;
+    `adopt` fills the ones the backbone keeps a sub-path for. A category added to
+    one must be added to the other, or the deploy and `adopt` disagree."""
+    from project_kit import docs_roots
+
+    assert set(docs_roots.CONVENTIONAL_SUBPATHS) == own.CONVENTIONAL_FOLDER_CATEGORIES, (
+        "add the category to CONVENTIONAL_FOLDER_CATEGORIES in .pkit/lifecycle/ownership.py "
+        "as well as to docs_roots.CONVENTIONAL_SUBPATHS"
+    )
+
+
+def test_no_category_is_both_write_carrying_and_conventional() -> None:
+    """A write-carrying category names paths only the project can list, so it has
+    no conventional folder (ADR-051 Implications)."""
+    assert not own.WRITE_CARRYING_CATEGORIES & own.CONVENTIONAL_FOLDER_CATEGORIES
 
 
 # --- the single-implementation invariant (ADR-051 Decision point 3) ----------
@@ -476,6 +510,140 @@ def test_a_write_carrying_category_may_name_the_adopters_settings(tmp_path: Path
     assert own.sync_managed_offences(
         root, category, [".pkit/adapters/claude-code/settings/core/"]
     ) == [".pkit/adapters/claude-code/settings/core/"]
+
+
+# --- point 7's test: reach both ways, and the categories it binds (ADR-088) ---
+
+
+def _capability_agent(root: Path, capability: str, name: str, front: str) -> Path:
+    """An agent *capability* ships, flat, with *front* as its front matter."""
+    folder = root / ".pkit" / "capabilities" / capability / "agents"
+    folder.mkdir(parents=True, exist_ok=True)
+    source = folder / f"{name}.md"
+    source.write_text(f"---\nname: {name}\n{front}---\n\n# {name}\n", encoding="utf-8")
+    return source
+
+
+@pytest.mark.parametrize(
+    "grant",
+    [
+        ".",
+        "./",
+        ".pkit",
+        ".pkit/",
+        "*",
+        "*.md",
+        "**/notes/",
+        ".pkit/capabilities/*/project/",
+        ".pkit/agents/core/architect.md",
+    ],
+)
+def test_a_grant_that_holds_or_lies_in_managed_content_reaches_it(
+    tmp_path: Path, grant: str
+) -> None:
+    """A grant of the root or `.pkit/` lets the agent write every file below it, and a
+    glob is read as the folder that holds its first glob character."""
+    assert own.grant_reaches(_project(tmp_path), grant) is True
+
+
+@pytest.mark.parametrize(
+    "grant",
+    [
+        "visual/",
+        "src/**/fixtures/",
+        "docs/*.md",
+        ".pkit/agents/project/",
+        ".pkit/capabilities/shipped/project/",
+        "",
+        "../elsewhere/",
+    ],
+)
+def test_a_grant_clear_of_managed_content_reaches_nothing(tmp_path: Path, grant: str) -> None:
+    root = _project(tmp_path, capabilities={"shipped": "kit-shipped"})
+    assert own.grant_reaches(root, grant) is False
+
+
+def test_a_grant_reaching_an_externally_sourced_copy_is_refused(tmp_path: Path) -> None:
+    """Sync brings an externally-sourced capability back to its pin (COR-041), in any
+    repository, so a grant in it, or holding it, reaches what sync overwrites."""
+    root = _project(tmp_path, capabilities={"pulled": "externally-sourced"})
+    assert own.grant_reaches(root, ".pkit/capabilities/pulled/") is True
+    assert own.grant_reaches(root, ".pkit/capabilities/pulled/agents/x.md") is True
+    assert own.grant_reaches(root, ".pkit/capabilities/pulled/project/") is False
+
+
+def test_a_core_write_carrying_grant_of_the_root_is_refused(tmp_path: Path) -> None:
+    """ADR-051 point 2 widens: a grant that holds managed content is refused for core's
+    write-carrying categories too (ADR-088 point 7)."""
+    root = _project(tmp_path)
+    assert own.sync_managed_offences(root, "process-authoring-targets", [".", "predicates/"]) == [
+        "."
+    ]
+
+
+def test_every_unmanaged_folder_of_this_tree_holds_only_unmanaged_files() -> None:
+    """`_holds_sync_managed` rests on this: below `.pkit/`, a path `is_sync_managed`
+    answers False for holds nothing it answers True for."""
+    kit = REPO / ".pkit"
+    broken = []
+    for folder in (p for p in kit.rglob("*") if p.is_dir()):
+        rel = folder.relative_to(REPO).as_posix()
+        if own.is_sync_managed(REPO, rel):
+            continue
+        broken += [
+            f"{rel} holds {path.relative_to(REPO).as_posix()}"
+            for path in folder.rglob("*")
+            if path.is_file() and own.is_sync_managed(REPO, path.relative_to(REPO).as_posix())
+        ]
+    assert broken == []
+
+
+def test_the_check_binds_each_category_a_capabilitys_agent_owns(tmp_path: Path) -> None:
+    root = _project(tmp_path)
+    _capability_agent(
+        root, "drawing", "designer", "owns:\n  - <drawing.work>\nreads:\n  paths: [<reads-only>]\n"
+    )
+    folder = root / ".pkit" / "capabilities" / "other" / "agents" / "keeper"
+    folder.mkdir(parents=True)
+    (folder / "keeper.md").write_text(
+        "---\nname: keeper\nowns: [<release-notes>]\n---\n", encoding="utf-8"
+    )
+    bound = own.bound_categories(root)
+    assert {"drawing.work", "release-notes", "process-authoring-targets"} <= bound
+    assert "reads-only" not in bound
+
+
+def test_the_check_binds_a_capabilitys_category_in_every_definition(tmp_path: Path) -> None:
+    """A project's definition that wins by name is bound by the capability's: the
+    category is the capability's, whichever definition deploys."""
+    root = _project(tmp_path)
+    _capability_agent(root, "drawing", "designer", "owns:\n  - <drawing.work>\n")
+    assert own.sync_managed_offences(root, "drawing.work", [".pkit/", "visual/"]) == [".pkit/"]
+    # A category no capability's agent owns is not bound, a project's own included.
+    assert own.sync_managed_offences(root, "project-paths", [".pkit/"]) == []
+
+
+def test_the_bound_categories_follow_an_edited_definition(tmp_path: Path) -> None:
+    root = _project(tmp_path)
+    source = _capability_agent(root, "drawing", "designer", "owns: []\n")
+    assert "drawing.work" not in own.bound_categories(root)
+    source.write_text("---\nname: designer\nowns: [<drawing.work>]\n---\n", encoding="utf-8")
+    assert "drawing.work" in own.bound_categories(root)
+
+
+def test_the_rejection_names_the_fix_for_any_bound_category() -> None:
+    joined = "\n".join(own.rejection_message("drawing.work", ["."]))
+    assert "lie in, or hold" in joined
+    assert "list in its place the files and folders the agent writes" in joined
+
+
+def test_an_undefined_capability_category_names_the_fill_commands() -> None:
+    """Told by the dot alone (ADR-088 point 6): the deploy reads no declaration."""
+    lines = own.undefined_category_remediation("drawing.work")
+    assert lines is not None
+    joined = "\n".join(lines)
+    assert "pkit agents reconcile --write" in joined and "pkit agents adopt <agent>" in joined
+    assert "<drawing.work>" in joined
 
 
 def test_the_two_predicates_do_not_contradict_on_this_tree() -> None:

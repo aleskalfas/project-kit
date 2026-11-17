@@ -1,0 +1,36 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  The graphic-design reviewer judges, on the image, each place a
+  `near-alignment` or `box-overlap` finding names, and its report says under
+  `Checks of boxes` whether each is a fault or is meant (#3328, DEC-046 point
+  3). Where a check of boxes measured a place, it does no sums over the frames
+  there for what that check measures, but for one: where the check measured a
+  row's gaps, it reads from the frames whether the row is exact by them, only
+  to tell whether the distances between its centres are judged. Siblings of
+  one kind whose sizes differ by less than the brand's smallest step of space
+  are judged on the image at the edges they do not share. Each fault in its report takes an id,
+  `F<n>`, and a grade a fault holds names each such fault by its id in its
+  evidence and in its rule finding, with the reviewer's own reading after
+  them. Once its rule binds, such a grade is for a person, since which grade
+  below `professional` it takes is the reviewer's reading. A fault a check
+  already reports is one fault, named in one line, and holds its grade once.
+  A new kind of fault, a stray text, takes in a text the piece does not place
+  and a text that runs out of its box into empty space, and cites no rule, so
+  it moves no grade. The reviewer says which rules of `COMM` and `GRAPHIC` a
+  fault cites and which name none, and why. A main visual missing, blank,
+  hidden where its answer lies or wrong holds `RS-COMM-001` below
+  `professional` on a page that rule judges, whatever kind of fault names it.
+  An offset of the brand's smallest step of space or more is no fault of
+  alignment, and an even spacing may be measured between edges or between
+  centres. Running text takes in captions, card descriptions and asides, read
+  by their kind rather than by their structure mark or their style. A lead
+  set under a page's title, a slide's limit and footer, and a cover's
+  subtitle are no running text. On an image the report marks `too-wide`, a
+  text too small for the image's scale is no fault. The reference instance of
+  a review shows a grade two faults hold, and grades `RS-GRAPHIC-005` without
+  comparing a text's size with its medium's minimum. The design knowledge's
+  topic on type attributes its teaching on lines read together, and its topic
+  on colour words strong colour over large areas as a note of taste.

@@ -22,6 +22,7 @@ pkit:
       record:
         - COR-053#3
         - COR-053#8
+        - COR-070#3
         - ADR-065#7
       artefact:
         - ACT-adopter
@@ -64,8 +65,9 @@ pkit:
 - **2a.** The wiring has no unmet need, or no capability of the local catalogue meets one. The [system](../../../glossary.md#term-system--system) suggests nothing, and the path goes on at step 4.
 - **4a.** The adopter passes `--json`, to `pkit capabilities show` or to the [install plan](../../../glossary.md#term-install-plan--install-plan). The system prints the same view as a JSON document.
 - **5a.** The local catalogue holds no capability of that name. The system refuses, saying where it looked and naming `pkit capabilities list`, and writes nothing. The use case ends.
+- **6a.** The capability ships [operational rules](../../../glossary.md#term-operational-rule--operational-rule) of its own, as one [loaded rule set](../../../glossary.md#term-loaded-rule-set--loaded-rule-set). The system reads the set from the capability's files, as its [install](../../../glossary.md#term-install--install) reads it. Last, under `Loaded rules`, it names the set and lists each accepted [rule](../../../glossary.md#term-rule--rule) by id and title. Installing the capability is the [consent](../../../glossary.md#term-consent--consent) to them ([COR-070 point 3](../../../../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md#3-installing-a-capability-accepts-its-loaded-set)).
 - **7a.** The capability is installed already. The system refuses, naming `pkit capabilities upgrade <name>`, and the use case ends.
-- **7b.** The capability is authored in the [project](../../../glossary.md#term-project--project), and does not ship with the running CLI. The plan refuses, since the [install](../../../glossary.md#term-install--install) takes only a capability that ships. Step 6 has shown its wiring, and [UC-016](../010-develop/UC-016-keep-capability.md) registers it.
+- **7b.** The capability is authored in the [project](../../../glossary.md#term-project--project), and does not ship with the running CLI. The plan refuses, since the install takes only a capability that ships. Step 6 has shown its wiring, and [UC-016](../010-develop/UC-016-keep-capability.md) registers it.
 - **7c.** The project is not the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository). The running CLI is at another [version](../../../glossary.md#term-version--version) than the project records, or a [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete. The plan stops as the install would ([UC-023](UC-023-add-or-remove-capability.md) variant 1c), names the remedy, and writes nothing ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)).
 - **9a.** A [role](../../../glossary.md#term-role--role) the capability provides is provided by another installed capability already. The plan lists the conflict as `<role> is provided by <providers> and none is selected; select one:`, with the command for each choice. After the install, the adopter chooses as [UC-025](UC-025-choose-role-provider.md) says.
 

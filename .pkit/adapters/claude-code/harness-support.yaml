@@ -47,6 +47,28 @@ requirements:
       (ADR-066 points 2 to 6). Those facts rest on Claude Code's documentation
       and its 2.1.302 release. The probe, `probe-confined-run.py`, has passed on
       no version yet, so the runner refuses every confined run.
+  unattended-working-run:
+    grade: at-cost
+    cost: >-
+      Holds on Linux with bubblewrap, and only where the run leaves Claude
+      Code's scrub of sign-in variables off. So a sign-in variable reaches
+      every command the run starts. With the scrub on, the harness forces its
+      own permission mode and widens the sandbox's writes. macOS is not
+      probed, so it has no grade here. The producer agent's build in such a
+      run, and a check's sandbox with no harness, are not confirmed yet, so
+      the grade covers only what the probe ran.
+    # The versions the probe of ADR-073 point 11 ran on. The runner's working
+    # form is not built yet; once it is, this bound is its tested range, as
+    # the confined run's is.
+    harness_versions: ["2.1.303", "2.1.303"]
+    evidence: >-
+      The probe of ADR-073 point 11, on 29 October, on Linux with bubblewrap
+      0.12.0: runs of `claude -p` with no settings sources, inline settings,
+      `dontAsk` and the sandbox on. Without the scrub, writes went to the
+      run's folder only. Its results, on #2289, do not yet cover the producer
+      agent's build or the checks' sandbox with no harness. The adapter's
+      README, "The probe of a working run", lists each fact they confirm and
+      how it was checked.
   session-loads-rules:
     grade: at-cost
     cost: >-
@@ -78,3 +100,49 @@ requirements:
       settings file either. The gap comes from how the adapter starts a run,
       not from the harness, so nothing an adopter keeps closes it; #2352 takes
       it up.
+  session-agent-withheld-tools:
+    grade: at-cost
+    cost: >-
+      Measured only for a whole built-in tool, named without an argument, so
+      a definition withholds only such tools: the adapter refuses to deploy
+      or run one that withholds a tool it does not know as built in, a tool
+      narrowed by an argument, or an MCP server's tool (its declaration of
+      tool access, `tool-access.json`).
+    harness_versions: ["2.1.319", "2.1.319"]
+    evidence: >-
+      Measured with Claude Code 2.1.319 on macOS, from the init message a
+      session reports at its start, for an agent whose definition names only
+      `disallowedTools`, which the adapter writes for `withheld` (ADR-085
+      point 1). The agent kept every other tool, a connected MCP server's
+      included, and the withheld tools were absent. That held for an agent
+      given on the command line, as the agent runner gives one, for one named
+      by the `agent` setting, as a project's default agent is, and with agent
+      teams on.
+  # helper-withheld-tools is left unanswered, so it reads as indeterminate
+  # (COR-047 point 3): a helper's tools are visible only inside a session, and
+  # nobody has measured a helper withheld a tool yet (ADR-085 point 3). Only
+  # whoever measures it answers it.
+  ask-reaches-person:
+    grade: at-cost
+    cost: >-
+      A session keeps a person who answers its asks. In a turn that something
+      other than a person answers, each ask is refused, and the refusal reads
+      as the person's own. In a turn nobody answers, each ask holds the turn
+      until someone answers it.
+    # The version the trial on an agent host ran: only whoever measures
+    # another version widens the range (COR-047 point 2).
+    harness_versions: ["2.1.321", "2.1.321"]
+    evidence: >-
+      Measured on 12 and 13 November 2026 with Claude Code 2.1.321, which an
+      agent host started through a protocol bridge, in auto mode, with the
+      permission hook on (#3004). The asks are the hook's: where a call may
+      hide a guardrail (ADR-025 point 7), and before a file tool writes
+      outside the session's repository, whether into another repository
+      (ADR-034 point 2) or to any other path (the maintainer's ruling
+      on #2004). In a turn a message in a chat channel started, the hook's
+      ask before a `Write` outside the repository was refused at once. The
+      harness recorded the refusal as the user's (`source: user_reject`), the
+      tool returned `User refused permission to run tool`, and the turn went
+      on. In a run with nobody at it, the hook's ask waited in the host's
+      approval inbox, which expires after 24 hours, and the turn stalled
+      until it was answered.

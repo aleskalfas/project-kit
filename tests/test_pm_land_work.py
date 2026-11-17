@@ -171,6 +171,9 @@ class _FakeGitHub:
     bodies: list[str] = field(default_factory=list)
     #: The branch the PR merges into.
     base_branch: str = "main"
+    #: The checks the base branch requires, by name, which its rulesets state
+    #: (#1965); none by default.
+    required: list[str] = field(default_factory=list)
     #: The PR's author as GitHub returns it; None for one it returns as null.
     author: dict[str, Any] | None = field(default_factory=lambda: {"login": "author"})
     _reads: dict[str, int] = field(default_factory=dict)
@@ -235,7 +238,33 @@ class _FakeGitHub:
             }
             return _done(argv, json.dumps(issue))
         if argv[:2] == ["api", "user"]:
-            return _done(argv, "octocat\n")
+            # The membership library asks for the login and the account's type.
+            typed = "[.login, .type] | @tsv" in argv
+            return _done(argv, "octocat\tUser\n" if typed else "octocat\n")
+        if argv == ["api", f"repos/{{owner}}/{{repo}}/branches/{self.base_branch}"]:
+            # A ruleset protects the branch; its classic protection is off.
+            off = {"enabled": False, "required_status_checks": {"enforcement_level": "off"}}
+            return _done(argv, json.dumps({"protected": bool(self.required), "protection": off}))
+        if argv == [
+            "api",
+            "--paginate",
+            f"repos/{{owner}}/{{repo}}/rules/branches/{self.base_branch}",
+        ]:
+            checks = [{"context": name} for name in self.required]
+            rule = {
+                "type": "required_status_checks",
+                "parameters": {"required_status_checks": checks},
+            }
+            return _done(argv, json.dumps([rule] if checks else []))
+        if argv[:1] == ["api"] and "/contents/" in argv[-1]:
+            # The capability's project configuration at a ref: the clone commits
+            # none, so the sync's switch is off everywhere (DEC-072 point 3).
+            return _done(
+                argv,
+                json.dumps({"message": "Not Found", "status": "404"}),
+                returncode=1,
+                stderr="gh: Not Found (HTTP 404)",
+            )
         if issue_branch_support.is_open_prs_reading(argv):
             # The open PRs of several local branches matching the issue (#1608).
             open_on = {BRANCH: [PR]} if self.state == "OPEN" else {}
@@ -670,6 +699,7 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
             gh_module,
             land,
             land.done_work,
+            land.done_work.sync_switch,
             land.review_pr,
             land.issue_branch,
             land.head_programs,
@@ -986,10 +1016,11 @@ def test_the_wait_running_out_on_no_run_is_its_own_exit(world, capsys) -> None:
         "([skip ci]), or a run from a fork awaits approval."
     )
     assert f"Run `land-work {ISSUE}` again to keep waiting" in last
-    assert (
+    assert last.endswith(
         f"review it with `review-pr {ISSUE}` and merge it, on the person's authorisation, "
-        f"with `done-work {ISSUE} --yes`"
-    ) in last
+        f"with `done-work {ISSUE} --yes`: `done-work` does not wait for a check nobody "
+        "reported, and passes a head with none wherever the base requires no check"
+    )
     assert run.invoked == []
 
 
@@ -1925,6 +1956,23 @@ def test_a_step_after_the_merge_failing_is_merged_and_owed(world, capsys, monkey
     assert out.splitlines()[-1] == f"merge: #{ISSUE} completed through its merged PR"
 
 
+def test_a_close_after_the_merge_failing_keeps_land_work_s_own_code(
+    world, capsys, monkeypatch
+) -> None:
+    """done-work exits 6 for a close owed (#3207); land-work decides on how its
+    run ended, so it exits 7, as for any step after the merge."""
+    run = world()
+    monkeypatch.setattr(run.land.done_work, "_invoke_close_issue", lambda *a, **k: 3)
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_RETRY == 7
+    assert out.splitlines()[-1] == (
+        f"merge: merged as {'c' * 7}, but a step after the merge failed: [warn] PR merged "
+        f"but close-issue exited 3 for #{ISSUE}. The merge is durable; re-run `close-issue "
+        f"{ISSUE} --mode pr-merge --pr {PR}` to close and cascade it. — run `land-work "
+        f"{ISSUE}` again to complete #{ISSUE}"
+    )
+
+
 def _then(run: _Run, monkeypatch: pytest.MonkeyPatch, after: Callable[[], None]) -> None:
     """Run `after` once done-work's run has returned."""
     original = run.land.done_work.run
@@ -2113,6 +2161,23 @@ def test_a_head_that_moves_between_the_gate_and_the_merge_request_merges_nothing
         f"{_short(run.github.head)} before the merge. Nothing was merged; "
         f"`land-work {ISSUE}` checks and reviews the new head"
     )
+
+
+def test_a_head_pushed_as_the_gate_reads_its_checks_is_not_passed_unchecked(world, capsys) -> None:
+    """No check has reported on the new head yet. Where the base requires
+    checks, `done-work`'s gate takes that for pending, so no merge is asked
+    for (#1965)."""
+    run = world()
+    run.github.required = ["checks"]
+
+    def rollup_read(argv: list[str]) -> bool:
+        return argv[:2] == ["pr", "view"] and argv[-1] == "statusCheckRollup"
+
+    run.github.before(rollup_read, lambda: run.push_new_head("racing.txt"))
+    rc, _out, err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    assert (run.github.state, run.github.merges) == ("OPEN", [])
+    assert "failing/pending: checks (EXPECTED)" in err
 
 
 def test_a_head_the_host_reads_as_behind_stops_at_the_checks_with_the_merge_to_make(
@@ -4255,7 +4320,7 @@ def test_a_queue_that_cannot_be_read_warns_and_changes_nothing(world, capsys) ->
 _CONFIG = ".pkit/capabilities/project-management/project/config.yaml"
 _GRANT = "fixers:\n  living-docs:\n    granted:\n      - living-docs:page\n"
 _GRANT_AND_REFUSE = _GRANT + "    refused:\n      - living-docs:guide\n"
-_GRANTED = "Fixer grant added: living-docs may start on its own on living-docs:page"
+_GRANTED = "Fixer grant added: living-docs may start on living-docs:page"
 _REFUSED = "Fixer refusal added: living-docs is refused living-docs:guide"
 _GRANTS = "a change to which fixers may start"
 
@@ -4604,6 +4669,219 @@ def test_landing_the_second_of_two_changes_that_pass_alone_is_refused(
     assert (run.github.merges, run.after_merge) == ([], [])
 
 
+# ---- the reviewers the merge requires (DEC-064 points 1 and 8, #2661) ------------
+# Where a contribution in force names the ruled-artefact floor and the base has moved
+# on, the merge check asks the backbone once which artefacts the change alters or
+# brings under a rule from the base's tip to the merge, and names the merge where that
+# requires a reviewer the head does not.
+
+_RULE_SET_REVIEWER = "rule-set-reviewer"
+#: The merge `_Run.merged` builds where the base moved on, and the base's tip there.
+_MERGE, _TIP = "d" * 40, "e" * 40
+
+
+@dataclass
+class _Ruled:
+    """The backbone's answer on which artefacts a change alters or brings under a rule
+    (`ruled_artefacts.ruled_altered`), stood in for: the ruled ones at the head and at
+    the merge, or why the merge's cannot be read — and each (base, head) asked."""
+
+    at_head: list[str] = field(default_factory=list)
+    at_merge: list[str] = field(default_factory=list)
+    problem: str = ""
+    asked: list[tuple[str, str]] = field(default_factory=list)
+
+    def merge_asked(self) -> int:
+        return self.asked.count((_TIP, _MERGE))
+
+
+def _ruled_floor(run: _Run, monkeypatch: pytest.MonkeyPatch) -> _Ruled:
+    """An installed capability contributes the rule-set reviewer on the ruled-artefact
+    floor (DEC-032 D1), and the agent is deployed. review-pr, done-work and the merge
+    check collect it alike, and read the backbone's answer from the returned stand-in."""
+    rc = sys.modules["_lib.review_contributions"]
+    ra = run.land.ruled_artefacts
+    rule = rc.ContributionRule(
+        capability="living-docs",
+        predicate=MappingProxyType({}),
+        reviewer=_RULE_SET_REVIEWER,
+        floor=rc.FLOOR_TOUCHES_RULED_ARTEFACT,
+    )
+    collection = rc.ContributionCollection(rules=(rule,))
+    for module in (run.land.review_pr, run.land.done_work):
+        monkeypatch.setattr(module, "collect_contributions", lambda _root: collection)
+    (run.work / ".claude" / "agents" / f"{_RULE_SET_REVIEWER}.md").write_text(
+        f"# {_RULE_SET_REVIEWER}\n", encoding="utf-8"
+    )
+    ruled = _Ruled()
+
+    def altered(base: str, head: str, **_kwargs: Any) -> Any:
+        ruled.asked.append((base, head))
+        if head == _MERGE and ruled.problem:
+            return ra.RuledAlteration(error=ruled.problem)
+        found = ruled.at_merge if head == _MERGE else ruled.at_head
+        return ra.RuledAlteration(
+            artefacts=tuple(
+                ra.AlteredArtefact(location, ra.CHANGED, (location,), ruled=True)
+                for location in found
+            )
+        )
+
+    for module in (run.land.review_pr, run.land.done_work, ra):
+        monkeypatch.setattr(module, "ruled_altered", altered)
+    return ruled
+
+
+def _base_moved_on(run: _Run) -> None:
+    run.outdated, run.tip = True, _TIP
+
+
+@pytest.mark.parametrize("authorised", [True, False], ids=["--yes", "ready"])
+def test_a_merge_that_requires_a_reviewer_the_head_does_not_names_the_merge(
+    world, capsys, monkeypatch, authorised
+) -> None:
+    """The base accepted a rule that binds on a page the change alters: at the merge the
+    floor's reviewer is required, at the head it is not. The run stops with the merge of
+    the base to make, whether authorised or not, and nothing merges."""
+    run = world()
+    ruled = _ruled_floor(run, monkeypatch)
+    ruled.at_merge = ["docs/guide.md", "docs/cli.md"]
+    _base_moved_on(run)
+    head = run.github.head
+    rc, out, err = run.authorised(capsys=capsys) if authorised else run.run(capsys=capsys)
+    assert rc == 1, out + err
+    assert out.splitlines()[-1] == (
+        f"{_MERGE_CHECK}: refused — {_short(head)} merged with main at {_short(_TIP)} alters "
+        "or brings under an accepted rule 2 artefacts (docs/guide.md, docs/cli.md), so it "
+        f"requires {_RULE_SET_REVIEWER}, which {_short(head)} does not. Merge main into "
+        f"{BRANCH} (`git merge origin/main`), push, and run `land-work {ISSUE}` again: the "
+        "review runs it there. Nothing was merged"
+    )
+    # The head's review did not run it, and the merge was asked once.
+    assert _RULE_SET_REVIEWER not in [name for name, _sha in run.invoked]
+    assert ruled.merge_asked() == 1
+    assert not any(line.startswith("ready:") for line in out.splitlines())
+    assert (run.github.merges, run.after_merge) == ([], [])
+
+
+def test_a_merge_that_brings_nothing_under_a_rule_goes_on_and_says_it_was_asked(
+    world, capsys, monkeypatch
+) -> None:
+    run = world()
+    ruled = _ruled_floor(run, monkeypatch)
+    _base_moved_on(run)
+    head = run.github.head
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert _merge_check_line(out) == (
+        f"{_MERGE_CHECK}: the change check passes on {_short(head)} merged with main at "
+        f"{_short(_TIP)}, and the merge requires no reviewer {_short(head)} does not"
+    )
+    assert ruled.merge_asked() == 1
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_head_that_requires_the_floor_s_reviewer_already_asks_the_merge_nothing(
+    world, capsys, monkeypatch
+) -> None:
+    """The head alters a ruled page itself, so the reviewer is required and reviews it.
+    A clean merge would keep its approval (DEC-028), so the merge adds nobody, and the
+    backbone is not asked about it."""
+    run = world()
+    ruled = _ruled_floor(run, monkeypatch)
+    ruled.at_head, ruled.at_merge = ["docs/guide.md"], ["docs/guide.md", "docs/cli.md"]
+    _base_moved_on(run)
+    head = run.github.head
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert (_RULE_SET_REVIEWER, head) in run.invoked
+    assert ruled.merge_asked() == 0
+    assert _merge_check_line(out) == (
+        f"{_MERGE_CHECK}: the change check passes on {_short(head)} merged with main at "
+        f"{_short(_TIP)}"
+    )
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_head_that_holds_the_base_asks_the_merge_nothing(world, capsys, monkeypatch) -> None:
+    run = world()
+    ruled = _ruled_floor(run, monkeypatch)
+    ruled.at_merge = ["docs/guide.md"]
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert ruled.merge_asked() == 0
+    assert len(run.github.merges) == 1
+
+
+def test_without_a_contribution_of_the_floor_the_merge_is_asked_nothing(
+    world, capsys, monkeypatch
+) -> None:
+    """No contribution in force names the floor: the merge can add no reviewer of it, and
+    the backbone is not asked."""
+    run = world()
+    asked: list[tuple[str, str]] = []
+    monkeypatch.setattr(run.land.ruled_artefacts, "ruled_altered", lambda *a, **_k: asked.append(a))
+    _base_moved_on(run)
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert asked == []
+    assert len(run.github.merges) == 1
+
+
+def test_in_human_review_mode_the_merge_is_asked_nothing(world, capsys, monkeypatch) -> None:
+    """The merge gate requires no reviewer agent in human review mode (DEC-027), so the
+    merge can add none."""
+    run = world(mode="human")
+    ruled = _ruled_floor(run, monkeypatch)
+    ruled.at_merge = ["docs/guide.md"]
+    _base_moved_on(run)
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 1, out + err
+    assert ruled.merge_asked() == 0
+    assert _merge_check_line(out) == (
+        f"{_MERGE_CHECK}: the change check passes on {_short(run.github.head)} merged with "
+        f"main at {_short(_TIP)}"
+    )
+    assert out.splitlines()[-1].startswith("merge: refused — [refused] approval gate")
+
+
+def test_a_merge_whose_ruled_artefacts_cannot_be_read_merges_nothing(
+    world, capsys, monkeypatch
+) -> None:
+    """Never a pass on a guess: a reviewer the merge might require is not dropped
+    (DEC-032 D5), and no merge is named."""
+    run = world()
+    ruled = _ruled_floor(run, monkeypatch)
+    ruled.problem = "`pkit rule-sets altered --json --base eeeeeee --head ddddddd`: it exited 2"
+    _base_moved_on(run)
+    head = run.github.head
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 2, out + err
+    assert out.splitlines()[-1] == (
+        f"{_MERGE_CHECK}: which artefacts {_short(head)} merged with main at {_short(_TIP)} "
+        f"alters or brings under a rule could not be read — {ruled.problem}, so whether it "
+        f"requires a reviewer {_short(head)} does not cannot be told. Nothing was merged; run "
+        f"`land-work {ISSUE}` again"
+    )
+    assert run.github.merges == []
+
+
+def test_a_merge_the_check_fails_on_is_refused_before_its_reviewers_are_asked(
+    world, capsys, monkeypatch
+) -> None:
+    """A check that fails at the merge names the merge already: the backbone is not
+    asked about its reviewers."""
+    run = world()
+    ruled = _ruled_floor(run, monkeypatch)
+    ruled.at_merge = ["docs/guide.md"]
+    _base_moved_on(run)
+    run.merge_refused = [_FRICTION]
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 1, out + err
+    assert out.splitlines()[-1].startswith(f"{_MERGE_CHECK}: refused — the change check fails")
+    assert ruled.merge_asked() == 0
+
+
 # ---- which heads may start programs (DEC-067) ---------------------------------
 
 
@@ -4949,3 +5227,84 @@ def test_a_grant_s_words_reach_the_terminal_escaped(world, capsys, monkeypatch) 
     assert rc == run.land.EXIT_READY, out + err
     assert "\x1b" not in out + err and "\x07" not in out + err
     assert "\\x1b[1A" in out
+
+
+# ---- a change that turns on the sync's switch (DEC-072 point 3, #3301) ------------------
+
+_SWITCH_ON = "sync_board:\n  adds_with_no_terminal: true\n"
+_SWITCH_HELD = (
+    "; held for `sync_board.adds_with_no_terminal`, which an authorisation given up front "
+    "does not cover (above); merge at a terminal, authorising it yourself, with: "
+    f"pkit pm land-work {ISSUE}"
+)
+
+
+def _push_switch_on(run: _Run) -> str:
+    """A push to the PR's branch whose project configuration turns the sync's switch
+    on. The clone ignores `.pkit/`, so the base holds no configuration."""
+    config = run.work / _CONFIG
+    config.write_text(config.read_text(encoding="utf-8") + _SWITCH_ON, encoding="utf-8")
+    _git(run.work, "add", "-f", _CONFIG)
+    _git(run.work, "commit", "-q", "-m", "turn the switch on")
+    _git(run.work, "push", "-q", "origin", BRANCH)
+    head = _git(run.work, "rev-parse", "HEAD")
+    run.github.head = head
+    run.github.checks[head] = [_GREEN]
+    return head
+
+
+@pytest.mark.parametrize("authorised", [True, False], ids=["yes", "no-yes-off-a-terminal"])
+def test_a_change_that_turns_on_the_switch_stops_ready_for_a_merge_at_a_terminal(
+    world, capsys, authorised: bool
+) -> None:
+    """An authorisation given up front does not cover it, so the run stops at
+    `ready:`, says what turning it on means, and names the run at a terminal in
+    place of the command that merges on a `--yes`."""
+    run = world()
+    _push_switch_on(run)
+
+    rc, out, err = (run.authorised if authorised else run.run)(capsys=capsys)
+
+    assert rc == run.land.EXIT_READY, out + err
+    assert run.github.merges == []
+    lines = out.splitlines()
+    assert lines[-1].endswith(_SWITCH_HELD)
+    assert "--yes" not in lines[-1]
+    assert any("This change turns on `sync_board.adds_with_no_terminal`." in line for line in lines)
+
+
+def test_at_a_terminal_the_persons_yes_merges_a_change_that_turns_on_the_switch(
+    world, capsys, monkeypatch
+) -> None:
+    """At a terminal, done-work says what turning the switch on means, from the hold
+    land-work read, and asks: the person's own yes merges it."""
+    run = world()
+    _push_switch_on(run)
+    monkeypatch.setattr(run.land, "_interactive", lambda: True)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    asked: list[str] = []
+
+    def answer(prompt: str = "") -> str:
+        asked.append(prompt)
+        return "y"
+
+    monkeypatch.setattr("builtins.input", answer)
+
+    rc, out, err = run.run(capsys=capsys)
+
+    assert rc == 0, out + err
+    assert [merge[-1] for merge in run.github.merges] == [run.github.head]
+    assert "lets `pkit pm sync-board` add the missing cards" in out
+    assert any(prompt.startswith("Squash-merge PR") for prompt in asked)
+    # The hold was read from git objects, so done-work asked the host nothing of it.
+    assert not any("/contents/" in argv[-1] for argv in run.github.calls)
+
+
+def test_a_change_that_leaves_the_switch_off_merges_on_the_authorisation(world, capsys) -> None:
+    run = world()
+    _push_grants(run, _GRANT)
+
+    rc, out, err = run.authorised(capsys=capsys)
+
+    assert rc == 0, out + err
+    assert "sync_board.adds_with_no_terminal" not in out

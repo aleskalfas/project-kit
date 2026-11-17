@@ -44,6 +44,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.pm_board_graphql import GraphBoard, is_seam_read
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 LIB_DIR = SCRIPTS_DIR / "_lib"
@@ -126,6 +128,39 @@ AUJ_BOARD_CONFIG = {
     "gh": {"default_owner": "ai-platform-incubation"},
 }
 TARGET_REPO = "ai-platform-incubation/spyre"
+
+
+def _card(item_id: str, number: int, *, repo: str = TARGET_REPO, body: str = "") -> dict:
+    """One issue's card, as the board's card list gives it."""
+    content = {
+        "__typename": "Issue",
+        "id": f"I_{number}",
+        "number": number,
+        "title": f"#{number}",
+        "body": body,
+        "state": "OPEN",
+        "repository": {"nameWithOwner": repo},
+    }
+    return {"id": item_id, "type": "ISSUE", "content": content, "fieldValueByName": None}
+
+
+class _Board(GraphBoard):
+    """Board #7 of the AUJ owner, node `PROJ_NODE`, whose cards a test gives:
+    ``archived`` among them only where a walk asks for archived cards."""
+
+    def __init__(self, cards: list[dict], archived: list[dict] | None = None) -> None:
+        super().__init__(node="PROJ_NODE", number=7, owner="ai-platform-incubation")
+        self.cards = cards
+        self.archived = archived or []
+
+    def walk(self, value_field, archived):
+        return self.cards + (self.archived if archived else [])
+
+
+def _board_view(args):
+    """The board's own answer to `gh project view 7`, naming it."""
+    answer = {"id": "PROJ_NODE", "number": 7, "owner": {"login": "ai-platform-incubation"}}
+    return subprocess.CompletedProcess(args, 0, stdout=json.dumps(answer), stderr="")
 
 
 AUJ_HOOKS = """\
@@ -334,6 +369,38 @@ def test_field_write_blocked_when_issue_not_on_board(bf) -> None:
     assert "not on" in change.blocked_reason
 
 
+@pytest.mark.parametrize(
+    ("state", "holds", "said"),
+    [
+        pytest.param("OPEN", False, ": `pkit pm sync-board 11` adds its card", id="open"),
+        pytest.param(
+            "OPEN",
+            True,
+            ": `pkit pm sync-board 11` adds its card, only in a run at a terminal or with "
+            "the project's switch `sync_board.adds_with_no_terminal` on, and its Status is "
+            "then set on the board, since the card the sync adds carries none",
+            id="open-board-holds-the-state",
+        ),
+        pytest.param("CLOSED", False, "", id="closed"),
+    ],
+)
+def test_an_issue_off_the_board_is_told_the_sync_that_adds_its_card(
+    bf, state: str, holds: bool, said: str
+) -> None:
+    """An open issue off the board is told what gives it its card: the sync, run
+    for it, in the words the board's role takes; a closed one, which the sync
+    gives no card, is told none (DEC-072 point 4)."""
+    intent = bf.BackFillIntent(
+        kind="set-board-field", citation="c", field_id="F", single_select_option_id="O"
+    )
+    issues = [{"number": 11, "title": "eleven", "milestone": None, "state": state}]
+    [change] = bf._build_proposed_changes(
+        [intent], issues, {}, project_id="PROJ", target_repo=TARGET_REPO, board_holds_state=holds
+    )
+    reason = f"issue not on the configured Projects v2 board (no item id for {TARGET_REPO}#11)"
+    assert change.blocked_reason == reason + said
+
+
 # ----- R2: board item-id resolution is repo-discriminated ------------
 
 
@@ -341,43 +408,12 @@ def test_board_item_ids_keyed_on_repo_and_number(bf, monkeypatch) -> None:
     """A Projects-v2 board can carry colliding issue numbers from multiple repos.
     The item map is keyed on (repo, number) so #42 in the target repo and #42 in
     another repo resolve to DISTINCT item ids — no cross-repo collision."""
-
-    def fake_gh_run(args, config, **kwargs):
-        return subprocess.CompletedProcess(
-            args,
-            0,
-            stdout=json.dumps(
-                {
-                    "data": {
-                        "node": {
-                            "items": {
-                                "pageInfo": {"hasNextPage": False, "endCursor": None},
-                                "nodes": [
-                                    {
-                                        "id": "ITEM_TARGET_42",
-                                        "content": {
-                                            "number": 42,
-                                            "repository": {"nameWithOwner": TARGET_REPO},
-                                        },
-                                    },
-                                    {
-                                        "id": "ITEM_OTHER_42",
-                                        "content": {
-                                            "number": 42,
-                                            "repository": {"nameWithOwner": "other/repo"},
-                                        },
-                                    },
-                                ],
-                            }
-                        }
-                    }
-                }
-            ),
-            stderr="",
-        )
-
-    monkeypatch.setattr(bf, "gh_run", fake_gh_run)
-    item_ids = bf._resolve_board_item_ids({}, "PROJ_NODE", [{"number": 42}])
+    board = _Board([_card("ITEM_TARGET_42", 42), _card("ITEM_OTHER_42", 42, repo="other/repo")])
+    monkeypatch.setattr(bf, "gh_run", lambda args, config, **kwargs: board.reply(args))
+    item_ids, unanswered = bf._resolve_board_item_ids(
+        AUJ_BOARD_CONFIG, "PROJ_NODE", [{"number": 42}]
+    )
+    assert unanswered is None
     assert item_ids[(TARGET_REPO, 42)] == "ITEM_TARGET_42"
     assert item_ids[("other/repo", 42)] == "ITEM_OTHER_42"
 
@@ -385,27 +421,76 @@ def test_board_item_ids_keyed_on_repo_and_number(bf, monkeypatch) -> None:
 def test_board_item_ids_leave_a_state_issues_card_out(bf, monkeypatch) -> None:
     """A state issue holds no work, so the board's read maps no card of one
     (DEC-058 point 3, ADR-071 point 6)."""
-    queries: list[str] = []
-
-    def card(item_id: str, number: int, body: str) -> dict:
-        repo = {"nameWithOwner": TARGET_REPO}
-        return {"id": item_id, "content": {"number": number, "body": body, "repository": repo}}
-
-    def fake_gh_run(args, config, **kwargs):
-        queries.append(args[args.index("-f") + 1])
-        nodes = [
-            card("ITEM_STATE", 7, "<!-- pkit:state-issue v=1 kind=seat key=planner -->\n"),
-            card("ITEM_WORK", 8, "## What\n\nwork\n"),
-        ]
-        page = {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": nodes}
-        return subprocess.CompletedProcess(
-            args, 0, stdout=json.dumps({"data": {"node": {"items": page}}}), stderr=""
-        )
-
-    monkeypatch.setattr(bf, "gh_run", fake_gh_run)
-    item_ids = bf._resolve_board_item_ids({}, "PROJ_NODE", [{"number": 7}, {"number": 8}])
+    state = "<!-- pkit:state-issue v=1 kind=seat key=planner -->\n"
+    board = _Board([_card("ITEM_STATE", 7, body=state), _card("ITEM_WORK", 8)])
+    monkeypatch.setattr(bf, "gh_run", lambda args, config, **kwargs: board.reply(args))
+    item_ids, _ = bf._resolve_board_item_ids(
+        AUJ_BOARD_CONFIG, "PROJ_NODE", [{"number": 7}, {"number": 8}]
+    )
     assert item_ids == {(TARGET_REPO, 8): "ITEM_WORK"}
-    assert "number body repository" in queries[0]
+
+
+def test_an_issue_whose_only_card_is_archived_is_on_the_board(bf, monkeypatch) -> None:
+    """An archived card is its issue's card, as any other (#3191). The board gives
+    a walk its archived cards only where the walk asks for them, so the field
+    write for the issue goes to that card, not to a membership the issue has."""
+    board = _Board([], archived=[_card("ITEM_ARCHIVED_42", 42)])
+    monkeypatch.setattr(bf, "gh_run", lambda args, config, **kwargs: board.reply(args))
+    issues = [{"number": 42, "title": "forty-two", "milestone": None}]
+    item_ids, _ = bf._resolve_board_item_ids(AUJ_BOARD_CONFIG, "PROJ_NODE", issues)
+    assert item_ids == {(TARGET_REPO, 42): "ITEM_ARCHIVED_42"}
+
+    intent = bf.BackFillIntent(
+        kind="set-board-field", citation="c", field_id="F", single_select_option_id="O"
+    )
+    [change] = bf._build_proposed_changes(
+        [intent], issues, item_ids, project_id="PROJ", target_repo=TARGET_REPO
+    )
+    assert change.prediction == "would-write"
+    assert "ITEM_ARCHIVED_42" in change.argv
+
+
+@pytest.mark.parametrize(
+    "setup",
+    ["fails", "another-board", "withheld"],
+)
+def test_a_board_that_did_not_answer_is_never_a_card_missing(bf, monkeypatch, setup) -> None:
+    """Where the walk of the board's cards did not answer, each field intent says
+    so, and is never reported as an issue off the board: back-fill skips it, as
+    any read it cannot make (ADR-053 point 4; [pkit:ADR-096] point 4). A card
+    the board withheld is set aside, since back-fill acts on its own
+    repository's issues alone (point 2)."""
+    board = _Board([_card("ITEM_1", 1)])
+    if setup == "fails":
+        board.failing["items"] = "missing required scopes [read:project]"
+    elif setup == "another-board":
+        board.number = 8
+    else:
+        board.cards.append({"id": "ITEM_HIDDEN", "type": "REDACTED", "content": None})
+    monkeypatch.setattr(bf, "gh_run", lambda args, config, **kwargs: board.reply(args))
+    issues = [{"number": 1, "title": "one", "milestone": None}, {"number": 2, "title": "two"}]
+    item_ids, unanswered = bf._resolve_board_item_ids(AUJ_BOARD_CONFIG, "PROJ_NODE", issues)
+    intent = bf.BackFillIntent(
+        kind="set-board-field", citation="c", field_id="F", single_select_option_id="O"
+    )
+    changes = bf._build_proposed_changes(
+        [intent],
+        issues,
+        item_ids,
+        project_id="PROJ_NODE",
+        target_repo=TARGET_REPO,
+        board_unanswered=unanswered,
+    )
+    if setup == "withheld":
+        assert unanswered is None
+        assert [c.prediction for c in changes] == ["would-write", "blocked"]
+        assert "not on the configured Projects v2 board" in changes[1].blocked_reason
+        return
+    assert item_ids == {} and unanswered
+    assert [c.prediction for c in changes] == ["blocked", "blocked"]
+    for change in changes:
+        assert "the board did not answer" in change.blocked_reason
+        assert "NOT a report that the issue is off the board" in change.blocked_reason
 
 
 def test_field_value_resolves_target_repo_item_not_a_colliding_one(bf) -> None:
@@ -443,13 +528,11 @@ def test_project_node_id_resolves_from_board_number_and_owner(bf, monkeypatch) -
 
     def fake_gh_run(args, config, **kwargs):
         seen["args"] = list(args)
-        return subprocess.CompletedProcess(
-            args, 0, stdout=json.dumps({"id": "PROJ_NODE_FROM_NUMBER"}), stderr=""
-        )
+        return _board_view(args)
 
     monkeypatch.setattr(bf, "gh_run", fake_gh_run)
     node_id = bf._resolve_project_node_id(AUJ_BOARD_CONFIG)
-    assert node_id == "PROJ_NODE_FROM_NUMBER"
+    assert node_id == "PROJ_NODE"
     # It read the board NUMBER (7) and the configured owner — the real shape.
     assert seen["args"][:4] == ["gh", "project", "view", "7"]
     assert "--owner" in seen["args"]
@@ -483,9 +566,7 @@ def test_auj_field_value_case_produces_would_write_under_real_config(
 
     def fake_gh_run(args, config, **kwargs):
         if args[:4] == ["gh", "project", "view", "7"]:
-            return subprocess.CompletedProcess(
-                args, 0, stdout=json.dumps({"id": "PROJ_NODE"}), stderr=""
-            )
+            return _board_view(args)
         if args[:3] == ["gh", "repo", "view"]:
             return subprocess.CompletedProcess(
                 args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr=""
@@ -497,32 +578,8 @@ def test_auj_field_value_case_produces_would_write_under_real_config(
                 stdout=json.dumps([{"number": 1, "title": "one", "milestone": None}]),
                 stderr="",
             )
-        if args[:3] == ["gh", "api", "graphql"]:
-            return subprocess.CompletedProcess(
-                args,
-                0,
-                stdout=json.dumps(
-                    {
-                        "data": {
-                            "node": {
-                                "items": {
-                                    "pageInfo": {"hasNextPage": False, "endCursor": None},
-                                    "nodes": [
-                                        {
-                                            "id": "ITEM_1",
-                                            "content": {
-                                                "number": 1,
-                                                "repository": {"nameWithOwner": TARGET_REPO},
-                                            },
-                                        }
-                                    ],
-                                }
-                            }
-                        }
-                    }
-                ),
-                stderr="",
-            )
+        if is_seam_read(args):
+            return _Board([_card("ITEM_1", 1)]).reply(args)
         return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
 
     monkeypatch.setattr(bf, "load_adopter_config", fake_load_config)
@@ -550,7 +607,7 @@ def _patch_gate_checks(
     """Patch the pre-check module the gate loads so its three residual probes
     return the requested statuses — without touching real gh or a real map."""
     fake_module = SimpleNamespace()
-    fake_module._check_gh_auth = lambda: _Check(
+    fake_module._check_gh_auth = lambda _config: _Check(
         "`gh` authenticated",
         "ok" if auth_ok else "fail",
         "auth ok" if auth_ok else "no active authentication",
@@ -606,7 +663,7 @@ def test_gate_skips_map_parse_when_no_map_present(bf, tmp_path, monkeypatch) -> 
     called = {"map_parse": False}
 
     fake = SimpleNamespace()
-    fake._check_gh_auth = lambda: _Check("`gh` authenticated", "ok", "ok")
+    fake._check_gh_auth = lambda _config: _Check("`gh` authenticated", "ok", "ok")
     fake._check_repo_accessible = lambda: _Check("repo accessible", "ok", "ok")
 
     def _map_probe(_root):
@@ -619,6 +676,32 @@ def test_gate_skips_map_parse_when_no_map_present(bf, tmp_path, monkeypatch) -> 
     gate = bf._residual_pre_check(cap)
     assert gate.passed is True
     assert called["map_parse"] is False
+
+
+def test_gate_judges_auth_by_the_projects_config(bf, tmp_path, monkeypatch) -> None:
+    """The gate hands pre-check's auth check the project's config, so it judges
+    the host the config sets, as pre-check does (#3007)."""
+    cap = tmp_path / ".pkit" / "capabilities" / "project-management"
+    (cap / "project").mkdir(parents=True)
+    (cap / "project" / "config.yaml").write_text(
+        "schema_version: 1\nworkstreams: []\ngh:\n  host: github.example.com\n",
+        encoding="utf-8",
+    )
+    _mark_bootstrapped(cap)
+    seen: list[object] = []
+
+    def _auth(config):
+        seen.append(config)
+        return _Check("`gh` authenticated", "ok", "host=github.example.com")
+
+    fake = SimpleNamespace(
+        _check_gh_auth=_auth,
+        _check_repo_accessible=lambda: _Check("repo accessible", "ok", "ok"),
+    )
+    monkeypatch.setattr(bf, "_load_pre_check_module", lambda _root: fake)
+
+    assert bf._residual_pre_check(cap).passed is True
+    assert seen == [{"schema_version": 1, "workstreams": [], "gh": {"host": "github.example.com"}}]
 
 
 def test_gate_proceeds_under_a_degraded_axis(bf, tmp_path, monkeypatch) -> None:
@@ -930,9 +1013,7 @@ def _serve_reads(args):
             args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr=""
         )
     if args[:4] == ["gh", "project", "view", "7"]:
-        return subprocess.CompletedProcess(
-            args, 0, stdout=json.dumps({"id": "PROJ_NODE"}), stderr=""
-        )
+        return _board_view(args)
     if args[:3] == ["gh", "issue", "list"]:
         return subprocess.CompletedProcess(
             args,
@@ -945,32 +1026,8 @@ def _serve_reads(args):
             ),
             stderr="",
         )
-    if args[:3] == ["gh", "api", "graphql"]:
-        return subprocess.CompletedProcess(
-            args,
-            0,
-            stdout=json.dumps(
-                {
-                    "data": {
-                        "node": {
-                            "items": {
-                                "pageInfo": {"hasNextPage": False, "endCursor": None},
-                                "nodes": [
-                                    {
-                                        "id": "ITEM_1",
-                                        "content": {
-                                            "number": 1,
-                                            "repository": {"nameWithOwner": TARGET_REPO},
-                                        },
-                                    }
-                                ],
-                            }
-                        }
-                    }
-                }
-            ),
-            stderr="",
-        )
+    if is_seam_read(args):
+        return _Board([_card("ITEM_1", 1)]).reply(args)
     return None
 
 

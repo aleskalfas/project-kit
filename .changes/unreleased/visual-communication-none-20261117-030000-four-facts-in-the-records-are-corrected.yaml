@@ -1,0 +1,8 @@
+component: visual-communication
+kind: none
+body: >
+  Four passages of DEC-046, DEC-062 and DEC-063 state what holds: the two
+  records rest on each other at DEC-063 point 4, both checks of boxes have
+  landed, and the report gives every finding of a check that runs on a
+  scene. No record decides anything different, and nothing a command does
+  changes.

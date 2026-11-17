@@ -22,9 +22,11 @@ pkit:
         - living-docs:DEC-001#4
         - living-docs:DEC-001#8
         - project-management:DEC-053
+        - ADR-060#6
         - COR-013
         - COR-017
         - COR-031
+        - COR-049#1
         - COR-050#1
         - COR-050#6
         - COR-050#8
@@ -54,11 +56,11 @@ pkit:
 **Assumptions:**
 
 - The [project](../../../../core/glossary.md#term-project--project) has living-docs installed, or registered in place where living-docs is developed, and the [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys its `living-docs` [agent definition](../../../../core/glossary.md#term-agent-definition--agent-definition) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md), [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md)).
-- The [backbone configuration](../../../../core/glossary.md#term-backbone-configuration--backbone-configuration) names the [documentation roots](../../../../core/glossary.md#term-documentation-root--documentation-root), and declares the places that hold the project's documents, as `core:UC-021` describes ([COR-050 point 1](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)).
+- The [backbone configuration](../../../../core/glossary.md#term-backbone-configuration--backbone-configuration) names the [documentation roots](../../../../core/glossary.md#term-documentation-root--documentation-root) ([COR-049 point 1](../../../../../../.pkit/decisions/core/COR-049-documentation-roots.md#1-the-roots)). It declares the places that hold the project's documents, as `core:UC-021` describes ([COR-050 point 1](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)).
 - The project's [declared surface](../../../../core/glossary.md#term-declared-surface--declared-surface) names what its documentation ought to cover, so the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check) measures what no [page](../../../glossary.md#term-page--page) anchors (COR-050 points [8](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures) and [14](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#14-project-settings)).
-- Where a work-tracking [capability](../../../../core/glossary.md#term-capability--capability) keeps a mapping from code to documents, it gives the mapping through its documentation-check [data point](../../../../core/glossary.md#term-data-point--data-point) ([project-management DEC-053](../../../../../../.pkit/capabilities/project-management/decisions/DEC-053-doc-check-slot.md)). Without one, the agent has no mapping to read.
-- A page new in a [change](../../../../core/glossary.md#term-change--change) counts as revalidated there. A change that alters the anchors of a document with front matter asks it for an [answer](../../../../core/glossary.md#term-answer--answer) in the same change ([COR-050 point 6](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
-- Nothing at run time confines the agent to the [agent workspace](../../../../core/glossary.md#term-agent-workspace--agent-workspace). Its definition grants no tool that edits a file in place and owns no path, but its Write and its Bash reach any file (COR-013).
+- Where a work-tracking [capability](../../../../core/glossary.md#term-capability--capability) keeps a [code-to-doc mapping](../../../glossary.md#term-code-to-doc-mapping--code-to-doc-mapping), it gives the mapping through its documentation-check [data point](../../../../core/glossary.md#term-data-point--data-point) ([project-management DEC-053](../../../../../../.pkit/capabilities/project-management/decisions/DEC-053-doc-check-slot.md)). Without one, the agent has no mapping to read.
+- A page new in a [change](../../../../core/glossary.md#term-change--change) counts as answered there. A change that alters the anchors of a document with front matter asks it for an [answer](../../../../core/glossary.md#term-answer--answer) in the same change ([COR-050 point 6](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
+- In a session, nothing at run time confines the agent to the [agent workspace](../../../../core/glossary.md#term-agent-workspace--agent-workspace). The [system](../../../../core/glossary.md#term-system--system) only stops prompting for writes there ([ADR-060 point 6](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#6-realised-by-the-hook-never-as-a-settings-rule)). The `living-docs` agent definition grants no tool that edits a file in place and owns no path (COR-013).
 
 **Trigger:** The adopter installs living-docs on a [project](../../../../core/glossary.md#term-project--project) that has documentation already.
 
@@ -71,13 +73,13 @@ pkit:
 5. The agent gathers its evidence:
    - [validation](../../../../core/glossary.md#term-validation--validation)'s [findings](../../../../core/glossary.md#term-finding--finding)
    - the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check)'s measures
-   - the mapping, where the [project](../../../../core/glossary.md#term-project--project) keeps one
+   - the [code-to-doc mapping](../../../glossary.md#term-code-to-doc-mapping--code-to-doc-mapping), where the [project](../../../../core/glossary.md#term-project--project) keeps one
    - both configuration files, and the documents
 6. The agent writes one [onboarding plan](../../../glossary.md#term-onboarding-plan--onboarding-plan), `.agent-workspace/living-docs/onboarding/plan.md`, in four parts, each line citing its evidence (DEC-001 point 8):
    - **Spaces:** the space each unclassified document becomes a [page](../../../glossary.md#term-page--page) of, with its `reader` and its `kind`, or why the spaces' rules do not govern it
    - **Splits and rewrites:** the pages that split, merge or are rewritten for their [readers](../../../glossary.md#term-reader--reader)
    - **Anchors:** the anchors each page's statements need, each on the one part a statement rests on, and the statements nothing grounds, raised as questions
-   - **Mapping:** the rules of the mapping that become page anchors, narrowed where an [anchor](../../../../core/glossary.md#term-anchor--anchor) would match most of the repository
+   - **Mapping:** the entries of the mapping that become page anchors, narrowed where an [anchor](../../../../core/glossary.md#term-anchor--anchor) would match most of the repository
 7. The agent shows the plan's summary, and waits at its one gate: approve, revise or reject.
 8. The adopter approves the plan.
 9. The agent drafts one [proposal](../../../glossary.md#term-proposal--proposal) for each step the plan names, under `.agent-workspace/living-docs/onboarding/`, each a diff and a pull-request body that cites the plan's evidence. It applies none, and stops (DEC-001 point 8 and [REQ-022](../../../requirements/functional/REQ-022-agent-proposes-only.md)).
@@ -91,12 +93,12 @@ pkit:
 - **6a.** A space has no [space definition](../../../glossary.md#term-space-definition--space-definition) yet. The plan names `pkit living-docs new space`, which the adopter runs as `UC-043` describes. A definition that validation reports with no scope gets the scope the report names ([DEC-001 point 2](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content)).
 - **6b.** A document's title is not written as a level-one heading at the start of a line, such as one written in HTML. The plan says so beside the [page kind](../../../glossary.md#term-page-kind--page-kind) it proposes, and proposes the title with the [page](../../../glossary.md#term-page--page)'s edit.
 - **6c.** A page has nothing to [anchor](../../../../core/glossary.md#term-anchor--anchor) to. The plan drafts its reason for having none, as `unanchored-because`, in place of anchors, for the adopter to accept at the gate ([COR-050 point 1](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)).
-- **6d.** The [project](../../../../core/glossary.md#term-project--project) keeps no mapping from code to documents. The plan's mapping part says so, and proposes nothing there.
+- **6d.** The [project](../../../../core/glossary.md#term-project--project) keeps no [code-to-doc mapping](../../../glossary.md#term-code-to-doc-mapping--code-to-doc-mapping). The plan's mapping part says so, and proposes nothing there.
 - **6e.** A page kind the plan needs has no template yet. The plan names it as a question for the adopter.
 - **7a.** The agent was dispatched as a subagent, so it cannot hear the adopter. The plan is its result, and the adopter's approval comes back as a new request that names the plan's file.
 - **8a.** The adopter rejects the plan with feedback. The agent revises the plan, writes its file again and shows what changed, and the path rejoins at step 7.
 - **8b.** The adopter rejects the plan outright. The agent drafts nothing, the plan stays in the [agent workspace](../../../../core/glossary.md#term-agent-workspace--agent-workspace), and the use case ends.
-- **9a.** The plan turns rules of a mapping into page anchors. Retiring the mapping is a separate [change](../../../../core/glossary.md#term-change--change) for whoever owns it, so the agent drafts no [proposal](../../../glossary.md#term-proposal--proposal) for it ([DEC-001 point 8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
+- **9a.** The plan turns entries of a mapping into page anchors. Retiring the mapping is a separate [change](../../../../core/glossary.md#term-change--change) for whoever owns it, so the agent drafts no [proposal](../../../glossary.md#term-proposal--proposal) for it ([DEC-001 point 8](../../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
 - **10a.** A proposal adds anchors to a document that has front matter already. The adopter answers for it in the same [pull request](../../../../core/glossary.md#term-pull-request--pull-request), as `core:UC-002` describes, and the path goes on at step 11.
 - **11a.** [Unclassified documents](../../../glossary.md#term-unclassified-document--unclassified-document) or pages left unanchored remain, or the [whole-repository check](../../../../core/glossary.md#term-whole-repository-check--whole-repository-check) still measures [declared surface](../../../../core/glossary.md#term-declared-surface--declared-surface) that no page anchors. The path rejoins at step 4.
 

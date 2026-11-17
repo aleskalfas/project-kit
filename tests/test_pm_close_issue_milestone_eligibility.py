@@ -161,7 +161,9 @@ def close_issue(
     monkeypatch.setattr(ci, "load_adopter_config", _returns({}))
     monkeypatch.setattr(ci, "_read_members", _returns([]))
     monkeypatch.setattr(
-        ci, "resolve_invoker_identity", _returns(SimpleNamespace(github_login="me"))
+        ci,
+        "resolve_invoker_identity",
+        _returns(SimpleNamespace(github_login="me", unresolved_cause=None)),
     )
     monkeypatch.setattr(ci, "check_membership", _returns(SimpleNamespace(allowed=True)))
     monkeypatch.setattr(ci.axis_labels, "load_substrate_map", _returns(None))

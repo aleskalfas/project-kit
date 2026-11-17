@@ -1,0 +1,34 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: under
+    layout: slide
+    title: Eine Legende sagt, wofür jede Farbe und jedes Zeichen steht
+    visual:
+      use: starter/panels
+      panels:
+        - id: items
+          use: starter/list
+          item: {use: starter/card, fill: tint}
+          items:
+            - {id: user, concept: test-notation/person, head: Die Leserin, text: Öffnet jede Seite.}
+            - {id: site, concept: test-notation/service, head: Die Website, text: Liefert die Seiten aus.}
+            - {id: pages, concept: test-notation/store, head: Die Seiten, text: Als Dateien abgelegt.}
+      under:
+        use: starter/legend
+        entries:
+          - {id: person, concept: test-notation/person, label: eine Benutzerin}
+          - {id: service, concept: test-notation/service, label: ein Dienst}
+          - {id: store, concept: test-notation/store, label: ein Datenspeicher}
+
+  - id: entry
+    layout: slide
+    title: Ihre Einträge kann eine Komponente des Stücks selbst zeichnen
+    visual:
+      use: starter/legend
+      entry: {use: piece/key}
+      entries:
+        - {id: person, concept: test-notation/person, label: eine Benutzerin}
+        - {id: service, concept: test-notation/service, label: ein Dienst}
+        - {id: store, concept: test-notation/store, label: ein Datenspeicher}

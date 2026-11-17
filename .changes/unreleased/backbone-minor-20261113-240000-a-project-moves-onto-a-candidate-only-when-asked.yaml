@@ -1,0 +1,22 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A project moves onto a release candidate only when someone asks, and such a
+  move always pins it there (ADR-089 points 6 to 8). `pkit pin` takes a
+  candidate in PEP 440's normal form, such as `pkit pin 3.0.0rc1`, orders it by
+  PEP 440 and raises a project at a final release to it. A candidate spelt
+  another way, such as `2.0.0-rc.1`, is refused, naming the normal form.
+  `pkit upgrade --pre` moves a project to the newest release, candidates
+  included, and hands over to a candidate above the running pkit through the
+  router's bypass. An upgrade or an `init` run by a candidate nobody asked for
+  refuses and writes nothing, naming the ways in. `--no-pin` is refused on a
+  move to a candidate, and an `init` run by a candidate with routing bypassed
+  pins the project it installs. A plain `pkit upgrade` never moves a project
+  onto a candidate its pin does not name. The CLI reference and the lifecycle's
+  upgrade flow say so. Where the router cannot run a candidate's pin, its
+  notice says when the pkit it runs instead is older, as it does for a
+  release's pin. The install script refuses a candidate's pin, as it refuses
+  any pin that names no release, and its message now says it installs only a
+  release.

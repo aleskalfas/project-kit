@@ -48,11 +48,17 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/head_programs.py
         - .pkit/capabilities/project-management/scripts/_lib/accepted_records.py
         - .pkit/capabilities/project-management/scripts/_lib/pr_merge.py
+        - .pkit/capabilities/project-management/scripts/_lib/merge_queue.py
+        - .pkit/capabilities/project-management/scripts/_lib/membership.py
+        - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
+        - .pkit/capabilities/project-management/scripts/_lib/sync_switch.py
         - .pkit/capabilities/project-management/agents/pm-reviewer.md
         - .pkit/capabilities/project-management/schemas/review-contributions.yaml
       record:
         - COR-004
         - project-management:DEC-007
+        - project-management:DEC-021
+        - project-management:DEC-003
         - project-management:DEC-026
         - project-management:DEC-027
         - project-management:DEC-028
@@ -66,6 +72,7 @@ pkit:
         - project-management:DEC-055#5
         - project-management:DEC-055#6
         - project-management:DEC-063#8
+        - project-management:DEC-064#8
         - project-management:DEC-065#1
         - project-management:DEC-065#2
         - project-management:DEC-065#4
@@ -73,6 +80,7 @@ pkit:
         - project-management:DEC-067#1
         - project-management:DEC-067#3
         - project-management:DEC-067#4
+        - project-management:DEC-072#3
         - COR-013
         - COR-017
         - COR-021
@@ -104,6 +112,8 @@ pkit:
         - PRJ-004
         - ADR-063
         - ADR-042
+        - ADR-066#1
+        - ADR-066#10
       artefact:
         - REQ-040
         - REQ-041
@@ -126,7 +136,7 @@ pkit:
 **Assumptions:**
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, the CLI registers `pkit pm`, and the [adapter](../../../../core/glossary.md#term-adapter--adapter) deploys each [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) agent ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md), [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
-- The [backbone](../../../../core/glossary.md#term-backbone--backbone) runs each reviewer agent the [system](../../../../core/glossary.md#term-system--system) names, and returns its output (COR-013).
+- The [backbone](../../../../core/glossary.md#term-backbone--backbone) runs each reviewer agent the [system](../../../../core/glossary.md#term-system--system) names, and returns its output (ADR-066 points [1](../../../../../architecture/decisions/ADR-066-unattended-agent-runner.md#1-the-runner-is-a-command-the-adapter-registers-and-the-backbone-runs-it) and [10](../../../../../architecture/decisions/ADR-066-unattended-agent-runner.md#10-what-a-run-in-the-unconfined-form-gets)).
 - The backbone tells which [artefacts](../../../../core/glossary.md#term-artefact--artefact) a [change](../../../../core/glossary.md#term-change--change) alters, or brings under a [rule](../../../../core/glossary.md#term-rule--rule), that an accepted rule binds on ([COR-057](../../../../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md)).
 - The backbone's [change check](../../../../core/glossary.md#term-change-check--change-check) lists the answers the change wrote, from the [answer files](../../../../core/glossary.md#term-answer-file--answer-file) the change adds ([COR-050](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md) and [COR-062](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md)).
 - The backbone merges the [pull request](../../../../core/glossary.md#term-pull-request--pull-request) pinned to a [head](../../../../core/glossary.md#term-head--head), and deletes its branch, as `core:UC-034` describes ([ADR-061](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md)).
@@ -136,7 +146,7 @@ pkit:
 **Main path:**
 
 1. The developer runs `pkit pm land-work <N>`, with the [Task](../../../glossary.md#term-task--task)'s number.
-2. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the [project](../../../../core/glossary.md#term-project--project)'s prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+2. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the [project](../../../../core/glossary.md#term-project--project)'s prerequisites, and that whoever runs the command is a member where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). Wherever GitHub names a user's account the command runs as, that account is whoever runs the command, not the person an agent works for. The system then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 3. The system reads the [pull request](../../../../core/glossary.md#term-pull-request--pull-request)'s [head](../../../../core/glossary.md#term-head--head), prints it, and holds it as the head this run judges.
 4. The system waits for the checks at that head, and goes on once each has passed. A head that shows no check never counts as passed (`ci_checks.py`).
 5. The system works out the [required reviewers](../../../glossary.md#term-required-reviewer--required-reviewer): those the project's settings name, and each a [capability](../../../../core/glossary.md#term-capability--capability) contributes whose condition the [change](../../../../core/glossary.md#term-change--change) meets ([DEC-032 point D1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)). It prints them, with each contributed [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) the project declined and its reason ([DEC-032 point D2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d2--capabilities-contribute-reviewer-requirements-pm-collects-them-by-walking-the-manifest)).
@@ -154,9 +164,10 @@ pkit:
    - each friction setting the change alters
    - how many files the change check could not read
    - each [revalidation answer](../../../../core/glossary.md#term-revalidation-answer--revalidation-answer) on a document on the base's tip that the change's answer did not read (DEC-055 point 3)
+   - what the change does to `friction.delegate` ([COR-064 point 2](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#2-named-in-committed-configuration-by-the-person-alone))
 
 > [!WARNING]
-> **Not built yet:** `land-work` does not show what the change does to the delegate's name. [COR-064 point 2](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#2-named-in-committed-configuration-by-the-person-alone) decides that the merge authoriser is shown it, and #2122 tracks it.
+> **Not built yet:** `land-work` does not show what the change does to the delegate's name. COR-064 point 2 decides that the merge authoriser is shown it, and #2122 tracks it.
 
 10. With no [authorisation](../../../glossary.md#term-authorisation--authorisation) yet, the system stops ready and exits `8`. It names the command that merges: `pkit pm land-work <N> --yes --expect-head <sha>`.
 11. The merge authoriser reads the findings and what the system printed, and authorises the merge of the pull request at that head (DEC-055 point 3).
@@ -176,7 +187,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** the dry run names no move of the [cascade](../../../glossary.md#term-cascade--cascade) that the merge would bring about. COR-004 decides that a dry run names each edit a run would make, and #1938 tracks it.
 
-- **2a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, the developer is no member, or the operator declines a write in another repository. The system refuses and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)). The use case ends.
+- **2a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, whoever runs the command is no member, or the operator declines a write in another repository. The system refuses and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)). The use case ends.
 - **3a.** The [change check](../../../../core/glossary.md#term-change-check--change-check) needs a program the [head](../../../../core/glossary.md#term-head--head) holds. The system cannot show that the head lies in the [base](../../../../core/glossary.md#term-base--base)'s own repository and holds no [builder agent](../../../glossary.md#term-builder-agent--builder-agent)'s commit ([DEC-067 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-067-heads-that-start-programs.md#1-a-head-on-the-bases-repository-may-start-programs)). So the system starts nothing the head holds, and asks the developer at a terminal to name the head for this run. Once the developer types the head's short id, the system posts a comment saying so, and the path rejoins at step 4 ([DEC-067 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-067-heads-that-start-programs.md#4-a-person-at-a-terminal-can-name-a-head-for-one-run)).
 - **3b.** The system cannot go on from 3a where:
   - nobody is at a terminal
@@ -195,7 +206,7 @@ pkit:
 
   So the system goes on to step 5, and waits for the others after step 8 ([DEC-063 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-063-task-builder.md#8-the-seat-asks-for-the-reviews-and-the-merge-gate-checks-them)). A check that fails then stops the run, and the system names it and starts no merge. A check run again at that head leaves each [verdict](../../../glossary.md#term-verdict--verdict) standing.
 - **5a.** The [required reviewers](../../../glossary.md#term-required-reviewer--required-reviewer) cannot be worked out, such as where a contributed [reviewer](../../../../core/glossary.md#term-reviewer--reviewer)'s agent is not deployed. The system refuses, names the cause, and runs no reviewer ([DEC-032 point D5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d5--activation-is-install-driven-the-resolved-set-is-recomputed-at-gate-time)). The use case ends.
-- **5b.** The project registers no local reviewer of its own. The system runs each reviewer a [capability](../../../../core/glossary.md#term-capability--capability) contributes that the change requires, as any other ([DEC-032 point D4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d4--review-pr-invokes-the-resolved-set)). Where the change requires no local reviewer at all, the system says so and runs none.
+- **5b.** The project's settings name no reviewer the system runs. The system runs each reviewer a [capability](../../../../core/glossary.md#term-capability--capability) contributes that the change requires, as any other ([DEC-032 point D4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d4--review-pr-invokes-the-resolved-set)). Where the change requires no such reviewer, the system says so and runs none.
 - **6a.** The developer changed something a reviewer checks since its verdict's head, or the pull request no longer stands on the verdict's base. The verdict is stale, and the system runs that reviewer again ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 - **6b.** The developer's only edits since an approving verdict are [answer files](../../../../core/glossary.md#term-answer-file--answer-file) the change adds. The verdict of a reviewer that only the condition `touches-code` requires stands, since an answer file is no code ([DEC-032 point D1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)).
 - **6c.** A reviewer's output holds no line that reads as a verdict. The system counts no verdict for it, prints the reviewer's whole output, and stops, exiting `6` ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). The use case ends.
@@ -208,16 +219,24 @@ pkit:
 - **9c.** The pull request's description carries a list of the answers, which an earlier run wrote. The system removes the list before it stops ready, asks or merges. A start marker with no end marker draws a warning, and the description stays as it is ([DEC-065 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#1-the-description-carries-no-list)).
 - **9d.** A sentence in the description reads as a closing reference. The system refuses it, merges nothing and exits `1` ([DEC-065 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#5-what-goes-with-the-list-and-what-stays)).
 - **9e.** The merge with the base needs a program its head did not. Nobody named the head, and the system cannot show the two things 3a names. So the system asks or stops as in 3a and 3b ([DEC-067 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-067-heads-that-start-programs.md#3-what-a-head-from-elsewhere-gets)).
+- **9f.** A [rule](../../../../core/glossary.md#term-rule--rule) the base accepted after the head left it binds on what the change alters. So the merge with the base requires a reviewer the head does not. The system names each such reviewer and the merge of the base, merges nothing and exits `1` ([DEC-064 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-064-base-merge-named.md#8-when-the-reviewers-the-merge-requires-are-read)). The developer merges the base into the branch and pushes, and the path rejoins at step 1.
 - **12a.** The head is not the one the [authorisation](../../../glossary.md#term-authorisation--authorisation) named. The system stops before it checks anything, unless each edit since that head lies in answer files the change adds. Then the authorisation covers the later head ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 - **12b.** An updated document has no sentence, or a later head leaves out of date what the authorised head did not. The system stops ready, and merges nothing ([DEC-065 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-065-answers-read-from-check.md#4-what-the-landing-command-prints)).
+- **12c.** The change turns on the project's setting `sync_board.adds_with_no_terminal`, or the system cannot read whether it does. A run authorised up front stops ready, says what turning the setting on means, and merges nothing. The merge authoriser authorises the merge at a terminal, answering the question the system asks there ([project-management DEC-072 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-072-sync-gives-missing-cards.md#3-where-the-board-holds-the-state-it-adds-cards-only-in-a-run-at-a-terminal-or-with-the-projects-switch-on-and-reads-each-back)).
 - **13a.** A required reviewer's latest verdict is missing or stale. The system refuses the merge, and lists each reviewer it still needs. It names `pkit pm review-pr <N>`, with the [Task](../../../glossary.md#term-task--task)'s number, to run them again ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 
 - **13b.** A [checkbox](../../../glossary.md#term-checkbox--checkbox) of an [issue](../../../glossary.md#term-issue--issue) the pull request closes is unticked. The system refuses the merge, listing each one ([DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)). The use case ends.
 - **13c.** The developer bypasses one required reviewer: `pkit pm done-work <N> --yes --bypass-reviewer <name> --bypass-reviewer-reason "<R>"`. The system posts the reason in an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) before the merge, and counts that reviewer as satisfied ([DEC-050](../../../../../../.pkit/capabilities/project-management/decisions/DEC-050-per-reviewer-override.md)).
-- **13d.** The project's settings set `review.mode` to `human`. A person's approval counts in place of the verdicts: an approving review, a comment opening with `Approved`, or a [bypass](../../../glossary.md#term-bypass--bypass). `review-work` assigns as reviewers the members of `review.human_review.reviewer_role`, never the author, and `land-work` runs no reviewer ([DEC-027](../../../../../../.pkit/capabilities/project-management/decisions/DEC-027-review-modes.md)).
-- **14a.** The base merges through a merge queue. The [backbone](../../../../core/glossary.md#term-backbone--backbone) queues the pull request pinned to the head, and the system exits `4` while it waits in the queue ([ADR-061](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md)).
+- **13d.** The project's settings set `review.mode` to `human`. A person's approval counts in place of the verdicts: an approving review, a comment opening with `Approved`, or a [bypass](../../../glossary.md#term-bypass--bypass). `review-work` assigns as reviewers the developers the setting `review.human_review.reviewer_role` selects, never the author, and `land-work` runs no reviewer ([DEC-027](../../../../../../.pkit/capabilities/project-management/decisions/DEC-027-review-modes.md)).
+- **14a.** The base merges through a merge queue. The [backbone](../../../../core/glossary.md#term-backbone--backbone) queues the pull request pinned to the head, and the system waits for the queue to merge it ([ADR-061](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md)). Where the pull request still waits in the queue when the wait ends, or at once under `--no-wait`, the system exits `4`. A later run completes what follows the merge, once the queue has merged the pull request.
+- **14b.** The system reads the pull request open at another head while it waits for the queue (14a). The system has the backbone take the pull request out of the queue, runs nothing that follows a merge, and exits `3` ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md) and `pr_merge.py`). The system's last line says how that went:
+  - **Taken out.** Nothing merged, and the path rejoins at step 1 for the new head.
+  - **Merged first.** The queue merged the pull request before it could be taken out, so the merge may hold commits nobody checked. The system names the head the pull request merged at. GitHub still closes each issue the pull request closes, where the base is the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), though the system moves none of them to Done. The use case ends, and a later run completes what follows the merge, whether or not anyone has looked at it (#3351).
+  - **Not known to be out.** Taking the pull request out failed, or whether that worked is not known. So the pull request may still merge. The system says so, and how to take it out by hand. The use case ends.
+- **14c.** The system first reads the moved head after the pull request merged, and warns, naming that head and the head the [merge gate](../../../glossary.md#term-merge-gate--merge-gate) judged. The system then moves to Done, and closes, each issue the pull request closes, as in step 14. So whether anything that follows such a merge runs turns on when the system first reads the moved head (`pr_merge.py` and #3351). The use case ends with only the minimal guarantees holding, since the merge may hold commits nobody checked.
+- **14d.** The pull request's head moves, and the system exits `4` (14a) before it reads the moved head. Nothing takes the pull request out, so the queue may merge the later head, with commits nobody checked ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)). A later run then completes what follows the merge, and compares no heads (`done-work.py` and #3351). The use case ends with only the minimal guarantees holding.
 
-**Postconditions:** The [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../../core/glossary.md#term-head--head) the gate judged, with a standing approval from each [required reviewer](../../../glossary.md#term-required-reviewer--required-reviewer). Each [issue](../../../glossary.md#term-issue--issue) it closed is in Done.
+**Postconditions:** The [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../../core/glossary.md#term-head--head) the [merge gate](../../../glossary.md#term-merge-gate--merge-gate) judged, with a standing approval from each [required reviewer](../../../glossary.md#term-required-reviewer--required-reviewer). Each [issue](../../../glossary.md#term-issue--issue) it closed is in Done.
 
 **Minimal guarantees:**
 
@@ -225,7 +244,8 @@ pkit:
 - Only a comment that carries the verdict's marker counts as a verdict (DEC-028).
 - An approval stands only while the developer changes nothing its [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) checks. A commit the [system](../../../../core/glossary.md#term-system--system) cannot read makes it stale (DEC-028).
 - Where the [required reviewers](../../../glossary.md#term-required-reviewer--required-reviewer) cannot be worked out, nothing merges on part of them ([DEC-032 point D5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d5--activation-is-install-driven-the-resolved-set-is-recomputed-at-gate-time)).
-- The merge is pinned to the [head](../../../../core/glossary.md#term-head--head) the gate judged, so a push after the gate fails it (DEC-028).
-- Nothing merges through `land-work` without an [authorisation](../../../glossary.md#term-authorisation--authorisation) for that head, given at a terminal or by `--yes` with `--expect-head` ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation) and [REQ-042](../../../requirements/functional/REQ-042-held-moves-authorised.md)).
+- The merge is pinned to the [head](../../../../core/glossary.md#term-head--head) the gate judged, so a push after the gate fails a direct merge (DEC-028).
+- On a push while the system waits for a merge queue, the system takes the [pull request](../../../../core/glossary.md#term-pull-request--pull-request) out of the queue. The queue may merge it first, so commits nobody checked may merge. The system says so where the queue merged it, or may still merge it. After the system exited `4`, nothing takes the pull request out ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+- Nothing merges through `land-work` without an [authorisation](../../../glossary.md#term-authorisation--authorisation) for that head, given at a terminal or by `--yes` with `--expect-head` ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation) and [REQ-042](../../../requirements/functional/REQ-042-held-moves-authorised.md)). The one exception is a later head that a merge queue merges, as in 14b to 14d (DEC-026 and [DEC-055 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#5-what-this-does-not-verify)).
 - A head starts no program where the system cannot show that the head lies in the [base](../../../../core/glossary.md#term-base--base)'s own repository and holds no [builder agent](../../../glossary.md#term-builder-agent--builder-agent)'s commit. Only a person at a terminal, naming the head for one run, makes an exception, and no flag does ([DEC-067](../../../../../../.pkit/capabilities/project-management/decisions/DEC-067-heads-that-start-programs.md)).
-- `done-work`, as in variant 13c, pins its merge to the head its gate read (DEC-028 and [DEC-055 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#5-what-this-does-not-verify)).
+- `done-work`, as in variant 13c, pins its merge or its enqueue to the head its gate read (DEC-028 and DEC-055 point 5). A merge queue may still merge a later head, as in 14b to 14d (DEC-026).

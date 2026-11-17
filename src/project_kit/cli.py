@@ -80,16 +80,19 @@ if TYPE_CHECKING:
         friction_since,
         friction_write,
         pull_request_landing,
+        release_candidate,
         scratchpads,
         session_guard,
         workspace_remove,
     )
     from project_kit import refs as refs_mod
+    from project_kit import write_categories as write_categories_mod
     from project_kit.agents import stamp_new_agent
     from project_kit.capabilities import CapabilitySource, CollisionFinding, MandatoryUpstream
     from project_kit.changesets import Changeset
     from project_kit.decisions import stamp_decision
     from project_kit.loaded_rules import SetReading
+    from project_kit.manifest import CapabilityPin
     from project_kit.merge import run_merge
     from project_kit.migrations import refuse_inside_migration
     from project_kit.process import ProcessEngine
@@ -98,13 +101,17 @@ if TYPE_CHECKING:
         ReleasePlan,
         apply_release,
         check_changesets,
+        check_queue,
         check_raised_ranges,
         check_shareable,
         compute_release,
         lint_release_format,
         merge_release_pr,
         migration_dir_mismatches,
+        plan_commit,
+        plan_commit_line,
         publish_release_notes,
+        refuse_final_release_tag,
         release_summary,
     )
     from project_kit.scaffolds import (
@@ -125,6 +132,7 @@ if TYPE_CHECKING:
     )
     from project_kit.status import report_status
     from project_kit.storyboards import ArtifactKind, stamp_new_storyboard
+    from project_kit.stranded_migrations import refuse_stranded_scripts
     from project_kit.sync import refuse_version_mismatch, run_sync
     from project_kit.upgrade import (
         capability_move,
@@ -155,6 +163,7 @@ else:
     friction_since = _OnFirstUse("project_kit.friction_since")
     friction_write = _OnFirstUse("project_kit.friction_write")
     pull_request_landing = _OnFirstUse("project_kit.pull_request_landing")
+    release_candidate = _OnFirstUse("project_kit.release_candidate")
     scratchpads = _OnFirstUse("project_kit.scratchpads")
     session_guard = _OnFirstUse("project_kit.session_guard")
     workspace_remove = _OnFirstUse("project_kit.workspace_remove")
@@ -165,13 +174,17 @@ else:
     refuse_inside_migration = _OnFirstUse("project_kit.migrations", "refuse_inside_migration")
     apply_release = _OnFirstUse("project_kit.release", "apply_release")
     check_changesets = _OnFirstUse("project_kit.release", "check_changesets")
+    check_queue = _OnFirstUse("project_kit.release", "check_queue")
     check_raised_ranges = _OnFirstUse("project_kit.release", "check_raised_ranges")
     check_shareable = _OnFirstUse("project_kit.release", "check_shareable")
     compute_release = _OnFirstUse("project_kit.release", "compute_release")
     lint_release_format = _OnFirstUse("project_kit.release", "lint_release_format")
     merge_release_pr = _OnFirstUse("project_kit.release", "merge_release_pr")
     migration_dir_mismatches = _OnFirstUse("project_kit.release", "migration_dir_mismatches")
+    plan_commit = _OnFirstUse("project_kit.release", "plan_commit")
+    plan_commit_line = _OnFirstUse("project_kit.release", "plan_commit_line")
     publish_release_notes = _OnFirstUse("project_kit.release", "publish_release_notes")
+    refuse_final_release_tag = _OnFirstUse("project_kit.release", "refuse_final_release_tag")
     release_summary = _OnFirstUse("project_kit.release", "release_summary")
     register_kit_shipped_component = _OnFirstUse(
         "project_kit.scaffolds", "register_kit_shipped_component"
@@ -186,6 +199,9 @@ else:
     transition_to_dropped = _OnFirstUse("project_kit.scratchpads", "transition_to_dropped")
     report_status = _OnFirstUse("project_kit.status", "report_status")
     stamp_new_storyboard = _OnFirstUse("project_kit.storyboards", "stamp_new_storyboard")
+    refuse_stranded_scripts = _OnFirstUse(
+        "project_kit.stranded_migrations", "refuse_stranded_scripts"
+    )
     refuse_version_mismatch = _OnFirstUse("project_kit.sync", "refuse_version_mismatch")
     run_sync = _OnFirstUse("project_kit.sync", "run_sync")
     capability_move = _OnFirstUse("project_kit.upgrade", "capability_move")
@@ -295,8 +311,11 @@ def agents(ctx: click.Context) -> None:
     whose absence never skips — the agent deploys without it, and such undefined
     categories are surfaced in an `Optional` footer state. Each row also shows the
     agent's effective model and effort: the overlay's `overrides.<agent>` value,
-    else the front matter's, else `inherit`. Deployment itself happens via
-    `pkit sync`; configuration is `.pkit/agents/project/overlay.yaml`.
+    else the front matter's, else `inherit`. An `UNKNOWN OVERRIDES` section warns
+    of each `overrides:` entry the deploy ignores, naming its key: a block for an
+    agent no source ships, or a category the agent's definition does not reference.
+    Deployment itself happens via `pkit sync`; configuration is
+    `.pkit/agents/project/overlay.yaml`.
     """
     if ctx.invoked_subcommand is not None:
         return
@@ -452,6 +471,77 @@ def agents_adopt(agent_name: str, yes: bool) -> None:
     click.echo("\n".join(lines))
 
 
+@agents.command("choose")
+@click.argument("agent_name", metavar="AGENT")
+@click.argument("capability", metavar="CAPABILITY")
+def agents_choose(agent_name: str, capability: str) -> None:
+    """Record the project's choice of CAPABILITY's definition as AGENT (COR-017).
+
+    Where two or more installed capabilities ship an agent's name, the one the
+    project chose is the agent, else the first by name. The choice is kept in
+    `.pkit/manifest.yaml` under `agent_choices`, one for each agent's name, and
+    replaces one recorded before; uninstalling the capability drops it.
+
+    Refused, with nothing written, where the choice would decide nothing: a
+    capability that is not installed, one that ships no agent of that name, and
+    one whose definition of it the project skipped. The project's place and
+    core's are not chosen, since COR-013 point 8 orders them already: the
+    project's wins over every capability's, and core's yields to them. The next
+    deploy, at `pkit sync`, deploys the agent the choice names.
+    """
+    refuse_inside_migration("agents choose")
+    from project_kit import agent_definitions
+    from project_kit.manifest import AGENT_CHOICES_KEY, record_agent_choice
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if capability in ("project", "core"):
+        raise click.ClickException(
+            f"{capability} is no capability, and its place is not chosen: the project's "
+            "definition wins over every capability's, and core's yields to them "
+            "(COR-013 point 8). Name an installed capability that ships the agent."
+        )
+    records = agent_definitions.records(target_root)
+    if records.registry_unreadable is not None:
+        raise click.ClickException(
+            f"cannot record the choice: {records.registry_unreadable}. Nothing was written."
+        )
+    if capability not in records.installed:
+        raise click.ClickException(
+            f"capability {capability!r} is not installed, so a choice of it would decide "
+            "nothing. Nothing was written."
+        )
+    pick = agent_definitions.answer(target_root).picks.get(agent_name)
+    place = f"{agent_definitions.CAPABILITY_PLACE}{capability}"
+    definition = next(
+        (d for d in (pick.definitions if pick is not None else ()) if d.place == place), None
+    )
+    if definition is None:
+        raise click.ClickException(
+            f"capability {capability!r} ships no agent named {agent_name!r}, so a choice of "
+            "it would decide nothing. Nothing was written."
+        )
+    if not definition.counts:
+        raise click.ClickException(
+            f"a choice of capability {capability!r} for agent {agent_name!r} would decide "
+            f"nothing: {definition.why_not}. Nothing was written."
+        )
+    written = record_agent_choice(target_root, agent_name, capability)
+    where = f".pkit/manifest.yaml, `{AGENT_CHOICES_KEY}`"
+    if written:
+        click.echo(f"  recorded     capability {capability}'s {agent_name} is the agent ({where})")
+    else:
+        click.echo(f"  unchanged    capability {capability}'s {agent_name} is already chosen")
+    if pick is not None and any(d.place == "project" for d in pick.definitions):
+        click.echo(
+            f"  note         the project ships its own {agent_name}, which wins while it does "
+            "(COR-013 point 8)"
+        )
+    if written:
+        click.echo("  The next deploy, at `pkit sync`, deploys it.")
+
+
 class _AskedToStop(BaseException):
     """`SIGTERM` or `SIGHUP` reached `agents run`. Raised so the run stops its
     runner as an interrupt would, rather than leaving it behind."""
@@ -502,7 +592,19 @@ def _stops_on_signal() -> Generator[None]:
     type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
     default=None,
     help="The folder an unconfined run runs in. The run takes the person's and the project's "
-    "settings there, as a session started in it would.",
+    "settings there, as a session started in it would. The folder also chooses the runner: "
+    "where it is a project's root, the runner that project registers, run from it; else the "
+    "runner of the project the command runs in.",
+)
+@click.option(
+    "--local-settings",
+    "local_settings",
+    is_flag=True,
+    default=False,
+    help="Unconfined: carry the person's local settings, which their harness keeps for one "
+    "checkout out of git, from the project you run the command in into FOLDER. The runner "
+    "knows which file holds them. It copies the file only where FOLDER holds nothing at that "
+    "path, and refuses the run where a link lies on the way.",
 )
 @click.option(
     "--commit",
@@ -545,6 +647,7 @@ def _stops_on_signal() -> Generator[None]:
 def agents_run(
     agent_name: str,
     folder: Path | None,
+    local_settings: bool,
     commit: str | None,
     rules_of: str | None,
     files_to: Path | None,
@@ -552,7 +655,8 @@ def agents_run(
     effort: str | None,
     as_json: bool,
 ) -> None:
-    """Run AGENT once, with nobody watching, on the brief read from standard input.
+    """Run AGENT once, which nobody can answer during its run, on the brief read
+    from standard input.
 
     The one way a command starts an agent (ADR-066 point 1). The backbone
     starts the runner the project's adapter registers in its `commands:` tree
@@ -565,7 +669,9 @@ def agents_run(
     \b
     Two forms:
     - Unconfined, with --folder: the runner starts the harness in FOLDER, in
-      the mode the settings there, or the harness, choose.
+      the mode the settings there, or the harness, choose. With
+      --local-settings, it first carries the person's local settings into
+      FOLDER from the project the command runs in (ADR-066 point 10).
     - Confined, with --commit, --rules-of and --files-to, together: the run
       runs in a fresh clone at the commit, held by the run rules of the named
       command, and its files are copied to the folder after the clone is
@@ -600,6 +706,8 @@ def agents_run(
         raise click.UsageError(
             "give --folder, or --commit, --rules-of and --files-to, all three together."
         )
+    if local_settings and folder is None:
+        raise click.UsageError("--local-settings goes only with --folder.")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -613,6 +721,7 @@ def agents_run(
         commit=commit,
         rules_of=rules_of,
         files_to=None if files_to is None else files_to.resolve(),
+        local_settings_from=target_root if local_settings else None,
     )
     problem = request.problem(target_root)
     if problem is not None:
@@ -1546,6 +1655,13 @@ _LAND_EXITS: Mapping[str, int] = {
     help="Send no merge and no enqueue: a PR queued at SHA is waited for, one queued at another "
     "head is still taken out, and one a merge or an enqueue would land is refused.",
 )
+@click.option(
+    "--first-in-queue",
+    is_flag=True,
+    default=False,
+    help="Enqueue only first in the queue: an enqueue behind another pull request is refused, "
+    "so none queued before the request lands ahead of this one.",
+)
 @_allow_foreign_repo_option
 @click.option(
     "--dry-run",
@@ -1564,6 +1680,7 @@ def pull_request_land(
     direct_only: bool,
     queued_bad_shape: str,
     no_request: bool,
+    first_in_queue: bool,
     allow_foreign_repo: bool,
     dry_run: bool,
     as_json: bool,
@@ -1572,7 +1689,8 @@ def pull_request_land(
 
     The cross-repository guard runs once, at the entry. Then one reading;
     the options applied to it; the direct squash merge, with SUBJECT, or the
-    enqueue, each pinned to SHA; the wait for the merge; and, where a reading
+    enqueue, each pinned to SHA, the direct merge carrying the PR's body as
+    the reading just before it read it; the wait for the merge; and, where a reading
     finds another head, the PR taken out of the queue. Never deletes a
     branch. Writes each event while the output takes them — a reading,
     `requesting` before each request is sent, `requested` once it is
@@ -1600,6 +1718,7 @@ def pull_request_land(
         direct_only=direct_only,
         queued_bad_shape=queued_bad_shape,
         no_request=no_request,
+        first_in_queue=first_in_queue,
     )
 
     closed = False
@@ -2880,7 +2999,14 @@ def version_promote() -> None:
 )
 @_allow_foreign_repo_option
 def version_tag(push: bool, allow_foreign_repo: bool) -> None:
-    """Tag HEAD as `v<version>` from .pkit/VERSION (per PRJ-002 + PRJ-004).
+    """Tag the commit the last final release landed as `v<version>` (PRJ-004).
+
+    The commit is the newest at or before HEAD on the default branch's
+    first-parent history that changed .pkit/VERSION, and the version is the one
+    it records, so every way of tagging a final release tags one commit (ADR-092
+    point 6). It refuses, tagging nothing, where HEAD is off that history, where
+    that commit records no final release version, and where the tag exists
+    locally or, with `--push`, on `origin`.
 
     With `--push` the cross-repository guard runs first, before the tag is
     made: in another repository than the session's anchor's it asks at a
@@ -2908,6 +3034,10 @@ def version_tag(push: bool, allow_foreign_repo: bool) -> None:
 @_allow_foreign_repo_option
 def version_untag(push: bool, allow_foreign_repo: bool) -> None:
     """Remove the `v<version>` tag matching .pkit/VERSION (local; --push for remote).
+
+    Refuses a release candidate's tag, `v<X.Y.Z>rc<N>`, which is never moved or
+    deleted: a candidate is withdrawn by the tag `withdrawn/v<X.Y.Z>rc<N>` on its
+    commit instead (ADR-092 point 4).
 
     With `--push` the cross-repository guard runs first, before either tag is
     deleted, as for `version tag --push`.
@@ -2964,6 +3094,15 @@ def release() -> None:
     """
 
 
+#: The `--pre` option `release plan` and `release apply` take, and what it asks for.
+_PRE_HELP = (
+    "A release candidate, planned from the commit this runs at, the versions it records "
+    "and the changesets pending in its tree, each moved version with the suffix rcN "
+    "(ADR-092 point 2). Refused where the default branch's head on origin is not in that "
+    "commit's history."
+)
+
+
 @release.command("plan")
 @click.option(
     "--json",
@@ -2972,15 +3111,40 @@ def release() -> None:
     default=False,
     help="Emit the computed release as JSON (for the release-PR automation).",
 )
-def release_plan(as_json: bool) -> None:
+@click.option("--pre", is_flag=True, default=False, help=_PRE_HELP)
+def release_plan(as_json: bool, pre: bool) -> None:
     """Preview the release computed from pending changesets (read-only).
 
     Refuses, as `apply` does, a release it would refuse: a declaration it cannot
-    write, or a range on a capability that would exclude the version the release
-    writes or carries for it (PRJ-002 D4)."""
+    write, a range on a capability that would exclude the version the release
+    writes or carries for it (PRJ-002 D4), or a migration script stranded in a
+    folder at or below its tier's fixed version (ADR-092 point 8).
+
+    With `--pre`, the release candidate a cut at HEAD would write, refused as
+    `apply --pre` refuses it: its number, one past the highest any candidate tag
+    on origin carries (ADR-092 point 3), and the base it would record (point 9)."""
     import json
 
     source_kit = _target_kit()
+    if pre:
+        candidate = release_candidate.plan_candidate(source_kit)
+        if as_json:
+            summary = release_summary(
+                source_kit,
+                candidate.written(),
+                warnings=migration_dir_mismatches(source_kit, candidate.plan),
+            )
+            summary["candidate"] = {
+                "version": candidate.version,
+                "number": candidate.number,
+                "tag": candidate.tag,
+            }
+            summary["base"] = json.loads(candidate.base.text())
+            click.echo(json.dumps(summary, indent=2))
+            return
+        _print_candidate(source_kit, candidate)
+        return
+    refuse_stranded_scripts(source_kit.parent)
     plan = compute_release(source_kit)
     if as_json:
         click.echo(json.dumps(release_summary(source_kit, plan), indent=2))
@@ -2994,10 +3158,20 @@ def release_plan(as_json: bool) -> None:
     "--tag",
     is_flag=True,
     default=False,
-    help="Also cut the tag now. Off by default — tag is a separate step "
-    "(`pkit version tag --push`) after the release commit lands on main.",
+    help="With --pre, tag the candidate's commit v<candidate>. Without it, refused before "
+    "anything is written: a final release is tagged once its release PR merges, by `pkit "
+    "version tag --push` on main (ADR-092 point 6).",
 )
-@click.option("--push", is_flag=True, default=False, help="With --tag, push the tag to origin.")
+@click.option(
+    "--push",
+    is_flag=True,
+    default=False,
+    help="Refused with --pre: a candidate's tag is pushed only once the wheel built from "
+    "its commit is checked (ADR-089 point 9). Without --pre it changes nothing, since apply "
+    "then cuts no tag: a final release's tag is pushed by `pkit version tag --push` once its "
+    "release PR merges (ADR-092 point 6).",
+)
+@click.option("--pre", is_flag=True, default=False, help=_PRE_HELP)
 @click.option(
     "--no-broaden",
     is_flag=True,
@@ -3011,13 +3185,14 @@ def release_plan(as_json: bool) -> None:
 @click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt (CI).")
 @_allow_foreign_repo_option
 def release_apply(
-    tag: bool, push: bool, no_broaden: bool, yes: bool, allow_foreign_repo: bool
+    tag: bool, push: bool, pre: bool, no_broaden: bool, yes: bool, allow_foreign_repo: bool
 ) -> None:
     """Consume changesets and write versions + changelog (the release write).
 
     The sole main-only writer of version state (PRJ-002 D3). Run from a
     release PR against `main` — not on every merge. Tagging is a separate,
-    anchored step by default; see `pkit version tag`.
+    anchored step, `pkit version tag`, run once the release PR merges: `--tag`
+    is refused before anything is written (ADR-092 point 6).
 
     On a component release, widens that component's `requires_backbone` to
     cover the repo's current backbone (the version being released under) unless
@@ -3038,21 +3213,40 @@ def release_apply(
     to admit the version this release writes for that capability, up to the next
     major; `--no-broaden` skips neither. A release that would leave a range on a
     capability excluding the version it writes or carries for it is refused
-    before anything is written, naming both (PRJ-002 D4). See
+    before anything is written, naming both (PRJ-002 D4). So is a release that
+    would ship a migration script stranded in a folder at or below its tier's
+    fixed version, naming a folder to move it to (ADR-092 point 8). See
     `.pkit/release/README.md`.
 
-    With `--tag --push` the tag's push changes the hosting service, so the
-    cross-repository guard runs first, before anything is written, as for
-    `version tag --push`.
+    A release that moves a version ends by printing the trailer line naming
+    the commit its plan read, `Release-plan-commit: <commit>`: commit the
+    release with it, and open its PR with it in the body, so `pkit release
+    merge` lands it only onto that commit (ADR-092 point 6).
+
+    With `--pre`, it cuts a release candidate from the commit it runs at
+    (ADR-092 point 2), as `plan --pre` shows it: each version the release moves
+    with the suffix rcN, the broaden and each declared upper bound as the final
+    release writes them, and the changelog section headed by the candidate's
+    version. It raises no floor and consumes no changeset (PRJ-002 D4). It
+    records the cut's base in `src/project_kit/candidate_base.json` (ADR-092
+    point 9), and commits the writes on no branch, leaving HEAD detached there.
+    `--tag` tags that commit `v<candidate>`; the tag is pushed only once the
+    wheel built from it is checked (ADR-089 point 9).
     """
+    if pre:
+        if push:
+            raise click.ClickException(
+                "refusing `--push` with `--pre`: a candidate's tag is pushed only once the "
+                "wheel built from its commit is checked (ADR-089 point 9). Run without it, "
+                "and push the tag alone after the check. Nothing was written."
+            )
+    else:
+        refuse_final_release_tag(tag)
     source_kit = _target_kit()
-    clearance = (
-        _cleared_at_entry(
-            source_kit.parent, allow_foreign_repo, unchanged="Nothing was written or pushed."
-        )
-        if tag and push
-        else None
-    )
+    if pre:
+        _cut_candidate(source_kit, tag=tag, broaden=not no_broaden, yes=yes)
+        return
+    refuse_stranded_scripts(source_kit.parent)
     plan = compute_release(source_kit)
     _print_release_plan(plan)
     _warn_migration_mismatches(source_kit, plan)
@@ -3062,16 +3256,12 @@ def release_apply(
     for warning in check_raised_ranges(plan, broaden=broaden):
         click.echo(f"warning: {warning}", err=True)
     if plan.is_empty:
-        apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
+        apply_release(source_kit, plan, broaden=broaden)
         return
     if not yes:
         from project_kit.project_config import confirm_at_terminal
 
-        flags = [
-            flag
-            for flag, given in (("--tag", tag), ("--push", push), ("--no-broaden", no_broaden))
-            if given
-        ]
+        flags = [flag for flag, given in (("--push", push), ("--no-broaden", no_broaden)) if given]
         rerun = shlex.join(["pkit", "release", "apply", *flags, "--yes"])
         confirm_at_terminal(
             "Write these versions and consume the changesets?",
@@ -3080,7 +3270,8 @@ def release_apply(
             "nobody confirmed it (#2003). Nothing was written. To release non-interactively, "
             f"run:\n  {rerun}",
         )
-    apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
+    apply_release(source_kit, plan, broaden=broaden)
+    click.echo(plan_commit_line(plan_commit(source_kit.parent)))
 
 
 @release.command("check")
@@ -3104,7 +3295,10 @@ def release_check(base: str | None, skip: bool | None) -> None:
     `requires_capabilities` floor, or a `runs_on_capabilities` upper bound, for a
     component it neither touches nor moves, or edits the range of an existing
     `requires_capabilities` entry other than to correct one that excludes the
-    version the tree carries (PRJ-002 D1).
+    version the tree carries (PRJ-002 D1). In the methodology's source
+    repository, fail too where HEAD's tree records a pre-release version, in
+    `.pkit/VERSION` or a component's `package.yaml`, unless HEAD is a release
+    candidate's own commit, the one its tag names (ADR-089 point 3).
 
     The diff is taken from where HEAD left the base — REF, else
     $PKIT_CHECK_BASE, else the default branch (COR-054); a base that resolves
@@ -3112,9 +3306,9 @@ def release_check(base: str | None, skip: bool | None) -> None:
     `none` changeset for the component, or the `skip-changeset` label
     (PKIT_CHANGESET_SKIP env). Surface is a human judgment (PRJ-002 D2) — this
     path heuristic can mis-fire; the override exists. No escape hatch waives
-    the floor tie or the range tie. A pending changeset the diff leaves alone —
-    another pull request's — does not count for this one, whatever component it
-    names.
+    the floor tie, the range tie or a pre-release version. A pending changeset
+    the diff leaves alone — another pull request's — does not count for this
+    one, whatever component it names.
     """
     source_kit = _target_kit()
     fork = _settled_base(source_kit.parent, base).fork
@@ -3194,7 +3388,69 @@ def release_check(base: str | None, skip: bool | None) -> None:
             'README.md, "Correcting a range that excludes a carried version". The '
             "`skip-changeset` label does not waive this."
         )
+    if result.pre_releases:
+        problems.append(
+            "a pre-release version in a tree bound for the default branch, which holds release "
+            "versions alone (ADR-089 point 3):\n"
+            + "\n".join(f"  {each.named}" for each in result.pre_releases)
+            + "\n  A release candidate's versions live only in its tag, on a commit no branch "
+            "holds (ADR-089 point 1): give each file back its release version. The "
+            "`skip-changeset` label does not waive this."
+        )
     raise click.ClickException("\n".join(problems))
+
+
+@release.command("check-queue")
+@click.option(
+    "--base",
+    metavar="REF",
+    default=None,
+    help="The merge group's base. Default: $PKIT_CHECK_BASE, else the default branch "
+    "(`pkit repository base` shows it).",
+)
+@click.option(
+    "--head",
+    "head_rev",
+    metavar="REV",
+    default="HEAD",
+    show_default=True,
+    help="The merge group's head: the merge the queue is about to make.",
+)
+def release_check_queue(base: str | None, head_rev: str) -> None:
+    """The queue's check: fail if a release a squashing merge queue's merge
+    holds would not land what its release step wrote onto the commit its
+    plan read (ADR-092 point 6).
+
+    Judges each commit from where REV left the base — REF, else
+    $PKIT_CHECK_BASE, else the default branch (COR-054) — to REV, on REV's
+    first-parent line, whose subject is a `chore(release):` one: the squash
+    commit the queue made of a release PR. Each lands sound where its parent
+    is the commit the trailer line in its own message names
+    (`Release-plan-commit: <commit>`), and its change from that commit holds
+    only what `pkit release apply` writes and the answer files it adds. A
+    commit without the trailer line fails too. Reads git alone: no fetch and
+    no pull request. Binds where a project's required check runs it on the
+    queue's merge.
+    """
+    source_kit = _target_kit()
+    fork = _settled_base(source_kit.parent, base, head_rev=head_rev).fork
+    assert fork is not None  # `_settled_base` refuses a base without one
+    judged = check_queue(source_kit, fork, head_rev)
+    if not judged:
+        click.echo("queue check: no release commit in this merge — ok.")
+        return
+    refused = [each for each in judged if each.problem is not None]
+    for each in judged:
+        verdict = "lands sound" if each.problem is None else f"does not land sound: {each.problem}"
+        click.echo(f"queue check: {each.commit[:12]} {each.subject} — {verdict}")
+    if refused:
+        from project_kit.release import RUN_THE_RELEASE_AGAIN
+
+        raise click.ClickException(
+            f"{len(refused)} release commit(s) in this merge would not land what their release "
+            f"step wrote onto the commit their plan read. {RUN_THE_RELEASE_AGAIN}"
+        )
+    click.echo("queue check: every release commit in this merge lands sound — ok.")
 
 
 @release.command("lint")
@@ -3317,7 +3573,9 @@ def release_merge(
     saw nothing merged, with the reading and the re-run that tell. Every `gh`
     call is bounded, so no stuck call holds the run. Exit 3 when the queue dropped the PR
     or its head moved; nothing is deleted then. A head the queue already
-    dropped is not enqueued again without `--force`. It does **not** tag —
+    dropped is not enqueued again without `--force`. In the methodology's
+    source repository it refuses, nothing merged, a release PR whose head
+    records a pre-release version (ADR-089 point 3). It does **not** tag —
     `release-tag.yml` cuts the backbone tag on the resulting push to `main`
     (PRJ-004). Human-gated: a human decides to run it; nothing auto-merges.
 
@@ -3371,6 +3629,10 @@ def release_publish_notes(version: str, dry_run: bool, allow_foreign_repo: bool)
     never a file / tarball / wheel channel. Repo is derived from the ambient
     `gh` context (no hardcoded owner/repo). A missing tag is a clear error;
     `--dry-run` prints the notes without calling `gh`.
+
+    A release candidate's notes, for a version `X.Y.ZrcN`, are read at its tag,
+    its Release is marked a pre-release (ADR-089 point 9), and they end with how
+    to try it: `pkit pin <candidate>`, beside the first hop (ADR-092 point 4).
 
     The cross-repository guard runs first, as for `release merge`: in another
     repository than the session's anchor's it asks at a terminal and refuses
@@ -3435,6 +3697,58 @@ def _declared_floors(cs: Changeset) -> list[str]:
         f"runs_on_capabilities: {name}: {value}" for name, value in cs.runs_on_capabilities
     )
     return floors
+
+
+def _print_candidate(source_kit: Path, candidate: release_candidate.Candidate) -> None:
+    """Print the plan of a cut, as the candidate writes it, with its number and base,
+    and the migration-dir warnings its release versions give."""
+    _print_release_plan(candidate.written())
+    base = candidate.base
+    click.echo(
+        f"Candidate: {candidate.tag}, number {candidate.number}, one past the highest any "
+        "candidate tag on origin carries (ADR-092 point 3)."
+    )
+    click.echo(
+        f"Base: {base.commit[:12]}, backbone {base.backbone}, and the version of each of "
+        f"{len(base.components)} components there (ADR-092 point 9)."
+    )
+    _warn_migration_mismatches(source_kit, candidate.plan)
+
+
+def _cut_candidate(source_kit: Path, *, tag: bool, broaden: bool, yes: bool) -> None:
+    """Plan, confirm and cut a release candidate from HEAD (`release apply --pre`)."""
+    candidate = release_candidate.plan_candidate(source_kit)
+    _print_candidate(source_kit, candidate)
+    for warning in check_raised_ranges(candidate.plan, broaden=broaden):
+        click.echo(f"warning: {warning}", err=True)
+    if not yes:
+        from project_kit.project_config import confirm_at_terminal
+
+        flags = ["--pre", *(["--tag"] if tag else []), *([] if broaden else ["--no-broaden"])]
+        rerun = shlex.join(["pkit", "release", "apply", *flags, "--yes"])
+        confirm_at_terminal(
+            f"Cut {candidate.tag} from HEAD, committing it on no branch?",
+            abort=True,
+            refusal="refusing to cut a candidate: stdin is not a terminal and --yes was not "
+            "given, so nobody confirmed it (#2003). Nothing was written. To cut it "
+            f"non-interactively, run:\n  {rerun}",
+        )
+    branch = release_candidate.current_branch(source_kit.parent)
+    commit = release_candidate.cut_candidate(source_kit, candidate, tag=tag, broaden=broaden)
+    back = f"`git switch {branch}`" if branch else "a switch to the branch you were on"
+    if tag:
+        click.echo(
+            f"Next: build the wheel from {commit[:12]} and check that `pkit --version` names "
+            f"{candidate.version}, then push the tag alone: `git push origin "
+            f"refs/tags/{candidate.tag}` (ADR-089 point 9). HEAD is detached at the "
+            f"candidate; {back} returns."
+        )
+    else:
+        click.echo(
+            f"Next: only a tag would hold {commit[:12]}, which no branch holds: tag it "
+            f"{candidate.tag}, or let it go. HEAD is detached at the candidate; {back} "
+            "returns."
+        )
 
 
 def _print_release_plan(plan: ReleasePlan) -> None:
@@ -4305,6 +4619,17 @@ def _run_report(
     if scratchpad_note:
         note_path = scratchpads.resolve_note(target_root, scratchpad_note)
         note_text = note_path.read_text(encoding="utf-8")
+        # Refused before anything is sent where the note could not record the
+        # send (#2923). A browser filing is recorded by `scratchpad reported`,
+        # which writes no report context.
+        stamps_context = assume_yes or (gh_ok and not want_url)
+        scratchpads.refuse_unrecordable_send(
+            target_root,
+            note_path,
+            note_text,
+            project=project if stamps_context else None,
+            workstream=ws if stamps_context else None,
+        )
         findings = lint_redaction(note_text)
         payload = attach_note(body, note_path.name, note_text)
         url = build_new_issue_url(
@@ -4935,6 +5260,16 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
         )
     if not gh_authenticated():
         raise click.ClickException("submit posts via gh — authenticate first (`gh auth login`).")
+    note_path = (target_root / draft.note) if draft.note else None
+    if note_path is not None and note_path.is_file():
+        # The note may have changed since it was staged (#2923); the draft is kept.
+        scratchpads.refuse_unrecordable_send(
+            target_root,
+            note_path,
+            note_path.read_text(encoding="utf-8"),
+            project=draft.project,
+            workstream=draft.workstream,
+        )
     refusal = (
         "refusing to post: stdin is not a terminal, so nobody can confirm the post (#2003). "
         f"Nothing was posted, and the draft is kept. Run `pkit report submit "
@@ -4948,7 +5283,6 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
     if not _confirm_send_payload(draft.kind, draft.payload, current_login(), refusal=refusal):
         click.echo(f"\nNot posted — draft kept ({draft.draft_id}).")
         return
-    note_path = (target_root / draft.note) if draft.note else None
     outcome = _post_confirmed_payload(
         target_root,
         kind=draft.kind,
@@ -5059,7 +5393,17 @@ def merge(targets: tuple[str, ...], dry_run: bool) -> None:
     "those two warnings and nothing else. A pinned project's upgrade passes it to the "
     "newer release it hands over to. Per ADR-065 points 6 and 9.",
 )
-def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> None:
+@click.option(
+    "--pre",
+    is_flag=True,
+    default=False,
+    help="Move the project to the newest release, release candidates included, a "
+    "withdrawn candidate passed by. Where that is a candidate newer than this pkit, its "
+    "own upgrade runs through the router's bypass, and the project is pinned there. "
+    "Where it is a final release, --pre hands over to none. It never installs a "
+    "candidate as the tool. Per ADR-089 point 8 and ADR-092 point 4.",
+)
+def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool, pre: bool) -> None:
     """Transition the project to a newer backbone (per COR-010).
 
     Moves the project to the source kit's current backbone version, running
@@ -5088,6 +5432,14 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> N
     `--force`, or else finishes the transition to its pin. It never updates the
     tool. Where the router could not fetch the pin and runs the installed pkit
     instead, it refuses, before it writes anything.
+
+    **A release candidate only on request** (ADR-089 points 7 and 8). `--pre`
+    moves the project to the newest release, candidates included, a withdrawn
+    candidate passed by (ADR-092 point 4), handing over to a candidate's own
+    upgrade where that is newer than this pkit. An upgrade
+    whose target is a candidate nobody asked for, by `--pre`, by a run with
+    routing bypassed, or by a pin that names it, refuses before it writes. A move
+    to a candidate always pins, and `--no-pin` is refused on it.
     """
     refuse_inside_migration("upgrade")
     target_root = find_target_root()
@@ -5101,6 +5453,7 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> N
         pin=not no_pin,
         self_update=not no_self_update,
         force=force,
+        pre=pre,
     )
 
 
@@ -5119,15 +5472,19 @@ def pin(version: str | None, force: bool) -> None:
     """Pin this project to a pkit version (per ADR-049): write `.pkit/version-pin`.
 
     VERSION, when given, is a version number only — `1.145.0`, or `v1.145.0`
-    (a single leading `v` is stripped). Branch, commit-sha, and pre-release /
-    build-metadata pins are refused: the router can only route a bare `v<semver>`
-    tag, so those are deferred. Both forms require `.pkit/manifest.yaml` (the
-    project's recorded content version); if it is absent, `pkit upgrade` writes it.
+    (a single leading `v` is stripped) — or a release candidate in PEP 440's
+    normal form, `2.0.0rc1`, which asks for that candidate (ADR-089 point 6).
+    Branch, commit-sha, other pre-release and build-metadata pins are refused,
+    and so is a candidate spelt another way, such as `2.0.0-rc.1`, naming its
+    normal form: the router routes a pin to the tag `v<pin>` as written. Both
+    forms require `.pkit/manifest.yaml` (the project's recorded content version);
+    if it is absent, `pkit upgrade` writes it.
 
     With no argument, freezes the project at its current CONTENT version
     (`.pkit/manifest.yaml`'s `backbone_version`) — the common case: lock this
     project where its content is, don't move it. With a VERSION token, the
-    behaviour depends on how it orders against that content version:
+    behaviour depends on how it orders against that content version, by PEP 440,
+    where a candidate sorts below its final release:
 
     \b
     - equal   → freeze in place (write the pin, no content sync);
@@ -5137,6 +5494,10 @@ def pin(version: str | None, force: bool) -> None:
     - older   → REFUSED — pkit migrations are forward-only (COR-010), so there is
                 no safe downgrade; revert the commit of each upgrade since that
                 version to roll back.
+
+    A VERSION that names a withdrawn release candidate, one the tag
+    `withdrawn/v<candidate>` marks, is warned of, and the pin goes on (ADR-092
+    point 4).
 
     Once the directive exists, the pkit router re-execs `uvx project-kit@<pin>` so
     the pinned version serves every command; a global-tool upgrade no longer moves
@@ -5163,11 +5524,19 @@ def unpin() -> None:
     The project reverts to floating on the installed pkit binary — the router
     runs the installed tool as-is (today's un-pinned behaviour). Idempotent: it
     is fine to run when no pin file is present.
+
+    Refused, before anything is written, in a project whose manifest records a
+    release candidate: a project on a candidate stays pinned (ADR-089 point 7).
+    The message names the ways off the candidate (PRJ-016 point 4).
     """
+    from project_kit.candidates import refuse_unpin
+    from project_kit.manifest import read_backbone_manifest
+
     refuse_inside_migration("unpin")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
+    refuse_unpin(read_backbone_manifest(target_root))
     pin_path = router.pin_file_path(target_root)
     if pin_path.exists():
         router.write_version_pin(target_root, None)
@@ -5378,9 +5747,15 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     # "no longer ships" and steer the adopter toward the destructive uninstall).
     # "Upgrade" for it means re-applying deploy from the in-repo tree, mirroring
     # the sync skip-branch.
-    if caps.read_capability_origin(target_root, name) == caps.INCUBATED_IN_REPO:
+    origin = caps.read_capability_origin(target_root, name)
+    if origin == caps.INCUBATED_IN_REPO:
         _upgrade_incubated_capability(target_root, source_kit, name, dry_run=dry_run)
         return
+    # An externally-sourced capability moves by its pin, never as shipped
+    # (COR-041), and moving a pin waits on #3229. Refused before the bundle is
+    # read, so a capability the bundle ships by the same name is never taken for it.
+    if origin == caps.EXTERNALLY_SOURCED:
+        _refuse_upgrading_externally_sourced(target_root, name)
     # The methodology's source run by its own code (ADR-059 point 2): the tree a
     # kit-shipped capability is refreshed from is its own subtree, so there is
     # nothing to copy and no migration to run — re-deploy it in place (#1107).
@@ -5400,7 +5775,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     # bundle ships older than the project records (point 7), with no override:
     # a transition never moves a recorded version down. The record is read once,
     # before anything is written, and serves the collision flow below.
-    record = caps.read_capability_record(target_root, name)
+    record = caps.read_capability_record(target_root, name, release=source_kit)
     move = capability_move(name, record.version, capability_source.package.version)
     refuse_components_bundled_older(
         [move] if move is not None else [], command=f"capabilities upgrade {name}"
@@ -5475,6 +5850,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         capability_source,
         skipped=prior_skipped,
         released=caps.shipped_capability_names(target_root, source_kit),
+        release=source_kit,
     )
 
     if new_collisions and not interactive:
@@ -5528,6 +5904,11 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
 
     # Merge prior + new skip state. De-dup by (kind, name).
     merged_skipped = tuple(sorted(set(prior_skipped).union(new_skipped).difference(overrides)))
+    # An override of an agent another capability ships records the project's
+    # choice of this one for the name (COR-017).
+    chosen = caps.overridden_agent_choices(
+        new_collisions, {artefact for kind, artefact in overrides if kind == "agent"}, name
+    )
 
     # The transition of one capability (ADR-065 point 4): its manifest moves
     # under project/, the skips chosen above are recorded and each override
@@ -5547,8 +5928,9 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         dry_run=dry_run,
         record=record,
         overridden=overridden,
+        chosen=chosen,
     )
-    _echo_capability_bound(target_root, name, rules_before, capability_source.path, dry_run=dry_run)
+    _echo_capability_bound(target_root, name, rules_before, capability_source.path)
 
     verb = "Would refresh" if dry_run else "Refreshed"
     skip_note = f" ({len(merged_skipped)} artifact(s) skipped)" if merged_skipped else ""
@@ -5564,13 +5946,10 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     if not dry_run:
         # Its derivable state (ADR-065 point 4, step 8, for this capability):
         # re-run installed adapter primitives so the harness side picks up any
-        # newly-added skills/agents from the upgraded capability, then provision
-        # its query commands, as sync would (#1090), and render `.pkit/.gitignore`,
-        # which reads the capability's runtime-ignore declarations.
+        # newly-added skills/agents from the upgraded capability, render
+        # `.pkit/.gitignore` again, which reads the capability's runtime-ignore
+        # declarations, then provision its query commands, as sync would (#1090).
         _deploy_capability(target_root, source_kit, name)
-        from project_kit import visibility
-
-        click.echo(visibility.render_runtime_ignore(target_root))
     # Last, the questions its points declare (COR-061).
     _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
 
@@ -5603,8 +5982,8 @@ def validate(include_refs: bool, only: tuple[str, ...], skip: tuple[str, ...]) -
 
     The backbone's members run first — manifests, schemas, configuration,
     packages, connections, versions, decisions, friction, rule-sets, refs,
-    process, data — then each installed capability's, registered in its
-    package metadata (`validators:`, each naming a `commands:` leaf that
+    process, data, scratchpad — then each installed capability's, registered
+    in its package metadata (`validators:`, each naming a `commands:` leaf that
     declares the query contract). One renderer prints every section;
     warnings, information and reports print, only errors fail. The
     diff-scoped checks (`friction check`, `migrations check-diff`, `release
@@ -5649,7 +6028,22 @@ def refs_validate() -> None:
         raise click.ClickException("not in a project tree.")
     found = refs_mod.validate_corpus(target_root)
     issues = [issue for issue in found if issue.kind not in refs_mod.WARNING_KINDS]
-    warnings = [issue for issue in found if issue.kind in refs_mod.WARNING_KINDS]
+    overrides = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_OVERRIDE]
+    undeclared = [issue for issue in found if issue.kind == refs_mod.UNDECLARED_CATEGORY]
+    unknown_fields = [issue for issue in found if issue.kind == refs_mod.UNKNOWN_FIELD]
+    choices = [issue for issue in found if issue.kind == refs_mod.AGENT_CHOICE]
+    warnings = [
+        issue
+        for issue in found
+        if issue.kind in refs_mod.WARNING_KINDS
+        and issue.kind
+        not in (
+            refs_mod.UNKNOWN_OVERRIDE,
+            refs_mod.UNDECLARED_CATEGORY,
+            refs_mod.UNKNOWN_FIELD,
+            refs_mod.AGENT_CHOICE,
+        )
+    ]
     lines = [
         cli_render.style(
             "title",
@@ -5673,6 +6067,50 @@ def refs_validate() -> None:
             )
         )
         for issue in warnings:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    if overrides:
+        lines.append(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"{len(overrides)} warning(s) of an override the deploy ignores, which do not "
+                "fail the check:",
+            )
+        )
+        for issue in overrides:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    if undeclared:
+        lines.append(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"{len(undeclared)} warning(s) of a capability's category no installed "
+                "capability declares, which do not fail the check:",
+            )
+        )
+        for issue in undeclared:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    if unknown_fields:
+        lines.append(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"{len(unknown_fields)} warning(s) of a key outside an agent definition's "
+                "fields, which do not fail the check:",
+            )
+        )
+        for issue in unknown_fields:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    if choices:
+        lines.append(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"{len(choices)} warning(s) of an agent's name no choice settles, or a choice "
+                "that decides nothing, which do not fail the check:",
+            )
+        )
+        for issue in choices:
             lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
     click.echo("\n".join(lines) + "\n", nl=False)
     if issues:
@@ -5894,8 +6332,16 @@ def hooks_list() -> None:
         + "   (bound provider by precedence)"
     ]
     for hook in declared_hooks:
-        winner = refs_mod.resolve_hook(providers, hook)
-        marker = f" -> {winner.tier}:{winner.source}" if winner else " (no provider)"
+        winners = refs_mod.winning_providers(providers, hook)
+        if not winners:
+            marker = " (no provider)"
+        elif len(winners) > 1:
+            sources = ", ".join(p.source for p in winners)
+            marker = cli_render.style(
+                "danger", f" (same-tier collision at {winners[0].tier}: {sources})"
+            )
+        else:
+            marker = f" -> {winners[0].tier}:{winners[0].source}"
         lines.append(f"  {hook}{marker}")
     click.echo("\n".join(lines) + "\n", nl=False)
 
@@ -5903,14 +6349,17 @@ def hooks_list() -> None:
 @hooks.command("resolve")
 @click.argument("hook")
 def hooks_resolve(hook: str) -> None:
-    """Show the currently-bound provider for a hook (by precedence)."""
+    """Show the provider a hook binds to (by precedence); refuse a same-tier collision."""
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     providers = refs_mod.load_hook_providers(target_root)
-    winner = refs_mod.resolve_hook(providers, hook)
-    if winner is None:
+    winners = refs_mod.winning_providers(providers, hook)
+    if not winners:
         raise click.ClickException(f"no provider declared for hook {hook!r}.")
+    if len(winners) > 1:
+        raise click.ClickException(f"{hook}: {refs_mod.collision_diagnosis(winners)}")
+    winner = winners[0]
     click.echo(f"  {hook} -> {winner.tier}:{winner.source} ({winner.implementation})")
 
 
@@ -5939,12 +6388,10 @@ def hooks_who_provides(hook: str) -> None:
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     providers = refs_mod.load_hook_providers(target_root)
-    matches = [p for p in providers if p.hook == hook]
+    matches = refs_mod.by_precedence([p for p in providers if p.hook == hook])
     if not matches:
         click.echo(f"  no provider declared for hook {hook!r}.")
         return
-    order = {"project": 0, "capability": 1, "adapter": 2, "core": 3}
-    matches.sort(key=lambda p: order.get(p.tier, 99))
     click.echo(cli_render.style("strong", f"{len(matches)} provider(s) for {hook!r}:"))
     for p in matches:
         click.echo(f"  {p.tier:8} {p.source:30} {p.implementation}")
@@ -7248,14 +7695,16 @@ def settings_consolidate(dry_run: bool, yes: bool) -> None:
 @click.argument("name")
 @click.option("--json", "as_json", is_flag=True, default=False, help="Print the machine form.")
 def show_capability_cmd(name: str, as_json: bool) -> None:
-    """Show a capability's connections, installed or not (COR-053 point 8).
+    """Show a capability's connections and its rules, installed or not (COR-053 point 8).
 
-    Read from its package metadata alone: the roles it provides, the points it
-    accepts and offers, its extensions (contributes, subscribes, depends-on),
-    and what would connect here — the live wiring for an installed capability,
-    the wiring this project would have with it installed otherwise. Found in the
-    local catalogue only: the installed tree, capabilities authored in this
-    repository, the capabilities that ship with this pkit. Writes nothing.
+    Its connections are read from its package metadata alone: the roles it
+    provides, the points it accepts and offers, its extensions (contributes,
+    subscribes, depends-on), and what would connect here — the live wiring for an
+    installed capability, the wiring this project would have with it installed
+    otherwise. Then the loaded rule set it ships, if any, with each accepted
+    rule's id and title: installing it is the consent to them (COR-070 point 3).
+    Found in the local catalogue only: the installed tree, capabilities authored
+    in this repository, the capabilities that ship with this pkit. Writes nothing.
     """
     from project_kit import capability_plans as plans
 
@@ -7342,6 +7791,24 @@ def _refuse_collisions_off_terminal(
 @capabilities.command("install")
 @click.argument("name")
 @click.option(
+    "--from",
+    "source_url",
+    metavar="GIT_URL",
+    default=None,
+    help="Install the capability another git repository incubates at "
+    ".pkit/capabilities/<name>/, fetched whole with your own git credentials "
+    "(COR-041, ADR-040). Pass it with --ref. Not available in this release: refused, "
+    "writing nothing, until #3349.",
+)
+@click.option(
+    "--ref",
+    metavar="TAG_OR_COMMIT",
+    default=None,
+    help="With --from: the tag, or the commit's full id, to install the capability at. "
+    "`pkit sync` keeps it there. A branch is refused: a branch pin waits on #3229. Not "
+    "available in this release: refused, writing nothing, until #3349.",
+)
+@click.option(
     "--dry-run",
     is_flag=True,
     default=False,
@@ -7367,7 +7834,13 @@ def _refuse_collisions_off_terminal(
     "dependent is still printed (COR-030).",
 )
 def install_capability_cmd(
-    name: str, dry_run: bool, plan: bool, as_json: bool, force: bool
+    name: str,
+    source_url: str | None,
+    ref: str | None,
+    dry_run: bool,
+    plan: bool,
+    as_json: bool,
+    force: bool,
 ) -> None:
     """Install a capability: copy subtree into adopter, register in manifest, re-deploy.
 
@@ -7382,11 +7855,25 @@ def install_capability_cmd(
     A capability whose rule set takes a name a project rule set declares is
     refused, naming the set and both files, and nothing is installed (COR-051
     point 3).
+
+    With --from and --ref, the capability is the one another git repository
+    incubates at `.pkit/capabilities/<name>/`, fetched whole at that tag or
+    commit with your own git credentials, and registered externally-sourced
+    with its pin (COR-041, ADR-040). It is fetched, then gated, then installed
+    or refused: a refusal writes nothing, and a source that cannot be reached
+    warns and installs nothing. A branch as a ref, and moving the pin of a
+    capability already installed, wait on #3229.
+
+    Not available in this release: until #3349, --from and --ref are refused
+    before anything is read or written, --dry-run and --plan included.
     """
     refuse_inside_migration("capabilities install")
     from project_kit import capabilities as caps
 
+    if source_url is not None or ref is not None:
+        _refuse_install_from_another_repository()
     _plan_flags(plan, as_json)
+    pin = _install_pin(source_url, ref)
 
     target_root = find_target_root()
     if target_root is None:
@@ -7395,11 +7882,12 @@ def install_capability_cmd(
         raise click.ClickException(f"{target_root}/.pkit/ does not exist. Run 'pkit init' first.")
 
     source_kit = find_source_kit()
+    command = f"capabilities install {name}{_pin_arguments(pin)}"
     # Sync's guard first (ADR-065 point 7): it stops wherever `pkit sync` stops,
     # before anything is read or written, and lets the methodology's source
     # pass. It stops `--dry-run` and `--plan` too: under another pkit, both would
     # preview the install of another release's capability, which would refuse.
-    refuse_version_mismatch(target_root, source_kit, command=f"capabilities install {name}")
+    refuse_version_mismatch(target_root, source_kit, command=command)
     # The methodology's source repository run by code that is not its own (the
     # gap, ADR-059): the install would copy the running code's capability
     # subtree into the tree it is built from. Refuse before any other pre-flight
@@ -7408,8 +7896,13 @@ def install_capability_cmd(
     refuse_propagation_into_source(
         target_root,
         source_kit,
-        command=f"capabilities install {name}",
-        would="copy the capability's subtree from that tree into the one it is built from",
+        command=command,
+        would=(
+            "copy the capability's subtree from that tree into the one it is built from"
+            if pin is None
+            else "land a fetched capability in the tree it is built from, registered by "
+            "code that is not its own"
+        ),
         own_code_does=None,
     )
 
@@ -7418,6 +7911,19 @@ def install_capability_cmd(
     # an adapter holds, which no capability may share.
     caps.refuse_reserved_capability_name(name)
     caps.refuse_name_held_by_other_kind(target_root, "capability", name)
+
+    if pin is not None:
+        _install_externally_sourced(
+            target_root,
+            source_kit,
+            name,
+            pin,
+            dry_run=dry_run,
+            plan=plan,
+            as_json=as_json,
+            force=force,
+        )
+        return
 
     capability_source = caps.find_capability_in_source(source_kit, name)
     if capability_source is None:
@@ -7433,13 +7939,231 @@ def install_capability_cmd(
             f"Use `pkit capabilities upgrade {name}` to refresh."
         )
 
+    _install_from(
+        target_root,
+        source_kit,
+        capability_source,
+        None,
+        dry_run=dry_run,
+        plan=plan,
+        as_json=as_json,
+        force=force,
+    )
+
+
+def _refuse_install_from_another_repository() -> NoReturn:
+    """Refuse `--from` and `--ref` until #3349 lands (#3359).
+
+    The fetch takes the commit a pin records only while the pin's ref still
+    names it, and #3349 replaces that handling of a moved ref. So no release
+    ships an install from another repository before then. The refusal names
+    no source, which may carry a credential (ADR-040 point 2). Sync of a
+    capability already installed from another repository is not held. #3349
+    removes this refusal.
+    """
+    raise click.ClickException(
+        "installing a capability from another repository (--from, --ref) is not available "
+        "in this release. It waits on a later release, which changes how a fetch takes the "
+        "commit a pin records once the pin's ref has moved (#3349). Nothing was fetched or "
+        "written. A capability already installed from another repository is not held: "
+        "`pkit sync` keeps it at its pin as before."
+    )
+
+
+def _install_pin(source_url: str | None, ref: str | None) -> CapabilityPin | None:
+    """The pin `--from` and `--ref` name, or None for a capability the running pkit ships.
+
+    The two go together. A pin pkit does not take is refused here, before any
+    other check reads the project (`capability_fetch.refuse_pin`): a source that
+    carries a credential is never passed on, recorded or printed (ADR-040 point 2).
+    """
+    from project_kit import capability_fetch
+    from project_kit import manifest as manifest_mod
+
+    if source_url is None and ref is None:
+        return None
+    if source_url is None or ref is None:
+        raise click.UsageError(
+            "--from and --ref go together: the git source, and the tag or commit to install at."
+        )
+    pin = manifest_mod.CapabilityPin(source=source_url, ref=ref)
+    try:
+        capability_fetch.refuse_pin(pin)
+    except capability_fetch.FetchRefused as exc:
+        raise click.ClickException(f"{_sentence(exc)} Nothing was installed.") from exc
+    return pin
+
+
+def _pin_arguments(pin: CapabilityPin | None) -> str:
+    """`--from` and `--ref` as a command that re-runs the install names them."""
+    if pin is None:
+        return ""
+    return f" --from {shlex.quote(pin.source)} --ref {shlex.quote(pin.ref)}"
+
+
+def _install_externally_sourced(
+    target_root: Path,
+    source_kit: Path,
+    name: str,
+    pin: CapabilityPin,
+    *,
+    dry_run: bool,
+    plan: bool,
+    as_json: bool,
+    force: bool,
+) -> None:
+    """Install capability *name* from another git repository, at *pin* (COR-041, ADR-040).
+
+    The name is checked first, before anything is fetched: a capability of the
+    name already registered, whatever its origin, or files at its landing path
+    outside its ``project/`` tier, are reported and refused, never overwritten
+    (point 6). One already installed from this pin is refused naming `pkit
+    sync`, and one installed from another source or ref is refused naming
+    uninstall, since moving a pin waits on #3229.
+
+    Then point 4's order: the subtree is fetched whole at the pin
+    (`capability_fetch.fetched`), its ``package.yaml`` read, and the gates every
+    install runs judge it (`_install_from`), before anything is written. A
+    source that cannot be reached, a ref it does not hold or a credential it
+    refuses warns loudly and installs nothing, and the command ends without
+    failing: a fetch that fails degrades, never refuses (point 7). The staged
+    copy is removed whatever the outcome. Under `--plan --json` the lines about
+    the fetch go to standard error, so the plan alone reaches standard output.
+    The pin is recorded with the commit the fetch took (`CapabilityPin.commit`).
+    """
+    from dataclasses import replace
+
+    from project_kit import capabilities as caps
+    from project_kit import capability_fetch
+
+    _refuse_landing_held(target_root, name, pin)
+    # The methodology's source run by its own code (ADR-059 point 2): every
+    # subtree at `.pkit/capabilities/` is authored there and bundled from there,
+    # and install there copies nothing, so a fetched copy has nowhere to land.
+    if caps.authored_in_source(target_root, source_kit, name):
+        raise click.ClickException(
+            f"refusing to install {name!r} from {caps.pin_text(pin)}: this is the "
+            "methodology's source repository, where every capability at "
+            ".pkit/capabilities/ is authored and bundled from, and install copies nothing "
+            "there (ADR-059). A fetched copy would ship in its releases. Nothing was fetched "
+            "or written. Install it in a project instead."
+        )
+    shipped = caps.find_capability_in_source(source_kit, name)
+    if shipped is not None:
+        click.echo(
+            f"note: the running pkit ships a capability named {name!r} too "
+            f"(v{shipped.package.version}). This install makes {name!r} the one fetched from "
+            f"{caps.pin_text(pin)}, and neither sync nor upgrade reads the shipped one as it.",
+            err=as_json,
+        )
+    click.echo(f"Fetching capability {name!r} from {caps.pin_text(pin)}", err=as_json)
+    try:
+        with capability_fetch.fetched(pin, name) as got:
+            capability_source = caps.fetched_capability(got.path, name)
+            if capability_source is None:
+                raise click.ClickException(
+                    f"{caps.pin_text(pin)} holds .pkit/capabilities/{name}/, but no package.yaml "
+                    f"there names the capability {name!r}. Nothing was installed."
+                )
+            click.echo(
+                f"  fetched v{capability_source.package.version}, commit {got.commit}",
+                err=as_json,
+            )
+            _install_from(
+                target_root,
+                source_kit,
+                capability_source,
+                # The pin records the commit fetched, so sync follows no tag moved since.
+                replace(pin, commit=got.commit),
+                dry_run=dry_run,
+                plan=plan,
+                as_json=as_json,
+                force=force,
+            )
+    except capability_fetch.FetchRefused as exc:
+        raise click.ClickException(f"{_sentence(exc)} Nothing was installed.") from exc
+    except capability_fetch.FetchFailed as exc:
+        click.echo(
+            f"⚠ WARNING: capability {name!r} could not be fetched from {caps.pin_text(pin)}: "
+            f"{_sentence(exc)} Nothing was installed or activated (ADR-040 point 7).",
+            err=True,
+        )
+
+
+def _sentence(exc: Exception) -> str:
+    """An exception's message as one sentence, ending in a full stop."""
+    return str(exc).rstrip(".") + "."
+
+
+def _refuse_landing_held(target_root: Path, name: str, pin: CapabilityPin) -> None:
+    """Refuse an externally-sourced install whose name is held, before anything is
+    fetched (ADR-040 point 6), naming what holds it and the way on."""
+    from project_kit import capabilities as caps
+    from project_kit import capability_fetch
+
+    wanted = caps.pin_text(pin)
+    if caps.installed_capability_origins(target_root).get(name) == caps.EXTERNALLY_SOURCED:
+        recorded = caps.read_capability_pin(target_root, name)
+        # The same source and ref: the commit recorded beside them is what they named.
+        if recorded is not None and (recorded.source, recorded.ref) == (pin.source, pin.ref):
+            raise click.ClickException(
+                f"capability {name!r} is already installed from {wanted}. `pkit sync` brings "
+                "its copy to that pin."
+            )
+        installed_from = (
+            caps.pin_text(recorded)
+            if recorded is not None
+            else "a pin its manifest does not record"
+        )
+        raise click.ClickException(
+            f"capability {name!r} is already installed from {installed_from}. Moving it to "
+            f"another source or ref waits on {capability_fetch.PIN_TRANSITION_ISSUE}: uninstall "
+            f"it first (`pkit capabilities uninstall {name}`), then install it from {wanted}. "
+            "Nothing was fetched or written."
+        )
+    held = caps.landing_held(target_root, name)
+    if held is not None:
+        raise click.ClickException(
+            f"capability {name!r} cannot be installed from {wanted}: the name is held by "
+            f"{held}. A fetched capability never lands over another (ADR-040 point 6). "
+            "Nothing was fetched or written."
+        )
+
+
+def _install_from(
+    target_root: Path,
+    source_kit: Path,
+    capability_source: CapabilitySource,
+    pin: CapabilityPin | None,
+    *,
+    dry_run: bool,
+    plan: bool,
+    as_json: bool,
+    force: bool,
+) -> None:
+    """Gate, then install, *capability_source*: the tail every install runs.
+
+    The source is the running pkit's capability where *pin* is None, and one a
+    fetch staged from another repository otherwise, which is registered
+    externally-sourced with its pin. The plan, or the gates — the backbone, the
+    capability's dependencies, the ranges installed capabilities declare on it,
+    its mandatory upstreams and its rule-set names — then the collisions, the
+    copy and registration, the rule set, the write categories' defaults, the
+    deploy and the points' questions. Nothing is written before every gate has
+    passed.
+    """
+    from project_kit import capabilities as caps
+
+    name = capability_source.name
+    origin = caps.KIT_SHIPPED if pin is None else caps.EXTERNALLY_SOURCED
+
     if plan:
         # The plan runs before the gates: what the gates refuse on — the backbone
         # and dependency ranges — is among what the plan reports it needs, and a
         # range an installed capability declares on it among the findings it adds.
         from project_kit import capability_plans as plans
 
-        candidate = plans.candidate_of(capability_source, caps.KIT_SHIPPED, installed=False)
+        candidate = plans.candidate_of(capability_source, origin, installed=False)
         if candidate is None:
             raise click.ClickException(f"capability {name!r}'s package.yaml does not read.")
         install_plan = plans.plan_install(target_root, candidate)
@@ -7503,13 +8227,14 @@ def install_capability_cmd(
 
     # The methodology's source run by its own code (ADR-059 point 2): the tree the
     # capability would be copied from is its destination. Register it in place —
-    # a copy would put the tree onto itself (#1107).
-    if caps.authored_in_source(target_root, source_kit, name):
+    # a copy would put the tree onto itself (#1107). A fetched capability never
+    # gets here in the source: `_install_externally_sourced` refuses it there.
+    if pin is None and caps.authored_in_source(target_root, source_kit, name):
         _install_capability_in_source(target_root, source_kit, capability_source, dry_run=dry_run)
         return
 
     # Pre-flight: collision detection.
-    collisions = caps.detect_collisions(target_root, capability_source)
+    collisions = caps.detect_collisions(target_root, capability_source, release=source_kit)
     skipped: list[tuple[str, str]] = []
     # The project's artefacts an override replaces (COR-017), removed once the
     # capability's are in place.
@@ -7522,7 +8247,9 @@ def install_capability_cmd(
             + "\n"
         )
         _refuse_collisions_off_terminal(
-            target_root, collisions, f"pkit capabilities install {shlex.quote(name)}"
+            target_root,
+            collisions,
+            f"pkit capabilities install {shlex.quote(name)}{_pin_arguments(pin)}",
         )
         for finding in collisions:
             choice = caps.resolve_collision_interactive(target_root, finding, capability=name)
@@ -7541,21 +8268,39 @@ def install_capability_cmd(
         capability_source,
         skipped_artifacts=tuple(skipped),
         dry_run=dry_run,
+        pin=pin,
     )
     caps.apply_overrides(target_root, overridden, dry_run=dry_run)
+    # An override of an agent another capability ships records the project's
+    # choice of this one for the name, once it is registered (COR-017). Only an
+    # agent's own answer counts: a skill of the same name may have been overridden
+    # while the agent was skipped.
+    overridden_agents = {
+        finding.artifact_name
+        for finding in collisions
+        if finding.artifact_kind == "agent" and ("agent", finding.artifact_name) not in skipped
+    }
+    caps.record_agent_choices(
+        target_root,
+        caps.overridden_agent_choices(collisions, overridden_agents, name),
+        dry_run=dry_run,
+    )
 
     verb = "Would install" if dry_run else "Installed"
     skip_note = f" ({len(skipped)} artifact(s) skipped)" if skipped else ""
+    pinned = f", externally sourced from {caps.pin_text(pin)}" if pin is not None else ""
     click.echo(
         "\n  "
         + cli_render.style(
             "strong",
             f"{verb} capability {name!r} v{capability_source.package.version} "
-            f"at {installed_path.relative_to(target_root)}/{skip_note}",
+            f"at {installed_path.relative_to(target_root)}/{pinned}{skip_note}",
         )
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
-    _echo_capability_bound(target_root, name, None, capability_source.path, dry_run=dry_run)
+    _echo_capability_bound(target_root, name, None, capability_source.path)
+    # The defaults its write categories declare, before the deploy (ADR-088 point 5).
+    _write_declared_defaults(target_root, capability_source, dry_run=dry_run, release=source_kit)
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness picks up
@@ -7607,11 +8352,138 @@ def _install_capability_in_source(
         )
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
-    _echo_capability_bound(target_root, name, None, capability_source.path, dry_run=dry_run)
+    _echo_capability_bound(target_root, name, None, capability_source.path)
+    _write_declared_defaults(target_root, capability_source, dry_run=dry_run, release=source_kit)
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
     _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
+
+
+def _write_declared_defaults(
+    target_root: Path, capability_source: CapabilitySource, *, dry_run: bool, release: Path
+) -> None:
+    """Provision the capability's default queries, then write each default its write
+    categories declare into the agents overlay, before the deploy (ADR-088 point 5).
+
+    Read from the capability in place, once the copy or the registration has run.
+    Each category is written, in the block's order, only where neither the top
+    level nor the owner's override gives it a value. Over a path that is absent or
+    holds nothing, running install is the consent. Over content, a terminal is
+    asked once for the run; on a "no", or off a terminal, those categories are
+    left undefined and the fill commands named. A query with no answer, or an
+    answer refused, leaves its category undefined, saying why. Install never fails
+    on a default. A dry run asks no query and provisions nothing: it lists each
+    category's state. A missing overlay gets no default. The other agents whose
+    grants a default may not overlap are the picker's, loaded from *release*, the
+    `.pkit/` tree the command brings (ADR-087 point 2); a picker it cannot reach
+    leaves every category undefined, saying why."""
+    from project_kit import agent_definitions, provisioning, upgrade
+    from project_kit import agents_overlay as ao
+    from project_kit import write_categories as wcat
+    from project_kit.command_runner import registered_commands, resolve_command
+
+    name = capability_source.name
+    in_place = target_root / ".pkit" / "capabilities" / name
+    categories = wcat.declared_in(name, capability_source.path if dry_run else in_place)
+    if not categories:
+        return
+    overlay = target_root / ao.OVERLAY_PATH
+    fill = "`pkit agents reconcile --write` or `pkit agents adopt <agent>`"
+    if not overlay.is_file():
+        click.echo(
+            f"  {'skipped':<12} the capability's defaults: the agents overlay "
+            f"({ao.OVERLAY_PATH.as_posix()}) is missing. Run `pkit agents reconcile --write` "
+            f"to create it, then {fill}."
+        )
+        return
+    document = wcat.OverlayDocument(overlay.read_text(encoding="utf-8"))
+    if dry_run:
+        for line in _default_states(document, categories):
+            click.echo(f"  {'would write' if 'to be written' in line else 'unchanged':<12} {line}")
+        return
+    # Step 4: the scripts the default queries name, and no other.
+    commands = registered_commands(in_place)
+    for category in categories:
+        command = (
+            resolve_command(commands, category.default_query) if category.default_query else None
+        )
+        if command is not None:
+            query = provisioning.QueryScript(name, command.reference, command.script)
+            verb, detail = provisioning.provision(query).line
+            click.echo(f"  {verb:<12} {detail}")
+    # Step 5: the defaults.
+    try:
+        outcomes = ao.plan_defaults(target_root, categories, document, moves=False, release=release)
+    except wcat.OverlayDoesNotRead as exc:
+        click.echo(f"  {'skipped':<12} the capability's defaults: the overlay does not read: {exc}")
+        return
+    except agent_definitions.Unreachable as exc:
+        click.echo(
+            f"  {'skipped':<12} the capability's defaults, left undefined: {exc.message}. "
+            f"Then run {fill}."
+        )
+        return
+    held = [o for o in outcomes if o.kind == ao.WRITE and o.over_content]
+    taken = [o for o in outcomes if o.kind == ao.WRITE and not o.over_content]
+    if held:
+        listing = "".join(
+            f"  {o.category.name} = {', '.join(o.paths)}  (owned by {o.category.owner})\n"
+            for o in held
+        )
+        if upgrade.at_a_terminal() and click.confirm(
+            "These paths already hold content; writing each category grants its agent "
+            f"them (COR-073 point 6):\n{listing}Write them in {ao.OVERLAY_PATH.as_posix()}",
+            default=True,
+        ):
+            taken = [o for o in outcomes if o.kind == ao.WRITE]
+        else:
+            for outcome in held:
+                click.echo(
+                    f"  {'skipped':<12} {outcome.category.name}: its paths hold content, and "
+                    f"nobody at a terminal agreed to grant them. Run {fill}."
+                )
+    ao.apply_defaults(document, taken)
+    overlay.write_text(document.text, encoding="utf-8")
+    for outcome in outcomes:
+        if outcome in taken:
+            note = f" ({outcome.note})" if outcome.note else ""
+            click.echo(
+                f"  {'wrote':<12} {outcome.category.name} = {ao.listed(outcome.paths)} in "
+                f"{ao.OVERLAY_PATH.as_posix()}{note}; edit it and the value is the project's."
+            )
+        elif outcome.kind in (ao.REFUSED, ao.NO_ANSWER):
+            click.echo(
+                f"  {'skipped':<12} {outcome.category.name}, left undefined: {outcome.reason}. "
+                f"The deploy skips {outcome.category.owner} until {fill} writes it."
+            )
+
+
+def _default_states(
+    document: write_categories_mod.OverlayDocument,
+    categories: list[write_categories_mod.WriteCategory],
+) -> list[str]:
+    """What install would do with each write category, for its dry run (ADR-088 point 5)."""
+    from project_kit import write_categories as wcat
+
+    lines: list[str] = []
+    for category in categories:
+        try:
+            written = document.still_as_written(category.name)
+            valued = document.gives_value(category.name, category.owner)
+        except wcat.OverlayDoesNotRead as exc:
+            return [f"the capability's defaults: the overlay does not read: {exc}"]
+        if written is not None:
+            lines.append(f"{category.name}: written earlier, left as it is")
+        elif valued:
+            lines.append(f"{category.name}: set by the project, left as it is")
+        elif category.default_query is None:
+            lines.append(f"{category.name}: to be written as [], having no default")
+        else:
+            lines.append(
+                f"{category.name}: to be written from its query once the capability is in place"
+            )
+    return lines
 
 
 def _create_declared_rule_set(
@@ -7651,7 +8523,9 @@ def _refuse_collisions_in_place(target_root: Path, capability_source: Capability
     """
     from project_kit import capabilities as caps
 
-    collisions = caps.detect_incubated_collisions(target_root, capability_source)
+    collisions = caps.detect_incubated_collisions(
+        target_root, capability_source, release=find_source_kit()
+    )
     if not collisions:
         return
     click.echo(
@@ -7775,6 +8649,16 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
                 )
             )
             return
+        # An externally-sourced copy was pulled from its pinned source, not
+        # authored here (COR-041): adopting it as incubated would cut it off
+        # from its pin. Refused, naming the way to author it here.
+        if current_origin == caps.EXTERNALLY_SOURCED:
+            raise click.ClickException(
+                f"capability {name!r} is externally sourced: its copy is pulled from its "
+                "pinned source, not authored here, so it is never registered as incubated. "
+                f"To author it here, uninstall it (`pkit capabilities uninstall {name}`) "
+                "and create it in this repository."
+            )
         # kit-shipped / unset → adopt in place: run the applicable pre-flights
         # below, then set origin on the existing entry (no re-copy, no re-deploy —
         # the subtree is already installed; this is an origin-state upgrade).
@@ -7906,7 +8790,8 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
             f"(in-repo) at {registered_path.relative_to(target_root)}/",
         )
     )
-    _echo_capability_bound(target_root, name, None, capability_source.path, dry_run=dry_run)
+    _echo_capability_bound(target_root, name, None, capability_source.path)
+    _write_declared_defaults(target_root, capability_source, dry_run=dry_run, release=source_kit)
 
     if not dry_run:
         # Run the SAME deploy primitives a kit-source install runs, so the
@@ -7960,6 +8845,25 @@ def _upgrade_incubated_capability(
     _ask_point_questions(target_root, name, dry_run=dry_run)
 
 
+def _refuse_upgrading_externally_sourced(target_root: Path, name: str) -> NoReturn:
+    """Refuse `capabilities upgrade` of an externally-sourced capability (COR-041).
+
+    It moves by its pin, never as shipped, and moving the pin waits on #3229;
+    `pkit sync` keeps its copy at the pin it has. Nothing is read or written.
+    """
+    from project_kit import capabilities as caps
+    from project_kit import capability_fetch
+
+    pin = caps.read_capability_pin(target_root, name)
+    pinned = f" from {caps.pin_text(pin)}" if pin is not None else ""
+    raise click.ClickException(
+        f"capability {name!r} is externally sourced{pinned}: it moves by its pin, never as "
+        f"shipped, and moving the pin waits on {capability_fetch.PIN_TRANSITION_ISSUE}. "
+        "`pkit sync` keeps its copy at its pin. To take another tag or commit, uninstall it "
+        f"(`pkit capabilities uninstall {name}`) and install it again with --from and --ref."
+    )
+
+
 def _upgrade_capability_in_source(
     target_root: Path, source_kit: Path, name: str, *, dry_run: bool
 ) -> None:
@@ -8010,11 +8914,14 @@ def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
     written: render the capabilities' rules index, so a session loads the
     capability's rules from here on (ADR-076 point 2); re-run the installed
     adapter primitives so the harness picks up the capability's skills and
-    agents; then provision its query commands, so an offline `pkit validate`
+    agents; render `.pkit/.gitignore`, as sync does, so the capability's
+    runtime-ignore lines are there before the next sync (ADR-009 rule 7,
+    #2367); then provision its query commands, so an offline `pkit validate`
     answers without a `pkit sync` first (#1090). Deploy is identical whatever
     the capability's origin (COR-031 D1).
     """
     from project_kit import install as install_mod
+    from project_kit import visibility
 
     ctx = install_mod.InstallContext(
         target_root=target_root,
@@ -8023,19 +8930,19 @@ def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
     )
     install_mod.render_rules_index(ctx)
     install_mod.run_installed_adapter_primitives(ctx)
+    click.echo(visibility.render_runtime_ignore(target_root))
     install_mod.provision_query_commands(ctx, component=name)
 
 
 def _echo_capability_bound(
-    target_root: Path, name: str, before: SetReading | None, source: Path, *, dry_run: bool
+    target_root: Path, name: str, before: SetReading | None, source: Path
 ) -> None:
     """What a capability's install, register or upgrade newly binds of its loaded set,
     read where it is copied from, against its reading `before`, none for an install
-    (ADR-076 point 6). A dry run says nothing: its copy is only named."""
+    (ADR-076 point 6). A dry run says it too, as sync's does: running the step is the
+    consent to those rules, so they are read before it runs (COR-070 point 3)."""
     from project_kit import loaded_rules
 
-    if dry_run:
-        return
     loaded_rules.echo_bound(target_root, loaded_rules.bound_by({name: before}, [(name, source)]))
 
 
@@ -8443,7 +9350,7 @@ def uninstall_capability_cmd(
 
     # Reference safety check.
     if not force:
-        references = caps.find_references(target_root, name)
+        references = caps.find_references(target_root, name, release=source_kit)
         if references:
             click.echo(
                 "\n  "
@@ -8527,6 +9434,18 @@ def uninstall_capability_cmd(
                 f"{verb} capability {name!r} from {outcome.cap_dir.relative_to(target_root)}",
             )
         )
+        # An externally-sourced copy goes, and its `project/` tier, the project's
+        # own, stays (ADR-040 point 3).
+        if origin == caps.EXTERNALLY_SOURCED and dry_run:
+            click.echo(
+                f"  (its copy from its pinned source would go; the project's own files under "
+                f"{subtree}project/ would stay.)"
+            )
+        elif outcome.project_tier_kept is not None:
+            click.echo(
+                f"  (its copy from its pinned source is gone; the project's own files stay at "
+                f"{outcome.project_tier_kept.relative_to(target_root)}/.)"
+            )
     elif outcome.in_source and not incubated:
         verb, deleted = ("Would unregister", "would be") if dry_run else ("Unregistered", "was")
         click.echo(
@@ -8557,9 +9476,12 @@ def uninstall_capability_cmd(
     if not dry_run:
         # Re-run installed adapter primitives so the harness drops stale
         # entries of a deleted subtree (e.g., deploy-skills.sh's "stale
-        # removal" pass). A subtree kept on disk was already undeployed
-        # inside `uninstall_capability`, through each adapter's undeploy
-        # primitive, since a deploy re-run cannot see it as gone.
+        # removal" pass), and the agents deploy removes each copy written from
+        # the capability's definitions, which no longer count once it is
+        # unregistered, kept on disk or not (ADR-087 point 4). The skills of a
+        # subtree kept on disk were already undeployed inside
+        # `uninstall_capability`, through each adapter's undeploy primitive,
+        # since a skills deploy re-run cannot see it as gone.
         from project_kit import install as install_mod
 
         ctx = install_mod.InstallContext(
@@ -8571,12 +9493,18 @@ def uninstall_capability_cmd(
         # on, its files kept or not (ADR-076 point 2).
         install_mod.render_rules_index(ctx)
         install_mod.run_installed_adapter_primitives(ctx)
+        # And `.pkit/.gitignore` leaves its runtime-ignore lines out, as the next
+        # sync's render would (ADR-009 rule 7, #2367).
+        from project_kit import visibility
+
+        click.echo(visibility.render_runtime_ignore(target_root))
 
 
 @capabilities.command("list")
 def list_capabilities_cmd() -> None:
     """List capabilities available in the kit source and which are installed."""
     from project_kit import capabilities as caps
+    from project_kit.capability_fetch import shown as shown_source
 
     target_root = find_target_root()
     if target_root is None:
@@ -8603,21 +9531,28 @@ def list_capabilities_cmd() -> None:
 
     rows: list[dict[str, str]] = []
     for n in names:
-        origin = origins.get(n, "")
         # Only mark origin for installed capabilities; an available-but-not-
-        # installed one has no install-state origin to report.
+        # installed one has no install-state origin to report. The mark is the one
+        # `pkit status` gives, and a kit-shipped one, which status leaves unmarked,
+        # is named here.
         origin_label = (
-            "incubated"
-            if origin == caps.INCUBATED_IN_REPO
-            else "kit-shipped"
+            (caps.origin_mark(origins.get(n, caps.KIT_SHIPPED)) or caps.KIT_SHIPPED)
             if n in installed
             else ""
+        )
+        # An externally-sourced one's pin, beside its origin (ADR-040 point 3).
+        pin = (
+            caps.read_capability_pin(target_root, n)
+            if origins.get(n) == caps.EXTERNALLY_SOURCED
+            else None
         )
         rows.append(
             {
                 "name": n,
                 "status": "installed" if n in installed else "",
                 "origin": origin_label,
+                "source": shown_source(pin.source) if pin is not None else "",
+                "ref": pin.ref if pin is not None else "",
             }
         )
     click.echo(
@@ -8627,9 +9562,15 @@ def list_capabilities_cmd() -> None:
                 f"{len(names)} known",
                 gloss="install with `pkit capabilities install <name>`",
             ),
-            sections=[cli_render.section(rows=rows, columns=["name", "status", "origin"])],
+            sections=[
+                cli_render.section(rows=rows, columns=["name", "status", "origin", "source", "ref"])
+            ],
             commands=[
                 ("pkit capabilities install <name>", "install a kit-shipped one into this project"),
+                (
+                    "pkit capabilities install <name> --from <git URL> --ref <tag or commit>",
+                    "install one another repository keeps",
+                ),
                 ("pkit capabilities register <name>", "register an in-repo (incubated) one"),
             ],
         ),
@@ -9046,7 +9987,7 @@ def new_agent(namespace: str, name: str, with_storyboard: bool, dry_run: bool) -
     type=str,
     default=None,
     help="Where the agent lives: core, project or a capability name. "
-    "Default: the agent the deploy resolves — project, capabilities by name, then core.",
+    "Default: the definition the picker names as the agent, the one the deploy writes.",
 )
 @click.option(
     "--scenario",

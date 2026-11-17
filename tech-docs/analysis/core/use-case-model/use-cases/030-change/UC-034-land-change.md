@@ -11,10 +11,6 @@ after:
   - [UC-014, UC-049]
 requirements:
   - REQ-012
-shortfalls:
-  - at: 5
-    issue: "#1257"
-    record: ADR-061#8
 pkit:
   friction:
     anchors:
@@ -77,11 +73,9 @@ pkit:
 4. The system reads the pull request once, for these:
    - its state
    - its head
+   - its body
    - whether its [base](../../../glossary.md#term-base--base) merges through a merge queue
 5. On a base without a queue, the system squash-merges the pull request, pinned to `<sha>`. The commit's subject is `<title>`, and its body is the pull request's body (COR-009 points [1](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md#1-squash-merge-as-the-default-merge-style) and [2](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md#2-pr-title-follows-conventional-commits), and [ADR-061 point 8](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#8-cor-009s-landing-realised)).
-
-> [!WARNING]
-> **Not built yet:** a direct merge passes the subject alone, so the commit's body is whatever the repository's default composes. ADR-061 point 8 decides that a direct merge carries the pull request's body, read just before the request, and #1257 tracks it.
 
 6. The system reads the pull request again, and ends `merged` once a reading says it merged at `<sha>`, naming the merge commit.
 7. The developer deletes the head branch with `pkit pull-request delete-branch <n> --expect <sha>`. The system deletes it only while its tip is the head that merged ([COR-009 point 4](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md#4-feature-branches-are-short-lived-and-deleted-after-merge) and [ADR-061 point 5](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#5-the-command-makes-requests-and-reports-facts-the-caller-decides)).
@@ -93,8 +87,9 @@ pkit:
 - **2b.** `<sha>` is no full commit id, such as an abbreviated one. The system refuses it as a usage error, reads nothing, and exits `2`, since an abbreviated [head](../../../glossary.md#term-head--head) would read as another head.
 - **3a.** The repository is another, and the operator declines. Or nobody can reply, and the developer passed no `--allow-foreign-repo`. The system refuses, sends nothing, and the use case ends.
 - **4a.** The [pull request](../../../glossary.md#term-pull-request--pull-request) merged already at `<sha>`. The system ends `merged`, sends nothing, and the path goes on at step 7.
-- **4b.** The reading shows another head than `<sha>`. Where the pull request is queued, the system takes it out of the queue, so no commit nobody checked merges. The system ends `head-moved`, and the path rejoins at step 1 for the new head.
+- **4b.** The reading shows the pull request open at another head than `<sha>`. Where the pull request is queued, the system takes it out of the queue, and says what that came to. The system ends `head-moved`, and the path rejoins at step 1 for the new head.
 - **4c.** The pull request is closed unmerged, or the reading cannot be taken. The system ends `closed` or `unreadable`, sends nothing, and the use case ends.
+- **4d.** The reading shows the pull request merged at another head than `<sha>`, or taking it out (4b) finds it merged. So the merge may hold commits nobody checked. The system ends `merged-at-another-head`, or `head-moved` with `dequeue.reason_kind` `merged`, naming the head the pull request merged at. The use case ends.
 - **5a.** The [base](../../../glossary.md#term-base--base) merges through a merge queue. The system checks that the queue squashes, and that the repository's squash-commit defaults are `PR_TITLE` and `PR_BODY`, and refuses otherwise ([ADR-061 point 8](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#8-cor-009s-landing-realised)). It enqueues the pull request pinned to `<sha>`, and waits for the queue to merge it. The path goes on at step 6.
 - **5b.** The developer passed `--admin` on a base that merges through a queue. The system refuses, since no administrator merge passes a queue, and sends nothing ([ADR-061 point 5](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#5-the-command-makes-requests-and-reports-facts-the-caller-decides)).
 - **5c.** The request gets no usable response. The system reads the pull request to settle whether the request was made, and never says the request was not made ([ADR-061 point 5](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#5-the-command-makes-requests-and-reports-facts-the-caller-decides)):
@@ -105,6 +100,7 @@ pkit:
   The developer reads the pull request with `pkit pull-request read <n>`, and the path rejoins at step 2.
 - **6a.** The wait runs out with the pull request still queued. The system ends `queued`, and the developer runs the same command again later, which waits for it. The path rejoins at step 2.
 - **6b.** The queue drops the pull request. The system ends `dropped`. The developer mends what dropped it, or runs the command again with `--allow-dropped-head` to enqueue it again, and the path rejoins at step 2.
+- **6c.** A reading during the wait shows another head than `<sha>`. The path goes on as 4b says, or as 4d says where the queue merged the pull request at that head first.
 - **7a.** The branch's tip moved after the merge, or another open pull request uses the branch as its head or its base. The system keeps the branch, and says why ([ADR-061 point 5](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#5-the-command-makes-requests-and-reports-facts-the-caller-decides)).
 
 **Postconditions:**
@@ -116,7 +112,7 @@ pkit:
 
 **Minimal guarantees:**
 
-- The landing merges nothing but `<sha>`. Each request is pinned to it, and a [pull request](../../../glossary.md#term-pull-request--pull-request) queued at another [head](../../../glossary.md#term-head--head) is taken out of the queue ([ADR-061 point 5](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#5-the-command-makes-requests-and-reports-facts-the-caller-decides) and `pull_request_landing.py`).
+- Each merge or enqueue the landing sends is pinned to `<sha>`. A [pull request](../../../glossary.md#term-pull-request--pull-request) queued at another [head](../../../glossary.md#term-head--head) is taken out of the queue ([ADR-061 point 5](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#5-the-command-makes-requests-and-reports-facts-the-caller-decides) and `pull_request_landing.py`). Where the queue merges the pull request at that head first, the landing names that head, and never ends `merged` (`pull_request_landing.py`).
 - A merge is stated only once a reading says merged. A request with no usable response is never reported as not made (ADR-061 point 5).
 - In a repository other than the session's own, nothing is sent to the hosting service without the operator's yes or `--allow-foreign-repo` ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md) and `session_guard.py`).
 - No request reaches a queue that would not make the squash commit [COR-009](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md) asks for ([ADR-061 point 8](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#8-cor-009s-landing-realised)).

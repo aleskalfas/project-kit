@@ -1,0 +1,10 @@
+component: claude-code
+kind: none
+body: >
+  Internal. The README and the runner's own description say that the drift
+  command's fixers take the unconfined form, and that every fixer's run takes
+  the confined form where that form is built and the harness holds it, with
+  a link to project-management's README for when the drift command starts a
+  fixer. The runner's help in the adapter's package says that nobody can
+  answer the agent during its run, where it said nobody watches it. The
+  runner runs as before.

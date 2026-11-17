@@ -29,7 +29,8 @@ checks the owning records ask for:
   artefacts.
 - **The delegate** (COR-064 point 2): `friction.delegate` names an agent of the
   project, one whose definition the project, a capability or the methodology
-  ships (`agents.agent_locations`) — otherwise an error naming the fix. One
+  ships, the agent of its name being the picker's (ADR-087) — otherwise an
+  error naming the fix. One
   whose definition does not declare that it reads COR-064 is a warning, since
   it says nothing of when it decides as the delegate.
 - **Types on the project's places** (COR-056 points 2 and 3): the type
@@ -73,9 +74,8 @@ from referencing.jsonschema import DRAFT202012, SchemaRegistry
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from project_kit import backbone_schemas, validators
+from project_kit import agent_definitions, backbone_schemas, validators
 from project_kit import connections as wiring
-from project_kit.agents import agent_locations, find_agent_file
 from project_kit.friction_discovery import (
     CONFIGURATION_MEMBER,
     SettingsPath,
@@ -408,13 +408,15 @@ def _delegate_findings(
     """The delegate names an agent of the project, one that knows the role (COR-064
     point 2).
 
-    An agent of the project is one whose definition the project, a capability
-    under `.pkit/capabilities/` or the methodology ships, in the folders the
-    adapter deploys from, the first in its precedence winning. A name no such
-    definition carries is an error. A definition that does not declare it reads
-    COR-064 (`reads.records`, COR-013) says nothing of when it decides as the
-    delegate, so naming it makes no agent decide: a warning. A name the shape
-    pass refused is not judged again: one finding per mistake.
+    An agent of the project is the definition of its name the picker names
+    (ADR-087), of those the project, an installed capability or the methodology
+    ships. A name with no agent is an error, as is a picker the command cannot
+    reach. A definition that does not declare it reads COR-064
+    (`reads.records`, COR-013) says nothing of when it decides as the delegate,
+    so naming it makes no agent decide: a warning. A name the shape pass
+    refused is not judged again, nor one whose agent the reference validator
+    reports, since its place holds both layouts or the picker cannot tell it:
+    one finding per mistake.
     """
     if not isinstance(friction, Mapping):
         return []
@@ -422,14 +424,19 @@ def _delegate_findings(
     pointer = f"/{FRICTION_KEY}/{DELEGATE_KEY}"
     if pointer in flagged or not isinstance(name, str) or not name:
         return []  # absent, or the shape pass already reported it
-    definition = next(
-        (
-            found
-            for _, folder in agent_locations(target_root)
-            if (found := find_agent_file(folder, name)) is not None
-        ),
-        None,
-    )
+    try:
+        pick = agent_definitions.answer(target_root).picks.get(name)
+    except agent_definitions.Unreachable as exc:
+        return [
+            ConfigFinding(
+                pointer, Severity.ERROR, f"cannot tell which agent {name!r} is: {exc.message}."
+            )
+        ]
+    if pick is not None and pick.agent is not None and pick.file is None:
+        return []  # both layouts: the reference validator's finding
+    if pick is not None and pick.untold is not None:
+        return []  # the reference validator's finding
+    definition = pick.file if pick is not None else None
     if definition is None:
         return [
             ConfigFinding(

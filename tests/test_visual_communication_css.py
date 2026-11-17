@@ -17,7 +17,13 @@ from typing import Any
 import pytest
 
 from tests.in_process import load
-from tests.visual_communication_project import CAPABILITY, FOUNDATIONS, TEST_BRAND, TEST_PARTS
+from tests.visual_communication_project import (
+    CAPABILITY,
+    FOUNDATIONS,
+    RELEASED_FOUNDATIONS,
+    TEST_BRAND,
+    TEST_PARTS,
+)
 
 css, css_declaration, seam, values, tokens, keys = load(
     "visual-communication",
@@ -163,7 +169,10 @@ REFERENCE = {
 
 @pytest.fixture(scope="module")
 def brand() -> Any:
-    return tokens.read_brand(TEST_BRAND, tokens.read_declarations(FOUNDATIONS / "roles.yaml"))
+    """The test brand on the foundations' release 1.0.0, which never changes, as its lock
+    names: so its reference style sheet is the writer's output alone."""
+    roles = RELEASED_FOUNDATIONS / "roles.yaml"
+    return tokens.read_brand(TEST_BRAND, tokens.read_declarations(roles))
 
 
 def axes_of(brand: Any) -> dict[str, dict[str, Any]]:
@@ -417,7 +426,7 @@ def three_axes() -> tuple[dict[str, Any], dict[str, Any]]:
     }
     doc = {
         "document": "visual-communication/values",
-        "version": 1,
+        "version": 2,
         "lock": {"lab": "1.0.0"},
         "keys": [keys.key_of(c, read) for c in every],
         "tokens": dict(sorted(tokens_.items())),
@@ -453,13 +462,15 @@ def test_one_document_gives_one_style_sheet(brand: Any) -> None:
 def test_it_refuses_a_size_axis_another_form_or_document_and_missing_combinations(
     brand: Any,
 ) -> None:
+    """A size axis never reaches the writer: the command hands it a brand's values at the
+    default of each size (DEC-021 point 8), so one handed to it is refused."""
     doc, axes = written_document(brand), axes_of(brand)
-    with pytest.raises(css.CssError, match="size axis"):
+    with pytest.raises(css.CssError, match=r"size axis; .* at the default of every other axis"):
         css.write(doc, {**axes, "contrast": {**axes["contrast"], "kind": "size"}})
     with pytest.raises(css.CssError, match="form 2"):
         css.write(doc, axes, form=2)
     with pytest.raises(css.CssError, match="document"):
-        css.write({**doc, "version": 2}, axes)
+        css.write({**doc, "version": 1}, axes)
     with pytest.raises(css.CssError, match="every combination"):
         css.write({**doc, "keys": doc["keys"][:-1]}, axes)
     with pytest.raises(css.CssError, match="typography"):
@@ -489,7 +500,7 @@ def test_the_roles_of_a_library_locked_with_the_brand_are_written_at_their_defau
     scope = tokens.read_scope({"foundations": FOUNDATIONS, "test-parts": TEST_PARTS})
     brand = tokens.read_brand(TEST_BRAND, scope)
     doc = values.document(brand, brand.combinations(), {**LOCK, "test-parts": "1.0.0"})
-    assert doc["version"] == 1
+    assert doc["version"] == 2
     doc["tokens"] = {p: t for p, t in doc["tokens"].items() if t["type"] in css.KINDS}
     sheet = css.write(doc, axes_of(brand))
     root = parsed(sheet)[0].declarations

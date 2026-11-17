@@ -20,6 +20,7 @@ to the distribution's fixed report target. Two sides:
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -28,6 +29,7 @@ import webbrowser
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 from project_kit.environment import collect_environment, render_environment_block
 
@@ -623,16 +625,52 @@ def _parse_stage_file(path: Path) -> StagedDraft | None:
     )
 
 
+#: The host `gh` reaches for a call that names none, where neither `GH_HOST`
+#: nor a sole logged-in host decides it.
+_GH_DEFAULT_HOST = "github.com"
+
+
 def gh_authenticated() -> bool:
-    """True iff `gh` is installed and authenticated (so the auto-file path can run).
-    Best-effort; any failure ⇒ False ⇒ the caller degrades to the URL."""
+    """True iff `gh` is installed and authenticated on the host it files the
+    report to (so the auto-file path can run). Best-effort; any failure ⇒
+    False ⇒ the caller degrades to the URL.
+
+    `gh auth status` with no host exits non-zero when any host it is logged in
+    to fails, such as a second account whose keychain read times out, though
+    the report target's host passes. So the check names the host `gh` reaches
+    for `--repo REPORT_TARGET` (`_report_target_host`), and judges it alone
+    (#3126). Where `gh` cannot list its hosts, the check judges every host, as
+    it did before it named one."""
     if shutil.which("gh") is None:
         return False
+    host = _report_target_host()
+    argv = ["gh", "auth", "status", *(["-h", host] if host else [])]
     try:
-        proc = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True, check=False)
+        proc = subprocess.run(argv, capture_output=True, text=True, check=False)
     except OSError:
         return False
     return proc.returncode == 0
+
+
+def _report_target_host() -> str | None:
+    """The host `gh` reaches for `--repo REPORT_TARGET`, whose `owner/repo`
+    names none: `GH_HOST` where the shell sets it, else the one host `gh` is
+    logged in to, else github.com. None where `gh` cannot list the hosts it is
+    logged in to, as one too old for `gh auth status --json`.
+
+    `gh auth status --json hosts` lists each host and exits zero whatever its
+    accounts report, so a failing host hides no other."""
+    env_host = os.environ.get("GH_HOST")
+    if env_host:
+        return env_host
+    data = _gh_json(["gh", "auth", "status", "--json", "hosts"])
+    hosts = cast("dict[str, object]", data).get("hosts") if isinstance(data, dict) else None
+    if not isinstance(hosts, dict):
+        return None
+    logged_in = list(cast("dict[str, object]", hosts))
+    if len(logged_in) == 1:
+        return logged_in[0]
+    return _GH_DEFAULT_HOST
 
 
 def ensure_kind_label(target: str, kind: str) -> bool:

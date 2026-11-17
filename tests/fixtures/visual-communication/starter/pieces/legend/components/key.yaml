@@ -1,0 +1,50 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: stable
+about: >-
+  One entry of a legend as a chart's key draws it: a swatch of its concept's colour, which
+  holds the concept's sign where it has one, and its label beside it in the shared colour
+  of text. The legend's reference renders draw its entries with this component of the
+  piece's own, through the legend's component field.
+
+fields:
+  type: object
+  required: [label]
+  properties:
+    label:
+      type: string
+      description: What the concept stands for, in a word or a few.
+      x-pkit-prose: true
+
+colour: neutral
+
+values:
+  # How tall the row is that the swatch and the label share, each centred on it.
+  side: "=@space.3 + @space.2"
+  band: "=max(side, label.height)"
+
+parts:
+  swatch:
+    box:
+      fill: ":colour.fill"
+      stroke: ":colour.line"
+      stroke-width: "=@stroke.thin"
+      rx: "=@space.1"
+    y: "=(band - side) / 2"
+    width: "=side"
+    height: "=side"
+  sign:
+    sign: {fill: ":colour.text"}
+    x: "=(side - sign.width) / 2"
+    y: "=swatch.y + (side - sign.height) / 2"
+    width: "=@space.3"
+    height: "=@space.3"
+  label:
+    text: {content: label, style: type.body, fill: text-primary}
+    x: "=side + @space.2"
+    y: "=(band - label.height) / 2"
+
+preferred:
+  width: "=label.right"
+  height: "=band"

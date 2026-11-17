@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: capability:project-management
+# pkit-digest: sha256:14ef94ed40d876b097741ff80f393bc488d89bbb67b568508cd6add55073257f
+# pkit-tool-access: tools: ["Read", "Glob", "Grep", "Bash", "Write"]
 name: pm-reviewer
 description: Reviewer agent for the project-management capability's merge gate. 
   Reviews a PR diff against pm conventions (Conventional Commits, branch/type 

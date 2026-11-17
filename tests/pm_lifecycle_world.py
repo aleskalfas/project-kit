@@ -54,7 +54,9 @@ CAPABILITY_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 SCRIPTS_DIR = CAPABILITY_ROOT / "scripts"
 ADDRESS = "project-management:issue-lifecycle"
 
-INVOKER = SimpleNamespace(github_login="octocat", email="octocat@example.com")
+INVOKER = SimpleNamespace(
+    github_login="octocat", email="octocat@example.com", unresolved_cause=None
+)
 #: Who merges a pull request: another authority than the invoker, so the engine's
 #: cross-authority gate on Review → Done passes.
 MERGER = "a-reviewer"

@@ -424,6 +424,14 @@ def test_each_block_ends_a_sentence() -> None:
     assert counted(text) == [1, 4, 1, 2, 1]
 
 
+def test_a_table_row_is_split_at_each_bar_outside_a_code_span() -> None:
+    """However many code spans a row holds, each cell is a block of its own, and a `|`
+    inside a code span splits nothing."""
+    text = "| `a` one | `b | c` two | three |\n|---|---|---|\n"
+    assert [block.text for block in pl.markdown_blocks(text)] == ["a one", "b | c two", "three"]
+    assert counted(text) == [2, 2, 1]
+
+
 def test_headings_bold_labels_and_code_blocks_are_not_read() -> None:
     """A bold label ends in a colon or a full stop, and a list item that is only a label
     is no sentence."""

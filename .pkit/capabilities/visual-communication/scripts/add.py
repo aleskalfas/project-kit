@@ -3,6 +3,7 @@
 # requires-python = ">=3.10"
 # dependencies = [
 #   "jsonschema==4.26.0",
+#   "referencing==0.37.0",
 #   "ruamel.yaml==0.19.1",
 #   "uharfbuzz==0.57.0",
 #   "fonttools==4.68.0",

@@ -49,3 +49,24 @@ slides:
             - {text: "                # Ihr Quellcode, unverändert", style: comment}
         - id: plain
           text: "name: starter\nversion: 1.0.0\nkind: components"
+
+  - id: signs
+    layout: slide
+    title: Ihr Zeichen beendet die Überschriftenzeile, ein schlichter Abschnitt trägt seines
+    visual:
+      use: starter/list
+      widths: own
+      item: {use: starter/code}
+      items:
+        - id: head
+          concept: test-notation/person
+          head: Die Datei einer Benutzerin
+          text:
+            - "Eigentümerin: "
+            - {text: "ada", concept: test-notation/person}
+            - "\nseit: 2024"
+        - id: text
+          concept: test-notation/person
+          text:
+            - "Prüferin: "
+            - {text: "grace", concept: test-notation/person}

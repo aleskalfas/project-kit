@@ -6,7 +6,9 @@ capabilities' rules index `@.pkit/rules/capabilities.md` directly after it, and 
 project's `@.pkit/rules/project.md`. The scenarios:
 
 1. CLAUDE.md absent → created with the three @-includes, in their layers' order.
-2. CLAUDE.md exists, no core include → the three inserted after the first H1.
+2. CLAUDE.md exists, no core include → the three inserted after the first H1, or,
+   where it holds the index's line or the project's, only the lines it lacks, in
+   their order around the line it holds (#2443).
 3. CLAUDE.md exists, no H1 → the three prepended with a minimal header.
 4. CLAUDE.md holds both core's include and the index's line → no-op (idempotent).
 5. CLAUDE.md holds core's include only → the index's line inserted after it, and
@@ -120,6 +122,66 @@ def test_inserts_the_three_after_h1_when_core_s_include_is_absent(adapter_tree: 
     assert _claude_md(adapter_tree).read_text(encoding="utf-8") == (
         f"# My Project Instructions\n\n{CORE}\n{INDEX}\n{PROJECT}\n\nSome existing content.\n"
     )
+
+
+def test_core_s_include_alone_goes_back_before_the_index_s_line(adapter_tree: Path) -> None:
+    """A file that holds the index's line and the project's gets core's include alone,
+    directly before the index's line, and holds each of the three once (COR-002;
+    ADR-076 point 3; #2443)."""
+    _claude_md(adapter_tree).write_text(
+        f"# Mine\n\nIntro.\n\n{INDEX}\n{PROJECT}\n\nMore.\n", encoding="utf-8"
+    )
+
+    result = _run_script(adapter_tree)
+
+    assert result.returncode == 0, result.stderr
+    assert f"{CORE} added before {INDEX}" in result.stdout
+    content = _claude_md(adapter_tree).read_text(encoding="utf-8")
+    assert content == f"# Mine\n\nIntro.\n\n{CORE}\n{INDEX}\n{PROJECT}\n\nMore.\n"
+    assert content.count(CORE) == content.count(INDEX) == content.count(PROJECT) == 1
+
+
+def test_the_project_s_line_comes_back_after_the_index_s_with_core_s(
+    adapter_tree: Path,
+) -> None:
+    """Core's include goes before the index's line, and the project's, inserted only
+    together with core's, directly after it."""
+    _claude_md(adapter_tree).write_text(f"# Mine\n\n{INDEX}\n\nMore.\n", encoding="utf-8")
+
+    result = _run_script(adapter_tree)
+
+    assert f"{CORE} added before {INDEX}, {PROJECT} after it" in result.stdout
+    assert _lines(adapter_tree) == ["# Mine", "", CORE, INDEX, PROJECT, "", "More."]
+
+
+def test_core_s_and_the_index_s_lines_go_before_the_project_s_alone(
+    adapter_tree: Path,
+) -> None:
+    _claude_md(adapter_tree).write_text(f"# Mine\n\n{PROJECT}\n\nMore.\n", encoding="utf-8")
+
+    result = _run_script(adapter_tree)
+
+    assert f"{CORE} and {INDEX} added before {PROJECT}" in result.stdout
+    assert _lines(adapter_tree) == ["# Mine", "", CORE, INDEX, PROJECT, "", "More."]
+
+
+def test_a_later_line_only_in_code_is_no_anchor(adapter_tree: Path) -> None:
+    """The index's line inside a fence holds nothing, so the project's line held below
+    it is where core's include and the index's line go."""
+    _claude_md(adapter_tree).write_text(
+        f"# Mine\n\n```\n{INDEX}\n```\n\n{PROJECT}\n", encoding="utf-8"
+    )
+    _run_script(adapter_tree)
+    assert _lines(adapter_tree) == ["# Mine", "", "```", INDEX, "```", "", CORE, INDEX, PROJECT]
+
+
+def test_putting_back_core_s_include_then_changes_nothing(adapter_tree: Path) -> None:
+    _claude_md(adapter_tree).write_text(f"# Mine\n\n{INDEX}\n", encoding="utf-8")
+    _run_script(adapter_tree)
+    once = _claude_md(adapter_tree).read_text(encoding="utf-8")
+    result = _run_script(adapter_tree)
+    assert "exists" in result.stdout
+    assert _claude_md(adapter_tree).read_text(encoding="utf-8") == once
 
 
 def test_an_h1_inside_fenced_code_is_not_the_host_s(adapter_tree: Path) -> None:
@@ -304,6 +366,11 @@ def test_a_crlf_file_gets_crlf_lines(adapter_tree: Path) -> None:
     _run_script(adapter_tree)
     assert path.read_bytes() == (
         f"# Mine\r\n\r\n{CORE}\r\n{INDEX}\r\n{PROJECT}\r\n\r\nProse.\r\n".encode()
+    )
+    path.write_bytes(f"# Mine\r\n\r\n{INDEX}\r\nProse.\r\n".encode())
+    _run_script(adapter_tree)
+    assert path.read_bytes() == (
+        f"# Mine\r\n\r\n{CORE}\r\n{INDEX}\r\n{PROJECT}\r\nProse.\r\n".encode()
     )
 
 

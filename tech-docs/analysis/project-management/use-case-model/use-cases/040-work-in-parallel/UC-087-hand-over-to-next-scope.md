@@ -1,6 +1,6 @@
 ---
 id: UC-087
-title: Hand the next piece of the work to the scope that does that piece
+title: Hand the next piece of the work to the agent of the scope that holds that piece
 status: active
 actor: ACT-worker-agent
 other-actors:
@@ -44,9 +44,9 @@ pkit:
         - REQ-041
 ---
 
-# UC-087 — Hand the next piece of the work to the scope that does that piece
+# UC-087 — Hand the next piece of the work to the agent of the scope that holds that piece
 
-**Goal:** Hand the next piece of the work to the scope that does that piece, with what that piece needs from my piece.
+**Goal:** Hand the next piece of the work to the agent of the scope that holds that piece, with what that piece needs from my piece.
 
 **Other actors:** **Planning agent** (`ACT-planning-agent`): filed the next piece's [Task](../../../glossary.md#term-task--task) in that Task's own [scope](../../../glossary.md#term-scope--scope). The `## Dependencies` section of the next piece's Task names this piece's Task (`batch-plan.md`).
 
@@ -59,7 +59,7 @@ pkit:
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and the commands of `pkit pm` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
 
-**Trigger:** The worker finishes the worker's piece of the work, such as an interface that another [scope](../../../glossary.md#term-scope--scope) builds on.
+**Trigger:** The worker finishes the worker's piece of the work, such as an interface that another [scope](../../../glossary.md#term-scope--scope)'s agent builds on.
 
 **Main path:**
 

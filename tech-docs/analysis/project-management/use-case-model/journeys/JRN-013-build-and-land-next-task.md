@@ -23,6 +23,10 @@ pkit:
         - project-management:DEC-055#6
         - project-management:DEC-064
         - project-management:DEC-059#7
+        - COR-050#3
+        - COR-051#4
+        - COR-066#1
+        - COR-066#3
       artefact:
         - ACT-worker-agent
         - UC-084
@@ -50,10 +54,11 @@ pkit:
 - **1a.** The listing holds no [ready Task](../../glossary.md#term-ready-task--ready-task). The worker starts nothing, and the path ends ([UC-084](../use-cases/040-work-in-parallel/UC-084-take-next-task.md) variant 1a).
 - **2a.** The [Task](../../glossary.md#term-task--task) is a piece of work that the Task of another [scope](../../glossary.md#term-scope--scope) depends on. The worker hands the next piece on as [UC-087](../use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md) describes, landing this Task through step 2, and the next piece's Task can start.
 - **2b.** The Task's [pull request](../../../core/glossary.md#term-pull-request--pull-request) conflicts with the [default branch](../../../core/glossary.md#term-default-branch--default-branch). The worker merges the default branch into the Task's branch and resolves the conflict. The new [head](../../../core/glossary.md#term-head--head) needs a new [authorisation](../../glossary.md#term-authorisation--authorisation), so the path rejoins at step 2 ([UC-089](../use-cases/040-work-in-parallel/UC-089-land-alongside-others.md) variant 4a).
+- **2c.** The pull request's head moves while a merge queue holds the pull request, and the queue merges that later head (UC-089 variant 6b). The path ends with only the minimal guarantees holding.
 
 **Postconditions:** The [Task](../../glossary.md#term-task--task)'s [pull request](../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../core/glossary.md#term-head--head) the [merge gate](../../glossary.md#term-merge-gate--merge-gate) judged, after the other agents' changes, and the Task is in Done.
 
 **Minimal guarantees:**
 
-- Nothing merges at a [head](../../../core/glossary.md#term-head--head) the merge authoriser has not authorised, but for one exception. That is a later head whose every edit since lies in the [answer files](../../../core/glossary.md#term-answer-file--answer-file) the [change](../../../core/glossary.md#term-change--change) adds ([project-management DEC-055 point 3](../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). A merge of the [base](../../../core/glossary.md#term-base--base) without a conflict counts as no edit there.
+- Nothing merges at a [head](../../../core/glossary.md#term-head--head) the merge authoriser has not authorised, but for two exceptions. One is a later head whose every edit since lies in the [answer files](../../../core/glossary.md#term-answer-file--answer-file) the [change](../../../core/glossary.md#term-change--change) adds ([project-management DEC-055 point 3](../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). A merge of the [base](../../../core/glossary.md#term-base--base) without a conflict counts as no edit there. The other is a later head of the [pull request](../../../core/glossary.md#term-pull-request--pull-request) that a merge queue merges, as variant 2c describes ([project-management DEC-026](../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 - A merge after which the [change check](../../../core/glossary.md#term-change-check--change-check) fails on a document merges nothing, and names each such document ([project-management DEC-055 point 6](../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#6-the-merge-as-it-would-land)).

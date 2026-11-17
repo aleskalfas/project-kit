@@ -34,7 +34,11 @@ Pointer:
    one an adapter registers — the registry reads capabilities alone — a
    command that declares what it reads beyond the working tree (`reads`, the
    same point) declares the query contract too — its values are the schema's
-   to check — a contribution names `command` or `value` but not both,
+   to check — a write category a capability declares is named
+   `<capability>.<word>`, its owner is an agent the capability ships whose
+   `owns` names it and no other agent of the capability's does, and its default
+   query declares the query contract and no `reads`, while an adapter declares
+   none (ADR-088 point 1) — a contribution names `command` or `value` but not both,
    documentation locations are
    relative sub-paths, friction places lie inside a declared location or the
    project and held folders inside a declared location, the target of each
@@ -125,7 +129,13 @@ from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 from ruamel.yaml import YAML
 
-from project_kit import lifecycle_ownership, process_dependencies, process_journal, validators
+from project_kit import (
+    lifecycle_ownership,
+    process_dependencies,
+    process_journal,
+    validators,
+    write_categories,
+)
 from project_kit.backbone_schemas import (
     BackboneSchemaMissing,
     expand_schema_error,
@@ -660,6 +670,115 @@ def _repository_findings(
             )
         )
 
+    declared_writes = raw.get(write_categories.WRITE_CATEGORIES_KEY)
+    if isinstance(declared_writes, Mapping):
+        findings.extend(
+            _write_category_findings(
+                raw,
+                cast("Mapping[Any, Any]", declared_writes),
+                component_dir,
+                _component_name(raw, expected_name, component_dir),
+                leaves,
+            )
+        )
+
+    return findings
+
+
+def _write_category_findings(
+    raw: Mapping[Any, Any],
+    declared: Mapping[Any, Any],
+    component_dir: Path,
+    name: str,
+    leaves: Mapping[tuple[str, ...], Mapping[Any, Any]],
+) -> list[PackageFinding]:
+    """The write categories a capability declares (ADR-088 point 1), against what it ships.
+
+    Each key is the category's whole name: the capability's name, a dot, a word.
+    Its `owner` is an agent the capability ships whose `owns` names the category,
+    and no other agent of the capability names it there: one path has one owning
+    agent (COR-073 point 1). Its `default-query` names a leaf of `commands:` that
+    declares the query contract and no `reads`, since install asks it while the
+    settled state may not be readable. Only a capability holds the block."""
+    findings: list[PackageFinding] = []
+    _error = _error_appender(findings)
+    key = write_categories.WRITE_CATEGORIES_KEY
+    component: Any = raw.get("component")
+    kind: Any = (
+        cast("Mapping[Any, Any]", component).get("kind") if isinstance(component, Mapping) else None
+    )
+    if kind == "adapter":
+        _error(
+            f"/{key}",
+            f"an adapter declares `{key}`: only a capability ships agents whose writes "
+            "it declares (ADR-088 point 1) — declare it in a capability's package metadata.",
+        )
+        return findings
+    agents = write_categories.capability_agents(component_dir)
+    owners = {
+        agent: write_categories.owned_placeholders(source) for agent, source in agents.items()
+    }
+    for category, entry in declared.items():
+        path = f"/{key}/{_token(category)}"
+        prefix, dot, word = str(category).partition(write_categories.SEPARATOR)
+        if not dot or prefix != name or not write_categories.WORD.match(word):
+            _error(
+                path,
+                f"write category {str(category)!r} is not named `{name}.<word>`: a category a "
+                "capability declares is its name, a dot, then a word of its own (COR-073 "
+                "point 1).",
+            )
+            continue
+        if not isinstance(entry, Mapping):
+            continue  # the shape pass reports the type
+        fields = cast("Mapping[str, Any]", entry)
+        owner = fields.get(write_categories.OWNER_KEY)
+        if isinstance(owner, str):
+            if owner not in agents:
+                shipped = f" (it ships: {sorted(agents)})." if agents else " (it ships none)."
+                _error(
+                    f"{path}/{write_categories.OWNER_KEY}",
+                    f"write category {category!r} names owner {owner!r}, which is no agent the "
+                    f"capability ships under agents/{shipped}",
+                )
+            elif str(category) not in owners[owner]:
+                _error(
+                    f"{path}/{write_categories.OWNER_KEY}",
+                    f"write category {category!r} names owner {owner!r}, whose `owns` does not "
+                    f"name <{category}>: the declaration and the definition must agree on who "
+                    "writes (ADR-088 point 1).",
+                )
+        elif owner is None:
+            _error(path, f"write category {category!r} names no `{write_categories.OWNER_KEY}`.")
+        for other in sorted(agent for agent, owned in owners.items() if str(category) in owned):
+            if other != owner:
+                _error(
+                    path,
+                    f"agent {other!r} names <{category}> in its `owns`, but the category's owner "
+                    f"is {owner!r}: a declared category has one owning agent (COR-073 point 1).",
+                )
+        query = fields.get(write_categories.DEFAULT_QUERY_KEY)
+        if isinstance(query, str):
+            query_path = f"{path}/{write_categories.DEFAULT_QUERY_KEY}"
+            leaf = resolve_command(leaves, query)
+            if leaf is None:
+                _error(
+                    query_path, f"write category {category!r}: {undeclared_command(query, leaves)}"
+                )
+            elif leaf.get(QUERY_CONTRACT_KEY) is not True:
+                _error(
+                    query_path,
+                    f"write category {category!r} names default query {query!r}, which does not "
+                    f"declare the query contract (`{QUERY_CONTRACT_KEY}: true` on its `commands:` "
+                    "entry).",
+                )
+            elif READS_KEY in leaf:
+                _error(
+                    query_path,
+                    f"write category {category!r} names default query {query!r}, which declares "
+                    f"`{READS_KEY}`: install asks the query while the settled state may not be "
+                    "readable, so it answers from the working tree alone (ADR-088 point 1).",
+                )
     return findings
 
 

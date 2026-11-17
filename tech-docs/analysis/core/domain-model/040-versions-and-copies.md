@@ -32,7 +32,12 @@ pkit:
         - ADR-065#1
         - ADR-065#2
         - ADR-065#3
+        - ADR-065#4
         - ADR-065#6
+        - ADR-089#1
+        - ADR-089#4
+        - ADR-089#5
+        - ADR-089#9
         - PRJ-004
       artefact:
         - TERM-manifest
@@ -187,6 +192,7 @@ A release tag is the annotated git tag `v<version>` on the commit that lands a n
 
 - Each release gets one. New versions of [components](../glossary.md#term-component--component) alone, with no new backbone version, get none (PRJ-004).
 - A reader of release tags, such as the lookup of the highest release, reads them alone and skips `latest` (PRJ-004).
+- A [release candidate](../glossary.md#term-release-candidate--release-candidate)'s tag, such as `v3.0.0rc1`, is no release tag. It names a commit no branch holds ([ADR-089 point 1](../../../architecture/decisions/ADR-089-release-candidates.md#1-a-candidate-is-the-final-releases-own-plan-with-the-suffix-added-where-the-step-writes)). The CI pipeline pushes it only once the wheel built from that commit names the candidate's version ([ADR-089 point 9](../../../architecture/decisions/ADR-089-release-candidates.md#9-a-candidate-is-cut-by-the-release-workflows-pre-release-run-and-notes-past-the-hosts-caps-are-linked)).
 
 ## Recorded version
 
@@ -222,6 +228,7 @@ stateDiagram-v2
 - No operation but a version transition moves it, and sync moves none (COR-059 points 2 and 3).
 - A project is at a version only when its target and its completion both name it (COR-059 point 6).
 - No copying of the [methodology](../glossary.md#term-methodology--methodology)'s content writes or removes it (COR-059 point 1).
+- It is compared with the version a release ships as a public version, its pre-release kept and a local segment dropped ([PEP 440](https://peps.python.org/pep-0440/)). So a [release candidate](../glossary.md#term-release-candidate--release-candidate)'s version sorts below its final release's ([ADR-089 point 5](../../../architecture/decisions/ADR-089-release-candidates.md#5-a-candidate-runs-its-final-releases-migration-folders-and-has-not-finished-them)).
 
 ## Migration
 
@@ -244,6 +251,7 @@ A migration is a script that carries a project's state across a version of the [
 **Always true:**
 
 - Only a version transition runs a migration (COR-059 point 3).
+- A version transition runs each folder above its lower bound in PEP 440 order, and at or below its target by minor. So a move to a [release candidate](../glossary.md#term-release-candidate--release-candidate) runs its final [release](../glossary.md#term-release--release)'s folder ([ADR-065 point 4](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#4-a-transition-runs-in-cor-010s-order-with-seed-paths-after-the-migrations), [ADR-089 point 5](../../../architecture/decisions/ADR-089-release-candidates.md#5-a-candidate-runs-its-final-releases-migration-folders-and-has-not-finished-them)).
 - Run again on a state it already carried, it changes nothing (COR-010).
 - A backbone migration acts only on a positive sign that it is needed, and never deletes by a path's name or position alone (COR-010).
 - What it writes stays within what the records owning that content allow (COR-059 point 3).
@@ -316,7 +324,9 @@ Defined in [TERM-dependency-gate](../glossary.md#term-dependency-gate--dependenc
 
 **Why:** A dependency whose interface changed in a way that breaks a [capability](../glossary.md#term-capability--capability) fails silently when that capability runs, at no step of the lifecycle ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)). A check at [install](../glossary.md#term-install--install) and at a [version transition](../glossary.md#term-version-transition--version-transition) makes that failure loud there instead (COR-030).
 
-A dependency gate is a check made before an install or a version transition writes anything. The gate checks that the capabilities the install or the transition would leave meet each other's ranges and mandatory [connections](../glossary.md#term-connection--connection). A capability that moves against a dependency outside its [range](../glossary.md#term-range--range) is refused. A dependency that moves outside a dependent's range is warned of, and the write goes on only under `--force`.
+A dependency gate is a check made before an install or a version transition writes anything. The gate checks that the capabilities the install or the transition would leave meet each other's ranges and mandatory [connections](../glossary.md#term-connection--connection).
+
+A capability that moves against a dependency outside its [range](../glossary.md#term-range--range) is refused. That refusal stands unless the target [release](../glossary.md#term-release--release) ships that capability and its new range admits the [version](../glossary.md#term-version--version) the dependency moves from. Any other pair a moving dependency takes out of range is warned of, and the write goes on only under `--force`.
 
 **Attributes:** None.
 
@@ -329,10 +339,12 @@ A dependency gate is a check made before an install or a version transition writ
 
 **Always true:**
 
-- A dependent that moves against a dependency outside its range is refused, since whoever runs the command controls the dependent's [version](../glossary.md#term-version--version) (COR-030).
-- A dependency that moves outside a dependent's range warns, naming each dependent. It goes on only under an explicit `--force`, never as a hard block (COR-030).
+- A dependent that moves against a dependency outside its range is refused, since whoever runs the command controls the dependent's version (COR-030). The one exception is a capability the target release ships whose new range admits the version the dependency moves from. In that case the dependency's move breaks the pair (ADR-065 point 6).
+- A dependency that moves outside the range of a dependent that does not move, or of that exception, warns, naming each dependent. It goes on only under an explicit `--force`, never as a hard block (COR-030).
 - A dependency that leaves a dependent's mandatory connection unmet warns in the same way (ADR-065 point 6).
+- A pair out of range neither side of which moves, such as one an earlier `--force` left, neither refuses nor warns (COR-030, ADR-065 point 6).
 - `--force` on `pkit upgrade` overrides those warnings, and nothing else (ADR-065 point 6).
+- A range is read with its pre-releases admitted, so it admits a [release candidate](../glossary.md#term-release-candidate--release-candidate)'s version within its bounds ([ADR-089 point 4](../../../architecture/decisions/ADR-089-release-candidates.md#4-every-range-is-read-with-its-pre-releases-admitted)).
 
 ## Propagation
 
@@ -487,6 +499,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
 - [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
 - [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
 - [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
@@ -538,6 +551,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 - [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md)
 - [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
+- [UC-048 — Put the system's CLI on my machine at a release](../use-case-model/use-cases/050-adopt/UC-048-install-cli.md)
 - [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md)
 - [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
 - [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md)
@@ -615,6 +629,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
 - [UC-021 — Declare my project's backbone configuration once, and have it validated](../use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md)
 - [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md)
+- [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
 - [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md)
 - [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md)
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md)
@@ -646,6 +661,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
 - [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/020-set-up/UC-006-gate-merges.md)
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
+- [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
 - [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md)
 - [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
 - [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)

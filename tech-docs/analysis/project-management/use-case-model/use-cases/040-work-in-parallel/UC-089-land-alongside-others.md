@@ -13,7 +13,7 @@ requirements:
   - REQ-041
   - REQ-042
 after:
-  - [UC-084]
+  - [UC-084, UC-088]
 shortfalls:
   - at: "4a"
     issue: "#2287"
@@ -30,6 +30,8 @@ pkit:
       path:
         - .pkit/capabilities/project-management/scripts/land-work.py
         - .pkit/capabilities/project-management/scripts/fix-drift.py
+        - .pkit/capabilities/project-management/scripts/_lib/pr_merge.py
+        - .pkit/capabilities/project-management/scripts/_lib/merge_queue.py
         - .pkit/capabilities/project-management/skills/pm/transition-state.md
       record:
         - project-management:DEC-013
@@ -39,6 +41,7 @@ pkit:
         - project-management:DEC-055#6
         - project-management:DEC-064
         - project-management:DEC-056#3
+        - project-management:DEC-069#1
         - project-management:DEC-056#4
         - project-management:DEC-056#6
         - ADR-061
@@ -63,6 +66,7 @@ pkit:
         - PRJ-004
         - ADR-063
         - ADR-034#1
+        - ADR-066#1
       artefact:
         - ACT-worker-agent
         - REQ-040
@@ -78,10 +82,10 @@ pkit:
 
 - **Merge authoriser** (`core:ACT-merge-authoriser`): authorises the merge of one [head](../../../../core/glossary.md#term-head--head) at a time, and no [verdict](../../../glossary.md#term-verdict--verdict) stands in for that [authorisation](../../../glossary.md#term-authorisation--authorisation) ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 - **CI pipeline** (`core:ACT-ci-pipeline`): runs the checks at each new head of the worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request).
-- **AI agent** (`core:ACT-ai-agent`): each [required reviewer](../../../glossary.md#term-required-reviewer--required-reviewer) whose verdict does not stand for the new head, such as after a conflict the worker resolved. Each such [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) reviews the new head again. A merge of the [base](../../../../core/glossary.md#term-base--base) without a conflict keeps every verdict ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). It is also each agent the [project](../../../../core/glossary.md#term-project--project) granted, which `fix-drift` starts to propose answers after the merge ([DEC-056 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)).
+- **AI agent** (`core:ACT-ai-agent`): each [required reviewer](../../../glossary.md#term-required-reviewer--required-reviewer) whose verdict does not stand for the new head, such as after a conflict the worker resolved. Each such [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) reviews the new head again. A merge of the [base](../../../../core/glossary.md#term-base--base) without a conflict keeps every verdict ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 - **Operator** (`core:ACT-operator`): is asked before a command changes a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From [UC-084](UC-084-take-next-task.md):** The worker's [Task](../../../glossary.md#term-task--task) is in Review, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+**Preconditions:** **From [UC-084](UC-084-take-next-task.md) or [UC-088](UC-088-delegate-to-agent.md):** The [Task](../../../glossary.md#term-task--task) is in Review, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 
 **Assumptions:**
 
@@ -95,10 +99,10 @@ pkit:
 1. The worker runs `pkit pm land-work <N>`. The [system](../../../../core/glossary.md#term-system--system) checks, reviews and stops ready at the [head](../../../../core/glossary.md#term-head--head) the system judged, as `UC-062` steps 2 to 10 describe.
 2. The merge authoriser authorises the merge of that head, as `UC-062` step 11 describes ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 3. Another agent's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merges first, so the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) moves past the worker's [base](../../../../core/glossary.md#term-base--base).
-4. The worker does not merge the default branch into the [Task](../../../glossary.md#term-task--task)'s branch only because the default branch moved on ([DEC-064 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-064-base-merge-named.md#4-where-the-pull-requests-author-takes-in-the-base)). The worker takes it in where the pull request conflicts with it, or where the system names that merge. The worker takes it in where the worker judges that the merge settles a check failing only on the hosting service's merge or the queue's. The [change check](../../../../core/glossary.md#term-change-check--change-check)'s outdated-base advice names no merge.
+4. The worker does not merge the default branch into the [Task](../../../glossary.md#term-task--task)'s branch only because the default branch moved on ([DEC-064 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-064-base-merge-named.md#4-where-the-pull-requests-author-takes-in-the-base)). The worker takes it in where the pull request conflicts with it, or where the system names that merge. The worker takes it in where the worker judges that the merge settles a check failing only on the hosting service's merge or the queue's. The [change check](../../../../core/glossary.md#term-change-check--change-check) names no merge when it reports an outdated base.
 5. The worker runs `pkit pm land-work <N> --yes --expect-head <sha>`, naming the head the merge authoriser authorised, as `UC-062` step 12 describes.
 6. The system keeps each [required reviewer](../../../glossary.md#term-required-reviewer--required-reviewer)'s [verdict](../../../glossary.md#term-verdict--verdict), which still stands for the head ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). The system runs the change check on that head merged with the default branch as it stands, and the check passes ([DEC-055 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#6-the-merge-as-it-would-land)). The system then merges at the head the [merge gate](../../../glossary.md#term-merge-gate--merge-gate) judged, as `UC-062` steps 13 and 14 describe.
-7. After the merge, the worker runs `pkit pm fix-drift` ([DEC-056 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)). The [fixers](../../../glossary.md#term-fixer--fixer) the [project](../../../../core/glossary.md#term-project--project) granted propose answers for what the merge left out of date.
+7. After the merge, the worker runs `pkit pm fix-drift` ([DEC-056 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)). Nobody is at a terminal in the worker's session, so the command starts no [fixer](../../../glossary.md#term-fixer--fixer). It lists what the merge left out of date, each with the fixer the [project](../../../../core/glossary.md#term-project--project) granted. It also names the command a person runs at a terminal to start them.
 
 **Variants:**
 
@@ -119,15 +123,16 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no build command exists, so the worker makes the merge and settles the findings in its own session. DEC-063 point 1 decides that only a recorded build adds a commit to the Task's branch, and #2287 tracks it.
 
-- **7a.** Another run of `fix-drift` in the same [clone](../../../glossary.md#term-clone--clone) holds the clone's lock. The command refuses, and the worker runs `fix-drift` again later ([DEC-056 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#4-the-run-is-bounded)).
+- **6b.** The default branch merges through a merge queue, and the pull request's head moves after the backbone queued the pull request. The queue may merge the later head, as `UC-062` variants 14b to 14d describe ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md) and `pr_merge.py`). Where the queue merges that head, the use case ends with only the minimal guarantees holding.
+- **7a.** A person's run of `fix-drift` in the same [clone](../../../glossary.md#term-clone--clone) holds the clone's lock. The worker's run starts no [fixer](../../../glossary.md#term-fixer--fixer) and writes nothing, so it takes no lock and lists what went stale ([DEC-056 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#4-the-run-is-bounded)).
 
-**Postconditions:** The worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../../core/glossary.md#term-head--head) the gate judged, after the other agents' changes, and the pull request's [Task](../../../glossary.md#term-task--task) is in Done.
+**Postconditions:** The worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../../core/glossary.md#term-head--head) the [merge gate](../../../glossary.md#term-merge-gate--merge-gate) judged, after the other agents' changes, and the pull request's [Task](../../../glossary.md#term-task--task) is in Done.
 
 **Minimal guarantees:**
 
-- Nothing merges at a [head](../../../../core/glossary.md#term-head--head) nobody authorised ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). The one exception is a later head whose every edit since lies in the [answer files](../../../../core/glossary.md#term-answer-file--answer-file) the [change](../../../../core/glossary.md#term-change--change) adds. A clean merge of the [base](../../../../core/glossary.md#term-base--base) counts as no edit there.
+- Nothing merges at a [head](../../../../core/glossary.md#term-head--head) nobody authorised ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). One exception is a later head whose every edit since lies in the [answer files](../../../../core/glossary.md#term-answer-file--answer-file) the [change](../../../../core/glossary.md#term-change--change) adds. A clean merge of the [base](../../../../core/glossary.md#term-base--base) counts as no edit there. The other is a later head that a merge queue merges, as variant 6b describes ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 - Nothing merges that the [change check](../../../../core/glossary.md#term-change-check--change-check) fails on, merged with the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) as it stands just before the merge ([DEC-055 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#6-the-merge-as-it-would-land)).
-- The merge counts a [verdict](../../../glossary.md#term-verdict--verdict) only where it stands for the head the merge lands. A merge of the base without a conflict keeps every verdict ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
+- The merge counts a [verdict](../../../glossary.md#term-verdict--verdict) only where it stands for the head the merge lands. The one exception is a later head that a merge queue merges (DEC-026). A merge of the base without a conflict keeps every verdict ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 - No two runs of the [fixers](../../../glossary.md#term-fixer--fixer) start at once in one [clone](../../../glossary.md#term-clone--clone), since the clone's lock holds back a second run (`fix-drift.py`).
 
 ## Open for the design
@@ -135,4 +140,4 @@ pkit:
 What the worker needs here that no accepted record decides yet:
 
 - **One batch of ready heads** across the agents, which the merge authoriser authorises in one sitting. The maintainer decided on 17 October that decisions reach the person in one batch (#1675), and no record holds that decision yet.
-- **The fixers across clones.** Each [clone](../../../glossary.md#term-clone--clone) keeps its own queue and its own lock ([DEC-056 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)). So agents that land in separate clones may each start [fixers](../../../glossary.md#term-fixer--fixer) on the same out-of-date [artefact](../../../../core/glossary.md#term-artefact--artefact), and no record decides which agent runs the fixers.
+- **The fixers across clones.** Each [clone](../../../glossary.md#term-clone--clone) keeps its own queue and its own lock ([DEC-056 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)). So people who start the [fixers](../../../glossary.md#term-fixer--fixer) in separate clones may each start them on the same out-of-date [artefact](../../../../core/glossary.md#term-artefact--artefact), and no record decides who runs them.

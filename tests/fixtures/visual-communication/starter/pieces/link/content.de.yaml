@@ -1,0 +1,12 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: links
+    layout: standard
+    main:
+      use: starter/navigation
+      links:
+        - {id: home, label: Startseite}
+        - {id: records, label: Entscheidungsprotokolle}
+        - {id: release, label: Versionshinweise}

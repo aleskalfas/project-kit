@@ -1,5 +1,8 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
+# pkit-definition: core
+# pkit-digest: sha256:8aefc9de8ee2598a1ba7ef72a6993a45309de38a8d9cc21b738b0c14a8ea44b3
+# pkit-tool-access: tools: ["Read", "Glob", "Grep", "Bash", "WebFetch", "Write"]
 name: methodology-reviewer
 description: Review new and changed records, rules, skills, and other 
   kit-shipped artifacts against the methodology's disciplines (axiom, 

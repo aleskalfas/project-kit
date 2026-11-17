@@ -1,0 +1,167 @@
+answers:
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+    revalidated:
+      at: 2026-11-08T23:19:18Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-code-review-panel
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+    revalidated:
+      at: 2026-11-08T23:19:27Z
+      outcome: unchanged
+      unchanged-because: The change only renames DEC-002's labels for its own points, D1, D3 and D4, as point 1, point 3 and point 4, and drops the D1 label from a comment in review-contributions.yaml; no rule there changes, and the panel's reviewers, what each judges and when each is required are as the term defines them.
+  - artefact: tech-docs/analysis/software-engineering/requirements/quality/REQ-060-secret-off-command-line.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+    revalidated:
+      at: 2026-11-08T23:19:38Z
+      outcome: unchanged
+      unchanged-because: The change only renames DEC-002's labels for its own points as point 1, point 3 and point 4, in its point 1, Rationale and Implications, and drops a label from a comment in review-contributions.yaml; the security-reviewer still rides the touches-code floor and blocks a change that owns a secret on a command line, so the requirement and how it is verified hold.
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-conventions-corpus
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+    revalidated:
+      at: 2026-11-08T23:19:47Z
+      outcome: unchanged
+      unchanged-because: The change only rewrites ADR-013's citation of DEC-002's knowledge split from D4 to point 4, the point this term already cites; the corpus, the seam through which agents find it, and the reviewers taking the project's rules from it alone are as the term says.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-081-decide-unasked-answers.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+    revalidated:
+      at: 2026-11-08T23:19:57Z
+      outcome: unchanged
+      unchanged-because: In DEC-002 point 1 the change rewrites only one locator, D3 to point 3, in the bullet on what docs-reviewer does not block on; point 1's rules on answers no change owes keep their words, so the docs-reviewer still checks each such answer, names it as advisory and blocks on one that does not hold, as the steps say.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T012936Z-26005889.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+    revalidated:
+      at: 2026-11-08T23:20:07Z
+      outcome: unchanged
+      unchanged-because: In DEC-002 point 1 the change rewrites only one locator, D3 to point 3, and in review-contributions.yaml it drops a label from a comment; the docs-reviewer still reads the change check's list, blocks on each answer that does not hold and names a changed target that leaves the change unmet as advisory, as the steps say.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001533Z-56aed0a4.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T004535Z-7b0f01ce.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T014227Z-338d7992.yaml
+      - 20261108T203336Z-317aab12.yaml
+    revalidated:
+      at: 2026-11-08T23:20:15Z
+      outcome: unchanged
+      unchanged-because: The guide cites DEC-002 point 1 for the docs reviewer checking a change's answers in project-kit; the change rewrites only one locator inside that point, D3 to point 3, so who checks the answers, and the sentence each updated document needs, are as the guide says.
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T151637Z-974a0d9a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+    revalidated:
+      at: 2026-11-08T23:20:23Z
+      outcome: unchanged
+      unchanged-because: In the four capability README sections this page anchors, the change rewrites only the DEC-002 citations D5, D3, D4 and D1 as points 5, 3, 4 and 1, and in DEC-002 and review-contributions.yaml only locators; what the page tells a user each reviewer judges, when it is required and what it blocks on still holds.

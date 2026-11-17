@@ -1,0 +1,394 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-merge-gate
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T130246Z-a00da651.yaml
+    revalidated:
+      at: 2026-11-09T00:43:48Z
+      outcome: unchanged
+      unchanged-because: "The merge gate is still the set of conditions a pull request meets before project-management lands it: each verdict it needs standing, its checks green, its issues' checkboxes ticked. The change alters only how done-work and DEC-028 judge whether a verdict that names no reviewed head stands, by when the head arrived on GitHub rather than by the head commit's dates, and makes the gate refuse on an unknown head rather than a dateless commit. The definition, the done-work example and the three distinctions state none of that, so each still holds."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-verdict
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+    revalidated:
+      at: 2026-11-09T00:43:57Z
+      outcome: unchanged
+      unchanged-because: "A verdict is still a reviewer agent's marked comment whose first line approves the change or requests changes, and its marker still names the head and base it reviewed. The change drops the commit-date helper from agent_verdicts.py, whose parsing of the line and marker stays as it was, and changes in verdict_freshness.py and DEC-028 only when a verdict naming no head stands: posted after the head arrived on GitHub, stale where that cannot be read. The definition, the example and the distinctions say nothing of freshness, so each still holds."
+  - artefact: tech-docs/analysis/project-management/domain-model/040-reviews-and-the-merge.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+    revalidated:
+      at: 2026-11-09T00:43:59Z
+      outcome: unchanged
+      unchanged-because: "The view's states still hold: an approval stands until the author changes something its reviewer checks, and a verdict whose base the pull request no longer stands on is stale. DEC-028's refinement only names when a verdict that names no head stands, after its head arrived on the host and stale where that arrival cannot be read, and the view describes no such verdict, so nothing in it changes."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+    revalidated:
+      at: 2026-11-09T00:44:09Z
+      outcome: unchanged
+      unchanged-because: The adopter still counts each pull request's review rounds from its verdicts, each naming the head reviewed. agent_verdicts.py reads that marker as before; the change only removes its commit-date helper, and DEC-028's refinement only says when a verdict naming no head stands, which the use case neither counts nor describes.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261107T130246Z-a00da651.yaml
+    revalidated:
+      at: 2026-11-09T00:47:01Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers made apart. f16023ec updated the requirement: its title says the move is asked for directly, it anchors move-issue, close-issue and done-work, and its Verified by names close-issue's held closes. a00da651 found it standing when done-work's CI gate narrowed what an empty rollup passes. This change has done-work judge a verdict naming no head by when its head arrived on GitHub, and refuse on an unknown head rather than a dateless commit. None of the three gives an authorisation or lifts a refusal, so a move a person holds is still made only on that person's authorisation, as the requirement and its tests say."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+    revalidated:
+      at: 2026-11-09T00:47:02Z
+      outcome: unchanged
+      unchanged-because: Judged with the three answers made apart. 9442a4b6 updated the use case to call a person's setting the refusal aside a bypass, in its actors and postconditions. a00da651 found it standing when done-work's CI gate narrowed, and 3c4c3246 when start-work's help came to name its refusals. This change touches only how done-work's merge gate judges a verdict naming no reviewed head, and which unknown head it refuses on. The start refused for a Task another instance owns, and the bypass a person makes with a recorded reason, stand with all four.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+    revalidated:
+      at: 2026-11-09T00:44:25Z
+      outcome: unchanged
+      unchanged-because: "Every step, variant and guarantee still holds. 6a and 13a still say a stale or missing verdict re-runs its reviewer or refuses the merge, and the guarantee that an approval stands only while nothing its reviewer checks changes is now kept for a verdict naming no head too: done-work, review-pr, pr_review.py and verdict_freshness.py judge it by when the head arrived on GitHub, never by the commit's dates, and hold it stale where the arrival cannot be read, as DEC-028's refinement says. agent_verdicts.py loses only its commit-date helper. The use case names no freshness anchor for such a verdict, so no sentence of it changes."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+    revalidated:
+      at: 2026-11-09T00:44:27Z
+      outcome: unchanged
+      unchanged-because: Step 6 keeps each verdict that still stands for the head, and the rules say a clean merge of the base keeps every verdict. DEC-028's refinement changes only when a verdict naming no head stands, after the head arrived on the host, so both statements still hold as written.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T234348Z-1f64d843.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+    revalidated:
+      at: 2026-11-09T00:47:11Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three answers made apart. 3d057b1b found the journey standing when land-work and review-work came to fetch a missing head one way, 9442a4b6 updated its need from UC-063 to name the batch plan, and a00da651 found it standing when the merge gate narrowed what it passes. This change narrows the gate again: a verdict naming no head stands only once posted after the head arrived on the host, as DEC-028's refinement says. The steps, the batch-plan need and the rule that nothing merges without a standing approval from each required reviewer hold with all four."
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+    revalidated:
+      at: 2026-11-09T00:47:13Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers made apart. e8754301 found the journey standing when UC-064 gained variant 12c, on a close over a topology that cannot be read in full, and b8b0a9c1 when UC-089 step 4 came to say the change check names no merge on an outdated base. This change removes only agent_verdicts.py's commit-date helper, its reading of the marker as before, and DEC-028's refinement only says when a verdict naming no head stands. The journey still needs each Task's pull request merged with each round's verdict naming its head, which holds with all three.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T012936Z-26005889.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+    revalidated:
+      at: 2026-11-09T00:45:01Z
+      outcome: unchanged
+      unchanged-because: The use case is about docs-reviewer checking a change's answers and giving its verdict; variant 7a still holds, since an edit of the description stales no verdict. DEC-028's refinement changes only when a verdict naming no head stands, after its head arrived on the host, which no step or variant describes.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261106T003428Z-6de85d99.yaml
+    revalidated:
+      at: 2026-11-09T00:44:48Z
+      outcome: unchanged
+      unchanged-because: "The use case cites DEC-028 for the finding tags: a blocking finding the agent fixes, and a finding marked for a person that waits for the merge authoriser. DEC-028's refinement touches only when a verdict naming no head stands, so neither statement moves."
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+    revalidated:
+      at: 2026-11-09T00:47:23Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two answers made apart. ee80c064 updated the page to cite software-engineering's DEC-002 by point numbers in place of D-labels, and 0faf9d00 found it standing when sync gained a warning for an agent's unmet hook need, which this page's agents do not declare. This change leaves DEC-028's rule for a verdict naming its head as it was: a floor reviewer's approval outlives commits after its reviewed head that change no code, and docs-reviewer's goes stale on any change, as the page says. The refinement only says when a verdict naming no head stands, posted after the head arrived on the host, which the page does not describe, so it holds with all three."
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T151637Z-974a0d9a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+    revalidated:
+      at: 2026-11-09T00:47:24Z
+      outcome: unchanged
+      unchanged-because: Judged with the two answers made apart. ee80c064 found the guide standing when DEC-002's citations in the sections it anchors came to name points by number, and 0faf9d00 when sync gained a warning for an agent's unmet hook need, which its agents do not declare. The guide says each required reviewer posts a verdict, the change merges once every one approves and the person authorises it, and an edit of the description stales no verdict. DEC-028's refinement only says when a verdict naming no head stands, posted after the head arrived on the host, which the guide does not describe, so it holds with all three.
+  - artefact: README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T230732Z-908440cd.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+    revalidated:
+      at: 2026-11-09T00:47:26Z
+      outcome: unchanged
+      unchanged-because: Judged with the four answers made apart, none of whose commits changed the README. 5bcef4af found it standing when the reference graph came to report a declared path the body never cites, 908440cd when a sync stopped adding a CLAUDE.md include already there, eb90ad27 when an upgrade's first rule set came to list only the rules new to the project, and 0faf9d00 when install and sync came to warn of an agent's unmet hook need. The README carries DEC-028 among its anchors, yet none of its statements says when a reviewer's verdict stands or what the merge gate reads. DEC-028's refinement only says a verdict naming no head stands once posted after the head arrived on the host, so the README holds with all five.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+    revalidated:
+      at: 2026-11-09T00:45:31Z
+      outcome: updated

@@ -78,3 +78,25 @@ slides:
             - "Plain at first, then "
             - {text: strong, style: strong}
             - ", both in the family's text."
+
+  - id: signs
+    layout: slide
+    title: Its concept's sign stands at the end of its head's row
+    visual:
+      use: starter/list
+      items:
+        - id: head
+          fill: tint
+          concept: test-notation/person
+          head: A head beside the sign breaks short of it
+          text: The sign keeps the end of the head's row.
+        - id: text
+          concept: test-notation/person
+          text: With no head, the sign ends the first line of the text, which breaks short of it, so the card grows no taller for it.
+        - id: runs
+          fill: tint
+          concept: test-notation/person
+          head: Runs
+          text:
+            - {text: A person, style: strong, concept: test-notation/person}
+            - " signs each run that names them."

@@ -1,0 +1,690 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T184836Z-d3d0aa8b.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261107T225725Z-d491b7e6.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T201011Z-bd16eac8.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T223833Z-3afa7580.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T083630Z-0f4529cb.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T144319Z-dd134ab5.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T200759Z-8c2bd4d1.yaml
+      - 20261110T200914Z-2e887a60.yaml
+      - 20261110T220739Z-00e08993.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+    revalidated:
+      at: 2026-11-11T09:07:17Z
+      outcome: unchanged
+      unchanged-because: "DEC-034's edits to the points this page rests on are not built yet: DEC-003 point 7 exempts a drawing from a status, DEC-022 point 3 adds that a brand's drawing writes its page's height in its own file and that a top with a physical size asks for a height through it, and DEC-009 takes a line that partially supersedes its points 7 and 9, whose text stands. No brand declares `draws` and no top `physical-size`, so What a release compares and The foundations state what the files and the release hold now. The Tasks under #2573 that build a drawing, a physical size and the release's reading of a brand's components write them here."
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T200020Z-29c3a865.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T161850Z-308ad562.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T200759Z-8c2bd4d1.yaml
+      - 20261110T200914Z-2e887a60.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+    revalidated:
+      at: 2026-11-11T09:07:19Z
+      outcome: unchanged
+      unchanged-because: "DEC-034's edits to the points this page rests on are not built yet: `:as` among a drawing's choices, its findings and the sources (DEC-005 points 1 and 5, DEC-021 point 7), a top's `physical-size`, the height it sets and its place on the scene's root (DEC-005 points 3 and 5, DEC-022 point 3), the ids kept under every drawing (DEC-005 point 5), a drawing with no status (DEC-003 point 7), and a brand's drawing that writes its page's height (DEC-022 point 3). DEC-009 takes a line that partially supersedes its points 7 and 9, and its points 1 and 5 read as they did. So A component's file, Switches, Layouts, What a scene holds, Trace ids and Sources state what a component and a scene hold now. The Tasks under #2573 write each here as they build it."
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T035615Z-a1d5b3e3.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T184836Z-d3d0aa8b.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T200020Z-29c3a865.yaml
+      - 20261109T201011Z-bd16eac8.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T223833Z-3afa7580.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T083630Z-0f4529cb.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T200759Z-8c2bd4d1.yaml
+      - 20261110T200914Z-2e887a60.yaml
+      - 20261110T220739Z-00e08993.yaml
+      - 20261110T221712Z-f1d0fca0.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+    revalidated:
+      at: 2026-11-11T09:07:21Z
+      outcome: unchanged
+      unchanged-because: "DEC-034's edits to DEC-005 points 5 and 9 and DEC-022 point 3 are not built yet: no top declares `physical-size`, no renderer declares whether its format has a physical page, and no brand's drawing writes a page's height. So the PDF renderer's Pages still state its mapping of each px as its declared unit, and Plugins and the HTML renderer's sections state what each renderer does now. The Task under #2573 of a top's physical size and the exports that map it writes them here."
+  - artefact: .pkit/capabilities/visual-communication/libraries/starter/README.md
+    read:
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T005759Z-29300bbe.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261110T144319Z-dd134ab5.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+    revalidated:
+      at: 2026-11-11T09:07:23Z
+      outcome: unchanged
+      unchanged-because: DEC-003 point 7 comes to exempt a drawing, a brand's component that declares `draws`, from a status (DEC-034 point 8). The starter is a component library and holds no drawing, so the status each of its components carries stands as this README states it.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-experimental
+    read:
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+    revalidated:
+      at: 2026-11-11T09:07:25Z
+      outcome: unchanged
+      unchanged-because: DEC-003 point 7 comes to exempt a drawing, a brand's component that declares `draws`, from a status (DEC-034 point 8). A library component that carries a status is still experimental until its library owner marks it ready, so the definition, its example and its distinction from proposed hold.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-owner
+    read:
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+    revalidated:
+      at: 2026-11-11T09:07:27Z
+      outcome: unchanged
+      unchanged-because: DEC-003 point 7 comes to exempt a drawing, a brand's component that declares `draws`, from a status (DEC-034 point 8). A library owner still numbers its library's states and marks each other component ready, so the definition and its example hold.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-stable
+    read:
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+    revalidated:
+      at: 2026-11-11T09:07:29Z
+      outcome: unchanged
+      unchanged-because: DEC-003 point 7 comes to exempt a drawing, a brand's component that declares `draws`, from a status (DEC-034 point 8). A library component its library owner marks stable still breaks only in a library version with a new major number, so the definition, its example and its distinctions hold.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-web-page
+    revalidated:
+      at: 2026-11-11T09:07:31Z
+      outcome: unchanged
+      unchanged-because: DEC-022 point 3 adds that a brand's drawing of a layout writes its page's height in its own file, and that a top with a physical size asks for a height through it. The foundations' site declares no physical size, and a web page is still as wide as the device it is drawn for and as tall as its content under any drawing, so the definition, its example and its distinctions hold.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-093-build-presentation.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+    revalidated:
+      at: 2026-11-11T09:07:33Z
+      outcome: unchanged
+      unchanged-because: DEC-003 point 7 comes to exempt a drawing, a brand's component that declares `draws`, from a status (DEC-034 point 8). Content never places a drawing, so the library components the developer chooses in step 3 still carry their status, and step 5 still names those that are experimental, so the use case holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-094-put-figure-in-page.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T024351Z-5424a227.yaml
+      - 20261106T024508Z-5f0b1c44.yaml
+      - 20261106T025530Z-6edd3f17.yaml
+      - 20261106T030639Z-cb240e44.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T131232Z-a68f64d0.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+    revalidated:
+      at: 2026-11-11T09:07:35Z
+      outcome: unchanged
+      unchanged-because: DEC-005 point 5 comes to say how a top declares a physical size and an export maps it, that the scene's root holds it, and that an instance keeps its id and what a field shows takes the field's name under every drawing. A diagram is still a page alone, and part of a page inside a slide, which variant 2a rests on, and a piece is still drawn in each mode it names, which step 3 rests on, so the use case holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+    revalidated:
+      at: 2026-11-11T09:07:37Z
+      outcome: unchanged
+      unchanged-because: DEC-005 point 1 comes to let a drawing of a layout choose by `:as`, and point 3 lets a top with a physical size ask for its height through it. A local component still says its parts as data, and repeats, lines up and sizes them by formulas of plain arithmetic, which steps 1 and 3 rest on, so the use case holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-103-improve-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T030639Z-cb240e44.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T131232Z-a68f64d0.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T09:07:39Z
+      outcome: unchanged
+      unchanged-because: DEC-003 point 7 comes to exempt a drawing, a brand's component that declares `draws`, from a status (DEC-034 point 8). A library component that content uses still carries one, so a stable one's break refused in variant 2a and an experimental one's warning in variant 2b hold, and so does the use case.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-107-use-brand-in-code.md
+    read:
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+    revalidated:
+      at: 2026-11-11T09:07:41Z
+      outcome: unchanged
+      unchanged-because: DEC-005 point 9 comes to add that a renderer declares whether its format has a physical page and whether it maps a top's physical size onto it. A code writer still declares the kinds of value it has a form for and reports what it lost in one form, which step 3 rests on, so the use case holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-110-add-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+    revalidated:
+      at: 2026-11-11T09:07:43Z
+      outcome: unchanged
+      unchanged-because: DEC-003 point 7 comes to exempt a drawing, a brand's component that declares `draws`, from a status (DEC-034 point 8). The library component this use case adds is one that content uses, which is experimental when first released and stable once its owner marks it, as steps 4 to 6 say, so the use case holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-099-draw-through-renderer.md
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+    revalidated:
+      at: 2026-11-11T09:07:45Z
+      outcome: unchanged
+      unchanged-because: DEC-005 point 9 comes to add that a renderer declares whether its format has a physical page and whether it maps a top's physical size onto it, reporting the loss where it has one and does not. A renderer still draws the same content and layouts and says what it could not draw as the piece asks, which steps 2 and 3 rest on, so the use case holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/030-draw-and-hand-out/UC-102-hand-out-pdf.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T222245Z-de38af02.yaml
+    revalidated:
+      at: 2026-11-11T09:07:47Z
+      outcome: unchanged
+      unchanged-because: DEC-005 point 5 comes to say that a top may declare a physical size, which a PDF export draws each page at by one scale, and that the scene's root holds it. A PDF still holds a page for each page of the piece, in order, one for each language, which step 2 rests on, so the use case holds.
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T061853Z-ad99d5f3.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T140220Z-88174d4e.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T200020Z-29c3a865.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T200759Z-8c2bd4d1.yaml
+      - 20261110T200914Z-2e887a60.yaml
+      - 20261110T220739Z-00e08993.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T224818Z-1aa347b2.yaml
+      - 20261111T022826Z-52fe4b1c.yaml
+    revalidated:
+      at: 2026-11-11T09:07:49Z
+      outcome: unchanged
+      unchanged-because: "DEC-034's edits to DEC-005 point 9, DEC-021 point 7 and DEC-022 point 3 are not built yet: no renderer declares a physical page, the check reads no `:as`, and no brand's drawing or physical size sets a page's height. So `size-switch` still refuses a switch by a marked name that reads no size axis, `:as` among them, `gets-less` still reports a page that asks for more height than its top, and `loss` still names what a renderer cannot draw, as the check does now. The Tasks under #2573 that build `:as`, a drawing and a physical size each add their findings here."

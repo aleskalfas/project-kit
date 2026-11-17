@@ -1,8 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  DEC-003 reads partially superseded by DEC-014, and DEC-003 and DEC-013
-  state in place what DEC-014 decides of them (#2618). The records design
-  ahead: the command that releases a project's own library, the fetch's full
-  read and the capability's own checks' full read land with the Tasks of
-  #2571, so no surface moves yet.

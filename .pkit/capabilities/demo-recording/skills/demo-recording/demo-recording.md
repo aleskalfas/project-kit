@@ -65,7 +65,7 @@ Halt if any is `proposed` or `superseded`.
 - **The format is generic; recording is one plugin** (per [demo-recording:DEC-002-three-layer-plugin-architecture]). The parser knows only steps + fenced blocks; the recording plugin owns the `boot`/`panes`/`narrate`/`shell`/… directive vocabulary. New backends register as additional plugins without touching the format.
 - **Surface via the CLI dispatch, not direct paths.** Prefer `pkit demo-recording record|run|validate …` over invoking `scripts/*.sh` by path. The dispatcher execs the bash leaves; the scripts self-resolve their siblings via `dirname "${BASH_SOURCE[0]}"`.
 - **Platform boundary** (per [demo-recording:DEC-004-platform-coupling-and-gate-placement]). The recording operations (record / windows / stop) require macOS + iTerm2 and refuse cleanly elsewhere; **validate and the authoring operations are platform-neutral** and run anywhere. The platform gate lives at the recording-plugin boundary, not the capability entry.
-- **`record.yaml`, storyboards, and hooks are adopter content.** The engine reads a bundle's `record.yaml` (modelled by the `record-config` schema); the bundle, its storyboards, and its hooks live in the adopter's tree, not the capability. See the README's adopter-vs-capability boundary.
+- **`record.yaml`, storyboards, and hooks are adopter content.** The engine reads a bundle's `record.yaml` (modelled by the `record-config` schema, `.pkit/capabilities/demo-recording/schemas/record-config.yaml`); the bundle, its storyboards, and its hooks live in the adopter's tree, not the capability. See the README's adopter-vs-capability boundary (`.pkit/capabilities/demo-recording/README.md`).
 
 ### Routing to the sub-procedure
 

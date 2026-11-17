@@ -54,7 +54,14 @@ def exports_with_copy(**fields: Any) -> dict[str, Any]:
 def test_each_kind_has_its_pair_and_the_shared_definitions_and_the_document_stand_alone() -> None:
     names = {path.name for path in SCHEMAS.iterdir()}
     wanted = {f"{kind}{suffix}" for kind in files.KINDS for suffix in (".yaml", ".schema.json")}
-    assert names == wanted | {"defs.schema.json", "values.schema.json", ".gitkeep"}
+    alone = {
+        "defs.schema.json",
+        "values.schema.json",
+        "values-2.schema.json",
+        "look-report.schema.json",
+        ".gitkeep",
+    }
+    assert names == wanted | alone
 
 
 @pytest.mark.parametrize("path", COMPANIONS, ids=lambda path: path.name)
@@ -137,6 +144,18 @@ def test_format_1_takes_no_other_state() -> None:
     assert refused(exports_in("retired"), "exports") != []
 
 
+@pytest.mark.parametrize("formats", [["html"], ["svg", "pdf", "html"], []])
+def test_format_1_takes_each_format_a_piece_exports_in(formats: list[str]) -> None:
+    """`html` came after the format's first release, an addition that leaves its number as
+    it is (DEC-003 point 1)."""
+    assert refused({**instance("piece"), "exports": formats}, "piece") == []
+
+
+@pytest.mark.parametrize("formats", [["png"], ["htm"], ["html", "html"]])
+def test_format_1_takes_no_other_format_and_each_once(formats: list[str]) -> None:
+    assert refused({**instance("piece"), "exports": formats}, "piece") != []
+
+
 def test_the_record_of_exports_may_name_the_version_handed_out() -> None:
     record = instance("exports")
     assert record["handed-out"] == 1
@@ -164,6 +183,7 @@ def test_the_record_of_exports_may_name_who_wrote_a_current_copy() -> None:
         "current-copy/flow.en.default.svg",
         "current-copy/flow.en.colour-scheme.dark.2.svg",
         "current-copy/flow.pt-br.default.pdf",
+        "current-copy/flow.en.colour-scheme.dark.html",
         "docs/images/flow.en.default.svg",
         "docs/flow.en.colour-scheme.dark.2.svg",
         "current-copy/nested/flow.en.default.svg",
@@ -178,6 +198,7 @@ def test_a_current_copys_file_lies_in_its_folder_or_at_a_place_with_no_number(pa
     [
         "flow.en.default.svg",
         "current-copy/flow.v1.en.default.svg",
+        "current-copy/flow.en.default.1.html",
         "current-copy/../flow.en.default.svg",
         "../docs/flow.en.default.svg",
         "/docs/flow.en.default.svg",
@@ -325,6 +346,85 @@ def test_an_input_may_name_the_fields_it_read_a_file_without() -> None:
 @pytest.mark.parametrize("location", [".pkit/x", "", ".", "../out", "/abs", "a//b", "a/.git"])
 def test_the_configuration_refuses_a_location_the_rules_refuse(location: str) -> None:
     assert refused({**instance("config"), "location": location}, "config") != []
+
+
+@pytest.mark.parametrize("browser", ["/opt/chromium/chrome", "~/browsers/chrome", "tools/chrome"])
+def test_the_configuration_takes_the_path_of_a_browser(browser: str) -> None:
+    assert refused({**instance("config"), "browser": browser}, "config") == []
+
+
+@pytest.mark.parametrize("browser", ["", 3, None, ["chrome"]])
+def test_the_configuration_refuses_a_browser_that_names_no_path(browser: object) -> None:
+    assert refused({**instance("config"), "browser": browser}, "config") != []
+
+
+@pytest.mark.parametrize(
+    "bar",
+    [
+        {"covers": ["COMM@1", "GRAPHIC@2"], "at-least": "professional"},
+        {"covers": ["RS-COMM-003@1"], "at-least": "excellent"},
+    ],
+)
+def test_the_configuration_takes_a_bar(bar: object) -> None:
+    assert refused({**instance("config"), "bar": bar}, "config") == []
+
+
+@pytest.mark.parametrize(
+    "bar",
+    [
+        {"covers": ["COMM@1"], "at-least": "competent"},
+        {"covers": ["COMM@1"], "at-least": "below competent"},
+        {"covers": ["COMM@1"], "at-least": "good"},
+        {"covers": ["COMM@1"]},
+        {"at-least": "professional"},
+        {"covers": [], "at-least": "professional"},
+        {"covers": ["COMM@1", "COMM@1"], "at-least": "professional"},
+        {"covers": ["COMM"], "at-least": "professional"},
+        {"covers": ["comm@1"], "at-least": "professional"},
+        {"covers": ["COMM@01"], "at-least": "professional"},
+        {"covers": ["RS-COMM@1"], "at-least": "professional"},
+        {"covers": "COMM@1", "at-least": "professional"},
+        {"covers": ["COMM@1"], "at-least": "professional", "rounds": 3},
+        [{"covers": ["COMM@1"], "at-least": "professional"}],
+        "professional",
+        None,
+    ],
+)
+def test_the_configuration_refuses_another_shape_of_bar_or_a_grade_below_professional(
+    bar: object,
+) -> None:
+    assert refused({**instance("config"), "bar": bar}, "config") != []
+
+
+def test_the_bounds_default_in_the_schema_is_five_rounds_to_the_bar_and_two_of_polish() -> None:
+    schema = json.loads((SCHEMAS / "config.schema.json").read_text(encoding="utf-8"))
+    bounds = schema["properties"]["bounds"]
+    assert bounds["default"] == {"to-the-bar": 5, "polish": 2}
+    assert bounds["properties"]["to-the-bar"]["default"] == 5
+    assert bounds["properties"]["polish"]["default"] == 2
+
+
+def test_the_bounds_are_no_part_of_the_bar() -> None:
+    bar = {"covers": ["COMM@1"], "at-least": "professional", "to-the-bar": 5}
+    assert refused({**instance("config"), "bar": bar}, "config") != []
+    assert refused({**instance("config"), "bounds": {"to-the-bar": 3, "polish": 0}}, "config") == []
+
+
+@pytest.mark.parametrize(
+    "bounds",
+    [
+        {"to-the-bar": 0},
+        {"to-the-bar": -1},
+        {"polish": -1},
+        {"polish": 1.5},
+        {"to-the-bar": "5"},
+        {"rounds": 5},
+        5,
+        None,
+    ],
+)
+def test_the_configuration_refuses_bounds_of_another_shape(bounds: object) -> None:
+    assert refused({**instance("config"), "bounds": bounds}, "config") != []
 
 
 @pytest.mark.parametrize(

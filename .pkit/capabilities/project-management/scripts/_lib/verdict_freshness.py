@@ -44,13 +44,16 @@ so a superseded verdict never counts however fresh it would be. Per verdict:
     reviewer never saw. When that cannot be read the verdict is stale; a
     marker naming no base skips the check.
   * **A verdict naming no head** is fresh when it was posted strictly after
-    the PR's latest commit, and stale otherwise — or when that commit's time
-    is unknown.
+    the PR's head arrived on the host (`_lib.head_arrival`), and stale
+    otherwise — or when that arrival cannot be read. The head commit's own
+    dates are never read: the committer's clock sets them, and a rebase or an
+    amend keeps them.
 
 Every outcome carries a one-line reason a consumer prints as it stands. The
-rule is pure logic: the author's changes and the base's history are read
-through injected callables, each computed at most once per reviewed head or
-base.
+rule is pure logic: the author's changes, the base's history and the head's
+arrival are read through injected callables, each computed at most once per
+reviewed head or base, the arrival at most once and only for a verdict that
+names no head.
 """
 
 from __future__ import annotations
@@ -59,9 +62,10 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 try:
-    from _lib.agent_verdicts import APPROVED, PATH_LOCAL, Verdict, latest_commit_timestamp
+    from _lib.agent_verdicts import APPROVED, PATH_LOCAL, Verdict
     from _lib.audit import short_sha
     from _lib.author_delta import AuthorDelta, BaseCheck
+    from _lib.head_arrival import ARRIVAL_VIEW_FIELDS, HeadArrival
     from _lib.required_reviewers import (
         DEFAULT_NOT_CODE,
         NotCode,
@@ -76,10 +80,10 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
         APPROVED,
         PATH_LOCAL,
         Verdict,
-        latest_commit_timestamp,
     )
     from audit import short_sha  # type: ignore[no-redef]
     from author_delta import AuthorDelta, BaseCheck  # type: ignore[no-redef]
+    from head_arrival import ARRIVAL_VIEW_FIELDS, HeadArrival  # type: ignore[no-redef]
     from required_reviewers import (  # type: ignore[no-redef]
         DEFAULT_NOT_CODE,
         NotCode,
@@ -93,7 +97,7 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
 
 # The `gh pr view --json` fields `rule_for_pr` reads; the consumers fetch them
 # with the comments, as `_lib.pr_review.REVIEW_VIEW_FIELDS`.
-PR_VIEW_FIELDS = ("commits", "headRefOid", "baseRefOid")
+PR_VIEW_FIELDS = ("commits", "headRefOid", "baseRefOid", *ARRIVAL_VIEW_FIELDS)
 
 # How many changed paths a reason names before counting the rest.
 _PATHS_NAMED = 5
@@ -122,6 +126,10 @@ BaseFn = Callable[[str], BaseCheck]
 RuledFn = Callable[[str, str], RuledAlteration]
 
 
+# `() -> HeadArrival`: when the PR's head arrived on the host.
+ArrivalFn = Callable[[], HeadArrival]
+
+
 def _no_delta(_since: str) -> AuthorDelta:
     return AuthorDelta(error="the pull request's head is unknown")
 
@@ -134,34 +142,40 @@ def _no_ruled(_start: str, _end: str) -> RuledAlteration:
     return RuledAlteration(error="no reader of the ruled artefacts a change altered was given")
 
 
+def _no_arrival() -> HeadArrival:
+    return HeadArrival(error="no reader of when the head arrived was given")
+
+
 class FreshnessRule:
     """The freshness rule for one PR at its current head.
 
-    Every argument defaults to its fail-closed value: no head, no commit
-    time, no base, no floor-scoped reviewer, and no way to read the author's
-    changes or the base's history — under which no verdict is fresh.
+    Every argument defaults to its fail-closed value: no head, no base, no
+    floor-scoped reviewer, and no way to read the author's changes, the
+    base's history or when the head arrived — under which no verdict is
+    fresh.
     """
 
     def __init__(
         self,
         *,
         head_sha: str = "",
-        head_timestamp: str = "",
         base_tip: str = "",
         floors_by_reviewer: Mapping[str, frozenset[str]] | None = None,
         not_code: NotCode = DEFAULT_NOT_CODE,
         delta_since: DeltaFn = _no_delta,
         base_kept: BaseFn = _no_base,
         ruled_since: RuledFn = _no_ruled,
+        head_arrival: ArrivalFn = _no_arrival,
     ) -> None:
         self._head_sha = head_sha
-        self._head_timestamp = head_timestamp
         self._base_tip = base_tip
         self._floors_by_reviewer = dict(floors_by_reviewer or {})
         self._not_code = not_code
         self._delta_since = delta_since
         self._base_kept = base_kept
         self._ruled_since = ruled_since
+        self._head_arrival = head_arrival
+        self._arrival: HeadArrival | None = None
         self._deltas: dict[str, AuthorDelta] = {}
         self._rulings: dict[str, tuple[str, ...] | _Unresolvable] = {}
         self._stretches: dict[tuple[str, str], RuledAlteration] = {}
@@ -173,7 +187,7 @@ class FreshnessRule:
 
     def assess(self, verdict: Verdict) -> Freshness:
         if not verdict.sha:
-            return self._by_commit_time(verdict)
+            return self._by_arrival(verdict)
         reviewed = short_sha(verdict.sha)
         base_moved = self._base_moved(verdict)
         if base_moved is not None:
@@ -220,14 +234,29 @@ class FreshnessRule:
             True, f"{changed} — reaches none of its floors ({', '.join(sorted(floors))})"
         )
 
-    def _by_commit_time(self, verdict: Verdict) -> Freshness:
-        if not self._head_timestamp:
+    def _by_arrival(self, verdict: Verdict) -> Freshness:
+        """A verdict naming no head stands only when it was posted after the
+        PR's head arrived on the host: the host's record, never the head
+        commit's own dates, which its committer's clock sets."""
+        if self._arrival is None:
+            self._arrival = self._head_arrival()
+        arrival = self._arrival
+        head = short_sha(self._head_sha)
+        if not arrival.ok:
             return Freshness(
-                False, "no reviewed head recorded; the latest commit's time is unknown"
+                False,
+                f"no reviewed head recorded; when the head {head} arrived cannot be read: "
+                f"{arrival.error or 'no time was recorded'}",
             )
-        if verdict.timestamp > self._head_timestamp:
-            return Freshness(True, "no reviewed head recorded; posted after the latest commit")
-        return Freshness(False, "no reviewed head recorded; posted before the latest commit")
+        if verdict.timestamp > arrival.timestamp:
+            return Freshness(
+                True, f"no reviewed head recorded; posted after the head {head} arrived"
+            )
+        return Freshness(
+            False,
+            f"no reviewed head recorded; posted before the head {head} arrived "
+            f"at {arrival.timestamp}",
+        )
 
     def _base_moved(self, verdict: Verdict) -> Freshness | None:
         """Why the verdict is stale because of its base, or None when its
@@ -333,6 +362,7 @@ def rule_for_pr(
     author_delta: Callable[..., AuthorDelta],
     base_kept: Callable[..., BaseCheck],
     ruled_altered: Callable[..., RuledAlteration] | None = None,
+    head_arrival: Callable[[Mapping, str], HeadArrival] | None = None,
 ) -> FreshnessRule:
     """The freshness rule for a PR, from its `gh pr view` payload.
 
@@ -340,16 +370,17 @@ def rule_for_pr(
     resolved required set: its floor-scoped reviewers and its not-code list
     decide what reaches a floor. A failed resolution names no floor-scoped
     reviewer, so every verdict goes stale on any change. `author_delta` and
-    `base_kept` are `_lib.author_delta`'s, and `ruled_altered` is
-    `_lib.ruled_artefacts`', passed by the consumer so its tests can stand
-    them in. Without `ruled_altered`, an approval scoped to
-    `touches-ruled-artefact` goes stale on any change.
+    `base_kept` are `_lib.author_delta`'s, `ruled_altered` is
+    `_lib.ruled_artefacts`', and `head_arrival` reads when the head arrived
+    (`_lib.head_arrival.read_head_arrival`, its `gh` wiring bound), each
+    passed by the consumer so its tests can stand them in. Without
+    `ruled_altered`, an approval scoped to `touches-ruled-artefact` goes stale
+    on any change; without `head_arrival`, a verdict naming no head is stale.
     """
     head = head_sha(pr_view)
     base_tip = str(pr_view.get("baseRefOid") or "")
     return FreshnessRule(
         head_sha=head,
-        head_timestamp=latest_commit_timestamp(pr_view.get("commits") or []),
         base_tip=base_tip,
         floors_by_reviewer=resolution.floors_by_reviewer,
         not_code=resolution.not_code,
@@ -358,6 +389,7 @@ def rule_for_pr(
         ruled_since=_no_ruled
         if ruled_altered is None
         else lambda start, end: ruled_altered(start, end),
+        head_arrival=_no_arrival if head_arrival is None else lambda: head_arrival(pr_view, head),
     )
 
 

@@ -1,0 +1,17 @@
+pkit_schema: visual-communication:piece
+schema_version: 1
+
+# A poster for a conference, the kind of piece the project adds (UC-104, step 3), drawn in
+# the test brand and exported as PDF at the poster's physical size.
+top: test-print/poster
+brand: test-brand
+languages: [en]
+audience: The capability's tests, which draw a kind of piece a project adds of its own.
+shown: In the capability's tests, as a printed poster.
+explains: false
+exports: [pdf]
+state: draft
+lock:
+  foundations: 1.1.0
+  test-brand: 1.1.0
+  test-print: 1.0.0

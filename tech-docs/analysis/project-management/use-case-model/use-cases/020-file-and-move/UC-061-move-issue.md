@@ -25,6 +25,15 @@ shortfalls:
   - at: "7a"
     issue: "#1215"
     record: project-management:DEC-007
+  - at: "5b"
+    issue: "#2305"
+    record: project-management:DEC-075
+  - at: "5d"
+    issue: "#2305"
+    record: project-management:DEC-075
+  - at: "5e"
+    issue: "#2305"
+    record: project-management:DEC-075
 pkit:
   friction:
     anchors:
@@ -44,6 +53,8 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/instance_claims.py
         - .pkit/capabilities/project-management/scripts/_lib/friction_answers.py
         - .pkit/capabilities/project-management/scripts/_lib/head_programs.py
+        - .pkit/capabilities/project-management/scripts/_lib/membership.py
+        - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
         - .pkit/capabilities/project-management/schemas/workflow.yaml
         - .pkit/capabilities/project-management/skills/pm/transition-state.md
       record:
@@ -57,6 +68,8 @@ pkit:
         - project-management:DEC-051#6
         - project-management:DEC-008
         - project-management:DEC-014
+        - project-management:DEC-021
+        - project-management:DEC-003
         - project-management:DEC-024
         - project-management:DEC-026
         - project-management:DEC-031
@@ -69,6 +82,7 @@ pkit:
         - project-management:DEC-067#1
         - project-management:DEC-067#3
         - project-management:DEC-067#4
+        - project-management:DEC-075
         - COR-004
         - COR-017
         - COR-021
@@ -93,6 +107,7 @@ pkit:
         - COR-028
         - PRJ-004
         - ADR-063
+        - ADR-074#1
       artefact:
         - REQ-040
         - REQ-041
@@ -120,7 +135,7 @@ pkit:
 **Main path:**
 
 1. The developer schedules the [issue](../../../glossary.md#term-issue--issue): `pkit pm promote-issue <N> --reason "<R>"`, with `--milestone <M>` where the [project](../../../../core/glossary.md#term-project--project) uses [Milestones](../../../glossary.md#term-milestone--milestone) ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and [DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
-2. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the project's prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+2. At its entry, the [system](../../../../core/glossary.md#term-system--system) checks the project's prerequisites, and that whoever runs the command is a member where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). Wherever GitHub names a user's account the command runs as, that account is whoever runs the command, not the person an agent works for. The system then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 3. The system checks that the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) declares the move from Todo to Backlog for the issue's type. It checks too that the issue's body holds no placeholder of its template (DEC-006 and [DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md)).
 4. Unless the project turns [audit comments](../../../glossary.md#term-audit-comment--audit-comment) off, the system posts the reason in an audit comment that names the move, before the move ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)). It then moves the issue to Backlog, and attaches the Milestone. Where the project keeps a [journal](../../../glossary.md#term-journal--journal), the move goes into it with its reason ([DEC-049](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 
@@ -136,27 +151,45 @@ pkit:
 
 **Variants:**
 
-- **1a.** The developer passes `--dry-run` to any of these commands. The [system](../../../../core/glossary.md#term-system--system) makes its checks, names each move it would make, and writes nothing ([COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md)). The use case ends.
+- **1a.** The developer passes `--dry-run` to any of these commands. The [system](../../../../core/glossary.md#term-system--system) makes its checks, names each move it would make and each [lifecycle hook](../../../glossary.md#term-lifecycle-hook--lifecycle-hook) that would run, and writes nothing ([COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md)). The use case ends.
 
 > [!WARNING]
-> **Not built yet:** the dry runs of `promote-issue`, `start-work` and `review-work` name neither the [cascade](../../../glossary.md#term-cascade--cascade)'s moves nor the hooks that would fire. That of `close-issue` lists no hook. COR-004 decides that a dry run names each edit a run would make, and #1938 tracks it.
+> **Not built yet:** the dry runs of `promote-issue`, `start-work` and `review-work` name neither the [cascade](../../../glossary.md#term-cascade--cascade)'s moves nor the lifecycle hooks that would run. That of `close-issue` lists no lifecycle hook. COR-004 decides that a dry run names each edit a run would make, and #1938 tracks it.
 
 - **1b.** The developer gives no reason. `promote-issue` refuses before it writes, and the use case ends ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
 - **1c.** The [issue](../../../glossary.md#term-issue--issue) is past Todo already. The system says so, and changes nothing (`promote-issue.py`).
-- **2a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, the developer is no member, or the operator declines a move in another repository. The system refuses and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)). The use case ends.
+- **2a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, whoever runs the command is no member, or the operator declines a move in another repository. The system refuses and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)). The use case ends.
 - **3a.** The [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) declares no such move for the issue's type, such as Review for an [EPIC](../../../glossary.md#term-epic--epic). The system refuses, naming the moves the issue lifecycle declares, and writes nothing ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). The use case ends.
 - **3b.** The issue's body still holds a placeholder of its template. The system refuses the move until the body is written ([DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md)). The use case ends.
 - **4a.** The project keeps a Projects v2 board, and its [substrate map](../../../glossary.md#term-substrate-map--substrate-map) carries the state off it. With each move, the system sets the card's Status to the issue's new state, and the cascade sets the Status of each issue above ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). A Status the system cannot write is one line, and the move stands. `pkit pm sync-board` sets the cards again from the issues' states.
 - **4b.** The project's substrate map binds the state to the board. The system reads where an open issue stands from its card's Status, and each move sets the Status, the cascade's included ([DEC-062 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#5-where-the-map-puts-state-on-the-board-the-boards-status-is-the-source-of-an-open-issues-position)). A Status the system cannot write leaves the move unmade, and nothing is journaled. A closed issue is Done whatever its card says.
 - **4c.** The board cannot be read, or the issue has no card, no Status, or a Status naming no open state. The command refuses, saying which of the four it is, and writes nothing ([DEC-051 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-051-axis-carriage-activation.md#6-a-board-carried-state-is-read-from-the-boards-status-and-never-guessed)). Nothing falls back to the labels or the [Milestone](../../../glossary.md#term-milestone--milestone). The use case ends.
+- **4d.** The issue moves after the system read where it stands, such as while the developer is asked to authorise the move. Just before the system writes anything, it reads again where the issue stands (`move-issue.py`). Where the issue stands elsewhere now, the system writes and [journals](../../../glossary.md#term-journal--journal) nothing, and says where the issue stands. The use case ends.
+- **4e.** The read the system makes just before it writes, as in variant 4d, cannot place the issue. The system refuses and writes nothing, as in variant 4c. The use case ends.
 - **5a.** A move of the cascade fails part-way. The system warns, and names the issues it did not move. Running the same move again finishes the cascade, since a move already made is not made twice ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
+- **5b.** The move schedules or starts the work, and GitHub or the board gives no reply to a read the cascade is planned on. A board that cannot be read, as in variant 4c, is one that gives no reply. After steps 2 and 3, the system refuses before it asks or writes anything, naming that read, and the use case ends ([DEC-075 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#1-a-move-that-schedules-or-starts-work-is-refused-where-a-first-read-gets-no-answer)). Run again once the read gets a reply, the command runs the cascade too, and a run that skips the cascade makes the move alone.
+
+> [!WARNING]
+> **Not built yet:** the system makes the move, and the cascade stops at that read, with a warning. `promote-issue` and `start-work` cannot skip the cascade. [DEC-075](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md) decides both, and #2305 tracks it.
+
+- **5c.** A read of an issue above gets no reply on a move variant 5b does not refuse, such as the move to Review. The move stands, and the cascade writes nothing to that issue or above it ([DEC-075 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#4-the-walk-goes-on-past-an-ancestor-left-and-where-it-ends)). The system warns, naming the read that got no reply. Running the same move again once the read gets a reply finishes the cascade, as in variant 5a.
+- **5d.** A read places an issue above in no state of the lifecycle, such as its card with no Status. The cascade leaves that issue where it stands, goes on past it, and warns of it (DEC-075 points [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#2-the-cascade-writes-to-an-ancestor-only-from-reads-made-after-the-move) and [4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#4-the-walk-goes-on-past-an-ancestor-left-and-where-it-ends)).
+
+> [!WARNING]
+> **Not built yet:** where the substrate map binds the state to the board, the cascade stops at such an issue. Where a label carries the state, the cascade passes the issue with no warning. [DEC-075](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md) decides that the cascade goes on past the issue and warns of it, and #2305 tracks it.
+
+- **5e.** An issue above moves, or the moved issue or an issue above changes or loses its parent, after the system planned the cascade. Just before the cascade writes to an issue above, the system reads that issue again, and writes from that read alone ([DEC-075 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#2-the-cascade-writes-to-an-ancestor-only-from-reads-made-after-the-move)). Where that read gets no reply, the cascade writes nothing to that issue above or higher, and warns. It does the same where an issue below changed or lost its parent.
+
+> [!WARNING]
+> **Not built yet:** the cascade writes from the read that planned it, unless the engine places the issue above elsewhere after the move. The cascade checks no parent again. [DEC-075](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md) decides both, and #2305 tracks it.
+
 - **6a.** The issue is assigned to someone else. `start-work` refuses, and changes nothing (`start-work.py`).
 - **6b.** The issue is still in Todo. `start-work` refuses, names the move to make first, and changes nothing (`composed_move.py`).
-- **1d.** While the issue is in Todo or Backlog, the developer decides that it will not be done: `pkit pm close-issue <N> --reason "<R>"`. The system checks each [checkbox](../../../glossary.md#term-checkbox--checkbox), then asks the developer at the terminal to authorise the close, or takes `--yes` as that [authorisation](../../../glossary.md#term-authorisation--authorisation) ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and [DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)). With no terminal and no `--yes`, the system refuses and writes nothing. Once the close is authorised, the system posts the reason, closes the issue as not planned and moves it to Done (DEC-006 and DEC-007).
+- **1d.** While the issue is in Todo or Backlog, the developer decides that it will not be done, and asks for a [won't-do close](../../../glossary.md#term-wont-do-close--wont-do-close): `pkit pm close-issue <N> --reason "<R>"`. The system checks each [checkbox](../../../glossary.md#term-checkbox--checkbox), then asks the developer at the terminal to authorise the close, or takes `--yes` as that [authorisation](../../../glossary.md#term-authorisation--authorisation) ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and [DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)). With no terminal and no `--yes`, the system refuses and writes nothing. Once the close is authorised, the system posts the reason, closes the issue as not planned and moves it to Done (DEC-006 and DEC-007).
 - **1e.** A checkbox of the issue is unticked. `close-issue` refuses, listing each one. The developer ticks it, having checked its claim, or removes it, and the path rejoins at variant 1d ([DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
 - **1f.** The issue closed is the last open child of its parent. The system asks the [process](../../../../core/glossary.md#term-process--process) engine whether the parent has an open child left, and says that the parent has none ([DEC-034](../../../../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)). A parent whose checkboxes are all ticked too is said to be eligible to close, with the command of variant 6c ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). That command asks the developer to authorise the close.
-- **1g.** The developer schedules a [Task](../../../glossary.md#term-task--task) into a Milestone in a [pool](../../../glossary.md#term-pool--pool) of workers, or moves it from one pool to another. The system asks the developer at the terminal, or takes `--yes` as that [consent](../../../../core/glossary.md#term-consent--consent), and with neither refuses and writes nothing ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). The [audit comment](../../../glossary.md#term-audit-comment--audit-comment) of step 4 records the consent. An `assign-milestone` hook that sets such a Milestone asks the same way.
-- **1h.** The issue is a Task whose work ends with no [pull request](../../../../core/glossary.md#term-pull-request--pull-request), such as an audit or a decision walked with the developer. The developer closes it as completed, naming where the result lives: `pkit pm close-issue <N> --mode=completed --result "<where>"`. The system checks that each checkbox is ticked, and asks for the authorisation as in variant 1d ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and [DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)). It then posts where the result lives, closes the Task as completed, moves it to Done and runs the cascade as in step 5.
+- **1g.** The developer schedules a [Task](../../../glossary.md#term-task--task) into a Milestone in a [pool](../../../glossary.md#term-pool--pool), or moves it from one pool to another. The system asks the developer at the terminal, or takes `--yes` as that [consent](../../../../core/glossary.md#term-consent--consent), and with neither refuses and writes nothing ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). The [audit comment](../../../glossary.md#term-audit-comment--audit-comment) of step 4 records the consent. A lifecycle hook of the kind `assign-milestone` that sets such a Milestone asks the same way.
+- **1h.** The issue is a Task whose work ends with no [pull request](../../../../core/glossary.md#term-pull-request--pull-request), such as an audit or a decision walked with the developer. The developer asks for a [completed close](../../../glossary.md#term-completed-close--completed-close), naming where the result lives: `pkit pm close-issue <N> --mode=completed --result "<where>"`. The system checks that each checkbox is ticked, and asks for the authorisation as in variant 1d ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and [DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)). It then posts where the result lives, closes the Task as completed, moves it to Done and runs the cascade as in step 5.
 - **1i.** The Task is in Review, with its pull request open, or a checkbox of it is unticked. `close-issue` refuses, naming the pull request's merge or each unticked checkbox, and writes nothing ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and [DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)). The use case ends.
 - **6c.** The issue is a parent issue with no open child, and the developer authorises its close: `pkit pm close-issue <N> --mode=cascade-eligibility-close`. The system checks the parent issue's checkboxes, and that it has no open child ([DEC-034](../../../../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)). The authorisation is the developer's yes at the terminal, or `--yes`, and with neither the system refuses and writes nothing ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). Once the close is authorised, the system closes the parent issue as completed (DEC-006 and DEC-034).
 - **6d.** The parent issue still has an open child, or an unticked checkbox. The system refuses, naming what holds it, and closes nothing ([DEC-034](../../../../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)).
@@ -166,6 +199,7 @@ pkit:
 - **6h.** The issue moved back is a parent issue with a child In Progress or in Review. The system refuses, naming each such child, and writes nothing ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). It refuses too where the children cannot all be told, such as an open child in another repository. The use case ends.
 - **6i.** The developer's clone cannot release the issue's owner: the clone is no [instance](../../../glossary.md#term-instance--instance), or a clone of another account made the ownership. The system refuses the move back, naming the owner, and writes nothing ([DEC-035 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#4-ownership-releases-when-the-work-ends-or-stops-and-transfers-on-reclaim)). The use case ends.
 - **6j.** The project's substrate map binds the state to the board. The system refuses the move back and writes nothing, releasing no ownership and journaling no move ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). The use case ends.
+- **6k.** The command runs as a user's account other than the developer's, such as one kept for a workflow. `start-work` assigns that account, not the developer. It refuses a Task assigned to the developer as one assigned to someone else, as in variant 6a ([DEC-021](../../../../../../.pkit/capabilities/project-management/decisions/DEC-021-team-membership-gate.md)).
 - **7a.** The developer moves the Task to Done directly: `pkit pm move-issue <N> --to done`. The system checks that each checkbox is ticked before it writes ([DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
 
 > [!WARNING]
@@ -173,7 +207,7 @@ pkit:
 
 - **7b.** The [change check](../../../../core/glossary.md#term-change-check--change-check) needs a program the [head](../../../../core/glossary.md#term-head--head) holds. The system cannot show that the head lies in the [base](../../../../core/glossary.md#term-base--base)'s own repository and holds no [builder agent](../../../glossary.md#term-builder-agent--builder-agent)'s commit ([DEC-067 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-067-heads-that-start-programs.md#1-a-head-on-the-bases-repository-may-start-programs)). So the system starts nothing the head holds, and asks the developer at a terminal to name the head for this run. With nobody there the system moves nothing and exits `2`, and `--force` moves on with a warning, starting nothing ([DEC-067 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-067-heads-that-start-programs.md#3-what-a-head-from-elsewhere-gets)).
 
-**Postconditions:** The [Task](../../../glossary.md#term-task--task) is in Review, its [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open, and each [issue](../../../glossary.md#term-issue--issue) above it is in In Progress or later. An issue closed as won't do is in Done, and so is a Task closed as completed without a pull request. An issue moved back is in Backlog or Todo.
+**Postconditions:** The [Task](../../../glossary.md#term-task--task) is in Review, and its [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open. Each [issue](../../../glossary.md#term-issue--issue) above the Task is in In Progress or later, except one the [cascade](../../../glossary.md#term-cascade--cascade) leaves behind, as in variants 5a and 5c to 5e. A [won't-do close](../../../glossary.md#term-wont-do-close--wont-do-close) leaves its issue in Done, and a [completed close](../../../glossary.md#term-completed-close--completed-close) leaves its Task there. An issue moved back is in Backlog or Todo.
 
 **Minimal guarantees:**
 

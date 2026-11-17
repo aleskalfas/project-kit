@@ -1,9 +1,11 @@
 """Harness support (COR-047 points 2 to 5; #1853): each adapter's support declaration,
 and the report of what the project's harness leaves unmet.
 
-- every shipped adapter answers every core harness requirement, and its declaration
-  passes its schema; the Claude Code adapter's version bound on the confined run is the
-  runner's tested range;
+- every shipped adapter answers every core harness requirement but those nobody has
+  measured on its harness yet, and its declaration passes its schema; the Claude Code
+  adapter's version bound on the confined run is the runner's tested range, and it answers
+  a session's agent withheld tools from the measurement and leaves a helper unanswered;
+  it answers that an ask reaches a person at a cost, for the version the trial measured;
 - each requirement resolves to exactly one of satisfied, unsatisfied or indeterminate.
   The pass reads files only, so it confirms nothing: silence, an answer for no version or
   for versions it cannot check, and a `supported` or `at-cost` answer are indeterminate,
@@ -50,6 +52,12 @@ INSIDE = Requirement("inside", "Seen from inside", "in-session")
 HOOKED = Requirement("hooked", "Seen at the hooks", "interposed-runtime")
 
 
+#: The requirements each shipped adapter leaves unanswered until someone measures them
+#: on its harness, so they read as indeterminate (COR-047 point 3): a helper's tools are
+#: visible only inside a session (ADR-085 point 3).
+UNANSWERED: dict[str, tuple[str, ...]] = {"claude-code": ("helper-withheld-tools",)}
+
+
 def _shipped_adapters() -> list[str]:
     return sorted(p.name for p in ADAPTERS.iterdir() if (p / "package.yaml").is_file())
 
@@ -71,7 +79,9 @@ def test_every_shipped_adapter_answers_every_core_requirement(adapter: str) -> N
     assert harness_support.shape_problems(REPO, adapter) == []
     document = harness_support.load_declaration(REPO, adapter)
     assert document is not None, f"{adapter} ships no {harness_support.DECLARATION}"
-    assert list(document["requirements"]) == [r.id for r in known]
+    unanswered = UNANSWERED.get(adapter, ())
+    assert list(document["requirements"]) == [r.id for r in known if r.id not in unanswered]
+    assert set(unanswered) <= {r.id for r in known}
 
 
 def test_the_shipped_schema_pair_validates() -> None:
@@ -116,6 +126,41 @@ def test_that_a_session_loads_the_rules_is_reported_indeterminate() -> None:
     (report,) = harness_support.report(REPO, ["claude-code"])
     (result,) = [r for r in report.results if r.requirement.id == "session-loads-rules"]
     assert result.result == harness_support.INDETERMINATE
+
+
+def test_a_session_agent_withheld_tools_is_answered_and_a_helper_left_indeterminate() -> None:
+    """Claude Code's answer for a session's agent rests on the 2.1.319 measurement, and
+    costs a withheld list of whole built-in tools; nobody has measured a helper, so it
+    reads indeterminate (ADR-085 point 3)."""
+    points = {r.id: r.observation_point for r in harness_support.requirements(REPO)}
+    assert points["session-agent-withheld-tools"] == "out-of-session"
+    assert points["helper-withheld-tools"] == "in-session"
+    document = harness_support.load_declaration(REPO, "claude-code")
+    assert document is not None
+    answer = document["requirements"]["session-agent-withheld-tools"]
+    assert (answer["grade"], answer["harness_versions"]) == ("at-cost", ["2.1.319", "2.1.319"])
+    assert "whole built-in tool" in answer["cost"]
+    assert "helper-withheld-tools" not in document["requirements"]
+    (report,) = harness_support.report(REPO, ["claude-code"])
+    (result,) = [r for r in report.results if r.requirement.id == "helper-withheld-tools"]
+    assert result.result == harness_support.INDETERMINATE
+    assert "no declaration" in result.reason
+
+
+def test_that_an_ask_reaches_a_person_is_answered_at_cost_for_the_version_measured() -> None:
+    """The requirement is observed only inside a session, where the answer arrives, and
+    only where the harness tells the session who gave it (COR-047 point 4). Claude Code's
+    answer rests on the trial on an agent host, bounded to the version it ran (ADR-091
+    point 6, #3004), so the report resolves it indeterminate."""
+    (requirement,) = [r for r in harness_support.requirements(REPO) if r.id == "ask-reaches-person"]
+    assert requirement.observation_point == "in-session"
+    document = harness_support.load_declaration(REPO, "claude-code")
+    assert document is not None
+    answer = document["requirements"]["ask-reaches-person"]
+    assert (answer["grade"], answer["harness_versions"]) == ("at-cost", ["2.1.321", "2.1.321"])
+    (report,) = harness_support.report(REPO, ["claude-code"])
+    (result,) = [r for r in report.results if r.requirement.id == "ask-reaches-person"]
+    assert (result.result, result.grade) == (INDETERMINATE, AT_COST)
 
 
 # --- resolution -------------------------------------------------------------------------
@@ -222,6 +267,41 @@ def _project(tmp_path: Path, declarations: dict[str, str | None]) -> Path:
         if text is not None:
             (folder / harness_support.DECLARATION).write_text(text, encoding="utf-8")
     return root
+
+
+@pytest.mark.parametrize(
+    ("answer", "achievable"),
+    [
+        ("grade: at-cost\n    cost: c\n    harness_versions: ['2.1.1', '2.1.2']", True),
+        ("grade: supported\n    harness_versions: unbounded", True),
+        ("grade: supported\n    harness_versions: []", False),
+        ("grade: not-achievable\n    harness_versions: unbounded", False),
+        (None, False),
+    ],
+)
+def test_an_answer_is_achievable_where_it_covers_a_version_and_is_not_not_achievable(
+    tmp_path: Path, answer: str | None, achievable: bool
+) -> None:
+    """What an adapter's declaration of tool access needs before it admits a withheld
+    entry (ADR-086 point 6)."""
+    answers = f"\n  outside:\n    {answer}\n    evidence: e\n" if answer else " {}\n"
+    root = _project(tmp_path, {"one": f"schema_version: 1\nrequirements:{answers}"})
+    assert harness_support.answers_achievable(root, "one", "outside") is achievable
+
+
+def test_an_adapter_with_no_support_declaration_answers_nothing_as_achievable(
+    tmp_path: Path,
+) -> None:
+    root = _project(tmp_path, {"one": None})
+    assert harness_support.answers_achievable(root, "one", "outside") is False
+
+
+def test_a_support_declaration_its_schema_refuses_cannot_answer_as_achievable(
+    tmp_path: Path,
+) -> None:
+    root = _project(tmp_path, {"one": "schema_version: 1\nrequirements:\n  outside: yes\n"})
+    with pytest.raises(harness_support.SupportError):
+        harness_support.answers_achievable(root, "one", "outside")
 
 
 def _run(root: Path, monkeypatch: pytest.MonkeyPatch, *args: str) -> Any:

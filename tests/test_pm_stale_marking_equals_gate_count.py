@@ -9,7 +9,8 @@ guard checks that it does, the way `test_pm_invoke_set_equals_gate_set`
 checks the invoke set: it drives each consumer's REAL path — `show-pr`'s
 `main()` with `--json`, `done-work`'s `_check_agent_gate`, and `review-pr`'s
 verdict read — against one stubbed world (the same comments, commits,
-closing issue, changed files, author changes and base history), and for
+closing issue, changed files, author changes, base history and the head's
+arrival on GitHub), and for
 every row of the table asserts:
 
   * per verdict: show-pr shows it stale ⇔ the gate did not count it (it is
@@ -84,9 +85,13 @@ REVIEWED = "a" * 40
 HEAD = "b" * 40
 BASE = "c" * 40
 ABANDONED_BASE = "d" * 40
+# When the head arrived on GitHub, by default the head commit's own date too.
 COMMIT_TS = "2026-06-05T00:00:00Z"
 BEFORE_THE_COMMIT = "2026-06-04T00:00:00Z"
 AFTER_THE_COMMIT = "2026-06-06T00:00:00Z"
+# A head commit dated before the verdicts and pushed after them.
+DATED_BEFORE_THE_VERDICT = "2026-06-01T00:00:00Z"
+PUSHED_AFTER_THE_VERDICT = "2026-06-07T00:00:00Z"
 
 PINNED = f"<!-- pkit-verdict sha={REVIEWED} base={BASE} -->"
 ON_THE_HEAD = f"<!-- pkit-verdict sha={HEAD} base={BASE} -->"
@@ -125,6 +130,10 @@ class World:
     changed_files: tuple[str, ...] = ("src/app.py", "README.md")
     not_code: list[str] | None = None
     docs_reviewer: bool = False
+    #: The head commit's own date, which no consumer reads for freshness.
+    committed: str = COMMIT_TS
+    #: When GitHub's activity says the head arrived; None when it cannot be read.
+    arrived: str | None = COMMIT_TS
 
 
 def _collection(rc, world: World):
@@ -172,9 +181,10 @@ def _pr_view(world: World) -> dict:
         "reviewRequests": [],
         "author": {"login": "author"},
         "comments": list(world.comments),
-        "commits": [{"oid": HEAD, "committedDate": COMMIT_TS}],
+        "commits": [{"oid": HEAD, "committedDate": world.committed}],
         "headRefOid": HEAD,
         "baseRefOid": BASE,
+        "headRepository": {"nameWithOwner": "o/r"},
     }
 
 
@@ -188,6 +198,13 @@ def _stub_world(modules, monkeypatch, rc, world: World) -> None:
             stdout = json.dumps({"closingIssuesReferences": [{"number": ISSUE}]})
         elif args[:2] == ["gh", "api"] and "/files" in joined:
             stdout = "".join(json.dumps([path, None]) + "\n" for path in world.changed_files)
+        elif args[:2] == ["gh", "api"] and args[2].startswith("repos/o/r/activity?"):
+            assert f"ref=refs%2Fheads%2Ffeat%2F{ISSUE}-a-change" in args[2]
+            if world.arrived is None:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=1, stdout="", stderr="HTTP 404: Not Found"
+                )
+            stdout = json.dumps([{"after": HEAD, "timestamp": world.arrived}])
         elif args[:3] == ["gh", "pr", "view"]:
             stdout = json.dumps(_pr_view(world))
         else:
@@ -283,7 +300,7 @@ _KNOWN_UNMARKED_DISAGREEMENT = pytest.mark.xfail(
     strict=True,
     reason=(
         "show-pr displays a verdict with no marker and judges it by the rule "
-        "alone (DEC-028, #593), so one posted after the latest commit is shown "
+        "alone (DEC-028, #593), so one posted after its head arrived is shown "
         "fresh though the gate never reads it — a read-surface decision, not "
         "the resolver wiring"
     ),
@@ -355,6 +372,29 @@ CASES = [
             stale={"pm-reviewer": True, "code-reviewer": True},
         ),
         id="marker-names-no-head-posted-before-the-commit",
+    ),
+    pytest.param(
+        World(
+            comments=(
+                _verdict("pm-reviewer", marker=NAMES_NO_HEAD, at=AFTER_THE_COMMIT),
+                _verdict("code-reviewer", marker=ON_THE_HEAD),
+            ),
+            committed=DATED_BEFORE_THE_VERDICT,
+            arrived=PUSHED_AFTER_THE_VERDICT,
+            stale={"pm-reviewer": True, "code-reviewer": False},
+        ),
+        id="marker-names-no-head-commit-dated-before-it-pushed-after-it",
+    ),
+    pytest.param(
+        World(
+            comments=(
+                _verdict("pm-reviewer", marker=NAMES_NO_HEAD, at=AFTER_THE_COMMIT),
+                _verdict("code-reviewer", marker=ON_THE_HEAD),
+            ),
+            arrived=None,
+            stale={"pm-reviewer": True, "code-reviewer": False},
+        ),
+        id="marker-names-no-head-arrival-unread",
     ),
     pytest.param(
         World(

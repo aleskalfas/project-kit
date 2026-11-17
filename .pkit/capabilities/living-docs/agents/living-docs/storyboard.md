@@ -183,7 +183,7 @@ The single approval gate of Scenario 3 is a turn the agent waits on. Booted as t
 
 ## Scenario 5: A fixer run a command started
 
-**Trigger.** A command of the project's work-tracking capability starts the agent as the fixer of pages, with a brief and nobody watching (project-management's DEC-056, point 3). It starts it on the artefacts of the types granted to it that the default branch left stale, the pages of type `living-docs:page` among them.
+**Trigger.** A command of the project's work-tracking capability starts the agent as the fixer of pages, with a brief, in a run nobody can answer during (project-management's DEC-056, point 3). It starts it on the artefacts of the types granted to it that the default branch left stale, the pages of type `living-docs:page` among them.
 
 **Preconditions.**
 

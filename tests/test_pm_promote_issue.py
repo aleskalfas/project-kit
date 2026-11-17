@@ -534,7 +534,7 @@ def test_main_reason_required_exits_nonzero(pi, monkeypatch) -> None:
 # the issue or attaches a milestone. The in-memory GitHub holds issue #42 with a
 # claim of instance 3, and this clone is instance 2.
 
-ME = SimpleNamespace(github_login="me", email="me@example.com")
+ME = SimpleNamespace(github_login="me", email="me@example.com", unresolved_cause=None)
 
 
 def _owned_by_instance_3(pi, monkeypatch) -> FakeGitHub:

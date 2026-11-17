@@ -98,12 +98,12 @@ def test_a_hyphen_inside_a_name_is_part_of_the_name() -> None:
 
 
 def test_a_formula_reads_the_engine_s_names() -> None:
-    parsed = formula.parse("=:width - :height + :index * :count")
+    parsed = formula.parse("=:width - :height + :index * :count * :place / :places")
 
     assert parsed.references() == tuple(Engine(name) for name in formula.ENGINE_NAMES)
-    assert (
-        refused("=:size")
-        == "the formula `=:size` names `:size`; the engine's names are :width :height :index :count"
+    assert refused("=:size") == (
+        "the formula `=:size` names `:size`; the engine's names are :width :height :index "
+        ":count :place :places"
     )
 
 

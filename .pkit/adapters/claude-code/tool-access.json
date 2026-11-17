@@ -1,0 +1,80 @@
+{
+  "$schema": "../../schemas/tool-access.schema.json",
+  "schema_version": 1,
+  "harness": "Claude Code",
+  "keys": {
+    "tools": "tools",
+    "withheld": "disallowedTools"
+  },
+  "name_forms": [
+    {
+      "pattern": "[A-Z][A-Za-z0-9]*",
+      "argument": true,
+      "description": "a built-in tool's name, such as `Read`"
+    },
+    {
+      "pattern": "mcp__[A-Za-z0-9_-]+",
+      "argument": false,
+      "description": "an MCP server's or tool's name, `mcp__<server>` or `mcp__<server>__<tool>`"
+    }
+  ],
+  "known_tools": [
+    "Agent",
+    "Artifact",
+    "AskUserQuestion",
+    "Bash",
+    "BashOutput",
+    "CronCreate",
+    "CronDelete",
+    "CronList",
+    "DesignSync",
+    "Edit",
+    "EnterPlanMode",
+    "EnterWorktree",
+    "ExitPlanMode",
+    "ExitWorktree",
+    "Glob",
+    "Grep",
+    "KillShell",
+    "LSP",
+    "ListAgents",
+    "ListMcpResourcesTool",
+    "Monitor",
+    "MultiEdit",
+    "NotebookEdit",
+    "PowerShell",
+    "PublishPlugin",
+    "PushNotification",
+    "Read",
+    "ReadMcpResourceTool",
+    "RemoteTrigger",
+    "ReportFindings",
+    "ScheduleWakeup",
+    "SendMessage",
+    "SendUserFile",
+    "ShareOnboardingGuide",
+    "Skill",
+    "Task",
+    "TaskCreate",
+    "TaskGet",
+    "TaskList",
+    "TaskOutput",
+    "TaskStop",
+    "TaskUpdate",
+    "TeamCreate",
+    "TeamDelete",
+    "TodoWrite",
+    "ToolSearch",
+    "WebFetch",
+    "WebSearch",
+    "Workflow",
+    "Write"
+  ],
+  "withheld_admits": [
+    {
+      "pattern": "[A-Z][A-Za-z0-9]*",
+      "argument": false,
+      "description": "a whole built-in tool, named without an argument"
+    }
+  ]
+}

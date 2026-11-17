@@ -1,0 +1,26 @@
+answers:
+  - artefact: tech-docs/analysis/core/domain-model/070-artefacts-and-friction.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+    revalidated:
+      at: 2026-11-10T22:43:34Z
+      outcome: unchanged
+      unchanged-because: "In this change, COR-017 now places installed capabilities' agents of one name: a capability counts while registered, the project's recorded choice wins, else the first by code points, and an uninstall removes no other place's agent. The view cites COR-017 only for what a component's package metadata declares and that a component ships it, which the change leaves as they were. Its closing list is as it was, since UC-027 no longer links the term place, so it holds."

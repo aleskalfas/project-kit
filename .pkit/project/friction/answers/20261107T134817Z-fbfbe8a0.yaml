@@ -1,0 +1,54 @@
+answers:
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T130246Z-a00da651.yaml
+    revalidated:
+      at: 2026-11-07T13:48:17Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T130246Z-a00da651.yaml
+    revalidated:
+      at: 2026-11-07T13:49:23Z
+      outcome: unchanged
+      unchanged-because: Judged with main's two answers made apart, 3d057b1b and a00da651. This change starts each reviewer of review-pr in the project's root, not the folder the command was run in; 3d057b1b moved the fetch of a missing commit into _lib/pr_head; a00da651 has the merge gate pass a head with no check reported only where the base requires none. UC-062 names neither the folder a reviewer starts in nor how a commit is fetched, and with all three step 13's 'must have passed' holds in more cases while step 4 and variant 4d stand, so the use case still holds.

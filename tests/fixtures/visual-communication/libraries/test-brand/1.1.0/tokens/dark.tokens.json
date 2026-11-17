@@ -1,0 +1,85 @@
+{
+  "$description": "The dark colour scheme: what each scheme paints with, redefined.",
+  "scheme": {
+    "$type": "color",
+    "paper": {
+      "$value": "{palette.night.900}"
+    },
+    "raised": {
+      "$value": "{palette.night.800}"
+    },
+    "ink": {
+      "$value": "{palette.night.50}"
+    },
+    "ink-soft": {
+      "$value": "{palette.night.400}"
+    },
+    "rule": {
+      "$value": "{palette.night.700}"
+    },
+    "accent": {
+      "$value": "{palette.blue.400}"
+    },
+    "strong-ink": {
+      "$value": "{palette.white}"
+    },
+    "strong-paper": {
+      "$value": "{palette.black}"
+    },
+    "blue": {
+      "fill": {
+        "$value": "{palette.blue.900}"
+      },
+      "line": {
+        "$value": "{palette.blue.400}"
+      },
+      "text": {
+        "$value": "{palette.blue.100}"
+      }
+    },
+    "green": {
+      "fill": {
+        "$value": "{palette.green.900}"
+      },
+      "line": {
+        "$value": "{palette.green.400}"
+      },
+      "text": {
+        "$value": "{palette.green.100}"
+      }
+    },
+    "orange": {
+      "fill": {
+        "$value": "{palette.orange.900}"
+      },
+      "line": {
+        "$value": "{palette.orange.400}"
+      },
+      "text": {
+        "$value": "{palette.orange.100}"
+      }
+    },
+    "purple": {
+      "fill": {
+        "$value": "{palette.purple.900}"
+      },
+      "line": {
+        "$value": "{palette.purple.400}"
+      },
+      "text": {
+        "$value": "{palette.purple.100}"
+      }
+    },
+    "red": {
+      "fill": {
+        "$value": "{palette.red.900}"
+      },
+      "line": {
+        "$value": "{palette.red.400}"
+      },
+      "text": {
+        "$value": "{palette.red.100}"
+      }
+    }
+  }
+}

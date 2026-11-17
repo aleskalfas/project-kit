@@ -36,7 +36,7 @@ pkit:
         - .pkit/process/connections.md#the-mandatory-mark
         - .pkit/process/connections.md#the-relations
         - .pkit/agents/README.md#write-carrying-categories
-        - .pkit/lifecycle/README.md#the-connection-documentation-and-friction-blocks
+        - .pkit/lifecycle/manifest.md#the-connection-documentation-and-friction-blocks
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#validate
@@ -202,7 +202,7 @@ Each check the stamp declares gets a script that fails until it is written ([Wri
 
 Connect a process to another capability's by the role that capability provides, so that the waiting definition never names it ([COR-053](../../.pkit/decisions/core/COR-053-connection-points.md)). The capability that offers the process provides the role, and the capability that waits couples to it. Three steps:
 
-1. **Provide a role, and offer the process under it.** In the offering capability's `package.yaml`, list the role under `connections.roles`, and list the process under `connections.extension-points.offers` ([the lifecycle reference, "The connection, documentation and friction blocks"](../../.pkit/lifecycle/README.md#the-connection-documentation-and-friction-blocks)).
+1. **Provide a role, and offer the process under it.** In the offering capability's `package.yaml`, list the role under `connections.roles`, and list the process under `connections.extension-points.offers` ([the lifecycle reference, "The connection, documentation and friction blocks"](../../.pkit/lifecycle/manifest.md#the-connection-documentation-and-friction-blocks)).
    - A role is named `<publisher>::<role>`, with your own name as the publisher.
    - An offer is keyed `<publisher>::<role>:<point>`, and takes `kind: process`, `process: <id>`, `schema_version` and a `description`, as the fence below shows.
    - Where the definition declares an `interface.version`, the offer's `schema_version` equals it ([the connections page, "The interface version"](../../.pkit/process/connections.md#the-interface-version)).

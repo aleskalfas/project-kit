@@ -1,12 +1,16 @@
-"""How project-management starts an agent with nobody watching (ADR-066 point 1).
+"""How project-management starts an agent through the backbone (ADR-066 point 1).
 
 A capability never calls a harness, and never looks for an adapter. It asks the
 backbone's run command, `pkit agents run`, which starts the runner the
 project's adapter registers, and the runner starts the harness. This module is
-the one place project-management asks: `review-pr` starts its reviewers
-through it (`run_agent`, the unconfined form), and `fix-drift` starts the
-granted fixers through it (`run_confined`, the confined form: a clone at a
-pinned commit, under the rules `permissions/runs.yaml` declares).
+the one place project-management asks. `review-pr` starts its reviewers
+through it (`run_agent`, the unconfined form), and so does `fix-drift` each
+fixer a person watches, in a working copy of its own (DEC-069 point 2).
+`run_confined` is the confined form, which every fixer's run takes, watched
+or not, once it is built and the harness holds it: a clone at a pinned
+commit, under the rules `permissions/runs.yaml` declares. The drift command
+starts no confined run yet, and a run nobody watches waits for that form or
+the project's switch (DEC-069 points 2 and 4).
 
 The command reads the brief on standard input and writes one JSON document, a
 version this module reads (`VERSION`): how the run ended, the harness's exit,
@@ -109,11 +113,17 @@ def run_agent(
     folder: Path,
     limit_seconds: int,
     effort: str | None = None,
+    local_settings: bool = False,
 ) -> AgentRun:
     """Run agent `name` once on `brief`, in `folder`, within `limit_seconds`, at
-    `effort` where one is set. Never raises for what the run did: every ending
-    is in the answer. An interrupt stops the run, then propagates."""
+    `effort` where one is set. With `local_settings`, the runner first carries
+    the person's local settings into `folder` from the checkout `pkit` runs in
+    (ADR-066 point 10); which file holds them is the adapter's to know. Never
+    raises for what the run did: every ending is in the answer. An interrupt
+    stops the run, then propagates."""
     argv = [*ARGV, "--folder", str(folder), "--limit", str(limit_seconds)]
+    if local_settings:
+        argv.append("--local-settings")
     return _run(name, brief, argv, limit_seconds=limit_seconds, effort=effort)
 
 
@@ -213,7 +223,7 @@ def _read(command: str, returncode: int, stdout: str, stderr: str) -> AgentRun:
 def _from_document(document: Mapping[str, Any]) -> tuple[AgentRun | None, str]:
     """The run the document states, or None and what is wrong with it."""
     version = document.get("schema_version")
-    if version != VERSION or isinstance(version, bool):
+    if type(version) is not int or version != VERSION:
         return None, f"schema_version {version!r}; pm reads {VERSION}"
     ending = document.get("ending")
     if ending not in ENDINGS:
@@ -223,9 +233,13 @@ def _from_document(document: Mapping[str, Any]) -> tuple[AgentRun | None, str]:
         return None, f"an exit_code that is not an integer, {exit_code!r}"
     if ending == FINISHED and exit_code is None:
         return None, "a finished run with no exit_code"
+    if "exit_code" not in document:
+        return None, "no exit_code"
     texts: dict[str, str] = {}
     for key in ("output", "diagnostics", "reason"):
-        value = document.get(key, "")
+        if key not in document:
+            return None, f"no {key}"
+        value = document[key]
         if not isinstance(value, str):
             return None, f"a {key} that is not a string"
         texts[key] = value
@@ -237,40 +251,57 @@ def _from_document(document: Mapping[str, Any]) -> tuple[AgentRun | None, str]:
 
 def _confined_keys(document: Mapping[str, Any]) -> dict[str, Any] | str:
     """A confined run's keys, which a backbone adds to its document (ADR-066
-    point 2): absent, an unconfined run's. A null check is a run refused before
-    its clone was made, so nothing was checked. A check that cannot be read is
-    read as a breach, so the run's files are set aside."""
-    if not document.get("confined"):
+    point 2), and none for an unconfined run's. A null check is a run refused
+    before its clone was made, so nothing was checked. A check that cannot be
+    read, missing included, is read as a breach, so the run's files are set aside
+    (ADR-097 point 3): never as a clean clone."""
+    confined = document.get("confined")
+    if not isinstance(confined, bool):
+        return "no confined that is true or false"
+    if not confined:
         return {}
-    check = document.get("check")
+    check = document.get("check", _UNREAD)
     verdict, changes = BREACH, ("the backbone's check of the clone cannot be read",)
     if check is None:
         verdict, changes = NOT_RUN, ()
     elif isinstance(check, Mapping) and check.get("verdict") in (CLEAN, BREACH, NOT_RUN):
-        verdict = str(check["verdict"])
-        raw = check.get("changes") or []
-        changes = tuple(str(c) for c in raw) if isinstance(raw, list) else changes
-    files = document.get("files")
+        raw = check.get("changes")
+        if isinstance(raw, list) and all(isinstance(c, str) for c in raw):
+            verdict, changes = str(check["verdict"]), tuple(raw)
+    if "files" not in document:
+        return "a confined run with no files"
+    files = document["files"]
     if files is not None and not isinstance(files, str):
         return "a files that is not a path"
-    refused = document.get("refused_calls") or []
-    excluded = document.get("excluded") or []
+    refused = document.get("refused_calls")
+    excluded = document.get("excluded")
     if not isinstance(refused, list) or not isinstance(excluded, list):
-        return "refused_calls or excluded that is not a list"
+        return "no refused_calls or excluded that is a list"
+    calls = tuple(_call(c) for c in refused)
+    if None in calls:
+        return "a refused call that does not give its tool and input"
     return {
         "check": verdict,
         "changes": changes,
         "files": files,
-        "refused_calls": tuple(_call(c) for c in refused),
+        "refused_calls": calls,
         "excluded": tuple(" ".join(e) if isinstance(e, list) else str(e) for e in excluded),
     }
 
 
-def _call(value: Any) -> str:
-    """A refused call as one line: its tool and what it was called with."""
-    if isinstance(value, Mapping):
-        return f"{value.get('tool', '?')}: {value.get('input', '')}".strip()
-    return str(value)
+#: A key the document does not give, told from one it gives as null.
+_UNREAD = object()
+
+
+def _call(value: Any) -> str | None:
+    """A refused call as one line, its tool and what it was called with, or None
+    where it does not give both as text (ADR-097 point 3)."""
+    if not isinstance(value, Mapping):
+        return None
+    tool, given = value.get("tool"), value.get("input")
+    if not isinstance(tool, str) or not isinstance(given, str):
+        return None
+    return f"{tool}: {given}".strip()
 
 
 def _stop(process: subprocess.Popen[bytes]) -> None:

@@ -233,6 +233,41 @@ def test_each_answer_reads_as_one_phrase(pr: dict[str, Any], described: str) -> 
     assert landing.read(496, gh=_gh([pr])).describe() == described
 
 
+def _entries(*at: tuple[int, int]) -> dict[str, Any]:
+    """A queue of `(position, number)` entries, in the order given."""
+    nodes = [{"position": p, "pullRequest": {"number": n}} for p, n in at]
+    return {"configuration": {"mergeMethod": "SQUASH"}, "entries": {"nodes": nodes}}
+
+
+@pytest.mark.parametrize(
+    ("pr", "ahead"),
+    [
+        ({**_QUEUED, "mergeQueue": _entries((3, 9), (1, 7), (2, 496))}, (7,)),
+        ({**_OUT, "mergeQueue": _entries((2, 8), (1, 7))}, (7, 8)),
+        ({**_OUT, "mergeQueue": _entries()}, ()),
+        (_OUT, ()),
+        (_NO_QUEUE, ()),
+        ({**_OUT, "mergeQueue": _entries((1, 7)) | {"entries": {"nodes": [{"position": 1}]}}}, ()),
+    ],
+    ids=["queued-second", "out-of-the-queue", "empty-queue", "entries-unread", "no-queue", "no-pr"],
+)
+def test_the_reading_names_the_prs_ahead_in_the_queue_first_first(
+    pr: dict[str, Any], ahead: tuple[int, ...]
+) -> None:
+    """Those at a lower position than the PR's, or every entry where it is
+    in none; an entry naming no PR is none — and in the reading's document."""
+    reading = landing.read(42, gh=_gh([pr]))
+    assert reading.ahead == ahead
+    assert reading.as_json()["ahead"] == list(ahead)
+
+
+def test_the_reading_holds_the_body_and_keeps_it_out_of_its_document() -> None:
+    reading = landing.read(42, gh=_gh([{**_OUT, "body": "Closes #7"}]))
+    assert reading.body == "Closes #7"
+    assert "body" not in reading.as_json()
+    assert landing.read(42, gh=_gh([_OUT])).body == ""
+
+
 def test_a_base_without_a_queue_reads_as_none() -> None:
     reading = landing.read(496, gh=_gh([_NO_QUEUE]))
     assert not reading.has_queue
@@ -417,6 +452,35 @@ def test_the_squash_merge_takes_the_subject_and_pins_the_head_without_deleting(
             "--squash",
             "--subject",
             "chore(release): v1.2.0",
+            "--match-head-commit",
+            "a" * 40,
+        ]
+    ]
+
+
+@pytest.mark.parametrize(
+    "body", ["Closes #7\n\nRelease-plan-commit: x\n", ""], ids=["a-body", "empty"]
+)
+def test_the_squash_merge_carries_a_body_given_it_the_empty_one_among_them(
+    here: dict[str, Any], acting: Callable[[landing.GhRunner], None], body: str
+) -> None:
+    """A body given is the commit's body as it is, an empty one too, which
+    `gh` would otherwise compose from its squash-commit default (ADR-061
+    point 8)."""
+    calls: list[list[str]] = []
+    acting(_gh([_NO_QUEUE], calls))
+    landing.squash_merge(42, subject="fix: x", body=body, head_oid="a" * 40, **here)
+    assert calls == [
+        [
+            "gh",
+            "pr",
+            "merge",
+            "42",
+            "--squash",
+            "--subject",
+            "fix: x",
+            "--body",
+            body,
             "--match-head-commit",
             "a" * 40,
         ]

@@ -213,7 +213,7 @@ def _patch_gate_checks(bf, monkeypatch, *, auth_ok=True, repo_ok=True, map_ok=Tr
 
     class _FakePreCheck:
         @staticmethod
-        def _check_gh_auth():
+        def _check_gh_auth(_config):
             return _Check("gh auth", "ok" if auth_ok else "fail", "auth")
 
         @staticmethod

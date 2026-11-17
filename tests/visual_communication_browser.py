@@ -7,8 +7,20 @@ needs a browser, and a test can have it answer, hang, die or plant a fault.
 **The plan.** `stand_in` writes a program and its plan, a JSON file that says what the program
 does. It holds a document for each file the module opens, by file name, as `READ` gives it, and
 each span adds what only a browser could learn: `fonts`, as `CSS.getPlatformFontsForNode`
-answers, and `ink`, the grounds on which the span changes the picture. `requests` are what the
-document asks for. A `fault` names a method, and the document it strikes in, if any.
+answers, `ink`, the grounds on which the span changes the picture, with `ink-when` giving
+other grounds under a reader's signal set to a value, keyed `signal:value`, and `lost`, the
+share of its strong ink each cause loses, by cause, `cut` or `covered`, with `lost-when` as
+`ink-when`. `requests` are what the document asks for. A `fault` names a method, and the
+document it strikes in, if any.
+
+**The signals.** What `Emulation.setEmulatedMedia` set shows in every picture it takes, so a
+page repaints as its signals change; under `repaints: false`, no picture shows them. The
+colours a forced palette gives the planted file follow the scheme set: `colours`, by scheme,
+names others.
+
+**What the page shows of a span.** Each span the module asks it to tally holds `STRONG` device
+pixels of strong ink, and loses to each cause its `lost` share of them, whatever the pictures
+it was handed.
 
 **What it leaves.** Each line of the log it writes is a JSON message, its flags and its process
 first.
@@ -39,6 +51,15 @@ VERSION = "Chrome/1.2.3"
 
 #: What a span of a face in the file answers.
 HELD_FONT = {"familyName": "Held", "isCustomFont": True, "glyphCount": 4}
+
+#: How many device pixels of strong ink each span holds, where the module tallies it.
+STRONG = 10_000
+
+#: The ground and the text colour each scheme's forced palette gives, as a browser computes them.
+COLOURS = {
+    "light": {"ground": "rgb(255, 255, 255)", "text": "rgb(0, 0, 0)"},
+    "dark": {"ground": "rgb(0, 0, 0)", "text": "rgb(255, 255, 255)"},
+}
 
 
 def stand_in(folder: Path, plan: Mapping[str, Any]) -> Path:
@@ -86,8 +107,11 @@ class _Browser:
         self.document = ""
         self.ground = ""
         self.alone: int | None = None
+        self.styles: dict[str, str] = {}
+        self.measured: list[int] = []
         self.held: set[str] = set()
         self.loader = 0
+        self.media: dict[str, str] = {}
 
     def log(self, message: Mapping[str, Any]) -> None:
         with open(self.plan["log"], "a", encoding="utf-8") as log:
@@ -122,6 +146,9 @@ class _Browser:
         method, params = message["method"], message.get("params", {})
         if method == "Page.navigate":
             self.document = params["url"].rsplit("/", 1)[-1]
+            self.ground, self.alone, self.styles, self.measured = "", None, {}, []
+        if method == "Emulation.setEmulatedMedia":
+            self.media = {each["name"]: each["value"] for each in params.get("features", [])}
         if self.strikes(method):
             self.strike(message)
             return
@@ -211,11 +238,48 @@ class _Browser:
     def ran(self, name: str, arguments: Sequence[Any]) -> Any:
         if name == "read":
             return self.plan["documents"][self.document]["pages"]
+        if name == "colours":
+            scheme = self.media.get("prefers-color-scheme", "light")
+            return self.plan.get("colours", COLOURS)[scheme]
+        if name == "tally":
+            return [self.tallied(asked["index"]) for asked in arguments[2]]
         if name == "ground":
             self.ground = arguments[1]
         elif name == "alone":
             self.alone = arguments[1] if arguments[3] else None
+        elif name == "style":
+            self.styles[arguments[0]] = arguments[1]
+        elif name == "marked":
+            self.measured = list(arguments[2])
+        elif name == "unground":
+            self.ground, self.alone, self.measured = "", None, []
+            for each in arguments[0]:
+                self.styles.pop(each, None)
         return None
+
+    def tallied(self, index: int) -> dict[str, int]:
+        """What the module's tally gives of the span of `index`: its strong ink, and how much of
+        it lies past its page's edge and hidden on its page, under the signals set."""
+        span = next(each for each in self.spans() if each["index"] == index)
+        lost = self.when(span, "lost", {})
+        return {
+            "strong": STRONG,
+            "past": round(lost.get("cut", 0) * STRONG),
+            "hidden": round(lost.get("covered", 0) * STRONG),
+        }
+
+    def ink(self, span: Mapping[str, Any]) -> Sequence[str]:
+        """The grounds on which `span` changes the picture, under the signals set."""
+        return self.when(span, "ink", ())
+
+    def when(self, span: Mapping[str, Any], field: str, otherwise: Any) -> Any:
+        """The span's `field` under the signals set: as its `<field>-when` gives it under a
+        signal set to a value, keyed `signal:value`, or else as it stands."""
+        for held, value in span.get(f"{field}-when", {}).items():
+            signal, _, wanted = held.partition(":")
+            if self.media.get(signal) == wanted:
+                return value
+        return span.get(field, otherwise)
 
     def picture(self, clip: Mapping[str, float]) -> bytes:
         """A PNG's header, the size of `clip`, then what shows in it: a span alone adds to its
@@ -223,10 +287,11 @@ class _Browser:
         shown = None
         if self.alone is not None:
             span = next(each for each in self.spans() if each["index"] == self.alone)
-            shown = self.alone if self.ground in span.get("ink", ()) else None
+            shown = self.alone if self.ground in self.ink(span) else None
         width, height = round(clip["width"] * 2), round(clip["height"] * 2)
         header = b"\x89PNG\r\n\x1a\n" + b"\0\0\0\rIHDR" + struct.pack(">II", width, height)
-        return header + json.dumps([self.document, self.ground, clip, shown]).encode()
+        media = self.media if self.plan.get("repaints", True) else {}
+        return header + json.dumps([self.document, self.ground, clip, shown, media]).encode()
 
 
 def main() -> None:

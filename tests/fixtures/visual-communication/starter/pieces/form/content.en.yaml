@@ -1,0 +1,24 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: full
+    layout: standard
+    main:
+      use: starter/form
+      head: Ask for a review
+      fields:
+        - {id: name, label: Your name, value: Ada Lovelace}
+        - {id: what, label: What to review, value: The decision on releases}
+      buttons:
+        - {id: send, label: Send the request}
+        - {id: cancel, label: Cancel}
+
+  - id: bare
+    layout: standard
+    main:
+      use: starter/form
+      fields:
+        - {id: search, label: Search the guide}
+      buttons:
+        - {id: search, label: Search}

@@ -1059,23 +1059,27 @@ def test_refs_find_nothing_in_the_agent_folder() -> None:
     assert (agent.kind, agent.capability) == ("agent", "software-analysis")
 
 
-def _deploy_marker() -> str:
-    script = (ADAPTER / "deploy-agents.sh").read_text(encoding="utf-8")
-    match = re.search(r'^MARKER="(.+)"$', script, flags=re.MULTILINE)
-    assert match, "deploy-agents.sh no longer declares MARKER"
-    return match.group(1)
-
-
 def test_the_deployed_copy_matches_the_source() -> None:
+    """What the deploy would write from the source today is what is committed: the
+    resolver's text, with the mark the deploy has it write for the capability's
+    definition (ADR-087 point 4)."""
     completed = subprocess.run(
-        [sys.executable, str(ADAPTER / "_resolve_agent.py"), str(AGENT), AGENT.stem, str(OVERLAY)],
+        [
+            sys.executable,
+            str(ADAPTER / "_resolve_agent.py"),
+            str(AGENT),
+            AGENT.stem,
+            str(OVERLAY),
+            "--mark",
+            "capability:software-analysis",
+        ],
+        cwd=REPO,
         capture_output=True,
         text=True,
         check=False,
     )
     assert completed.returncode == 0, completed.stderr
-    first, rest = completed.stdout.split("\n", 1)
-    assert DEPLOYED.read_text(encoding="utf-8") == f"{first}\n{_deploy_marker()}\n{rest}", (
+    assert DEPLOYED.read_text(encoding="utf-8") == completed.stdout, (
         "stale deployed copy: run `bash .pkit/adapters/claude-code/deploy-agents.sh`"
     )
     front, _body = _split(DEPLOYED)

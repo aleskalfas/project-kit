@@ -9,10 +9,12 @@ import click
 import pytest
 from click.testing import CliRunner
 
+from project_kit import agent_definitions
 from project_kit import capabilities as caps
 from project_kit import install as install_mod
 from project_kit.cli import main
 from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
     ComponentManifest,
@@ -26,6 +28,7 @@ from project_kit.manifest import (
     write_component_manifest,
 )
 from tests.adopter_repo import GitRepo, MakeAdopterRepo
+from tests.agent_definitions_support import stage_picker
 from tests.shipped_rule_sets import own
 
 # The version an installed fixture records: the real source kit's.
@@ -136,6 +139,9 @@ def kit_source(tmp_path_factory: pytest.TempPathFactory) -> Path:
     source = tmp_path_factory.mktemp("kit-source")
     (source / "decisions").mkdir()
     (source / "VERSION").write_text(f"{_PROJECTS_VERSION}\n", encoding="utf-8")
+    # The picker and the records' reader, which a command that changes what is
+    # installed loads from the release it brings (ADR-087 point 2).
+    stage_picker(source)
     return source
 
 
@@ -913,6 +919,32 @@ def test_detect_no_collisions_when_clean(kit_target: Path, kit_source: Path) -> 
     assert findings == []
 
 
+def test_detect_collisions_reads_the_folder_form_on_both_sides(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A skill or an agent is a file `<name>.md` or a folder `<name>/` holding it
+    (COR-015): the capability's, the project's and another installed capability's
+    (#2470)."""
+    cap_dir = _stage_capability_in_source(kit_source, "evidence")
+    for area, name in (("skills", "fold"), ("agents", "keeper")):
+        (cap_dir / area / name).mkdir(parents=True)
+        (cap_dir / area / name / f"{name}.md").write_text(f"# {name}\n", encoding="utf-8")
+    project_skill = _project_skill(kit_target, "fold")
+    other = kit_target / ".pkit" / "capabilities" / "audit" / "agents" / "keeper"
+    other.mkdir(parents=True)
+    (other / "keeper.md").write_text("# audit's\n", encoding="utf-8")
+    caps._register_in_backbone_manifest(kit_target, "audit")
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+
+    found = caps.detect_collisions(kit_target, source, release=kit_source)
+
+    assert [(c.artifact_kind, c.artifact_name, c.source_path, c.target_path) for c in found] == [
+        ("skill", "fold", cap_dir / "skills" / "fold" / "fold.md", project_skill),
+        ("agent", "keeper", cap_dir / "agents" / "keeper" / "keeper.md", other / "keeper.md"),
+    ]
+
+
 # --- override and skip on a collision (COR-017, #1528) --------------
 
 _PROJECTS_SKILL = "---\nname: shared\n---\n# The project's\n"
@@ -991,8 +1023,6 @@ def test_cli_install_override_replaces_the_projects_agent_in_both_forms(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
     """A project agent held as a file and as a folder is removed in both forms."""
-    from project_kit.agents import agent_locations, find_agent_file
-
     agents = kit_target / ".pkit" / "agents" / "project"
     (agents / "coordinator").mkdir(parents=True)
     (agents / "coordinator" / "coordinator.md").write_text("# Mine\n", encoding="utf-8")
@@ -1006,12 +1036,144 @@ def test_cli_install_override_replaces_the_projects_agent_in_both_forms(
     assert result.exit_code == 0, result.output
     assert not (agents / "coordinator.md").exists()
     assert not (agents / "coordinator").exists()
-    deploys = next(
-        found
-        for _, folder in agent_locations(kit_target)
-        if (found := find_agent_file(folder, "coordinator")) is not None
-    )
+    deploys = agent_definitions.answer(kit_target).picks["coordinator"].file
     assert deploys == kit_target / ".pkit" / "capabilities" / "pm" / "agents" / "coordinator.md"
+
+
+def _two_capabilities_shipping(kit_target: Path, kit_source: Path, monkeypatch) -> None:
+    """`audit` installed with agent `keeper`, then `evidence`, which ships it too,
+    installed with the collision overridden."""
+    _stage_capability_in_source(kit_source, "audit", with_agents=("keeper",))
+    assert _install(kit_source, monkeypatch, "audit", "").exit_code == 0
+    _stage_capability_in_source(kit_source, "evidence", with_agents=("keeper",))
+    result = _install(kit_source, monkeypatch, "evidence", "override\n")
+    assert result.exit_code == 0, result.output
+    assert (
+        "override leaves .pkit/capabilities/audit/agents/keeper.md and records the project's "
+        "choice of capability evidence for agent keeper over capability audit's"
+    ) in result.output
+
+
+def _choices(kit_target: Path) -> object:
+    from ruamel.yaml import YAML
+
+    text = (kit_target / ".pkit" / "manifest.yaml").read_text(encoding="utf-8")
+    return (YAML(typ="safe").load(text) or {}).get("agent_choices")
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_cli_install_override_of_another_capabilitys_agent_records_the_choice(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """The override removes nothing of the other capability's, and records the
+    project's choice of the new one for the name, which the picker then takes
+    (COR-017)."""
+    _two_capabilities_shipping(kit_target, kit_source, monkeypatch)
+
+    assert (kit_target / ".pkit" / "capabilities" / "audit" / "agents" / "keeper.md").is_file()
+    assert _choices(kit_target) == {"keeper": "evidence"}
+    pick = agent_definitions.answer(kit_target).picks["keeper"]
+    assert pick.agent.place == "capability:evidence"
+
+
+@pytest.mark.parametrize(
+    ("answers", "choices", "picked"),
+    [
+        ("override\nskip\n", None, "capability:audit"),
+        ("skip\noverride\n", {"keeper": "evidence"}, "capability:evidence"),
+    ],
+    ids=["skill-overridden-agent-skipped", "skill-skipped-agent-overridden"],
+)
+@pytest.mark.usefixtures("at_a_terminal")
+def test_cli_install_records_a_choice_from_the_agents_own_answer(
+    kit_target: Path,
+    kit_source: Path,
+    monkeypatch,
+    answers: str,
+    choices: object,
+    picked: str,
+) -> None:
+    """A skill and an agent of one name collide, and each gets its own answer: the
+    choice for the agent's name follows the agent's answer alone, never the
+    skill's (COR-017)."""
+    _stage_capability_in_source(
+        kit_source, "audit", with_skills=("keeper",), with_agents=("keeper",)
+    )
+    assert _install(kit_source, monkeypatch, "audit", "").exit_code == 0
+    _stage_capability_in_source(
+        kit_source, "evidence", with_skills=("keeper",), with_agents=("keeper",)
+    )
+
+    result = _install(kit_source, monkeypatch, "evidence", answers)
+
+    assert result.exit_code == 0, result.output
+    assert "2 naming collision(s) detected" in result.output
+    assert _choices(kit_target) == choices
+    assert ("the project's choice of capability 'evidence'" in result.output) == bool(choices)
+    assert agent_definitions.answer(kit_target).picks["keeper"].agent.place == picked
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_uninstall_drops_the_capabilitys_choices_in_the_same_write(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _two_capabilities_shipping(kit_target, kit_source, monkeypatch)
+
+    caps.uninstall_capability(kit_target, "evidence", source_kit=kit_source)
+
+    assert _choices(kit_target) is None
+    assert agent_definitions.answer(kit_target).picks["keeper"].agent.place == "capability:audit"
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_agents_choose_records_a_choice_between_installed_capabilities(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _two_capabilities_shipping(kit_target, kit_source, monkeypatch)
+
+    result = CliRunner().invoke(main, ["agents", "choose", "keeper", "audit"])
+
+    assert result.exit_code == 0, result.output
+    assert "recorded     capability audit's keeper is the agent" in result.output
+    assert _choices(kit_target) == {"keeper": "audit"}
+    again = CliRunner().invoke(main, ["agents", "choose", "keeper", "audit"])
+    assert "unchanged" in again.output
+
+
+@pytest.mark.parametrize(
+    ("agent", "capability", "refusal"),
+    [
+        ("keeper", "gone", "capability 'gone' is not installed"),
+        ("other", "audit", "capability 'audit' ships no agent named 'other'"),
+        ("keeper", "core", "core is no capability"),
+        ("keeper", "project", "project is no capability"),
+    ],
+)
+def test_agents_choose_refuses_a_choice_that_decides_nothing(
+    kit_target: Path, kit_source: Path, monkeypatch, agent: str, capability: str, refusal: str
+) -> None:
+    _stage_capability_in_source(kit_source, "audit", with_agents=("keeper",))
+    assert _install(kit_source, monkeypatch, "audit", "").exit_code == 0
+    before = (kit_target / ".pkit" / "manifest.yaml").read_bytes()
+
+    result = CliRunner().invoke(main, ["agents", "choose", agent, capability])
+
+    assert result.exit_code == 1
+    assert refusal in result.output
+    assert (kit_target / ".pkit" / "manifest.yaml").read_bytes() == before
+
+
+def test_agents_choose_refuses_a_skipped_definition(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _stage_capability_in_source(kit_source, "audit", with_agents=("keeper",))
+    assert _install(kit_source, monkeypatch, "audit", "").exit_code == 0
+    caps.record_skips(kit_target, "audit", [("agent", "keeper")], version="0.1.0")
+
+    result = CliRunner().invoke(main, ["agents", "choose", "keeper", "audit"])
+
+    assert result.exit_code == 1
+    assert "the project skipped capability audit's agent keeper" in result.output
 
 
 @pytest.mark.parametrize("state", ["untracked", "changed", "staged"])
@@ -1094,6 +1256,55 @@ def test_cli_install_skip_keeps_the_projects_skill_and_records_it(
     manifest = read_component_manifest(installed / "project" / "manifest.yaml")
     assert manifest is not None
     assert manifest.backend_state["skipped"] == [{"kind": "skill", "name": "shared"}]
+
+
+def _stage_folder_skill(kit_source: Path, capability: str, name: str = "shared") -> Path:
+    """Stage `capability` shipping the skill `name` in the folder form, with a helper."""
+    folder = _stage_capability_in_source(kit_source, capability) / "skills" / name
+    folder.mkdir(parents=True)
+    (folder / f"{name}.md").write_text(
+        f"---\nname: {name}\ndescription: t\n---\n# {capability}'s\n", encoding="utf-8"
+    )
+    (folder / "helper.md").write_text("# helper\n", encoding="utf-8")
+    return folder
+
+
+@pytest.mark.parametrize(
+    ("answer", "deployed"),
+    [
+        ("override", ".pkit/capabilities/evidence/skills/shared/shared.md"),
+        ("skip", ".pkit/skills/project/shared.md"),
+    ],
+)
+@pytest.mark.usefixtures("at_a_terminal")
+def test_cli_install_asks_about_a_folder_form_skill_the_project_names(
+    kit_target: Path, kit_source: Path, monkeypatch, answer: str, deployed: str
+) -> None:
+    """A capability's skill in the folder form whose name the project's own skill has
+    is asked about, as a flat one is (COR-015, COR-017, #2470): the answer, not the
+    deploy's name precedence, picks which skill deploys."""
+    project_skill = _project_skill(kit_target)
+    _commit_all(kit_target)
+    _stage_folder_skill(kit_source, "evidence")
+    _deploy_skills_for_real(monkeypatch)
+
+    result = _install(kit_source, monkeypatch, "evidence", f"{answer}\n")
+
+    assert result.exit_code == 0, result.output
+    assert "1 naming collision(s) detected" in result.output
+    assert "skill 'shared' collides with existing .pkit/skills/project/shared.md" in result.output
+    assert _deployed_skill(kit_target, "shared") == deployed
+    installed = kit_target / ".pkit" / "capabilities" / "evidence"
+    manifest = read_component_manifest(installed / "project" / "manifest.yaml")
+    assert manifest is not None
+    if answer == "override":
+        assert not project_skill.exists()
+        assert (installed / "skills" / "shared" / "helper.md").is_file()
+        assert "skipped" not in manifest.backend_state
+    else:
+        assert project_skill.read_text(encoding="utf-8") == _PROJECTS_SKILL
+        assert not (installed / "skills" / "shared").exists()
+        assert manifest.backend_state["skipped"] == [{"kind": "skill", "name": "shared"}]
 
 
 @pytest.mark.usefixtures("at_a_terminal")
@@ -1429,6 +1640,83 @@ def test_find_references_empty_when_no_refs(kit_target: Path, kit_source: Path) 
     assert refs == []
 
 
+def _deploy_mark(root: Path) -> str:
+    """The mark line the Claude Code adapter's agents deploy writes, read from its script."""
+    script = root / ".pkit" / "adapters" / "claude-code" / "deploy-agents.sh"
+    return next(
+        line.removeprefix('MARKER="').removesuffix('"')
+        for line in script.read_text(encoding="utf-8").splitlines()
+        if line.startswith('MARKER="')
+    )
+
+
+def _deploy_agents(root: Path) -> dict[str, Path]:
+    """Write a copy of each agent to `.claude/agents/`, as `deploy-agents.sh` writes it,
+    and return each copy by its agent's name.
+
+    Each name's copy is of its agent, the definition the picker names, and the
+    copy is its source with the deploy's mark after the opening line. The
+    overlay's placeholders stay unresolved: what the reference scan reads in a copy
+    comes from its source.
+    """
+    mark = _deploy_mark(root)
+    folder = root / ".claude" / "agents"
+    folder.mkdir(parents=True, exist_ok=True)
+    copies: dict[str, Path] = {}
+    for name, (_place, source) in agent_definitions.agents(agent_definitions.answer(root)).items():
+        first, rest = source.read_text(encoding="utf-8").split("\n", 1)
+        copy = folder / f"{name}.md"
+        copy.write_text(f"{first}\n{mark}\n{rest}", encoding="utf-8")
+        copies[name] = copy
+    return copies
+
+
+_CITING_AGENT = (
+    "---\nname: ev-agent\ndescription: t\n---\n# ev-agent\n\n"
+    "Per [evidence:DEC-001-x], read .pkit/capabilities/evidence/agents/ev-agent.md.\n"
+)
+
+
+def test_find_references_skips_the_deployed_copies_of_its_agents(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A copy the deploy wrote of the capability's agent is not the project's file (#2366)."""
+    _stage_capability_in_source(kit_source, "evidence", with_agents=("ev-agent",))
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+    caps.install_capability(kit_target, source)
+    agent = kit_target / ".pkit" / "capabilities" / "evidence" / "agents" / "ev-agent.md"
+    agent.write_text(_CITING_AGENT, encoding="utf-8")
+
+    copy = _deploy_agents(kit_target)["ev-agent"]
+
+    assert "[evidence:DEC-001-x]" in copy.read_text(encoding="utf-8")
+    assert caps.find_references(kit_target, "evidence") == []
+
+
+def test_find_references_counts_the_projects_own_agent_files(
+    kit_target: Path, kit_source: Path
+) -> None:
+    """A file of the project's that cites the capability still counts: an agent file
+    without the deploy's mark, which the deploy leaves alone, and a definition under
+    `.pkit/agents/project/`, even one copied there with the mark."""
+    _stage_capability_in_source(kit_source, "evidence", with_agents=("ev-agent",))
+    source = caps.find_capability_in_source(kit_source, "evidence")
+    assert source is not None
+    caps.install_capability(kit_target, source)
+    unmarked = kit_target / ".claude" / "agents" / "ev-agent.md"
+    unmarked.parent.mkdir(parents=True, exist_ok=True)
+    unmarked.write_text(_CITING_AGENT, encoding="utf-8")
+    first, rest = _CITING_AGENT.split("\n", 1)
+    definition = kit_target / ".pkit" / "agents" / "project" / "ev-agent.md"
+    definition.parent.mkdir(parents=True, exist_ok=True)
+    definition.write_text(f"{first}\n{_deploy_mark(kit_target)}\n{rest}", encoding="utf-8")
+
+    refs = caps.find_references(kit_target, "evidence")
+
+    assert sorted({path for path, _ in refs}) == sorted({unmarked, definition})
+
+
 # --- CLI wiring ------------------------------------------------------
 
 
@@ -1529,11 +1817,112 @@ def test_cli_uninstall_clean_proceeds(kit_target: Path, kit_source: Path, monkey
     assert "Removed capability 'evidence'" in result.output
 
 
+@pytest.fixture
+def deployed_engineering(make_adopter_repo: MakeAdopterRepo, monkeypatch) -> Path:
+    """A fresh project with project-management and software-engineering installed and
+    every agent deployed, software-engineering's own citing its records (#2366)."""
+    monkeypatch.setenv("PKIT_SOURCE_BIN", "/fake/pkit")
+    root = make_adopter_repo(capabilities=("project-management", "software-engineering")).root
+    copies = _deploy_agents(root)
+    assert "[software-engineering:" in copies["docs-reviewer"].read_text(encoding="utf-8")
+    return root
+
+
+def test_cli_uninstall_is_not_held_back_by_the_capability_s_deployed_agents(
+    deployed_engineering: Path,
+) -> None:
+    result = CliRunner().invoke(main, ["capabilities", "uninstall", "software-engineering"])
+
+    assert result.exit_code == 0, result.output
+    assert "Removed capability 'software-engineering'" in result.output
+    assert not caps.is_installed(deployed_engineering, "software-engineering")
+
+
+def test_cli_uninstall_still_refuses_a_reference_from_the_project_s_file(
+    deployed_engineering: Path,
+) -> None:
+    notes = deployed_engineering / "docs" / "notes.md"
+    notes.parent.mkdir()
+    notes.write_text(
+        "See [software-engineering:DEC-001-producer-agent-and-conventions-seam].\n",
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(main, ["capabilities", "uninstall", "software-engineering"])
+
+    assert result.exit_code != 0
+    assert "Refusing to uninstall 'software-engineering': 1 reference(s) found:" in result.output
+    assert "docs/notes.md: [software-engineering:DEC-001-" in result.output
+    assert caps.is_installed(deployed_engineering, "software-engineering")
+
+
 def test_cli_uninstall_not_installed_errors(kit_target: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["capabilities", "uninstall", "nothing"])
     assert result.exit_code != 0
     assert "not installed" in result.output
+
+
+# --- the runtime-ignore render on install and uninstall (ADR-009 rule 7, #2367) ---
+
+#: The runtime-ignore line project-management declares, as `.pkit/.gitignore` renders it.
+_PM_IGNORE_LINE = "capabilities/project-management/project/instance/*.json"
+
+
+@pytest.fixture
+def committed_target(make_adopter_repo: MakeAdopterRepo, monkeypatch) -> GitRepo:
+    """A project with the backbone installed and committed, as after `pkit init`.
+    Provisioning is stubbed out, so neither an install nor a sync here asks uv
+    to resolve a query command."""
+    monkeypatch.setenv("PKIT_SOURCE_BIN", "/fake/pkit")
+    monkeypatch.setattr(install_mod, "provision_query_commands", lambda *_a, **_k: None)
+    repo = make_adopter_repo()
+    repo.commit("adopter: pkit init")
+    return repo
+
+
+def _ignore_lines(root: Path) -> list[str]:
+    return (root / ".pkit" / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+
+def _what_sync_changes(repo: GitRepo) -> str:
+    """Run `pkit sync` and return what it changed, as `git status --porcelain` lists it."""
+    result = CliRunner().invoke(main, ["sync"])
+    assert result.exit_code == 0, result.output
+    return repo.git("status", "--porcelain").stdout
+
+
+def test_cli_install_writes_the_ignore_lines_so_the_next_sync_changes_nothing(
+    committed_target: GitRepo,
+) -> None:
+    """The install renders `.pkit/.gitignore` with the capability's lines, as sync
+    does, so a sync after the committed install leaves git status clean."""
+    result = CliRunner().invoke(main, ["capabilities", "install", "project-management"])
+
+    assert result.exit_code == 0, result.output
+    assert "rendered      .pkit/.gitignore" in result.output
+    assert _PM_IGNORE_LINE in _ignore_lines(committed_target.root)
+    committed_target.commit("adopter: install project-management")
+    assert _what_sync_changes(committed_target) == ""
+
+
+def test_cli_uninstall_drops_the_ignore_lines_so_the_next_sync_changes_nothing(
+    committed_target: GitRepo,
+) -> None:
+    """The uninstall renders `.pkit/.gitignore` without the capability's lines, so
+    a sync after the committed uninstall leaves git status clean."""
+    runner = CliRunner()
+    assert runner.invoke(main, ["capabilities", "install", "project-management"]).exit_code == 0
+    _what_sync_changes(committed_target)
+    committed_target.commit("adopter: install project-management")
+    assert _PM_IGNORE_LINE in _ignore_lines(committed_target.root)
+
+    result = runner.invoke(main, ["capabilities", "uninstall", "project-management"])
+
+    assert result.exit_code == 0, result.output
+    assert _PM_IGNORE_LINE not in _ignore_lines(committed_target.root)
+    committed_target.commit("adopter: uninstall project-management")
+    assert _what_sync_changes(committed_target) == ""
 
 
 # --- pkit capabilities upgrade (per COR-017) ---------------------------
@@ -3695,6 +4084,31 @@ def test_cli_list_shows_incubated_origin(kit_target: Path, kit_source: Path, mon
     assert "incubated" in result.output
 
 
+def test_cli_list_marks_each_installed_capability_by_its_origin(
+    kit_target: Path, kit_source: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`capabilities list` marks an installed capability as `pkit status` does, and names
+    a kit-shipped one: one pulled from another repository is `externally-sourced`, never
+    `kit-shipped` (COR-041). One only available has no origin."""
+    _stage_capability_in_source(kit_source, "offered")
+    for name, origin in (
+        ("fetched", ORIGIN_EXTERNALLY_SOURCED),
+        ("mine", ORIGIN_INCUBATED_IN_REPO),
+        ("shipped", ORIGIN_KIT_SHIPPED),
+    ):
+        caps._register_in_backbone_manifest(kit_target, name, origin=origin)
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(main, ["capabilities", "list"])
+    assert result.exit_code == 0, result.output
+    rows = [line.split() for line in result.output.splitlines()]
+    assert ["fetched", "installed", "externally-sourced"] in rows
+    assert ["mine", "installed", "incubated"] in rows
+    assert ["shipped", "installed", "kit-shipped"] in rows
+    assert ["offered"] in rows
+
+
 def test_register_then_sync_leaves_incubated_capability_untouched(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -3805,8 +4219,9 @@ def test_uninstall_incubated_undeploys_through_the_adapter_primitive(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
     """Unregister-in-place runs the claude-code adapter's own undeploy primitive: the
-    capability's deployed skill and agent go though its files stay, and an adopter's
-    agent stays."""
+    capability's deployed skill goes though its files stay. Its deployed agent and an
+    adopter's agent stay: the agents deploy the caller runs next removes the
+    capability's copy (ADR-087 point 4)."""
     cap_dir = _register_incubated_via_cli(
         kit_target,
         kit_source,
@@ -3841,7 +4256,7 @@ def test_uninstall_incubated_undeploys_through_the_adapter_primitive(
 
     assert outcome.adapters_without_undeploy == ()
     assert not deployed_skill.exists()
-    assert not deployed_agent.exists()
+    assert deployed_agent.is_file()
     assert adopters_agent.is_file()
     assert cap_dir.is_dir()
     assert (cap_dir / "skills" / "home-skill.md").is_file()
@@ -4337,3 +4752,236 @@ def test_sync_never_seeds_and_never_clobbers(tmp_path: Path) -> None:
     assert (proj / "process" / "issue-lifecycle" / "7.journal.jsonl").is_file()
     assert not (proj / "process" / "issue-lifecycle" / "999.journal.jsonl").exists()
     assert not (proj / "process" / "issue-lifecycle" / "446.journal.jsonl").exists()
+
+
+# --- the defaults a capability's write categories declare (ADR-088 point 5) ----
+
+_DRAWING_PACKAGE = """schema_version: 1
+component:
+  kind: capability
+  name: drawing
+  version: 0.1.0
+description: Drawing.
+requires_backbone: ">=0.1.0,<99.0.0"
+commands:
+  default-work:
+    script: scripts/default-work.py
+    help: Where the designer works.
+    query-contract: true
+write_categories:
+  drawing.work:
+    owner: designer
+    default-query: default-work
+"""
+
+
+def _stage_drawing(root: Path) -> Path:
+    """The capability `drawing` under `root`'s `capabilities/`: `designer` owns
+    `drawing.work`, which the query `default-work` answers."""
+    cap_dir = _stage_capability_in_source(root, "drawing")
+    (cap_dir / "package.yaml").write_text(_DRAWING_PACKAGE, encoding="utf-8")
+    (cap_dir / "agents").mkdir()
+    (cap_dir / "agents" / "designer.md").write_text(
+        "---\nname: designer\ndescription: Draws.\nowns:\n  - <drawing.work>\n---\n# Designer\n",
+        encoding="utf-8",
+    )
+    (cap_dir / "scripts").mkdir()
+    (cap_dir / "scripts" / "default-work.py").write_text("print('{}')\n", encoding="utf-8")
+    return cap_dir
+
+
+def _answering(monkeypatch, *paths: str, asked: list[str] | None = None) -> None:
+    """The default query answers `paths`, read in this process, and notes each ask."""
+    from project_kit import write_categories as wcat
+
+    def _ask(_root: Path, category: wcat.WriteCategory) -> wcat.Answer:
+        if asked is not None:
+            asked.append(category.name)
+        return wcat.Answer(paths=paths)
+
+    monkeypatch.setattr(wcat, "ask", _ask)
+
+
+def _no_answer(monkeypatch) -> None:
+    from project_kit import write_categories as wcat
+
+    monkeypatch.setattr(wcat, "ask", lambda _root, _category: wcat.NoAnswer("it exited 3"))
+
+
+def _terminal(monkeypatch, at_one: bool) -> None:
+    from project_kit import upgrade
+
+    monkeypatch.setattr(upgrade, "at_a_terminal", lambda: at_one)
+
+
+def _agents_overlay(root: Path) -> str:
+    return (root / ".pkit" / "agents" / "project" / "overlay.yaml").read_text(encoding="utf-8")
+
+
+def _deploy_agents_for_real(monkeypatch) -> None:
+    """Run the claude-code adapter's real `deploy-agents.sh` where the lifecycle deploys."""
+
+    def _run(script: Path, ctx: install_mod.InstallContext, *args: str) -> None:
+        if script.name == "deploy-agents.sh":
+            _RUN_ADAPTER_PRIMITIVE(script, ctx, *args)
+
+    monkeypatch.setattr(install_mod, "_run_adapter_primitive", _run)
+
+
+_WRITTEN = 'drawing.work: ["visual/"]  # pkit-written: ["visual/"]'
+
+
+def test_install_writes_the_default_before_the_deploy(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """The owner deploys on the answer install wrote, which it prints with its path."""
+    _stage_drawing(kit_source)
+    _answering(monkeypatch, "visual/")
+    _terminal(monkeypatch, False)
+    _deploy_agents_for_real(monkeypatch)
+
+    result = _install(kit_source, monkeypatch, "drawing", "")
+
+    assert result.exit_code == 0, result.output
+    assert _WRITTEN in _agents_overlay(kit_target)
+    assert (
+        "wrote        drawing.work = visual/ in .pkit/agents/project/overlay.yaml; "
+        "edit it and the value is the project's." in result.output
+    )
+    deployed = (kit_target / ".claude" / "agents" / "designer.md").read_text(encoding="utf-8")
+    assert "visual/" in deployed
+    assert "<drawing.work>" not in deployed
+
+
+def test_install_keeps_a_value_the_project_set(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """A category the overlay already gives a value is neither asked nor written."""
+    _stage_drawing(kit_source)
+    overlay = kit_target / ".pkit" / "agents" / "project" / "overlay.yaml"
+    overlay.write_text(overlay.read_text(encoding="utf-8") + "drawing.work: [mine/]\n")
+    asked: list[str] = []
+    _answering(monkeypatch, "visual/", asked=asked)
+
+    result = _install(kit_source, monkeypatch, "drawing", "")
+
+    assert result.exit_code == 0, result.output
+    assert asked == []
+    assert "pkit-written" not in _agents_overlay(kit_target)
+    assert "drawing.work: [mine/]" in _agents_overlay(kit_target)
+
+
+@pytest.mark.parametrize(
+    ("at_one", "answers", "written"),
+    [(True, "y\n", True), (True, "n\n", False), (False, "", False)],
+    ids=["agreed-at-a-terminal", "refused-at-a-terminal", "off-a-terminal"],
+)
+def test_install_over_content_asks_once_at_a_terminal(
+    kit_target: Path, kit_source: Path, monkeypatch, at_one: bool, answers: str, written: bool
+) -> None:
+    """Over content, a terminal is asked; a "no", or no terminal, leaves the category
+    undefined and names the fill commands, and install still succeeds."""
+    _stage_drawing(kit_source)
+    (kit_target / "visual").mkdir()
+    (kit_target / "visual" / "a.svg").write_text("<svg/>", encoding="utf-8")
+    _answering(monkeypatch, "visual/")
+    _terminal(monkeypatch, at_one)
+
+    result = _install(kit_source, monkeypatch, "drawing", answers)
+
+    assert result.exit_code == 0, result.output
+    assert ("already hold content" in result.output) is at_one
+    assert (_WRITTEN in _agents_overlay(kit_target)) is written
+    if not written:
+        assert "drawing.work" not in _agents_overlay(kit_target)
+        assert "pkit agents reconcile --write" in result.output
+
+
+def test_install_leaves_a_category_with_no_answer_undefined(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _stage_drawing(kit_source)
+    _no_answer(monkeypatch)
+
+    result = _install(kit_source, monkeypatch, "drawing", "")
+
+    assert result.exit_code == 0, result.output
+    assert "drawing.work, left undefined: it exited 3" in result.output
+    assert "drawing.work" not in _agents_overlay(kit_target)
+
+
+def test_install_asks_the_releases_picker_for_the_other_agents(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """The agents whose grants a default may not overlap are named by the picker
+    of the release install brings, so a project whose tree lacks the picker still
+    gets the default (ADR-087 point 2, ADR-088 point 5)."""
+    for module in (
+        Path("agents") / "definition_source.py",
+        Path("lifecycle") / "capability_records.py",
+    ):
+        (kit_target / ".pkit" / module).unlink()
+    _stage_drawing(kit_source)
+    _answering(monkeypatch, "visual/")
+    _terminal(monkeypatch, False)
+
+    result = _install(kit_source, monkeypatch, "drawing", "")
+
+    assert result.exit_code == 0, result.output
+    assert _WRITTEN in _agents_overlay(kit_target)
+
+
+def test_install_leaves_the_defaults_undefined_where_no_picker_answers(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Install never fails on a default: a picker it cannot reach leaves the
+    category undefined, says why and names the fill commands (ADR-088 point 5)."""
+    from project_kit import agent_definitions
+    from project_kit import agents_overlay as ao
+
+    def _unreachable(_root: Path, *, release: Path | None = None) -> dict[str, object]:
+        raise agent_definitions.Unreachable("the picker is not there")
+
+    _stage_drawing(kit_source)
+    _answering(monkeypatch, "visual/")
+    monkeypatch.setattr(ao, "discover_kit_agents", _unreachable)
+
+    result = _install(kit_source, monkeypatch, "drawing", "")
+
+    assert result.exit_code == 0, result.output
+    assert "the capability's defaults, left undefined: the picker is not there." in result.output
+    assert "pkit agents reconcile --write" in result.output
+    assert "drawing.work" not in _agents_overlay(kit_target)
+
+
+def test_install_dry_run_asks_no_query_and_lists_each_state(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    _stage_drawing(kit_source)
+    asked: list[str] = []
+    _answering(monkeypatch, "visual/", asked=asked)
+
+    result = _install(kit_source, monkeypatch, "drawing", "", "--dry-run")
+
+    assert result.exit_code == 0, result.output
+    assert asked == []
+    assert (
+        "drawing.work: to be written from its query once the capability is in place"
+        in result.output
+    )
+    assert "drawing.work" not in _agents_overlay(kit_target)
+
+
+def test_register_writes_the_default_in_place(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Registration in place writes the default as install does."""
+    _stage_drawing(kit_target / ".pkit")
+    _answering(monkeypatch, "visual/")
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(main, ["capabilities", "register", "drawing"])
+
+    assert result.exit_code == 0, result.output
+    assert _WRITTEN in _agents_overlay(kit_target)

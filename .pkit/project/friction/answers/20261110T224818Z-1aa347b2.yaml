@@ -1,0 +1,862 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/components.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T200020Z-29c3a865.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T161850Z-308ad562.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+    revalidated:
+      at: 2026-11-10T22:48:18Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/files.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T184836Z-d3d0aa8b.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261107T225725Z-d491b7e6.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T201011Z-bd16eac8.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T223833Z-3afa7580.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T083630Z-0f4529cb.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T144319Z-dd134ab5.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T220739Z-00e08993.yaml
+    revalidated:
+      at: 2026-11-10T23:00:20Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/outputs.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T035615Z-a1d5b3e3.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T184836Z-d3d0aa8b.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T200020Z-29c3a865.yaml
+      - 20261109T201011Z-bd16eac8.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T223833Z-3afa7580.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T083630Z-0f4529cb.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T220739Z-00e08993.yaml
+    revalidated:
+      at: 2026-11-10T23:00:21Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/checks.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T181511Z-6cf22051.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043326Z-f74aaa9c.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T051034Z-13da0f09.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T061853Z-ad99d5f3.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T112625Z-a7b7ca91.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T140220Z-88174d4e.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T200020Z-29c3a865.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+      - 20261110T220739Z-00e08993.yaml
+    revalidated:
+      at: 2026-11-10T23:00:22Z
+      outcome: updated
+  - artefact: .pkit/capabilities/visual-communication/libraries/starter/README.md
+    read:
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T005759Z-29300bbe.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261110T144319Z-dd134ab5.yaml
+      - 20261110T153914Z-59b4ef7e.yaml
+      - 20261110T155342Z-400eda56.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T160707Z-809340a8.yaml
+      - 20261110T163615Z-6bd32b15.yaml
+    revalidated:
+      at: 2026-11-10T22:50:24Z
+      outcome: unchanged
+      unchanged-because: "Judged with the answers made apart for DEC-025's, DEC-012's and DEC-010's and DEC-011's trims, which change no rule the README states: a picture shown by its name and the logo by picture.logo, a field of runs and its words, each list's component field, arrangement words and ties. DEC-035 refines DEC-008 points 3 and 4 for component tokens and a brand's tokens under component.<library>, and files.md's Content files now says an override names no token; the starter's components declare none, so its own roles' defaults and a brand that names it stand as the README says."
+  - artefact: .pkit/capabilities/visual-communication/README.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261104T173450Z-30d17cb6.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261105T212314Z-4c67bf0c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T223507Z-f2a91f5d.yaml
+      - 20261105T224140Z-08730f0d.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261105T225848Z-3e84e405.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T043557Z-4ed48797.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T060745Z-98733159.yaml
+      - 20261106T101926Z-f61addd0.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T113238Z-7d61497a.yaml
+      - 20261106T121058Z-f45a9426.yaml
+      - 20261106T121926Z-1ff42833.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T123755Z-cab57a47.yaml
+      - 20261106T130706Z-41a94eb8.yaml
+      - 20261106T131742Z-47f9f143.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T134926Z-db8d35aa.yaml
+      - 20261106T142013Z-2e1eed69.yaml
+      - 20261106T150052Z-c9ff2ad6.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T135441Z-82c14d62.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T140950Z-26b2d33c.yaml
+      - 20261107T142335Z-64833036.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150300Z-2a8421b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T151404Z-3dac5756.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T153001Z-f5b0bda2.yaml
+      - 20261107T154525Z-f94f36f9.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T160436Z-9362ab4c.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T164054Z-a9458c60.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261107T170212Z-291d7b6c.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T172532Z-19721e4d.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T180629Z-368efe46.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T184836Z-d3d0aa8b.yaml
+      - 20261107T194747Z-edf4a2ac.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T004550Z-f8bba9dd.yaml
+      - 20261108T005759Z-29300bbe.yaml
+      - 20261108T011854Z-346a8070.yaml
+      - 20261108T013532Z-39c81bd6.yaml
+      - 20261108T021821Z-a73154b1.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T105804Z-f95ee3de.yaml
+      - 20261108T210953Z-944553cc.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T200020Z-29c3a865.yaml
+      - 20261109T201011Z-bd16eac8.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261109T223833Z-3afa7580.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T081413Z-78f2c9ae.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T083630Z-0f4529cb.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T144319Z-dd134ab5.yaml
+      - 20261110T155554Z-ce4af016.yaml
+      - 20261110T161411Z-310bc3fd.yaml
+      - 20261110T220739Z-00e08993.yaml
+    revalidated:
+      at: 2026-11-10T23:00:23Z
+      outcome: unchanged
+      unchanged-because: "Judged with the answers made apart for the agent-definition checks of 7e079af4 and 29c3a865, which leave the capability's agent and skill deploying as the README says, and for the quoting of a run under files.md's Content files, which leaves a piece's files where they were. The sections it points to now also describe component tokens, a brand's tokens under component.<library>, a stable component's tokens in a release's comparison and a producer's input that names no token; the README only points to them for a piece, a brand, the library folder, the release's comparison and produced pictures, and each pointer still holds. Judged too with DEC-013's trim, answered apart in 310bc3fd and 00e08993: points 1 and 5 decide what they decided, release.py changed only in its docstring, and files.md's section on the libraries the capability ships gains the shipped release's two refusals, how parallel changes meet and the released versions' cost, which the README does not state and the component tokens do not touch, so what pkit visual add takes and refuses, and what release --shipped holds and writes, stand as it says."
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-axis
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+    revalidated:
+      at: 2026-11-10T22:48:48Z
+      outcome: unchanged
+      unchanged-because: tokens.py now reads component tokens and judges a brand's tokens under component.<library>; nothing about a brand's axes or what their modes may alter changed, so the entry holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-brand
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+    revalidated:
+      at: 2026-11-10T22:48:51Z
+      outcome: unchanged
+      unchanged-because: tokens.py now reads component tokens and lets a brand that names a library give them values; a brand still holds its values in each mode, and the entry's distinctions from a theme and a mode still hold.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-mode
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T203800Z-471a3d6c.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+    revalidated:
+      at: 2026-11-10T22:48:53Z
+      outcome: unchanged
+      unchanged-because: tokens.py now reads component tokens, which a brand values in each mode as it values any role; what a mode is, and how it differs from a theme or a reader's mode, did not change.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-content-slot
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+    revalidated:
+      at: 2026-11-10T22:48:55Z
+      outcome: unchanged
+      unchanged-because: The component schema and layout.py gain a component's tokens, and DEC-001 point 4 adds that a local component declares none; a layout's content slots and what fills them did not change.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-layout
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+    revalidated:
+      at: 2026-11-10T22:48:57Z
+      outcome: unchanged
+      unchanged-because: The component schema and layout.py gain a component's tokens, and DEC-001 point 4 adds that a local component declares none; how a top declares its layouts and a brand draws them did not change.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-library-component
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+    revalidated:
+      at: 2026-11-10T22:48:59Z
+      outcome: unchanged
+      unchanged-because: A library component may now declare component tokens, and DEC-001 point 4 adds that a local component declares none; the entry's distinctions, a library component apart from the core's component and from a local component that becomes one once moved into a library, still hold.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-local-component
+    read:
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261105T142448Z-37423011.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T175150Z-1bb0868b.yaml
+      - 20261106T045753Z-f02f34f0.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261106T110521Z-7534b186.yaml
+      - 20261106T110932Z-3b040a83.yaml
+      - 20261106T122117Z-378d78a7.yaml
+      - 20261106T134453Z-035a9aaf.yaml
+      - 20261106T151937Z-c65fc01f.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T152425Z-5df8e941.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T034708Z-f16d8671.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+    revalidated:
+      at: 2026-11-10T22:49:02Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 4 now adds that a local component declares no component token, and the engine refuses one there; the entry says only that a local component is made in one piece for that piece, which still holds.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-option
+    read:
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T153525Z-b90f7ed6.yaml
+      - 20261107T161037Z-476db373.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T042239Z-7c260a12.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+    revalidated:
+      at: 2026-11-10T22:49:04Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 6 now ends that content points a part at a role, never a value or a component token, and the engine refuses an override naming one; the entry says a piece may point a part at another name the brand gives a value to, which an override to a role still does.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-experimental
+    read:
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+    revalidated:
+      at: 2026-11-10T22:49:06Z
+      outcome: unchanged
+      unchanged-because: The comparison now compares a stable or deprecated component's tokens, and an experimental component's tokens may change in any release; that matches the entry, which says an experimental component may still change.
+  - artefact: tech-docs/analysis/visual-communication/glossary.md#TERM-stable
+    read:
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261104T111046Z-f7ad840c.yaml
+      - 20261104T164143Z-37e80644.yaml
+      - 20261106T060339Z-9b329e2d.yaml
+      - 20261107T134444Z-767c8326.yaml
+      - 20261107T135641Z-7da14fce.yaml
+      - 20261107T144519Z-a31f624c.yaml
+      - 20261107T162236Z-893f20f2.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T025310Z-7acd7024.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+    revalidated:
+      at: 2026-11-10T22:49:08Z
+      outcome: unchanged
+      unchanged-because: The comparison now also breaks on a stable component's token removed, retyped, or no longer ending at a shared role; the entry's sense of breaking, removing or renaming what the component offers or changing what it means, still covers it, as it did states and exposed parts it does not list.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-093-build-presentation.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T092838Z-6e1df2bb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-10T22:49:10Z
+      outcome: unchanged
+      unchanged-because: DEC-001 points 4 and 6 now add that a local component declares no component token and that content never points a part at one; no step of the use case has the developer do either, and a local component still serves a visual no library component fits.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-095-draw-views-of-system.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-10T22:49:13Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 6 now ends that content points a part at a role, never a value or a component token; the use case's element still takes its colour from the concept it names, through roles, so it holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261105T214836Z-09cec591.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-10T22:49:15Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 4 now adds that a local component declares no component token, and point 6 that content never points a part at one; the use case's local component takes each colour, font and size from a role the brand gives a value to, which it still may, and is still the same kind of data as a library component.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-097-put-produced-picture.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261105T210032Z-f3d993fd.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261107T134944Z-8d8d3cca.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-10T22:49:18Z
+      outcome: unchanged
+      unchanged-because: DEC-006 point 2 now ends that what is written for the picture names roles, never raw values or component tokens; the use case's step takes each colour from a name the brand gives a value to, which a role still is, so it holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-104-add-kind-of-piece.md
+    read:
+      - 20261103T140411Z-459661c4.yaml
+      - 20261105T140327Z-3a08d07c.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T150704Z-dc1b19d8.yaml
+      - 20261108T214150Z-676eef59.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-10T22:49:20Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 4 now adds that a local component declares no component token; the use case adds a kind of piece through a top's layouts and a brand, and names no component token, so it holds.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/020-build-libraries/UC-110-add-library-component.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T073153Z-01c32629.yaml
+      - 20261103T140411Z-459661c4.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T134514Z-b7b499b1.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-10T22:49:22Z
+      outcome: unchanged
+      unchanged-because: DEC-001 points 4 and 6 now add that a local component declares no component token and content never points a part at one; the use case's generalised library component still takes each colour from a name the brand gives a value to, and may now declare tokens, which no step contradicts.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/journeys/JRN-011-move-component-into-library.md
+    read:
+      - 20261103T053645Z-9b958b41.yaml
+      - 20261103T165045Z-20cf3897.yaml
+      - 20261103T170439Z-32fb6096.yaml
+      - 20261106T002156Z-812bc5cd.yaml
+      - 20261106T022655Z-7d3a5027.yaml
+      - 20261107T124642Z-7a8e773a.yaml
+      - 20261107T165308Z-ced38a91.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-10T22:49:24Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 4 now adds that a local component declares no component token; the journey moves a local component into a library, where it may first declare tokens, so its steps and its claim that both are the same kind of data still hold.
+  - artefact: .pkit/capabilities/visual-communication/rule-sets/graphic.md#RS-GRAPHIC-007
+    revalidated:
+      at: 2026-11-10T22:49:26Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 6 now ends that content points a part at a role, never a value or a component token; the rule judges whether the form shows what the content says, and names no override or token, so it still binds as written.

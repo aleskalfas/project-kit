@@ -4,7 +4,7 @@ schema_version: 1
 slides:
   - id: stack
     layout: slide
-    title: Levels stacked one on another, the top first
+    title: Levels stacked one on another, the top first, each a step of the order
     visual:
       use: starter/layers
       levels:
@@ -23,10 +23,10 @@ slides:
 
   - id: tinted
     layout: slide
-    title: Each level tinted by the concept it names
+    title: Each level tinted by the concept it names, with no shade by its place
     visual:
       use: starter/layers
-      level: {use: starter/card, fill: tint}
+      shade: plain
       levels:
         - id: people
           concept: test-notation/person
@@ -65,3 +65,29 @@ slides:
         - id: checked
           head: Checked
           text: A level that disagrees is checked first.
+
+  - id: steps
+    layout: slide
+    title: Steps that narrow to the top, tied from a note at their edge
+    visual:
+      use: starter/layers
+      shape: steps
+      level: {use: starter/card, fill: tint, concept: test-notation/service}
+      note: {use: starter/card, bar: left}
+      levels:
+        - id: decisions
+          head: Decisions
+        - id: rules
+          head: Working rules
+        - id: commands
+          head: Commands and checks
+        - id: work
+          head: Your code and documents
+      notes:
+        - id: start
+          head: Where ideas start
+          text: In conversation, and in a note when one needs longer.
+      ties:
+        - id: start-decisions
+          from: {item: "notes[start]"}
+          to: {item: "levels[decisions]"}

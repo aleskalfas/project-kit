@@ -1,0 +1,12 @@
+pkit_schema: visual-communication:library
+schema_version: 1
+
+# A component library a project owns, which holds a kind of piece the capability does not
+# ship: the poster (UC-104, step 1). It reads the foundations' shared roles, so it builds
+# on them. No library the capability ships names it.
+name: test-print
+version: 1.0.0
+kind: components
+needs-release: 0.1.0
+builds-on:
+  - {name: foundations, major: 1}

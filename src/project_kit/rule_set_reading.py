@@ -56,9 +56,10 @@ from project_kit import rule_sets as rs
 from project_kit.friction_git import SHORT, CommitTree
 from project_kit.working_tree import WorkingTree, working_tree
 
-#: The version of the document `reach_document` returns. A change a reader could break
-#: against — a key removed, renamed or given another meaning — raises it; a key added
-#: does not.
+#: The version of the document `reach_document` returns. It rises only when one of
+#: the document's own keys, or a value of one of its sets, goes, a break the changeset
+#: declares at `major`; never for a key or a value added. No key or value comes to
+#: mean anything else, in place or by coming back (ADR-097 points 4 and 5).
 REACH_SCHEMA_VERSION = 1
 
 #: The version of the document `altered_document` returns, raised as the reach
@@ -645,8 +646,8 @@ def render_altered_human(document: Mapping[str, Any]) -> str:
         lines.append(
             cli_render.style(
                 "warn",
-                "  the base moved on after this branch left it; merge or "
-                "rebase onto it for results that hold",
+                "  the base moved on after this branch left it; results hold only "
+                "against an up-to-date base",
             )
         )
     budgets = document.get("budgets", [])

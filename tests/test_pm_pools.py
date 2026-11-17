@@ -181,6 +181,14 @@ def test_where_the_pools_cannot_be_told_the_write_asks(declared) -> None:
     assert unread.asks and unread.note == "the open milestones could not be read"
 
 
+def test_the_standing_pools_are_those_the_well_formed_lines_name() -> None:
+    """Two lines, or none, name no pool, so only #3, #4 and #6 count."""
+    descriptions = [str(row["description"]) for row in ROWS]
+    assert pools.standing_pools(descriptions) == ("alpha", "bravo", "charlie")
+    assert pools.standing_pools(["Pool: alpha", "Pool: alpha"]) == ("alpha",)
+    assert pools.standing_pools(["Pool: Not A Name", ""]) == ()
+
+
 def test_the_person_is_asked_and_off_a_terminal_the_write_is_refused(monkeypatch, capsys) -> None:
     found = pools.Move(True, None, "alpha")
     assert pools.authorise(pools.Move(False), subject="#9", yes=False, verb="edit-issue") is None

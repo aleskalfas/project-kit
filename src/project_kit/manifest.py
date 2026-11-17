@@ -3,11 +3,16 @@
 Two manifest forms today:
 
 - **Backbone manifest** at `.pkit/manifest.yaml` — adopter-side. Records
-  the backbone version installed and a registry of installed components.
+  the backbone version installed, a registry of installed components, and
+  the project's choices between capabilities that ship one agent's name
+  (`agent_choices`, COR-017). This module writes the choices; the
+  lifecycle's reader, `.pkit/lifecycle/capability_records.py`, reads them
+  (ADR-087 point 1).
 - **Per-component manifest** at `<component-project-side>/manifest.yaml`
   — one per installed adapter / capability. Records the component's
-  version, install timestamp, `requires_backbone` range, and any opaque
-  backend IDs (`backend_state`).
+  version, install timestamp, `requires_backbone` range, any opaque
+  backend IDs (`backend_state`), and an externally-sourced capability's
+  pin (`pin`, ADR-040 point 3).
 
 Round-trip-safe via `ruamel.yaml`: comments and key order are preserved
 when an existing manifest is updated. New manifests are written with
@@ -35,9 +40,9 @@ ComponentKind = Literal["adapter", "capability"]
 # (additive, no migration — COR-031 D2).
 ORIGIN_KIT_SHIPPED = "kit-shipped"
 ORIGIN_INCUBATED_IN_REPO = "incubated-in-repo"
-# COR-041's third origin: content pulled whole from an external source at a
-# pin and restored to it by reconciliation. Its fetch is not built yet; the
-# wire value is named so a reader can tell an entry carrying it apart.
+# COR-041's third origin: content pulled whole from another git repository at
+# a pin, and brought back to the pin's content by sync (ADR-040). The pin
+# itself is recorded in the capability's own manifest (`CapabilityPin`).
 ORIGIN_EXTERNALLY_SOURCED = "externally-sourced"
 
 # A per-component manifest's file name, in its component's `project/`.
@@ -48,6 +53,11 @@ COMPONENT_MANIFEST_NAME = "manifest.yaml"
 # `backbone_version` still finds the target.
 BACKBONE_VERSION_KEY = "backbone_version"
 COMPLETED_VERSION_KEY = "completed_version"
+
+# The backbone manifest's key of the project's choices between capabilities: a
+# mapping from an agent's name to the capability chosen (COR-017, ADR-087 point 1).
+# The lifecycle's reader, `.pkit/lifecycle/capability_records.py`, holds the same.
+AGENT_CHOICES_KEY = "agent_choices"
 
 
 # Singleton YAML instance: round-trip mode preserves comments and key
@@ -221,13 +231,20 @@ def record_completed_version(target_root: Path, version: str) -> Path:
     return path
 
 
-def write_backbone_manifest(target_root: Path, manifest: BackboneManifest) -> Path:
+def write_backbone_manifest(
+    target_root: Path, manifest: BackboneManifest, *, dropping_choices_of: str | None = None
+) -> Path:
     """Write `.pkit/manifest.yaml`. Round-trip-preserves comments if the file already exists.
 
     An existing file keeps every key this writer does not set, so a key a later
     release adds survives an older writer. `completed_version` is never written
     here: only its own in-place edit writes it (`record_completed_version`), so
     a registry write from a manifest read earlier cannot move it.
+
+    *dropping_choices_of* names a capability whose choices the same write drops
+    from `agent_choices`, as an uninstall does with its registration (COR-017,
+    ADR-087 point 1). A key left with no choice goes. A value under the key that
+    is no mapping is left as it is, since it records no choice this could drop.
     """
     path = _backbone_manifest_path(target_root)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -240,6 +257,13 @@ def write_backbone_manifest(target_root: Path, manifest: BackboneManifest) -> Pa
         existing["schema_version"] = manifest.schema_version
         existing["backbone_version"] = manifest.backbone_version
         existing["components"] = [_entry_to_map(e) for e in manifest.components]
+        choices = cast("dict[str, object]", existing).get(AGENT_CHOICES_KEY)
+        if dropping_choices_of is not None and isinstance(choices, dict):
+            mapping = cast("dict[Any, Any]", choices)
+            for agent in [a for a, chosen in mapping.items() if chosen == dropping_choices_of]:
+                del mapping[agent]
+            if not mapping:
+                del existing[AGENT_CHOICES_KEY]
         with path.open("w", encoding="utf-8") as f:
             _yaml_dump(existing, f)
     else:
@@ -252,6 +276,43 @@ def write_backbone_manifest(target_root: Path, manifest: BackboneManifest) -> Pa
             _yaml_dump(doc, f)
 
     return path
+
+
+def record_agent_choice(target_root: Path, agent: str, capability: str) -> bool:
+    """Record the project's choice of *capability* for agent *agent*, in the backbone
+    manifest's `agent_choices` (COR-017, ADR-087 point 1). It replaces a choice
+    recorded for the name before, and keeps every other key and comment.
+
+    Whether the choice decides anything is its caller's to check. Raises
+    `click.ClickException` where there is no backbone manifest, or where its
+    `agent_choices` is not a mapping, which this would write over. Returns True
+    when the manifest was written, False when it already held the choice.
+    """
+    import click
+
+    path = _backbone_manifest_path(target_root)
+    if not path.is_file():
+        raise click.ClickException(
+            f"cannot record the choice: {path.relative_to(target_root)} is not there."
+        )
+    existing = cast(CommentedMap, _yaml_load(path.read_text(encoding="utf-8")) or CommentedMap())
+    choices = cast("dict[str, object]", existing).get(AGENT_CHOICES_KEY)
+    if choices is None:
+        choices = CommentedMap()
+        existing[AGENT_CHOICES_KEY] = choices
+    if not isinstance(choices, dict):
+        raise click.ClickException(
+            f"cannot record the choice: `{AGENT_CHOICES_KEY}` in "
+            f"{path.relative_to(target_root)} is not a mapping from an agent's name to a "
+            "capability's. Mend it first, and nothing else is written."
+        )
+    mapping = cast("dict[Any, Any]", choices)
+    if mapping.get(agent) == capability:
+        return False
+    mapping[agent] = capability
+    with path.open("w", encoding="utf-8") as f:
+        _yaml_dump(existing, f)
+    return True
 
 
 def read_capability_origin(target_root: Path, name: str) -> str:
@@ -469,6 +530,33 @@ def read_kit_version(source_kit: Path) -> str:
     return version_file.read_text(encoding="utf-8").strip()
 
 
+@dataclass(frozen=True)
+class CapabilityPin:
+    """Where an externally-sourced capability is pulled from, and at which ref
+    (COR-041; ADR-040 points 1 and 3).
+
+    *source* is the git URL the person gave, which their own git credentials
+    reach, and *ref* a tag or a commit's full id. *commit* is the full id of the
+    commit the ref named when install fetched it, so a tag moved at its source
+    later is not followed; None for a pin the person names, before any fetch,
+    and for one a manifest records without it. Recorded in the capability's
+    manifest, under its ``project/``, out of the fetch's reach: sync brings the
+    copy to the pin's content and never writes the pin (COR-059 points 1 and 2).
+    """
+
+    source: str
+    ref: str
+    commit: str | None = None
+
+
+# The per-component manifest's key of an externally-sourced capability's pin,
+# and its keys (`CapabilityPin`).
+PIN_KEY = "pin"
+_PIN_SOURCE_KEY = "source"
+_PIN_REF_KEY = "ref"
+_PIN_COMMIT_KEY = "commit"
+
+
 @dataclass
 class ComponentManifest:
     """Adopter-side per-component manifest.
@@ -477,7 +565,8 @@ class ComponentManifest:
     `.pkit/adapters/<name>/project/manifest.yaml`,
     `.pkit/capabilities/<name>/project/manifest.yaml`). Records what was
     installed: version, install timestamp, recorded `requires_backbone`,
-    and any opaque backend identifiers the kit cannot rederive.
+    any opaque backend identifiers the kit cannot rederive, and, for an
+    externally-sourced capability, its pin (`pin`).
 
     A capability's manifest written before it moved there sits at the
     capability's root, `.pkit/capabilities/<name>/manifest.yaml`, until its
@@ -492,6 +581,8 @@ class ComponentManifest:
     requires_backbone: str
     backend_state: dict[str, Any] = field(default_factory=lambda: {})
     schema_version: int = 1
+    # An externally-sourced capability's pin; None for every other component.
+    pin: CapabilityPin | None = None
 
 
 def read_component_manifest(path: Path) -> ComponentManifest | None:
@@ -509,11 +600,41 @@ def read_component_manifest(path: Path) -> ComponentManifest | None:
         requires_backbone=str(raw.get("requires_backbone", "")),
         backend_state=cast(dict[str, Any], raw.get("backend_state") or {}),
         schema_version=int(raw.get("schema_version", 1)),
+        pin=_read_pin(raw.get(PIN_KEY)),
     )
 
 
+def _read_pin(raw: object) -> CapabilityPin | None:
+    """The pin a manifest's `pin` mapping records, or None where it records none
+    that reads: no mapping, or a source or a ref missing or empty. A commit
+    missing, empty or not a string reads as none."""
+    if not isinstance(raw, dict):
+        return None
+    mapping = cast("dict[str, Any]", raw)
+    source, ref = mapping.get(_PIN_SOURCE_KEY), mapping.get(_PIN_REF_KEY)
+    if not isinstance(source, str) or not isinstance(ref, str) or not source or not ref:
+        return None
+    commit = mapping.get(_PIN_COMMIT_KEY)
+    return CapabilityPin(
+        source=source, ref=ref, commit=commit if isinstance(commit, str) and commit else None
+    )
+
+
+def _pin_to_map(pin: CapabilityPin) -> CommentedMap:
+    out = CommentedMap()
+    out[_PIN_SOURCE_KEY] = pin.source
+    out[_PIN_REF_KEY] = pin.ref
+    if pin.commit is not None:
+        out[_PIN_COMMIT_KEY] = pin.commit
+    return out
+
+
 def write_component_manifest(path: Path, manifest: ComponentManifest) -> Path:
-    """Write a per-component `manifest.yaml`. Round-trip-preserves comments on update."""
+    """Write a per-component `manifest.yaml`. Round-trip-preserves comments on update.
+
+    A manifest with a pin writes it under `pin`. One without leaves a `pin`
+    already in the file as it is, so a writer that knows no pin never drops one.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
 
     if path.is_file():
@@ -527,6 +648,8 @@ def write_component_manifest(path: Path, manifest: ComponentManifest) -> Path:
         component_map["version"] = manifest.version
         component_map["installed_at"] = manifest.installed_at
         existing["component"] = component_map
+        if manifest.pin is not None:
+            existing[PIN_KEY] = _pin_to_map(manifest.pin)
         existing["requires_backbone"] = manifest.requires_backbone
         existing["backend_state"] = manifest.backend_state
         with path.open("w", encoding="utf-8") as f:
@@ -540,6 +663,8 @@ def write_component_manifest(path: Path, manifest: ComponentManifest) -> Path:
         component_map["version"] = manifest.version
         component_map["installed_at"] = manifest.installed_at
         doc["component"] = component_map
+        if manifest.pin is not None:
+            doc[PIN_KEY] = _pin_to_map(manifest.pin)
         doc["requires_backbone"] = manifest.requires_backbone
         doc["backend_state"] = manifest.backend_state
         with path.open("w", encoding="utf-8") as f:

@@ -1,0 +1,635 @@
+answers:
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-reader-review
+    read:
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215558Z-fb9e6aef.yaml
+    revalidated:
+      at: 2026-11-12T06:25:30Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the entry's anchors growing by COR-051 point 4, the agent's definition writing in full the paths it reads, and living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, the agent's definition only calls a fixer's run one nobody can answer it during, limited to proposing, where it said nobody watches it and it is confined. Reader-review, a page read as its reader against the rules that bind it, is untouched by any of these, so judged together the entry holds.
+  - artefact: tech-docs/analysis/living-docs/domain-model/020-proposals-and-reviews.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:25:36Z
+      outcome: updated
+  - artefact: tech-docs/analysis/living-docs/domain-model/010-spaces-and-pages.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:25:44Z
+      outcome: unchanged
+      unchanged-because: Main's answers updated the view with cbabcdd3, then judged living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, DEC-001 point 5 and its rationale only call a fixer's run one nobody can answer the agent during, or a run a command starts, where they said nobody watches it. The view states the spaces, the pages and their places, and neither a fixer's run nor where a mention is read, so judged together it holds.
+  - artefact: tech-docs/analysis/living-docs/requirements/constraints/REQ-025-never-fetch-source.md
+    read:
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:25:52Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged PRJ-002's release candidates, under which D1 and D2 stand, and living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, DEC-001 point 5 and its rationale only call a fixer's run one nobody can answer the agent during, or a run a command starts, where they said nobody watches it. The agent's definition says the same of its run, limited to proposing. It still says the agent never fetches a captured source, and asks what changed or holds the page with one question, so judged together the requirement holds.
+  - artefact: tech-docs/analysis/living-docs/requirements/functional/REQ-024-checks-where-rule-binds.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:25:59Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged PRJ-002's release candidates, under which D1 and D2 stand, and living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, DEC-001 point 5 and its rationale only call a fixer's run one nobody can answer the agent during, or a run a command starts, where they said nobody watches it. Which parts of an LDOC rule validation checks, and where, is untouched by either, so judged together the requirement holds.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/020-write/UC-046-review-page-as-reader.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215558Z-fb9e6aef.yaml
+    revalidated:
+      at: 2026-11-12T06:26:14Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged each requirement it anchors gaining only its fingerprint, PRJ-002's release candidates, under which D1 and D2 stand, and living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, the agent's definition only calls a fixer's run one nobody can answer it during, limited to proposing, where it said nobody watches it and it is confined. Its storyboard's Scenario 5 says the same of the run a command starts, and REQ-022 now names a run a command starts, watched or not, where it named one nobody watches. Reader-review runs in a session, so judged together every step holds.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/journeys/JRN-015-publish-page-for-reader.md
+    read:
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:26:23Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged PRJ-002's release candidates, under which D1 and D2 stand, and living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, DEC-001 point 5 and its rationale only call a fixer's run one nobody can answer the agent during, or a run a command starts, where they said nobody watches it. The journey publishes a page for its reader through the agent's proposals in a session, which point 5 still has the agent propose and never apply, so judged together it holds.
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T020441Z-7e50a784.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T215716Z-41cae09d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:26:30Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged ADR-065 point 9's routed child under `pkit upgrade --pre`, under which upgrade's refusal and its rollback by reverting its commit hold, and the HTTPS fetch and remedies across install.py, sync.py and upgrade.py. They also judged living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, DEC-001 point 5 and its rationale only call a fixer's run one nobody can answer the agent during, or a run a command starts, where they said nobody watches it. The README cites living-docs for neither a fixer's run nor where a mention is read, so judged together it holds.
+  - artefact: .pkit/capabilities/doc-examples/README.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:27:07Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the CLI reference's sync section losing a remedy's sentence on SSH keys and naming the install script, under which sync still provisions the CLI's queries. They also judged living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read, and doc-examples DEC-001 naming living-docs' pages.md as where it names this capability. In this change, living-docs DEC-001 point 5 and its rationale only call a fixer's run one nobody can answer the agent during, or a run a command starts, where they said nobody watches it. The README describes neither a fixer's run nor where living-docs says these things, so judged together it holds.
+  - artefact: .pkit/capabilities/living-docs/pages.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:27:31Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged, with 00d0d16c, DEC-002's diagram languages and the `refs` member's new warning and errors, none of which the page states. They also judged living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read, and doc-examples DEC-001 naming this page as where living-docs names that capability, which its account of console output does. In this change, living-docs DEC-001 point 5 and its rationale only call a fixer's run one nobody can answer the agent during, or a run a command starts, where they said nobody watches it. The page states what a page is and holds, not a fixer's run, so judged together it holds.
+  - artefact: .pkit/capabilities/living-docs/spaces.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:27:39Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged, with 00d0d16c, DEC-002 adding no rule to LDOC and the `refs` member's new warning and errors, none of which the page states. They also judged living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, DEC-001 point 5 and its rationale only call a fixer's run one nobody can answer the agent during, or a run a command starts, where they said nobody watches it. The page declares the spaces and their rules, and neither a fixer's run nor where a mention is read, so judged together it holds.
+  - artefact: .pkit/capabilities/living-docs/validation.md
+    read:
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:27:50Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the CLI reference's sync section, under which what sync provisions for the check, and running sync after an upgrade, hold. They also judged living-docs DEC-001 point 6 now naming this page, in place of the README, as the one that says where in a page's text each form of a mention is read, which its section on mentions does. In this change, DEC-001 point 5 and its rationale only call a fixer's run one nobody can answer the agent during, or a run a command starts, where they said nobody watches it. The page states what validation checks, not a fixer's run, so judged together it holds.
+  - artefact: .pkit/capabilities/living-docs/agent.md
+    read:
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:27:58Z
+      outcome: updated
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T150420Z-3caaee28.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:28:00Z
+      outcome: updated
+  - artefact: docs/capabilities/living-docs/050-fix-a-stale-page.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:28:02Z
+      outcome: updated
+  - artefact: docs/capabilities/living-docs/040-have-a-page-read-as-its-reader.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215558Z-fb9e6aef.yaml
+    revalidated:
+      at: 2026-11-12T06:28:14Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged UC-046 and REQ-022 saying nothing at run time confines the agent in a session, the definition writing in full the paths it reads, and living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, the agent's definition only calls a fixer's run one nobody can answer it during, limited to proposing, where it said nobody watches it and it is confined. Its storyboard's Scenario 5 says the same of the run a command starts, and REQ-022 now names a run a command starts, watched or not. The page has the agent review in a session, write its record in the agent workspace and change nothing it reviews, so judged together it holds.
+  - artefact: docs/capabilities/living-docs/020-bring-in-your-documents.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:28:18Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the CLI's friction check section changing only its links and pointers, UC-047 naming the code-to-doc mapping, the definition writing in full the paths it reads, and living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read. In this change, the agent's definition only calls a fixer's run one nobody can answer it during, limited to proposing, where it said nobody watches it and it is confined. Its storyboard's Scenario 5 says the same of the run a command starts, and DEC-001 point 5 and REQ-022 say the same. Onboarding runs in a session, its plan and proposals written in the agent workspace and applied by nobody but the person, so judged together the guide holds.
+  - artefact: docs/capabilities/living-docs/README.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:28:21Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the CLI's friction check section changing only its links, UC-043 to UC-047 and REQ-022 changing their words and anchors, and the definition writing in full the paths it reads. They also judged living-docs DEC-001 point 6 naming validation.md, in place of the README, as the page that says where a mention is read, which the guide links for its account of mentions. In this change, the agent's definition only calls a fixer's run one nobody can answer it during, limited to proposing, where it said nobody watches it and it is confined. DEC-001 point 5 and REQ-022 say the same, and UC-045's fixer's run is one a person may start at a terminal. The guide asks at install whether the agent may propose fixes, which still holds, so judged together it holds.
+  - artefact: tech-docs/analysis/living-docs/requirements/functional/REQ-022-agent-proposes-only.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+    revalidated:
+      at: 2026-11-12T06:28:34Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: tests/test_living_docs_agent.py
+        outcome: unchanged
+        reason: "REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left the tests as they were. The tests read the definition and its storyboard, not who watches a run: its grants of Read, Glob, Grep, Bash and Write alone, no owned path, the writers named and run by none, and no consent handed over. The tests pass at the merged head, so they still verify the requirement for every run it covers."
+      - anchor:
+          kind: record
+          value: ADR-060#6
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left ADR-060 as it was. Point 6 still realises the workspace's allow by the hook, which confines nothing. A watched run is unconfined and runs the hook as a session started in its clone does, so nothing at run time confines the agent's Write in a session, as the verification says, and the point stands.
+      - anchor:
+          kind: record
+          value: ADR-061#3
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left ADR-061 as it was. Point 3 has the backbone reach the hosting service through `gh`, which the measure's posted reader-review still uses, so the point stands.
+      - anchor:
+          kind: record
+          value: COR-001
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left COR-001 as it was. It gives each file one owner, and the agent's definition owns no path, so the agent changes no tracked file in any run, and the record stands.
+      - anchor:
+          kind: record
+          value: COR-009
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left COR-009 as it was. Its pull-request workflow is still where the person reviews each proposal and where a reader-review is posted, and whether a run is watched moves neither, so the record stands.
+      - anchor:
+          kind: record
+          value: COR-010
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left COR-010 as it was. Its lifecycle still deploys the agent's definition, and rewording the requirement breaks no installed project's state, so the record stands.
+      - anchor:
+          kind: record
+          value: COR-050#3
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left COR-050 as it was. Point 3 leaves each answer to a person, or the delegate a person named, and the agent runs no writer in any run, so the statement and its rationale still rest on the point as written.
+      - anchor:
+          kind: record
+          value: COR-050#6
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left COR-050 as it was. Point 6's two checks still find the friction a fixer's run proposes fixes for, watched or not, and the agent answers none of it, so the point stands.
+      - anchor:
+          kind: record
+          value: COR-050#9
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left COR-050 as it was. Point 9 still derives debt from git, to which the agent writes nothing in any run, so the point stands.
+      - anchor:
+          kind: record
+          value: COR-051#4
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left COR-051 as it was. Point 4 still has a person accept a rule through the gate, and the agent's reader-review cites rules and accepts none, so the point stands.
+      - anchor:
+          kind: record
+          value: COR-053#8
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left COR-053 as it was. Point 8's plans still predict the wiring without acting, and the drift command's fixer role is wired as before, so the point stands.
+      - anchor:
+          kind: record
+          value: COR-059#3
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left COR-059 as it was. Point 3 still leaves moving a recorded version to a transition, which no run of the agent performs, so the point stands.
+      - anchor:
+          kind: record
+          value: COR-062#1
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left COR-062 as it was. Point 1 still puts answers in answer files, which the agent writes in no run, so the rationale's reading of an answer as a person's decision stands.
+      - anchor:
+          kind: record
+          value: COR-066#1
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left COR-066 as it was. Point 1 still keeps a proposal in its change, and each edit the agent drafts stays a proposal until a person takes it into one, so the point stands.
+      - anchor:
+          kind: record
+          value: COR-066#2
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left COR-066 as it was. Point 2's check still refuses to land a proposal, and nothing the agent writes in any run lands a record, so the point stands.
+      - anchor:
+          kind: record
+          value: PRJ-002#D1
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left PRJ-002 as it was. D1 still has each surface change declared in a changeset, which this change does for its wording, and a run's being watched declares nothing, so D1 stands.
+      - anchor:
+          kind: record
+          value: PRJ-002#D2
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left PRJ-002 as it was. D2 still leaves a changeset's segment to a person's judgment, which the agent makes in no run, so D2 stands.
+      - anchor:
+          kind: record
+          value: living-docs:DEC-001#6
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches. Main's merge reworded point 6 only to name validation.md, in place of the README, as where a mention is read. Point 6's reader-review still runs in a session, and the measure's one other write, a review posted as a pull-request comment where the person asks for one, is unchanged, so the point stands.
+      - anchor:
+          kind: record
+          value: living-docs:DEC-001#8
+        outcome: unchanged
+        reason: REQ-022's measure and applies-to now name a run a command starts, watched or not, where they named one nobody watches, and main's merge left point 8 as it was. Its onboarding still proposes, each move landing as a reviewable change, and runs in a session with its plan in the agent workspace, which the measure still names first, so the point stands.

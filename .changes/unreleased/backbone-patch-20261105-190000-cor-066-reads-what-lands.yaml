@@ -1,8 +1,0 @@
-component: backbone
-kind: patch
-custom:
-  category: Changed
-body: >
-  COR-066 says its check of a change reads what the change would land, and that
-  the check stands beside the specification's check of a change on records
-  (#2703).

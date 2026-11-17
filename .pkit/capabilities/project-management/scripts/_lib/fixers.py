@@ -5,9 +5,9 @@ artefacts of its type proposes the answer, and the person decides it. Which
 agent fixes which type is `pkit::work-tracking:fixers`, the data point this
 capability defines as the provider of the work-tracking role (COR-052,
 COR-053): one entry per artefact type, `{id, agent, description}` (its
-companion schema, `schemas/fixers.schema.json`). A fixer starts on its own only
-where the project granted it, in the grant list `fixers` of this capability's
-project configuration, empty by default.
+companion schema, `schemas/fixers.schema.json`). A fixer starts only where the
+project granted it, in the grant list `fixers` of this capability's project
+configuration, empty by default.
 
 Five parts, so the commands over them stay thin and the drift command can call
 the same functions:
@@ -69,6 +69,7 @@ from typing import Any
 
 from _lib import agents as agent_files
 from _lib import backbone
+from _lib import document_keys as keys
 
 try:  # ruamel is declared by every pm script's PEP 723 header.
     from ruamel.yaml import YAML
@@ -93,6 +94,7 @@ LIST_VERB = "list-fixers"
 GRANT_VERB = "grant-fixer"
 REVOKE_VERB = "revoke-fixer"
 ASK_VERB = "ask-fixers"
+DRIFT_VERB = "fix-drift"
 
 #: The backbone's read commands, how long each may take, and the versions of
 #: their documents this reading understands. A document without the key comes
@@ -202,37 +204,75 @@ def read_point(run: Runner = backbone.run) -> Point:
     return point_of(_document(RESOLVE_ARGV, run))
 
 
+#: The outcomes a resolution ends in (the CLI reference, `connections resolve`), and
+#: the states of a filler that answered, or was not meant to (COR-052 point 6).
+OUTCOMES = frozenset(
+    {
+        "resolved",
+        "undefined",
+        "unfilled",
+        "no-answer",
+        "inert-fail",
+        "collision",
+        "selection-needed",
+        "selection-unmatched",
+        "definer-defect",
+    }
+)
+ANSWERED = frozenset({"taken", "passed over"})
+#: The kinds of filler (COR-052 point 2), as a filler's `source` names them.
+SOURCES = frozenset({PROJECT_FILLER, CONTRIBUTION, "default"})
+
+
 def point_of(document: Mapping[str, Any]) -> Point:
-    """The point a `pkit connections resolve --json` document states."""
+    """The point a `pkit connections resolve --json` document states, read by its keys
+    (ADR-097 point 3). A version this reading does not know, a key it reads that is
+    missing, null or of another type, an outcome it does not know, and a filler in a
+    state it does not know beside the entries each leave the point unresolved, with
+    why: never a point that declares no fixer, or one with fewer entries."""
     version = document.get("schema_version", DOCUMENT_VERSION)
-    if version != DOCUMENT_VERSION:
+    if type(version) is not int or version != DOCUMENT_VERSION:
         return Point(
             False,
             why=f"the backbone answered a document at version {version!r}; this reading "
             f"understands {DOCUMENT_VERSION}",
         )
-    outcome = document.get("outcome")
-    if document.get("defined") is False or outcome in OFF:
-        return Point(True, why=str(document.get("why") or "nothing declares a fixer"))
-    fillers = [f for f in document.get("fillers") or [] if isinstance(f, Mapping)]
+    try:
+        return _point(document)
+    except keys.Untold as exc:
+        return Point(
+            False,
+            why=f"`{' '.join(RESOLVE_ARGV)}` answered a document this reading cannot read: {exc}",
+        )
+
+
+def _point(document: Mapping[str, Any]) -> Point:
+    outcome = keys.one_of(document, "outcome", "", OUTCOMES)
+    if not keys.flag(document, "defined", "") or outcome in OFF:
+        return Point(True, why=keys.text(document, "why", "") or "nothing declares a fixer")
+    fillers = keys.objects(document, "fillers", "")
+    for where, filler in fillers:
+        keys.one_of(filler, "source", where, SOURCES)
+        for key in ("name", "supplies", "state", "reason"):
+            keys.text(filler, key, where)
     if outcome != RESOLVED:
-        why = str(document.get("why") or "").strip() or f"it ended as {outcome!r}"
-        inert = tuple(_inert(f) for f in fillers if f.get("state") == INERT)
+        why = keys.text(document, "why", "").strip() or f"it ended as {outcome!r}"
+        inert = tuple(_inert(f) for _where, f in fillers if f["state"] == INERT)
         return Point(False, why=why, inert=inert)
-    supplies = {
-        str(f.get("name")): str(f.get("supplies") or "")
-        for f in fillers
-        if f.get("source") == CONTRIBUTION
-    }
-    filler_file = next(
-        (str(f.get("name")) for f in fillers if f.get("source") == PROJECT_FILLER), ""
-    )
+    untold = [f"{f['name']} ({f['state']})" for _where, f in fillers if f["state"] not in ANSWERED]
+    if untold:
+        return Point(
+            False,
+            why=f"a filler's entries cannot be told, since its state is not one in which it "
+            f"answered: {'; '.join(untold)}",
+        )
+    supplies = {f["name"]: f["supplies"] for _where, f in fillers if f["source"] == CONTRIBUTION}
+    filler_file = next((f["name"] for _where, f in fillers if f["source"] == PROJECT_FILLER), "")
     entries: list[Entry] = []
-    for item in document.get("entries") or []:
-        value = item.get("value") if isinstance(item, Mapping) else None
+    for where, item in keys.objects(document, "entries", ""):
+        value, origin = keys.value(item, "value", where), keys.text(item, "origin", where)
         if not isinstance(value, Mapping):
             continue
-        origin = str(item.get("origin") or "")
         project = origin == PROJECT_FILLER
         entries.append(
             Entry(
@@ -265,24 +305,35 @@ def read_types(run: Runner = backbone.run) -> dict[str, str]:
     registries the backbone lists beside its one answer for each artefact's type
     (COR-056 point 6), read through `pkit friction artefacts --json`. Raises
     Unreadable when it gives no such document."""
-    document = _document(ARTEFACTS_ARGV, run)
-    version = document.get("schema_version", ARTEFACTS_VERSION)
-    if version != ARTEFACTS_VERSION:
+    return types_of(_document(ARTEFACTS_ARGV, run))
+
+
+def types_of(document: Mapping[str, Any]) -> dict[str, str]:
+    """Each declared type the `pkit friction artefacts --json` document lists, and the
+    component that declares it, read by its keys (ADR-097 point 3). Raises Unreadable
+    for a version this reading does not know, and for a key it reads that is missing,
+    null or of another type."""
+    version = document.get("schema_version")
+    if type(version) is not int or version != ARTEFACTS_VERSION:
         raise Unreadable(
             f"`{' '.join(ARTEFACTS_ARGV)}` answered a document at version {version!r}; "
             f"this reading understands {ARTEFACTS_VERSION}"
         )
-    types = document.get("types")
-    if not isinstance(types, Mapping):
+    if "types" not in document:
         raise Unreadable(
             f"`{' '.join(ARTEFACTS_ARGV)}` lists no type registries (it predates them; "
             "upgrade the backbone)"
         )
-    return {
-        str(name): str(declared.get("component") or "")
-        for name, declared in types.items()
-        if isinstance(declared, Mapping)
-    }
+    try:
+        types = keys.mapping(document, "types", "")
+        return {
+            str(name): keys.text(keys.mapping(types, name, "types"), "component", f"types.{name}")
+            for name in types
+        }
+    except keys.Untold as exc:
+        raise Unreadable(
+            f"`{' '.join(ARTEFACTS_ARGV)}` answered a document this reading cannot read: {exc}"
+        ) from exc
 
 
 def _document(argv: Sequence[str], run: Runner) -> Mapping[str, Any]:
@@ -544,8 +595,8 @@ class GrantChange:
         """The change as a line says it to the person who authorises the merge."""
         if self.answer == GRANTED:
             if self.added:
-                return f"Fixer grant added: {self.agent} may start on its own on {self.type}"
-            return f"Fixer grant removed: {self.agent} no longer starts on its own on {self.type}"
+                return f"Fixer grant added: {self.agent} may start on {self.type}"
+            return f"Fixer grant removed: {self.agent} no longer starts on {self.type}"
         if self.added:
             return f"Fixer refusal added: {self.agent} is refused {self.type}"
         return f"Fixer refusal removed: {self.agent} is no longer refused {self.type}"
@@ -782,8 +833,13 @@ def questions(point: Point, checked: Sequence[Checked], answers: Answers) -> lis
 
 def question_text(question: Question) -> str:
     """The question's words: built from the capability's name and the descriptions
-    of the agent's entries, saying what the agent does on its own after each merge,
-    and that nothing is applied until the person approves it."""
+    of the agent's entries, saying what the agent does when a person runs the
+    drift command at a terminal, under whose settings, that it also starts
+    after each merge with nobody watching, confined once the harness can
+    confine it and unconfined where the project's switch is on, and that
+    nothing it proposes is applied until the person approves it (DEC-069
+    point 3). A grant counts for a run nobody watches only where the question
+    it answered said so."""
     kept = _joined(list(dict.fromkeys(e.description for e in question.entries)))
     origins = {e.origin for e in question.entries}
     if len(origins) == 1 and PROJECT_FILLER not in origins:
@@ -791,9 +847,12 @@ def question_text(question: Question) -> str:
     else:
         subject, doer = f"The agent {question.agent}", "it"
     return (
-        f"{subject} can keep {kept} true on its own. After each merge, {doer} proposes a fix "
-        "for each one that went out of date, and nothing is applied until you approve it. "
-        "Turn this on?"
+        f"{subject} can keep {kept} true. When you run `{COMMAND} {DRIFT_VERB}` at a terminal, "
+        f"{doer} proposes a fix for each one that went out of date, under your settings and the "
+        f"project's. After each merge, {doer} also starts with nobody watching: confined, once "
+        "your harness can confine it, and where the project's switch is on, under the settings "
+        "of whoever runs the drift command. Nothing it proposes is applied until you approve "
+        "it. Turn this on?"
     )
 
 

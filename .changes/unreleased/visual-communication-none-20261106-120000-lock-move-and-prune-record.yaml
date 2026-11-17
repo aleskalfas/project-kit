@@ -1,7 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  DEC-019 decides what a lock's proposed move carries, where a reviewer sees it
-  before and after, how a person names a version that goes further, and what
-  removing versions spares (#2701). The record designs ahead: `upgrade`,
-  `outdated` and `prune` land in later pull requests, so no surface moves yet.

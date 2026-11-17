@@ -26,9 +26,11 @@ pkit:
         - src/project_kit/validators.py
         - src/project_kit/command_runner.py
         - src/project_kit/default_branch.py
+        - src/project_kit/friction_check.py
         - .pkit/rules/project.md
       record:
         - COR-050#6
+        - COR-050#12
         - COR-054#2
         - COR-054#3
         - COR-054#4
@@ -89,7 +91,7 @@ pkit:
 - **2b.** The [base](../../../glossary.md#term-base--base) resolves to no commit. Each check that has something to compare refuses ([COR-054 point 4](../../../../../../.pkit/decisions/core/COR-054-default-branch.md#4-unresolved-report-never-guess)). It names its fixes: fetching the base, declaring the right default branch, or naming another base.
 - **3a.** A registered [validator](../../../glossary.md#term-validator--validator) cannot run, ends abnormally or overruns its time. It yields an `error` [finding](../../../glossary.md#term-finding--finding), never a clean pass. Where `pkit sync` has not provisioned its environment in this clone, it says "environment not provisioned — run `pkit sync`".
 - **3b.** A [documentation root](../../../glossary.md#term-documentation-root--documentation-root) the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration) declares does not exist yet. [Validation](../../../glossary.md#term-validation--validation) warns of it, and does not fail on it ([REQ-015](../../../requirements/functional/REQ-015-missing-root-warns.md)).
-- **4a.** The base moved on after the branch left it. The [change check](../../../glossary.md#term-change-check--change-check) reports an `outdated-base` and passes. The developer merges the base and runs the checks again.
+- **4a.** The base moved on after the branch left it. The [change check](../../../glossary.md#term-change-check--change-check) reports an `outdated-base`, passes, and names no remedy ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)). Where the project has the developer take in the base, the developer does so, and the path rejoins at step 1. Otherwise the path goes on at step 5.
 - **6a.** The developer pushes with `git push --no-verify`, so the hook does not run. The CI pipeline still runs the checks on the pull request.
 - **6b.** In project-kit, the push changes only answers since the pull request's most recent full run in CI, which passed. The CI pipeline runs every check but the test suite on it (project rule 2 and [ADR-067](../../../../../architecture/decisions/ADR-067-answers-only-short-check.md) points 1 to 3). Where the hook ran, it ran the whole aggregator before the push ([ADR-067 point 10](../../../../../architecture/decisions/ADR-067-answers-only-short-check.md#10-what-the-pre-push-hook-runs)).
 

@@ -37,6 +37,7 @@ pkit:
         - PRJ-003
         - COR-005
         - ADR-034#1
+        - ADR-088#5
       artefact:
         - ACT-methodology-maintainer
         - ACT-ai-agent
@@ -89,7 +90,7 @@ pkit:
 - **2a.** The maintainer runs the dispatcher `.pkit/cli/pkit` itself. The path goes on at step 4.
 - **2b.** The maintainer runs `pkit init` in the checkout. The [system](../../../glossary.md#term-system--system) refuses with `<root> is already a project-kit project.`, names `pkit sync` to refresh it, and writes nothing (`install.py`). The use case ends.
 - **2c.** The maintainer runs `pkit pin <version>`. The system refuses with ``refusing to pin <root>: it is the methodology's source repository``, since the checkout's own code runs before any pin is read, and writes nothing. To move the checkout to another [release](../../../glossary.md#term-release--release), the maintainer updates it with git ([ADR-059 point 3](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md#3-the-marker-test)). The use case ends.
-- **2d.** The maintainer runs `pkit capabilities install <name>` for a [capability](../../../glossary.md#term-capability--capability) the tree authors. The system records the capability as `kit-shipped` in the [manifest](../../../glossary.md#term-manifest--manifest), copies nothing, and says that `nothing was copied (ADR-059)`. Uninstalling it later only takes it out of the manifest, after asking `Unregister '<name>' and keep .pkit/capabilities/<name>/?`, and the system refuses `--purge` there ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)).
+- **2d.** The maintainer runs `pkit capabilities install <name>` for a [capability](../../../glossary.md#term-capability--capability) the tree authors. The system records the capability as `kit-shipped` in the [manifest](../../../glossary.md#term-manifest--manifest), copies nothing, and says that `nothing was copied (ADR-059)`. It writes the defaults the capability declares into the [overlay](../../../glossary.md#term-overlay--overlay), as [UC-023](../020-set-up/UC-023-add-or-remove-capability.md)'s step 20 does ([ADR-088 point 5](../../../../../architecture/decisions/ADR-088-capability-default-write-paths.md#5-install-provisions-the-query-writes-the-defaults-then-deploys)). Uninstalling it later only takes it out of the manifest, after asking `Unregister '<name>' and keep .pkit/capabilities/<name>/?`, and the system refuses `--purge` there ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)).
 - **2e.** On the path of 2d, `pkit capabilities install` and `uninstall` each check the repository at their entry, as step 9 does ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]

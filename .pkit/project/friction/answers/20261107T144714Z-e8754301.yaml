@@ -1,0 +1,94 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-audit-comment
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+    revalidated:
+      at: 2026-11-07T14:47:14Z
+      outcome: unchanged
+      unchanged-because: This change adds standing_pools to _lib/pools.py and has a write of a Task's Milestone call it, with the same result as before. No audit comment a write posts changes, nor what it records, so the term's definition and example still hold.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-pool
+    revalidated:
+      at: 2026-11-07T14:47:21Z
+      outcome: unchanged
+      unchanged-because: "This change only adds to _lib/pools.py a helper that names the pools the Pool: lines name, for a write or a close where the topology cannot be read. What a pool is, and how a Milestone joins one by its Pool: line, stand as before."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+    revalidated:
+      at: 2026-11-07T14:48:30Z
+      outcome: unchanged
+      unchanged-because: Judged with main's two answers made apart. 9442a4b6 brought UC-084 to the analysis rules, adding the builder agent as an actor and mending steps 5 and 9. 3c4c3246 found start-work's docstring changed no behaviour. This change adds to _lib/pools.py only a helper that a write of a Task's Milestone and a close use where the topology cannot be read, with move's result kept. Nothing the take of the next Task reads changes, nor variant 2f, so the use case as 9442a4b6 left it holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T010917Z-565aa9b8.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+    revalidated:
+      at: 2026-11-07T14:47:31Z
+      outcome: updated
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+    revalidated:
+      at: 2026-11-07T14:47:32Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+    revalidated:
+      at: 2026-11-07T14:47:34Z
+      outcome: unchanged
+      unchanged-because: UC-064 gained variant 12c, on a close over a topology the code cannot read in full. What JRN-004 needs from UC-064, the workstreams the project declares and the Milestones a person marks with a pool, is unchanged.

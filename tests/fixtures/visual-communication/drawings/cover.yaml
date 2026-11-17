@@ -1,0 +1,48 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+# A brand's drawing of the deck's cover (visual-communication DEC-034 point 1), which the
+# tests copy into the test brand's version folder as `components/cover.yaml`. It declares
+# nothing the content gives: it takes the cover's slots from the deck. Each part that shows
+# a slot is named after it (point 5), and it writes no width, since a page gets the deck's
+# (point 2). It carries no status, since nothing names it (point 8).
+about: >-
+  The test brand's cover: the title at the top, under a band of the accent, and the
+  subtitle, the author and the link below it.
+draws: {top: foundations/deck, layout: cover}
+
+values:
+  margin: "=@space.4"
+
+parts:
+  background:
+    box: {fill: surface}
+    width: "=:width"
+    height: "=:height"
+  band:
+    box: {fill: accent}
+    width: "=:width"
+    height: "=@space.2"
+  title:
+    text: {content: title, style: type.heading, fill: text-primary}
+    x: "=margin"
+    y: "=band.bottom + margin"
+    width: "=:width - 2 * margin"
+  subtitle:
+    when: subtitle
+    text: {content: subtitle, style: type.body, fill: text-secondary}
+    x: "=margin"
+    y: "=title.bottom + @space.3"
+    width: "=:width - 2 * margin"
+  author:
+    when: author
+    text: {content: author, style: type.body, fill: text-primary}
+    x: "=margin"
+    y: "=subtitle.bottom + @space.3"
+    width: "=:width - 2 * margin"
+  link:
+    when: link
+    text: {content: link, style: type.body, fill: text-secondary}
+    x: "=margin"
+    y: "=:height - margin - link.height"
+    width: "=:width - 2 * margin"

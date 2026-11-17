@@ -34,9 +34,11 @@ process:
 # rules, `.pkit/rules/project.md`, kept as a plain file (COR-069 point 3):
 # `pkit validate` fails the file past it. Lowered by the trim (#2261) to the
 # trimmed file's 290 words with room for about 50 more (COR-069 point 4); a
-# growth past it is a raise a person authorises.
+# growth past it is a raise a person authorises. Raised by the maintainer to
+# 600 for rule 5, which is interim (#3249): the change that removes rule 5
+# lowers it back to 340.
 rule-sets:
-  plain-file-budget: 340
+  plain-file-budget: 600
 
 # `friction` — anchors and friction (COR-050 point 14). `enforcing` from the
 # day the check exists (ADR-055 point 5).
@@ -92,6 +94,10 @@ friction:
     - {path: .pkit/cli/README.md, type: living-docs:page}
     - {path: .pkit/decisions/README.md, type: living-docs:page}
     - {path: .pkit/lifecycle/README.md, type: living-docs:page}
+    - {path: .pkit/lifecycle/manifest.md, type: living-docs:page}
+    - {path: .pkit/lifecycle/component-registry.md, type: living-docs:page}
+    - {path: .pkit/lifecycle/migrations.md, type: living-docs:page}
+    - {path: .pkit/lifecycle/upgrade-flow.md, type: living-docs:page}
     - {path: .pkit/permissions/README.md, type: living-docs:page}
     - {path: .pkit/process/README.md, type: living-docs:page}
     - {path: .pkit/process/shape.md, type: living-docs:page}
@@ -156,6 +162,7 @@ friction:
     - .pkit/adapters/claude-code/*.sh
     - .pkit/adapters/claude-code/harness-support.yaml
     - .pkit/adapters/claude-code/permission-enforcement.yaml
+    - .pkit/adapters/claude-code/tool-access.json
     - .pkit/adapters/claude-code/settings/**
   # Left out of anchoring and of the measures (COR-050 point 7).
   exclude:

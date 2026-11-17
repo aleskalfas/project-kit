@@ -1,8 +1,0 @@
-component: visual-communication
-kind: none
-body: >
-  What projects a scene onto a page lies in a module of its own, `_lib/canvas.py`,
-  which the SVG renderer draws through and a second renderer can subclass (#2741).
-  The module is internal, and no renderer but the SVG one uses it yet. The SVG
-  renderer's output and version stay as they were, and no command, path or file
-  format changes, so no surface moves.

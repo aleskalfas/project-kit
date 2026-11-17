@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "roles.schema.json",
   "title": "A library's declarations of roles — visual-communication capability",
-  "description": "Formal shape of a library's `roles.yaml` (DEC-004 points 2, 7, 8 and 10): the roles it declares, each with its type and a default that aliases an older role; and, in the foundations, the shared axes with their kind, modes and default, the colour families and their members, and the pairs of colour roles that must contrast at WCAG's levels. A role carries no value: a brand gives it one. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of a library's `roles.yaml` (DEC-004 points 2, 7, 8 and 10): the roles it declares, each with its type and a default that aliases an older role; and, in the foundations, the shared axes with their kind, modes and default, the colour families and their members, the shapes a notation maps a concept to (DEC-036 point 1), an order's roles (DEC-032 point 1), and the pairs of colour roles that must contrast at WCAG's levels. A role carries no value: a brand gives it one. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -21,7 +21,7 @@
       "const": 1
     },
     "roles": {
-      "description": "The roles the library declares, by token path, each with its type and, optionally, a default: an alias to another role, which the role takes wherever no brand gives it a value. In the foundations these are the shared roles, and a default aliases an older role (DEC-004 point 7). In another library of components they are its own roles, each under the group of the library's name and none under `component`; a default aliases another of its own roles or a role of a library it builds on, the shared roles included, of the same type, never a value or a component token (DEC-008 points 1 and 3).",
+      "description": "The roles the library declares, by token path, each with its type and, optionally, a default: an alias to another role, which the role takes wherever no brand gives it a value. In the foundations these are the shared roles, and a default aliases an older role (DEC-004 point 7). In another library of components they are its own roles, each under the group of the library's name and none under `component`; a default aliases another of its own roles or a role of a library it builds on, the shared roles included, of the same type, never a value or a component token (DEC-008 points 1 and 3). A role of the type `picture` takes a picture file of the brand as its value: only the foundations declare one, with no default, and no brand owes it a value (DEC-025 point 4).",
       "type": "object",
       "propertyNames": {
         "$ref": "defs.schema.json#/$defs/token-path"
@@ -40,7 +40,8 @@
               "fontFamily",
               "fontWeight",
               "number",
-              "typography"
+              "typography",
+              "picture"
             ]
           },
           "default": {
@@ -98,6 +99,41 @@
           "$ref": "defs.schema.json#/$defs/token-path"
         },
         "minProperties": 1
+      }
+    },
+    "shapes": {
+      "description": "The shapes a notation maps a concept to, each an outline by its name, the concept's sign where its notation holds no icon for it (DEC-036 point 1). Only the foundations declare them.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "$ref": "defs.schema.json#/$defs/outline"
+      }
+    },
+    "order": {
+      "description": "An order's roles, which only the foundations declare (DEC-032 point 1): which colour role is the first end, which an order's first place takes, which the last end, which the text on every step, and which the page's ground, from which the first end stands out at least as much as the last (DEC-004 point 8). Four different roles. No colour family holds the first three, and no family takes the name `order`.",
+      "type": "object",
+      "required": [
+        "first",
+        "last",
+        "text",
+        "ground"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "first": {
+          "$ref": "defs.schema.json#/$defs/token-path"
+        },
+        "last": {
+          "$ref": "defs.schema.json#/$defs/token-path"
+        },
+        "text": {
+          "$ref": "defs.schema.json#/$defs/token-path"
+        },
+        "ground": {
+          "$ref": "defs.schema.json#/$defs/token-path"
+        }
       }
     },
     "pairs": {

@@ -1,0 +1,3342 @@
+answers:
+  - artefact: .pkit/agents/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T215716Z-41cae09d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:14:06Z
+      outcome: updated
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T132436Z-bef131f7.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231902Z-3d2033fe.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T005438Z-7c9426ae.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201011Z-bd16eac8.yaml
+      - 20261109T223833Z-3afa7580.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:14:13Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-049
+          reason: "The records add --pre to pkit release plan and apply and to pkit upgrade, candidate pins, the refusal of pkit unpin on a candidate and an upgrade guard against a candidate nobody asked for, none built yet. The reference gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-063
+          reason: "The records add --pre to pkit release plan and apply and to pkit upgrade, candidate pins, the refusal of pkit unpin on a candidate and an upgrade guard against a candidate nobody asked for, none built yet. The reference gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-064
+          reason: "The records add --pre to pkit release plan and apply and to pkit upgrade, candidate pins, the refusal of pkit unpin on a candidate and an upgrade guard against a candidate nobody asked for, none built yet. The reference gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-002
+          reason: "The records add --pre to pkit release plan and apply and to pkit upgrade, candidate pins, the refusal of pkit unpin on a candidate and an upgrade guard against a candidate nobody asked for, none built yet. The reference gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-004
+          reason: "The records add --pre to pkit release plan and apply and to pkit upgrade, candidate pins, the refusal of pkit unpin on a candidate and an upgrade guard against a candidate nobody asked for, none built yet. The reference gains them with the build for #2211."
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T020441Z-7e50a784.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T215716Z-41cae09d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:14:20Z
+      outcome: updated
+  - artefact: .pkit/lifecycle/manifest.md
+    read:
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T215716Z-41cae09d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:14:28Z
+      outcome: updated
+  - artefact: .pkit/lifecycle/component-registry.md
+    read:
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T215716Z-41cae09d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:14:35Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:14:40Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-016-keep-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:14:46Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225513Z-2f7a79b4.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:14:51Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T21:14:55Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:15:00Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-overlay-category
+    read:
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-11T21:15:05Z
+      outcome: unchanged
+      unchanged-because: The change adds overlay categories a capability declares for its agents' writes, named <capability>.<word>, whose defaults install and the fill commands write (ADR-088). Each is still a named kind of path under which the overlay lists the paths that fill its placeholder, so the definition and its distinctions hold.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-overlay
+    read:
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-11T21:15:10Z
+      outcome: unchanged
+      unchanged-because: The overlay may now hold a default a writer wrote, which a mark on its line repeats, and an edit makes the value the project's (ADR-088 point 4). It is still the project-owned file that gives the paths the adapter writes in place of each placeholder, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-placeholder
+    read:
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T21:15:15Z
+      outcome: unchanged
+      unchanged-because: The change adds a writer of the overlay's values and a test of what a grant may reach. How the deploy replaces a placeholder in the front matter, and leaves it in the body, is as it was, so the term holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-package-metadata
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-11T21:15:20Z
+      outcome: unchanged
+      unchanged-because: Package metadata may now declare write categories, which package validation checks (ADR-088 point 1). The definition lists what a component adds as examples, with 'such as', so it still holds, and so do its distinctions.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-project-owned-content
+    read:
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-11T21:15:24Z
+      outcome: unchanged
+      unchanged-because: ownership.py now holds the deploy's reach test and the categories it binds, and its predicates of what sync manages are as they were. Install writes a default into the overlay as an operation records name (ADR-065 point 11, ADR-088 point 5), so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-synced-copy
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-11T21:15:38Z
+      outcome: unchanged
+      unchanged-because: The change leaves is_synced_copy and is_sync_managed as they were, and adds the deploy's test, which refuses an agent's grant that reaches what sync overwrites. A synced copy is still what sync writes over, so the term holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-source-repository
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261108T220940Z-0b404379.yaml
+    revalidated:
+      at: 2026-11-11T21:15:42Z
+      outcome: unchanged
+      unchanged-because: The change leaves is_methodology_source as it was. In the source repository the core's trees stay the core's to manage, so the deploy refuses a grant into them there too, and the term and its distinctions hold.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261106T042059Z-9e1949f8.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:15:51Z
+      outcome: unchanged
+      unchanged-because: The tests the change adds cover the defaults a capability's install and register write into the agents overlay, and one finds that install --dry-run asks no query and leaves the overlay as it was. So the requirement's verification of install's dry run still holds, and its statement does not change.
+  - artefact: tech-docs/analysis/core/requirements/constraints/REQ-007-offline-same-answer.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - moved-c65929ef6b08.yaml
+    revalidated:
+      at: 2026-11-11T21:15:55Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: src/project_kit/command_runner.py
+        outcome: unchanged
+        reason: The runner marks each run offline and drops a named base for every query, which the requirement's verification reads. write_categories.ask runs a capability's default query through it, so the runner stands as it is.
+      - anchor:
+          kind: path
+          value: tests/test_data_points.py
+        outcome: unchanged
+        reason: It finds the query contract's declaration and the offline mark for a command that fills a data point, one of the requirement's uses, which the change leaves as it was. The fourth use is found by tests/test_write_categories.py and tests/test_package_validate.py.
+      - anchor:
+          kind: path
+          value: tests/test_friction_anchor_kinds.py
+        outcome: unchanged
+        reason: It finds the query contract's declaration and the offline mark for a command that resolves an anchor, one of the requirement's uses, which the change leaves as it was. The fourth use is found by tests/test_write_categories.py and tests/test_package_validate.py.
+      - anchor:
+          kind: path
+          value: tests/test_validators.py
+        outcome: unchanged
+        reason: It finds the query contract's declaration and the offline mark for a command that joins validation, one of the requirement's uses, which the change leaves as it was. The fourth use is found by tests/test_write_categories.py and tests/test_package_validate.py.
+      - anchor:
+          kind: record
+          value: ADR-057#3
+        outcome: unchanged
+        reason: Point 3 has a capability declare the contract and the engine refuse a command without it, which the requirement's verification rests on. The default query takes the same declaration (ADR-088 point 2), so point 3 stands.
+      - anchor:
+          kind: record
+          value: ADR-057#4
+        outcome: unchanged
+        reason: Point 4 says that nothing confines a query command's use of the network, which the requirement cites as why it is a constraint. That holds of the default query alike, so point 4 stands.
+      - anchor:
+          kind: record
+          value: ADR-058#4
+        outcome: unchanged
+        reason: Point 4 asks the same declaration of a validator's command, as the requirement cites it, and the default query declares it by the same literal (ADR-088 point 2).
+      - anchor:
+          kind: record
+          value: COR-050#2
+        outcome: unchanged
+        reason: Point 2 lays the three obligations on a command that resolves an anchor, which the requirement still cites it for. The fourth use is imposed by COR-073 point 3 and ADR-088 point 2, which it now cites.
+      - anchor:
+          kind: record
+          value: COR-052#6
+        outcome: unchanged
+        reason: Point 6 lays the obligations on a command filler, and already counts a capability's default query among the query commands. The requirement now names that use, and reads point 6 as it stands.
+      - anchor:
+          kind: record
+          value: COR-055#3
+        outcome: unchanged
+        reason: Point 3 runs a command that joins validation under the same limits, which the requirement still cites it for. The fourth use is imposed by COR-073 point 3 and ADR-088 point 2.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+    revalidated:
+      at: 2026-11-11T21:15:59Z
+      outcome: unchanged
+      unchanged-because: The agents README gains a capability's write categories and the deploy's wider test, and its account of reviewers, their read-only section and the agent workspace is as it was. No reviewer agent owns a capability's category, so the requirement holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-029-compatibility-before-write.md
+    read:
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261106T042059Z-9e1949f8.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261111T084307Z-31fa735e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:27:23Z
+      outcome: unchanged
+      unchanged-because: "Judged with 31fa735e and ec4f3511, made apart: the first added upgrade's hand-over to a newer candidate and its refusal of a candidate nobody asked for, both before any write, and the second a raise that refuses a target it cannot fetch before it runs it. This change's tests in tests/test_capabilities.py run capabilities install and register over a capability's write categories, and none runs pkit upgrade or its dependency gates. Under all three a transition still resolves compatibility in its first step before any write, so the requirement holds."
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T130234Z-4a978d21.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261106T042059Z-9e1949f8.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:27:28Z
+      outcome: unchanged
+      unchanged-because: "Judged with b6b1d9a3 and ec4f3511, made apart: the first added upgrade's --pre hand-over and its refusal of a candidate nobody asked for, each the person's ask or a refusal that writes nothing, and the second a refused raise that asks and writes nothing. This change's tests find that install asks at a terminal before it writes a default over content, and leaves the category unset, naming the fill commands, without one. Install is no version transition, so under all three no choice of a transition is taken silently, and the requirement holds."
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T191337Z-5f15e2a0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T042059Z-9e1949f8.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261111T084307Z-31fa735e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:27:33Z
+      outcome: unchanged
+      unchanged-because: "Judged with ec4f3511 and 3caaee28, made apart: a refused raise records nothing, and status's new warning of a hidden skill leaves the transition lines it shows as they were. This change's tests in tests/test_capabilities.py cover a capability install's defaults, and none touches a recorded target, a completion or a failing migration. Under all three an interrupted transition still never reads as finished, so the requirement holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:16:18Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case re-pins an inherited rule set through the rule-set commands, none of which the change touches, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T21:16:22Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case checks that a capability is ready to share through the release's shareability check, which the change leaves as it was, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T084307Z-31fa735e.yaml
+    revalidated:
+      at: 2026-11-11T21:16:27Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case declares a changeset and reads the release's checks of it, none of which the change touches, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T21:16:33Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case dispatches the reviewer agents and runs the diff checks. No core reviewer owns a capability's category, so their deploy, and the use case's steps, hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T114749Z-6d317cb4.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:16:39Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case reads capabilities install --plan, which returns before the defaults step and shows no default, as ADR-088 point 5 decides, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:16:48Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case authors rule sets through the rule-set and authoring commands, which the change leaves as they were. REQ-006 and REQ-007 now name the query that answers a capability's default among the commands they cover (ADR-088 point 2). Their thirty-second bound and the query contract, for a command that resolves an anchor or joins validation, are as the use case reads them, variant 6c's cited source among them, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T21:16:56Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case makes a drafted record or rule binding through the person's review and the acceptance gate, which the change leaves as they were, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T21:17:01Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case stamps a new capability with pkit new capability, which the change leaves as it was. A capability may now declare write categories, which the stamp does not write and the use case's steps do not list, so they hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:17:06Z
+      outcome: unchanged
+      unchanged-because: package_validate.py now refuses a write_categories block on an adapter, which an adapter's stamped package never holds. ownership.py now holds the categories the deploy's test binds, which a new adapter's resolver asks rather than derives. The use case's steps of stamping, validating and deploying an adapter hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:27:58Z
+      outcome: unchanged
+      unchanged-because: Judged with ec4f3511 and 3caaee28, made apart, which judged the install's docstring and the skills reference's sentence on a hidden skill against owning a skill or an agent and its deploy. Here the developer's agent definition takes a name no capability's agent has (step 3), so the deploy's wider test binds only the core's write-carrying categories it may name, as before, and the undeclared-category warning reads only dotted names. Its deploy through the overlay, and variant 9a on an unset category, are as they were, so it holds under all three.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-006-gate-merges.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T011742Z-95ba1392.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T21:17:16Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case makes merges wait on the checks a pipeline runs, which the change leaves as they were. REQ-006 and REQ-007 now name the query that answers a capability's default among the commands they cover (ADR-088 point 2). Their thirty-second bound and the query contract, for a command that resolves an anchor or joins validation, are as the use case reads them, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T21:17:21Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case declares and validates the backbone configuration, which the change leaves as it was, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:17:25Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case chooses a role's provider through the connections commands, which the change leaves as they were, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T21:17:30Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case lands a change through the pull-request commands, which the change leaves as they were, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T020441Z-7e50a784.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+    revalidated:
+      at: 2026-11-11T21:17:34Z
+      outcome: unchanged
+      unchanged-because: refs.py gains a warning of an undeclared dotted category in the agents overlay, and ownership.py the deploy's wider test, neither of which reads a decision record. cli.py's decision commands are as they were, so the use case's steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T231902Z-3d2033fe.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T005438Z-7c9426ae.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T21:17:39Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case's scratchpad commands are as they were, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T21:17:43Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case keeps core records true through review and the record checks, which the change leaves as they were, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T214551Z-3cd33a49.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:17:48Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case releases the backbone through the release commands, which the change leaves as they were, so its steps hold.
+      deferred:
+        - anchor:
+            kind: record
+            value: PRJ-002#D2
+          reason: "PRJ-002 has the release workflow cut each release candidate, and the final release that ends a line cut from the last candidate's source commit, tagged before its release PR, with refusals of its own, none built yet. The use case gains those paths with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-002#D3
+          reason: "PRJ-002 has the release workflow cut each release candidate, and the final release that ends a line cut from the last candidate's source commit, tagged before its release PR, with refusals of its own, none built yet. The use case gains those paths with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-002#D4
+          reason: "PRJ-002 has the release workflow cut each release candidate, and the final release that ends a line cut from the last candidate's source commit, tagged before its release PR, with refusals of its own, none built yet. The use case gains those paths with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-004
+          reason: "PRJ-002 has the release workflow cut each release candidate, and the final release that ends a line cut from the last candidate's source commit, tagged before its release PR, with refusals of its own, none built yet. The use case gains those paths with the build for #2211."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T214551Z-3cd33a49.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T084307Z-31fa735e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:28:09Z
+      outcome: unchanged
+      unchanged-because: "Judged with 31fa735e and ec4f3511, made apart: a final release of components alone cuts no candidate and gets no tag, and PRJ-004 only gained PRJ-015's line on the install form. In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case releases a component on its own version through the release commands, which none of the three touches, so its steps hold."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-010-migrate-backbone-change.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T084307Z-31fa735e.yaml
+    revalidated:
+      at: 2026-11-11T21:17:58Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case's migration of a breaking backbone change, and its check of a diff, are as they were, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-011-migrate-component-change.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T084307Z-31fa735e.yaml
+    revalidated:
+      at: 2026-11-11T21:18:02Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case's migration of a breaking change of a component is as it was, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T084307Z-31fa735e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:28:15Z
+      outcome: unchanged
+      unchanged-because: "Judged with 31fa735e and ec4f3511, made apart: the first added the candidate tag, which latest never names, and the second the install script and the install over HTTPS, with which it updated the use case. In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). None of these touches the CLI's install at latest or at a tag, or the install script, so the use case holds under all three."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T084307Z-31fa735e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:28:38Z
+      outcome: unchanged
+      unchanged-because: "Judged with 31fa735e and ec4f3511, made apart: a component's lower bound read in PEP 440 order gives what it gave for every release, and upgrade's fetch over HTTPS leaves a capability's upgrade and its stop with a remedy as they were. In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case upgrades one capability through capabilities upgrade, which writes no default (ADR-088 point 5), so its steps hold under all three."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/060-report/UC-012-report-problem.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T21:18:16Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case's reporting commands are as they were, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/060-report/UC-013-link-reports.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T21:18:21Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The use case's linking of reports to their fixes is as it was, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-032-ask-before-other-repository.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T21:18:25Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). Install's defaults go into the project's own agents overlay, so the change adds no write outside the session's repository, and the use case's steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T084307Z-31fa735e.yaml
+    revalidated:
+      at: 2026-11-11T21:18:30Z
+      outcome: unchanged
+      unchanged-because: refs.py gains a warning of an undeclared dotted category in the agents overlay, which fails nothing, so the journey's checks of a change, and its steps, hold.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-005-package-and-share-capability.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:18:35Z
+      outcome: unchanged
+      unchanged-because: UC-016 now says register writes a capability's defaults into the agents overlay, a step inside that use case. The journey's steps name UC-015, UC-016 and UC-018 in turn, and none of them changes.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-002-upgrade-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T131514Z-b8a00a20.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T214551Z-3cd33a49.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T084307Z-31fa735e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:28:27Z
+      outcome: unchanged
+      unchanged-because: "Judged with ec4f3511 and 3caaee28, made apart: UC-048 still gives a CLI installed from a release's tag, now over HTTPS, and status's hidden-skill warning leaves the rule-set pins the journey reads as they were. Here UC-023 gains install's step 20, which writes a capability's defaults, and ADR-088 point 5 keeps the defaults out of upgrade. So the journey's steps, which upgrade the system, hold under all three."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-007-upgrade-one-capability.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:28:43Z
+      outcome: unchanged
+      unchanged-because: "Judged with ec4f3511 and 3caaee28, made apart: UC-048 still gives a CLI installed from a tag, now over HTTPS, and status's hidden-skill warning leaves the rule-set pins the journey reads as they were. Here UC-023 gains install's step 20, which writes a capability's defaults. The journey upgrades one capability, and capabilities upgrade writes no default (ADR-088 point 5), so its steps hold under all three."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-008-release-breaking-backbone-change.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T214551Z-3cd33a49.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+    revalidated:
+      at: 2026-11-11T21:18:49Z
+      outcome: unchanged
+      unchanged-because: UC-014's variant 2d now says install in the source writes a capability's defaults. The journey's steps to release a breaking backbone change take none of that variant, so they hold.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T145230Z-c78b596e.yaml
+    revalidated:
+      at: 2026-11-11T21:18:55Z
+      outcome: unchanged
+      unchanged-because: _resolve_agent.py changed only in its docstrings, which name the deploy's wider test. The software engineer reads its corpus through project-conventions, a category it reads and never writes, so its deploy and the use case's steps hold.
+  - artefact: .pkit/process/engine.md
+    read:
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T21:19:00Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The page's operations of the process engine are as they were, so it holds.
+  - artefact: .pkit/agents/storyboards.md
+    read:
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+    revalidated:
+      at: 2026-11-11T21:19:06Z
+      outcome: unchanged
+      unchanged-because: refs.py gains a warning of an undeclared dotted category, which fails nothing, and _resolve_agent.py's docstrings name the deploy's wider test. The page's storyboards, their declaration and what refs validate fails on are as they were.
+  - artefact: .pkit/adapters/claude-code/README.md
+    read:
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+    revalidated:
+      at: 2026-11-11T21:19:14Z
+      outcome: unchanged
+      unchanged-because: _resolve_agent.py changed only in its docstrings, which name the deploy's wider test, and the page states no rule of that test. Its account of the adapter's scripts holds.
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T053408Z-3b52273c.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:19:21Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). Install still runs the adapters' deploy primitives, after that step, so the page's primitives and declarations hold.
+  - artefact: .pkit/agents/hooks.md
+    read:
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:19:29Z
+      outcome: unchanged
+      unchanged-because: refs.py and cli.py gain a warning of an undeclared dotted category in the overlay, and cli.py install's defaults step, neither of which reads a hook's declaration, provider or signature. The page holds.
+  - artefact: .pkit/process/connections.md
+    read:
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T075620Z-bee9e107.yaml
+    revalidated:
+      at: 2026-11-11T21:19:35Z
+      outcome: unchanged
+      unchanged-because: package_validate.py gains the checks of a write_categories block, and leaves the checks of the connection blocks as they were, so the page holds.
+  - artefact: .pkit/decisions/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T21:19:41Z
+      outcome: unchanged
+      unchanged-because: refs.py gains a warning of an undeclared dotted category in the agents overlay, and its checks of records and their citations are as they were. The README's account of the record system holds.
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T174956Z-c97b966f.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T155747Z-06175c8e.yaml
+      - 20261107T171148Z-59c0d09e.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T010504Z-7ceac335.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-11T21:19:45Z
+      outcome: unchanged
+      unchanged-because: The registry's install section now says install writes a capability's defaults before the deploy. software-analysis declares no write category, so its install, as the README gives it, writes none, and the README holds.
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:19:51Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's surface table changed in its rows for pkit agents, agents reconcile and agents adopt, which the permissions README does not rest on. Its account of grants holds.
+  - artefact: .pkit/schemas/backbone-files.md
+    read:
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T110104Z-48d747c9.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:19:57Z
+      outcome: unchanged
+      unchanged-because: package.schema.json gains the closed write_categories block without a schema_version move, and the page says the schema holds every field in use, so its account holds. is_synced_copy, which the page names, is as it was.
+  - artefact: .pkit/schemas/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T020441Z-7e50a784.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:27:43Z
+      outcome: unchanged
+      unchanged-because: Judged with ec4f3511 and 3caaee28, made apart, which judged the CLI reference's sync and status sections and the install's docstring against what install and sync provision of the schemas and the pins status shows. Here refs.py gains a warning of an undeclared dotted category, ownership.py the deploy's wider test, and the registry's install section the step that writes a capability's defaults, none of which provisions or checks a schema. The ownership predicates the README reads are as they were, so it holds under all three.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:27:48Z
+      outcome: unchanged
+      unchanged-because: Judged with ec4f3511 and 3caaee28, made apart, which judged the CLI reference's sync and status sections against sync deploying the docs-author skill and status showing each data point. Here the CLI reference's section on the two ways in gains the defaults install writes for a capability's write categories. living-docs declares none, so its install, as the README gives it, is as before, and the README holds under all three.
+  - artefact: .pkit/skills/README.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:27:53Z
+      outcome: unchanged
+      unchanged-because: "Judged with ec4f3511 and 3caaee28, made apart: the first judged the sync section's remedy and the install's docstring against install and sync deploying skills, and the second added the warning pkit status gives of a deployed skill a personal skill hides. Here refs.py gains a warning of an undeclared dotted category in the agents overlay, the registry's install section the step that writes a capability's defaults, and the surface table the agents commands' defaults. A skill owns no path and takes no write category, so none of these touches a skill's deploy, its check or that warning, and the README holds."
+  - artefact: docs/process/README.md
+    read:
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T225513Z-2f7a79b4.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:20:16Z
+      outcome: unchanged
+      unchanged-because: process-authoring-targets keeps its rules, and the deploy now also refuses a grant that holds sync-managed content, such as the root, which the page never suggests. Its fences register capabilities that declare no write category, so their output is as before.
+  - artefact: docs/rules/README.md
+    read:
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225513Z-2f7a79b4.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:20:20Z
+      outcome: unchanged
+      unchanged-because: The page installs project-management, which declares no write category, so the output it shows is as before. UC-022's and UC-023's new variants concern the agents overlay, which the page does not cover.
+  - artefact: docs/skills/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:28:03Z
+      outcome: unchanged
+      unchanged-because: Judged with ec4f3511 and 3caaee28, made apart, which judged the CLI reference's sync and upgrade remedies and the hidden-skill warning against the page's deploy, a project skill replacing a shipped one and its fences. Here refs.py gains a warning of an undeclared dotted category in the agents overlay, which reads no skill. So the page's skills, their deploy, their checks and its fences hold under all three.
+  - artefact: docs/scratchpad/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T231902Z-3d2033fe.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T005438Z-7c9426ae.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+    revalidated:
+      at: 2026-11-11T21:20:30Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change adds only a step of capabilities install, register and install in the source that writes the defaults a capability's write categories declare into the agents overlay before the deploy, and refs validate's warning of a dotted category no installed capability declares (ADR-088). The page's scratchpad commands are as they were, so it holds.
+  - artefact: docs/decisions/README.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T21:20:35Z
+      outcome: unchanged
+      unchanged-because: The CLI reference's surface table changed in its rows for the agents commands, which the page does not rest on. Its account of decisions holds.
+  - artefact: docs/schemas/README.md
+    read:
+      - 20261104T114749Z-6d317cb4.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+    revalidated:
+      at: 2026-11-11T21:20:40Z
+      outcome: unchanged
+      unchanged-because: The page registers a capability that declares no write category, so register's output, as it shows it, is as before, and the page holds.
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:20:44Z
+      outcome: unchanged
+      unchanged-because: UC-027's variant 6c now gives the deploy's wider test of an agent's write grants, a surface apart from the page's privileges. Its fence registers a capability with no write category, so its output is as before.
+  - artefact: docs/agents/README.md
+    read:
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+    revalidated:
+      at: 2026-11-11T21:20:49Z
+      outcome: unchanged
+      unchanged-because: The reference's frontmatter, overlay and pkit agents sections gain a capability's write categories, the undeclared-category warning and the written defaults the report shows. The page's account of core's categories, the overlay's seed and a skipped definition holds, and none of its fences installs a capability.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T145230Z-c78b596e.yaml
+    revalidated:
+      at: 2026-11-11T21:28:49Z
+      outcome: unchanged
+      unchanged-because: "Judged with ec4f3511 and c78b596e, made apart: the first judged the sync section's remedy against sync deploying the agents with the conventions' paths, and the second updated the README for the software engineer committing only the paths its change touched. Here the agents README's overlay sections and the CLI reference's two ways in gain a capability's write categories and their defaults, and ownership.py the deploy's wider test. The software engineer only reads project-conventions, and the capability declares no write category. The README's test of where a walking skeleton's conventions may go reads is_sync_managed and is_synced_copy, which are as they were, so it holds under all three."
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T151637Z-974a0d9a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T145230Z-c78b596e.yaml
+    revalidated:
+      at: 2026-11-11T21:28:55Z
+      outcome: unchanged
+      unchanged-because: "Judged with ec4f3511 and c78b596e, made apart: the first judged the sync remedy against sync writing the conventions' paths into the agents it deploys, and the second updated the page for the software engineer committing only the paths its change touched. Here the agents reference's overlay, repair and pkit agents sections gain a capability's write categories, their defaults and the undeclared-category warning. The software engineer only reads project-conventions, and the capability declares no write category, so the page's account of its overlay and of pkit agents, and its fence, hold under all three."
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-006-command-time-bound.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - moved-4695bf771ed9.yaml
+    revalidated:
+      at: 2026-11-11T21:21:03Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: src/project_kit/command_runner.py
+        outcome: unchanged
+        reason: The runner still kills a command thirty seconds after it starts, with its process group, and reads it as giving no answer. write_categories.ask runs a capability's default query through it, so the requirement's new use rests on the runner as it is.
+      - anchor:
+          kind: path
+          value: tests/test_command_runner.py
+        outcome: unchanged
+        reason: It finds the runner's bound, the deadline of a run inside a run and the kill of what a command started, which the default query shares unchanged. The new use, a capability's default query, is found by tests/test_write_categories.py, which the requirement now anchors.
+      - anchor:
+          kind: path
+          value: tests/test_data_points.py
+        outcome: unchanged
+        reason: It finds the bound for a command that fills a data point, one of the requirement's uses, which the change leaves as it was. The new use, a capability's default query, is found by tests/test_write_categories.py, which the requirement now anchors.
+      - anchor:
+          kind: path
+          value: tests/test_friction_anchor_kinds.py
+        outcome: unchanged
+        reason: It finds the bound for a command that resolves an anchor, one of the requirement's uses, which the change leaves as it was. The new use, a capability's default query, is found by tests/test_write_categories.py, which the requirement now anchors.
+      - anchor:
+          kind: path
+          value: tests/test_validators.py
+        outcome: unchanged
+        reason: It finds the bound for a command that joins validation, one of the requirement's uses, which the change leaves as it was. The new use, a capability's default query, is found by tests/test_write_categories.py, which the requirement now anchors.
+      - anchor:
+          kind: record
+          value: ADR-057#3
+        outcome: unchanged
+        reason: Point 3 fixes the bound of a query command at thirty seconds, as the requirement cites it. The default query runs under that bound through the shared runner (ADR-088 point 2), so point 3 stands.
+      - anchor:
+          kind: record
+          value: ADR-057#5
+        outcome: unchanged
+        reason: Point 5 keeps one runner, whose deadline and kill reach a run inside a run, as the requirement's measure states. The default query runs through that runner unchanged, so point 5 stands.
+      - anchor:
+          kind: record
+          value: ADR-058#4
+        outcome: unchanged
+        reason: Point 4 applies the bound to validation unchanged, as the requirement cites it. ADR-088 point 2 applies it to the default query in the same way, beside it.
+      - anchor:
+          kind: record
+          value: COR-050#2
+        outcome: unchanged
+        reason: Point 2 bounds a command that resolves an anchor, which the requirement still cites it for. The new use is imposed by COR-073 point 3 and ADR-088 point 2, which the requirement now cites.
+      - anchor:
+          kind: record
+          value: COR-052#6
+        outcome: unchanged
+        reason: Point 6 puts a command filler under the bound, and already counts the query that answers a capability's default among the query commands, with no subject. The requirement now names that use, and reads point 6 as it stands.
+      - anchor:
+          kind: record
+          value: COR-055#3
+        outcome: unchanged
+        reason: Point 3 runs a command that joins validation under the same limits, which the requirement still cites it for. The new use is imposed by COR-073 point 3 and ADR-088 point 2, which the requirement now cites.
+  - artefact: README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261027T191803Z-5aae943e.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261101T153124Z-da768340.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T230732Z-908440cd.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T084307Z-31fa735e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T140022Z-1a3a1d07.yaml
+      - 20261111T140427Z-15276336.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:21:07Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T012936Z-26005889.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T180128Z-acda80dc.yaml
+    revalidated:
+      at: 2026-11-11T21:21:12Z
+      outcome: unchanged
+      unchanged-because: REQ-006 and REQ-007 now name the query that answers a capability's default among the commands they cover (ADR-088 point 2). Their thirty-second bound and the query contract, for a command that resolves an anchor or joins validation, are as the use case reads them, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-004-check-before-push.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T170342Z-a3aeb099.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T180128Z-acda80dc.yaml
+    revalidated:
+      at: 2026-11-11T21:27:38Z
+      outcome: unchanged
+      unchanged-because: "Judged with 5a681b61 and acda80dc, made apart: the first registers pkit validate's scratchpad member, and the second adds CI's drawings job beside the aggregator's parts, each leaving the aggregator and the hook running the same checks. Here REQ-006 and REQ-007 name the query that answers a capability's default among the commands they cover (ADR-088 point 2), and their bound and query contract for an anchor's or a validator's command are as before. Under all three the developer still runs the project's checks before a push, so the use case holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+    revalidated:
+      at: 2026-11-11T21:21:27Z
+      outcome: unchanged
+      unchanged-because: REQ-006 and REQ-007 now name the query that answers a capability's default among the commands they cover (ADR-088 point 2). Their thirty-second bound and the query contract, for a command that resolves an anchor or joins validation, are as the use case reads them, variant 1e's resolver among them, so its steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261104T105644Z-9ae3ab2b.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+    revalidated:
+      at: 2026-11-11T21:21:38Z
+      outcome: unchanged
+      unchanged-because: REQ-006 and REQ-007 now name the query that answers a capability's default among the commands they cover (ADR-088 point 2). Their thirty-second bound and the query contract, for a command that resolves an anchor or joins validation, are as the use case reads them, so its steps hold.
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-002-project-owned-writers.md
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:21:45Z
+      outcome: unchanged
+      unchanged-because: Read with ec4f3511, made apart, in which test_sync.py changed only to find no install line and no SSH in the fallback's remedies. Here ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares (ADR-088). The requirement asks that each write to project-owned content come from a writer a record names, citing point 11. Point 11 names the new writers itself, none of them is sync, and sync's writers are as both changes leave them, so the statement, measure and tests hold.
+  - artefact: .pkit/lifecycle/upgrade-flow.md
+    read:
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:21:50Z
+      outcome: unchanged
+      unchanged-because: "Read with ec4f3511, made apart, which judged the HTTPS fetch, the raise's probe and the fallback's remedies against the page. This change has a capability's install, register and the fill commands write its declared defaults into the agents overlay (agents_overlay.py, ADR-065 point 11), widens the deploy's test in ownership.py, and has the registry's install section write the defaults before the deploy. The page's transition only creates the overlay where that seed path is missing, and writes no default, which ADR-088 point 5 keeps out of upgrade, so its steps hold under both changes. The deferrals of ADR-049, ADR-064 and ADR-065 to #2211 stand, release candidates being unbuilt yet."
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-049
+          reason: "ADR-049, ADR-064 and ADR-065 let a pin name a release candidate, add pkit upgrade --pre with its hand-over, its guard against a candidate nobody asked for and its remedy for a move cut short, have a move to a candidate always pin and pkit unpin refuse on one, and read the window's lower bound in PEP 440 order, none built yet. The page's steps of a transition gain them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-064
+          reason: "ADR-049, ADR-064 and ADR-065 let a pin name a release candidate, add pkit upgrade --pre with its hand-over, its guard against a candidate nobody asked for and its remedy for a move cut short, have a move to a candidate always pin and pkit unpin refuse on one, and read the window's lower bound in PEP 440 order, none built yet. The page's steps of a transition gain them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-065
+          reason: "ADR-049, ADR-064 and ADR-065 let a pin name a release candidate, add pkit upgrade --pre with its hand-over, its guard against a candidate nobody asked for and its remedy for a move cut short, have a move to a candidate always pin and pkit unpin refuse on one, and read the window's lower bound in PEP 440 order, none built yet. The page's steps of a transition gain them with the build for #2211."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:21:56Z
+      outcome: unchanged
+      unchanged-because: "Read with ec4f3511 and 3caaee28, made apart, which judged the HTTPS install with REQ-031, and pkit status's warning of a hidden skill, against steps 10 and 11. Here cli.py gains the step of a capability's install, register and in-source install that writes its declared defaults, and refs validate's warning of an undeclared dotted category, and ADR-065 point 11 names those installs as writers into the overlay. pkit init installs no capability, and creates the overlay by point 11's seed row, so the use case's steps hold under all three. The deferral of ADR-065 point 4 to #2211 stands."
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-065#4
+          reason: "ADR-065 point 4 has an init run by a release candidate refuse unless routing is bypassed and pin the project it installs, which no code does yet. The use case gains that variant with the build for #2211."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T084307Z-31fa735e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:28:21Z
+      outcome: unchanged
+      unchanged-because: "Judged with 31fa735e and ec4f3511, made apart: the first counts the candidate tag a tagged install that latest never names, and the second judged UC-048's install script and HTTPS step, each leaving the journey adopting the system at a release. Here UC-023 gains step 20, where a capability's install writes the defaults the capability declares into the overlay, and ADR-065 point 11 names that writer. The journey adds a capability through UC-023 and names no writer of the overlay, so what the install writes stays on UC-023's page, and its steps hold under all three."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T214544Z-1452f2b4.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:22:19Z
+      outcome: unchanged
+      unchanged-because: Read with ec4f3511, made apart, which judged the fallback's remedies losing the HTTPS install against variants 3b and 3e. Here cli.py gains the step of a capability's install, register and in-source install that writes its declared defaults, and refs validate's undeclared-category warning, and ADR-065 point 11 names those installs as writers into the overlay. A fresh clone's sync regenerates the state point 11 lists and installs no capability, so it writes no default, and the use case holds under both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:22:27Z
+      outcome: unchanged
+      unchanged-because: Read with ec4f3511, made apart, which judged the lookup and the tool's update over HTTPS against step 3 and variants 3a and 3c. Here cli.py gains the step of a capability's install, register and in-source install that writes its declared defaults, and ADR-065 point 11 names those installs as writers into the overlay. ADR-088 point 5 keeps the defaults out of upgrade, and the transition only creates a missing seed path, so the use case's steps hold under both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:22:34Z
+      outcome: unchanged
+      unchanged-because: Read with ec4f3511, made apart, which judged the router's fetch over HTTPS and the raise's probe against the minimal guarantees and variant 7a. Here cli.py gains the step of a capability's install, register and in-source install that writes its declared defaults, and ADR-065 point 11 names those installs as writers into the overlay. The router and the transition this use case runs write no default, so its steps hold under both changes.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-006-start-on-new-machine.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T214551Z-3cd33a49.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:28:32Z
+      outcome: unchanged
+      unchanged-because: "Judged with b6b1d9a3 and ec4f3511, made apart: the first has a project on a candidate always pinned, so the router runs its pin on a new machine, and the second updated the journey for the install script and the CLI's install over HTTPS. Here ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares. The journey puts the CLI on the machine and syncs a fresh clone at the pin, installs no capability and names no writer of the overlay, so it holds under all three."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-028-keep-intermediate-files.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T192358Z-673a43ca.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T150420Z-3caaee28.yaml
+    revalidated:
+      at: 2026-11-11T21:22:46Z
+      outcome: unchanged
+      unchanged-because: Read with ec4f3511 and 3caaee28, made apart, which judged the HTTPS fetch and pkit status's warning of a hidden skill against the agent workspace this use case keeps. Here ADR-065 point 11's row for the agents overlay names a capability's install and register, and the install in the methodology's source, as writers of the defaults the capability declares. The agent workspace, which point 11 lists as derivable state, is as all three changes leave it, so the use case holds.
+  - artefact: .pkit/process/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261106T011619Z-e405542a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:22:52Z
+      outcome: unchanged
+      unchanged-because: ADR-051 now has the deploy refuse a path that lies in or holds sync-managed content, for core's write-carrying categories and every category in the owns of an agent a capability ships. The agents README's write-carrying section now says how reach is read and which categories are bound, and the manifest reference's validation section checks a write_categories block. The README's process-authoring-targets ships empty, owned by process-author alone, which the wider test still binds and no capability declares, so its grant, what the agent can never own and its discipline hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261103T031323Z-5c3bf226.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T143433Z-c966325a.yaml
+    revalidated:
+      at: 2026-11-11T21:22:58Z
+      outcome: unchanged
+      unchanged-because: package_validate.py adds the checks of a write_categories block, and cli.py the step of a capability's install, register and in-source install that writes its declared defaults, with refs validate's undeclared-category warning. ADR-051 now refuses a grant that lies in or holds sync-managed content for every category a capability's agent owns, and REQ-006 now bounds a capability's default query too. The roles, data points and processes the use case connects keep their checks and their bound, and variants 8a and 8b's process-author grant, from ADR-051 point 1, is as it was, so it holds.

@@ -37,7 +37,7 @@ Replacing the tool is a network write outside any one project. Where a sandbox c
 
 ### 1. Detect, best-effort
 
-The upgrade asks the release source for its highest release, read from its `v`-prefixed tags. It runs `git ls-remote --tags` against the distribution URL compiled into the tool, the URL the router fetches pins from, with a short time limit. A pre-release or dev release tag is skipped, even one above the latest release. When the running tool is at or above that version, the upgrade says the tool is current.
+The upgrade asks the release source for its highest release, read from the tags whose full reference is `refs/tags/v…` (refinement per [ADR-092](ADR-092-final-release-from-head.md) point 4). It runs `git ls-remote --tags` against the distribution URL compiled into the tool, the URL the router fetches pins from, with a short time limit. A pre-release or dev release tag is skipped, even one above the latest release. When the running tool is at or above that version, the upgrade says the tool is current.
 
 Any failure — offline, no credentials, no `git`, the limit reached, no release tag — prints a warning on standard error. The upgrade then goes on with its own steps under the running tool, as if the tool were current. Those steps may find nothing to upgrade.
 
@@ -49,7 +49,7 @@ When the install succeeds, the upgrade hands itself over, replacing its own proc
 
 ### 3. Print the command where it cannot or may not install, and stop where the hand-over fails
 
-The upgrade installs nothing when standard input or standard output is not a terminal, when `--no-self-update` is passed, or when the process carries `PKIT_SELF_UPDATED=1`. It prints the install command instead, with a note to run `pkit upgrade` again, unless it stops as below. It prints the same when the install exits non-zero or cannot be started. A sandbox that refuses the install ends here.
+The upgrade installs nothing when standard input or standard output is not a terminal, when `--no-self-update` is passed, or when the process carries `PKIT_SELF_UPDATED=1`. It prints the install command instead, with a note to run `pkit upgrade` again, unless it stops as below. It prints the same when the install exits non-zero or cannot be started. A sandbox that refuses the install ends here. This test governs the upgrade's replacement of the installed tool (refinement per [ADR-090](ADR-090-self-fetch-over-https.md) point 5). The install script, `.pkit/cli/install-pkit.sh`, installs with nobody at a terminal, and only where it finds no pkit installed (refinement per [ADR-090](ADR-090-self-fetch-over-https.md) point 5).
 
 The upgrade installs only under the installed tool. A pkit run another way is not that tool: through `uv run`, a pip install or a `uvx` served from uv's cache. Such a pkit prints the newer release and its command, and the upgrade goes on under it. So does any pkit when `uv` cannot say where its tools live, unless a hand-over started it.
 
@@ -77,7 +77,7 @@ The new process routes like any `pkit` command. In an un-pinned project the rout
 
 ### 7. The tool, from its compiled URL
 
-The step installs the tool from the distribution URL compiled into it. It touches no content a project takes from an external source ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)). A fork that builds its own wheel compiles its own URL, so its tool updates from the fork. A tool installed from anywhere else — a local path, a mirror — is replaced by the compiled URL's release once that release is newer. `--no-self-update` keeps such an install. The step uses the router's URL and leaves the router's route decision as ADR-039 sets it.
+The step installs the tool from the distribution URL compiled into it. It touches no content a project takes from an external source ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)). A fork that builds its own wheel compiles its own URL, and puts the same URL in the install script, where a test holds the two equal, so its tool updates from the fork (refinement per [ADR-090](ADR-090-self-fetch-over-https.md) points 1 and 7). A tool installed from anywhere else — a local path, a mirror — is replaced by the compiled URL's release once that release is newer. `--no-self-update` keeps such an install. The step uses the router's URL and leaves the router's route decision as ADR-039 sets it.
 
 ## Rationale
 
@@ -124,6 +124,6 @@ The step installs the tool from the distribution URL compiled into it. It touche
 - **Where the code differs on pinned projects.** The code runs the step in two pinned cases: a pin equal to the installed tool, which the router runs in-process, and a pin the router could not fetch, where it falls back to the installed tool. #1462 tracks both.
 - **What a failure leaves.** An install is not undone when the rest of the upgrade fails. An un-pinned project is then left un-pinned under the newer tool, until its upgrade runs again. A forced install that fails part-way can leave the shared tool unusable. The old process keeps running and prints the install command, and running that with `uv` repairs the tool.
 - **What a failed hand-over leaves.** Where the upgrade detects it, the project's content and pin stay as they were, and the new tool stays installed. Two failed hand-overs go undetected, and the upgrade goes on, bringing the project to the running pkit's bundle and pinning it there. One is where the pkit that installs, or the first `pkit` the `PATH` finds, comes from a release without this stop. The other is where the new process cannot look up the latest release.
-- **Pre-release tags.** The lookup skips them (point 1). So what the step installs, and what a pinned raise writes as the pin, is a release `pkit pin` and the release step's floors accept.
+- **Pre-release tags.** The lookup skips them (point 1). So what the step installs, and what a pinned raise without `--pre` writes as the pin, is a final release, whose version the release step's floors accept. The step installs no release candidate, even under `pkit upgrade --pre`, since a candidate as the machine's tool would put every un-pinned project behind the candidate's guard. `--pre` moves the one project through the bypass, and pins it at the candidate (refinement per [ADR-089](ADR-089-release-candidates.md) point 8).
 - **No migration.** The behaviour lives in the upgrading code. A machine gets it with the first upgrade run by a tool that carries it, and no installed state changes shape.
 - **Stands on** ADR-033, ADR-039, ADR-049, ADR-059, ADR-064, COR-007, COR-010, COR-041 and PRJ-004, all accepted.

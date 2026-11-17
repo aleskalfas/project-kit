@@ -1,0 +1,14 @@
+component: claude-code
+kind: minor
+custom:
+  category: Added
+body: >
+  The agent runner takes `local_settings_from`, your checkout, in an
+  unconfined request, as `pkit agents run --local-settings` sends it. Before
+  Claude Code starts, it copies that checkout's `.claude/settings.local.json`
+  into the run's folder as a new file only you can read, where the checkout
+  has one and the folder holds none, which then stays as it is. A symbolic
+  link at the folder's `.claude` or at the file refuses the run, and a run
+  refused before the harness starts writes nothing there. A confined request
+  that carries the key is refused, and a runner older than this one refuses
+  any request that carries it. The README says so.

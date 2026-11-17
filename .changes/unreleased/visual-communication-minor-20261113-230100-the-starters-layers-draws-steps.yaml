@@ -1,0 +1,10 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The starter's version being built, 1.1.0, gives its `layers` the option `shape`,
+  its words `stack`, the default, and `steps`. With `steps` each level is a step
+  narrower than the one under it, centred on it, so the levels narrow to the top,
+  and a tie into a level ends at its drawn edge. A `layers` that names no `shape`
+  draws as before.

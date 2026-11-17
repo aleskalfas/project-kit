@@ -23,10 +23,20 @@ DEC-005 point 4, DEC-004 point 9, DEC-012 point 4).
   roles its runs take on it.
 - **No shrinking.** A word longer than its line breaks after a `/`, or is left whole
   and the text overflows.
+- **A run's sign and ground** (DEC-036 point 3). A run may draw a sign, a square as wide as
+  its font size, before its first character that is no space or line feed, with a gap after
+  it, and take a ground behind its text, from its first such character to its last, with
+  room at each end. Runs next to each other in one paragraph that share a sign draw one,
+  and those that share a ground take one, with room at its two ends alone. Each is measured
+  with the character it lies beside, so no line breaks between them, and a line's spans are
+  cut where a sign or a ground's end lies, so each lies at a span's edge (`Marks`,
+  `SignAt`, `GroundAt`).
 """
 
 from __future__ import annotations
 
+import bisect
+import functools
 import hashlib
 import re
 from collections.abc import Callable, Mapping, Sequence
@@ -45,17 +55,59 @@ BREAK_MARGIN = 0.02
 #: How the engine measures every text in the default font profile.
 MEASURED = "file"
 
-#: The rule that keeps a one-letter word off a line's end: it moves to the next line
-#: with the word after it.
-ONE_LETTER_WORD = "one-letter-word"
+
+@dataclass(frozen=True)
+class LanguageRules:
+    """A language's line-breaking rules beyond Unicode's. Each keeps a word off a line's
+    end, so that it moves to the next line with the word after it: a one-letter word, where
+    `one_letter_word` holds, and each of `short_prepositions`, in any case."""
+
+    one_letter_word: bool = False
+    short_prepositions: frozenset[str] = frozenset()
+
+    def kept_together(self, paragraph: str) -> set[int]:
+        """The break opportunities in `paragraph` these rules forbid: each after a word they
+        keep off a line's end and the spaces after it."""
+        found: set[int] = set()
+        if self.one_letter_word:
+            found.update(match.end() for match in _ONE_LETTER.finditer(paragraph))
+        if self.short_prepositions:
+            found.update(
+                match.end() for match in _words(self.short_prepositions).finditer(paragraph)
+            )
+        return found
+
 
 #: Each language's line-breaking rules beyond Unicode's, by its primary language subtag.
 #: A new language's rules arrive with a release of the capability (DEC-005 point 4).
-LANGUAGE_RULES: Mapping[str, frozenset[str]] = {
-    "cs": frozenset({ONE_LETTER_WORD}),
+LANGUAGE_RULES: Mapping[str, LanguageRules] = {
+    "cs": LanguageRules(
+        one_letter_word=True,
+        short_prepositions=frozenset({"před", "nad", "pod", "přes", "za", "na", "do", "od", "ve"}),
+    ),
 }
 
+#: A language with no rules of its own follows Unicode's alone.
+_NO_RULES = LanguageRules()
+
 _ONE_LETTER = re.compile(r"(?<!\w)[^\W\d_] +")
+
+
+@functools.cache
+def _words(words: frozenset[str]) -> re.Pattern[str]:
+    """A pattern that finds each of `words`, whole and in any case, with the spaces after
+    it."""
+    alternatives = "|".join(re.escape(word) for word in sorted(words, key=len, reverse=True))
+    return re.compile(rf"(?<!\w)(?:{alternatives}) +", re.IGNORECASE)
+
+
+def rules_of(language: str) -> LanguageRules:
+    """The line-breaking rules of `language`, a language tag, by its primary subtag."""
+    return LANGUAGE_RULES.get(language.split("-")[0].lower(), _NO_RULES)
+
+
+#: The characters a run's sign and ground pass over at the run's ends (DEC-036 point 3).
+BLANK = " \n"
 
 
 class MissingGlyph(MissingFont):
@@ -223,21 +275,71 @@ class Style:
 
 @dataclass(frozen=True)
 class Run:
-    """A span of a text set in one style (DEC-012 point 1)."""
+    """A span of a text set in one style (DEC-012 point 1). Where it draws its concept's
+    sign, `sign` names what the runs next to it share to draw one sign with it, its concept;
+    where it takes a ground, `ground` names what they share to take one ground with it, its
+    paint (DEC-036 point 3)."""
 
     text: str
     style: Style
+    sign: str | None = None
+    ground: str | None = None
+
+
+@dataclass(frozen=True)
+class Marks:
+    """The lengths a run's sign and ground take within its line, in px (DEC-036 point 3):
+    the gap between a sign and the character after it, and the room a ground leaves at each
+    end of its span."""
+
+    gap: float = 0.0
+    room: float = 0.0
+
+
+@dataclass(frozen=True)
+class SignAt:
+    """A sign before a span's text: the side of its square, its run's font size; the top
+    of the square below the line's top, centred on the run's letters; and the gap after
+    it."""
+
+    size: float
+    top: float
+    gap: float
+
+
+@dataclass(frozen=True)
+class GroundAt:
+    """The part of a ground behind a span: the top of the ground's piece on the line below
+    the line's top, and its height, alike for every span of the piece; and the room before
+    the span where the ground starts at it, and after it where the ground ends at it, else
+    None."""
+
+    top: float
+    height: float
+    start: float | None = None
+    end: float | None = None
 
 
 @dataclass(frozen=True)
 class Span:
     """The part of one run that lies on a line: the run's place among its paragraph's
-    runs, from 0, its text, and how far it moves the pen, in px. The spaces that end a
-    line belong to no span."""
+    runs, from 0, its text, and how far its text moves the pen, in px; with the sign before
+    its text and the ground behind it, where it has them. The spaces that end a line belong
+    to no span."""
 
     run: int
     text: str
     width: float
+    sign: SignAt | None = None
+    ground: GroundAt | None = None
+
+    @property
+    def advance(self) -> float:
+        """How far the span moves the pen: its ground's room, its sign and the sign's gap,
+        and its text."""
+        ground, sign = self.ground, self.sign
+        rooms = (ground.start or 0.0) + (ground.end or 0.0) if ground is not None else 0.0
+        return rooms + (sign.size + sign.gap if sign is not None else 0.0) + self.width
 
 
 @dataclass(frozen=True)
@@ -290,9 +392,8 @@ def _units(paragraph: str, language: str) -> list[str]:
     """The paragraph cut at each break opportunity Unicode's rules and the language's
     allow; each unit keeps its trailing spaces."""
     ends = [end for end in line_break_boundaries(paragraph) if 0 < end < len(paragraph)]
-    if ONE_LETTER_WORD in LANGUAGE_RULES.get(language.split("-")[0].lower(), frozenset()):
-        bound = {match.end() for match in _ONE_LETTER.finditer(paragraph)}
-        ends = [end for end in ends if end not in bound]
+    kept = rules_of(language).kept_together(paragraph)
+    ends = [end for end in ends if end not in kept]
     units, start = [], 0
     for end in [*ends, len(paragraph)]:
         units.append(paragraph[start:end])
@@ -311,10 +412,12 @@ def break_lines(text: str, width: float | None, style: Style, language: str) -> 
     return break_runs([Run(text, style)], width, language)
 
 
-def break_runs(runs: Sequence[Run], width: float | None, language: str) -> Broken:
+def break_runs(
+    runs: Sequence[Run], width: float | None, language: str, marks: Marks | None = None
+) -> Broken:
     """A text of `runs` broken into lines for a planned width, across its runs; with no
     width, each paragraph is one line, as wide as it is. A text with no characters has no
-    lines."""
+    lines. `marks` gives the lengths of the runs' signs and grounds (`Marks`)."""
     if not runs:
         return Broken((), (), False)
     line_height = max(run.style.line_height for run in runs)
@@ -322,8 +425,10 @@ def break_runs(runs: Sequence[Run], width: float | None, language: str) -> Broke
     placed: list[Line] = []
     if any(run.text for run in runs):
         size = max(run.style.size for run in runs)
+        marked = _Marked(runs, marks or Marks())
         for index, parts in enumerate(split):
             styled = _Paragraph([(runs[run].style, text) for run, text in parts])
+            marked.mark(styled, index)
             for start, end in styled.lines(width, size, language):
                 placed.append(styled.line(index, start, end, line_height))
     texts = tuple(line.text for line in placed)
@@ -333,8 +438,109 @@ def break_runs(runs: Sequence[Run], width: float | None, language: str) -> Broke
     return Broken(texts, widths, overflow, tuple(placed), frozen, line_height)
 
 
+@dataclass(frozen=True)
+class _Ground:
+    """A ground within one paragraph: its first and last character there, and whether it
+    starts and ends there, where it takes room."""
+
+    first: int
+    last: int
+    starts: bool
+    ends: bool
+
+
+class _Marked:
+    """Where the signs and grounds of a text's runs lie (DEC-036 point 3), by the place of
+    each character in the runs' texts joined, and how each paragraph takes them."""
+
+    def __init__(self, runs: Sequence[Run], marks: Marks) -> None:
+        self.marks = marks
+        texts = [run.text for run in runs]
+        joined = "".join(texts)
+        self.paragraph_starts = [0] + [at + 1 for at, char in enumerate(joined) if char == "\n"]
+        starts = [sum(len(text) for text in texts[:index]) for index in range(len(texts))]
+        firsts = [_first(text, start) for text, start in zip(texts, starts, strict=True)]
+        lasts = [_last(text, start) for text, start in zip(texts, starts, strict=True)]
+        # Each sign's character, and each ground's first and last, in the joined text.
+        self.signs: list[int] = []
+        self.grounds: list[tuple[int, int]] = []
+        for group in _groups(runs, texts, lambda run: run.sign):
+            found = [firsts[index] for index in group if firsts[index] is not None]
+            if found:
+                self.signs.append(found[0])
+        for group in _groups(runs, texts, lambda run: run.ground):
+            first = [firsts[index] for index in group if firsts[index] is not None]
+            last = [lasts[index] for index in group if lasts[index] is not None]
+            if first and last:
+                self.grounds.append((first[0], last[-1]))
+
+    def _local(self, at: int) -> tuple[int, int]:
+        """The paragraph that holds the character `at` of the joined text, and its place in
+        that paragraph."""
+        paragraph = bisect.bisect_right(self.paragraph_starts, at) - 1
+        return paragraph, at - self.paragraph_starts[paragraph]
+
+    def mark(self, styled: _Paragraph, index: int) -> None:
+        """Gives the paragraph `index` the signs and the grounds that lie in it."""
+        styled.marks = self.marks
+        for at in self.signs:
+            paragraph, local = self._local(at)
+            if paragraph == index:
+                styled.signs.add(local)
+        for first, last in self.grounds:
+            (start_paragraph, start), (end_paragraph, end) = self._local(first), self._local(last)
+            if not start_paragraph <= index <= end_paragraph:
+                continue
+            low = start if index == start_paragraph else 0
+            high = end if index == end_paragraph else len(styled.text) - 1
+            if low <= high:
+                styled.grounds.append(
+                    _Ground(low, high, index == start_paragraph, index == end_paragraph)
+                )
+
+
+def _first(text: str, start: int) -> int | None:
+    """The place of `text`'s first character that is no space or line feed, in the joined
+    text where `text` starts at `start`; None where it holds none."""
+    stripped = text.lstrip(BLANK)
+    return start + len(text) - len(stripped) if stripped else None
+
+
+def _last(text: str, start: int) -> int | None:
+    """The place of `text`'s last character that is no space or line feed; None where it
+    holds none."""
+    stripped = text.rstrip(BLANK)
+    return start + len(stripped) - 1 if stripped else None
+
+
+def _groups(
+    runs: Sequence[Run], texts: Sequence[str], key: Callable[[Run], str | None]
+) -> list[list[int]]:
+    """The runs that share one sign, or one ground, by `key`: each group runs next to each
+    other in one paragraph, with the same key. A run of no key is in none."""
+    groups: list[list[int]] = []
+    for index, run in enumerate(runs):
+        named = key(run)
+        if named is None:
+            continue
+        before = index - 1
+        joined = (
+            groups
+            and groups[-1][-1] == before
+            and key(runs[before]) == named
+            and not texts[before].endswith("\n")
+            and not texts[index].startswith("\n")
+        )
+        if joined:
+            groups[-1].append(index)
+        else:
+            groups.append([index])
+    return groups
+
+
 class _Paragraph:
-    """One paragraph of a text: its runs' parts, each in its style, joined."""
+    """One paragraph of a text: its runs' parts, each in its style, joined; with the place
+    of each sign that lies in it, and each ground's part in it (`_Marked.mark`)."""
 
     def __init__(self, parts: Sequence[tuple[Style, str]]) -> None:
         self.parts = list(parts)
@@ -344,28 +550,62 @@ class _Paragraph:
         for _, text in parts:
             self.bounds.append((start, start + len(text)))
             start += len(text)
+        self.marks = Marks()
+        self.signs: set[int] = set()
+        self.grounds: list[_Ground] = []
 
-    def _spans(self, start: int, end: int) -> list[tuple[int, str, Style]]:
-        """The parts of the runs between two places of the paragraph, each with its
-        part's place."""
+    def _cuts(self) -> list[int]:
+        """Where a span ends beside its run's: before each sign, and at each end of each
+        ground."""
+        cuts = set(self.signs)
+        for ground in self.grounds:
+            cuts.update((ground.first, ground.last + 1))
+        return sorted(cuts)
+
+    def _spans(self, start: int, end: int) -> list[tuple[int, int, int, Style]]:
+        """The parts of the runs between two places of the paragraph, each cut where a sign
+        or a ground's end lies, with its part's place, where it starts and where it ends."""
+        cuts = self._cuts()
         found = []
         for place, ((low, high), (style, _)) in enumerate(
             zip(self.bounds, self.parts, strict=True)
         ):
-            text = self.text[max(low, start) : min(high, end)]
-            if text:
-                found.append((place, text, style))
+            low, high = max(low, start), min(high, end)
+            if low >= high:
+                continue
+            inner = [cut for cut in cuts if low < cut < high]
+            for begin, finish in zip([low, *inner], [*inner, high], strict=True):
+                found.append((place, begin, finish, style))
         return found
 
     def _end(self, start: int, end: int) -> int:
         """`end`, moved back past the spaces that end the text between the two places."""
         return start + len(self.text[start:end].rstrip(" "))
 
+    def _extra(self, low: int, high: int, style: Style) -> float:
+        """What a part from `low` to `high` takes beside its text: a sign and its gap before
+        it, and the room of a ground that starts or ends in it."""
+        extra = 0.0
+        if low in self.signs:
+            extra += style.size + self.marks.gap
+        for ground in self.grounds:
+            if ground.starts and low <= ground.first < high:
+                extra += self.marks.room
+            if ground.ends and low <= ground.last < high:
+                extra += self.marks.room
+        return extra
+
     def width(self, start: int, end: int) -> float:
-        """How wide the text between two places is drawn, each part in its own style;
-        trailing spaces do not count."""
+        """How wide the text between two places is drawn, each part in its own style, with
+        the signs and the grounds' room that lie in it; trailing spaces do not count."""
         spans = self._spans(start, self._end(start, end))
-        return sum((style.advance(text) for _, text, style in spans), 0.0)
+        return sum(
+            (
+                style.advance(self.text[low:high]) + self._extra(low, high, style)
+                for _, low, high, style in spans
+            ),
+            0.0,
+        )
 
     def lines(self, width: float | None, size: float, language: str) -> list[tuple[int, int]]:
         """Where each line starts and ends, filled greedily against the planned width less
@@ -387,14 +627,64 @@ class _Paragraph:
         return lines
 
     def line(self, paragraph: int, start: int, end: int, line_height: float) -> Line:
-        """The line between two places, its spans measured, standing on its baseline."""
-        spans = tuple(
-            Span(place, text, style.advance(text)) for place, text, style in self._spans(start, end)
-        )
-        styles = [self.parts[span.run][0] for span in spans] or [self.parts[0][0]]
+        """The line between two places, its spans measured, standing on its baseline, each
+        with the sign before it and the ground behind it where it has them."""
+        parts = self._spans(start, end)
+        styles = [style for _, _, _, style in parts] or [self.parts[0][0]]
         baseline = _baseline(styles, line_height)
+        signs = {
+            low: _sign_at(style, baseline, self.marks.gap)
+            for _, low, _, style in parts
+            if low in self.signs
+        }
+        grounds = [self._ground_of(low) for _, low, _, _ in parts]
+        spans = []
+        for (place, low, high, style), ground in zip(parts, grounds, strict=True):
+            text = self.text[low:high]
+            at = None
+            if ground is not None:
+                piece = [
+                    (part[3], signs.get(part[1]))
+                    for part, other in zip(parts, grounds, strict=True)
+                    if other is ground
+                ]
+                top, bottom = _extent(piece, baseline)
+                room = self.marks.room
+                at = GroundAt(
+                    top,
+                    bottom - top,
+                    room if ground.starts and low == ground.first else None,
+                    room if ground.ends and high - 1 == ground.last else None,
+                )
+            spans.append(Span(place, text, style.advance(text), signs.get(low), at))
         width = self.width(start, end)
-        return Line(self.text[start:end], width, paragraph, spans, baseline)
+        return Line(self.text[start:end], width, paragraph, tuple(spans), baseline)
+
+    def _ground_of(self, low: int) -> _Ground | None:
+        """The ground behind the span that starts at `low`, if one is."""
+        for ground in self.grounds:
+            if ground.first <= low <= ground.last:
+                return ground
+        return None
+
+
+def _sign_at(style: Style, baseline: float, gap: float) -> SignAt:
+    """A sign as wide as `style`'s font size, centred on its letters on a line whose
+    baseline lies at `baseline`, with `gap` after it."""
+    middle = baseline - (style.ascent - style.descent) / 2
+    return SignAt(style.size, middle - style.size / 2, gap)
+
+
+def _extent(piece: Sequence[tuple[Style, SignAt | None]], baseline: float) -> tuple[float, float]:
+    """The top and the bottom of a ground's piece on a line, below the line's top: from the
+    highest reach of its spans' letters and signs to the lowest."""
+    tops = [baseline - style.ascent for style, _ in piece]
+    bottoms = [baseline + style.descent for style, _ in piece]
+    for _, sign in piece:
+        if sign is not None:
+            tops.append(sign.top)
+            bottoms.append(sign.top + sign.size)
+    return min(tops), max(bottoms)
 
 
 def _baseline(styles: Sequence[Style], line_height: float) -> float:

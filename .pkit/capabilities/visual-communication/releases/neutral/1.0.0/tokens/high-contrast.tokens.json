@@ -1,0 +1,66 @@
+{
+  "$description": "High contrast, in either colour scheme: the background, text, lines and accent at the scheme's strongest, the line and the text of each colour family's hue too.",
+  "background": {
+    "$type": "color",
+    "$value": "{scheme.strong-paper}"
+  },
+  "text-primary": {
+    "$type": "color",
+    "$value": "{scheme.strong-ink}"
+  },
+  "text-secondary": {
+    "$type": "color",
+    "$value": "{scheme.strong-ink-soft}"
+  },
+  "accent": {
+    "$type": "color",
+    "$value": "{scheme.strong-accent}"
+  },
+  "line": {
+    "$type": "color",
+    "$value": "{scheme.strong-ink}"
+  },
+  "family": {
+    "$type": "color",
+    "blue": {
+      "line": {
+        "$value": "{scheme.blue.strong-line}"
+      },
+      "text": {
+        "$value": "{scheme.blue.strong-text}"
+      }
+    },
+    "green": {
+      "line": {
+        "$value": "{scheme.green.strong-line}"
+      },
+      "text": {
+        "$value": "{scheme.green.strong-text}"
+      }
+    },
+    "orange": {
+      "line": {
+        "$value": "{scheme.orange.strong-line}"
+      },
+      "text": {
+        "$value": "{scheme.orange.strong-text}"
+      }
+    },
+    "purple": {
+      "line": {
+        "$value": "{scheme.purple.strong-line}"
+      },
+      "text": {
+        "$value": "{scheme.purple.strong-text}"
+      }
+    },
+    "red": {
+      "line": {
+        "$value": "{scheme.red.strong-line}"
+      },
+      "text": {
+        "$value": "{scheme.red.strong-text}"
+      }
+    }
+  }
+}

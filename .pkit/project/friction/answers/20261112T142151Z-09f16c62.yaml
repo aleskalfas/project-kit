@@ -1,0 +1,144 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T14:21:51Z
+      outcome: unchanged
+      unchanged-because: "Main's answer 91725510 judged, with b6b1d9a3 and ec4f3511, release candidates, the install script and PRJ-004's line, which landing a change does not reach, and ADR-066 point 10 having a review run pass the picked definition under a name unique to the run. This change adds to ADR-066 point 1 that the caller of an unconfined run names its folder, and has point 10, whose link here it re-points to the point's new heading, cover a drift command's runs beside the review command's runs: one a person watches, and one the project's switch starts with nobody watching where no confined form holds it. Point 10 also decides that the review command's runs keep today's form until a form for reviewing is built and the harness holds it, and take that form once it is, with its rules, clone and mode left to a follow-up record. Until then the backbone still runs each required reviewer and returns its output, so judged together the use case holds."
+  - artefact: .pkit/lifecycle/manifest.md
+    read:
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T215716Z-41cae09d.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T150420Z-3caaee28.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T123303Z-7c4eb2ad.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T14:21:55Z
+      outcome: unchanged
+      unchanged-because: Main's answer 7c4eb2ad judged refs.py skipping a dotted word inside a placeholder when it reads a body's hooks, under which the package fields, the write_categories block and the validation this page states read as before, and main's 6ef4bac4 updated the page to add the backbone manifest's `agent_choices` key. This change's ADR-066 has a drift command's run take the unconfined form, in a clone the drift command makes, where a person watches it, or where the project's switch starts it with nobody watching and no confined form holds it. It keeps the confined form as the later hardening of every run nobody watches, a review's included. The agent-run row's policy, a confined run's runner read from its clone, and the new key are untouched by these, so judged together the page holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T043834Z-e7198abd.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T123303Z-7c4eb2ad.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+    revalidated:
+      at: 2026-11-12T14:22:04Z
+      outcome: unchanged
+      unchanged-because: Main's answer 7c4eb2ad judged the agents README's body conventions leaving a dotted word inside a placeholder out of a body's hooks, which leaves how an adopter finds which definition is deployed untouched. Main's 6ef4bac4 updated the use case to say which of two capabilities' agents deploys, what a refused agent's earlier copy becomes and which marked copies go, with variant 5a for a name the system cannot tell. This change's cli.py only rewords `pkit agents run`'s help to say nobody can answer the agent during its run, and the adapters README changes only its agent runner section and the status line of `unattended-confined-run`. ADR-066 has a drift command's run take the unconfined form where a person watches it, or where the project's switch starts it with nobody watching and no confined form holds it, and keeps the confined form as the later hardening of every run nobody watches, a review's included. The deploy, the overlay's paths and the grants are untouched by these, so judged together the use case holds.

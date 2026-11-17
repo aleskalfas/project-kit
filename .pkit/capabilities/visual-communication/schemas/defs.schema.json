@@ -460,6 +460,35 @@
           }
         }
       ]
+    },
+    "outline": {
+      "description": "A sign's outline (DEC-036 point 1): one outline in SVG's path data, filled by the rule it names, within a square whose side it names. Its numbers are lengths within that square, so no brand gives it a value.",
+      "type": "object",
+      "required": [
+        "d",
+        "fill-rule",
+        "square"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "d": {
+          "description": "The outline's path, in SVG's path data, starting with a move.",
+          "type": "string",
+          "minLength": 1
+        },
+        "fill-rule": {
+          "description": "The rule that fills the outline, as SVG names it.",
+          "enum": [
+            "nonzero",
+            "evenodd"
+          ]
+        },
+        "square": {
+          "description": "The side of the square the path's numbers lie within.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
     }
   }
 }

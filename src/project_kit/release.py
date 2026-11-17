@@ -10,9 +10,9 @@ the same way, the floor of each `requires_capabilities` entry a changeset
 declares for another capability, widens the entry's upper bound where a
 changeset declares the dependent runs on the version the release writes, refuses
 a release that would leave a range excluding a dependency's version, generates
-the changelog, which states each raised floor and widened bound, deletes the consumed
-changesets, and (for a backbone bump) cuts the tag via the existing
-`tag_version` (PRJ-004). The files it writes are one list, `release_writes`,
+the changelog, which states each raised floor and widened bound, and deletes the
+consumed changesets. It cuts no tag: a final release is tagged once it lands, by
+`pkit version tag` (PRJ-004; ADR-092 point 6). The files it writes are one list, `release_writes`,
 which the changeset guard recognises a release diff by, beside the answer files
 a release PR adds for the answers its writes need.
 
@@ -32,7 +32,8 @@ import json
 import re
 import subprocess
 from collections import Counter
-from collections.abc import Callable, Collection, Mapping, Sequence
+from collections.abc import Callable, Collection, Generator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
@@ -44,7 +45,9 @@ from packaging.version import InvalidVersion, Version
 
 from project_kit import (
     answer_files,
+    candidates,
     command_runner,
+    default_branch,
     pull_request_landing,
     session_guard,
     versioning,
@@ -65,6 +68,7 @@ from project_kit.changesets import (
 )
 from project_kit.manifest import BACKBONE_VERSION_KEY, COMPLETED_VERSION_KEY, set_state_line
 from project_kit.migrations import _VERSION_DIR_RE, minor_of, parse_version_tuple
+from project_kit.router import is_source_checkout
 
 # Repo-root-relative path prefixes whose changes count as touching the
 # backbone's surface, for the changeset guard. A heuristic — see the "Limits"
@@ -1210,13 +1214,27 @@ def _capability_bound_widenings(
     return tuple(bounds)
 
 
+#: Why `apply` refuses to tag the release it writes (ADR-092 point 6).
+_FINAL_RELEASE_TAG = (
+    "refusing `--tag`: a final release is tagged only once its release PR merges, by "
+    "`pkit version tag --push` on the default branch, which tags the commit the release "
+    "landed (ADR-092 point 6). Nothing was written."
+)
+
+
+def refuse_final_release_tag(tag: bool) -> None:
+    """Refuse, before anything is written, a `tag` asked of the release `apply` writes:
+    the release commit does not exist yet, and a final release is tagged only on the
+    commit it lands, by `pkit version tag` (ADR-092 point 6)."""
+    if tag:
+        raise click.ClickException(_FINAL_RELEASE_TAG)
+
+
 def apply_release(
     source_kit: Path,
     plan: ReleasePlan,
     *,
     tag: bool = False,
-    push: bool = False,
-    clearance: session_guard.Clearance | None = None,
     broaden: bool = True,
     today: date | None = None,
 ) -> None:
@@ -1266,19 +1284,14 @@ def apply_release(
     would leave the entry's range admitting no version, and a range that would
     exclude the version the release leaves for a capability it names.
 
-    Tagging is **off by default** and deliberately a separate step, matching
-    the codebase's anchoring principle (bump writes; `pkit version tag` tags —
-    per COR-004). PRJ-004 tags the *committed* `.pkit/VERSION`, so the tag must
-    point at the release commit — which does not exist yet when `apply` runs.
-    The intended sequence is: `apply` → commit the release → merge to `main` →
-    `pkit version tag --push` on `main`. Pass `tag=True` only when HEAD is
-    already the release commit (e.g. re-running on `main` post-merge). A tag
-    pushed with `push=True` changes the hosting service, so it needs
-    `clearance`, the cross-repository guard's for the repository, cleared at
-    the entry (ADR-061 point 6): it is required before anything is written.
+    Tagging is a separate step, matching the codebase's anchoring principle
+    (bump writes; `pkit version tag` tags — per COR-004). A final release is
+    tagged only on the commit it lands, which does not exist yet when `apply`
+    runs, so `tag=True` refuses before anything is written
+    (`refuse_final_release_tag`; ADR-092 point 6). The sequence is: `apply` →
+    commit the release → merge to `main` → `pkit version tag --push` on `main`.
     """
-    if tag and push:
-        session_guard.require(clearance, source_kit.parent)
+    refuse_final_release_tag(tag)
     if plan.is_empty:
         click.echo("No pending changesets move a version — nothing to release.")
         # Still consume any `none`-only changesets so the tree is clean.
@@ -1288,13 +1301,7 @@ def apply_release(
     check_raised_ranges(plan, broaden=broaden)  # the CLI prints its warnings before confirming
 
     backbone = plan.backbone
-    for rel in plan.releases:
-        if rel.component.name == BACKBONE:
-            rel.component.version_path.write_text(f"{rel.new_version}\n", encoding="utf-8")
-            click.echo(f"Backbone: {rel.old_version} -> {rel.new_version}")
-            _sync_self_host_manifest_backbone(source_kit, rel.new_version)
-        else:
-            _write_component_version(rel)
+    _write_versions(source_kit, plan)
 
     if broaden:
         _broaden_at_release(source_kit, plan)
@@ -1305,13 +1312,53 @@ def apply_release(
     _write_changelog(source_kit.parent, plan, today or date.today())
     _delete_changesets(plan.consumed)
 
-    if tag and backbone is not None:
-        versioning.tag_version(source_kit, push=push, clearance=clearance)
-    elif backbone is not None:
+    if backbone is not None:
         click.echo(
             "Next: commit the release, then `pkit version tag --push` on main "
             f"to cut v{backbone.new_version} (PRJ-004)."
         )
+
+
+def apply_candidate(
+    source_kit: Path,
+    plan: ReleasePlan,
+    candidate: ReleasePlan,
+    *,
+    broaden: bool = True,
+    today: date | None = None,
+) -> None:
+    """Write a release candidate: `candidate`, the plan as the candidate writes it,
+    each version `plan` moves with the suffix `rcN` (ADR-089 point 1).
+
+    Every check reads `plan`, at release versions, so a cut is refused wherever the
+    final release would be: `check_raised_ranges` refuses an empty range before
+    anything is written. Then it writes as `apply_release` does, but for what
+    PRJ-002 D4 and D5 keep out of a candidate's tree: it raises no floor, on the
+    backbone or on a capability, and deletes no changeset. The broaden and each
+    declared upper bound are written as the final release writes them, at release
+    versions, so the candidate's own components admit it. The changelog's section is
+    headed by the candidate's version, and each component's entry is tagged with its
+    candidate version.
+    """
+    check_raised_ranges(plan, broaden=broaden)
+    _write_versions(source_kit, candidate)
+    if broaden:
+        _broaden_at_release(source_kit, plan)
+    _widen_declared_capability_bounds(source_kit, plan)
+    _write_changelog(source_kit.parent, candidate, today or date.today())
+
+
+def _write_versions(source_kit: Path, plan: ReleasePlan) -> None:
+    """Write the version each release of `plan` moves to: the backbone's to
+    `.pkit/VERSION` and the self-host manifest (PRJ-007), and each component's to its
+    package file."""
+    for rel in plan.releases:
+        if rel.component.name == BACKBONE:
+            rel.component.version_path.write_text(f"{rel.new_version}\n", encoding="utf-8")
+            click.echo(f"Backbone: {rel.old_version} -> {rel.new_version}")
+            _sync_self_host_manifest_backbone(source_kit, rel.new_version)
+        else:
+            _write_component_version(rel)
 
 
 def _broaden_at_release(source_kit: Path, plan: ReleasePlan) -> None:
@@ -1822,7 +1869,9 @@ def _delete_changesets(changesets: list[Changeset]) -> None:
 # --- Automation-facing summary + migration-dir alignment -----------------
 
 
-def release_summary(source_kit: Path, plan: ReleasePlan) -> dict[str, object]:
+def release_summary(
+    source_kit: Path, plan: ReleasePlan, *, warnings: list[str] | None = None
+) -> dict[str, object]:
     """A machine-readable summary of a computed release, for automation.
 
     Emitted as JSON by `pkit release plan --json` so the release-PR workflow
@@ -1833,6 +1882,9 @@ def release_summary(source_kit: Path, plan: ReleasePlan) -> dict[str, object]:
     on), and surface the migration-dir prediction warnings
     (`migration_warnings`). A range that excludes a dependency's version has no
     key: `compute_release` refuses such a release, so `plan --json` fails.
+    `warnings`, where given, are the migration-dir warnings in place of those
+    `plan`'s versions predict, as for a candidate, whose warnings its release
+    versions give.
     """
     backbone = plan.backbone
     return {
@@ -1856,7 +1908,9 @@ def release_summary(source_kit: Path, plan: ReleasePlan) -> dict[str, object]:
             for rel in plan.releases
         ],
         "changesets_consumed": len(plan.consumed),
-        "migration_warnings": migration_dir_mismatches(source_kit, plan),
+        "migration_warnings": (
+            migration_dir_mismatches(source_kit, plan) if warnings is None else warnings
+        ),
     }
 
 
@@ -1997,6 +2051,9 @@ class GuardResult:
     # Each edit this diff makes to the range of an existing `requires_capabilities`
     # entry (`range_edits`), the ones the guard refuses among them.
     range_edits: list[RangeEdit] = field(default_factory=lambda: [])
+    # Each pre-release version the tree records, which the default branch never
+    # holds (`pre_releases_bound_for_the_default_branch`, ADR-089 point 3).
+    pre_releases: list[RecordedPreRelease] = field(default_factory=lambda: [])
 
     @property
     def surface_ok(self) -> bool:
@@ -2013,10 +2070,16 @@ class GuardResult:
     @property
     def ok(self) -> bool:
         """The escape hatch and the release exemption waive the surface check
-        only: a stray floor or a refused range edit fails the guard either way.
-        A release diff, which only deletes changesets, declares no floor to be
-        stray, and its range writes ride on the declarations it consumes."""
-        return self.surface_ok and not self.stray_floors and not self.refused_ranges
+        only: a stray floor, a refused range edit or a pre-release version fails
+        the guard either way. A release diff, which only deletes changesets,
+        declares no floor to be stray, and its range writes ride on the
+        declarations it consumes."""
+        return (
+            self.surface_ok
+            and not self.stray_floors
+            and not self.refused_ranges
+            and not self.pre_releases
+        )
 
 
 def changed_files(repo_root: Path, base: str) -> list[str]:
@@ -2085,16 +2148,15 @@ def _matches_prefix(path: str, prefixes: tuple[str, ...]) -> bool:
 # exemption waives the surface check only, never the floor tie (`GuardResult.ok`).
 
 
-def _diff_name_status(repo_root: Path, base: str) -> list[tuple[str, str]]:
-    """(`status`, path) for each change between `base` and HEAD.
+def _diff_name_status(repo_root: Path, revisions: Sequence[str]) -> list[tuple[str, str]]:
+    """(`status`, path) for each change `git diff <revisions>` shows.
 
-    Status is git's `--name-status` letter (`A`/`M`/`D`/…). Mirrors
-    `changed_files`' merge-base scoping (`base...HEAD`). A rename (`Rxxx`) yields
-    its destination path — a release renames nothing (`release_writes`), so a
-    rename is simply not the release and falls through to the normal guard.
+    Status is git's `--name-status` letter (`A`/`M`/`D`/…). A rename (`Rxxx`)
+    yields its destination path — a release renames nothing (`release_writes`),
+    so a rename is simply not the release and falls through to the normal guard.
     """
     result = subprocess.run(
-        ["git", "diff", "--name-status", f"{base}...HEAD"],
+        ["git", "diff", "--name-status", *revisions],
         capture_output=True,
         text=True,
         cwd=repo_root,
@@ -2111,10 +2173,16 @@ def _diff_name_status(repo_root: Path, base: str) -> list[tuple[str, str]]:
     return entries
 
 
-def _file_diff_lines(repo_root: Path, base: str, path: str) -> list[str]:
+def _since(base: str) -> tuple[str]:
+    """The diff from where HEAD left `base` (`base...HEAD`), mirroring
+    `changed_files`' merge-base scoping."""
+    return (f"{base}...HEAD",)
+
+
+def _file_diff_lines(repo_root: Path, revisions: Sequence[str], path: str) -> list[str]:
     """The content (`+`/`-`) lines of one file's diff, hunk headers stripped."""
     result = subprocess.run(
-        ["git", "diff", f"{base}...HEAD", "--", path],
+        ["git", "diff", *revisions, "--", path],
         capture_output=True,
         text=True,
         cwd=repo_root,
@@ -2130,45 +2198,219 @@ def _file_diff_lines(repo_root: Path, base: str, path: str) -> list[str]:
 
 
 def _changes_only(
-    repo_root: Path, base: str, path: str, patterns: tuple[re.Pattern[str], ...]
+    repo_root: Path,
+    revisions: Sequence[str],
+    path: str,
+    patterns: tuple[re.Pattern[str], ...],
 ) -> bool:
     """True when every line one file's diff adds or removes matches one of
     `patterns`. A blank changed line is tolerated (a whitespace-only hunk edge)."""
     return all(
         not line.strip() or any(pattern.match(line) for pattern in patterns)
-        for line in _file_diff_lines(repo_root, base, path)
+        for line in _file_diff_lines(repo_root, revisions, path)
     )
 
 
 def is_release_diff(source_kit: Path, base: str) -> bool:
-    """True when the diff vs `base` is only what `pkit release apply` writes,
-    and the answer files it adds for the answers those writes need.
+    """True when the diff vs `base` — from where HEAD left it — is only what
+    `pkit release apply` writes, and the answer files it adds for the answers
+    those writes need (`release_change_problem`)."""
+    return release_change_problem(source_kit, _since(base)) is None
 
-    Every changed file must be one the release writes (`release_writes`), with a
-    status that write leaves, and — for a file the release rewrites in place —
-    only the lines it rewrites (verified line-by-line), or an answer file the
-    diff adds (`answer_files.is_answer_file`, status `A`); and the diff must
-    write more than the consumed changesets it deletes and the answer files it
-    adds.
+
+def release_change_problem(source_kit: Path, revisions: Sequence[str]) -> str | None:
+    """What makes the change `git diff <revisions>` shows more than what
+    `pkit release apply` writes and the answer files it adds for the answers
+    those writes need; None where it is only that — the recogniser `pkit
+    release check` reads a release by, and the content half of the predicate
+    a release lands by (`release_landing_problem`).
+
+    Every changed file must be one the release writes (`release_writes`, read
+    from `source_kit`'s working tree), with a status that write leaves, and —
+    for a file the release rewrites in place — only the lines it rewrites
+    (verified line-by-line), or an answer file the change adds
+    (`answer_files.is_answer_file`, status `A`); and the change must write more
+    than the consumed changesets it deletes and the answer files it adds.
 
     Any other change (a `src/` edit, a doc, a new file under a component subtree,
     a package.yaml line beside its version and floor, an answer file edited or
-    removed) makes the answer False — the diff is then treated as an ordinary PR
-    and the surface guard runs. An empty diff is not a release.
+    removed) is named — the change is then no release, and the surface guard
+    runs. An empty change is no release either.
     """
     repo_root = source_kit.parent
     writes = release_writes(source_kit)
     marked = False  # a write that shows a release, not only consumed changesets
-    for status, path in _diff_name_status(repo_root, base):
+    for status, path in _diff_name_status(repo_root, revisions):
         if status == "A" and answer_files.is_answer_file(path):
             continue  # the answers the release's writes need: no surface, no release
         write = next((w for w in writes if w.covers(status, path)), None)
         if write is None:
-            return False  # anything else ⇒ not the release itself
-        if write.lines and not _changes_only(repo_root, base, path, write.lines):
-            return False  # an edit rode along in a file the release rewrites
+            return f"{path}, which `pkit release apply` does not write so ({status})"
+        if write.lines and not _changes_only(repo_root, revisions, path, write.lines):
+            return f"a line of {path} that `pkit release apply` does not write"
         marked = marked or write.marks_release
-    return marked
+    if not marked:
+        return "no version or changelog `pkit release apply` writes"
+    return None
+
+
+# --- A release lands only what its step wrote, onto its plan's commit -------
+#
+# ADR-092 point 6. A release PR consumes the changesets pending at the commit of
+# the default branch its plan read, so it lands sound only onto that commit, and
+# only with what `pkit release apply` wrote there, plus the answer files its
+# writes need. The history does not say which commit the plan read, so `apply`
+# prints a trailer line naming it, which the release commit and the release
+# PR's body carry. The predicate and the trailer's reading live here, once:
+# `pkit release merge` applies them at its request, and the queue's check
+# (`pkit release check-queue`) to each release a squashing queue's merge holds.
+
+#: The key of the trailer line naming the commit a release's plan read.
+PLAN_COMMIT_KEY = "Release-plan-commit"
+
+# The trailer line whole: the key, and a commit's full 40-character id.
+_PLAN_COMMIT_LINE_RE = re.compile(rf"{PLAN_COMMIT_KEY}: ([0-9a-f]{{40}})")
+
+#: The way on from every refusal of a release that cannot land as it stands.
+RUN_THE_RELEASE_AGAIN = (
+    "Run the release again, so that it is planned from the default branch's head, and never "
+    "amend the release commit."
+)
+
+
+def plan_commit_line(commit: str) -> str:
+    """The trailer line naming `commit`, the commit a release's plan read."""
+    return f"{PLAN_COMMIT_KEY}: {commit}"
+
+
+def plan_commits_named(text: str) -> list[str]:
+    """Each commit a trailer line in `text` names, once, in order: a line that
+    is the trailer whole, anywhere in a commit message or a pull request's
+    body, wherever git would read trailers or not."""
+    named: list[str] = []
+    for line in text.splitlines():
+        match = _PLAN_COMMIT_LINE_RE.fullmatch(line)
+        if match is not None and match.group(1) not in named:
+            named.append(match.group(1))
+    return named
+
+
+def plan_commit(repo_root: Path) -> str:
+    """The commit `pkit release apply` plans from in `repo_root`: HEAD's, in
+    full. Raises `click.ClickException` where git cannot name it."""
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", "HEAD^{commit}"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=False,
+    )
+    commit = result.stdout.strip()
+    if result.returncode != 0 or not commit:
+        raise click.ClickException(
+            "git names no commit at HEAD, so no trailer line can name the commit the release's "
+            "plan read."
+        )
+    return commit
+
+
+def release_landing_problem(
+    source_kit: Path, *, lands_on: str, plan_commit: str, head: str
+) -> str | None:
+    """Why a release whose head is commit `head`, landing onto commit
+    `lands_on`, does not land sound, or None where it does: the predicate
+    every reader applies (ADR-092 point 6). It lands sound where `lands_on` is
+    `plan_commit`, the commit its plan read, and its change from that commit
+    holds only the files and lines `pkit release apply` writes, plus answer
+    files the change adds (`release_change_problem`)."""
+    if lands_on != plan_commit:
+        return (
+            f"it would land on {lands_on[:12]}, and its plan read {plan_commit[:12]}: the "
+            "default branch has moved since the release was planned"
+        )
+    beyond = release_change_problem(source_kit, (plan_commit, head))
+    if beyond is not None:
+        return (
+            f"its change from {plan_commit[:12]}, the commit its plan read, holds more than "
+            f"`pkit release apply` writes: {beyond}"
+        )
+    return None
+
+
+@dataclass(frozen=True)
+class QueuedRelease:
+    """A release a merge queue's merge holds, as the queue's check judged it:
+    its squash commit, the commit's subject, and why it does not land sound,
+    or None where it does."""
+
+    commit: str
+    subject: str
+    problem: str | None
+
+
+def check_queue(source_kit: Path, base: str, head: str = "HEAD") -> list[QueuedRelease]:
+    """The queue's check (ADR-092 point 6): each commit from `base` to `head`,
+    on `head`'s first-parent line and oldest first, whose subject is a
+    `chore(release):` one — a squash commit a queue that squashes made of a
+    release PR — judged by the predicate (`release_landing_problem`), with its
+    parent as the commit it lands on and the trailer in its own message as the
+    plan's commit. A commit without the trailer, or naming more than one plan
+    commit, or with other than one parent, does not land sound. Reads git
+    alone: no fetch and no pull request."""
+    repo_root = source_kit.parent
+    result = subprocess.run(
+        [
+            "git",
+            "log",
+            "-z",
+            "--reverse",
+            "--first-parent",
+            "--format=%H%n%P%n%B",
+            f"{base}..{head}",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=True,
+    )
+    judged: list[QueuedRelease] = []
+    for record in result.stdout.split("\0"):
+        commit, _, rest = record.lstrip("\n").partition("\n")
+        parents, _, message = rest.partition("\n")
+        subject = message.partition("\n")[0]
+        if not commit or not subject.startswith(RELEASE_TITLE_PREFIX):
+            continue
+        judged.append(
+            QueuedRelease(
+                commit, subject, _queued_problem(source_kit, commit, parents.split(), message)
+            )
+        )
+    return judged
+
+
+def _queued_problem(source_kit: Path, commit: str, parents: list[str], message: str) -> str | None:
+    """Why release commit `commit`, with `parents` and `message`, does not
+    land sound in the queue's merge, or None where it does."""
+    named = plan_commits_named(message)
+    problem = trailer_problem(named, "its message")
+    if problem is not None:
+        return problem
+    if len(parents) != 1:
+        return f"it has {len(parents)} parents, so it lands on no one commit"
+    return release_landing_problem(
+        source_kit, lands_on=parents[0], plan_commit=named[0], head=commit
+    )
+
+
+def trailer_problem(named: Sequence[str], where: str) -> str | None:
+    """Why the commits `where` names in trailer lines (`plan_commits_named`)
+    name no one plan's commit, or None where they name exactly one."""
+    if not named:
+        return f"{where} carries no `{PLAN_COMMIT_KEY}:` line naming the commit its plan read"
+    if len(named) > 1:
+        listed = ", ".join(commit[:12] for commit in named)
+        return f"{where} names {len(named)} commits as the one its plan read: {listed}"
+    return None
 
 
 def _repo_rel(repo_root: Path, path: Path) -> str:
@@ -2192,7 +2434,10 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
     never does, and an escape hatch that could pass one would let any pull
     request raise any component's floor. Nor is the range tie (`range_edits`),
     which refuses an edit to an existing `requires_capabilities` entry's range
-    but the correction PRJ-002 D1 allows, for the same reason.
+    but the correction PRJ-002 D1 allows, for the same reason. Nor, in the
+    methodology's source repository, is the refusal of a pre-release version
+    HEAD's tree records (`pre_releases_bound_for_the_default_branch`), which
+    reads the tree, not the diff (ADR-089 point 3).
     """
     repo_root = source_kit.parent
     components = discover_components(source_kit)
@@ -2210,6 +2455,7 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
         release_exempt=release_exempt,
         stray_floors=stray_floors(repo_root, base, pending, files, touched),
         range_edits=range_edits(source_kit, base, files, components),
+        pre_releases=pre_releases_bound_for_the_default_branch(source_kit),
     )
 
 
@@ -2311,6 +2557,109 @@ def _text_at(repo_root: Path, rev: str, path: str) -> str | None:
     return result.stdout if result.returncode == 0 else None
 
 
+# --- The default branch holds release versions alone (ADR-089 point 3) --------
+#
+# A release candidate's versions live only in its tag: its cut commits them on
+# no branch (ADR-089 point 1). A commit that records one could still reach a
+# branch, by hand or by a mistaken run. So `pkit release check`, which CI runs
+# on every pull request, refuses a tree that records a pre-release version, and
+# `pkit release merge` refuses a release PR whose head records one. Neither
+# refuses a candidate's own commit, the one its tag names. Both refuse only in
+# the methodology's source repository, the one the marker test finds (ADR-059
+# point 3): candidates are cut only there (ADR-089 point 2), and anywhere else an
+# adopter's own component, or a default branch a tester moved to a candidate,
+# may record one.
+
+
+@dataclass(frozen=True)
+class RecordedPreRelease:
+    """A pre-release version a tree records: the backbone's, or a component's."""
+
+    component: str
+    path: str  # repo-root-relative, git's path form: the file that records it
+    version: str
+
+    @property
+    def named(self) -> str:
+        """The version as a refusal names it: the file, the component and the version."""
+        return f"{self.path}: {self.component} at {self.version}"
+
+
+def recorded_pre_releases(source_kit: Path, rev: str) -> list[RecordedPreRelease]:
+    """Each pre-release version the tree at `rev` records: the backbone's in its
+    `VERSION`, and each component's in its `package.yaml`, found as
+    `discover_components` finds them, in its order. A pre-release is PEP 440's, so a
+    development release is one too. A version that does not parse is none here,
+    and validation's to refuse."""
+    with _kit_at(source_kit, rev, ("package.yaml",)) as copy:
+        return [
+            RecordedPreRelease(
+                component.name,
+                component.version_path.relative_to(copy.parent).as_posix(),
+                component.version,
+            )
+            for component in discover_components(copy)
+            if _is_pre_release(component.version)
+        ]
+
+
+def _is_pre_release(version: str) -> bool:
+    try:
+        return Version(version).is_prerelease
+    except InvalidVersion:
+        return False
+
+
+def pre_releases_bound_for_the_default_branch(source_kit: Path) -> list[RecordedPreRelease]:
+    """The pre-release versions `pkit release check` refuses: each one HEAD's tree
+    records, in the methodology's source repository, unless HEAD is a release
+    candidate's own commit (`_is_a_candidates_own_commit`). Empty anywhere else."""
+    repo_root = source_kit.parent
+    if not is_source_checkout(repo_root):
+        return []
+    recorded = recorded_pre_releases(source_kit, "HEAD")
+    if recorded and _is_a_candidates_own_commit(repo_root, "HEAD", recorded):
+        return []
+    return recorded
+
+
+def _is_a_candidates_own_commit(
+    repo_root: Path, rev: str, recorded: Sequence[RecordedPreRelease]
+) -> bool:
+    """Whether `rev` is the commit a release candidate's tag names: where the
+    backbone records a candidate's version, `X.Y.ZrcN`, the clone's tag
+    `vX.Y.ZrcN` names `rev`'s commit."""
+    backbone = next((each.version for each in recorded if each.component == BACKBONE), None)
+    if backbone is None or not versioning.is_candidate_version(backbone):
+        return False
+    tagged = _commit_named(repo_root, f"refs/tags/v{backbone}")
+    return tagged is not None and tagged == _commit_named(repo_root, rev)
+
+
+def _commit_named(repo_root: Path, name: str) -> str | None:
+    """The commit `name` resolves to in `repo_root`, or None where it names none."""
+    result = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{name}^{{commit}}"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=False,
+    )
+    commit = result.stdout.strip()
+    return commit if result.returncode == 0 and commit else None
+
+
+def release_pr_pre_releases(pr: ReleasePrState, repo_root: Path) -> list[RecordedPreRelease]:
+    """The pre-release versions release PR `pr`'s head records, which `pkit release
+    merge` refuses, in the methodology's source repository. Empty anywhere else.
+    Fetches the head where the clone does not hold it; raises
+    `click.ClickException` where it still does not."""
+    if not is_source_checkout(repo_root):
+        return []
+    _fetch_unless_held(repo_root, (pr.head_oid,), base=pr.base_ref, number=pr.number)
+    return recorded_pre_releases(repo_root / ".pkit", pr.head_oid)
+
+
 # --- A range a branch edits (PRJ-002 D1) ---------------------------------------
 #
 # Once a `requires_capabilities` entry exists, its floor and upper bound move at
@@ -2393,7 +2742,7 @@ def range_edits(
         )
     if not found:
         return []
-    carried = _carried_at(repo_root, source_kit, merge_base)
+    carried = _carried_at(source_kit, merge_base)
     consumed = (
         _consumed_declarations(repo_root, base, merge_base)
         if is_release_diff(source_kit, base)
@@ -2560,13 +2909,24 @@ def _renamed_from(repo_root: Path, base: str) -> dict[str, str]:
     return renamed
 
 
-def _carried_at(repo_root: Path, source_kit: Path, rev: str) -> dict[str, str]:
+def _carried_at(source_kit: Path, rev: str) -> dict[str, str]:
     """The version the tree at `rev` carries for each component but the backbone,
     read as `capability_versions` reads the working tree's: the backbone's version
-    and every package and manifest file under the kit, written from `rev` into a
-    temporary folder. Nothing is checked out."""
+    and every package and manifest file under the kit, as `rev` holds them."""
+    with _kit_at(source_kit, rev, ("package.yaml", "manifest.yaml")) as copy:
+        components = {c.name: c for c in discover_components(copy)}
+        return dict(capability_versions(copy, components, {}).carries)
+
+
+@contextmanager
+def _kit_at(source_kit: Path, rev: str, names: tuple[str, ...]) -> Generator[Path]:
+    """The kit as the tree at `rev` holds it, for as long as the context lasts:
+    its backbone's `VERSION` and each file under it named one of `names`,
+    written from `rev` into a temporary folder, whose copy of the kit this
+    yields at the kit's own path from the folder. Nothing is checked out."""
     import tempfile
 
+    repo_root = source_kit.parent
     kit = _repo_rel(repo_root, source_kit)
     listed = subprocess.run(
         ["git", "ls-tree", "-r", "-z", "--name-only", rev, "--", kit],
@@ -2575,11 +2935,7 @@ def _carried_at(repo_root: Path, source_kit: Path, rev: str) -> dict[str, str]:
         cwd=repo_root,
         check=True,
     ).stdout.split("\0")
-    wanted = [
-        path
-        for path in listed
-        if path == f"{kit}/VERSION" or Path(path).name in ("package.yaml", "manifest.yaml")
-    ]
+    wanted = [path for path in listed if path == f"{kit}/VERSION" or Path(path).name in names]
     with tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
         for path in wanted:
@@ -2589,9 +2945,7 @@ def _carried_at(repo_root: Path, source_kit: Path, rev: str) -> dict[str, str]:
             target = root / path
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(text, encoding="utf-8")
-        copy = root / kit
-        components = {c.name: c for c in discover_components(copy)}
-        return dict(capability_versions(copy, components, {}).carries)
+        yield root / kit
 
 
 def _consumed_declarations(
@@ -2601,7 +2955,7 @@ def _consumed_declarations(
     changeset the diff vs `base` deletes declared at the merge base."""
     unreleased = _repo_rel(repo_root, unreleased_dir(repo_root)) + "/"
     declared: set[tuple[str, str]] = set()
-    for status, path in _diff_name_status(repo_root, base):
+    for status, path in _diff_name_status(repo_root, _since(base)):
         if status != "D" or not path.startswith(unreleased):
             continue
         text = _text_at(repo_root, merge_base, path)
@@ -2642,16 +2996,18 @@ _BARE_REF_RE = re.compile(r"(?:#\d+|ADR-\d+|DEC-\d+|COR-\d+|https?://\S+)", re.I
 # date-only section (a component-only release with no backbone key). The `—`
 # em-dash is what the generator writes; a plain `-` and the canonical KaC
 # `[version]` brackets are also accepted so a hand-edit in either idiom passes.
-# Group 1 is the version, a backbone release the tree records
-# (`recorded_backbone_releases`).
+# Group 1 is the version: a backbone release the tree records
+# (`recorded_backbone_releases`), or the candidate a candidate's tree records
+# (`X.Y.ZrcN`, ADR-089 point 9), which `publish-notes` reads as the lint does.
 _CHANGELOG_VERSION_HEADING_RE = re.compile(
-    r"^## \[?(\d+\.\d+\.\d+)\]?(?: [—-] \d{4}-\d{2}-\d{2})?$"
+    r"^## \[?(\d+\.\d+\.\d+(?:rc\d+)?)\]?(?: [—-] \d{4}-\d{2}-\d{2})?$"
 )
 _CHANGELOG_DATE_HEADING_RE = re.compile(r"^## \d{4}-\d{2}-\d{2}$")
 # The tag that opens a component's changelog entry, `- **<component> X.Y.Z** —`
 # (`render_changelog_entry`): group 1 the component, group 2 the version it
-# released (`recorded_capability_releases`).
-_CHANGELOG_COMPONENT_TAG_RE = re.compile(r"^- \*\*([^*\s]+) (\d+\.\d+\.\d+)\*\* ")
+# released (`recorded_capability_releases`), or its candidate version, `X.Y.ZrcN`,
+# in a candidate's tree.
+_CHANGELOG_COMPONENT_TAG_RE = re.compile(r"^- \*\*([^*\s]+) (\d+\.\d+\.\d+(?:rc\d+)?)\*\* ")
 
 
 @dataclass(frozen=True)
@@ -2918,6 +3274,7 @@ class ReleasePrState:
     mergeable: str  # MERGEABLE / CONFLICTING / UNKNOWN (normalised upper-case)
     checks_passing: bool
     failing_checks: tuple[str, ...]  # names (+ outcome) of non-passing checks
+    body: str = ""  # the PR's description, whose trailer line names its plan's commit
 
 
 @dataclass(frozen=True)
@@ -3013,6 +3370,7 @@ def parse_release_pr(raw: Mapping[str, Any]) -> ReleasePrState:
         mergeable=str(raw.get("mergeable", "")).upper(),
         checks_passing=passing,
         failing_checks=failing,
+        body=str(raw.get("body") or ""),
     )
 
 
@@ -3138,7 +3496,11 @@ def merge_release_pr(
     through a queue the PR is enqueued, pinned to the checked head, and the
     run waits for the queue's merge — `wait_seconds` None as long as the
     queue estimates, 0 not at all — saying through `say` where the PR stands;
-    without one it squash-merges directly, pinned the same way. A dry run
+    without one it squash-merges directly, pinned the same way. Before the
+    landing, in a dry run too, it refuses a release that would not land sound
+    (`release_pr_problem`), and in the methodology's source repository a
+    release PR whose head records a pre-release version
+    (`release_pr_pre_releases`, ADR-089 point 3). A dry run
     reports from the plan and lands nothing. Does **not** tag: the flow's
     post-merge tag step cuts the backbone tag on the resulting push to `main`
     (VERSION-driven).
@@ -3214,6 +3576,21 @@ def merge_release_pr(
         raise click.ClickException(decision.message)
     if ended != pull_request_landing.END_PLANNED:
         return landing.reported(plan)
+    unsound = release_pr_problem(pr, repo_root)
+    if unsound is not None:
+        raise click.ClickException(
+            f"release PR #{number} would not land what its release step wrote onto the commit its "
+            f"plan read: {unsound}. {RUN_THE_RELEASE_AGAIN} Nothing was merged."
+        )
+    recorded = release_pr_pre_releases(pr, repo_root)
+    if recorded:
+        named = "\n".join(f"  {each.named}" for each in recorded)
+        raise click.ClickException(
+            f"release PR #{number} records a pre-release version, and the default branch holds "
+            f"release versions alone (ADR-089 point 3):\n{named}\n{RUN_THE_RELEASE_AGAIN} Where "
+            "the default branch records a pre-release version itself, give it back its release "
+            "version first. Nothing was merged."
+        )
     if dry_run:
         if would == pull_request_landing.ENQUEUE_REQUEST:
             return ReleaseMergeReport(
@@ -3259,6 +3636,7 @@ class _ReleaseLanding:
             seconds=wait_seconds,
             allow_dropped_head=force,
             queued_bad_shape=pull_request_landing.SHAPE_WARN,
+            first_in_queue=True,
         )
         self.say = say
         self.base = pr.base_ref or "the base branch"
@@ -3585,6 +3963,153 @@ def _head_moved(pr: ReleasePrState, end: _End, rerun: str) -> ReleaseNotMerged:
     )
 
 
+#: How long one `git` call that reaches the remote may run in `pkit release
+#: merge`, past which it is ended and the run merges nothing.
+GIT_REMOTE_SECONDS = 60.0
+
+
+def release_pr_problem(pr: ReleasePrState, repo_root: Path) -> str | None:
+    """Why release PR `pr` would not land sound at its request, or None where
+    it would (ADR-092 point 6): read just before the request, on every base,
+    from the head of the PR's base branch — the default branch — read from the
+    remote, and the PR's head, the one its gates checked.
+
+    The release commit is the one commit past the base's head, on the PR's
+    head, whose message carries the trailer line (`plan_commits_named`); the
+    PR's body names the same commit, and only it; and the predicate holds
+    (`release_landing_problem`) with the base's head as the commit it lands
+    on. Fetches the two commits where the clone does not hold them; raises
+    `click.ClickException` where the remote cannot be read."""
+    base = pr.base_ref
+    if not base:
+        return f"`gh pr view {pr.number}` names no base branch for it"
+    lands_on = _remote_head(repo_root, base)
+    _fetch_unless_held(repo_root, (lands_on, pr.head_oid), base=base, number=pr.number)
+    carriers = [
+        (commit, named)
+        for commit, message in _messages_between(repo_root, lands_on, pr.head_oid)
+        if (named := plan_commits_named(message))
+    ]
+    if not carriers:
+        return (
+            f"no commit of {pr.head_ref} past the head of {base} carries a "
+            f"`{PLAN_COMMIT_KEY}:` line naming the commit its plan read"
+        )
+    if len(carriers) > 1:
+        listed = ", ".join(commit[:12] for commit, _ in carriers)
+        return (
+            f"{len(carriers)} commits of {pr.head_ref} carry the trailer line ({listed}), not one"
+        )
+    release_commit, named = carriers[0]
+    problem = trailer_problem(named, f"its release commit {release_commit[:12]}")
+    if problem is not None:
+        return problem
+    in_body = plan_commits_named(pr.body)
+    if not in_body:
+        return (
+            f"its body carries no `{PLAN_COMMIT_KEY}:` line naming the commit its plan read, "
+            "which the squash commit's message takes from the body"
+        )
+    if in_body != named:
+        listed = ", ".join(commit[:12] for commit in in_body)
+        return (
+            f"its body names {listed} as the commit its plan read, and its release commit "
+            f"{release_commit[:12]} names {named[0][:12]}"
+        )
+    return release_landing_problem(
+        repo_root / ".pkit", lands_on=lands_on, plan_commit=named[0], head=pr.head_oid
+    )
+
+
+def _remote_head(repo_root: Path, branch: str) -> str:
+    """The commit `branch` is at on the remote, read now (`git ls-remote`);
+    raises `click.ClickException` where it cannot be read."""
+    ref = f"refs/heads/{branch}"
+    answer = _git_remote(repo_root, ["ls-remote", "--exit-code", default_branch.REMOTE, ref])
+    for line in answer.splitlines():
+        commit, _, name = line.partition("\t")
+        if name == ref and pull_request_landing.full_object_id(commit):
+            return commit.lower()
+    raise click.ClickException(
+        f"`git ls-remote {default_branch.REMOTE} {ref}` names no commit for {branch}. Nothing "
+        "was merged."
+    )
+
+
+def _fetch_unless_held(repo_root: Path, commits: Sequence[str], *, base: str, number: int) -> None:
+    """`commits` held in the clone, fetched with `base` and PR `number`'s head
+    where any is not; raises `click.ClickException` where one still is not."""
+    if all(_holds(repo_root, commit) for commit in commits):
+        return
+    _git_remote(
+        repo_root,
+        [
+            "fetch",
+            "--no-tags",
+            "--quiet",
+            default_branch.REMOTE,
+            f"refs/heads/{base}",
+            f"refs/pull/{number}/head",
+        ],
+    )
+    missing = [commit[:12] for commit in commits if not _holds(repo_root, commit)]
+    if missing:
+        raise click.ClickException(
+            f"the clone does not hold {', '.join(missing)} after a fetch of {base} and PR "
+            f"#{number}'s head from {default_branch.REMOTE}, so the release cannot be read. "
+            "Nothing was merged."
+        )
+
+
+def _holds(repo_root: Path, commit: str) -> bool:
+    result = subprocess.run(
+        ["git", "cat-file", "-e", f"{commit}^{{commit}}"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def _git_remote(repo_root: Path, args: list[str]) -> str:
+    """`git <args>`, which reaches the remote, bounded by
+    :data:`GIT_REMOTE_SECONDS`: its output, or `click.ClickException` where it
+    fails, cannot start or is ended at its bound."""
+    said = f"`git {' '.join(args)}`"
+    try:
+        result = command_runner.run_bounded(
+            ["git", *args], cwd=repo_root, seconds=GIT_REMOTE_SECONDS
+        )
+    except OSError as exc:
+        raise click.ClickException(f"{said} could not be run ({exc}). Nothing was merged.") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise click.ClickException(
+            f"{said} did not answer within {exc.timeout:g} s, and was ended. Nothing was merged."
+        ) from None
+    if result.returncode != 0:
+        why = result.stderr.strip() or f"exit {result.returncode}"
+        raise click.ClickException(f"{said} failed: {why}. Nothing was merged.")
+    return result.stdout
+
+
+def _messages_between(repo_root: Path, base: str, head: str) -> list[tuple[str, str]]:
+    """(commit, message) for each commit `head` holds that `base` does not."""
+    result = subprocess.run(
+        ["git", "log", "-z", "--format=%H%n%B", f"{base}..{head}"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=True,
+    )
+    pairs: list[tuple[str, str]] = []
+    for record in result.stdout.split("\0"):
+        commit, _, message = record.lstrip("\n").partition("\n")
+        if commit:
+            pairs.append((commit, message))
+    return pairs
+
+
 def release_pr_refusal(pr: ReleasePrState) -> ReleaseMergeDecision | None:
     """The refusal of a PR that is not a release PR — a `release/*` head under
     a `chore(release):` title — else None. A PR on another head branch is
@@ -3633,6 +4158,16 @@ def _landing_refusal(pr: ReleasePrState, end: _End) -> str:
             "the gates, so the landing sent nothing: no merge and no enqueue goes out that no "
             f"gate of this run saw. Run `pkit release merge {pr.number}` again: it plans afresh, "
             "and runs its gates before it merges or enqueues anything."
+        )
+    if kind == pull_request_landing.QUEUED_AHEAD:
+        queued: list[object] = list(reading.get("ahead") or [])
+        ahead = ", ".join(f"#{number}" for number in queued)
+        return (
+            f"the merge queue for {base} holds {ahead or 'another pull request'} ahead of release "
+            f"PR #{pr.number}, which would land first, so the release would land on another "
+            "commit than its plan read. Nothing was enqueued. Once the queue ahead of it is "
+            f"empty, run `pkit release merge {pr.number}` again; where any of them merged, "
+            f"{_lower_first(RUN_THE_RELEASE_AGAIN)}"
         )
     if kind in (pull_request_landing.QUEUE_NOT_SQUASH, pull_request_landing.SQUASH_DEFAULTS):
         problem, remedy = _squash_commit_problem(end, base)
@@ -3802,7 +4337,7 @@ def _gh_pr_view(pr_number: int, repo_root: Path) -> dict[str, Any]:
     object ends the run too, having asked nothing."""
     fields = (
         "number,title,state,headRefName,headRefOid,baseRefName,isCrossRepository,"
-        "mergeable,url,statusCheckRollup"
+        "mergeable,url,statusCheckRollup,body"
     )
     try:
         result = command_runner.run_bounded(
@@ -4289,40 +4824,83 @@ def publish_release_notes(
     notes reach `gh` on its standard input, never as an argument, whose
     length the system caps.
 
+    A candidate's notes, for a version `X.Y.ZrcN`, are read from `CHANGELOG.md` at
+    its tag, since only the tag holds the commit that records them, and its Release
+    is marked a pre-release, so GitHub never shows a candidate as its latest
+    release (ADR-089 point 9). They end with the way into the candidate,
+    `pkit pin <candidate>` beside the first hop (`candidates.way_in_notes`;
+    ADR-092 point 4), after the section or its short notes alike.
+
     `clearance` is the cross-repository guard's for `repo_root`, cleared at the
     entry (`session_guard.clear`), before `gh` is asked anything (ADR-061
     point 6).
     """
     session_guard.require(clearance, repo_root)
+    tag = f"v{version}"
+    candidate = versioning.is_candidate_version(version)
+    text = _changelog_at_tag(repo_root, tag) if candidate else _changelog_here(repo_root)
+    notes = extract_changelog_section(text, version)
+    way_in = f"\n{candidates.way_in_notes(version)}" if candidate else ""
+    form = "its whole changelog section"
+    if len(notes) + len(way_in) > RELEASE_BODY_LIMIT:
+        size = f"{len(notes):,} characters"
+        if way_in:
+            size += f", {len(notes) + len(way_in):,} with how to try the candidate"
+        form = (
+            f"short notes, as its changelog section is {size}, past the "
+            f"{RELEASE_BODY_LIMIT:,} a GitHub Release keeps"
+        )
+        repository_url = origin_repository_url(repo_root)
+        changelog_url = f"{repository_url}/blob/{tag}/{CHANGELOG_NAME}" if repository_url else None
+        notes = short_release_notes(text, version, changelog_url=changelog_url)
+    if candidate:
+        form += ", then how to try the candidate"
+    notes += way_in
+
+    kind = "notes-only GitHub pre-release" if candidate else "notes-only GitHub Release"
+    if dry_run:
+        return f"[dry-run] would publish {kind} {tag} (no artifact) with {form}:\n\n{notes}"
+
+    if _gh_release_exists(tag, repo_root):
+        _gh_release_edit_notes(tag, notes, repo_root, pre_release=candidate)
+        return f"Updated {kind} {tag} with {form} (no artifact)."
+    _gh_release_create_notes(tag, notes, repo_root, pre_release=candidate)
+    return f"Published {kind} {tag} with {form} (no artifact)."
+
+
+def _changelog_here(repo_root: Path) -> str:
+    """The text of the working tree's `CHANGELOG.md`, where a final release's notes
+    are read."""
     changelog = repo_root / CHANGELOG_NAME
     if not changelog.is_file():
         raise click.ClickException(
             f"no {CHANGELOG_NAME} at {changelog} — run `pkit release apply` first."
         )
-    text = changelog.read_text(encoding="utf-8")
-    notes = extract_changelog_section(text, version)
-    tag = f"v{version}"
-    form = "its whole changelog section"
-    if len(notes) > RELEASE_BODY_LIMIT:
-        form = (
-            f"short notes, as its changelog section is {len(notes):,} characters, past "
-            f"the {RELEASE_BODY_LIMIT:,} a GitHub Release keeps"
-        )
-        repository_url = origin_repository_url(repo_root)
-        changelog_url = f"{repository_url}/blob/{tag}/{CHANGELOG_NAME}" if repository_url else None
-        notes = short_release_notes(text, version, changelog_url=changelog_url)
+    return changelog.read_text(encoding="utf-8")
 
-    if dry_run:
-        return (
-            f"[dry-run] would publish notes-only GitHub Release {tag} "
-            f"(no artifact) with {form}:\n\n{notes}"
-        )
 
-    if _gh_release_exists(tag, repo_root):
-        _gh_release_edit_notes(tag, notes, repo_root)
-        return f"Updated notes-only GitHub Release {tag} with {form} (no artifact)."
-    _gh_release_create_notes(tag, notes, repo_root)
-    return f"Published notes-only GitHub Release {tag} with {form} (no artifact)."
+def _changelog_at_tag(repo_root: Path, tag: str) -> str:
+    """The text of `CHANGELOG.md` at the commit `tag` names, where a candidate's
+    notes are read: only its tag holds that commit (ADR-089 point 1)."""
+    try:
+        result = subprocess.run(
+            ["git", "show", f"refs/tags/{tag}:{CHANGELOG_NAME}"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            cwd=repo_root,
+            check=False,
+        )
+    except OSError as exc:
+        raise click.ClickException(f"`git` could not be run ({exc}).") from exc
+    if result.returncode != 0:
+        said = result.stderr.strip() or f"exit status {result.returncode}"
+        raise click.ClickException(
+            f"{CHANGELOG_NAME} cannot be read at the tag {tag} (git says: {said}). A "
+            "candidate's notes are read at its tag, since no branch holds its commit: fetch "
+            f"the tag (`git fetch {default_branch.REMOTE} tag {tag}`), and run again."
+        )
+    return result.stdout
 
 
 def _gh_release_exists(tag: str, repo_root: Path) -> bool:
@@ -4347,7 +4925,9 @@ def _gh_release_exists(tag: str, repo_root: Path) -> bool:
     return result.returncode == 0
 
 
-def _gh_release_create_notes(tag: str, notes: str, repo_root: Path) -> None:
+def _gh_release_create_notes(
+    tag: str, notes: str, repo_root: Path, *, pre_release: bool = False
+) -> None:
     """Create a notes-only Release for `tag` — notes body, NO artifact.
 
     `--verify-tag` makes `gh` refuse when the git tag does not exist (the clear
@@ -4355,11 +4935,15 @@ def _gh_release_create_notes(tag: str, notes: str, repo_root: Path) -> None:
     `--generate-notes`: the Release is a pure notes overlay on the tag install
     path (PRJ-004), never an artifact channel. Title is the tag. The notes go
     on standard input (`--notes-file -`), so no length of theirs meets the
-    cap the system puts on one argument.
+    cap the system puts on one argument. A `pre_release`, a candidate's, is
+    marked so (`--prerelease`), which GitHub never shows as the latest release.
     """
+    command = ["gh", "release", "create", tag, "--title", tag, "--notes-file", "-", "--verify-tag"]
+    if pre_release:
+        command.append("--prerelease")
     try:
         result = subprocess.run(
-            ["gh", "release", "create", tag, "--title", tag, "--notes-file", "-", "--verify-tag"],
+            command,
             input=notes,
             capture_output=True,
             text=True,
@@ -4375,16 +4959,21 @@ def _gh_release_create_notes(tag: str, notes: str, repo_root: Path) -> None:
         raise click.ClickException(f"`gh release create {tag}` failed: {result.stderr.strip()}")
 
 
-def _gh_release_edit_notes(tag: str, notes: str, repo_root: Path) -> None:
+def _gh_release_edit_notes(
+    tag: str, notes: str, repo_root: Path, *, pre_release: bool = False
+) -> None:
     """Update an existing Release's notes for `tag` — notes only, NO artifact.
 
     Edits only the notes body (the idempotent re-run path); title and the
     no-artifact posture are unchanged. The notes go on standard input, as for
-    `_gh_release_create_notes`.
+    `_gh_release_create_notes`. A `pre_release`, a candidate's, is kept marked so.
     """
+    command = ["gh", "release", "edit", tag, "--notes-file", "-"]
+    if pre_release:
+        command.append("--prerelease")
     try:
         result = subprocess.run(
-            ["gh", "release", "edit", tag, "--notes-file", "-"],
+            command,
             input=notes,
             capture_output=True,
             text=True,

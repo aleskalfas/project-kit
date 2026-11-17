@@ -88,6 +88,12 @@ def _document(**fields: object) -> str:
         "output": "the review\n",
         "diagnostics": "",
         "reason": "",
+        "refused_calls": [],
+        "confined": False,
+        "commit": None,
+        "check": None,
+        "files": None,
+        "excluded": [],
     }
     document.update(fields)
     return json.dumps(document) + "\n"
@@ -115,6 +121,23 @@ def test_pm_asks_the_backbones_run_command(ar: ModuleType, fake_pkit: Path) -> N
         "code-reviewer",
     ]
     assert seen["brief"] == "Review PR 7."
+
+
+def test_pm_asks_for_the_person_s_local_settings_by_a_flag(ar: ModuleType, fake_pkit: Path) -> None:
+    """pm names no harness's file: the backbone and the adapter's runner carry
+    the settings (ADR-066 points 1 and 10)."""
+    _answer(fake_pkit, stdout=_document())
+    ar.run_agent("living-docs", "Fix.", folder=fake_pkit, limit_seconds=60, local_settings=True)
+    seen = json.loads((fake_pkit / "log.json").read_text(encoding="utf-8"))
+    assert seen["argv"][:6] == [
+        "agents",
+        "run",
+        "--folder",
+        str(fake_pkit),
+        "--limit",
+        "60",
+    ]
+    assert "--local-settings" in seen["argv"][: seen["argv"].index("--")]
 
 
 def test_a_confined_run_names_its_commit_rules_and_folder(ar: ModuleType, fake_pkit: Path) -> None:
@@ -230,6 +253,8 @@ def test_the_document_is_the_run(
     ("fields", "says"),
     [
         ({"schema_version": 2}, "schema_version 2"),
+        ({"schema_version": True}, "schema_version True"),
+        ({"schema_version": 1.0}, "schema_version 1.0"),
         ({"ending": "approved"}, "an ending pm does not know"),
         ({"exit_code": None}, "no exit_code"),
         ({"exit_code": "0"}, "not an integer"),

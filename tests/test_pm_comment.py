@@ -235,7 +235,7 @@ def _run_verb(
         calls.append(args)
         return _FakeProc(0)
 
-    def this_clone(_root, _login, _config=None, *, dry_run=False):
+    def this_clone(_root, _login, _config=None, *, dry_run=False, login_cause=None):
         if isinstance(clone, Exception):
             raise clone
         return clone

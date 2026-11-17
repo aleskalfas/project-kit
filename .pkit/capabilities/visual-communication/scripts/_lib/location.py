@@ -17,11 +17,16 @@ pieces (DEC-002 points 1 and 2).
 - **Refused:** the repository's top itself, a path outside the repository, under `.pkit/`,
   under a hidden folder, reached through a link, or not a folder. An empty `location:` is
   refused too, by reading and writing commands alike, rather than read as no location.
+- **Moving the work** is a person's: no command moves a recorded location. Each message
+  that says how to move it names the designer's grant in the agents overlay too, the line a
+  person moves with it, and nothing here writes the overlay (DEC-030 point 5).
 
 The files of a folder are listed as git sees them: tracked, and untracked but not ignored.
-Outside a git repository, the folder is walked. A link is never listed. What a commit holds
-is read from git alone (`files_at`, `file_at`). Whether a path is one git keeps is git's word
-too (`ignored`).
+Outside a git repository, the folder is walked. A link is listed only where a caller asks
+for links too (`listed`), as the reading of a picture file does, to tell a name that finds a
+link from one that finds nothing. What a commit holds is read from git alone (`files_at`,
+`file_at`). Whether a path is one git keeps is git's word too (`ignored`), and so is whether
+git hands it to a large-file store (`in_store`).
 """
 
 from __future__ import annotations
@@ -32,7 +37,7 @@ from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from _lib import config_text
+from _lib import config_text, grant
 from _lib.files import Change, is_of_format
 from _lib.reading import ReadError, read_yaml
 from _lib.root import CONFIG
@@ -176,7 +181,8 @@ def for_reading(root: Path) -> Location | None:
         if found is not None:
             raise LocationRefused(
                 f"{CONFIG} records the location `{recorded}`, which {found}: restore the "
-                f"folder, or change the `{KEY}:` line to where the work lies"
+                f"folder, or change the `{KEY}:` line to where the work lies, and move "
+                f"{grant.moved_with(root)}"
             )
         return Location(recorded, recorded=True)
     if (root / DEFAULT).is_dir() and problem(root, DEFAULT) is None and holds_marker(root, DEFAULT):
@@ -193,12 +199,14 @@ def for_writing(root: Path, given: str | None = None, cwd: Path | None = None) -
         if given is not None and normalise(root, given, cwd) != recorded:
             raise LocationRefused(
                 f"{CONFIG} records the location `{recorded}`; a command never moves it. To "
-                f"move the work, move the folder and change the `{KEY}:` line"
+                f"move the work, move the folder, change the `{KEY}:` line, and move "
+                f"{grant.moved_with(root)}"
             )
         if not (root / recorded).is_dir():
             raise LocationRefused(
                 f"{CONFIG} records the location `{recorded}`, which does not exist: restore "
-                f"the folder, or change the `{KEY}:` line to where the work lies"
+                f"the folder, or change the `{KEY}:` line to where the work lies, and move "
+                f"{grant.moved_with(root)}"
             )
         return ForWriting(recorded, record=False)
     if given is not None:
@@ -235,7 +243,7 @@ def record(change: Change, where: ForWriting) -> str | None:
     origin = " (the default, at the repository's top)" if where.path == DEFAULT else ""
     return (
         f"recorded the location `{where.path}`{origin} in {CONFIG}; to move the work, move "
-        f"the folder and change the `{KEY}:` line there"
+        f"the folder, change the `{KEY}:` line there, and move {grant.moved_with(change.root)}"
     )
 
 
@@ -263,11 +271,17 @@ def files(root: Path, folder: str) -> list[str]:
     """The files under `folder`, relative to `root`, as git sees them: tracked, and
     untracked but not ignored; walked outside a git repository. In path order, without
     links, and without a tracked file the working tree no longer holds."""
+    return [rel for rel in listed(root, folder) if not (root / rel).is_symlink()]
+
+
+def listed(root: Path, folder: str) -> list[str]:
+    """The files under `folder` that `files` lists, and each link among them that git lists,
+    or that lies there outside a git repository. In path order."""
     if not _in_repository(root):
-        return walked(root, folder)
+        return walked(root, folder, links=True)
     found = _git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", folder)
-    listed = {entry for entry in found.decode("utf-8").split("\0") if entry}
-    return sorted(rel for rel in listed if _plain_file(root / rel))
+    entries = {entry for entry in found.decode("utf-8").split("\0") if entry}
+    return sorted(rel for rel in entries if _plain_file(root / rel) or (root / rel).is_symlink())
 
 
 def files_at(root: Path, commit: str, folder: str) -> list[str]:
@@ -292,6 +306,20 @@ def ignored(root: Path, paths: Iterable[str]) -> list[str]:
     asked = "\0".join(paths).encode("utf-8")
     found = _git(root, "check-ignore", "-z", "--stdin", literal=False, given=asked, passes=(0, 1))
     return [entry for entry in found.decode("utf-8").split("\0") if entry]
+
+
+def in_store(root: Path, paths: Iterable[str]) -> list[str]:
+    """Those of `paths`, relative to `root`, that git hands to a large-file store, by the
+    attribute `filter=lfs`, so a commit holds the store's pointer in their place, not their
+    bytes: none outside a git repository. Raises GitFailed."""
+    asked = list(paths)
+    if not asked or not _in_repository(root):
+        return []
+    given = "\0".join(asked).encode("utf-8")
+    found = _git(root, "check-attr", "-z", "--stdin", "filter", literal=False, given=given)
+    words = found.decode("utf-8").split("\0")
+    # Each answer is three words: the path, the attribute's name and its value.
+    return [words[i] for i in range(0, len(words) - 2, 3) if words[i + 2] == "lfs"]
 
 
 def _git(
@@ -325,17 +353,19 @@ def _plain_file(path: Path) -> bool:
     return path.is_file() and not path.is_symlink()
 
 
-def walked(root: Path, folder: str) -> list[str]:
+def walked(root: Path, folder: str, *, links: bool = False) -> list[str]:
     """The files under `folder`, relative to `root`, as they lie, whatever git ignores: in
-    path order, and without links."""
+    path order, without links, unless `links` asks for each link too. A linked folder is
+    never entered."""
     top = root / folder
     if not top.is_dir() or top.is_symlink():
         return []
     found = []
     for current, dirs, names in os.walk(top, followlinks=False):
-        dirs[:] = [d for d in dirs if not (Path(current) / d).is_symlink()]
-        for name in names:
+        linked = [d for d in dirs if (Path(current) / d).is_symlink()]
+        dirs[:] = [d for d in dirs if d not in linked]
+        for name in (*names, *(linked if links else ())):
             path = Path(current) / name
-            if _plain_file(path):
+            if _plain_file(path) or (links and path.is_symlink()):
                 found.append(path.relative_to(root).as_posix())
     return sorted(found)

@@ -440,7 +440,11 @@ def main() -> int:
     # release is the instance's write, and the close is not (DEC-059 point 6).
     try:
         clone = instance_claims.this_clone(
-            capability_root, invoker.github_login, config, dry_run=args.dry_run
+            capability_root,
+            invoker.github_login,
+            config,
+            dry_run=args.dry_run,
+            login_cause=invoker.unresolved_cause,
         )
     except instance_claims.Unconfirmed as exc:
         print(

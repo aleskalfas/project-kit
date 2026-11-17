@@ -21,6 +21,7 @@ pkit:
         - COR-001
         - COR-002
         - COR-003
+        - COR-030
         - COR-048
         - COR-049
         - COR-053#6
@@ -32,6 +33,10 @@ pkit:
         - ADR-064
         - ADR-065#1
         - ADR-065#4
+        - ADR-065#6
+        - ADR-089#6
+        - ADR-089#7
+        - ADR-092#7
       artefact:
         - TERM-project-owned-content
         - TERM-seeding
@@ -93,13 +98,14 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How a project's own files come to be written
-  accDescr: The first install, and each version transition of the backbone, seed each missing seed path, which is project-owned content from then on. A version transition's chosen target is the one consent for every migration it runs, and each migration writes within what the records owning the content allow. After the version transition, pkit upgrade writes the version pin, last of all. Sync runs only merge delivery's tier that asks nothing, which adds the methodology's entries. Merge delivery's tier that asks, and the configuration commands, write only with consent. Where nobody can reply, nothing is written and the default applies. Validation checks the project's state as it stands.
+  accDescr: The first install, and each version transition of the backbone, seed each missing seed path, which is project-owned content from then on. A version transition's chosen target is the one consent for every migration it runs, and each migration writes within what the records owning the content allow. After the version transition, pkit upgrade writes the version pin, last of all. A first install run by a release candidate writes the version pin too, last of its writes. Sync runs only merge delivery's tier that asks nothing, which adds the methodology's entries. Merge delivery's tier that asks, and the configuration commands, write only with consent. Where nobody can reply, nothing is written and the default applies. Validation checks the project's state as it stands.
   I([First install]) -->|seeding creates each missing seed path| C[Project-owned content]
   U(["pkit upgrade"]) -->|runs| T(["Version transition of the backbone"])
   T -->|seeding creates each missing seed path| C
   T -->|its chosen target is the one consent for| M[Migrations]
   M -->|write within what the records owning the content allow| C
   U -->|writes it last, after the version transition| P["Version pin, a project-owned file"]
+  I -->|run by a release candidate, writes it last| P
   S([Sync]) -->|runs only| D1["Merge delivery, tier that asks nothing"]
   D1 -->|adds the methodology's entries| C
   D2["Merge delivery, tier that asks"] --> Q{Consent}
@@ -246,35 +252,39 @@ Defined in [TERM-version-pin](../glossary.md#term-version-pin--version-pin).
 
 **Why:** One machine may serve several projects held at different [versions](../glossary.md#term-version--version), under one installed [system](../glossary.md#term-system--system) ([ADR-049](../../../architecture/decisions/ADR-049-per-project-version-pin.md)). Without a pin, a newer system can run over older content that was never migrated to it ([ADR-064](../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md)).
 
-A version pin is a project-owned file, `.pkit/version-pin`, that names a [release](../glossary.md#term-release--release). While that release can be fetched, the system at that release runs the [project](../glossary.md#term-project--project)'s commands instead of the installed one.
+A version pin is a project-owned file, `.pkit/version-pin`, that names a [release](../glossary.md#term-release--release) or a [release candidate](../glossary.md#term-release-candidate--release-candidate). While what it names can be fetched, the system at that version runs the [project](../glossary.md#term-project--project)'s commands instead of the installed one.
 
 **Attributes:**
 
-- the release it names, as a bare `MAJOR.MINOR.PATCH` ([ADR-049 point 3](../../../architecture/decisions/ADR-049-per-project-version-pin.md#3-three-separate-gestures-manage-the-pin--freeze-raise-remove--because-they-are-three-different-intents))
+- the version it names, as a bare `MAJOR.MINOR.PATCH` for a release ([ADR-049 point 3](../../../architecture/decisions/ADR-049-per-project-version-pin.md#3-three-separate-gestures-manage-the-pin--freeze-raise-remove--because-they-are-three-different-intents)), or as `MAJOR.MINOR.PATCHrcN` for a release candidate ([ADR-089 point 6](../../../architecture/decisions/ADR-089-release-candidates.md#6-a-pin-may-name-a-candidate-and-a-pin-that-names-one-asks-for-candidates))
 
 **Relations:**
 
 - `pkit upgrade` writes it at the release it brought the project to, unless asked not to ([ADR-064 point 1](../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#1-the-default-pin)).
+- A version pin that names a release candidate asks for it, so an upgrade moves the project to that candidate (ADR-089 point 6).
+- A move to a release candidate always pins the project, and so does a first [install](../glossary.md#term-install--install) run by a release candidate ([ADR-089 point 7](../../../architecture/decisions/ADR-089-release-candidates.md#7-an-upgrade-or-an-init-refuses-a-candidate-nobody-asked-for-and-a-move-to-a-candidate-always-pins)).
+- Where the project's [manifest](../glossary.md#term-manifest--manifest) records a release candidate, no raise moves the pin to another release ([ADR-092 point 7](../../../architecture/decisions/ADR-092-final-release-from-head.md#7-a-project-on-a-candidate-moves-to-no-other-release)). There `pkit unpin` refuses to remove it (ADR-089 point 7).
 - It is no [recorded version](../glossary.md#term-recorded-version--recorded-version): it directs which release runs, where a recorded version records the content held ([ADR-049 point 1](../../../architecture/decisions/ADR-049-per-project-version-pin.md#1-pin-source-a-dedicated-project-owned-directive-file)).
 - The [methodology](../glossary.md#term-methodology--methodology)'s [source repository](../glossary.md#term-source-repository--source-repository) is never pinned ([ADR-064 point 3](../../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#3-what-the-default-does-not-reach)).
 
-**States:** A project has no pin until `pkit pin` or `pkit upgrade` writes one. A later pin may raise it, and `pkit unpin` removes it (ADR-049 point 3, ADR-064 point 1).
+**States:** A project has no pin until `pkit pin` or `pkit upgrade` writes one, or a first install run by a release candidate does. A later pin may raise it, and `pkit unpin` removes it (ADR-049 point 3, ADR-064 point 1, ADR-089 point 7). Where the manifest records a release candidate, the pin is raised to no other release, and stays (ADR-092 point 7).
 
 ```mermaid
 stateDiagram-v2
   accTitle: The states of a version pin
-  accDescr: A project has no pin until pkit pin or pkit upgrade writes one. A pin may be raised to a later release, and pkit unpin removes it.
+  accDescr: A project has no pin until pkit pin or pkit upgrade writes one, or a first install run by a release candidate does. A pin may be raised to a later release or release candidate, and pkit unpin removes it. Where the manifest records a release candidate, the pin is raised to no other release, and pkit unpin does not remove it.
   [*] --> absent
-  absent --> present : pkit pin or pkit upgrade writes it
-  present --> present : it is raised to a later release
-  present --> absent : pkit unpin removes it
+  absent --> present : pkit pin, pkit upgrade or a candidate's first install writes it
+  present --> present : it is raised to a later release or release candidate, never off a release candidate the manifest records
+  present --> absent : pkit unpin removes it, save where the manifest records a release candidate
 ```
 
 **Always true:**
 
 - It is written last, after the content and the [migrations](../glossary.md#term-migration--migration), so it never runs ahead of the content (ADR-049 point 1, ADR-064 point 1).
 - It is never lowered: naming an older release is refused (ADR-049 point 3).
-- `pkit init` and `pkit sync` write no pin (ADR-064 point 3).
+- Where the manifest records a release candidate, the pin is raised to no other release, and is not removed (ADR-089 point 7, ADR-092 point 7).
+- `pkit sync` writes no pin, and `pkit init` writes one only where a release candidate runs it (ADR-064 point 3).
 
 ## Router
 
@@ -334,6 +344,7 @@ Validation checks a [project](../glossary.md#term-project--project)'s state agai
 - It rejects a mandatory mark that a connection carries with no reason (COR-053 point 6).
 - It reports a connection that ties to no [connection point](../glossary.md#term-connection-point--connection-point) (COR-053 point 6).
 - It rejects two mandatory connections facing each other, which form a cycle (COR-053 point 6).
+- It reports a pair out of [range](../glossary.md#term-range--range) neither side of which moves, such as one an earlier `--force` left ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md), [ADR-065 point 6](../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
 
 ## Validator
 
@@ -454,16 +465,20 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-021 — Declare my project's backbone configuration once, and have it validated](../use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md)
 - [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md)
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md)
+- [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
 - [REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently](../requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md)
 
 **Version pin:**
 
+- [UC-048 — Put the system's CLI on my machine at a release](../use-case-model/use-cases/050-adopt/UC-048-install-cli.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
 - [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md)
 - [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
 - [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md)
 - [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 - [JRN-002 — Upgrade the system](../use-case-model/journeys/JRN-002-upgrade-system.md)
 - [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
+- [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
 - [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
 - [REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it](../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)
 - [REQ-027 · Quality · The version pin holds the old one or the new one, never part, and an upgrade writes it last](../requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md)
@@ -472,6 +487,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Router:**
 
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)
 - [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md)
 - [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md)
 - [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md)
@@ -502,7 +518,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [JRN-007 — Upgrade one capability, and re-pin its rule set](../use-case-model/journeys/JRN-007-upgrade-one-capability.md)
 - [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
 - [REQ-005 · Quality · A command that only reads or validates changes nothing in the project](../requirements/quality/REQ-005-reading-writes-nothing.md)
-- [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
+- [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation, a capability's default or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
 - [REQ-007 · Constraint · A query command is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)
 

@@ -3,7 +3,9 @@ schema_version: 1
 
 # The shared roles (DEC-004 point 7): a component paints and measures with these, and
 # every brand gives each a value, in every combination of the axes. A role carries no
-# value here, only its type.
+# value here, only its type. A picture role is the exception: no brand owes one a value,
+# so it carries no default, and the shared picture roles lie in the group `picture`
+# (DEC-025 point 4).
 roles:
   background: {type: color}
   surface: {type: color}
@@ -43,6 +45,7 @@ roles:
   type.heading: {type: typography}
   type.strong: {type: typography}
   type.code: {type: typography}
+  picture.logo: {type: picture}
 
 # The shared axes (DEC-004 point 2). Both change colours alone, so every mode of either
 # is drawn from one scene.

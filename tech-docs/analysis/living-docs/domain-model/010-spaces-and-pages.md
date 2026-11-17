@@ -55,7 +55,7 @@ classDiagram
   class Reader
   Reader : id
   Reader : needs
-  Reader : paths
+  Reader : reader paths
   class CapturedSource["Captured source"]
   CapturedSource : name
   CapturedSource : title
@@ -95,47 +95,47 @@ A documentation space is the collection of pages written for one audience. Every
 - its id, such as `user` or `technical` ([DEC-001 point 1](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces))
 - its audience: users, or maintainers and the agents that write and check the documentation (DEC-001 point 1)
 - its entry point, the [page](../glossary.md#term-page--page) its [readers](../glossary.md#term-reader--reader) start from (DEC-001 point 1)
-- its places: the root that serves its audience, where it has one, and the places assigned to it (DEC-001 point 1)
+- its places: the documentation root that serves its audience, where it has one, and the places assigned to it (DEC-001 point 1)
 
 **Relations:**
 
-- Its pages lie in its places. A [place](../../core/glossary.md#term-place--place) outside every root gives its documents the space the project assigns it to. A place inside a root gives that root's space, unless the project assigns it to another (DEC-001 point 1).
+- Its pages lie in its places. A [place](../../core/glossary.md#term-place--place) outside every documentation root gives its documents the space the project assigns it to. A place inside a root gives that root's space, unless the project assigns it to another (DEC-001 point 1).
 - Where places nest, the [backbone](../../core/glossary.md#term-backbone--backbone)'s order of places decides which one gives a document its space (DEC-001 point 1).
 - It has one [space definition](../glossary.md#term-space-definition--space-definition) once the project writes it, and its places may hold [unclassified documents](../glossary.md#term-unclassified-document--unclassified-document) (DEC-001 points [2](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content) and [4](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
 
-**States:** A space has no definition until the project writes one, and no [rule](../../core/glossary.md#term-rule--rule) binds on its pages until then. Once its definition exists, the rules bind on each page its scope selects (DEC-001 point 2).
+**States:** A documentation space has no space definition until the project writes one, and no [rule](../../core/glossary.md#term-rule--rule) binds on its pages until then. Once its space definition exists, the rules bind on each page its scope selects (DEC-001 point 2).
 
 **Always true:**
 
-- Two roots that are one folder give no space until they are set apart (DEC-001 point 1). The command that stamps a space, or a page of the user or technical space, offers to set them apart first (DEC-001 point 2).
+- Two documentation roots that are one folder give no space until they are set apart (DEC-001 point 1). The command that stamps a space, or a page of the user or technical space, offers to set them apart first (DEC-001 point 2).
 - A place outside every root that holds a document nothing else claims belongs to exactly one space, the one assigned to it. An untyped place of [rule sets](../../core/glossary.md#term-rule-set--rule-set) owes no assignment, and is passed over until it has one (DEC-001 point 1).
-- A synced tree is never a place of a space (DEC-001 point 1).
+- A tree of [synced copies](../../core/glossary.md#term-synced-copy--synced-copy) is never a place of a space (DEC-001 point 1).
 
 ## Space definition
 
 Defined in [TERM-space-definition](../glossary.md#term-space-definition--space-definition).
 
-**Why:** A method written once, and inherited, can be reused across projects, and changed in one <!-- pkit:not-the-term -->place. One mixed into content cannot be separated again. A shipped [rule set](../../core/glossary.md#term-rule-set--rule-set) takes no scope, so a set of the [project](../../core/glossary.md#term-project--project)'s own says where its rules bind. A [documentation space](../glossary.md#term-documentation-space--documentation-space)'s definition already names the rules its pages follow, so its scope says where they bind ([DEC-001](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).
+**Why:** A method written once, and inherited, can be reused across projects, and changed in a single spot. One mixed into content cannot be separated again. A shipped [rule set](../../core/glossary.md#term-rule-set--rule-set) takes no scope, so a set of the [project](../../core/glossary.md#term-project--project)'s own says where its rules bind. A [documentation space](../glossary.md#term-documentation-space--documentation-space)'s definition already names the rules its pages follow, so its scope says where they bind ([DEC-001](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).
 
-A space definition is the rule set that says which rules a documentation space's pages follow. It inherits `LDOC`, the shared rules living-docs ships, and adds the space's own. Its scope selects the space's pages, so those rules bind on them as soon as the definition exists.
+A space definition is the rule set that says which rules a documentation space's pages follow. It inherits `LDOC`, the shared rules living-docs ships, and adds the space's own. Where it carries a scope, that scope selects the space's pages, so those rules bind on them as soon as the definition exists.
 
 **Attributes:**
 
 - its [inheritance pin](../../core/glossary.md#term-inheritance-pin--inheritance-pin) on `LDOC`, whose major decides when a new major of `LDOC` starts binding through it ([DEC-001 point 2](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content))
-- its scope, which selects the documentation space's pages (DEC-001 point 2)
-- the space's own rules, such as the user space's [rule](../../core/glossary.md#term-rule--rule) that [reader](../glossary.md#term-reader--reader) paths stay unbroken ([DEC-001 point 3](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require))
+- its scope, where it carries one, which selects the documentation space's pages (DEC-001 point 2)
+- the space's own rules, such as the user space's [rule](../../core/glossary.md#term-rule--rule) that [reader paths](../glossary.md#term-reader-path--reader-path) stay unbroken ([DEC-001 point 3](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require))
 
 **Relations:**
 
 - It belongs to one documentation space, whose entry in living-docs' configuration names its path (DEC-001 point 2).
-- Each [page](../glossary.md#term-page--page) that a [place](../../core/glossary.md#term-place--place) assigned to its space gives the space lies in its scope, and in no other ([DEC-001 point 1](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
+- Where it carries a scope, each [page](../glossary.md#term-page--page) that a [place](../../core/glossary.md#term-place--place) assigned to its space gives the space lies in that scope. That page lies in no other ([DEC-001 point 1](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
 
 **States:** None.
 
 **Always true:**
 
 - It inherits `LDOC`, and adds the documentation space's own rules to it (DEC-001 point 2).
-- It lies in the technical space, in a [documentation location](../glossary.md#term-documentation-location--documentation-location) living-docs declares, so a space's readers never meet it (DEC-001 point 2).
+- It lies in the technical space, in a [documentation location](../glossary.md#term-documentation-location--documentation-location) living-docs declares, so a space's [readers](../glossary.md#term-reader--reader) never meet it (DEC-001 point 2).
 - A space definition with no scope selects no page itself (DEC-001 point 2).
 
 ## Page
@@ -144,7 +144,7 @@ Defined in [TERM-page](../glossary.md#term-page--page).
 
 **Why:** A statement nothing grounds cannot be judged true or false, which is what makes fluent, unfounded text look reliable. Anchoring the page, not each sentence, keeps the cost bearable. Anchors turn "is this still true?" into a question a tool can raise and a reviewer can settle ([DEC-001](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).
 
-A page is a document in a [documentation root](../../core/glossary.md#term-documentation-root--documentation-root), or a [place](../../core/glossary.md#term-place--place) assigned to a [documentation space](../glossary.md#term-documentation-space--documentation-space), that names its [page kind](../glossary.md#term-page-kind--page-kind). It is written for the [reader](../glossary.md#term-reader--reader) it names in its front matter, and its anchors name what makes its statements true. A document is a page where its place gives the page type and it names its page kind. One that names its page kind in a place the [project](../../core/glossary.md#term-project--project) declares outside every root, with no type, is a page too.
+A page is a document that names its [page kind](../glossary.md#term-page-kind--page-kind) in a [place](../../core/glossary.md#term-place--place), and is no [decision record](../../core/glossary.md#term-decision-record--decision-record), rule-set file or other owner's. It is written for the [reader](../glossary.md#term-reader--reader) it names in its front matter, and its anchors name what makes its statements true. A document is a page where its place gives the [artefact type](../../core/glossary.md#term-artefact-type--artefact-type) `living-docs:page` and it names its page kind. One that names its page kind in a place the [project](../../core/glossary.md#term-project--project) declares outside every [documentation root](../../core/glossary.md#term-documentation-root--documentation-root), with no artefact type, is a page too.
 
 **Attributes:**
 
@@ -155,7 +155,7 @@ A page is a document in a [documentation root](../../core/glossary.md#term-docum
 
 **Relations:**
 
-- It belongs to the documentation space its place gives it. While the two roots are one folder, a page under them belongs to none ([DEC-001 point 1](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
+- It belongs to the [documentation space](../glossary.md#term-documentation-space--documentation-space) its place gives it. While the two documentation roots are one folder, a page under them belongs to none ([DEC-001 point 1](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
 - It names one page kind and one reader (DEC-001 point 4).
 - It may anchor captured sources (DEC-001 point 4).
 - `LDOC`'s rules and its space's own bind on it where a [space definition](../glossary.md#term-space-definition--space-definition)'s scope selects it (DEC-001 points [2](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content) and [3](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require)).
@@ -164,7 +164,7 @@ A page is a document in a [documentation root](../../core/glossary.md#term-docum
 
 **Always true:**
 
-- A [decision record](../../core/glossary.md#term-decision-record--decision-record) and a rule-set file are never pages, and nor is a document another owner claims (DEC-001 points 1 and 4).
+- A decision record and a rule-set file are never pages, and nor is a document another owner claims (DEC-001 points 1 and 4).
 - Only what a page anchors grounds a statement it makes (DEC-001 point 3).
 
 ## Page kind
@@ -203,7 +203,7 @@ A reader is a class of people or agents who read the [project](../../core/glossa
 
 - its id, which a page names in its `reader` field ([DEC-001 point 7](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#7-connections))
 - its needs (DEC-001 point 7)
-- the paths it takes through the pages (DEC-001 point 7)
+- its [reader paths](../glossary.md#term-reader-path--reader-path), which it takes through the pages (DEC-001 point 7)
 
 **Relations:**
 

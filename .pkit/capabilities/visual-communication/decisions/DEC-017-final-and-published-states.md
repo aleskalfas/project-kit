@@ -41,7 +41,7 @@ A file that went out is a fact, which no later edit of the piece undoes. So the 
 - **A published piece's lock goes back so too.** This one step takes no proposal and no before-and-after (DEC-003 point 8). The piece stops being published there, and the file its page shows does not change (point 5).
 - **It says what else changed.** It reads "changed" as DEC-016 point 1 does, with the lock put back, so the lock's own move counts for nothing. It names the lock it put back, and each input that still does not verify. That stops nothing.
 - **A version made before that reading** read the piece's own file whole, so a pin reads as a change. The command says the file was read whole. The lock comes from other inputs, so such a version loses nothing.
-- **A number or a date let through** is named too, and stops nothing. No check judges a final piece's drawing, and nothing can mend a file that went out.
+- **A number or a date let through** is named too, and stops nothing. No check judges a final piece's drawing, and nothing can mend a file that went out. An element of a switching file let through (DEC-006 point 7) is named the same way, and stops nothing (refinement per [visual-communication:DEC-018-copy-follows-reader-mode] point 1).
 
 ### 2. What marking final needs, and what it writes
 
@@ -232,7 +232,7 @@ Each command below is the writer of what it names (DEC-002 point 9).
 - **The change that builds marking final** carries out points 1, 2 and 8's first bullet, and a final piece's render of point 3. It adds the field to the record of exports, an addition the format allows (DEC-003 point 3). It names the command. A test holds that an export's inputs name its whole lock, which rests on an export's refusal of a lock that does not hold.
 - **The change that judges a final piece** carries out point 4, point 6's findings on a version handed out, and point 3's refusals. It sorts the lock's findings by DEC-002 point 7. Its refusals land before marking final does, or with it.
 - **The change that copies a final piece** carries out point 8's second bullet. It names the command.
-- **The changes that write and hold a current copy** carry out point 5's gate, point 7's first four bullets and point 8's third bullet. They also carry out point 6's findings on a published piece. The record of a copy's form, [project-kit#2700](https://github.com/aleskalfas/project-kit/issues/2700), is to say what the hash is taken of.
+- **The changes that write and hold a current copy** carry out point 5's gate, point 7's first four bullets and point 8's third bullet. They also carry out point 6's findings on a published piece. [visual-communication:DEC-018-copy-follows-reader-mode] point 3 says what the hash is taken of.
 - **[visual-communication:DEC-019-lock-moves-and-pruning]** decides what a proposal carries, which leaves no difference at point 5's gate. Until its command exists a published lock cannot move, which fails closed.
 - **[visual-communication:DEC-019-lock-moves-and-pruning]** names that command a writer of the copy, and decides a move of a piece none of whose copy's files stand.
 - **What removing a library version no lock names spares.** That is decided by [visual-communication:DEC-019-lock-moves-and-pruning] point 9. A library version named only by kept fingerprints, other than that of the version that wrote a current copy, is no lock's, so marking final an export made under it leaves a finding until it is back.

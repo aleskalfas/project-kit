@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import agents_overlay, install, router
+from project_kit import agents_overlay, install, router, session_guard
 from project_kit.cli import main
 
 
@@ -258,6 +259,97 @@ def test_install_kit_dry_run_writes_nothing(tmp_target: Path) -> None:
     install.install_kit(tmp_target, dry_run=True)
     # In dry-run, .pkit/ should not have been created.
     assert not (tmp_target / ".pkit").exists()
+
+
+def _a_candidates_source(tmp_path_factory: pytest.TempPathFactory, candidate: str) -> Path:
+    """A copy of this source whose bundle records the release candidate *candidate*,
+    as a candidate's own pkit carries it."""
+    source = tmp_path_factory.mktemp("candidate") / ".pkit"
+    shutil.copytree(install.find_source_kit(), source, ignore=shutil.ignore_patterns("__pycache__"))
+    (source / "VERSION").write_text(f"{candidate}\n", encoding="utf-8")
+    return source
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+@pytest.mark.parametrize("dry_run", [False, True], ids=["run", "dry-run"])
+def test_an_init_by_a_candidate_refuses_and_writes_nothing(
+    tmp_target: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+    dry_run: bool,
+) -> None:
+    """`pkit init` run by a release candidate refuses, before anything is written and
+    under `--dry-run` too, unless routing is bypassed. Its message names the
+    bypass and the install of the latest release (ADR-089 point 7)."""
+    source = _a_candidates_source(tmp_path_factory, "3.0.0rc1")
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
+    monkeypatch.delenv(router._BYPASS_ENV, raising=False)
+
+    with pytest.raises(click.ClickException) as refused:
+        install.install_kit(tmp_target, dry_run=dry_run)
+
+    message = " ".join(refused.value.message.split())
+    assert "refusing to install pkit 3.0.0rc1" in message
+    assert "`PKIT_NO_ROUTE=1 pkit init`" in message
+    assert "Nothing was written" in message
+    assert not (tmp_target / ".pkit").exists()
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_an_init_by_a_candidate_with_routing_bypassed_pins_the_project_last(
+    tmp_target: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """With routing bypassed, an `init` run by a candidate installs the project and
+    pins it at the candidate, after it records the completion, through the pin's
+    one writer (ADR-089 point 7, ADR-064 point 3)."""
+    from project_kit import manifest
+
+    source = _a_candidates_source(tmp_path_factory, "3.0.0rc1")
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+    completed_at_pin: list[str | None] = []
+    real_write = install.write_version_pin
+
+    def _write(root: Path, version: str | None) -> None:
+        recorded = manifest.read_backbone_manifest(root)
+        completed_at_pin.append(recorded.completed_version if recorded is not None else None)
+        real_write(root, version)
+
+    monkeypatch.setattr(install, "write_version_pin", _write)
+
+    install.install_kit(tmp_target)
+
+    assert router.read_version_pin(tmp_target) == "3.0.0rc1"
+    assert completed_at_pin == ["3.0.0rc1"]
+    assert "pinned       .pkit/version-pin -> 3.0.0rc1" in capsys.readouterr().out
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_an_init_by_a_candidate_dry_run_says_it_would_pin_and_writes_nothing(
+    tmp_target: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    source = _a_candidates_source(tmp_path_factory, "3.0.0rc1")
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+
+    install.install_kit(tmp_target, dry_run=True)
+
+    assert "would pin    .pkit/version-pin -> 3.0.0rc1" in capsys.readouterr().out
+    assert not (tmp_target / ".pkit").exists()
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_an_init_by_a_release_writes_no_pin(tmp_target: Path) -> None:
+    """A finished `init` by a release writes no pin (ADR-064 point 3)."""
+    install.install_kit(tmp_target)
+
+    assert not router.pin_file_path(tmp_target).exists()
 
 
 @pytest.mark.usefixtures("stub_adapter_primitives")
@@ -774,14 +866,45 @@ def test_the_readme_recommends_the_install_the_cli_reference_recommends() -> Non
     assert _install_the_readme_recommends() == _install_the_cli_reference_recommends()
 
 
-def test_the_dispatchers_install_advice_names_the_latest_tag() -> None:
-    """`.pkit/cli/pkit` advises installing pkit in two errors. Each gives the
-    install `init` prints, of the tag `latest`."""
-    dispatcher = (install.find_source_kit() / "cli" / "pkit").read_text(encoding="utf-8")
-    advised = re.findall(r"^\s*(uv tool install \S+)$", dispatcher, re.MULTILINE)
+@pytest.mark.parametrize("uv_on_path", [False, True])
+def test_the_dispatcher_in_a_projects_clone_names_the_install_script(
+    tmp_path: Path, uv_on_path: bool
+) -> None:
+    """In a project's clone, `.pkit/cli/pkit` runs nothing, and where it names how
+    to install pkit, it names the install script beside it, never an install of
+    `latest` (ADR-090 point 8): with `uv` missing, and with `uv` present."""
+    cli = tmp_path / "clone" / ".pkit" / "cli"
+    cli.mkdir(parents=True)
+    dispatcher = cli / "pkit"
+    shutil.copy2(install.find_source_kit() / "cli" / "pkit", dispatcher)
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    if uv_on_path:
+        uv = tools / "uv"
+        uv.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        uv.chmod(0o755)
 
-    assert len(advised) == 2
-    assert all(command == install.recommended_install_command() for command in advised)
+    completed = subprocess.run(
+        ["bash", str(dispatcher), "status"],
+        capture_output=True,
+        text=True,
+        cwd=tmp_path,
+        env={"PATH": f"{tools}:/usr/bin:/bin", "HOME": str(tmp_path)},
+        check=False,
+    )
+
+    assert completed.returncode == 1
+    assert re.search(r'sh "/\S*/clone/\.pkit/cli/install-pkit\.sh"', completed.stderr)
+    assert "@latest" not in completed.stderr
+
+
+def test_the_dispatcher_gives_no_install_of_latest() -> None:
+    """`.pkit/cli/pkit` gives no `uv tool install` line: a project's clone is sent
+    to the install script, which installs the project's version (ADR-090 point
+    8)."""
+    dispatcher = (install.find_source_kit() / "cli" / "pkit").read_text(encoding="utf-8")
+
+    assert re.findall(r"^\s*(uv tool install \S+)$", dispatcher, re.MULTILINE) == []
 
 
 def test_the_cli_reference_names_the_install_from_main_the_development_install() -> None:
@@ -834,6 +957,104 @@ def test_init_numbers_its_steps_in_order_and_names_the_private_step(
         m for line in lines if "To keep pkit private" in line and (m := _STEP.match(line))
     )
     assert f"(step {private.group(1)})" in " ".join(lines)
+
+
+@pytest.mark.parametrize("pkit_found", [True, False])
+def test_init_ends_with_a_new_session_at_the_projects_root(
+    capsys: pytest.CaptureFixture[str], pkit_found: bool
+) -> None:
+    """The last step names a new session at the root, and says that it loads
+    what init wrote (#3005)."""
+    lines = _next_steps_lines(capsys, pkit_found=pkit_found)
+    last = max(index for index, line in enumerate(lines) if _STEP.match(line))
+
+    assert lines[last].endswith(". Start a new session at the project's root:")
+    assert lines[last + 1 :] == [
+        "",
+        ".",
+        "",
+        "A new session loads the settings, agents and rules init wrote.",
+    ]
+
+
+# ── a session started elsewhere than the root (#3005) ──────────────────────
+
+
+def _session_warning(output: str) -> str:
+    """The warning about the session's project folder, or "" where there is none."""
+    return output.partition("⚠ WARNING: this session's project folder")[2]
+
+
+def test_no_warning_outside_any_session(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    install.warn_if_session_elsewhere(tmp_path, command="init")
+
+    assert capsys.readouterr().out == ""
+
+
+def test_no_warning_in_a_session_started_at_the_root(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The anchor and the root are compared as folders, so a link to the root,
+    such as macOS's `/tmp` for `/private/tmp`, is the root."""
+    root = tmp_path / "repo"
+    root.mkdir()
+    (tmp_path / "link").symlink_to(root, target_is_directory=True)
+
+    for anchor in (str(root), str(tmp_path / "link"), f"{root}/"):
+        monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, anchor)
+        install.warn_if_session_elsewhere(root, command="sync")
+
+    assert capsys.readouterr().out == ""
+
+
+@pytest.mark.parametrize("command", ["init", "sync"])
+def test_a_warning_in_a_session_started_above_the_root(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    command: str,
+) -> None:
+    """A repository cloned into a folder below the session's: the harness loads
+    nothing the command writes there until a session starts at the root."""
+    root = tmp_path / "work" / "repo"
+    root.mkdir(parents=True)
+    monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(tmp_path / "work"))
+
+    install.warn_if_session_elsewhere(root, command=command)
+
+    warning = " ".join(_session_warning(capsys.readouterr().out).split())
+    assert warning == (
+        f"is {tmp_path / 'work'}, not {root}. The harness will not load the settings, "
+        f"agents and rules `pkit {command}` writes there until a session starts at {root}."
+    )
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_init_warns_last_where_the_session_started_elsewhere(
+    tmp_target: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(tmp_target.parent))
+
+    install.install_kit(tmp_target)
+
+    out = capsys.readouterr().out
+    assert "A new session loads the settings, agents and rules init wrote." in out
+    warning = _session_warning(out)
+    assert warning and "`pkit init`" in warning
+    assert out.rstrip().endswith(f"until a session starts at {tmp_target}.")
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_init_does_not_warn_in_a_session_started_at_the_root(
+    tmp_target: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(session_guard.CLAUDE_CODE_ANCHOR, str(tmp_target))
+
+    install.install_kit(tmp_target)
+
+    out = capsys.readouterr().out
+    assert "Install complete." in out
+    assert _session_warning(out) == ""
 
 
 def _folder_with_pkit(folder: Path) -> Path:

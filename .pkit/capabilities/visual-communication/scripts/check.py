@@ -13,7 +13,9 @@ validator of the project's validation (DEC-002 points 6 and 7, DEC-005 point 13)
 
 Every run judges the files themselves: the binding of each file of the capability's format
 in the location, the library folder and its list, each piece's lock, the brand it locks,
-the ids of its content and its content against the components it fills. A piece's scenes
+the ids of its content and its content against the components it fills. A run with no
+piece named also judges the designer's grant in the agents overlay against the location
+the configuration records (DEC-030 point 5). A piece's scenes
 are judged from its findings record, `findings.yaml`, while the record's key verifies
 against the files; otherwise they are computed now, while the validation's bound allows.
 A final piece is read by its files and its lock alone (DEC-017 point 4). A published piece

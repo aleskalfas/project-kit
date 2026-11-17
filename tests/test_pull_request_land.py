@@ -791,9 +791,11 @@ def test_the_refusals_come_in_one_order_the_squash_defaults_read_last(
 ) -> None:
     """Every refusal applies at once; lifting each in turn shows the next:
     request-not-allowed, admin-on-queue, queue-not-allowed, queue-not-squash,
-    dropped-head, squash-defaults — the defaults read only for the last."""
+    dropped-head, queued-ahead, squash-defaults — the defaults read only for
+    the last."""
     _queue(host, method="MERGE")
     host.dropped_before()
+    host.queue_ahead = [7]
     host.squash_defaults = ("COMMIT_OR_PR_TITLE", "COMMIT_MESSAGES")
     steps: list[tuple[dict[str, Any], str, str]] = [
         (
@@ -814,6 +816,9 @@ def test_the_refusals_come_in_one_order_the_squash_defaults_read_last(
     end = _land(here)
     assert (end.reason_kind, _requests(host)) == (landing.DROPPED_HEAD, "read")
     assert end.shape == landing.Shape(True)
+    host.requests.clear()
+    end = _land(here, allow_dropped_head=True, first_in_queue=True)
+    assert (end.reason_kind, _requests(host)) == (landing.QUEUED_AHEAD, "read")
     host.requests.clear()
     end = _land(here, allow_dropped_head=True)
     assert (end.reason_kind, _requests(host)) == (landing.SQUASH_DEFAULTS, "read defaults")
@@ -894,6 +899,75 @@ def test_no_option_hands_a_pr_to_a_queue_that_would_not_make_its_commit(
         landing.DROPPED_HEAD,
     )
     assert fake.ENQUEUE not in host.kinds() and fake.MERGE not in host.kinds()
+
+
+# ---- first in the queue (ADR-092 point 6) -------------------------------------------
+
+
+@pytest.mark.parametrize("dry_run", [False, True], ids=["run", "dry-run"])
+def test_first_in_the_queue_refuses_an_enqueue_behind_another_pr(
+    here: dict[str, Any], host: fake.HostingService, dry_run: bool
+) -> None:
+    _queue(host)
+    host.queue_ahead = [7, 8]
+    end = _land(here, dry_run=dry_run, first_in_queue=True)
+    assert (end.ended, end.reason_kind, end.sent) == (
+        landing.END_REFUSED,
+        landing.QUEUED_AHEAD,
+        None,
+    )
+    assert end.reason == (
+        f"the merge queue on PR #{PR}'s base holds #7, #8 ahead of it, and the landing "
+        "enqueues only first in the queue"
+    )
+    assert _requests(host) == "read"
+
+
+def test_first_in_the_queue_enqueues_on_an_empty_queue(
+    here: dict[str, Any], host: fake.HostingService
+) -> None:
+    _enqueued(host, fake.at(1), fake.lands())
+    end = _land(here, first_in_queue=True)
+    assert (end.ended, end.sent) == (landing.END_MERGED, landing.ENQUEUE_REQUEST)
+
+
+def test_without_first_in_the_queue_a_pr_is_enqueued_behind_others(
+    here: dict[str, Any], host: fake.HostingService
+) -> None:
+    _enqueued(host, fake.at(3), fake.at(1), fake.lands())
+    host.queue_ahead = [7, 8]
+    end = _land(here)
+    assert (end.ended, end.sent) == (landing.END_MERGED, landing.ENQUEUE_REQUEST)
+
+
+def test_first_in_the_queue_still_waits_for_a_pr_already_queued_behind_others(
+    here: dict[str, Any], host: fake.HostingService
+) -> None:
+    """It asks for no enqueue, so none is refused: it is waited for."""
+    _queued_at_the_head(host)
+    host.entry = (2, "AWAITING_CHECKS")
+    host.queue_ahead = [7]
+    end = _land(here, first_in_queue=True)
+    assert (end.ended, end.sent) == (landing.END_MERGED, None)
+
+
+def test_a_direct_merge_carries_the_body_read_just_before_its_request(
+    here: dict[str, Any], host: fake.HostingService
+) -> None:
+    """ADR-061 point 8: the body as the reading before the request read it."""
+    host.body = "Closes #42\n\nRelease-plan-commit: " + "a" * 40 + "\n"
+    end = _land(here)
+    assert end.ended == landing.END_MERGED
+    (merge,) = [request.argv for request in host.requests if request.kind == fake.MERGE]
+    assert merge[merge.index("--body") + 1] == host.body
+
+
+def test_an_enqueue_carries_no_body(here: dict[str, Any], host: fake.HostingService) -> None:
+    """The queue makes the commit from its own squash defaults."""
+    _enqueued(host, fake.at(1), fake.lands())
+    _land(here)
+    (enqueue,) = [request.argv for request in host.requests if request.kind == fake.ENQUEUE]
+    assert "--body" not in enqueue
 
 
 # ---- the wait's ends ----------------------------------------------------------------
@@ -1763,6 +1837,19 @@ def test_land_with_no_request_waits_for_a_pr_queued_at_the_head(
     assert result.exit_code == 0
     assert _lines(result.stdout)[-1]["ended"] == "merged"
     assert fake.ENQUEUE not in served.kinds() and fake.MERGE not in served.kinds()
+
+
+def test_land_with_first_in_queue_refuses_an_enqueue_behind_another_pr(
+    served: fake.HostingService,
+) -> None:
+    _queue(served)
+    served.queue_ahead = [7]
+    result = _invoke(*_ARGS, "--first-in-queue", "--json")
+    assert result.exit_code == 1
+    end = _lines(result.stdout)[-1]
+    assert (end["ended"], end["reason_kind"], end["sent"]) == ("refused", "queued-ahead", None)
+    assert end["reading"]["ahead"] == [7]
+    assert _requests(served) == "read"
 
 
 def test_land_with_no_request_still_takes_a_moved_head_out(served: fake.HostingService) -> None:

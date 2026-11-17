@@ -18,10 +18,13 @@ starts the harness (ADR-066 point 1). This module is that command's work:
   `RUNNER_MARGIN_SECONDS`, the time the runner keeps to end the harness and
   answer. A confined run's runner runs from the clone's root instead, and
   Python writes no bytecode there, so the check reads no file the runner's
-  own imports wrote. Past that bound, or on an interrupt, the runner is asked to stop, so
-  it ends the harness it started, and is killed after `END_GRACE_SECONDS`. A
-  run inside a command the backbone runs is refused: that run's kill asks
-  nothing first, so the harness would escape it.
+  own imports wrote. An unconfined run whose folder is a project's root, such
+  as a clone at a commit, takes the runner that project registers and runs it
+  from there (`_unconfined_root`), so the runner picks a shipped agent's
+  definition in that tree. Past that bound, or on an interrupt, the runner is
+  asked to stop, so it ends the harness it started, and is killed after
+  `END_GRACE_SECONDS`. A run inside a command the backbone runs is refused:
+  that run's kill asks nothing first, so the harness would escape it.
 - **Reading its answer.** The runner answers with one JSON document
   (`ANSWER_VERSION`): how the run ended, the harness's exit, the agent's
   output, the harness's diagnostics and a reason, and the calls the harness
@@ -36,7 +39,10 @@ What crosses the boundary is ADR-066 point 2's, in two forms:
 
 - **Unconfined:** the agent, the brief, the folder the run runs in, a
   wall-clock limit, and an effort level where one is set. The review
-  command's runs take this form (ADR-066 point 10).
+  command's runs take this form (ADR-066 point 10). A caller may also ask for
+  the person's local settings: the backbone then names the project root as
+  the checkout they come from, and the runner, which alone knows the file its
+  harness keeps them in, carries them into the folder (ADR-066 points 1 and 10).
 - **Confined:** the same without the folder, and in its place the commit, the
   command whose run rules hold the run (`<capability>:<command>`), and the
   folder the run's files go to. The backbone makes a clone at the commit,
@@ -125,9 +131,11 @@ ENDINGS = (*RUNNER_ENDINGS, NO_ANSWER)
 class Request:
     """What a caller passes for one run (ADR-066 point 2).
 
-    An unconfined run names its `folder`. A confined run names none, and names
-    instead the `commit`, the command whose run rules hold it (`rules_of`, as
-    `<capability>:<command>`) and the folder its files go to (`files_to`)."""
+    An unconfined run names its `folder`, and may name the checkout the
+    person's local settings are carried from into it (`local_settings_from`).
+    A confined run names neither, and names instead the `commit`, the command
+    whose run rules hold it (`rules_of`, as `<capability>:<command>`) and the
+    folder its files go to (`files_to`)."""
 
     agent: str
     brief: str
@@ -137,6 +145,7 @@ class Request:
     commit: str | None = None
     rules_of: str | None = None
     files_to: Path | None = None
+    local_settings_from: Path | None = None
 
     @property
     def confined(self) -> bool:
@@ -168,7 +177,14 @@ class Request:
                 )
             if not self.folder.is_absolute() or not self.folder.is_dir():
                 return f"the folder {self.folder} is not a directory"
+            source = self.local_settings_from
+            if source is not None and (not source.is_absolute() or not source.is_dir()):
+                return f"the checkout the local settings come from, {source}, is not a directory"
             return None
+        if self.local_settings_from is not None:
+            return (
+                "a confined run loads none of the person's settings, so it takes no local settings"
+            )
         return self._confined_problem(target_root)
 
     def _confined_problem(self, target_root: Path | None) -> str | None:
@@ -193,8 +209,11 @@ class Request:
 
     def as_json(self, confined: Mapping[str, Any] | None = None) -> dict[str, Any]:
         """The request as the runner reads it on standard input: with the folder,
-        or, for a confined run, with the `confined` block in its place
-        (`agent_confinement.request_block`)."""
+        and the checkout the local settings come from where one is named, or,
+        for a confined run, with the `confined` block in their place
+        (`agent_confinement.request_block`). A request that asks for no local
+        settings carries no key for them, so a runner that predates the key
+        still runs it."""
         document: dict[str, Any] = {
             "schema_version": REQUEST_VERSION,
             "agent": self.agent,
@@ -202,6 +221,8 @@ class Request:
         }
         if confined is None:
             document["folder"] = str(self.folder)
+            if self.local_settings_from is not None:
+                document["local_settings_from"] = str(self.local_settings_from)
         document["limit_seconds"] = self.limit_seconds
         document["effort"] = self.effort
         if confined is not None:
@@ -326,7 +347,9 @@ def run_agent(target_root: Path, request: Request) -> AgentRun:
     whole group without asking first. So the runner would be killed before it
     could end the harness, which leads a session of its own and would run on.
 
-    A confined request runs in a clone at its commit (`_run_confined`)."""
+    A confined request runs in a clone at its commit (`_run_confined`). An
+    unconfined one takes the runner of the project whose root its folder is,
+    else the project's (`_unconfined_root`)."""
     marked = inside_a_run(request.agent, confined=request.confined, commit=request.commit)
     if marked is not None:
         return marked
@@ -341,13 +364,14 @@ def run_agent(target_root: Path, request: Request) -> AgentRun:
         return _refused(request, problem)
     if request.confined:
         return _run_confined(target_root, request)
-    found = _runner_of(target_root, request)
+    root = _unconfined_root(target_root, cast("Path", request.folder))
+    found = _runner_of(root, request)
     if isinstance(found, AgentRun):
         return found
     run = command_runner.run_command(
         found.script,
         [],
-        cwd=target_root,
+        cwd=root,
         bound_seconds=request.limit_seconds + RUNNER_MARGIN_SECONDS,
         stdin=json.dumps(request.as_json()).encode("utf-8"),
         grace_seconds=END_GRACE_SECONDS,
@@ -369,6 +393,19 @@ def _refused(
         commit=request.commit,
         check=CHECK_NOT_RUN if request.confined else None,
     )
+
+
+def _unconfined_root(target_root: Path, folder: Path) -> Path:
+    """The root an unconfined run's runner is found in and runs from: the run's
+    folder where it is a project's root, holding the backbone's manifest, else
+    the project root. So a run in a clone at a commit, such as a drift
+    command's watched run, takes the runner that commit registers, and the
+    definition of a shipped agent it picks there, as a confined run takes its
+    clone's (ADR-066 point 3). A review's run, in the person's checkout, takes
+    the checkout's."""
+    if read_backbone_manifest(folder) is not None:
+        return folder
+    return target_root
 
 
 def _runner_of(root: Path, request: Request) -> Runner | AgentRun:

@@ -17,11 +17,9 @@ DEC-017 points 5, 7 and 8).
   piece's folder once the piece names a place: it names each file of the last copy it did
   not write again, and a person removes it (DEC-017 point 7).
 - **A file of the copy** (`file_of`). The name of its version's file with the number left
-  out, and the bytes of that file, so the two keep one hash (`hash_of`): the SHA-256 of the
-  whole file. The accepted records leave what a name must hold and what the hash is taken
-  of to the record of a copy's form, project-kit#2700 (DEC-019 point 5, DEC-017,
-  Implications). So these functions alone work out either, and another answer changes them
-  alone.
+  out, in every format, and the bytes of that file, so the two keep one hash (`hash_of`):
+  the SHA-256 of the whole file, with every mode a switching file holds (DEC-018 points 2
+  and 3). These functions alone work out either.
 - **The record.** `exports.yaml` names, under `current-copy`, the piece and the version
   that wrote the copy, and each file's path and hash (DEC-017 point 7). A path in the
   piece's folder is read from that folder, so a rename or a move of the location leaves it
@@ -36,7 +34,9 @@ DEC-017 points 5, 7 and 8).
 - **The lock it was made under** (`written_lock`) is read from the fingerprint of the
   version that wrote it, as any version's is (`version_lock`), each library and version
   held to its shape, since a record may be written by hand. The release that version
-  recorded lies beside it (`written_release`).
+  recorded lies beside it (`written_release`), and so does each number or date it let
+  through (`written_let_through`, DEC-016 point 6), and each element of a switching file it
+  let through (`written_differing`, DEC-018 point 1).
 """
 
 from __future__ import annotations
@@ -77,7 +77,7 @@ _A_FOLDER = r"[^/.\\][^/\\]*(/[^/.\\][^/\\]*)*"
 #: A file's path in that entry, the pattern the schema of the record of exports holds.
 PATH = (
     rf"^{_A_FOLDER}/{_A_NAME}\.{_A_LANGUAGE}\.(default|{_A_MODE}(\+{_A_MODE})*)"
-    r"((\.[1-9][0-9]*)?\.svg|\.pdf)$"
+    r"((\.[1-9][0-9]*)?\.svg|\.pdf|\.html)$"
 )
 
 _PATH = re.compile(PATH)
@@ -369,6 +369,76 @@ def written_over_stale(
     kept = _writer(entry, versions).get("recorded")
     stale = kept.get("used-stale") if isinstance(kept, Mapping) else None
     return [str(output) for output in stale] if isinstance(stale, list) else []
+
+
+def written_let_through(
+    entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]
+) -> list[Mapping[str, Any]]:
+    """Each number or date the version that wrote the current copy `entry` names let through,
+    among the record's `versions` (`let_through`)."""
+    return let_through(_writer(entry, versions))
+
+
+#: The fields of a text a version let through that each entry holds: the fact, its text, the
+#: element and its component. A component in a library adds its `version`.
+_LET_THROUGH = ("fact", "text", "element", "component")
+
+
+def let_through(kept: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """Each number or date a version the record of exports `kept` let through, though it
+    overflows (DEC-016 point 6), each entry that holds its fields as text; none where it
+    keeps no such list, as a version that let none through."""
+    recorded = kept.get("recorded")
+    through = recorded.get("let-through") if isinstance(recorded, Mapping) else None
+    if not isinstance(through, list):
+        return []
+    return [
+        each
+        for each in through
+        if isinstance(each, Mapping)
+        and all(isinstance(each.get(name), str) for name in _LET_THROUGH)
+        and isinstance(each.get("version", ""), str)
+    ]
+
+
+def let_through_said(each: Mapping[str, Any]) -> str:
+    """A text a version let through, in words: the fact, its text, the element and its
+    component (`let_through`)."""
+    return f"`{each['fact']}` as `{each['text']}` at `{each['element']}` in `{each['component']}`"
+
+
+def written_differing(
+    entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]
+) -> list[Mapping[str, Any]]:
+    """Each element of a switching file the version that wrote the current copy `entry` names
+    let through, among the record's `versions` (`differing`)."""
+    return differing(_writer(entry, versions))
+
+
+#: The fields of an element of a switching file a version let through: the file, the key of
+#: the combination it paints otherwise, and the element.
+_DIFFERING = ("file", "key", "element")
+
+
+def differing(kept: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """Each element of a switching file a version the record of exports `kept` let through,
+    though it paints a combination otherwise than the one-key file of it (DEC-018 point 1),
+    each entry that holds its fields as text; none where it keeps no such list."""
+    recorded = kept.get("recorded")
+    through = recorded.get("differing") if isinstance(recorded, Mapping) else None
+    if not isinstance(through, list):
+        return []
+    return [
+        each
+        for each in through
+        if isinstance(each, Mapping) and all(isinstance(each.get(name), str) for name in _DIFFERING)
+    ]
+
+
+def differing_said(each: Mapping[str, Any]) -> str:
+    """An element of a switching file a version let through, in words: the element, its file
+    and the key (`differing`)."""
+    return f"`{each['element']}` of `{each['file']}` in `{each['key']}`"
 
 
 def _writer(entry: Mapping[str, Any], versions: Sequence[Mapping[str, Any]]) -> Mapping[str, Any]:

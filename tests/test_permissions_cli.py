@@ -221,6 +221,7 @@ def _with_adapter(proj: Path) -> Path:
     (proj / ".pkit").mkdir(parents=True, exist_ok=True)
     (proj / ".pkit" / "manifest.yaml").write_text(
         "components:\n  - kind: adapter\n    name: claude-code\n"
+        "    manifest: .pkit/adapters/claude-code/project/manifest.yaml\n"
     )
     core = proj / ".pkit" / "adapters" / "claude-code" / "settings" / "core"
     core.mkdir(parents=True, exist_ok=True)
@@ -398,6 +399,99 @@ def test_apply_reports_out_of_harness_gap(tmp_path, monkeypatch):
     assert "out-of-harness gap" in out
     assert "enforced at runtime" in out  # pm's vcs (per-agent bash)
     assert "not natively enforceable" in out  # network-egress (enforcement: none)
+
+
+# ---- the gap report reads each registered adapter's declaration (#3059) -----
+
+_CLAUDE_CODE_GAP = "⚠ not natively enforceable (declare + enforce out-of-harness): network-egress"
+
+# A second harness whose gaps differ from Claude Code's.
+_OTHER_DECLARATION = (
+    "schema_version: 1\n"
+    "adapter: other-harness\n"
+    "dimensions:\n"
+    "  tool-gating: {layer: frontmatter, enforcement: native}\n"
+    "  filesystem-confinement: {layer: out-of-harness, enforcement: none}\n"
+    "  network-egress: {layer: out-of-harness, enforcement: none}\n"
+)
+
+
+def _register(proj: Path, adapters: dict[str, str | None]) -> Path:
+    """Register each adapter in the backbone manifest, in order, and give it a
+    folder holding `permission-enforcement.yaml` with the text given; None
+    leaves the folder without one."""
+    entries = "".join(
+        f"  - kind: adapter\n    name: {name}\n"
+        f"    manifest: .pkit/adapters/{name}/project/manifest.yaml\n"
+        for name in adapters
+    )
+    (proj / ".pkit" / "manifest.yaml").write_text(
+        f"backbone_version: 0.0.0\ncomponents:\n{entries}"
+    )
+    for name, text in adapters.items():
+        folder = proj / ".pkit" / "adapters" / name
+        folder.mkdir(parents=True, exist_ok=True)
+        if text is not None:
+            (folder / "permission-enforcement.yaml").write_text(text)
+    return proj
+
+
+def _claude_code_declaration() -> str:
+    return (REPO / ".pkit" / "adapters" / "claude-code" / "permission-enforcement.yaml").read_text()
+
+
+def test_diff_with_only_claude_code_reports_its_gap_as_before(tmp_path, monkeypatch):
+    proj = _register(_setup(tmp_path), {"claude-code": _claude_code_declaration()})
+    lines = _run(proj, monkeypatch, "diff").splitlines()
+    assert _CLAUDE_CODE_GAP in lines
+    assert not any("claude-code" in line for line in lines)
+
+
+def test_diff_names_each_adapters_own_gaps(tmp_path, monkeypatch):
+    proj = _register(
+        _setup(tmp_path),
+        {"claude-code": _claude_code_declaration(), "other-harness": _OTHER_DECLARATION},
+    )
+    lines = _run(proj, monkeypatch, "diff").splitlines()
+    assert (
+        "⚠ not natively enforceable by claude-code (declare + enforce out-of-harness): "
+        "network-egress"
+    ) in lines
+    assert (
+        "⚠ not natively enforceable by other-harness (declare + enforce out-of-harness): "
+        "filesystem-confinement, network-egress"
+    ) in lines
+    assert _CLAUDE_CODE_GAP not in lines
+
+
+@pytest.mark.parametrize(
+    "declaration",
+    [None, "schema_version: 1\nadapter: bare\ndimensions: {}\n"],
+    ids=["no-declaration", "no-dimension"],
+)
+def test_diff_names_an_adapter_that_declares_nothing(tmp_path, monkeypatch, declaration):
+    proj = _register(
+        _setup(tmp_path), {"claude-code": _claude_code_declaration(), "bare": declaration}
+    )
+    lines = _run(proj, monkeypatch, "diff").splitlines()
+    assert (
+        "⚠ bare declares nothing (no dimension in its permission-enforcement.yaml): "
+        "none is known to be enforced"
+    ) in lines
+    assert not any("enforceable by bare" in line for line in lines)
+    assert any("enforceable by claude-code" in line for line in lines)
+
+
+def test_diff_names_a_lone_adapter_that_declares_nothing(tmp_path, monkeypatch):
+    # Registered with no folder at all: nothing on disk declares for it.
+    proj = _setup(tmp_path)
+    (proj / ".pkit" / "manifest.yaml").write_text(
+        "backbone_version: 0.0.0\ncomponents:\n  - kind: adapter\n    name: bare\n"
+        "    manifest: .pkit/adapters/bare/project/manifest.yaml\n"
+    )
+    out = _run(proj, monkeypatch, "diff")
+    assert "⚠ bare declares nothing" in out
+    assert "not natively enforceable" not in out
 
 
 def test_apply_refused_without_adapter(tmp_path, monkeypatch):
@@ -2965,8 +3059,11 @@ def test_decide_verdict_path_byte_identical_to_main():
     # Transitive call graph (verified against decide.py):
     #   decide        → _strip_leading_cd, recognized_privileges, _deny_forms,
     #                   _effective_grants, _privilege_ids, _scope_ok,
-    #                   _uncovered_segments, _shown_program, _doubts
-    #                   (+ _UNSEEN_KIND)
+    #                   _uncovered_segments, _glob_widened, _shown_program,
+    #                   _doubts (+ _UNSEEN_KIND)
+    #   _glob_widened → _without_harmless_redirections, _segment_words,
+    #                   _assignments, _matches_bash, _named_behind_glob (+ _SEP)
+    #   _named_behind_glob    → _may_open_flag
     #   hook_decide   → _read_default_agent, decide
     #   recognized_privileges → segments, _segment_privileges
     #   segments      → _without_harmless_redirections, _segment_words,
@@ -2978,8 +3075,27 @@ def test_decide_verdict_path_byte_identical_to_main():
     #   _doubts       → _without_harmless_redirections, _words, _assignments
     #                   (+ _SEP/_UNTRUSTED/_UNTRUSTED_KIND/_ODD_SPACE/_PROGRAM_VAR/
     #                   _QUOTED/_EXPORT_OPERAND), _brace_expansion
-    #   _deny_forms   → _without_harmless_redirections, _segment_words, _assignments,
-    #                   _export_prefix, _rule_form (+ _SEP/_CONFIG_VAR)
+    #   _deny_forms   → _deny_parts, _rule_form
+    #   _deny_parts   → _without_harmless_redirections, _words, _assignments,
+    #                   _export_prefix, _git_configures, _runner_parts,
+    #                   _names_runner, _split_outside_quotes
+    #                   (+ _SEP/_RUN_SEP/_CONFIG_VAR)
+    #   _split_outside_quotes → (+ _QUOTE_TOKEN)
+    #   _runner_parts → _program_name, _shell_script, _deny_parts, _doubts,
+    #                   _runner_commands, _expands, _git_configures
+    #                   (+ _SHELLS/_RUNNER_HOPS)
+    #   _runner_commands      → _find_commands, _uv_command, _skip_options,
+    #                           _expands (+ _RUNNERS/_CONFIG_VAR)
+    #   _uv_command           → _skip_options (+ _UV_OPTIONS)
+    #   _skip_options → _expands
+    #   _shell_script → _expands (+ _SHELL_OPTIONS/_BASH_LONG/_ZSH_LONG)
+    #   _find_commands        → _brace_expansion, _globbed,
+    #                           _may_name_a_find_action (+ _FIND_RUNS)
+    #   _git_configures       → _program_name, _subcommand_candidates,
+    #                           _may_open_flag, _brace_expansion, _globbed
+    #                           (+ _GIT_CONFIG_KEY/_GIT_SECTION)
+    #   _names_runner         → _program_name (+ _RUNNERS/_SHELLS)
+    #   _expands              → _globbed, _brace_expansion (+ _UNTRUSTED)
     #   _rule_form    → _structured_form, _pattern_form
     #   _structured_form      → _program_name, _globbed, _glob_head, _may_open_flag,
     #                           _subcommand_candidates, _flag_form
@@ -3038,6 +3154,20 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_globbed",
         "_glob_head",
         "_without_harmless_redirections",
+        "_glob_widened",
+        "_named_behind_glob",
+        "_deny_parts",
+        "_split_outside_quotes",
+        "_runner_parts",
+        "_runner_commands",
+        "_uv_command",
+        "_skip_options",
+        "_shell_script",
+        "_find_commands",
+        "_may_name_a_find_action",
+        "_git_configures",
+        "_names_runner",
+        "_expands",
         # module-level verdict regexes the above close over
         "_TOKEN",
         "_SEP",
@@ -3059,6 +3189,18 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_UNSEEN_KIND",
         "_HARMLESS_REDIRECTION",
         "_SHELL_KEYWORDS",
+        "_RUN_SEP",
+        "_QUOTE_TOKEN",
+        "_RUNNERS",
+        "_UV_OPTIONS",
+        "_SHELLS",
+        "_FIND_RUNS",
+        "_RUNNER_HOPS",
+        "_GIT_CONFIG_KEY",
+        "_BASH_LONG",
+        "_SHELL_OPTIONS",
+        "_ZSH_LONG",
+        "_GIT_SECTION",
     )
     # A deliberate, reviewed change to a function above names here the rewrite
     # that turns main's side into the change, as (old, new) pairs, so the rest
@@ -3068,8 +3210,123 @@ def test_decide_verdict_path_byte_identical_to_main():
     # a later change to the same function. Delete it in any change after that
     # one merges. A name in `introduced` is new to the change, and is compared
     # once main defines it.
-    sanctioned: dict[str, tuple[tuple[str, str], ...]] = {}
-    introduced: tuple[str, ...] = ()
+    #
+    # Pending (#1990): a deny reads the command a listed runner runs, and git
+    # configuration a command sets or writes (ADR-025 point 5). `_deny_forms`
+    # reads the commands `_deny_parts` finds, and names every privilege a Bash
+    # recognizer names where the core cannot read a runner's command.
+    # `_UNSEEN_KIND` names the two new kinds. `decide` keeps a grant naming a
+    # subcommand or flags from allowing behind a pathname pattern that may
+    # expand to an option (ADR-025 point 2).
+    sanctioned: dict[str, tuple[tuple[str, str], ...]] = {
+        "_UNSEEN_KIND": (
+            (
+                '    "options": "more options before a subcommand than the core reads",\n',
+                '    "options": "more options before a subcommand than the core reads",\n'
+                '    "git-config": "configuration the command sets or writes",\n'
+                '    "runner": "a command a runner runs that the core cannot read",\n',
+            ),
+        ),
+        "decide": (
+            (
+                "        uncovered = _uncovered_segments(catalog, request, allowed)\n",
+                "        uncovered = _uncovered_segments(catalog, request, allowed)\n"
+                "        # A pathname pattern that may expand to an option, before the\n"
+                "        # subcommand or flag a grant names, keeps that grant from allowing\n"
+                "        # (#1990, ADR-025 point 2). The reason names the program alone.\n"
+                "        widened = [] if uncovered else _glob_widened(catalog, request, allowed)\n"
+                "        if widened:\n"
+                "            programs = sorted({_shown_program(toks) for toks in widened})\n"
+                '            if posture == "strict":\n'
+                '                return "deny", (\n'
+                "                    "
+                'f"strict posture: a pathname pattern may expand to an option "\n'
+                '                    f"the grant on the {programs} segment(s) does not name"\n'
+                "                )\n"
+                '            return "abstain", (\n'
+                '                f"a pathname pattern may expand to an option the grant on the "\n'
+                "                "
+                'f"{programs} segment(s) does not name — fail closed, defer to the "\n'
+                '                f"harness\'s normal flow"\n'
+                "            )\n",
+            ),
+        ),
+        "_deny_forms": (
+            (
+                "    An assignment that changes the program's configuration counts where the\n"
+                "    shell hands it on: in front of a command, for that command, and in a\n"
+                "    segment that only assigns or exports, `builtin export` included, for the\n"
+                "    segments after it.\n"
+                "\n"
+                "    It reads the command with each redirection that writes no file removed\n"
+                "    (#2002), so a program behind one, as in `2>/dev/null rm -rf ~`, is the\n"
+                '    program a deny reads."""\n',
+                "    It reads each command `_deny_parts` finds: each segment, and each command\n"
+                "    a listed runner runs (#1990). Where the core cannot read what a runner\n"
+                '    runs, every privilege a Bash recognizer names may bind unseen."""\n',
+            ),
+            (
+                "    parts: list[tuple[list[tuple[str, str]], bool]] = []\n"
+                "    inherited = False\n"
+                "    for raw in _SEP.split("
+                '_without_harmless_redirections(request.get("command", "")).strip()):\n'
+                "        words = _segment_words(raw)\n"
+                "        exported = _export_prefix(words)\n"
+                "        count = len(words) if exported else _assignments(words)\n"
+                "        configured = any("
+                "_CONFIG_VAR.match(text) for text, _ in words[exported:count])\n"
+                "        if words[count:]:\n"
+                "            parts.append((words[count:], inherited or configured))\n"
+                "        else:\n"
+                "            inherited = inherited or configured\n",
+                '    parts, opaque = _deny_parts(request.get("command", ""), 0)\n',
+            ),
+            (
+                '        for rule in spec.get("recognize", {}).get("bash", []):\n'
+                "            for words, configured in parts:\n"
+                "                form = _rule_form(rule, words, configured)\n",
+                '        rules = spec.get("recognize", {}).get("bash", [])\n'
+                "        for rule in rules:\n"
+                "            for words, kind in parts:\n"
+                "                form = _rule_form(rule, words, kind is not None)\n",
+            ),
+            (
+                "                    unsure.setdefault(name, set()).add(form)\n",
+                "                    unsure.setdefault(name, set()).add("
+                'kind if form == "config" and kind else form)\n'
+                "        if opaque and rules:\n"
+                '            unsure.setdefault(name, set()).add("runner")\n',
+            ),
+        ),
+    }
+    introduced: tuple[str, ...] = (
+        "_glob_widened",
+        "_named_behind_glob",
+        "_deny_parts",
+        "_split_outside_quotes",
+        "_runner_parts",
+        "_runner_commands",
+        "_uv_command",
+        "_skip_options",
+        "_shell_script",
+        "_find_commands",
+        "_may_name_a_find_action",
+        "_git_configures",
+        "_names_runner",
+        "_expands",
+        "_RUN_SEP",
+        "_QUOTE_TOKEN",
+        "_RUNNERS",
+        "_UV_OPTIONS",
+        "_SHELLS",
+        "_FIND_RUNS",
+        "_RUNNER_HOPS",
+        "_GIT_CONFIG_KEY",
+        "_BASH_LONG",
+        "_SHELL_OPTIONS",
+        "_ZSH_LONG",
+        "_GIT_SECTION",
+    )
     diverged = _verdict_path_divergences(base, working, frozen, sanctioned, introduced)
     named = ", ".join(
         f"`{fn}`" + (" (after its sanctioned rewrite)" if fn in sanctioned else "")

@@ -54,14 +54,22 @@ _LOOP_GUARD_ENV = "PKIT_ROUTED"
 # Routing itself is untouched — the subprocess still probes the pin.
 _PIN_UNRESOLVED_ENV = "PKIT_PIN_UNRESOLVED"
 
-# The PRJ-004 canonical distribution URL. Route 2 pins by git tag `v<version>`
-# appended after `@` (PRJ-004's tag-pinning form); tag⟺`.pkit/VERSION`
-# correspondence is a release-discipline property owned by #464 (ADR-039 D3).
-DISTRIBUTION_GIT_URL = "git+ssh://git@github.com/aleskalfas/project-kit.git"
-# The same repository over HTTPS, which needs no SSH key. A remedy names it where
-# the SSH fetch is what fails (ADR-065 point 8): a pin's version installed from it
-# is one the router runs with no fetch.
-DISTRIBUTION_HTTPS_URL = "git+https://github.com/aleskalfas/project-kit.git"
+# The distribution URL compiled into the tool: the repository's public HTTPS URL,
+# the canonical install (PRJ-015 point 1). It is the one value every fetch the tool
+# makes of its own releases reads, and every line it prints that names where pkit
+# comes from (ADR-090 point 1). This is uv's spelling, with its `git+` prefix;
+# git's derives from it (`DISTRIBUTION_REMOTE_URL`). Route 2 pins by git tag
+# `v<version>` appended after `@` (PRJ-004's tag-pinning form); tag⟺`.pkit/VERSION`
+# correspondence is a release-discipline property owned by #464 (ADR-039 D3). The
+# install script, `.pkit/cli/install-pkit.sh`, keeps its own copy, since it runs
+# before any pkit exists to ask, and a test holds the two equal (ADR-090 point 7).
+DISTRIBUTION_GIT_URL = "git+https://github.com/aleskalfas/project-kit.git"
+# git's spelling of the same URL, as `git ls-remote` takes it.
+DISTRIBUTION_REMOTE_URL = DISTRIBUTION_GIT_URL.removeprefix("git+")
+
+# git's switch for its terminal prompt. Off, a fetch the server asks a credential
+# of fails at once rather than wait at a terminal for an answer (ADR-090 point 2).
+_TERMINAL_PROMPT_ENV = "GIT_TERMINAL_PROMPT"
 
 # The project-owned pin directive (ADR-049). Its *presence* opts a project into
 # per-project version pinning: the router reads it as the pin source and re-execs
@@ -419,6 +427,29 @@ def _stamp_cli_version(root: Path, environ) -> None:
         environ[_CLI_VERSION_ENV] = version
 
 
+def fetch_environment(environ: Mapping[str, str]) -> dict[str, str]:
+    """A copy of *environ* with git's terminal prompt off, for a process pkit
+    starts only to fetch a release of itself or to probe one (ADR-090 point 2).
+
+    A fetch the server asks a credential of then fails at once, onto its own
+    failure path, rather than wait at a terminal nobody may be at. A process that
+    runs a release's code for the operator's command gets no such copy: the
+    switch would reach every git command that command runs for the project. What
+    the machine's own git configures, a credential helper, an askpass program or
+    a URL rewrite, is left as it is.
+    """
+    return {**environ, _TERMINAL_PROMPT_ENV: "0"}
+
+
+class ReleaseNotFetched(Exception):
+    """The probe of a release failed, so the command that was to run under it did
+    not start (ADR-090 point 2)."""
+
+    def __init__(self, pin: str) -> None:
+        super().__init__(f"pkit {pin} could not be fetched from {DISTRIBUTION_GIT_URL}")
+        self.pin = pin
+
+
 def _run_pinned(pin: str, running: str, argv: list[str], environ: MutableMapping[str, str]) -> None:
     """Route 2: run the command under the pinned wheel, or degrade loudly to self.
 
@@ -429,6 +460,10 @@ def _run_pinned(pin: str, running: str, argv: list[str], environ: MutableMapping
     warn and return so the caller runs self, never double-executing a partially
     applied command. The probe pays a per-version fetch/build the first time,
     cached thereafter (the bounded, eyes-open cost ADR-039 records).
+
+    The probe runs with git's terminal prompt off, so a URL that asks for a
+    credential fails it at once; the run, the operator's command, gets an
+    environment of its own, without the switch (ADR-090 point 2).
     """
     env = dict(environ)
     env[_LOOP_GUARD_ENV] = "1"  # the pinned wheel's router must not route again
@@ -475,9 +510,10 @@ def _notice_pin_unresolved(pin: str, running: str, environ: MutableMapping[str, 
 def _is_older_release(version: str, than: str) -> bool:
     """True iff release *version* is strictly older than release *than*.
 
-    Stdlib-only, for the pre-click hot path: both must be bare
-    `MAJOR.MINOR.PATCH` releases (the only pin `pkit pin` writes, ADR-049);
-    anything else is not ordered, so the caller claims no order it cannot show.
+    Stdlib-only, for the pre-click hot path: each must be a bare
+    `MAJOR.MINOR.PATCH` release (ADR-049) or a release candidate's
+    `MAJOR.MINOR.PATCHrcN`, the two forms a pin takes (ADR-089 point 6).
+    Anything else is not ordered, so the caller claims no order it cannot show.
     """
     parsed, parsed_than = _release_tuple(version), _release_tuple(than)
     if parsed is None or parsed_than is None:
@@ -485,13 +521,27 @@ def _is_older_release(version: str, than: str) -> bool:
     return parsed < parsed_than
 
 
-def _release_tuple(version: str) -> tuple[int, int, int] | None:
-    """*version*'s `MAJOR.MINOR.PATCH` parts, or None when it is not that shape."""
-    parts = version.split(".")
-    if len(parts) != 3 or not all(part.isascii() and part.isdigit() for part in parts):
+def _release_tuple(version: str) -> tuple[int, int, int, int, int] | None:
+    """*version*'s order key, or None when it is neither form a pin takes.
+
+    A candidate sorts below its final release, as PEP 440 orders them: the key
+    is the three parts, then 1 for a release or 0 and N for a candidate `rcN`.
+    """
+    release, rc, candidate = version.partition("rc")
+    parts = release.split(".")
+    if len(parts) != 3 or not all(_is_number(part) for part in parts):
         return None
     major, minor, patch = (int(part) for part in parts)
-    return major, minor, patch
+    if not rc:
+        return major, minor, patch, 1, 0
+    if not _is_number(candidate):
+        return None
+    return major, minor, patch, 0, int(candidate)
+
+
+def _is_number(part: str) -> bool:
+    """True iff *part* is a run of ASCII digits."""
+    return part.isascii() and part.isdigit()
 
 
 def _pinned_base(pin: str) -> list[str]:
@@ -518,24 +568,32 @@ def run_bypassed(pin: str, argv: list[str], environ=None) -> int:
     while the outer reconcile still flipped the pin forward (pin-ahead-of-content
     corruption, ADR-049). So drop PKIT_ROUTED from the child env; only
     PKIT_NO_ROUTE is set, and the grandchild reconciles content for real.
+
+    Like route 2, it probes the release first, with git's terminal prompt off,
+    and runs the command only where the probe succeeds; the run gets no switch
+    (ADR-090 point 2). A failed probe raises `ReleaseNotFetched`, and nothing ran.
     """
     env = dict(os.environ if environ is None else environ)
     env[_BYPASS_ENV] = "1"
     env.pop(_LOOP_GUARD_ENV, None)  # never leak the loop guard into the bootstrapped child
+    if not _pin_is_resolvable(pin, env):
+        raise ReleaseNotFetched(pin)
     completed = subprocess.run([*_pinned_base(pin), *argv], env=env)
     return completed.returncode
 
 
-def _pin_is_resolvable(pin: str, env) -> bool:
+def _pin_is_resolvable(pin: str, env: Mapping[str, str]) -> bool:
     """True iff the pinned wheel can be resolved and run (a `--version` probe).
 
     Any launch failure (`uvx` absent) or non-zero exit (fetch/build/tag error)
-    means the pin is unresolvable — the caller then degrades to self.
+    means the pin is unresolvable — the caller then degrades to self, or, in a
+    raise, stops before the run. The probe runs in a copy of *env* with git's
+    terminal prompt off (`fetch_environment`).
     """
     try:
         probe = subprocess.run(
             [*_pinned_base(pin), "--version"],
-            env=env,
+            env=fetch_environment(env),
             capture_output=True,
             text=True,
         )

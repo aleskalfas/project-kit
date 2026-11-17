@@ -1,20 +1,38 @@
 pkit_schema: visual-communication:notation
 schema_version: 1
 
-# What project-kit's pieces tell apart by colour. A concept that shares a family with
-# another never meets it on one page, as `rule` and `capability` do not. Until a place in a
-# list can take a colour of its own (project-kit#2576), the layers of how pkit fits together
-# take theirs from what each is: pkit's commands and checks are `core`, your code and
-# documents `yours`, and the three layers above them each a concept here.
+# What project-kit's pieces tell apart by colour, and by a sign beside it, so no concept is
+# told by its colour alone (visual-communication DEC-036 point 1). A concept that shares a
+# family with another never meets it on one page, as `rule` and `capability` do not, and
+# no two concepts share a sign. The layers of how pkit fits together name no concept:
+# they are places in an order, not kinds, so they take the neutral family until a place in
+# a list can take a step of a colour of its own (visual-communication DEC-032).
 concepts:
-  # Whose a thing is: pkit's own files and commands, which each upgrade replaces; what
-  # belongs to you; and an optional part of pkit a project installs.
-  core: {colour: purple}
-  yours: {colour: blue}
-  capability: {colour: orange}
-  # The layers above pkit's commands: the choices you accepted, the working rules, schemas
-  # and processes that say exactly what to do, and the skills, agents and permissions that
-  # say how agents act.
-  decision: {colour: green}
-  rule: {colour: orange}
-  skill: {colour: red}
+  # Whose a thing is: pkit's own files and commands, which each upgrade replaces, a full
+  # circle; what belongs to you, a ring, the circle left open; and an optional part of pkit
+  # a project installs.
+  core: {colour: purple, shape: circle}
+  yours:
+    colour: blue
+    icon:
+      d: M 2 12 A 10 10 0 1 1 22 12 A 10 10 0 1 1 2 12 Z M 7 12 A 5 5 0 1 0 17 12 A 5 5 0 1 0 7 12 Z
+      fill-rule: evenodd
+      square: 24
+  capability: {colour: orange, shape: hexagon}
+  # Three of pkit's kinds of thing, for a page that tells them apart: the choices you
+  # accepted, the working rules, schemas and processes that say exactly what to do, and the
+  # skills, agents and permissions that say how agents act.
+  decision: {colour: green, shape: diamond}
+  rule: {colour: orange, shape: square}
+  skill: {colour: red, shape: star}
+  # What proves a page's lead: the one part of the drawing a reader checks the claim
+  # against, and the same words where pkit prints them. Its sign is a tick, the mark of a
+  # thing checked, drawn in the drawing's part and before the words pkit prints, so the two
+  # stay joined where the colours are the reader's. It shares green with `decision`, which
+  # no page that marks proof shows.
+  proof:
+    colour: green
+    icon:
+      d: M 9.5 19.5 L 2.5 12.5 L 5.3 9.7 L 9.5 13.9 L 18.7 4.7 L 21.5 7.5 Z
+      fill-rule: nonzero
+      square: 24

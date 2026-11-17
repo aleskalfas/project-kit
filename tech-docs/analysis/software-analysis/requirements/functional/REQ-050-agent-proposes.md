@@ -3,9 +3,9 @@ id: REQ-050
 title: An agent proposes what the analysis records, and a person decides it
 status: active
 statement: An agent proposes each revalidation outcome, candidate, freed id and edit to a declared structure, and a person decides each before it is committed.
-measure: The analysis-resolver's definition grants no tool that edits a file in place, and owns no path. Its revalidation proposal hands each writer's command to a person. The analysis-author skill asks a person to confirm each candidate, and to accept each entry that frees an id or changes a declared structure.
+measure: The analysis-resolver's agent definition grants no tool that edits a file in place, and owns no path. Its revalidation proposal hands each command that writes to a person. The analysis-author skill asks a person to confirm each candidate, and to accept each entry that frees an id or changes a declared structure.
 applies-to: "The analysis-resolver agent, in a session or a run, and an agent describing an existing project, freeing ids or choosing parts with the analysis-author skill."
-obligation: v1:sha256:c3b362cebf2c7dd1b6dcf25a592fb5fee3ce153728572585cdd2d96e6a062c52
+obligation: v1:sha256:afc9e9c83309c262747a03596b0c9da9d16181fed545310f979012536298d37f
 actors:
   - core:ACT-developer
   - core:ACT-adopter
@@ -24,6 +24,7 @@ pkit:
         - software-analysis:DEC-001#3
         - software-analysis:DEC-001#5
         - software-analysis:DEC-001#9
+        - ADR-060#6
         - COR-050#3
         - COR-009
         - ADR-061#3
@@ -42,6 +43,6 @@ pkit:
 
 # REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it
 
-**Verified by:** Tests of the [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) find that it grants Read, Glob, Grep, Bash and Write alone, and owns no path. They find that it gives each writer as a command for the person, with no consent flag. Nothing confines its Write or its Bash at run time. No test holds what the [skill](../../../core/glossary.md#term-skill--skill) asks of an agent, and no test runs an agent.
+**Verified by:** Tests of the [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) find that it grants Read, Glob, Grep, Bash and Write alone, and owns no path. They find that it gives each command that writes to the person, with no consent flag. In a session, nothing at run time confines the agent's Write to the [agent workspace](../../../core/glossary.md#term-agent-workspace--agent-workspace) ([ADR-060 point 6](../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#6-realised-by-the-hook-never-as-a-settings-rule)). No test holds what the [skill](../../../core/glossary.md#term-skill--skill) asks of an agent, and no test runs an agent.
 
-**Rationale:** Whether a [change](../../../core/glossary.md#term-change--change) was meant is a question of intent, and where intent is unclear only a person knows ([DEC-001 point 5](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)). On a [project](../../../core/glossary.md#term-project--project) that has code, documents and decisions already, a person confirms the [candidates](../../glossary.md#term-candidate--candidate) ([DEC-001 point 9](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#9-brownfield-onboarding)). Only the project frees an id, and no tool infers one ([DEC-001 point 3](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers)). A kind's parts are the project's own choice as it adopts the [capability](../../../core/glossary.md#term-capability--capability) ([DEC-001 point 1](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).
+**Rationale:** Whether a [change](../../../core/glossary.md#term-change--change) was meant is a question of intent, and where intent is unclear only a person knows ([DEC-001 point 5](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)). On a [project](../../../core/glossary.md#term-project--project) that has code, documents and decisions already, a person confirms the [candidates](../../glossary.md#term-candidate--candidate) ([DEC-001 point 9](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#9-brownfield-onboarding)). Only the project frees an id, and no tool infers one ([DEC-001 point 3](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers)). The parts of each [artefact kind](../../glossary.md#term-artefact-kind--artefact-kind) and of the [revalidation record](../../glossary.md#term-revalidation-record--revalidation-record)'s kind are the project's own choice as it adopts the [capability](../../../core/glossary.md#term-capability--capability) ([DEC-001 point 1](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape)).

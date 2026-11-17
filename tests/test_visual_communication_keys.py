@@ -119,3 +119,17 @@ def test_a_variant_takes_the_key_with_fewest_segments_then_the_first_in_string_o
     assert keys.variant_key(["colour-scheme.dark", "default"]) == "default"
     with pytest.raises(ValueError):
         keys.variant_key([])
+
+
+@pytest.mark.parametrize(
+    ("key", "narrowed"),
+    [
+        ("default", "default"),
+        ("contrast.high", "contrast.high"),
+        ("density.compact", "default"),
+        ("colour-scheme.dark+contrast.high+density.compact", "colour-scheme.dark+contrast.high"),
+    ],
+)
+def test_a_key_narrowed_to_some_axes_leaves_out_the_others(key: str, narrowed: str) -> None:
+    """As a scene reads only the shared size axes of a key that holds a brand's own."""
+    assert keys.narrowed(key, AXES) == narrowed

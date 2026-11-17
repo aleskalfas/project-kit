@@ -1,0 +1,38 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  A short label on a small box with rounded corners, painted in its colour family: its
+  fill, its edge, and its text on that fill. It is as large as its label, on one line.
+  Content places it alone, a list lays tags in a row, or a card shows one.
+
+fields:
+  type: object
+  required: [label]
+  properties:
+    label:
+      type: string
+      description: What the tag says, in a word or a few.
+      x-pkit-prose: true
+
+colour: neutral
+
+parts:
+  box:
+    box:
+      fill: ":colour.fill"
+      stroke: ":colour.line"
+      stroke-width: "=@starter.edge"
+      rx: "=@starter.corner"
+    width: "=:width"
+    height: "=:height"
+  # The label is the family's text on the family's fill, a pair the foundations declare.
+  label:
+    text: {content: label, style: type.body, fill: ":colour.text"}
+    x: "=@space.2"
+    y: "=@space.1"
+
+preferred:
+  width: "=label.right + @space.2"
+  height: "=label.bottom + @space.1"

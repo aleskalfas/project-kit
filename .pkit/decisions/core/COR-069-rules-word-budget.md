@@ -42,7 +42,7 @@ COR-068 already keeps a loaded set's front matter, its origins and its retired a
 - **The key:** a backbone configuration key, owned by this record (COR-048 point 2), gives the budget, in words, of the project's own rules file kept as a plain file.
 - **Its default:** with the key absent, the plain file has no budget, and nothing is checked (COR-048 point 3).
 - **A key that holds nothing:** where the project has no plain rules file, because it has none or keeps its rules as a loaded set, a key that is set bounds nothing. Validation warns of it, so one budget has one place.
-- **Its writer:** a change a person authorises, with consent as COR-048 point 5 asks. An install does not write it, and neither does an upgrade. At install the project's rules file is the seed the install wrote, so no size the project chose exists yet. A budget the project sets later, from its own file, bounds what it chose.
+- **Its writer:** a change a person authorises, with consent as COR-048 point 5 asks. An install does not write it, and neither does an upgrade. The project writes its own rules file, and an install writes none (COR-014), so at install there is no file whose size the project chose. A budget the project sets later, from its own file, bounds what it chose.
 
 ### 4. A budget is raised only in a change a person authorises
 
@@ -92,7 +92,7 @@ COR-068 already keeps a loaded set's front matter, its origins and its retired a
 - **A budget optional for a component's set.** Rejected: a project would receive a file that nothing bounds.
 - **A check that fails on slack, or reports it as a warning.** Rejected: a ceiling with room is no broken invariant, and the report already shows the room.
 - **A raise seen only in the diff.** Rejected: the budget is outside every rule's content, so nothing that lists what a change does to the rules would show it, and a reviewer would see it only by chance.
-- **Install writing the key.** Rejected: the file at install is the seed, so the budget would bound no size the project chose.
+- **Install writing the key.** Rejected: the project writes its own rules file, and an install writes none, so at install the key would bound nothing.
 
 ## Implications
 

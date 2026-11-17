@@ -37,6 +37,7 @@ pkit:
         - COR-053#1
         - ADR-059
         - ADR-034#1
+        - ADR-088#5
       artefact:
         - ACT-component-author
         - ACT-operator
@@ -77,6 +78,7 @@ pkit:
 5. The system checks that none of the capability's [skills](../../../glossary.md#term-skill--skill) or [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) collides with one the project already holds.
 6. The system records the capability in the [manifest](../../../glossary.md#term-manifest--manifest) with the [component origin](../../../glossary.md#term-component-origin--component-origin) `incubated-in-repo`, and copies nothing (COR-031 points [D2](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md#d2--origin-is-recorded-in-lifecycle-owned-install-state-defaulting-to-kit-shipped) and [D3](../../../../../../.pkit/decisions/core/COR-031-capability-origin.md#d3--registering-an-incubated-capability-does-not-copy)).
 7. The system prints `Registered incubated capability '<name>' v<version> (in-repo) at .pkit/capabilities/<name>/`.
+15. The capability may declare [overlay categories](../../../glossary.md#term-overlay-category--overlay-category) for its agent definitions' writes. The system writes each one's default into the [overlay](../../../glossary.md#term-overlay--overlay), as [UC-023](../020-set-up/UC-023-add-or-remove-capability.md)'s step 20 does ([ADR-088 point 5](../../../../../architecture/decisions/ADR-088-capability-default-write-paths.md#5-install-provisions-the-query-writes-the-defaults-then-deploys)).
 8. The system runs each [adapter](../../../glossary.md#term-adapter--adapter)'s scripts, which deploy the capability's skills and agent definitions, and sets up each command the capability registers. Then it asks each question the capability's [data points](../../../glossary.md#term-data-point--data-point) declare.
 9. Later, the author runs `pkit sync` in the project, where the system is installed. For the capability, the system prints `incubated   '<name>' — in-repo capability; skipping source-reconciliation.`, and copies nothing over it. It deploys the capability's skills and agent definitions again (COR-031 point D1).
 13. At its entry, before it reads anything, the [sync](../../../glossary.md#term-sync--sync) of step 9 checks the repository as step 12 does (REQ-012). The sync of 9a checks the repository too.

@@ -16,7 +16,7 @@ import pytest
 from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
 from tests.visual_communication_producer import OUTPUT, PIECE, producing_project
-from tests.visual_communication_project import CAPABILITY, CONFIG
+from tests.visual_communication_project import CAPABILITY, CONFIG, RECORDED_DEFAULT
 from tests.visual_communication_writes import FULL, failing
 
 script, seam = load("visual-communication", "produce.py", "plugins.seam")
@@ -44,8 +44,7 @@ def test_it_writes_the_picture_says_what_each_variant_serves_and_records_the_loc
     shown = run(root, PIECE, OUTPUT)
     assert shown.returncode == 0, shown.stderr
     assert shown.stdout.splitlines() == [
-        f"recorded the location `visual` (the default, at the repository's top) in {CONFIG}; "
-        f"to move the work, move the folder and change the `location:` line there",
+        RECORDED_DEFAULT,
         "produced `marker` of `flow` with square 1.0.0: 2 variants for 4 combinations",
         "  default.png serves default, contrast.high",
         "  colour-scheme.dark.png serves colour-scheme.dark, colour-scheme.dark+contrast.high",

@@ -1,0 +1,14 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: cells
+    layout: standard
+    main:
+      use: starter/table
+      rows:
+        - id: kinds
+          cells:
+            - {id: head, head: A head alone}
+            - {id: text, text: "A text alone, broken to the width of its cell."}
+            - {id: both, head: A head, text: And a text under it.}

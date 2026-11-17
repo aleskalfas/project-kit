@@ -49,3 +49,24 @@ slides:
             - {text: "                # your code, untouched", style: comment}
         - id: plain
           text: "name: starter\nversion: 1.0.0\nkind: components"
+
+  - id: signs
+    layout: slide
+    title: Its concept's sign ends its head's row, and a plain run starts with its own
+    visual:
+      use: starter/list
+      widths: own
+      item: {use: starter/code}
+      items:
+        - id: head
+          concept: test-notation/person
+          head: A person's file
+          text:
+            - "owner: "
+            - {text: "ada", concept: test-notation/person}
+            - "\nsince: 2024"
+        - id: text
+          concept: test-notation/person
+          text:
+            - "reviewer: "
+            - {text: "grace", concept: test-notation/person}

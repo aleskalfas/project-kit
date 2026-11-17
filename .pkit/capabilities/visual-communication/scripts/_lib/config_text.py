@@ -40,7 +40,7 @@ def with_key(existing: str | None, key: str, value: str) -> str:
     the configuration's schema, when `existing` is None. Unchanged when the file records
     that value already. Raises ConfigRefused when it records another value, holds the key
     with no value, or would not read back as it was plus the key."""
-    line = f"{key}: {_scalar(value)}\n"
+    line = f"{key}: {scalar(value)}\n"
     binding = f"pkit_schema: {schema_of('config')}\nschema_version: {FORMAT}\n"
     if existing is None:
         return f"{binding}\n{line}"
@@ -53,7 +53,7 @@ def with_key(existing: str | None, key: str, value: str) -> str:
         if was[key] is None:
             raise ConfigRefused(
                 f"{CONFIG} records an empty `{key}:`: write its value there, such as "
-                f"`{key}: {_scalar(value)}`, or remove the line"
+                f"`{key}: {scalar(value)}`, or remove the line"
             )
         if was[key] == value:
             return existing
@@ -73,7 +73,7 @@ def with_key(existing: str | None, key: str, value: str) -> str:
     if reads != wanted:
         raise ConfigRefused(
             f"{CONFIG} would not read back as it is plus `{key}` — its top is not written as "
-            f"the command can extend it, a block mapping: add `{key}: {_scalar(value)}` at its "
+            f"the command can extend it, a block mapping: add `{key}: {scalar(value)}` at its "
             f"top level by hand, then run the command again"
         )
     return bom + (updated.replace("\n", "\r\n") if crlf else updated)
@@ -96,7 +96,7 @@ def recording(root: Path, key: str, value: str) -> str | None:
     return None if text == existing else text
 
 
-def _scalar(value: str) -> str:
+def scalar(value: str) -> str:
     """`value` as YAML: plain where YAML reads it back as the same text and it is no word
     another version of YAML reads as another value, so another tool reads it as the same
     text too; else quoted."""

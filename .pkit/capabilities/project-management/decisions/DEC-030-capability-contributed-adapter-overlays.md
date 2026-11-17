@@ -118,7 +118,7 @@ After uninstall, the previously-contributed keys remain in `.claude/settings.jso
 
 ## Rejected alternatives
 
-**`session_defaults:` block in the capability's `project/config.yaml`** (the original draft). Rejected per the prior critic pass: `project/config.yaml` is consumed by capability scripts as harness-agnostic config; no validating schema; collision precedence by directory ordering would have been a category error.
+**`session_defaults:` block in the capability's `project/config.yaml`** (the original draft). Rejected per the prior critic review: `project/config.yaml` is consumed by capability scripts as harness-agnostic config; no validating schema; collision precedence by directory ordering would have been a category error.
 
 **Always-on capability contribution** (no opt-in). Rejected per #188's explicit opt-in requirement.
 

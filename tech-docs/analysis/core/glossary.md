@@ -1340,6 +1340,22 @@ TERM-release:
           - COR-059#1
           - COR-059#7
           - PRJ-004
+TERM-release-candidate:
+  name: release candidate
+  noun-forms: [release candidates]
+  status: active
+  definition: "set of versions cut to test changes before they ship, each one it raises suffixed `rcN`, which a project moves onto only on request"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/candidates.py
+        record:
+          - PRJ-016#3
+          - ADR-089#1
+          - ADR-089#7
+          - ADR-089#8
+          - ADR-092#2
 TERM-release-pull-request:
   name: release pull request
   noun-forms: [release pull requests]
@@ -1366,6 +1382,7 @@ TERM-release-step:
           - PRJ-002#D3
           - PRJ-002#D4
           - PRJ-004
+          - ADR-092#2
 TERM-release-tag:
   name: release tag
   noun-forms: [release tags]
@@ -1378,6 +1395,7 @@ TERM-release-tag:
           - src/project_kit/versioning.py
         record:
           - PRJ-004
+          - ADR-089#9
 TERM-report:
   name: report
   other-senses: [whole-repository report]
@@ -1833,7 +1851,7 @@ TERM-version-pin:
   name: version pin
   noun-forms: [version pins]
   status: active
-  definition: "project-owned file naming the release whose system runs the project's commands instead of the installed one, while that release can be fetched"
+  definition: "project-owned file naming the release or release candidate whose system runs the project's commands, not the installed one, while what it names can be fetched"
   pkit:
     friction:
       anchors:
@@ -1845,6 +1863,7 @@ TERM-version-pin:
           - ADR-049#3
           - ADR-064#1
           - ADR-064#3
+          - ADR-089#6
 TERM-version-transition:
   name: version transition
   noun-forms: [version transitions]
@@ -1873,6 +1892,19 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
           - COR-050#12
+TERM-withdrawn-release-candidate:
+  name: withdrawn release candidate
+  noun-forms: [withdrawn release candidates]
+  status: active
+  definition: "set of versions cut to test changes before they ship whose commit also carries a second tag, pushed to mark that set unfit"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/upgrade.py
+          - src/project_kit/versioning.py
+        record:
+          - ADR-092#4
 ---
 
 # Glossary
@@ -2134,7 +2166,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 **Distinctions:**
 
 - **Surface change:** what a person judges a change makes. The changeset guard reads only paths, so it can flag a change that moves no [surface](#term-surface--surface) ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
-- **The `skip-changeset` label:** the escape hatch that skips the surface check. Floors, bounds and [range](#term-range--range) edits are still checked ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
+- **The `skip-changeset` label:** the escape hatch that skips the surface check. Floors, bounds and [range](#term-range--range) edits are still checked ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)).
 - **Cross-repository guard:** a check against writing in another repository. It shares only the word.
 
 ## TERM-collection-file — collection file
@@ -2359,7 +2391,7 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 
 **Distinctions:**
 
-- **A moving capability out of range:** refused outright, since the project controls the dependency that does not move ([ADR-065 point 6](../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
+- **A moving capability whose range excludes its dependency:** refused, since whoever runs the command controls that capability's [version](#term-version--version). The one exception is a capability the target [release](#term-release--release) ships whose new range admits the version the dependency moves from. In that case the dependency's move breaks the pair, so that capability is only warned of ([ADR-065 point 6](../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#6-a-transition-settles-its-collisions-and-its-dependency-gates-before-it-writes)).
 - **A dependent left out of range:** warned of. The transition proceeds only under `pkit upgrade --force` (ADR-065 point 6).
 - **Acceptance gate:** a condition on what work builds on. It shares only the word.
 
@@ -3043,7 +3075,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 - **Change:** the unit of work a pull request carries. Where the [project](#term-project--project) allows it, a [change](#term-change--change) may land as a direct commit instead ([COR-009 point 5](../../../.pkit/decisions/core/COR-009-pr-workflow.md#5-prs-are-recommended-not-enforced)).
 - **Target:** the branch a pull request merges into, which CI names as the checks' [base](#term-base--base).
-- **Release pull request:** the pull request that carries one [release step](#term-release-step--release-step)'s writes ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- **Release pull request:** the pull request that carries one [release step](#term-release-step--release-step)'s writes ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
 
 ## TERM-query-command — query command
 
@@ -3065,7 +3097,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 
 **Distinctions:**
 
-- **Floor:** the lowest [version](#term-version--version) a range admits, its `>=X.Y.Z`. At a [release step](#term-release-step--release-step), a floor rises only where a [changeset](#term-changeset--changeset) declares that the [component](#term-component--component) needs a newer version ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
+- **Floor:** the lowest [version](#term-version--version) a range admits, its `>=X.Y.Z`. At a [release step](#term-release-step--release-step), a floor rises only where a [changeset](#term-changeset--changeset) declares that the [component](#term-component--component) needs a newer version ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)).
 - **Upper bound:** the version a range stops below, its `<A.B.C`. A release step widens an upper bound on the backbone with no declaration. It widens an upper bound on another capability only on a changeset's declaration (PRJ-002 D4).
 - **A component's version:** the one number the component carries in its `package.yaml`, as the backbone carries its own in `.pkit/VERSION`. A range names versions of what the component depends on ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md) and [COR-030](../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
 - **Harness version bound:** the [harness](#term-harness--harness) versions that an [adapter](#term-adapter--adapter)'s [support declaration](#term-support-declaration--support-declaration) holds for. It is never widened automatically, only by an author who tested the claim ([COR-047 point 2](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
@@ -3094,14 +3126,25 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 **Distinctions:**
 
 - **Release step:** the procedure that makes a release from the pending [changesets](#term-changeset--changeset). To release a component is to run the [release step](#term-release-step--release-step) for that component's changesets.
-- **Changeset:** a [change](#term-change--change)'s declaration for the next release. The release step consumes every changeset waiting for it (PRJ-002 [D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr) and [D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- **Changeset:** a [change](#term-change--change)'s declaration for the next release. The release step consumes every changeset waiting for it (PRJ-002 [D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr) and [D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
 - **A release step that moves no backbone:** writes new versions of components and makes no release of its own. Those versions reach a CLI installed from a tag with the next release ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
-- **A component's release:** [PRJ-002](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)'s and PRJ-004's name for one new version of one component ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)). The analysis calls it the component's new version.
+- **A component's release:** [PRJ-002](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md)'s and PRJ-004's name for one new version of one component ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)). The analysis calls it the component's new version.
 - **An externally-sourced component's version:** written in the component's own [source repository](#term-source-repository--source-repository), and reached by a [project](#term-project--project)'s transition of that component ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
 - **Release pull request:** the [pull request](#term-pull-request--pull-request) that carries one release step's writes, on a `release/` branch under a `chore(release):` title. It closes no issue, so `pkit release merge` lands it.
 - **Release tag:** the annotated tag `v<version>` on the commit that lands a release's versions. Each release gets one, and a release step that moves only components gets none (PRJ-004).
-- **Pre-release:** a version with a suffix after its patch number, such as `1.150.0rc1`. It is no release, and `pkit pin` refuses one.
+- **Release candidate:** a set of versions cut to test changes before they ship, in which each one it raises is a pre-release. It is no release, and its final release is the release at its backbone version without the suffix.
+- **Pre-release:** a version with a suffix after its patch number, such as `1.150.0rc1`. It is no release, and `pkit pin` refuses one, save a [release candidate](#term-release-candidate--release-candidate)'s version in PEP 440's normal form ([ADR-089 point 6](../../architecture/decisions/ADR-089-release-candidates.md#6-a-pin-may-name-a-candidate-and-a-pin-that-names-one-asks-for-candidates)).
 - **GitHub release:** the page the hosting service shows for a tag. Its notes are the version's changelog section, and it carries no file (PRJ-004).
+
+## TERM-release-candidate — release candidate
+
+**Example:** a major built on its branch is cut as the release candidate `3.0.0rc1`, which holds [backbone](#term-backbone--backbone) 3.0.0rc1 and, among its [components](#term-component--component), project-management 0.55.0rc1. A tester's [project](#term-project--project) moves onto it from the final [release](#term-release--release) it stood at, and the branch merges once its testing passes.
+
+**Distinctions:**
+
+- **Release:** a set of [versions](#term-version--version) shipped together. A release candidate is none, since each version it raises is a pre-release, and its versions live only in its tag ([ADR-089 point 1](../../architecture/decisions/ADR-089-release-candidates.md#1-a-candidate-is-the-final-releases-own-plan-with-the-suffix-added-where-the-step-writes)). Its final release is the release at its backbone version without the suffix, such as 3.0.0 for `3.0.0rc1`.
+- **Pre-release:** a version with a suffix after its patch number, as PEP 440 reads it. Each version a release candidate raises carries `rcN`, and sorts below the same version without the suffix. So a [version transition](#term-version-transition--version-transition) to `0.55.0rc1` runs the [migration](#term-migration--migration) folder `0.55.0/` ([ADR-089 point 5](../../architecture/decisions/ADR-089-release-candidates.md#5-a-candidate-runs-its-final-releases-migration-folders-and-has-not-finished-them)).
+- **Release tag:** a release candidate's own tag, such as `v3.0.0rc1`, is none. It names a commit no branch holds, and the lookup of the highest release skips it ([ADR-089 point 4](../../architecture/decisions/ADR-089-release-candidates.md#4-every-range-is-read-with-its-pre-releases-admitted)). `pkit upgrade --pre` reads it too, beside the [release tags](#term-release-tag--release-tag) ([ADR-089 point 8](../../architecture/decisions/ADR-089-release-candidates.md#8-the-way-into-a-candidate-and-the-way-on-refinement-per-adr-092)).
 
 ## TERM-release-pull-request — release pull request
 
@@ -3112,7 +3155,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 **Distinctions:**
 
 - **Pull request:** a proposal to land one [change](#term-change--change). A release pull request closes no issue, so `pkit pull-request land` refuses it, and `pkit release merge` lands it.
-- **Release step:** the procedure whose writes the release pull request carries ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- **Release step:** the procedure whose writes the release pull request carries ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
 - **Release tag:** what the commit a release pull request lands gets, where the [release step](#term-release-step--release-step) moved the [backbone](#term-backbone--backbone) ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 
 ## TERM-release-step — release step
@@ -3125,7 +3168,8 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 - **Release:** the set of [versions](#term-version--version) a release step makes when it moves the [backbone](#term-backbone--backbone). A release step that moves only [components](#term-component--component) makes none of its own ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 - **Changeset:** what a branch writes instead of a version number, declaring its [change](#term-change--change) for the release step ([PRJ-002 D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
-- **Release pull request:** the [pull request](#term-pull-request--pull-request) that carries one release step's writes onto the [default branch](#term-default-branch--default-branch) ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- **Release pull request:** the [pull request](#term-pull-request--pull-request) that carries one release step's writes onto the [default branch](#term-default-branch--default-branch) ([PRJ-002 D3](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
+- **Release candidate:** what `pkit release apply --pre` writes from the release step's plan, at the commit it runs on. The cut writes each version the plan raises with the suffix `rcN`, and consumes no [changeset](#term-changeset--changeset) ([ADR-092 point 2](../../architecture/decisions/ADR-092-final-release-from-head.md#2-a-candidate-is-cut-from-a-commit-that-has-the-default-branchs-head-in-its-history)). The cut's writes reach no branch and, once its commit is tagged, only the candidate's tag.
 
 ## TERM-release-tag — release tag
 
@@ -3138,6 +3182,7 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 - **Release:** the set of [versions](#term-version--version) a release tag names by its [backbone](#term-backbone--backbone) version.
 - **A release step that moves only components:** gets no release tag ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 - **The `latest` tag:** a tag that points at the highest release tag. The `uv tool install` command the [system](#term-system--system) prints names it.
+- **A release candidate's tag:** a tag such as `v3.0.0rc1`, on a commit no branch holds, is no release tag. The CI pipeline pushes it alone, and only once the wheel built from its commit names the candidate's version ([ADR-089 point 9](../../architecture/decisions/ADR-089-release-candidates.md#9-a-candidate-is-cut-by-the-release-workflows-pre-release-run-and-notes-past-the-hosts-caps-are-linked)).
 - **GitHub release:** the page the hosting service shows for a release tag. Its notes are the version's changelog section (PRJ-004).
 
 ## TERM-report — report
@@ -3365,7 +3410,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 **Distinctions:**
 
 - **Target:** the repository a command would write in, read from the working directory. The cross-repository guard compares it with the session anchor's repository ([ADR-034 point 1](../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever)).
-- **Project root:** the folder the [system](#term-system--system)'s commands find the [project](#term-project--project) in, from their working directory. For those commands, the session anchor is only the other side of the cross-repository guard's comparison (ADR-034 point 1).
+- **Project root:** the folder the [system](#term-system--system)'s commands find the [project](#term-project--project) in, from their working directory. For those commands, the session anchor is only the other side of a comparison, never the root (ADR-034 point 1). Beside the cross-repository guard, `pkit init` and `pkit sync` compare the session anchor with the root they wrote to, and warn where the two differ.
 - **Anchor:** an [artefact](#term-artefact--artefact)'s link to what makes it true (`TERM-anchor`). It shares the word, and nothing else.
 
 ## TERM-settled-break — settled break
@@ -3448,7 +3493,7 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 - **Surface change:** an alteration of the surface, which a change declares in a changeset ([PRJ-002 D1](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
 - **Declared surface:** the paths a [component](#term-component--component) or the [project](#term-project--project) names as what descriptions ought to cover ([COR-050 point 8](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#8-two-measures-not-failures)). It shares only the word. A passage that says a component declares its surface, or that speaks of uncovered surface, means these paths.
 - **A component's surface paths:** the paths the [changeset guard](#term-changeset-guard--changeset-guard) reads as a component's surface. An edit to one only suggests a [surface change](#term-surface-change--surface-change) ([PRJ-002 D2](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
-- **The surface check:** the changeset guard's check that a change names each component it touches. The `skip-changeset` label skips it, and leaves floors, bounds and [range](#term-range--range) edits checked ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
+- **The surface check:** the changeset guard's check that a change names each component it touches. The `skip-changeset` label skips it, and leaves floors, bounds and [range](#term-range--range) edits checked ([PRJ-002 D4](../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)).
 - **To surface:** the plain verb, as when ambiguities surface in a draft. It shares only the word.
 
 ## TERM-surface-change — surface change
@@ -3576,6 +3621,7 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 - **An external source's pin:** the ref an externally-sourced [component](#term-component--component) is pulled at, which is that component's [recorded version](#term-recorded-version--recorded-version) ([COR-041](../../../.pkit/decisions/core/COR-041-external-source-distribution.md)).
 - **The installed CLI:** the command on the machine. A pinned project runs the installed CLI only where its pin cannot be fetched, and is warned ([ADR-064](../../architecture/decisions/ADR-064-upgrade-pins-by-default.md)).
 - **The source repository:** never pinned ([ADR-064 point 3](../../architecture/decisions/ADR-064-upgrade-pins-by-default.md#3-what-the-default-does-not-reach)).
+- **A release candidate:** a version pin may name one, in PEP 440's normal form, such as `3.0.0rc1`. The project's commands then run at that [release candidate](#term-release-candidate--release-candidate) ([ADR-089 point 6](../../architecture/decisions/ADR-089-release-candidates.md#6-a-pin-may-name-a-candidate-and-a-pin-that-names-one-asks-for-candidates)).
 - **To pin:** a project pins a release when its version pin names that release, as in "the [version](#term-version--version) it pins". Elsewhere the verb keeps its everyday sense, as in a merge pinned to one commit.
 
 ## TERM-version-transition — version transition
@@ -3602,3 +3648,12 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Change check:** compares one [change](#term-change--change) with its [base](#term-base--base), and fails where the [friction mode](#term-friction-mode--friction-mode) is `enforcing` ([COR-050 point 12](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - **Debt:** what the whole-repository check reports, derived from git on each run ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
 - **Tool-written status:** the `last-check` that an after-merge job writes from the check's result. The checks never read it for [friction](#term-friction--friction) ([COR-050 point 10](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#10-a-tool-written-status-on-separate-lines)).
+
+## TERM-withdrawn-release-candidate — withdrawn release candidate
+
+**Example:** the methodology maintainer finds the [release candidate](#term-release-candidate--release-candidate) `3.0.0rc1` unfit, and pushes the tag `withdrawn/v3.0.0rc1` on its commit, beside its own tag `v3.0.0rc1`. `3.0.0rc1` is then a withdrawn release candidate: `pkit upgrade --pre` passes it by, and `pkit pin 3.0.0rc1` warns of it and pins it all the same.
+
+**Distinctions:**
+
+- **Release candidate:** a withdrawn release candidate is still one. Its own tag, such as `v3.0.0rc1`, is neither moved nor deleted, and a [version pin](#term-version-pin--version-pin) may still name it ([ADR-092 point 4](../../architecture/decisions/ADR-092-final-release-from-head.md#4-a-withdrawal-is-a-tag-which-pkit-upgrade---pre-passes-by-and-pkit-pin-warns-of)).
+- **Release tag:** the tag `withdrawn/v<candidate>` is none. It names no [install](#term-install--install), so no lookup of the highest [release](#term-release--release) takes it (ADR-092 point 4).

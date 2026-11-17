@@ -10,7 +10,8 @@ the check read too, does not.
 
 1. **The declaration.** `piece.yaml` declares each produced output under
    `produced.<output>`: the producer, its inputs, each naming a role by its token path,
-   and the pixel size of each variant. The piece's lock says which brand version the
+   never a component token, which only its component reads (DEC-035 point 3), and the
+   pixel size of each variant. The piece's lock says which brand version the
    values come from. A piece with no lock yet is refused: a draft's first render writes
    one, a published piece is set back to a draft for it, and a final piece takes no run.
 2. **The values and the variants.** Each role the inputs name is resolved in every
@@ -53,7 +54,7 @@ shipped `<name>_declaration.py`):
 
 Its implementation has `produce(handover: dict, out_dir: Path) -> dict`.
 
-- **It receives** the values document, version 1 (`values.document`), holding the roles
+- **It receives** the values document, version 2 (`values.document`), holding the roles
   its inputs name alone, under the lock of the brand and what it builds on, with three keys
   added: `inputs` (input -> token path); `variants` (variant key -> `{serves: [combination
   keys], pixels: {width, height}}`); and `frames: {}`, the measured frames it declared
@@ -106,7 +107,7 @@ from _lib.files import (
 )
 from _lib.findings import ATTENTION, FAILS, Finding, accepted, loss_finding
 from _lib.libraries import FOUNDATIONS
-from _lib.names import is_name, is_token_path
+from _lib.names import COMPONENT, is_name, is_token_path
 from _lib.plugins import seam
 from _lib.reading import ReadError, load_yaml, sha256
 from _lib.root import LOCAL
@@ -288,17 +289,23 @@ def _refuse_final(root: Path, location: str, piece: str) -> None:
 
 
 def plan(
-    root: Path, location: str, piece: str, output: str, held: libraries.Held | None = None
+    root: Path,
+    location: str,
+    piece: str,
+    output: str,
+    held: libraries.Held | None = None,
+    lock: Mapping[str, str] | None = None,
 ) -> Plan:
     """Read, from the files as they are now, what a run of the producer that the piece
     `piece` declares for `output` reads. The library versions come from `held` where it
-    is given, as for a location git ignores, and otherwise as git lists them. Raises
-    Refused."""
+    is given, as for a location git ignores, and otherwise as git lists them. They are those
+    of `lock` where it is given, as for a lock not yet written, and otherwise of the lock the
+    piece's file holds. Raises Refused."""
     folder = _piece_folder(root, location, piece)
     data = _piece(root, folder, piece)
     declaration = _declaration(data, piece, output)
     plugin = producer(declaration.producer)
-    lock = data.get("lock")
+    lock = data.get("lock") if lock is None else lock
     if not isinstance(lock, Mapping) or not lock:
         final = copies.final(data, folder)
         if copies.lock_stays(data, final):
@@ -316,7 +323,7 @@ def plan(
     if not isinstance(modes, Mapping):
         raise Refused(f"the `modes` of `{piece}` is not a mapping of axes to their modes")
     try:
-        combinations = keys.combinations(modes, brand.axes)
+        combinations = brand.combinations_of(modes)
     except keys.BadKey as exc:
         raise Refused(f"the `modes` of `{piece}`: {exc}") from exc
     document = values.document(
@@ -732,6 +739,12 @@ def _declaration(data: Mapping[str, Any], piece: str, output: str) -> Declaratio
             raise Refused(
                 f"the input `{key}` of {at} is `{role}`, which is no role: an input names a "
                 f"role of the brand by its token path, such as `accent`, never a raw value",
+                declared=True,
+            )
+        if role.split(".")[0] == COMPONENT:
+            raise Refused(
+                f"the input `{key}` of {at} names `{role}`, a component token, which only its "
+                f"component reads: name a role, such as `accent`",
                 declared=True,
             )
     size = _size(pixels)

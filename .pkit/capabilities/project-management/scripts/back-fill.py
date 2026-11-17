@@ -222,14 +222,15 @@ from _lib import (
     axis_labels,
     back_fill_apply,
     board_fields,
+    board_status,
     bootstrap_gate,
     issue_list,
+    missing_card,
     session_guard,
     substrate_writes,
 )
 from _lib.gh import gh_run, load_adopter_config
 from _lib.hooks import HOOKS_RELATIVE_PATH, load_hooks_file
-from _lib.state_issues import is_state_issue
 
 CAPABILITY_NAME = "project-management"
 PLAN_SCHEMA_VERSION = 1
@@ -637,7 +638,7 @@ def _derive_plan(
 
     issues, truncated = _enumerate_corpus(config, limit=args.limit, state=args.state)
     target_repo = _resolve_repo_name_with_owner(config)
-    item_ids = _resolve_board_item_ids(config, project_node_id, issues)
+    item_ids, unanswered = _resolve_board_item_ids(config, project_node_id, issues)
     proposed = _build_proposed_changes(
         intents,
         issues,
@@ -645,6 +646,8 @@ def _derive_plan(
         project_node_id,
         target_repo,
         substrate_map=substrate_map,
+        board_unanswered=unanswered,
+        board_holds_state=board_status.role(config, substrate_map) == "source",
     )
     return (
         _plan_document(intents, proposed, gate, truncated=truncated, intent_errors=intent_errors),
@@ -916,8 +919,10 @@ def _residual_pre_check(capability_root: Path) -> GateResult:
         )
         return GateResult(passed=False, checks=checks)
 
-    # 1. gh auth, 2. repo accessible — always residual hard-fails.
-    auth = pre_check._check_gh_auth()
+    # 1. gh auth, 2. repo accessible — always residual hard-fails. Auth is
+    #    judged on the host the project's `gh` calls reach, so the config goes
+    #    with it, as pre-check passes it.
+    auth = pre_check._check_gh_auth(load_adopter_config(capability_root))
     checks.append((auth.label, auth.status, auth.detail))
     repo = pre_check._check_repo_accessible()
     checks.append((repo.label, repo.status, repo.detail))
@@ -1302,7 +1307,7 @@ def _enumerate_corpus(
         listing = issue_list.list_issues(
             config,
             ["--state", state, "--limit", str(limit)],
-            fields="number,title,milestone,labels",
+            fields="number,title,milestone,labels,state",
             gh_call=gh_run,
             check=False,
         )
@@ -1325,16 +1330,17 @@ def _resolve_project_node_id(config: dict[str, Any]) -> str | None:
     current repo's owner from ``gh repo view``). A READ only.
 
     Returns ``None`` when no board is configured (``has_projects_v2_board`` falsey
-    or ``projects_v2_board_id`` unset) or the board number does not resolve. The
+    or ``projects_v2_board_id`` unset), or the board did not answer: its read
+    failed, or its answer names no board or another ([pkit:ADR-096] point 1). The
     caller treats a ``None`` as "no board resolvable" — which, when a field intent
     is declared, the residual gate's fourth member turns into a global refusal
     (DEC-037 §2), and otherwise leaves the milestone-only back-fill unaffected.
 
     The read itself lives in the board READ seam (`_lib/board_fields`, #724) — the
-    single home for board name → id resolution, extracted once this shape had
-    copies here, in `adopt-existing` and in `create-issue`. The argv and the
-    owner precedence are unchanged; `_board_gh_call` keeps the invocation on this
-    module's own `gh_run` binding.
+    single home for every read of the board, extracted once this shape had
+    copies here, in `adopt-existing` and in `create-issue`. The owner precedence
+    is unchanged; `_board_gh_call` keeps the invocation on this module's own
+    `gh_run` binding.
     """
     if board_fields.board_number(config) is None:
         # Short-circuit BEFORE resolving the owner: `_resolve_board_owner` may
@@ -1356,8 +1362,9 @@ def _board_gh_call(
     """Run a board READ through THIS module's `gh_run`, owner spliced as before.
 
     The seam (`_lib/board_fields`) accepts the runner so a delegating caller keeps
-    its own invocation path: the owner is appended exactly where this script
-    appended it before the extraction, so the argv `gh` receives is unchanged.
+    its own invocation path: a `gh project` read's owner is appended where this
+    script appended it before the extraction; the seam's GraphQL reads name the
+    owner themselves.
     """
     if fallback_owner:
         args = [*args, "--owner", fallback_owner]
@@ -1381,12 +1388,14 @@ def _resolve_board_owner(config: dict[str, Any]) -> str | None:
 
 def _resolve_board_item_ids(
     config: dict[str, Any], project_node_id: str | None, issues: list[dict[str, Any]]
-) -> dict[tuple[str, int], str]:
-    """Map (repo, issue-number) → its Projects-v2 item node id, for the field write.
+) -> tuple[dict[tuple[str, int], str], str | None]:
+    """Map (repo, issue-number) → its Projects-v2 item node id, for the field write,
+    and why the board did not answer where it did not.
 
     The field-value write (`gh project item-edit --id <item>`) needs the issue's
-    Projects-v2 *item* node id. Resolving it is a READ; this fetches the board's
-    items once via the GraphQL surface and maps each item's content to its id.
+    Projects-v2 *item* node id. Resolving it is a READ; this walks the board's
+    cards once, through the board read seam (`board_fields.read_items`), and maps
+    each card's issue to its id.
 
     The map is keyed on **(repository nameWithOwner, issue number)**, not number
     alone: a Projects-v2 board can carry issues from multiple repos with colliding
@@ -1396,75 +1405,31 @@ def _resolve_board_item_ids(
     matching only the target repo's issues (in :func:`_build_proposed_changes`)
     closes that collision.
 
-    Returns ``{}`` when no board node id resolves or the read fails — every field
-    intent then reports as blocked (needs membership) rather than guessing. Best-
-    effort and bounded: a single paginated read. A card that holds a state issue
-    is left out by its marker, since a state issue holds no work (DEC-058 point 3).
+    The walk is whole or nothing ([pkit:ADR-096] point 2). Where the board did not
+    answer, the map is empty and the second value says why: each field intent then
+    reports the board unanswered for the issue, which back-fill skips, never as an
+    issue that needs membership (ADR-053 point 4). An archived card is mapped as
+    any other, so an issue whose only card is archived is on the board, not one
+    that needs membership. A card that holds a state issue is left out, since a
+    state issue holds no work (DEC-058 point 3), and so is a card the board
+    withheld, whose issue lies in a repository the credential may not read: none
+    of this repository's issues.
     """
     if not isinstance(project_node_id, str) or not project_node_id:
-        return {}
-
-    query = (
-        "query($project: ID!, $cursor: String) { node(id: $project) { "
-        "... on ProjectV2 { items(first: 100, after: $cursor) { "
-        "pageInfo { hasNextPage endCursor } nodes { id content { "
-        "... on Issue { number body repository { nameWithOwner } } } } } } } }"
+        return {}, None
+    read = board_fields.read_items(
+        config,
+        project_node_id=project_node_id,
+        owner=_resolve_board_owner(config),
+        gh_call=_board_gh_call,
     )
+    if not read.ok:
+        return {}, read.error or "the board's cards could not be read"
     out: dict[tuple[str, int], str] = {}
-    cursor: str | None = None
-    # Bound the pagination so a misconfigured board can't loop unboundedly.
-    for _ in range(50):
-        api_args = [
-            "gh",
-            "api",
-            "graphql",
-            "-f",
-            f"query={query}",
-            "-F",
-            f"project={project_node_id}",
-        ]
-        if cursor:
-            api_args += ["-F", f"cursor={cursor}"]
-        try:
-            proc = gh_run(api_args, config, check=False)
-        except FileNotFoundError:
-            return out
-        if proc.returncode != 0:
-            return out
-        try:
-            payload = json.loads(proc.stdout)
-        except json.JSONDecodeError:
-            return out
-        items_block = (
-            payload.get("data", {}).get("node", {}).get("items", {})
-            if isinstance(payload, dict)
-            else {}
-        )
-        for node in items_block.get("nodes") or []:
-            if not isinstance(node, dict):
-                continue
-            content = node.get("content") or {}
-            if not isinstance(content, dict) or is_state_issue(str(content.get("body") or "")):
-                continue
-            number = content.get("number")
-            repo_block = content.get("repository") or {}
-            repo = repo_block.get("nameWithOwner") if isinstance(repo_block, dict) else None
-            item_id = node.get("id")
-            if (
-                isinstance(number, int)
-                and isinstance(repo, str)
-                and repo
-                and isinstance(item_id, str)
-                and item_id
-            ):
-                out[(repo, number)] = item_id
-        page = items_block.get("pageInfo") or {}
-        if not page.get("hasNextPage"):
-            break
-        cursor = page.get("endCursor")
-        if not isinstance(cursor, str) or not cursor:
-            break
-    return out
+    for item in read.items:
+        if item.number is not None and item.repository:
+            out[(item.repository, item.number)] = item.item_id
+    return out, None
 
 
 # ----- proposed-change computation (the enumerate half) --------------
@@ -1478,6 +1443,8 @@ def _build_proposed_changes(
     target_repo: str,
     *,
     substrate_map: axis_labels.SubstrateMap | None = None,
+    board_unanswered: str | None = None,
+    board_holds_state: bool = False,
 ) -> list[ProposedChange]:
     """Compute the proposed changes per (issue, intent), with the constructed argv.
 
@@ -1494,6 +1461,11 @@ def _build_proposed_changes(
     cannot resolve. The global "no board resolvable" case is handled upstream by
     the residual gate (DEC-037 §2 fourth member); ``project_id`` is ``None`` here
     only when no field intent gated (milestone-only back-fill).
+    ``board_unanswered`` is why the walk of the board's cards did not answer,
+    where it did not: each field intent then reports that, never a missing card.
+    ``board_holds_state`` says whether the board holds the state, which the words
+    on an open issue's missing card follow
+    ([project-management:DEC-072-sync-gives-missing-cards] point 4).
 
     One change per (issue, intent) holds for the two non-label kinds. The label
     kind is the exception, and deliberately: it proposes NOTHING for an issue that
@@ -1511,7 +1483,16 @@ def _build_proposed_changes(
         for intent in intents:
             if intent.kind == "set-board-field":
                 proposed.append(
-                    _propose_field_value(intent, number, title, item_ids, project_id, target_repo)
+                    _propose_field_value(
+                        intent,
+                        number,
+                        title,
+                        item_ids,
+                        project_id,
+                        target_repo,
+                        board_unanswered=board_unanswered,
+                        card_remedy=_card_remedy(issue, number, board_holds_state),
+                    )
                 )
             elif intent.kind == SET_AXIS_LABEL_KIND:
                 change = _propose_axis_label(intent, number, title, issue, substrate_map)
@@ -1529,6 +1510,9 @@ def _propose_field_value(
     item_ids: dict[tuple[str, int], str],
     project_id: str | None,
     target_repo: str,
+    *,
+    board_unanswered: str | None = None,
+    card_remedy: str = "",
 ) -> ProposedChange:
     """Propose one Projects-v2 field-value write for one issue.
 
@@ -1540,14 +1524,27 @@ def _propose_field_value(
     for a milestone-only back-fill that never declared a field intent, so it is
     reported as a per-issue block too. Either way: per-issue grain, no fabricated
     argv. T2b acts on the block (establish membership, then write) honestly.
+
+    Where the walk of the board's cards did not answer (``board_unanswered``), the
+    issue's card is unknown: the block says so, and back-fill skips the issue, the
+    way it skips any read it cannot make (ADR-053 point 4). It is never reported
+    as an issue off the board ([pkit:ADR-096] point 4). An issue off the board is
+    told what gives it its card, ``card_remedy``, where the caller names one.
     """
     item_id = item_ids.get((target_repo, number))
     if item_id is None or project_id is None:
-        reason = (
-            f"issue not on the configured Projects v2 board (no item id for {target_repo}#{number})"
-            if project_id is not None
-            else "no Projects v2 board resolvable for this milestone-only back-fill"
-        )
+        if project_id is None:
+            reason = "no Projects v2 board resolvable for this milestone-only back-fill"
+        elif board_unanswered is not None:
+            reason = (
+                "the board did not answer, so the issue's card could not be read; this is "
+                f"NOT a report that the issue is off the board: {board_unanswered}"
+            )
+        else:
+            reason = (
+                "issue not on the configured Projects v2 board "
+                f"(no item id for {target_repo}#{number})"
+            ) + (f": {card_remedy}" if card_remedy else "")
         return ProposedChange(
             issue_number=number,
             issue_title=title,
@@ -1577,6 +1574,15 @@ def _propose_field_value(
         observed=None,
         prediction="would-write",
     )
+
+
+def _card_remedy(issue: dict[str, Any], number: int, board_holds_state: bool) -> str:
+    """What gives an open issue its missing card: the sync, run for it
+    ([project-management:DEC-072-sync-gives-missing-cards] point 4). Empty for a
+    closed issue, which the sync gives no card."""
+    if str(issue.get("state") or "").upper() == "CLOSED":
+        return ""
+    return missing_card.remedy(number, board_holds_state=board_holds_state)
 
 
 def _propose_milestone(

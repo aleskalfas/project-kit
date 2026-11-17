@@ -4,7 +4,8 @@ schema_version: 1
 # A component library with roles of its own, for the capability's tests (DEC-008): each
 # lies under its name and defaults along a chain that ends at a shared role, but one,
 # which has no default, so only a brand that names the library gives it a value. Its tag
-# paints and measures with them. No project locks it.
+# paints and measures with them, and fills its box through a component token of its own,
+# which defaults to the library's paper (DEC-035). No project locks it.
 name: test-parts
 version: 1.0.0
 kind: components

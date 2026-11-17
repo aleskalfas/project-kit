@@ -16,7 +16,7 @@ It prints:
 - **`loss:`** each loss a renderer reports that the piece does not accept ([The loss report](../../outputs.md#the-loss-report)).
 - **`findings:`** how many it kept in `findings.yaml`.
 
-**Exit 0 is no pass.** The render exits 0 once it has drawn, findings or not. It judges no content against its components, so it draws over a mistyped key and prints nothing of it. Only the check reports that. Exit 1 means it refused, and drew nothing ([Draw it once](piece.md#5-draw-it-once)).
+**Exit 0 is no pass.** The render exits 0 once it has drawn, findings or not. It judges no content against its components, so it draws over a mistyped key and prints nothing of it. Only the check reports that. Exit 1 means it refused, and drew nothing ([Draw it once](piece.md#6-draw-it-once)).
 
 ## 2. Check
 
@@ -41,37 +41,68 @@ A finding in a library version that the project does not correct asks for attent
 
 ## 3. Read
 
-`pkit visual pages <piece>` lists what can be drawn: its languages and keys, what is drawn by default, and each page by its number and trace id. `pkit visual look <piece>` draws pages as images in the clone's local `look/<piece>/`. It moves no lock, keeps no finding, and replaces what an earlier run left there ([The viewing step](../../outputs.md#the-viewing-step)).
+`pkit visual pages <piece>` lists what can be drawn: its languages and keys, what is drawn by default, and each page by its number and trace id. `pkit visual look <piece>` draws pages as images in the clone's local `look/<piece>/`, or `look/<piece>.html/` for the HTML renderer's pages. It moves no lock, keeps no findings record, and replaces what an earlier run left there. Its report gives each image what the checks found on it ([The viewing step](../../outputs.md#the-viewing-step)).
 
 **Which pages to draw:**
 
 - **While you mend a page:** `pkit visual look <piece> --page <page>`, by its number or its trace id. By default that is the source language, in the first key.
 - **A language or a mode you changed:** add `--language <language>` or `--key <key>`, each of which may repeat.
-- **Before you stop:** `pkit visual look <piece> --every-language --every-key`. A fault may lie in one language or one mode alone, such as a longer word that breaks a line.
+- **Each size the piece names:** a look draws one size by default. Draw each other size with `--key`, a phone's among them, or all with `--every-key`.
+- **Before you stop:** `pkit visual look <piece> --every-language --every-key`. A fault may lie in one language, one mode or one size alone, such as a longer word that breaks a line.
 
 **How to read them.** Open each image, one at a time, and read it as the piece's `audience` would. Go through what the content gives, part by part, then look over the page as a whole. A frame file beside each image gives each element's trace id and its box in the image's pixels, so you can name what you found.
+
+**Against the brief.** Where the piece keeps a brief, read each page against its part and the whole piece's: does the page make visible each relation, serve each goal, and leave the reader with its takeaway, or its lead? Read the reasons last, once you have judged the page, so they do not steer what you see, and check that each still holds of the drawing ([The brief](../../files.md#the-brief)).
+
+**A page in bands.** A page too tall for one image, such as a phone's web page, is drawn in bands, each an image as wide as the page. Read every band of the page, in order, before you judge it. Each overlaps the next by a line, so a part cut at a band's edge shows whole in the band beside it ([The viewing step](../../outputs.md#the-viewing-step)).
 
 **What `report.json` adds.** It says what the images cannot show ([What the report says](../../outputs.md#what-the-report-says)):
 
 | Entry | What it tells you | What to do |
 |---|---|---|
-| `dropped` | The tool drew nothing of a text or a run. | Read it as a part missing from the page, even where the image looks whole. Find the element by its frame, and mend what lost it. If you cannot, report it. |
+| `dropped` | The page does not show a text, a run or a span. Through the HTML renderer, `why` names the cause, and a `cut` or `covered` entry gives the `share` of the span's ink it loses. | Read it as a part missing from the page, even where the image looks whole, and find the element by its frame. Mend it where its cause lies, never by accepting it ([visual-communication:DEC-037-text-the-page-hides] point 1): `no ink` in the span's paint or the file; `off the page` and `cut` in the layout or the content, so the text stays inside its page; `covered` in the layout, the content, or the spacing a component or the brand sets between lines and between texts. Under forced colours alone, two covers are the draw order's to mend ([visual-communication:DEC-039-forced-colours-grounds-and-edges], its Rationale): a part between two texts, which the later text's ground lies over, drawn before both texts, or after both where it meets neither text's letters; and a clipped shape, such as a path or a sign, drawn before the text that rests on it. If you cannot mend it, report it. |
+| `dropped-not-read` | Through the SVG renderer, the causes of `dropped` the read does not reach: `cut` and `covered`. | Read the images for a text a part covers or the page's edge cuts. |
 | `losses` | What the renderer left out, accepted or not. | Treat one the piece does not accept as `loss` in step 4. |
 | `drawn-otherwise` | A run measured in more than one family, which the tool may set in one of them. | Trust the image less on that line. |
-| `on-white`, on an image | The page draws no ground of its own, so its white is not the piece's. | Judge a text over nothing knowing this. |
+| `band`, on an image | The image is one band of a page too tall for one, with its number and how many the page has. | Read each band the page has before you judge the page. |
+| `on-white`, on an image | Through the SVG renderer, the page draws no ground of its own, so its white is not the piece's. | Judge a text over nothing knowing this. |
+| `on-browser-ground`, on an image | Through the HTML renderer, the page draws no ground of its own. It lies on the browser's own ground in the mode drawn, which differs between browsers. | Judge a text over nothing knowing this, in each mode. No check reads that ground. |
 
 **What an image cannot prove** ([visual-communication:DEC-015-viewing-step-and-reviewer] point 6):
 
 - **A browser's drawing.** An image shows this tool's drawing, and no other tool's.
 - **A later drawing.** The pixels may change with the tool, its version or the machine. Keep no image as a reference, and compare none as a contract.
-- **A page you did not draw.** One language or one key stands for no other.
+- **A page you did not draw.** One language, one key or one size stands for no other.
 - **A pass.** A page that looks right has passed nothing. The check still measures it.
+
+### Where a look stops
+
+Through the HTML renderer a look needs a browser. Where none can run, the look exits 3, leaves the page files and `report.json` with no image, and names the ways on, in this order ([When the browser stops](../../outputs.md#when-the-browser-stops)):
+
+1. a build pipeline's drawings of the piece's pages, where the project has its pipeline draw them. They show a pushed commit, not the working tree.
+2. the same look, run once by a person outside any sandbox, such as in their own terminal. That line is addressed to a person, not to you.
+3. the SVG renderer's pages, `pkit visual look <piece> --renderer svg`, which show the layout, never the HTML renderer's page.
+
+Where a sandbox stopped it, the stop says so. Go on as [visual-communication:DEC-024-outside-programs-sandbox] point 6 holds:
+
+- **Never take the command out of the sandbox yourself.** Never apply an exclusion from the session's sandbox, and never use the harness's escape on your own. Letting a command out is a person's act.
+- **Run the command as the project writes it.** Never change its form to slip out of the sandbox.
+- **Read the pipeline's drawings** of the commit you pushed, where you can reach them. Otherwise, or where you need the working tree drawn, ask a person, naming the ways on the stop names.
+- **In a run the permission model confines,** a builder's among them, no pipeline's drawings are in reach. Only the SVG renderer's pages remain there. Whoever started the run may read the pipeline's drawings once its commits are pushed.
+
+**How to find a pull request's drawings.** A pipeline that draws them keeps them as `visual-drawings-<commit>`, named by the full hash of the commit it drew ([A pipeline's drawings](../../outputs.md#a-pipelines-drawings)). Take the pull request's head commit, then fetch its drawings into a folder of their own, named by that commit.
+
+Never fetch them into `look/`: a look replaces its renderer's folder there. Read the fetched folder as a look's: `report.json` first, then each image with its frames. They show that commit as the pipeline's browser drew it. Where the download is refused, or its host is out of reach, say so and ask a person.
+
+**Where a person ran the look outside the sandbox,** read the folder that run left in `look/<piece>.html/`. Never run the look over it, since a run replaces that folder ([visual-communication:DEC-020-html-page-drawing] point 5).
 
 ## 4. Mend
 
 Mend at the nearest place that holds the fault. Try the content first, then a local component, then a library.
 
 **Never a value in a component.** A component takes its lengths, colours and fonts from roles, and a brand gives the values ([visual-communication:DEC-005-engine-and-plugins] point 1). The check fails a hand-written `#ff0000` or `=:width - 24`.
+
+**When to hand it to `graphic-designer`.** A mend changes a word, an option or a part. A page whose design does not carry its point needs designing again: its form shows another structure than its content has, it has no focal point, a brief finding asks for another form, or no library draws what the brief asks. Hand such a page, or the whole piece, to the capability's designer, naming the piece and its pages ([The designer](../../README.md#the-designer)). It designs them from the brief, mends at the root, has the reviewer read every page before it stops, and tells you what it changed.
 
 ### The content
 
@@ -160,6 +191,15 @@ From the scenes ([Scenes](../../checks.md#scenes)):
 | `loss` | Change what draws it, or ask a person. Only a person accepts a loss, with a reason ([Accepting a loss](../../outputs.md#accepting-a-loss)). |
 | `not-checked` | Run `pkit visual render <piece>`, and commit `findings.yaml`. |
 
+In the brief ([The brief](../../checks.md#the-brief)):
+
+| Label | What to do |
+|---|---|
+| `brief-page` | Key the part by the id of a page the content holds, or give the page that id. Before the page exists, keep its intent under `piece`. |
+| `brief-path` | Name the part by the keys and ids the content file writes, from the page in a page's part. The message names the nearest key or id. |
+
+Mend the brief, not the content, where an id was renamed on purpose. Never change what the brief asks to clear a finding: its goals and relations are what whoever asked for the piece wants.
+
 In the files and the libraries ([Files and binding](../../checks.md#files-and-binding), [Libraries and locks](../../checks.md#libraries-and-locks)):
 
 | Label | What to do |
@@ -182,13 +222,22 @@ The loop ends when all three hold.
 2. **The pages read.** Each page you drew reads as its `audience` needs, and each entry of `report.json` is answered.
 3. **What was not looked at is named.** Report which pages, languages and keys nobody read. What you did not see is not looked at, never clean.
 
-**When to hand the images to `graphic-design-reviewer`.** It reports what no check measures ([The reviewer](../../README.md#the-reviewer)). Dispatch it:
+**When to hand the images to `graphic-design-reviewer`.** It reports what no check measures, whether the pages keep the capability's rules, and whether they show what the piece's brief asks ([The reviewer](../../README.md#the-reviewer)). Dispatch it:
 
 - where a page is dense, since no check measures overlaps or alignment
 - where a change reached pages you did not read yourself
 - before the piece goes to its audience
 - where you cannot read an image yourself
 
-Before you dispatch it, run `pkit visual look` once with all you want read, since it sees only what the last run drew. Name the piece. Mend a fault it reports as in step 4. Its findings are advice, and it changes nothing. Where its harness reads no image it stops and says so, and those pages stay not looked at.
+Before you dispatch it, run `pkit visual look` once with all you want read, since it sees only what the last run drew. Name the piece. You may hand it a pipeline's drawings instead, naming the folder you fetched them into and the commit they show. With the images and the piece, hand it what `pkit visual intent <piece>` prints, as it prints it: the brief's goals, relations and takeaways, without their reasons, which it grades against before it reads the brief's file ([`pkit visual intent <piece>`](../../README.md#pkit-visual-intent-piece)). It runs no command, so it has the intent only from you. Where you hand it none, it grades without the intent, and its report says so among what it read before grading. Where its harness reads no image it stops and says so, and those pages stay not looked at.
 
-**Then commit** the piece's folder: `piece.yaml`, the content, any local component, and the `findings.yaml` of the last render. So the check reads it on a fresh clone ([The findings record](../../checks.md#the-findings-record)). Commit the library copies and the configuration with the first piece.
+It reads the piece's brief, and the capability's rule sets, beside the images. Its report names the brief it read, or that the piece has none. Each finding is one of four kinds, kept apart by what it cites:
+
+- **A fault,** from its list of what no check measures, such as text over text. Mend it as in step 4.
+- **A rule finding,** which cites a rule of the capability's rule sets by its id. Mend the page so it keeps the rule. Today such a finding only informs.
+- **A brief finding,** which cites the part of the brief a page does not show: a relation, a goal, a takeaway, or a reason that does not hold of the drawing. Mend the drawing, in the content or a component, so it shows what the brief asks. Where you changed a choice on purpose, write its reason again. Never draw a relation the brief names as another to fit what a library draws.
+- **A note,** anything else worth a look, which never fails.
+
+Its findings are advice, and it changes nothing. Where a piece keeps no brief, it has none to judge against, and says so. Where `graphic-designer` builds the piece, it dispatches the reviewer itself before it stops, or asks you to where it cannot, and hands you the report as the reviewer wrote it.
+
+**Then commit** the piece's folder: `piece.yaml`, the content, its brief, any local component, its `pictures/`, and the `findings.yaml` of the last render. So the check reads it on a fresh clone ([The findings record](../../checks.md#the-findings-record)). Commit the library copies and the configuration with the first piece.

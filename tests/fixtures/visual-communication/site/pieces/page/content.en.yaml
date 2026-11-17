@@ -1,0 +1,26 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+header:
+  use: starter/card
+  fill: tint
+  head: Project kit
+  text: The rules a project keeps, and the tools that apply them.
+
+footer:
+  use: starter/card
+  text: Written down, every rule can be read and reviewed, like any change.
+
+pages:
+  - id: home
+    layout: standard
+    main:
+      use: starter/list
+      head: Why a project writes its rules down
+      items:
+        - id: advice
+          head: Not advice
+          text: A rule an agent reads is advice. A rule the tool applies is not.
+        - id: reviewed
+          head: Reviewed
+          text: Every rule can be read and reviewed, like any change.

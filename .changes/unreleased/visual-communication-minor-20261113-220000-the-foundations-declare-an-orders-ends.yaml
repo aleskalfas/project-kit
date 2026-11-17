@@ -1,0 +1,15 @@
+component: visual-communication
+kind: minor
+body: >
+  The foundations' version being built, 1.2.0, declares an order's roles
+  (DEC-032 point 1): `family.order.first`, `family.order.last` and
+  `family.order.text`, with defaults at the neutral family's fill and text, and,
+  under a new `order` key in `roles.yaml`, which role is each end, the text and
+  the page's ground. The order's text is a declared pair with each end. The
+  check fails a brand whose order's text lies between its ends
+  (`order-text-between`), or whose first end stands out from the page's ground
+  less than its last (`order-first-weaker`), in any combination where the
+  brand gives the order a value. It refuses an `order` that is not of its shape
+  (`order-shape`), one in a library other than the foundations, and a library's
+  default that aliases a role of an order. A brand that gives an order no value
+  draws and checks as before.

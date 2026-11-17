@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  In the methodology's source repository, the default branch holds release
+  versions alone (ADR-089 point 3). `pkit release check` now fails where the
+  tree it checks records a pre-release version, in `.pkit/VERSION` or a
+  component's `package.yaml`, and names each, unless that tree is a release
+  candidate's own commit, the one its tag names. `pkit release merge` refuses,
+  nothing merged, a release pull request whose head records one. No escape
+  hatch waives either refusal, and neither binds in any other repository, so
+  an adopter's own component may still record a pre-release.

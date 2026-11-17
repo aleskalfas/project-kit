@@ -1,0 +1,37 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T213812Z-344be429.yaml
+    revalidated:
+      at: 2026-11-05T22:51:03Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: record
+          value: project-management:DEC-013
+        outcome: unchanged
+        reason: It names a branch by its issue's number, which is how the requirement finds a branch. Neither how an instance got its number nor the clone key the statement now names bears on that name, so the record stands.
+      - anchor:
+          kind: record
+          value: project-management:DEC-035
+        outcome: unchanged
+        reason: "`Every instance` now also reads on a clone whose number came with a seat, and the statement names the clone key for that case alone, which DEC-059 point 9 decides. With no topology, DEC-035 still decides what a clone keeps and what it marks on an issue, so it stands."
+      - anchor:
+          kind: record
+          value: project-management:DEC-035#1
+        outcome: unchanged
+        reason: Point 1 makes a set id what activates the facility. Under a topology a seat gives the clone its number instead (DEC-059 point 6), and the statement's clone key belongs to that case alone, so neither the shorter applies-to nor the key takes anything from the point.
+      - anchor:
+          kind: record
+          value: project-management:DEC-035#7
+        outcome: unchanged
+        reason: Point 7 has listings sign every issue by owner. The clone key says which ownership counts under a topology, and not how a listing signs it, so neither the key in the statement nor the shorter applies-to moves a listing, and the point stands.
+      - anchor:
+          kind: record
+          value: project-management:DEC-043#4
+        outcome: unchanged
+        reason: Point 4 mirrors the current owner into the issue's description. The mirror serves every instance alike, and the clone key in the statement says which ownership counts, which asks nothing of the mirror, so the point stands.

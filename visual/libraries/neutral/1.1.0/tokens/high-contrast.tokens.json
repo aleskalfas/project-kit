@@ -1,0 +1,72 @@
+{
+  "$description": "High contrast, in either colour scheme: the background, text, lines and accent at the scheme's strongest, the line and the text of each colour family's hue too.",
+  "background": {
+    "$description": "The page at the scheme's strongest: pure white, or pure black in dark.",
+    "$type": "color",
+    "$value": "{scheme.strong-paper}"
+  },
+  "text-primary": {
+    "$description": "Text at the scheme's strongest against the page.",
+    "$type": "color",
+    "$value": "{scheme.strong-ink}"
+  },
+  "text-secondary": {
+    "$description": "Text that steps back, still well past 7 to 1, so stepping back never costs a reader who needs contrast (WCAG 2, 1.4.6).",
+    "$type": "color",
+    "$value": "{scheme.strong-ink-soft}"
+  },
+  "accent": {
+    "$description": "The accent a step deeper in light, and lighter in dark.",
+    "$type": "color",
+    "$value": "{scheme.strong-accent}"
+  },
+  "line": {
+    "$description": "Every line as strong as the text, so a part's edge shows for a reader who cannot tell faint greys apart.",
+    "$type": "color",
+    "$value": "{scheme.strong-ink}"
+  },
+  "family": {
+    "$description": "Each hue's line and text at their strongest steps, so a family's marks hold against its fill.",
+    "$type": "color",
+    "blue": {
+      "line": {
+        "$value": "{scheme.blue.strong-line}"
+      },
+      "text": {
+        "$value": "{scheme.blue.strong-text}"
+      }
+    },
+    "green": {
+      "line": {
+        "$value": "{scheme.green.strong-line}"
+      },
+      "text": {
+        "$value": "{scheme.green.strong-text}"
+      }
+    },
+    "orange": {
+      "line": {
+        "$value": "{scheme.orange.strong-line}"
+      },
+      "text": {
+        "$value": "{scheme.orange.strong-text}"
+      }
+    },
+    "purple": {
+      "line": {
+        "$value": "{scheme.purple.strong-line}"
+      },
+      "text": {
+        "$value": "{scheme.purple.strong-text}"
+      }
+    },
+    "red": {
+      "line": {
+        "$value": "{scheme.red.strong-line}"
+      },
+      "text": {
+        "$value": "{scheme.red.strong-text}"
+      }
+    }
+  }
+}

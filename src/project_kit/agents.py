@@ -26,12 +26,8 @@ from pathlib import Path
 
 import click
 
-from project_kit import lifecycle_ownership
-from project_kit.capability_namespace import (
-    CAPABILITIES_DIR,
-    capability_names,
-    resolve_capability_dir,
-)
+from project_kit import agent_definitions, lifecycle_ownership
+from project_kit.capability_namespace import resolve_capability_dir
 
 # The namespaces under `.pkit/agents/`. Any other namespace is a capability name.
 AREA_NAMESPACES: tuple[str, ...] = ("core", "project")
@@ -120,11 +116,12 @@ def stamp_new_agent(
     agent's `storyboards:` names the sibling and its body cites it, and the
     storyboard's `consumers:` names the agent.
 
-    Refuses if the name is already taken anywhere agents ship from — core,
-    project, or any capability — since the deploy resolves one agent per
-    name and a colliding one would mask the other. Surface the collision
-    instead of silently shadowing. Refuses, in a dry run too, a folder that
-    arrives in the project as a synced copy (`refuse_synced_copy`).
+    Refuses if any place already ships a definition of the name — the project,
+    core or a capability's folder, as the picker lists them (ADR-087) — since
+    at most one definition of a name is the agent and a second would mask the
+    other or be masked. Surface the collision instead of silently shadowing.
+    Refuses, in a dry run too, a folder that arrives in the project as a synced
+    copy (`refuse_synced_copy`).
 
     Returns the agent file path (not the storyboard). When stamping
     folder-form, that's `<agents folder>/<name>/<name>.md`.
@@ -138,12 +135,12 @@ def stamp_new_agent(
         f"Stamp the project's own agent with `pkit new agent project {name}`.",
     )
 
-    for _, location in agent_locations(target_root):
-        existing = find_agent_file(location, name)
-        if existing is not None:
-            raise click.ClickException(
-                f"agent {name!r} already exists at {existing.relative_to(target_root)}."
-            )
+    taken = agent_definitions.answer(target_root).picks.get(name)
+    if taken is not None:
+        existing = taken.definitions[0].files[0]
+        raise click.ClickException(
+            f"agent {name!r} already exists at {existing.relative_to(target_root)}."
+        )
 
     title = _name_to_title(name)
     content = AGENT_TEMPLATE.format(
@@ -232,30 +229,33 @@ def refuse_synced_copy(target_root: Path, namespace: Namespace, folder: Path, in
         raise click.ClickException(refusal)
 
 
-def agent_locations(target_root: Path) -> list[tuple[Namespace, Path]]:
-    """Every folder agents ship from, as (namespace, folder), in deploy order.
-
-    `project`, each capability by name, then `core` — the name-collision
-    precedence the Claude Code deploy (`deploy-agents.sh`) resolves a name by
-    (the agents README, "Name-collision precedence"), so the first location
-    holding an agent is the one that deploys. Folders need not exist.
-    """
-    return [
-        ("project", target_root / _AGENTS_DIR / "project"),
-        *(
-            (cap, target_root / CAPABILITIES_DIR / cap / "agents")
-            for cap in capability_names(target_root)
-        ),
-        ("core", target_root / _AGENTS_DIR / "core"),
-    ]
-
-
 def find_agent_file(agents_dir: Path, name: str) -> Path | None:
     """The agent's canonical file in `agents_dir`: `<name>.md` or `<name>/<name>.md` (COR-015)."""
     for candidate in (agents_dir / f"{name}.md", agents_dir / name / f"{name}.md"):
         if candidate.is_file():
             return candidate
     return None
+
+
+# The deploy mark: the part of the comment line an adapter's agents deploy writes
+# into the front matter of each copy (the agents README, "Deploy mechanics"). It
+# tells the deploy's copy from a file of the project's of the same name.
+DEPLOY_MARK = "managed-by: project-kit"
+
+
+def carries_deploy_mark(path: Path) -> bool:
+    """True if the file's first five lines carry the deploy mark.
+
+    The deploy writes the mark as the second line of each copy, and looks for it
+    in the first five lines before it writes over a file, as this does. A long
+    body is not read.
+    """
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            head = "".join(line for _, line in zip(range(5), f, strict=False))
+    except (OSError, UnicodeDecodeError):
+        return False
+    return DEPLOY_MARK in head
 
 
 def _validate_name(name: str) -> None:

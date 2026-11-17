@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -48,6 +49,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import (
     axis_carriage,
     axis_labels,
+    board_fields,
     board_status,
     bootstrap_gate,
     default_branch,
@@ -55,7 +57,6 @@ from _lib import (
 )
 from _lib.agents import agent_deploy_path, agent_is_deployed
 from _lib.classification_rules import title_prefix_by_value
-from _lib.gh import gh_project_run
 from _lib.label_contributions import collect_label_contributions
 from _lib.lifecycle_inference import STATE_ORDER
 from _lib.review_contributions import (
@@ -220,12 +221,12 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
         )
         return results
 
-    # 3. gh authentication.
-    results.append(_check_gh_auth())
-
-    # Adopter config — read once; needed by checks 4, 6, 7.
+    # Adopter config — read once; needed by checks 3, 4, 6, 7.
     config_path = capability_root / ADOPTER_CONFIG_PATH
     config, config_result = _check_adopter_config(config_path)
+
+    # 3. gh authentication, on the host the project's `gh` calls reach.
+    results.append(_check_gh_auth(config))
     results.append(config_result)
 
     # Substrate map — read once (per DEC-036 / ADR-026). `None` ⇒ greenfield
@@ -251,10 +252,10 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
         results.extend(_check_substrate_board_arm_satisfiable(config, substrate_map))
         results.extend(_check_board_arm_default_has_hook(capability_root, substrate_map))
 
-    # 3b. gh: block validation + host-pinned auth (per DEC-023).
+    # 3b. gh: block validation (per DEC-023). The configured host's
+    #     authentication is check 3's.
     if config is not None:
         results.append(_check_gh_block(config))
-        results.append(_check_gh_host_auth(config))
 
     # 4. Repo accessibility.
     results.append(_check_repo_accessible())
@@ -363,19 +364,95 @@ def _check_command_on_path(cmd: str) -> CheckResult:
     return CheckResult(f"`{cmd}` on PATH", "ok", detail)
 
 
-def _check_gh_auth() -> CheckResult:
-    """Verify `gh auth status` reports an authenticated host (ambient)."""
-    proc = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True, check=False)
-    if proc.returncode != 0:
-        return CheckResult(
-            "`gh` authenticated",
-            "fail",
-            "`gh auth status` reports no active authentication",
-            remediation="Run `gh auth login` and follow the prompts.",
+_GH_AUTH_CHECK = "`gh` authenticated"
+# The host `gh` reaches for a call that names none, where neither `GH_HOST` nor
+# a sole logged-in host decides it.
+_GH_DEFAULT_HOST = "github.com"
+
+
+def _check_gh_auth(config: dict[str, Any] | None) -> CheckResult:
+    """Verify `gh` is authenticated on the host the project's `gh` calls reach.
+
+    `gh auth status` with no host exits non-zero when any host it is logged in
+    to fails, such as a second account whose keychain read times out, though
+    the project's own host passes. So the check names the host and judges it
+    alone (#3007): the configured `gh.host`, which wins over the shell's
+    `GH_HOST` (DEC-023), else the host `gh` picks for a call that names none
+    (:func:`_gh_default_host`). Where `gh` cannot list its hosts, the check
+    judges every host, as it did before it named one.
+    """
+    configured = _configured_gh_host(config)
+    if configured is not None:
+        host, source = configured, "configured as `gh.host`"
+        hint = "DEC-023 requires the adopter's configured host to be authenticated locally."
+    else:
+        host, source = _gh_default_host()
+        hint = (
+            "Where the project lives on another host, set `gh.host` in "
+            "project/config.yaml to it instead (DEC-023)."
         )
-    # First line of `gh auth status` typically names the host.
-    first_line = (proc.stderr or proc.stdout).strip().split("\n", maxsplit=1)[0]
-    return CheckResult("`gh` authenticated", "ok", first_line)
+    argv = ["gh", "auth", "status", *(["-h", host] if host else [])]
+    proc = subprocess.run(argv, capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        login = f"gh auth login -h {host}" if host else "gh auth login"
+        return CheckResult(
+            _GH_AUTH_CHECK,
+            "fail",
+            f"`{' '.join(argv)}` reports no active authentication",
+            remediation=f"Run `{login}` and follow the prompts. {hint}",
+        )
+    return CheckResult(_GH_AUTH_CHECK, "ok", f"host={host} ({source})" if host else source)
+
+
+def _configured_gh_host(config: dict[str, Any] | None) -> str | None:
+    """The `gh.host` the config sets, or None where it sets none (DEC-023).
+
+    A value of the wrong shape counts as none, as `_lib/gh.gh_env` reads it;
+    :func:`_check_gh_block` reports the shape.
+    """
+    gh_block = config.get("gh") if isinstance(config, dict) else None
+    host = gh_block.get("host") if isinstance(gh_block, dict) else None
+    return host if isinstance(host, str) and host else None
+
+
+def _gh_default_host() -> tuple[str | None, str]:
+    """The host `gh` reaches for a call that names none, and how it was picked.
+
+    `GH_HOST` where the shell sets it, else the one host `gh` is logged in to,
+    else github.com. The host is None where `gh` cannot list the hosts it is
+    logged in to, as one too old for `gh auth status --json`.
+    """
+    env_host = os.environ.get("GH_HOST")
+    if env_host:
+        return env_host, "from `GH_HOST`"
+    hosts = _gh_logged_in_hosts()
+    if hosts is None:
+        return None, "every host `gh` is logged in to passes; this `gh` cannot list them"
+    if len(hosts) == 1:
+        return hosts[0], "the one host `gh` is logged in to"
+    return _GH_DEFAULT_HOST, "`gh`'s default host"
+
+
+def _gh_logged_in_hosts() -> list[str] | None:
+    """The hosts `gh` is logged in to, or None where it cannot list them.
+
+    `gh auth status --json hosts` lists each host and exits zero whatever its
+    accounts report, so a failing host hides no other.
+    """
+    proc = subprocess.run(
+        ["gh", "auth", "status", "--json", "hosts"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        data = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return None
+    hosts = data.get("hosts") if isinstance(data, dict) else None
+    return list(hosts) if isinstance(hosts, dict) else None
 
 
 def _check_gh_block(config: dict[str, Any]) -> CheckResult:
@@ -442,41 +519,6 @@ def _check_gh_block(config: dict[str, Any]) -> CheckResult:
         summary_parts.append(f"default_owner={raw['default_owner']}")
     summary = ", ".join(summary_parts) if summary_parts else "empty block (no overrides)"
     return CheckResult("`gh:` config block valid", "ok", summary)
-
-
-def _check_gh_host_auth(config: dict[str, Any]) -> CheckResult:
-    """When `gh.host` is set, verify `gh auth status -h <host>` succeeds.
-
-    Per DEC-023's adopter-portability discipline: a correct `config.yaml`
-    should be enough for any team member or agent to reach the configured
-    host. If `gh` isn't authenticated against the configured host, the
-    pre-check fails early with a remediation pointing at `gh auth login`.
-    """
-    host = (config.get("gh") or {}).get("host") if isinstance(config.get("gh"), dict) else None
-    if not isinstance(host, str) or not host:
-        return CheckResult(
-            "`gh` authenticated against configured host",
-            "skip",
-            "no `gh.host` configured",
-        )
-    proc = subprocess.run(
-        ["gh", "auth", "status", "-h", host],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        return CheckResult(
-            "`gh` authenticated against configured host",
-            "fail",
-            f"`gh auth status -h {host}` reports no active authentication",
-            remediation=(
-                f"Run `gh auth login -h {host}` and follow the prompts. "
-                "DEC-023 requires the adopter's configured host to be "
-                "authenticated locally."
-            ),
-        )
-    return CheckResult("`gh` authenticated against configured host", "ok", f"host={host}")
 
 
 def _check_bootstrap_stamp(capability_root: Path) -> CheckResult:
@@ -619,25 +661,20 @@ def _check_board(
     # Resolving an ORG-OWNED board (#444). The prior check ran a bare
     # `gh project view <n>` with no `--owner`, which false-negatives on an
     # org-owned board: an ownerless `gh project view 2` fails, while
-    # `gh project view 2 --owner <org>` (or the cached node id) resolves it.
-    # The runtime create path already gets this right —
-    # `create-issue._resolve_project_node_id` is cache-first on
-    # `projects_v2_node_id`, and `_gh_add_to_board` threads `--owner`. This
-    # health check mirrors that ordering so it accepts exactly the boards the
-    # runtime accepts.
+    # `gh project view 2 --owner <org>` resolves it.
     #
     # CHOICE (cache-first, then owner-threaded fallback): trust a cached
     # `projects_v2_node_id` as sufficient evidence the board resolves before
     # making any API call. The tradeoff is CACHE STALENESS vs. an extra
     # owner-threaded round-trip — a cached id could in principle be stale (the
-    # board deleted/recreated since adoption). We accept that here deliberately:
-    # (a) the runtime create path trusts the SAME cache to seed board fields, so
-    # a health check that distrusted it would false-alarm on a config the
-    # runtime happily uses — the check must not be stricter than the thing it
-    # gates; and (b) pre-check is read-only, so a stale-cache pass surfaces at
-    # the first real board write (which re-resolves), not as silent corruption.
-    # On a cache MISS we live-resolve with `--owner` threaded from the repo's
-    # `owner/name`, which is what fixes the org-owned false-negative.
+    # board deleted/recreated since adoption). pre-check is read-only, so a
+    # stale-cache pass surfaces at the first real board read, which counts the
+    # board only where its own answer names it ([pkit:ADR-096] point 1). Whether
+    # this check reads the board live whatever the cache holds is
+    # project-kit#3193's to decide, with the record it proposes.
+    # On a cache MISS we live-resolve through the board read seam, with the
+    # owner threaded from the repo's `owner/name`, which is what fixes the
+    # org-owned false-negative.
     cached_node_id = config.get("projects_v2_node_id") if isinstance(config, dict) else None
     if isinstance(cached_node_id, str) and cached_node_id:
         return CheckResult(
@@ -646,24 +683,24 @@ def _check_board(
             f"board #{board_id} resolves (cached node id in config)",
         )
 
-    # Route through the `gh project` sole-constructor (#453): it threads the
-    # configured `GH_HOST` (a raw `subprocess.run` would land on github.com and
-    # false-negative on a GHES host) and splices `--owner` — preferring
-    # `gh.default_owner`, else the repo-derived `owner` passed here.
-    view_args = ["gh", "project", "view", str(board_id), "--format", "json"]
-    proc = gh_project_run(view_args, config or {}, fallback_owner=owner, check=False)
-    if proc.returncode != 0:
-        owner_hint = f" --owner {owner}" if owner else ""
+    # Through the board read seam, which owns every read of the board
+    # ([pkit:ADR-096] point 6): its `gh project` constructor threads the
+    # configured `GH_HOST` and splices `--owner` — preferring `gh.default_owner`,
+    # else the repo-derived `owner` passed here — and the answer counts only
+    # where it names the configured board.
+    board_config = dict(config or {}, has_projects_v2_board=True, projects_v2_board_id=board_id)
+    read = board_fields.read_project_node_id(board_config, owner=owner)
+    if not read.ok:
         return CheckResult(
             "Projects v2 board",
             "fail",
-            f"`gh project view {board_id}{owner_hint}` failed",
+            f"board #{board_id} did not answer: {read.error}",
             remediation=(
-                "Verify the board id with `gh project list --owner <org>`. "
+                "Verify the board id with `gh project list --owner <owner>`. "
                 "Update `projects_v2_board_id` in the config if it has moved. "
-                "For an org-owned board, ensure the repo's owner owns the board "
-                "(the check threads `--owner` from the repo), or cache the "
-                "board's node id as `projects_v2_node_id` at adoption."
+                "For a board under an owner other than the repository's, set "
+                "`gh.default_owner` to that owner in the config (DEC-023), so every "
+                "read of the board names it."
             ),
         )
     return CheckResult("Projects v2 board", "ok", f"board #{board_id} resolves")

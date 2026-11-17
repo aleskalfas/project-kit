@@ -58,7 +58,7 @@ Today the only supported artifact-kind is **agent**. The named agent must alread
 
 The storyboard binds to the agent that drives the scripted scenario. If the agent is currently in flat form (`<name>.md` in its agents folder), stamping the storyboard migrates it to folder form (`<name>/<name>.md` + `<name>/storyboard.md`) per COR-015's first-helper rule.
 
-The command finds the agent in the deploy's order — project, capabilities by name, then core. When the same name exists in more than one place and you mean one the deploy does not pick, name it with `--namespace <ns>` (`core`, `project` or the capability's name).
+The command stamps beside the definition that is the agent, as the picker the deploy asks names it (the agents README, "Name-collision precedence"). A name whose agent has no one text, or that the picker cannot tell, is refused with the picker's reason. When the same name exists in more than one place and you mean a definition the picker did not pick, name its place with `--namespace <ns>` (`core`, `project` or the capability's name).
 
 ### 3. Decide single-file or per-scenario layout
 
@@ -90,7 +90,7 @@ The command stamps the file with:
 
 Do not edit the `consumers:` frontmatter at first stamp — the command fills it correctly. Edit it only when the storyboard genuinely gains a second consumer (rare today; when it happens, add an additional `{kind, name, namespace}` entry, and verify each named consumer's `storyboards:` declares this file back).
 
-The agent declares the storyboard back in its `storyboards:` by the bare sibling filename the command stamped (`storyboard.md` or `<slug>.storyboard.md`) and cites that name in its body; the deploy rewrites it to the source path in the deployed copy (`.pkit/agents/storyboards.md`, "Frontmatter declaration"). `pkit refs validate` checks both sides, for a capability's agent as for one in `.pkit/agents/`.
+The agent declares the storyboard back in its `storyboards:` by the bare sibling filename the command stamped (`storyboard.md` or `<slug>.storyboard.md`) and cites that name in its body; the deploy rewrites it to the source path in the deployed copy (`.pkit/agents/storyboards.md`, "Frontmatter declaration"). `pkit refs validate` checks both sides, for a capability's agent as for one in `.pkit/agents/` (`.pkit/agents/README.md`, "The reference graph").
 
 ### 5. Draft the framing
 

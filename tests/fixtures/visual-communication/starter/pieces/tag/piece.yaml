@@ -2,10 +2,10 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 
 # The tag's reference renders (DEC-007 point 3): a tag in its default family and in the
-# families of three concepts, alone in a row and inside cards, in English and in German,
-# whose compound words and diacritics stress its text. It has no option and no field of
-# runs. Pinned with the test brand, the starter and the test notation, so only a person
-# moves what they draw.
+# families of three concepts, one of which has a sign before its label, alone in a row and
+# inside cards, in English and in German, whose compound words and diacritics stress its
+# text. It has no option and no field of runs. Pinned with the test brand, the starter and
+# the test notation, so only a person moves what they draw.
 top: foundations/deck
 brand: test-brand
 notations: [test-notation]

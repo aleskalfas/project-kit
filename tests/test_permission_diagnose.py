@@ -81,12 +81,19 @@ def test_disarm_is_idempotent(tmp_path):
 
 def test_ttl_expiry_reads_as_not_armed(tmp_path):
     root = _proj(tmp_path)
-    _arm(root, ttl_seconds=1)
+    ttl = 60
+    _arm(root, ttl_seconds=ttl)
     marker = perm._diagnose_read_marker(root)
-    # Just-armed → armed.
-    assert perm._diagnose_is_armed(marker, time.time()) is True
-    # A moment past the TTL window → expired.
-    assert perm._diagnose_is_armed(marker, time.time() + 2) is False
+    assert marker is not None
+    # Read the window from the time the marker was armed at, not the wall clock,
+    # so a runner however slow between arming and checking reads the same.
+    armed_at = marker["armed_at"]
+    # Inside the TTL window → armed.
+    assert perm._diagnose_is_armed(marker, armed_at) is True
+    assert perm._diagnose_is_armed(marker, armed_at + ttl - 1) is True
+    # At its end and past it → expired.
+    assert perm._diagnose_is_armed(marker, armed_at + ttl) is False
+    assert perm._diagnose_is_armed(marker, armed_at + ttl + 1) is False
     # status reflects EXPIRED when the wall clock is past the window.
     # (force an old armed_at so we don't have to sleep)
     perm._dump_yaml(

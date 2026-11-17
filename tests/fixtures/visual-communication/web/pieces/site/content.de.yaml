@@ -1,0 +1,77 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+header:
+  use: starter/header
+  title: Projektbaukasten
+  links:
+    - {id: home, label: Start}
+    - {id: ask, label: Anfragen}
+    - {id: releases, label: Versionen}
+
+footer:
+  use: starter/section
+  fill: tint
+  head: Projektbaukasten
+  text: Aufgeschrieben kann jede Regel gelesen und geprüft werden, wie jede Änderung.
+
+pages:
+  - id: home
+    layout: standard
+    main:
+      use: starter/sections
+      sections:
+        - id: written
+          head: Jede Regel an einem Ort
+          text: >-
+            Ein Projekt schreibt jede seiner Regeln einmal auf, wo jeder Agent und jede
+            Mitarbeiterin dieselben Worte liest.
+          picture: window.png
+        - id: applied
+          fill: tint
+          side: left
+          head: Von den Werkzeugen durchgesetzt
+          text: Die Werkzeuge lesen die Regeln und setzen sie bei jeder Änderung durch.
+          picture: window.png
+        - id: reviewed
+          head: Wie Code geprüft
+          text: Eine Regeländerung ist eine Änderung wie jede andere, und jemand prüft sie.
+
+  - id: ask
+    layout: standard
+    main:
+      use: starter/form
+      head: Um eine Prüfung bitten
+      fields:
+        - {id: name, label: Ihr Name, value: Ada Lovelace}
+        - id: mail
+          state: error
+          label: Ihre E-Mail-Adresse
+          value: ada.example.org
+          note: Eine Adresse enthält ein @, etwa ada@example.org.
+        - {id: what, label: Was geprüft werden soll, note: "Ein Protokoll, eine Seite oder ein Bild."}
+      buttons:
+        - {id: send, label: Anfrage senden}
+        - {id: draft, state: disabled, label: Als Entwurf speichern}
+
+  - id: releases
+    layout: standard
+    main:
+      use: starter/table
+      head: Was jede Veröffentlichung brachte
+      rows:
+        - id: names
+          cells:
+            - {id: version, span: narrow, head: Nr.}
+            - {id: what, head: Was sie brachte}
+            - {id: who, span: wide, head: Wer sie liest}
+        - id: first
+          cells:
+            - {id: version, span: narrow, text: "1.0"}
+            - {id: what, text: "Die Karten, die Listen und die Pfeile einer Folie."}
+            - {id: who, span: wide, text: "Wer eine Präsentation oder eine Abbildung zeichnet."}
+        - id: second
+          cells:
+            - {id: version, span: narrow, text: "1.1"}
+            - {id: what, text: "Die Teile einer Webseite, in jeder Größe."}
+            - {id: who, span: wide, text: "Wer eine Website zeichnet."}

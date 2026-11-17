@@ -9,9 +9,14 @@ pkit:
         - src/project_kit/agents.py
         - src/project_kit/refs.py
         - .pkit/adapters/claude-code/_resolve_agent.py
+        - .pkit/agents/tool_access.py
       record:
+        - "COR-013#7"
         - COR-015
         - COR-016
+        - "ADR-085#2"
+        - ADR-086
+        - "ADR-087#3"
 ---
 
 # Storyboards
@@ -79,7 +84,7 @@ The agent and the storyboard each declare the other (COR-016). The agent's side:
 ---
 name: review-agent
 description: ...
-tools: [Read, Edit]           # Read is required where storyboards are declared
+tools: [Read, Edit]           # the agent's tool access gives it Read where storyboards are declared
 storyboards:
   - storyboard.md
 ---
@@ -89,7 +94,7 @@ Load your storyboard from `storyboard.md` with the Read tool at session start an
 
 - **`storyboards:`** lists each storyboard by its bare file name beside the definition, `storyboard.md` or `<scenario-slug>.storyboard.md`. It resolves against the agent's own folder, so it stays right wherever the folder lives, and when the folder moves. A path from the project's root is accepted too.
 - **The body** cites each entry as the entry is written.
-- **`tools:`** includes `Read`, so the agent can read the storyboard.
+- **The agent's tool access** gives the agent `Read`, so the agent can read the storyboard ([the agents README, "Tool access"](README.md#tool-access)). The tool access gives `Read` where the agent's grant names `Read`, or where the agent names no grant and does not withhold `Read`.
 - **The deployed copy** lives elsewhere, such as `.claude/agents/<name>.md`, where a bare name resolves to nothing. So the deploy rewrites each such entry to the storyboard's path from the project's root, in `storyboards:` and in the body. An example is `.pkit/agents/project/review-agent/storyboard.md`, or `.pkit/capabilities/<capability>/agents/<agent>/storyboard.md` for a capability's agent. An entry already written from the root deploys as written.
 
 The storyboard's side:
@@ -113,7 +118,7 @@ What the reference graph's check, `refs validate`, checks, failing on each findi
 - **The agent's side:**
   - each storyboard it declares exists
   - its body cites each one
-  - its `tools:` hold `Read`
+  - its tool access gives it `Read`, read through the area's reader of tool access
 - **The storyboard's side:** its `consumers:` is a non-empty list, and each consumer exists and declares the storyboard back.
 - **An orphan:** a storyboard in an agent's folder that no agent declares.
 - **Where it looks:** in every agent folder, this area's and each capability's. It compares an entry with a file by the file the entry resolves to, so both forms of an entry name one storyboard.
@@ -128,7 +133,7 @@ pkit new storyboard agent <agent-name> --scenario <slug>   # one scenario's own 
 pkit new storyboard agent <agent-name> --namespace <ns>    # where the agent lives
 ```
 
-- **Which agent.** The command finds the agent in the deploy's order: the project, the capabilities by name, then core. So it stamps beside the agent that deploys. `--namespace`, `core`, `project` or a capability's name, looks in that one place instead.
+- **Which agent.** The command stamps beside the definition that is the agent, as the picker the deploy asks names it (the agents README, "Name-collision precedence"). A name whose agent has no one text, or that the picker cannot tell, is refused with the picker's why. `--namespace`, `core`, `project` or a capability's name, looks in that one place instead.
 - **An unknown capability** gets the same refusal as `pkit new agent`.
 - **A synced copy is refused.** The command stamps nothing beside an agent the project receives by sync, and leaves a flat definition flat. It says where such an agent is authored.
 - **A flat definition** moves into a folder of its own, named after it, first.

@@ -47,7 +47,7 @@ from typing import Any
 import click
 import pytest
 
-from project_kit import cli, pull_request_landing, session_guard
+from project_kit import cli, pull_request_landing, release, session_guard
 from tests import hosting_fake as fake
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -2515,7 +2515,7 @@ class _Allowed:
 
 #: The invoker, in the shape `resolve_invoker_identity` returns: an identity
 #: with a login and an email, which done-work's clash guard reads the login of.
-_INVOKER = SimpleNamespace(github_login="octocat", email=None)
+_INVOKER = SimpleNamespace(github_login="octocat", email=None, unresolved_cause=None)
 
 
 def _stub_gates(monkeypatch: pytest.MonkeyPatch, module: ModuleType, cap: Path) -> None:
@@ -2664,6 +2664,10 @@ def land(
 
     elif caller == RELEASE:
         monkeypatch.setattr(cli, "_target_kit", lambda: clone.root / ".pkit")
+        # The fake release PR lands what its release step wrote onto the
+        # commit its plan read: the predicate reads git and the remote, which
+        # `tests/test_release_landing.py` runs on real repositories (#3101).
+        monkeypatch.setattr(release, "release_pr_problem", lambda pr, repo_root: None)
 
         def once() -> str:
             return _release(["release", "merge", str(PR), *argv])
@@ -2682,8 +2686,10 @@ def land(
         monkeypatch.setattr(accepted, "derive", lambda head, base: accepted.Derivation())
         # The project holds no seats, so no build's records are read (DEC-067 point 1).
         monkeypatch.setattr(lw.head_programs.topology, "read", lambda *args, **kwargs: None)
-        # The stub's change writes no answer and changes no grant list.
+        # The stub's change writes no answer, changes no grant list, and leaves the
+        # sync's switch off (DEC-072 point 3).
         monkeypatch.setattr(lw.fixers, "change_between", lambda *args: ())
+        monkeypatch.setattr(lw, "_switch_hold", lambda *args: lw.sync_switch.NOT_HELD)
         monkeypatch.setattr(lw, "_sleep", clock.sleep)
         monkeypatch.setattr(lw, "_monotonic", clock)
 

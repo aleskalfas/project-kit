@@ -1,6 +1,0 @@
-component: backbone
-kind: none
-body: >
-  The CLI reference gains a section, "A capability's commands", which points
-  to the capability's README for `pkit visual look` (#2674). No command, path or format of the backbone
-  changes, so no surface moves.

@@ -1,6 +1,6 @@
 # Overview of the analysis of visual-communication
 
-<!-- pkit:overview reads=5 fingerprint=sha256:c597a94598d15a0fe7a1a0f2bd084af384d7d2b3fda7703115bc05a651b636db -->
+<!-- pkit:overview reads=5 fingerprint=sha256:1a4539f5d9c842e9297018d116a7d7c5dea10fe2c180d0710a472e6664a5b682 -->
 
 [Visual work keeps its content and its look as data, and renderers only project it](../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md).
 
@@ -23,6 +23,7 @@ Make each piece, such as a deck or a figure in a documentation page, from librar
 - [UC-095 — Draw several views of one system from one model](../use-case-model/use-cases/010-make/UC-095-draw-views-of-system.md)
 - [UC-096 — Add a new kind of visual to a piece as data](../use-case-model/use-cases/010-make/UC-096-add-visual-as-data.md)
 - [UC-097 — Put a picture that a program makes in a piece](../use-case-model/use-cases/010-make/UC-097-put-produced-picture.md)
+- [UC-111 — Have a piece designed and judged by the principles of visual communication](../use-case-model/use-cases/010-make/UC-111-have-piece-designed-and-judged.md) ([not built yet](#not-built-yet): variant 5b)
 
 **Its journeys:**
 
@@ -133,6 +134,12 @@ flowchart LR
   step_1 --> step_2
   step_2 --> step_3
 ```
+
+### Not built yet
+
+What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
+
+- [UC-111 — Have a piece designed and judged by the principles of visual communication](../use-case-model/use-cases/010-make/UC-111-have-piece-designed-and-judged.md): variant 5b, decided by `visual-communication:DEC-042#6`, tracked in `#3148`
 
 ### Diagrams
 

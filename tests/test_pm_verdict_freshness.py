@@ -15,7 +15,7 @@ is required for the whole change on any PR), and `code-reviewer` /
   * a code fix → every verdict stale;
   * a push during a review run → stale;
   * a rebase → stale;
-  * a verdict naming no head → the commit-time rule.
+  * a verdict naming no head → judged by when the head arrived on the host.
 """
 
 from __future__ import annotations
@@ -161,13 +161,20 @@ def _verdict(
     )
 
 
-def _rule(vf, ad, repo, *, base_tip=None, floors=FLOOR_ONLY, head_timestamp=""):
-    """The rule at the repository's current head, reading its real history."""
+def _arrived(timestamp):
+    """A reader of the head's arrival that answers `timestamp`."""
+    head_arrival = importlib.import_module("_lib.head_arrival")
+    return lambda: head_arrival.HeadArrival(timestamp=timestamp)
+
+
+def _rule(vf, ad, repo, *, base_tip=None, floors=FLOOR_ONLY, arrived=""):
+    """The rule at the repository's current head, reading its real history;
+    the head arrived on the host at `arrived`, unread when it is empty."""
     head = repo.head()
     tip = repo.head("main") if base_tip is None else base_tip
     return vf.FreshnessRule(
         head_sha=head,
-        head_timestamp=head_timestamp,
+        **({"head_arrival": _arrived(arrived)} if arrived else {}),
         base_tip=tip,
         floors_by_reviewer=floors,
         delta_since=lambda since: ad.author_delta(
@@ -395,21 +402,23 @@ def test_a_stale_rejection_naming_no_head_does_not_revive_the_approval(
     repo,
 ) -> None:
     """The head could not be read when the CHANGES_REQUESTED was posted, so it
-    names none and is judged by commit time; a later Markdown commit makes it
-    stale. The older APPROVED it superseded does not count again."""
+    names none and is judged by when the head arrived; a later Markdown
+    commit makes it stale. The older APPROVED it superseded does not count
+    again."""
     approved_head = repo.commit({"src/app.py": "x = 2\n"}, "feature")
     repo.commit({"README.md": "readme, fixed\n"}, "docs")
 
-    rule = _rule(vf, ad, repo, head_timestamp="2026-06-03T00:00:00Z")
+    rule = _rule(vf, ad, repo, arrived="2026-06-03T00:00:00Z")
     approval = _comment(av, CODE, "APPROVED", ts="2026-06-01T00:00:00Z", sha=approved_head)
     rejection = _comment(av, CODE, "CHANGES_REQUESTED", ts="2026-06-02T00:00:00Z")
     assert rule.is_fresh(_verdict(av, CODE, approved_head))
     assert _gate(av, rule, [approval, rejection]) == []
 
 
-def test_a_verdict_naming_no_head_follows_the_commit_time(av, vf) -> None:
+def test_a_verdict_naming_no_head_follows_the_head_s_arrival(av, vf) -> None:
     rule = vf.FreshnessRule(
-        head_timestamp="2026-06-05T00:00:00Z",
+        head_sha="b" * 40,
+        head_arrival=_arrived("2026-06-05T00:00:00Z"),
         floors_by_reviewer=FLOOR_ONLY,
         delta_since=lambda since: pytest.fail("no head is named"),
     )
@@ -417,15 +426,16 @@ def test_a_verdict_naming_no_head_follows_the_commit_time(av, vf) -> None:
     at = _verdict(av, CODE, "", timestamp="2026-06-05T00:00:00Z")
     assert rule.assess(after) == vf.Freshness(
         True,
-        "no reviewed head recorded; posted after the latest commit",
+        "no reviewed head recorded; posted after the head bbbbbbb arrived",
     )
     assert rule.assess(at) == vf.Freshness(
         False,
-        "no reviewed head recorded; posted before the latest commit",
+        "no reviewed head recorded; posted before the head bbbbbbb arrived at 2026-06-05T00:00:00Z",
     )
     assert vf.FreshnessRule().assess(after) == vf.Freshness(
         False,
-        "no reviewed head recorded; the latest commit's time is unknown",
+        "no reviewed head recorded; when the head unknown arrived cannot be read: "
+        "no reader of when the head arrived was given",
     )
 
 
@@ -848,15 +858,26 @@ def test_rule_for_pr_reads_the_pr_view_and_the_resolution(av, ad, vf) -> None:
         floors_by_reviewer=FLOOR_ONLY,
         not_code=resolution_module.NotCode(patterns=()),
     )
+    arrivals: list[tuple] = []
+
+    def head_arrival(pr_view, head):
+        arrivals.append((pr_view["headRefName"], head))
+        return importlib.import_module("_lib.head_arrival").HeadArrival(
+            timestamp="2026-06-05T00:00:00Z"
+        )
+
     rule = vf.rule_for_pr(
         {
             "headRefOid": "b" * 40,
             "baseRefOid": "c" * 40,
-            "commits": [{"committedDate": "2026-06-05T00:00:00Z"}],
+            "headRefName": "feat/x",
+            # The commit's own date is after the verdict: it is not read.
+            "commits": [{"committedDate": "2026-06-07T00:00:00Z"}],
         },
         resolution,
         author_delta=delta,
         base_kept=base_kept,
+        head_arrival=head_arrival,
     )
     # The resolution's not-code list excludes nothing here, so a changeset is
     # code and reaches the floor.
@@ -865,8 +886,9 @@ def test_rule_for_pr_reads_the_pr_view_and_the_resolution(av, ad, vf) -> None:
     # A recorded base is checked against the PR's base.
     assert not rule.is_fresh(_verdict(av, PM, "b" * 40, base="e" * 40))
     assert bases == [("e" * 40, "c" * 40)]
-    # A verdict naming no head is judged by the PR's latest commit.
+    # A verdict naming no head is judged by when the PR's head arrived.
     assert rule.is_fresh(_verdict(av, PM, "", timestamp="2026-06-06T00:00:00Z"))
+    assert arrivals == [("feat/x", "b" * 40)]
 
 
 def test_head_sha_falls_back_to_the_last_commit(vf) -> None:

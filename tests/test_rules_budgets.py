@@ -136,6 +136,7 @@ def test_the_white_space_named_is_unicode_s_property() -> None:
 CAPABILITY_LOADED = {
     ".pkit/capabilities/project-management/rules.md": "project-management:PM",
     ".pkit/capabilities/software-engineering/rules.md": "software-engineering:SWE",
+    ".pkit/capabilities/visual-communication/rules.md": "visual-communication:VIS",
 }
 
 

@@ -2,7 +2,7 @@ pkit_schema: visual-communication:component
 schema_version: 1
 
 status: experimental
-about: A short label on a box, painted and spaced with the library's own roles.
+about: A short label on a box, painted and spaced with the library's roles and its own token.
 
 fields:
   type: object
@@ -13,9 +13,12 @@ fields:
       description: What the tag says.
       x-pkit-prose: true
 
+tokens:
+  fill: {type: color, default: '{test-parts.paper}'}
+
 parts:
   box:
-    box: {fill: test-parts.paper, stroke: line, stroke-width: "=@stroke.thin"}
+    box: {fill: component.test-parts.tag.fill, stroke: line, stroke-width: "=@stroke.thin"}
     width: "=:width"
     height: "=:height"
   label:

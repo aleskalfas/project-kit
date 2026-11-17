@@ -1,0 +1,96 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+# The design system its job and its form come from (DEC-022 point 4): the GOV.UK Design
+# System's question pages, its text input and its button group.
+about: >-
+  What takes a reader's answer: a head where the content gives one, its fields one under
+  another, each drawn by the field unless the content names another, and its buttons
+  under them, each drawn by the button unless the content names another. The buttons
+  stand in a row on a wide page, and one under another on a phone. Each field and the
+  head run no wider than the brand's length of a line. It is drawn, never sent: it holds
+  no action, and each field shows the text its content gives it. It fills the width it is
+  given, and sets its own inset.
+
+fields:
+  type: object
+  required: [fields, buttons]
+  properties:
+    head:
+      type: string
+      description: What the form asks for, in a few words.
+      x-pkit-prose: true
+    fields:
+      type: array
+      minItems: 1
+      description: The fields, from the top, each with the fields of the component that draws it.
+      items: {type: object}
+    field:
+      type: object
+      description: >-
+        The component that draws each field that names none, with words for its options:
+        the field unless the content names another.
+    buttons:
+      type: array
+      minItems: 1
+      description: >-
+        Its buttons, the one that sends it first, each with the fields of the component
+        that draws it.
+      items: {type: object}
+    button:
+      type: object
+      description: >-
+        The component that draws each button that names none, with words for its options:
+        the button unless the content names another.
+
+lists:
+  fields: {component: field}
+  buttons: {component: button}
+
+values:
+  # The inset from each edge: a large spacing on a wide page, the inset on a phone.
+  margin: {by: ":device", desktop: "=@starter.margin", phone: "=@starter.inset"}
+  inner: "=:width - margin - margin"
+  # How wide the head and each field are: the whole inner width, up to the brand's length
+  # of a line.
+  measure: "=min(@size.line, inner)"
+  # Where the buttons start down: a large spacing under the fields.
+  buttons-y: "=fields.bottom + @starter.margin"
+
+parts:
+  head:
+    when: head
+    text: {content: head, style: starter.type.head, fill: text-primary}
+    x: "=margin"
+    y: "=margin"
+    width: "=measure"
+  fields:
+    repeat: fields
+    draw: starter/field
+    x: "=margin"
+    y: "=head.bottom + min(head.height, @starter.gap)"
+    width: "=measure"
+    column: {gap: "=@starter.gap", align-items: stretch}
+  # One list, two parts: the buttons in a row on a wide page, each as large as its label,
+  # and one under another on a phone (DEC-021 point 4).
+  buttons:
+    repeat: buttons
+    when: {by: ":device", desktop: true, phone: false}
+    draw: starter/button
+    x: "=margin"
+    y: "=buttons-y"
+    width: "=measure"
+    row: {gap: "=@starter.gap", sizes: own, align-items: center}
+  buttons-phone:
+    repeat: buttons
+    when: {by: ":device", desktop: false, phone: true}
+    draw: starter/button
+    x: "=margin"
+    y: "=buttons-y"
+    width: "=measure"
+    column: {gap: "=@starter.gap", align-items: start}
+
+preferred:
+  # One of the two rows of buttons is drawn, the other has no height.
+  height: "=buttons.bottom + buttons-phone.height + margin"

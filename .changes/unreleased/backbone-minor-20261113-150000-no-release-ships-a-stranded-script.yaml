@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  `pkit release plan` and `apply` refuse, before anything is written, a release
+  that would ship a stranded migration script: one in a folder at or below its
+  tier's fixed version that the commit which fixed that version did not hold
+  (ADR-092 point 8). A script the project receives by sync, or by a
+  capability's install or upgrade, is passed by. The refusal names each script
+  with a folder to move it to, past the version the default branch records, so
+  the move passes `pkit migrations check-diff` too. In the methodology's source
+  repository the fixed version is the one the newest final release tag
+  records, fixed at the first final release tag that carries it, read from the
+  remote's tags. In every other project it is the version the default branch's
+  head records, fixed at the first commit of the branch's first-parent history
+  that records it. Where the guard cannot read the remote's tags, a tag's
+  commit, the default branch or the whole of its history, as in a shallow
+  clone, it refuses. A project whose tiers hold no migration script of their
+  own reads none of them. The lifecycle, CLI and release references say so.

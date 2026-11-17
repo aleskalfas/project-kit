@@ -399,6 +399,7 @@ def test_route2_reexecs_pinned_version_and_propagates_exit(
     _make_adopter(tmp_path, "1.100.0")
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv(router._CLI_VERSION_ENV, raising=False)
+    monkeypatch.delenv("GIT_TERMINAL_PROMPT", raising=False)
     monkeypatch.setattr(router, "running_version", lambda: "1.139.0")
     # Probe resolves (rc 0), then the real command exits 3.
     calls = _patch_subprocess(monkeypatch, [_FakeCompleted(0), _FakeCompleted(3)])
@@ -421,6 +422,10 @@ def test_route2_reexecs_pinned_version_and_propagates_exit(
     assert real_cmd[-1] == "validate"
     # The loop guard is set on the child's environment.
     assert calls[1]["kwargs"]["env"][router._LOOP_GUARD_ENV] == "1"
+    # The probe alone runs with git's terminal prompt off: the run is the
+    # operator's command, and gets an environment of its own (ADR-090 point 2).
+    assert calls[0]["kwargs"]["env"]["GIT_TERMINAL_PROMPT"] == "0"
+    assert "GIT_TERMINAL_PROMPT" not in calls[1]["kwargs"]["env"]
 
 
 def test_route2_degrades_to_self_when_pin_unresolvable(
@@ -505,6 +510,28 @@ def test_route2_fallback_to_a_newer_binary_does_not_call_it_older(
     assert "Running 1.139.0 instead" in err
 
 
+def test_route2_fallback_says_when_this_binary_is_older_than_a_candidate_pin(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    no_exec: None,
+    ran_self: list[bool],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A pin may name a release candidate (ADR-089 point 6), and the fallback orders
+    it by PEP 440 as it orders a release."""
+    _make_adopter(tmp_path, "2.0.0rc1")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(router, "running_version", lambda: "1.150.0")
+    _patch_subprocess(monkeypatch, [_FakeCompleted(1)])
+
+    router.main(["status"])
+
+    assert ran_self == [True]
+    err = capsys.readouterr().err
+    assert "pkit 1.150.0 instead, an OLDER pkit than the pin names" in err
+    assert f"{router.DISTRIBUTION_GIT_URL}@v2.0.0rc1" in err
+
+
 def test_route2_fallback_notice_is_said_once_per_command(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -537,10 +564,22 @@ def test_route2_fallback_notice_is_said_once_per_command(
         ("1.9.0", "1.10.0", True),  # numeric, not lexical
         ("1.149", "1.150.0", False),  # not MAJOR.MINOR.PATCH: no order claimed
         ("1.149.0", "main", False),
-        ("1.149.0rc1", "1.150.0", False),
+        # A release candidate, the other form a pin takes, in PEP 440's order
+        ("1.149.0rc1", "1.150.0", True),
+        ("1.150.0", "2.0.0rc1", True),
+        ("2.0.0rc1", "2.0.0", True),  # a candidate sorts below its final release
+        ("2.0.0", "2.0.0rc1", False),
+        ("2.0.0rc1", "2.0.0rc2", True),
+        ("2.0.0rc2", "2.0.0rc10", True),  # numeric, not lexical
+        ("2.0.0rc1", "2.0.0rc1", False),
+        ("2.0.0rc", "2.0.0", False),  # no candidate number: no order claimed
+        ("2.0.0a1", "2.0.0", False),  # another pre-release: no order claimed
+        ("2.0.0-rc.1", "2.0.0", False),
     ],
 )
-def test_is_older_release_orders_only_bare_releases(version: str, than: str, older: bool) -> None:
+def test_is_older_release_orders_releases_and_candidates(
+    version: str, than: str, older: bool
+) -> None:
     assert router._is_older_release(version, than) is older
 
 
@@ -556,17 +595,60 @@ def test_run_bypassed_sets_no_route_and_clears_loop_guard(
     itself as the routed pinned child and sync NOTHING while the outer reconcile
     still flipped the pin — pin-ahead-of-content corruption (ADR-049)."""
     monkeypatch.setenv(router._LOOP_GUARD_ENV, "1")  # we are an already-routed child
-    calls = _patch_subprocess(monkeypatch, [_FakeCompleted(0)])
+    calls = _patch_subprocess(monkeypatch, [_FakeCompleted(0), _FakeCompleted(0)])
 
     rc = router.run_bypassed("2.0.0", ["upgrade"])
 
     assert rc == 0
-    env = calls[0]["kwargs"]["env"]
-    assert env[router._BYPASS_ENV] == "1"  # routing bypassed
-    assert router._LOOP_GUARD_ENV not in env  # loop guard NOT leaked into the child
-    cmd = calls[0]["cmd"]
+    for call in calls:  # the probe and the run
+        env = call["kwargs"]["env"]
+        assert env[router._BYPASS_ENV] == "1"  # routing bypassed
+        assert router._LOOP_GUARD_ENV not in env  # loop guard NOT leaked into the child
+    cmd = calls[1]["cmd"]
     assert f"{router.DISTRIBUTION_GIT_URL}@v2.0.0" in cmd
     assert cmd[-1] == "upgrade"
+
+
+def test_run_bypassed_probes_the_target_with_the_prompt_off_before_it_runs_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The raise probes its target first, with git's terminal prompt off, and runs
+    it in an environment of its own, with no switch pkit set: the run is the
+    operator's command, whose own git commands the switch would reach (ADR-090
+    point 2)."""
+    monkeypatch.delenv("GIT_TERMINAL_PROMPT", raising=False)
+    calls = _patch_subprocess(monkeypatch, [_FakeCompleted(0), _FakeCompleted(0)])
+
+    router.run_bypassed("2.0.0", ["upgrade"])
+
+    probe, run = calls
+    assert probe["cmd"] == [*router._pinned_base("2.0.0"), "--version"]
+    assert probe["kwargs"]["env"]["GIT_TERMINAL_PROMPT"] == "0"
+    assert run["cmd"] == [*router._pinned_base("2.0.0"), "upgrade"]
+    assert "GIT_TERMINAL_PROMPT" not in run["kwargs"]["env"]
+
+
+def test_run_bypassed_runs_nothing_where_the_probe_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A target the probe cannot fetch raises `ReleaseNotFetched`, and the run
+    never starts, so the caller keeps the pin where it was (ADR-049 point 5)."""
+    calls = _patch_subprocess(monkeypatch, [_FakeCompleted(1)])
+
+    with pytest.raises(router.ReleaseNotFetched) as excinfo:
+        router.run_bypassed("2.0.0", ["upgrade"])
+
+    assert excinfo.value.pin == "2.0.0"
+    assert len(calls) == 1
+    assert calls[0]["cmd"][-1] == "--version"
+
+
+def test_the_distribution_url_is_the_public_https_url() -> None:
+    """The compiled URL is the repository's public HTTPS URL, the canonical
+    install, in uv's spelling, and git's spelling derives from it (PRJ-015 point
+    1, ADR-090 point 1)."""
+    assert router.DISTRIBUTION_GIT_URL == "git+https://github.com/aleskalfas/project-kit.git"
+    assert router.DISTRIBUTION_REMOTE_URL == "https://github.com/aleskalfas/project-kit.git"
 
 
 # --- Route 3: match / no pin / not-in-project → run self ------------------------

@@ -268,3 +268,130 @@ def test_siblings_deploy_from_the_source_that_wins_only(mock_kit: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     assert sorted(p.name for p in _deployed(mock_kit, "shared").iterdir()) == ["SKILL.md"]
+
+
+# --- suspensions: a project skill of a shipped skill's name (COR-074) -----------
+
+
+def _suspended_lines(output: str) -> list[str]:
+    return [line.strip() for line in output.splitlines() if line.startswith("  suspended ")]
+
+
+def test_a_project_skill_of_a_core_skill_s_name_is_named_with_both_files(mock_kit: Path) -> None:
+    """The project's skill deploys in core's place, and the deploy names both
+    files: the core skill it leaves out, and the project's that replaces it."""
+    _write_flat_skill(mock_kit, "core", "decision-author", "# core's\n")
+    _write_flat_skill(mock_kit, "project", "decision-author", "# the project's\n")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    link = _deployed(mock_kit, "decision-author") / "SKILL.md"
+    project = mock_kit / ".pkit" / "skills" / "project" / "decision-author.md"
+    assert link.resolve() == project.resolve()
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/skills/core/decision-author.md"
+        " (replaced by .pkit/skills/project/decision-author.md)"
+    ]
+    assert "1 shipped skill(s) suspended" in result.stdout
+
+
+def test_a_project_skill_of_a_name_no_core_skill_has_is_no_suspension(mock_kit: Path) -> None:
+    _write_flat_skill(mock_kit, "core", "decision-author", "# core's\n")
+    _write_flat_skill(mock_kit, "project", "release-notes", "# the project's\n")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert (_deployed(mock_kit, "release-notes") / "SKILL.md").is_symlink()
+    assert _suspended_lines(result.stdout) == []
+    assert "suspended" not in result.stdout
+
+
+def test_a_suspension_is_named_on_each_run_and_on_the_run_that_starts_it(
+    mock_kit: Path,
+) -> None:
+    """The run that moves the link from core's skill to the project's names the
+    suspension, and so does every run after it while it holds."""
+    _write_flat_skill(mock_kit, "core", "decision-author", "# core's\n")
+    assert _suspended_lines(_run_deploy(mock_kit).stdout) == []
+
+    _write_flat_skill(mock_kit, "project", "decision-author", "# the project's\n")
+    first = _run_deploy(mock_kit)
+    again = _run_deploy(mock_kit)
+
+    assert "updated    .claude/skills/decision-author/SKILL.md" in first.stdout
+    assert len(_suspended_lines(first.stdout)) == 1
+    assert "exists     .claude/skills/decision-author/SKILL.md" in again.stdout
+    assert _suspended_lines(again.stdout) == _suspended_lines(first.stdout)
+
+
+def test_each_shipped_skill_a_project_skill_replaces_is_named(mock_kit: Path) -> None:
+    """A name that core and a registered capability both ship, in either form,
+    is one line for each file the project's skill leaves out."""
+    _write_composite_skill(mock_kit, "core", "shared", dispatcher=True)
+    _write_capability_skill(mock_kit, "my-cap", "shared", composite=False)
+    register_capabilities(mock_kit, "my-cap")
+    _write_flat_skill(mock_kit, "project", "shared", "# the project's\n")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/skills/core/shared/shared.md"
+        " (replaced by .pkit/skills/project/shared.md)",
+        "suspended  .pkit/capabilities/my-cap/skills/shared.md"
+        " (replaced by .pkit/skills/project/shared.md)",
+    ]
+    assert "2 shipped skill(s) suspended" in result.stdout
+
+
+def test_a_shipped_skill_that_wins_over_another_shipped_one_suspends_nothing(
+    mock_kit: Path,
+) -> None:
+    """Core's skill over a capability's of the same name is no suspension: the
+    project's own files take no part in it."""
+    _write_capability_skill(mock_kit, "my-cap", "shared", composite=False)
+    register_capabilities(mock_kit, "my-cap")
+    _write_flat_skill(mock_kit, "core", "shared", "# shared, from core\n")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert _suspended_lines(result.stdout) == []
+
+
+def test_a_hand_kept_file_at_a_core_skill_s_place_is_named_as_replacing_it(
+    mock_kit: Path,
+) -> None:
+    """A file the deploy did not make at the skill's place keeps core's skill out
+    as surely as a project skill does, as when a release adds core's skill under
+    a name the project already keeps by hand: the deploy names both files."""
+    _write_flat_skill(mock_kit, "core", "release-notes", "# core's\n")
+    own = _deployed(mock_kit, "release-notes")
+    own.mkdir(parents=True)
+    (own / "SKILL.md").write_text("# kept by hand\n", encoding="utf-8")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "(user content)" in result.stdout
+    assert (own / "SKILL.md").read_text(encoding="utf-8") == "# kept by hand\n"
+    assert _suspended_lines(result.stdout) == [
+        "suspended  .pkit/skills/core/release-notes.md (replaced by"
+        " .claude/skills/release-notes/SKILL.md, a file the deploy did not make)"
+    ]
+
+
+def test_a_hand_kept_file_where_only_the_project_ships_the_name_is_no_suspension(
+    mock_kit: Path,
+) -> None:
+    _write_flat_skill(mock_kit, "project", "release-notes", "# the project's\n")
+    own = _deployed(mock_kit, "release-notes")
+    own.mkdir(parents=True)
+    (own / "SKILL.md").write_text("# kept by hand\n", encoding="utf-8")
+
+    result = _run_deploy(mock_kit)
+
+    assert result.returncode == 0, result.stderr
+    assert "suspended" not in result.stdout

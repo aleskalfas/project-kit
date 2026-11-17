@@ -1,0 +1,63 @@
+# The released versions of a library the capability ships (visual-communication
+# DEC-013 point 2), each with its hash. `pkit visual release <library> --shipped` adds
+# each one; nothing changes an entry once it is added.
+
+pkit_schema: visual-communication:libraries
+schema_version: 1
+libraries:
+  neutral:
+    source:
+      kind: shipped
+    versions:
+      1.0.0:
+        released: true
+        hash:
+          form: 1
+          hash: sha256
+          format: 1
+          value: 7339888d710dc6745215eec219f52b3a3b2964b541be792794419caf4da7f004
+          inputs:
+            - library: neutral
+              version: 1.0.0
+              path: fonts/LICENSE-Source-Code-Pro.txt
+              sha256: 1036668c56392d012c81aa1c84cd8aacea3e767c52190f789d14857b3d0a5765
+            - library: neutral
+              version: 1.0.0
+              path: fonts/LICENSE-Source-Sans-Pro.txt
+              sha256: 653aaf9819e33cf1e2b3523c5d4d6c3dae925d770cb4563030f96655321ca2e9
+            - library: neutral
+              version: 1.0.0
+              path: fonts/SourceCodePro-Regular.ttf
+              sha256: f144137f557805c7327fc4b14d1d730f6e1822e0124170251ff1bcd723a693f1
+            - library: neutral
+              version: 1.0.0
+              path: fonts/SourceSansPro-Regular.otf
+              sha256: 6b096b47206d8f78a2c49af2f2ae46b35d93b0e3cf105a9febef59144aa2eae2
+            - library: neutral
+              version: 1.0.0
+              path: fonts/SourceSansPro-Semibold.otf
+              sha256: ee3ba5c88400b22b880d85202ce82143dc5e19861bf7880b7f4c32d4263e96d5
+            - library: neutral
+              version: 1.0.0
+              path: library.yaml
+              sha256: ad60b9ab10c1f568c1344041461a62efc635ddd4b36081d67f02cf3aab3e793e
+            - library: neutral
+              version: 1.0.0
+              path: neutral.resolver.json
+              sha256: 9ec655e88f85b6ece8593816112656266c41bb9e74699981d04944bbb5e8b915
+            - library: neutral
+              version: 1.0.0
+              path: tokens/base.tokens.json
+              sha256: 5ea3f8571dfb8050b947079651d1530843a412a7861b2a4fa1e6cfba4f5f2798
+            - library: neutral
+              version: 1.0.0
+              path: tokens/dark.tokens.json
+              sha256: 288184af74169ab9fc00dc25c1b61ecdbc01c5a3b7029a2fccff180c89e45996
+            - library: neutral
+              version: 1.0.0
+              path: tokens/high-contrast.tokens.json
+              sha256: babc4ab4183caa0266b9811c1a69583d70f15f25ddd0c2d1bfbb894f52983799
+            - library: neutral
+              version: 1.0.0
+              path: tokens/palette.tokens.json
+              sha256: 1c7c09942b89937709875c44cfc3b088706bfb69817843a8149b7492d921b782

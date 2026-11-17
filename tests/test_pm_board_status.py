@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 from ruamel.yaml import YAML
 
+from tests.pm_board_graphql import flag_value, query_of
 from tests.pm_board_world import BOARD_CONFIG, LABEL_STATE, BoardTracker
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -105,8 +106,9 @@ def test_a_write_sets_the_cards_status_and_reads_the_board_once_per_run(
 
     assert first.ok and second.ok
     assert board.edits == [(7, "In Progress"), (8, "Backlog")]
-    reads = [argv[2] for argv in board.board_calls() if argv[1] == "project"]
-    assert reads.count("view") == 1 and reads.count("field-list") == 1
+    # One read of the board itself gives its node and its Status field.
+    assert len(_field_reads(board)) == 1
+    assert not [argv for argv in board.board_calls() if argv[1:3] == ["project", "view"]]
     assert first.line() == "[board] #7: Status set to 'In Progress'"
 
 
@@ -116,7 +118,8 @@ def test_a_write_given_the_card_looks_up_no_card(board: BoardTracker) -> None:
 
     assert status.write(7, "todo", item_id="PVTI_7").ok
 
-    assert not [argv for argv in board.board_calls() if argv[1] != "project"]
+    assert not _card_reads(board)
+    assert not [argv for argv in board.calls if argv[1:3] == ["issue", "view"]]
     assert board.edits == [(7, "Todo")]
 
 
@@ -130,10 +133,21 @@ def test_a_write_given_the_issues_node_id_reads_no_issue(board: BoardTracker) ->
     assert board.edits == [(7, "Todo")]
 
 
+def _field_reads(board: BoardTracker) -> list[list[str]]:
+    """The reads of the board's fields."""
+    return [argv for argv in board.board_calls() if "fields(first:" in query_of(argv)]
+
+
+def _card_reads(board: BoardTracker) -> list[list[str]]:
+    """The reads of issues' own cards."""
+    return [argv for argv in board.board_calls() if "issues: nodes(ids:" in query_of(argv)]
+
+
 @pytest.mark.parametrize(
     ("setup", "state", "says"),
     [
         ("no card", "review", "#7 has no card on board #4"),
+        ("no witness", "review", "no issue this read saw from the repository shows a card"),
         ("fields", "review", "missing required scopes [read:project]"),
         ("card", "review", "HTTP 502: Bad Gateway"),
         ("edit", "review", "gh project item-edit failed: HTTP 502: Bad Gateway"),
@@ -144,7 +158,9 @@ def test_a_write_given_the_issues_node_id_reads_no_issue(board: BoardTracker) ->
 def test_a_write_that_cannot_be_made_says_why_in_one_line(
     board: BoardTracker, setup: str, state: str, says: str
 ) -> None:
-    if setup != "no card":
+    if setup == "no witness":
+        board.graph.witness = False
+    elif setup != "no card":
         board.card(7, "Todo")
     if setup in ("fields", "card"):
         board.fail_reads.add(setup)
@@ -170,9 +186,15 @@ def test_a_write_that_cannot_be_made_says_why_in_one_line(
 
 
 def _owners(board: BoardTracker) -> set[str | None]:
-    """The owner each read of the board named, None for a read that named none."""
-    reads = [argv for argv in board.calls if argv[1:2] == ["project"] and argv[2] != "item-edit"]
-    return {argv[argv.index("--owner") + 1] if "--owner" in argv else None for argv in reads}
+    """The owner each read of the board by its number named, None for a read
+    that named none. A read addressed by the board's node names no owner."""
+    owners: set[str | None] = set()
+    for argv in board.board_calls():
+        if argv[1:2] == ["project"] and argv[2] not in ("item-edit", "item-add"):
+            owners.add(argv[argv.index("--owner") + 1] if "--owner" in argv else None)
+        elif "board: node(id:" not in query_of(argv) and argv[1:3] == ["api", "graphql"]:
+            owners.add(flag_value(argv, "owner"))
+    return owners
 
 
 @pytest.mark.parametrize(
@@ -342,6 +364,7 @@ def test_the_remedy_of_an_unreadable_status_points_at_what_named_the_fault(
         ("fields", "unreadable", "the board's Status of #7 could not be read: missing required"),
         ("card", "unreadable", "could not be read: HTTP 502: Bad Gateway"),
         ("no card", "no-card", "#7 has no card on board #4"),
+        ("no witness", "unreadable", "no issue this read saw from the repository shows a card"),
         ("unset", "unset", "#7's card on board #4 has no Status"),
         ("done", "not-open", "has the Status 'Done', which names no open state"),
         ("blocked", "not-open", "has the Status 'Blocked', which names no open state"),
@@ -351,9 +374,13 @@ def test_each_status_that_does_not_place_the_issue_is_its_own_outcome(
     board: BoardTracker, setup: str, outcome: str, says: str
 ) -> None:
     """Four outcomes, each its own message, none placing the issue: the board
-    cannot be read, no card, no Status, a Status naming no open state."""
+    cannot be read, no card, no Status, a Status naming no open state. An issue
+    with no card is told only where another issue of its repository shows one;
+    with none, the board is read as not answering (ADR-096 point 1)."""
     board.options["Blocked"] = "opt-blocked"
-    if setup != "no card":
+    if setup == "no witness":
+        board.graph.witness = False
+    elif setup != "no card":
         status = {"unset": None, "done": "Done", "blocked": "Blocked"}.get(setup, "Todo")
         board.card(7, status)
     if setup in ("fields", "card"):
@@ -393,9 +420,12 @@ def test_a_listing_reads_the_listed_issues_cards_and_no_others(board: BoardTrack
     # An issue the listing did not read is no finding about its card.
     assert listed.read("I_11").outcome == "unreadable"
     assert listed.read(None).outcome == "unreadable"
-    reads = [argv for argv in board.board_calls() if argv[1:3] == ["api", "graphql"]]
+    reads = _card_reads(board)
     assert len(reads) == 1
     assert "items(first" not in " ".join(reads[0])
+    # Beside the listed issues, the read carries a page of the repository's
+    # recent issues, read only for a sign that the board answered.
+    assert "page0: node(id: $page0)" in query_of(reads[0])
 
 
 def test_a_listing_with_no_issues_reads_no_board(board: BoardTracker) -> None:

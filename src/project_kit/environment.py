@@ -119,9 +119,9 @@ def _recorded_capability_version(target_root: Path, name: str) -> str:
     version. "unknown" only when none of the three gives one."""
     # Local import, as `_running_tool_version`'s: `capabilities` is heavy, and this
     # keeps the environment module cheap to import.
-    from project_kit.capabilities import read_capability_record
+    from project_kit.capabilities import read_capability_version
 
-    return read_capability_record(target_root, name).version or "unknown"
+    return read_capability_version(target_root, name) or "unknown"
 
 
 def _running_tool_version() -> str:

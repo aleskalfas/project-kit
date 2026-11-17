@@ -913,20 +913,35 @@ def test_the_full_history_is_fetched_and_confirmed_before_the_check(
 def test_the_query_commands_are_provisioned_before_the_check_as_the_required_check_does(
     workflow: dict[str, Any],
 ) -> None:
-    """The same step, in the same place, as each part of `checks.yml` runs before its
-    part of the aggregator (ADR-078 point 1). A part may give the step an id of its own."""
+    """The same step, in the same place, as each job of `checks.yml` that installs the
+    project runs once, right after installing it: each part before its part of the
+    aggregator (ADR-078 point 1), and any other job before the commands it runs offline,
+    such as the drawings' look (visual-communication DEC-024 point 5). The jobs are read
+    from the workflow, so a job added there is held to it without a count to edit. A job
+    may give the step an id of its own."""
     checks = YAML(typ="safe").load((WORKFLOW.parent / "checks.yml").read_text(encoding="utf-8"))
-    theirs = [
-        {key: value for key, value in step.items() if key != "id"}
-        for job in checks["jobs"].values()
-        for step in job["steps"]
-        if step.get("name", "").startswith("Sync")
-    ]
-    assert len(theirs) == 4
+    jobs = {name: job["steps"] for name, job in checks["jobs"].items()}
+
+    def named(steps: list[dict[str, Any]], prefix: str) -> list[int]:
+        return [i for i, step in enumerate(steps) if step.get("name", "").startswith(prefix)]
+
+    installing = {name for name, steps in jobs.items() if named(steps, "Install project")}
+    parts = {
+        name
+        for name, steps in jobs.items()
+        if any("scripts/ci_parts.py run" in step.get("run", "") for step in steps)
+    }
+    assert parts and parts <= installing
+    assert {name for name, steps in jobs.items() if named(steps, "Sync")} == installing
     sync = _index(workflow, RENDER, "Sync")
-    for step in theirs:
-        assert _steps(workflow, RENDER)[sync] == step
-        assert step["run"] == "uv run pkit sync"
+    ours = _steps(workflow, RENDER)[sync]
+    assert ours["run"] == "uv run pkit sync"
+    for name in installing:
+        steps = jobs[name]
+        [installed] = named(steps, "Install project")
+        assert named(steps, "Sync") == [installed + 1], name
+        theirs = {key: value for key, value in steps[installed + 1].items() if key != "id"}
+        assert theirs == ours, name
     assert _index(workflow, RENDER, "Install project") < sync
     assert sync < _index(workflow, RENDER, "Whole-repository friction check")
 

@@ -1,0 +1,53 @@
+answers:
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T130246Z-a00da651.yaml
+    revalidated:
+      at: 2026-11-07T13:12:45Z
+      outcome: unchanged
+      unchanged-because: "Judged with this change's answer (24c81172) and main's two, 01dc9885 and a5583e69. 01dc9885 judged the agents README becoming a reference: its Adopter overlay still has the project's overlay name each category's paths, its Diagnosing + repairing the overlay still has reconcile append a commented stub for an optional category, its Body conventions still keep a reviewer's working files in the workspace, and The rule-set reviewer still stands in the stack, so what this README says of them holds. a5583e69 judged the landing section gaining a print of person findings at a stop inside the review, and exit 6's run again without --yes. This change adds a clause to that section's ci step, on done-work's gate passing an empty rollup only where the base requires no check. The three reach separate sections, and this README says only that land-work runs the same review as one of its steps and that a person finding goes to whoever authorises the merge, so it holds against all three."
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T151637Z-974a0d9a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T130246Z-a00da651.yaml
+    revalidated:
+      at: 2026-11-07T13:12:47Z
+      outcome: unchanged
+      unchanged-because: "Judged with this change's answer (24c81172) and main's three, 59c67901, 01dc9885 and a5583e69. 59c67901 judged ACT-developer's need rewritten in the glossary's terms, DEC-056's citations, and the bar and share keys pkit friction explain gained: the guide rests on none of those words, and its build task, the answers left to its reader and the sentences under their section stand. 01dc9885 judged the agents reference's Adopter overlay and Diagnosing + repairing the overlay rewritten as a reference, and gave the guide an anchor on its pkit agents section, which its proof's mention of pkit agents rests on, so its statements on the overlay, the agents report and the panel hold. a5583e69 judged the landing section gaining the print at a stop and exit 6's run again without --yes. This change adds a clause to that section's ci step only. Each reaches its own passage, so the path from opening the pull request to landing it stands with all four."

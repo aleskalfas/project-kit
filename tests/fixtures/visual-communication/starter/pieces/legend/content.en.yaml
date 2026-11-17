@@ -1,0 +1,34 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: under
+    layout: slide
+    title: A legend says what each colour and sign stands for
+    visual:
+      use: starter/panels
+      panels:
+        - id: items
+          use: starter/list
+          item: {use: starter/card, fill: tint}
+          items:
+            - {id: user, concept: test-notation/person, head: The reader, text: Opens each page.}
+            - {id: site, concept: test-notation/service, head: The site, text: Serves the pages.}
+            - {id: pages, concept: test-notation/store, head: The pages, text: Kept as files.}
+      under:
+        use: starter/legend
+        entries:
+          - {id: person, concept: test-notation/person, label: a person}
+          - {id: service, concept: test-notation/service, label: a service}
+          - {id: store, concept: test-notation/store, label: a store of data}
+
+  - id: entry
+    layout: slide
+    title: Its entries may be drawn by a component of the piece's own
+    visual:
+      use: starter/legend
+      entry: {use: piece/key}
+      entries:
+        - {id: person, concept: test-notation/person, label: a person}
+        - {id: service, concept: test-notation/service, label: a service}
+        - {id: store, concept: test-notation/store, label: a store of data}

@@ -1,0 +1,179 @@
+answers:
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T155246Z-cdd2022b.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+    revalidated:
+      at: 2026-11-11T14:52:30Z
+      outcome: updated
+  - artefact: docs/capabilities/software-engineering/README.md
+    read:
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261102T151637Z-974a0d9a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T131245Z-5afe6d5a.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+    revalidated:
+      at: 2026-11-11T14:52:36Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-hand-off
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+    revalidated:
+      at: 2026-11-11T14:52:52Z
+      outcome: unchanged
+      unchanged-because: The change has the software-engineer name in its hand-off each path it found changed that its change did not touch. The term's definition, a report with what the person must decide, already covers that, and its example still holds.
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-walking-skeleton
+    read:
+      - 20261105T214007Z-cbabcdd3.yaml
+    revalidated:
+      at: 2026-11-11T14:53:19Z
+      outcome: unchanged
+      unchanged-because: The change adds only how the software-engineer stages and commits its change, by the paths it touched. Nothing the term says of a walking skeleton, or of the conventions it writes into the corpus, moves.
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-conventions-corpus
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-11T14:53:29Z
+      outcome: unchanged
+      unchanged-because: The change adds only how the software-engineer stages and commits its change, by the paths it touched. What the agent reads from the conventions corpus, and when it writes to it, stay as the term describes.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+    revalidated:
+      at: 2026-11-11T14:53:40Z
+      outcome: unchanged
+      unchanged-because: The change adds only that the software-engineer commits by name the paths its change touched, and names in its hand-off each other changed path it left out. UC-001 gives no account of committing, so each of its steps, variants and guarantees holds as written.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-081-decide-unasked-answers.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+    revalidated:
+      at: 2026-11-11T14:53:48Z
+      outcome: unchanged
+      unchanged-because: The change adds only how the software-engineer stages and commits its change, by the paths it touched. Which answers it writes, and which it names in its hand-off for the developer to decide, stay as UC-081 describes.

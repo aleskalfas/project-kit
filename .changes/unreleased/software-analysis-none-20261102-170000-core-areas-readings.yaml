@@ -1,7 +1,0 @@
-component: software-analysis
-kind: none
-body: >
-  project-kit's own software-analysis configuration gives the goals of the
-  core analysis's two new areas, `060-report` and `070-work-within-limits`,
-  and trims the goals of `020-set-up` and `050-adopt` to what is left in them
-  (#2486). Nothing software-analysis ships to an adopter changes.

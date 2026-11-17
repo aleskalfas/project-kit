@@ -1321,6 +1321,12 @@ def range_admits(version_range: Any, version: Any) -> bool | None:
     capability (COR-030). Validation reads it here; so do the install, register
     and upgrade gates.
 
+    The range is read with its pre-releases admitted, so a range that names no
+    pre-release admits a release candidate within its bounds, whatever
+    `packaging`'s default (ADR-089 point 4). Ordering keeps its exclusions:
+    `>=2.0.0` and `<2.0.0` both refuse `2.0.0rc1`. Every gate judges one version;
+    a caller that picks a version from a list chooses its own pre-releases.
+
     `None` when either side cannot be read — a range that is not a non-empty
     PEP 440 specifier set, a version that is not a PEP 440 version — which every
     reader takes as no constraint: the packages pass reports a malformed range.
@@ -1329,7 +1335,7 @@ def range_admits(version_range: Any, version: Any) -> bool | None:
     actual = _version(version) if isinstance(version, str) else None
     if spec is None or actual is None:
         return None
-    return actual in spec
+    return spec.contains(actual, prereleases=True)
 
 
 def _range_findings(

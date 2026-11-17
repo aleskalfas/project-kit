@@ -1,0 +1,12 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  The neutral brand's version being built, 1.1.0, takes cool greys: each of its
+  seven greys is tilted a touch toward its accent's blue at the luminance of the
+  plain grey it replaces, so a project that starts from it draws in a calm,
+  professional look, and every contrast it declares stays within 0.3% of what
+  it was. The grey group's `$description` gives the reason. Its released
+  version 1.0.0 is unchanged, and a project's copy of 1.1.0 takes the new greys
+  when `pkit visual add neutral` brings it up to date.

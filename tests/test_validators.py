@@ -17,7 +17,9 @@
 - the data member walks the project-owned folders under `.pkit/` and skips
   what nothing claims, unreadable files included;
 - the refs member classifies drift as a warning, the rest as errors, and
-  reads a bracketed `reads.patterns` declaration the way the deploy does.
+  reads an agent's `reads.patterns` entry the way the deploy does: a
+  placeholder or a path passes, a bare category name is an error (#2481);
+- the scratchpad member fails on a slug whose notes lie in two state folders.
 """
 
 from __future__ import annotations
@@ -54,6 +56,7 @@ BACKBONE_ORDER = [
     "refs",
     "process",
     "data",
+    "scratchpad",
 ]
 
 CLEAN_ANSWER = {"summary": ["3 thing(s) checked; 0 error(s)."], "findings": []}
@@ -170,9 +173,10 @@ def test_capability_validators_sort_after_the_backbone_by_order_then_name(
     registered = validators.registered_validators(adopter.root)
     names = [v.name for v in registered]
     # `order: 5` sorts among the backbone's members; the default sorts after every one.
+    backbone_end = 1 + len(BACKBONE_ORDER)
     assert names[0] == "zeta:early"
-    assert names[1:13] == BACKBONE_ORDER
-    assert names[13:] == ["alpha:citations", "zeta:late"]
+    assert names[1:backbone_end] == BACKBONE_ORDER
+    assert names[backbone_end:] == ["alpha:citations", "zeta:late"]
     # The help is the leaf's — a nested leaf resolves like a top-level one.
     assert _member(adopter.root, "alpha:citations").help == "Every citation resolves."
 
@@ -829,7 +833,7 @@ def _agent(root: Path, name: str, front_matter: str, body: str) -> Path:
     return path
 
 
-def test_bracketed_pattern_declarations_are_read_the_way_the_deploy_reads_them(
+def test_pattern_declarations_are_read_the_way_the_deploy_reads_them(
     adopter: AdopterRepo,
 ) -> None:
     _agent(
@@ -840,17 +844,46 @@ def test_bracketed_pattern_declarations_are_read_the_way_the_deploy_reads_them(
     )
     _agent(
         adopter.root,
+        "reader",
+        "reads:\n  patterns:\n    - docs/conventions/\n    - STYLE.md\n",
+        "Read `docs/conventions/` and `STYLE.md` when they exist.",
+    )
+    _agent(
+        adopter.root,
         "reviewer",
         "reads:\n  patterns:\n    - project-conventions\n",
         "Read the `<project-conventions>` corpus before reviewing.",
     )
     _agent(adopter.root, "silent", "reads:\n  patterns:\n    - code-paths\n", "Says nothing.")
-    diagnoses = [
-        i.diagnosis for i in refs.validate_corpus(adopter.root) if "agents/project" in i.location
+    findings = [
+        (f.location, f.severity, f.message)
+        for f in refs.outcome(adopter.root).findings
+        if "agents/project" in f.location
     ]
-    assert diagnoses == [
-        "frontmatter declares pattern 'code-paths' but it is not referenced anywhere."
+    bare = (
+        "`reads.patterns` entry {0!r} is neither a `<category>` placeholder nor a path, "
+        "so the deploy does not resolve it. Write it `<{0}>`."
+    )
+    assert findings == [
+        (
+            ".pkit/agents/project/silent.md",
+            validators.Severity.WARNING,
+            "frontmatter declares pattern 'code-paths' but it is not referenced anywhere.",
+        ),
+        (
+            ".pkit/agents/project/reviewer.md",
+            validators.Severity.ERROR,
+            bare.format("project-conventions"),
+        ),
+        (
+            ".pkit/agents/project/silent.md",
+            validators.Severity.ERROR,
+            bare.format("code-paths"),
+        ),
     ]
+    focused = CliRunner().invoke(main, ["refs", "validate"])
+    assert focused.exit_code == 1
+    assert "'code-paths' is neither a `<category>` placeholder nor a path" in focused.output
 
 
 def test_refs_member_warns_on_drift_and_fails_on_a_hook_nobody_answers(
@@ -878,6 +911,28 @@ def test_refs_member_warns_on_drift_and_fails_on_a_hook_nobody_answers(
     assert (
         CliRunner().invoke(main, ["refs", "validate"]).exit_code == 1
     )  # drift alone still fails it
+
+
+# --- the scratchpad member: a note lies in one state folder (COR-012) ---------
+
+
+def test_the_scratchpad_member_fails_on_a_slug_in_two_state_folders(adopter: AdopterRepo) -> None:
+    scratchpad = adopter.root / ".pkit" / "scratchpad"
+    note = "---\nauthors:\n  - Test Author\nstarted: 2026-09-30\n---\n\n# Review load\n"
+    (scratchpad / "active" / "2026-09-30-review-load.md").write_text(note, encoding="utf-8")
+    clean = CliRunner().invoke(main, ["validate", "--only", "scratchpad"])
+    assert clean.exit_code == 0, clean.output
+    assert "1 scratchpad note(s) checked; 0 error(s)." in clean.output
+
+    (scratchpad / "done" / "2026-09-30-review-load.md").write_text(note, encoding="utf-8")
+    result = CliRunner().invoke(main, ["validate", "--only", "scratchpad"])
+    assert result.exit_code == 1, result.output
+    assert "error    .pkit/scratchpad :: review-load" in result.output
+    assert (
+        "slug 'review-load' is in 2 state folders: "
+        ".pkit/scratchpad/active/2026-09-30-review-load.md, "
+        ".pkit/scratchpad/done/2026-09-30-review-load.md." in result.output
+    )
 
 
 # --- the answer document ------------------------------------------------------

@@ -14,6 +14,10 @@ points 1, 2, 4, 8 and 10; #1742, #1744). The confined form has its own tests,
   deployed, and a harness that is not on PATH;
 - the harness gets the brief on standard input, starts in the folder, gets
   none of the backbone's run variables, and gets the marker;
+- where the request names the person's checkout, the harness starts with the
+  checkout's local settings copied into the folder: a file the folder holds
+  stays, a link on the way refuses the run, and a run refused before its start
+  carries nothing (ADR-066 point 10);
 - at the limit it ends the harness and every process still descended from it,
   a shell command in a session of its own included, and asked to stop it ends
   them first;
@@ -54,7 +58,9 @@ def runner() -> ModuleType:
 def _request(in_folder: Path, **overrides: object) -> dict[str, object]:
     request: dict[str, object] = {
         "schema_version": 1,
-        "agent": "code-reviewer",
+        # A name no place of the methodology ships, so the harness loads it by name
+        # (ADR-087 point 3): the reviewer the project wrote into `.claude/agents/`.
+        "agent": "my-reviewer",
         "brief": "Review pull request 99.",
         "folder": str(in_folder),
         "limit_seconds": 30,
@@ -71,7 +77,7 @@ def _script(path: Path, body: str) -> Path:
     return path
 
 
-def _deploy(folder: Path, name: str = "code-reviewer") -> None:
+def _deploy(folder: Path, name: str = "my-reviewer") -> None:
     agents = folder / ".claude" / "agents"
     agents.mkdir(parents=True, exist_ok=True)
     (agents / f"{name}.md").write_text("---\nname: x\n---\n", encoding="utf-8")
@@ -130,6 +136,8 @@ def _bin(env: dict[str, str]) -> Path:
         ({"brief": ""}, "the brief is empty"),
         ({"brief": 7}, "the brief is empty"),
         ({"folder": "relative"}, "is not a directory"),
+        ({"local_settings_from": "relative"}, "the local settings come from"),
+        ({"local_settings_from": 7}, "the local settings come from"),
         ({"limit_seconds": 0}, "the limit 0"),
         ({"limit_seconds": True}, "the limit True"),
         ({"limit_seconds": 7 * 24 * 60 * 60 + 1}, "the limit"),
@@ -150,6 +158,112 @@ def test_a_request_that_is_no_json_object_is_refused(runner: ModuleType) -> None
         runner.read_request("[1]")
 
 
+def test_a_confined_request_takes_no_local_settings(runner: ModuleType, tmp_path: Path) -> None:
+    """A confined run loads none of the person's settings files (ADR-066 point
+    3), so the key is refused before anything else of the request is read."""
+    request = _request(tmp_path, confined={}, local_settings_from=str(tmp_path))
+    del request["folder"]
+    with pytest.raises(runner.Refused, match="does not run: local_settings_from"):
+        runner.read_request(json.dumps(request))
+
+
+# --- the person's local settings ------------------------------------------------------
+
+
+_LOCAL = Path(".claude") / "settings.local.json"
+
+
+def _local_settings(checkout: Path, text: str = '{"sandbox": {"enabled": true}}') -> Path:
+    (checkout / _LOCAL).parent.mkdir(parents=True, exist_ok=True)
+    (checkout / _LOCAL).write_text(text, encoding="utf-8")
+    return checkout
+
+
+def test_the_local_settings_are_carried_from_the_checkout(
+    runner: ModuleType, tmp_path: Path
+) -> None:
+    """They are the person's, not the project's, so a run in another folder,
+    such as a clone at a commit, takes them from the checkout (ADR-066 point
+    10), and is the only reader of them."""
+    checkout = _local_settings(tmp_path / "checkout")
+    folder = tmp_path / "clone"
+    folder.mkdir()
+    runner.carry_local_settings(checkout, folder)
+    copied = folder / _LOCAL
+    assert copied.read_text(encoding="utf-8") == (checkout / _LOCAL).read_text(encoding="utf-8")
+    assert stat.S_IMODE(copied.stat().st_mode) == 0o600
+    assert stat.S_IMODE(copied.parent.stat().st_mode) == 0o700
+
+
+def test_without_local_settings_nothing_is_carried(runner: ModuleType, tmp_path: Path) -> None:
+    checkout = tmp_path / "checkout"
+    checkout.mkdir()
+    folder = tmp_path / "clone"
+    folder.mkdir()
+    runner.carry_local_settings(checkout, folder)
+    assert list(folder.iterdir()) == []
+
+
+def test_local_settings_the_folder_holds_stay_the_folder_s(
+    runner: ModuleType, tmp_path: Path
+) -> None:
+    """A file the folder holds at that path is, in a clone, the commit's, and
+    so the project's."""
+    checkout = _local_settings(tmp_path / "checkout", "the checkout's")
+    folder = _local_settings(tmp_path / "clone", "the commit's")
+    runner.carry_local_settings(checkout, folder)
+    assert (folder / _LOCAL).read_text(encoding="utf-8") == "the commit's"
+    # A run in the checkout itself carries nothing.
+    runner.carry_local_settings(checkout, checkout)
+    assert (checkout / _LOCAL).read_text(encoding="utf-8") == "the checkout's"
+
+
+@pytest.mark.parametrize("linked", [".claude", ".claude/settings.local.json"])
+def test_a_link_on_the_way_to_the_local_settings_refuses_the_run(
+    runner: ModuleType, tmp_path: Path, linked: str
+) -> None:
+    """The copy writes nothing outside the folder."""
+    checkout = _local_settings(tmp_path / "checkout")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    folder = tmp_path / "clone"
+    (folder / linked).parent.mkdir(parents=True, exist_ok=True)
+    (folder / linked).symlink_to(elsewhere / "target")
+    with pytest.raises(runner.Refused, match=r"symbolic link on the way to `\.claude/settings"):
+        runner.carry_local_settings(checkout, folder)
+    assert list(elsewhere.iterdir()) == []
+
+
+def test_the_harness_starts_with_the_local_settings_in_its_folder(
+    tmp_path: Path, env: dict[str, str]
+) -> None:
+    checkout = _local_settings(tmp_path / "checkout", "the person's")
+    folder = tmp_path / "clone"
+    _deploy(folder)
+    seen = tmp_path / "seen"
+    _script(
+        _bin(env) / "claude",
+        "import pathlib, sys\nsys.stdin.read()\n"
+        f"held = pathlib.Path({str(_LOCAL)!r})\n"
+        f"open({str(seen)!r}, 'w').write(held.read_text() if held.is_file() else 'none')\n",
+    )
+    answer = _run(_request(folder, local_settings_from=str(checkout)), env)
+    assert answer["ending"] == "finished", answer
+    assert seen.read_text(encoding="utf-8") == "the person's"
+
+
+def test_a_run_refused_before_its_start_carries_nothing(
+    tmp_path: Path, env: dict[str, str]
+) -> None:
+    checkout = _local_settings(tmp_path / "checkout")
+    folder = tmp_path / "clone"
+    folder.mkdir()
+    _script(_bin(env) / "claude", "print('should not run')\n")
+    answer = _run(_request(folder, local_settings_from=str(checkout)), env)
+    assert answer["ending"] == "refused" and "is not deployed" in str(answer["reason"])
+    assert list(folder.iterdir()) == []
+
+
 # --- the closed set of flags ------------------------------------------------------
 
 
@@ -168,7 +282,15 @@ def test_the_command_line_is_the_closed_set(runner: ModuleType) -> None:
         "--effort",
         "low",
     ]
-    assert set(runner.FLAGS) == {"-p", "--agent", "--effort"}
+    assert runner.command("claude", "run-1", None, {"prompt": "p"}) == [
+        "claude",
+        "-p",
+        "--agents",
+        '{"run-1": {"prompt": "p"}}',
+        "--agent",
+        "run-1",
+    ]
+    assert set(runner.FLAGS) == {"-p", "--agents", "--agent", "--effort"}
 
 
 @pytest.mark.parametrize(
@@ -182,7 +304,6 @@ def test_the_command_line_is_the_closed_set(runner: ModuleType) -> None:
         "--allowed-tools",
         "--add-dir",
         "--settings",
-        "--agents",
         "--mcp-config",
     ],
 )
@@ -208,12 +329,12 @@ def test_the_agent_is_found_where_claude_code_finds_it(runner: ModuleType, tmp_p
     home = tmp_path / "home"
     env = {"CLAUDE_CONFIG_DIR": str(home)}
     assert runner.agent_file("code-reviewer", folder, env) is None
-    _deploy(tmp_path / "elsewhere")  # not above the folder: not found
+    _deploy(tmp_path / "elsewhere", "code-reviewer")  # not above the folder: not found
     assert runner.agent_file("code-reviewer", folder, env) is None
     (home / "agents").mkdir(parents=True)
     (home / "agents" / "mine.md").write_text("x", encoding="utf-8")
     assert runner.agent_file("mine", folder, env) == home / "agents" / "mine.md"
-    _deploy(project)
+    _deploy(project, "code-reviewer")
     assert runner.agent_file("code-reviewer", folder, env) == (
         project / ".claude" / "agents" / "code-reviewer.md"
     )
@@ -297,7 +418,7 @@ def test_a_run_finishes_with_the_harness_exit(tmp_path: Path, env: dict[str, str
         "reason": "",
     }
     seen = json.loads(record.read_text(encoding="utf-8"))
-    assert seen["argv"] == ["-p", "--agent", "code-reviewer", "--effort", "max"]
+    assert seen["argv"] == ["-p", "--agent", "my-reviewer", "--effort", "max"]
     assert seen["brief"] == "Review --dangerously-skip-it"
     assert Path(seen["cwd"]).resolve() == tmp_path.resolve()
     assert seen["deadline"] is None

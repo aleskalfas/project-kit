@@ -94,9 +94,17 @@ def _backbone(tip: str | None = TIP, problem: str | None = None) -> Any:
                 "source": "default",
                 "ref": "origin/main",
                 "commit": tip,
+                "resolved": "remote" if tip else None,
+                "problem": problem,
+                "unborn": False,
+            },
+            "base": {
+                "ref": "origin/main",
+                "tip": tip,
+                "fork": tip,
+                "resolved": "remote" if tip else None,
                 "problem": problem,
             },
-            "base": {"ref": "origin/main", "tip": tip, "fork": tip, "problem": problem},
         }
         return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
 

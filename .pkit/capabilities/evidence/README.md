@@ -9,6 +9,7 @@ pkit:
         - .pkit/capabilities/evidence/schemas/**
         - .pkit/capabilities/evidence/skills/**
         - .pkit/capabilities/evidence/decisions/**
+        - .pkit/capabilities/evidence/package.yaml
       record: [COR-007, COR-017, COR-020, COR-021]
       artefact: [.pkit/cli/README.md#validate]
 ---
@@ -76,7 +77,7 @@ This is the COR-017 citation form. `pkit refs validate` walks the capability's s
 
 ## Dependencies
 
-- **Backbone:** `>=1.26.0,<2.0.0`. The capability install/sync/upgrade mechanics depend on COR-017's runtime; the `pkit evidence validate` invocation depends on COR-021's capability-command dispatch landing in backbone v1.26.0.
+- **Backbone:** a version in the range the capability's [`package.yaml`](package.yaml) declares under `requires_backbone` (COR-017). The capability install/sync/upgrade mechanics depend on COR-017's runtime; the `pkit evidence validate` invocation depends on COR-021's capability-command dispatch landing in backbone v1.26.0.
 - **uv** on the adopter's PATH to run the validator's PEP 723 self-contained script. The first invocation installs the script's dependencies transparently.
 - No external accounts or services. The discipline is entirely local-file-based in this reference implementation.
 

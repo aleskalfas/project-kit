@@ -1,0 +1,24 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: full
+    layout: standard
+    main:
+      use: starter/form
+      head: Um eine Prüfung bitten
+      fields:
+        - {id: name, label: Ihr Name, value: Ada Lovelace}
+        - {id: what, label: Was geprüft werden soll, value: Die Entscheidung über Veröffentlichungen}
+      buttons:
+        - {id: send, label: Anfrage senden}
+        - {id: cancel, label: Abbrechen}
+
+  - id: bare
+    layout: standard
+    main:
+      use: starter/form
+      fields:
+        - {id: search, label: Die Anleitung durchsuchen}
+      buttons:
+        - {id: search, label: Suchen}

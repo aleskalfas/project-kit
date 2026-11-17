@@ -25,7 +25,7 @@ from typing import Any
 
 import click
 
-from project_kit import project_config, treecopy, workspace
+from project_kit import project_config, session_guard, treecopy, workspace
 from project_kit.lifecycle_ownership import OWNERSHIP_MODULE
 from project_kit.router import (
     DISTRIBUTION_GIT_URL,
@@ -35,8 +35,10 @@ from project_kit.router import (
     is_routed_child,
     is_source_checkout,
     looks_like_pkit_install,
+    pin_file_path,
     source_dispatcher,
     source_dispatcher_missing,
+    write_version_pin,
 )
 
 # Settings-file template seeded into adopter projects when no
@@ -664,7 +666,15 @@ def install_kit(target_root: Path, dry_run: bool = False, refuse_proposals: bool
     tree, or if the target is the source itself (project-kit
     self-hosts). With `refuse_proposals`, the explicit flag, it writes the
     key that turns the landing check's refusal on (ADR-081 point 5).
+
+    Run by a release candidate, it refuses unless routing is bypassed, and pins
+    the project it installs at the candidate, last of its writes (ADR-089 point
+    7, ADR-064 point 3). The candidate's upgrade through the bypass finishes such
+    an install cut short.
     """
+    from project_kit.candidates import is_candidate, refuse_init
+    from project_kit.manifest import read_kit_version
+
     source_kit = find_source_kit()
     ctx = InstallContext(target_root=target_root, source_kit=source_kit, dry_run=dry_run)
 
@@ -673,6 +683,8 @@ def install_kit(target_root: Path, dry_run: bool = False, refuse_proposals: bool
     _refuse_if_target_is_source(ctx)
     _refuse_reserved_adapter_names(ctx)
     _refuse_shared_component_names(ctx)
+    version = read_kit_version(source_kit)
+    refuse_init(version, target_root, bypassed=is_route_bypassed(os.environ))
 
     click.echo(f"Installing project-kit into {target_root}")
     click.echo(f"  source: {source_kit}")
@@ -713,7 +725,24 @@ def install_kit(target_root: Path, dry_run: bool = False, refuse_proposals: bool
     ensure_agent_workspace(ctx)
     provision_query_commands(ctx)
     _record_install_completion(ctx)
+    if is_candidate(version):
+        _pin_the_candidate(ctx, version)
     _print_next_steps(ctx, settings_backed_up=settings_backed_up, pkit_found=pkit_on_path())
+    warn_if_session_elsewhere(target_root, command="init")
+
+
+def _pin_the_candidate(ctx: InstallContext, version: str) -> None:
+    """Pin the project that an `init` run by the release candidate *version*
+    installed, at that candidate, after the completion. A project on a candidate
+    always stays pinned, so the router keeps it on the candidate's code whatever
+    pkit is installed (ADR-089 point 7, ADR-064 point 3). The write goes through
+    the pin's one writer, `router.write_version_pin`."""
+    pin_path = pin_file_path(ctx.target_root).relative_to(ctx.target_root)
+    if ctx.dry_run:
+        click.echo(f"  {'would pin':<12} {pin_path} -> {version} (a release candidate's install)")
+        return
+    write_version_pin(ctx.target_root, version)
+    click.echo(f"  {'pinned':<12} {pin_path} -> {version} (a release candidate's install)")
 
 
 def ensure_agent_workspace(ctx: InstallContext) -> None:
@@ -1284,11 +1313,14 @@ def _run_adapter_primitive(script: Path, ctx: InstallContext, *args: str) -> Non
 # matters: settings merge precedes content deploys because some skills
 # may rely on settings being in place. Adding a new primitive: extend
 # this list and document the new script's contract in the adapter README.
+# An adapter that ships `AGENT_DEPLOY_PRIMITIVE` deploys agents, so validation
+# reads its declaration of tool access (ADR-086 point 6).
+AGENT_DEPLOY_PRIMITIVE = "deploy-agents.sh"
 _ADAPTER_PRIMITIVES = (
     "merge-settings.sh",
     "merge-claude-md.sh",
     "deploy-skills.sh",
-    "deploy-agents.sh",
+    AGENT_DEPLOY_PRIMITIVE,
 )
 
 
@@ -1317,11 +1349,46 @@ def run_installed_adapter_primitives(ctx: InstallContext) -> None:
     `pkit sync` after the refresh pass — both need the harness side
     (re-)materialised. Adapters are discovered by walking
     `.pkit/adapters/<name>/`; the scripts must be idempotent so re-runs
-    on a stable state report "exists" rather than "created".
+    on a stable state report "exists" rather than "created". Every deploy
+    then warns of the hook needs no provider binds
+    (`report_unsatisfied_needs`).
     """
     for adapter_dir in _installed_adapter_dirs(ctx.target_root):
         for name in _ADAPTER_PRIMITIVES:
             _run_adapter_primitive(adapter_dir / name, ctx)
+    report_unsatisfied_needs(ctx)
+
+
+def report_unsatisfied_needs(ctx: InstallContext) -> None:
+    """Warn of each `needs:` entry whose hook binds no provider (COR-013 point 4).
+
+    The check is the one `pkit refs validate` makes (`refs.unsatisfied_needs`), over
+    the agents and skills on disk once they are deployed. Each need is one `warning`
+    line naming the agent or skill and the hook: a hook no skill answers and no
+    package provides, or one whose providers collide at its winning tier. The report
+    writes nothing and fails nothing, as the deploy's other reports. A front matter or
+    a `package.yaml` that cannot be read is one `warning` line in its place. A dry run
+    deploys nothing, so it reports nothing. Local import: the reference graph imports
+    this module.
+    """
+    if ctx.dry_run:
+        return
+    from ruamel.yaml.error import YAMLError
+
+    from project_kit import refs
+
+    try:
+        artifacts = refs.load_artifacts(ctx.target_root)
+        needs = refs.unsatisfied_needs(artifacts, refs.load_hook_providers(ctx.target_root))
+    except (OSError, UnicodeDecodeError, YAMLError) as exc:
+        reason = str(exc).splitlines()[0] if str(exc) else type(exc).__name__
+        click.echo(
+            f"  {'warning':<12} hook needs not checked: a front matter or package.yaml "
+            f"could not be read ({reason})."
+        )
+        return
+    for need in needs:
+        click.echo(f"  {'warning':<12} {need.describe(ctx.target_root)}")
 
 
 def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> tuple[str, ...]:
@@ -1329,9 +1396,11 @@ def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> t
 
     Adapters are discovered as `run_installed_adapter_primitives` discovers
     them; each runs `ADAPTER_UNDEPLOY_PRIMITIVE <capability>`, which removes
-    what the adapter deployed for that capability and nothing else. The
-    lifecycle names the capability only — where a harness keeps skills and
-    agents is the adapter's knowledge (COR-013).
+    the skills the adapter deployed for that capability and nothing else. It
+    removes no agent: once the capability is unregistered, the deploy its
+    caller runs removes each copy written from the capability's definitions
+    (ADR-087 point 4). The lifecycle names the capability only — where a
+    harness keeps skills is the adapter's knowledge (COR-013).
 
     An adapter that ships no undeploy primitive is reported by a `warning`
     line naming it, and its name is returned, so no caller can miss that its
@@ -1346,7 +1415,7 @@ def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> t
             click.echo(
                 f"  {'warning':<12} adapter {adapter_dir.name!r} ships no "
                 f"{ADAPTER_UNDEPLOY_PRIMITIVE}: capability {capability!r} stays deployed in "
-                "its harness. Remove its skills and agents there by hand."
+                "its harness. Remove its skills there by hand."
             )
             continue
         _run_adapter_primitive(script, ctx, capability)
@@ -1359,7 +1428,8 @@ LATEST_TAG = "latest"
 
 
 def recommended_install_command() -> str:
-    """The install of pkit's highest release, the canonical form (PRJ-004).
+    """The install of pkit's highest release, the canonical form (PRJ-004), over
+    the repository's public HTTPS URL (PRJ-015 point 1).
 
     It names the tag `latest`, which by design only the release-tag workflow
     writes, and only onto a release's commit. So, like a release tag's, the
@@ -1419,7 +1489,9 @@ def _print_next_steps(ctx: InstallContext, *, settings_backed_up: bool, pkit_fou
     Each step is a title and its further lines. The install of pkit is left out
     where a `pkit` is installed on the PATH already (*pkit_found*), and the settings
     backup is named only where `init` made one (*settings_backed_up*). No step
-    names a capability's configuration, since first install installs none.
+    names a capability's configuration, since first install installs none. The
+    last step is a new session at the project's root, which loads what `init`
+    wrote (#3005).
     """
     steps: list[tuple[str, list[str]]] = []
     if not pkit_found:
@@ -1486,6 +1558,17 @@ def _print_next_steps(ctx: InstallContext, *, settings_backed_up: bool, pkit_fou
             ["     hasn't adopted it — run `pkit visibility private` (per ADR-009)."],
         )
     )
+    steps.append(
+        (
+            "Start a new session at the project's root:",
+            [
+                "",
+                f"       {ctx.target_root}",
+                "",
+                "     A new session loads the settings, agents and rules init wrote.",
+            ],
+        )
+    )
 
     click.echo()
     click.echo("Install complete. Recommended next steps:")
@@ -1494,6 +1577,28 @@ def _print_next_steps(ctx: InstallContext, *, settings_backed_up: bool, pkit_fou
         click.echo(f"  {number}. {title}")
         for line in lines:
             click.echo(line)
+
+
+def warn_if_session_elsewhere(target_root: Path, *, command: str) -> None:
+    """Warn where this session's project folder is not *target_root* (#3005).
+
+    The harness loads a project's settings, agents and rules in a session
+    started at the project's root, the folder it names the session's anchor
+    (`session_guard`). A repository cloned into a folder below the one the
+    session started in is the case this names. Outside any session, where no
+    anchor is set, and in a session started at the root, it says nothing.
+    Called by `init` and `sync`, under `--dry-run` too, so it speaks of what
+    they write.
+    """
+    anchor = session_guard.session_anchor()
+    if anchor is None or _same_folder(Path(anchor), target_root):
+        return
+    click.echo()
+    click.echo(
+        f"⚠ WARNING: this session's project folder is {anchor}, not {target_root}.\n"
+        f"       The harness will not load the settings, agents and rules `pkit {command}`\n"
+        f"       writes there until a session starts at {target_root}."
+    )
 
 
 # --- Filesystem primitives (each respects ctx.dry_run) -------------------

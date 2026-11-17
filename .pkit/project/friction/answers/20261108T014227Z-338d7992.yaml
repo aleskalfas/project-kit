@@ -1,0 +1,50 @@
+answers:
+  - artefact: .pkit/capabilities/evidence/README.md
+    read:
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261102T235145Z-1a0d93cb.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T235651Z-829c1f38.yaml
+      - 20261107T133905Z-5a681b61.yaml
+    revalidated:
+      at: 2026-11-08T01:42:27Z
+      outcome: updated
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001533Z-56aed0a4.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T004535Z-7b0f01ce.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T180128Z-acda80dc.yaml
+    revalidated:
+      at: 2026-11-08T01:42:35Z
+      outcome: unchanged
+      unchanged-because: "This change rewrites only the Backbone line of the doc-examples README's Dependencies, which now names the range its package.yaml declares under requires_backbone instead of stating one. CONTRIBUTING.md states no backbone range, and the contract, \"The run\" and the exit codes it cites from that README are as they were. Judged with the two answers made apart that this one replaces. 20261107T133905Z-5a681b61 found the page true against ef6907ac, a comment in scripts/check.sh naming the scratchpad member of pkit validate, since \"Running checks\" names the CLI reference's validate section rather than its members. 20261107T180128Z-acda80dc updated it (9fee84ff: the drawings job paragraph, with its anchors on scripts/visual_drawings.py and the outputs page's \"A pipeline's drawings\"). That paragraph lists no validate member and says nothing of check.sh's steps, and \"Running checks\" still names that section, so the two hold together."

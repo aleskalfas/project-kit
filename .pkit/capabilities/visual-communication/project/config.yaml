@@ -2,3 +2,21 @@ pkit_schema: visual-communication:config
 schema_version: 1
 
 location: visual
+
+# project-kit's bar (visual-communication DEC-042 point 3): the designer's loop runs until
+# each page and the piece reach at least professional on the rules of COMM and GRAPHIC,
+# once a calibration the capability's maintainer accepted lets the verdict end a loop
+# (DEC-042 points 9 and 10). It names GRAPHIC's rules singly and leaves out
+# RS-GRAPHIC-008, running text, until a calibration's ladder varies running text.
+# A change to it needs the maintainer's own yes.
+bar:
+  covers:
+    - COMM@1
+    - RS-GRAPHIC-001@2
+    - RS-GRAPHIC-002@2
+    - RS-GRAPHIC-003@2
+    - RS-GRAPHIC-004@2
+    - RS-GRAPHIC-005@2
+    - RS-GRAPHIC-006@2
+    - RS-GRAPHIC-007@2
+  at-least: professional
