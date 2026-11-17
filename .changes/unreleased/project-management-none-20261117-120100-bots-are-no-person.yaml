@@ -2,14 +2,16 @@ component: project-management
 kind: none
 body: >
   Design-ahead: the record DEC-079 decides that, in every project and under
-  every credential, nothing an account GitHub records as a bot writes counts as
-  a person's claim on work, and that in human mode no approval counts from a
-  bot's account or from an account the project registers as a reviewer
-  agent's, while a bot's request for changes still holds the merge until a
-  person approves after it. Human mode assigns no app's account in the member
-  list as a reviewer. Every comparison of two accounts uses one spelling that
-  keeps whether each is a bot's, and where no surface gives that kind, the
-  comparison grants nothing and frees nothing, so a claim it cannot judge is
-  held. Once accepted, it refines DEC-026, DEC-027, DEC-043, ADR-041 and
-  ADR-071 in place, and overturns nothing. No behaviour changes until the
-  record is built.
+  every credential, an account GitHub records as a bot's stands for no person.
+  No command makes it an assignee or hands it a Task, and a claim on work it
+  writes never counts. In human mode, no approval counts from a bot's
+  account, from an account whose kind the backbone cannot tell, or from an
+  account the project registers as a reviewer agent's, while a bot's request
+  for changes still holds the merge until a person approves after it, and
+  human mode assigns none of those accounts as a reviewer. Which accounts are
+  bots', and how two accounts compare, follow the backbone's one spelling of
+  accounts (ADR-094), so a claim whose author's kind it cannot tell, such as a
+  bot's whose login GitHub gives with no [bot] suffix, is held. Once
+  accepted, it refines DEC-019, DEC-026, DEC-027, DEC-043 and ADR-041 in
+  place, and overturns nothing. It is accepted with or after ADR-094. No
+  behaviour changes until the record is built.
