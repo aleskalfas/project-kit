@@ -1,0 +1,7 @@
+component: project-management
+kind: none
+body: >
+  The README's row for the workstream commands, under "When the board does
+  not answer", now says that `remove-workstream --force` warns and removes
+  the workstream where the issue count could not be read, as the command
+  already does (#3287). No command changes, so no surface moves.

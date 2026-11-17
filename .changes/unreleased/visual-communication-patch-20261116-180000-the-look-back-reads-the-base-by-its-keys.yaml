@@ -1,0 +1,8 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The look back reads the backbone's base document by its keys, as ADR-097
+  point 3 says. A `schema_version` that is true or false is refused as a
+  version the reading does not know, never read as version 1.

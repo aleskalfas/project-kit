@@ -15,9 +15,30 @@
 # Tunables (set under `env:` below):
 #   - AUTO_REMEDIATE: 'true' to auto-add to board / auto-assign filer.
 #       Default 'false' — comment + status check only.
-#   - PM_PROJECT_BOARD_OWNER: required when AUTO_REMEDIATE='true' and
-#       config.has_projects_v2_board==true. The owner the board lives
-#       under (org or user login).
+#
+# A credential the board answers (unset as shipped). The workflow's own
+# token reaches no Projects v2 board, so under it the membership check
+# reports the board unanswered on each issue, at the drift severity, and
+# lets the issue through; where the substrate map binds an axis to the
+# board, a check that reads it fails the issue. Set one of these in your
+# copy's repository settings, if any:
+#   - secret PM_BOARD_TOKEN: a person's token that reads the board (and,
+#       for AUTO_REMEDIATE, adds to it). For a person's board. Long-lived,
+#       and as broad as its scopes.
+#   - variable PM_BOARD_APP_ID + secret PM_BOARD_APP_KEY: a GitHub App
+#       installed on the board's organisation. For an organisation's
+#       board. The job mints a token from the App's key on each run, and
+#       it expires within the hour. The token is minted for the
+#       repository's owner, so it reaches a board of that organisation;
+#       for a board under another owner, set PM_BOARD_TOKEN instead.
+# Only the steps that read or add on the board hold the credential. Those
+# steps run tools the job fetches at run time (uv, the capability's
+# scripts' dependencies), so the credential reaches those tools too: the
+# job runs on each issue opened, edited or reopened, which anyone who can
+# open an issue starts. Which to set, if any, is your project's choice.
+#
+# The board is found under one owner, as the capability resolves it:
+# `gh.default_owner` in project/config.yaml, else the repository's owner.
 
 name: pm-issue-check
 
@@ -34,7 +55,6 @@ permissions:
 
 env:
   AUTO_REMEDIATE: 'false'
-  # PM_PROJECT_BOARD_OWNER: ''   # uncomment + set when AUTO_REMEDIATE='true'
 
 jobs:
   check:
@@ -47,10 +67,23 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Mints a token for the board from a GitHub App, where the project set
+      # one (PM_BOARD_APP_ID + PM_BOARD_APP_KEY); skipped otherwise.
+      - name: Mint the board's credential
+        id: board-app
+        if: vars.PM_BOARD_APP_ID != ''
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.PM_BOARD_APP_ID }}
+          private-key: ${{ secrets.PM_BOARD_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+
       - name: Run pm validate-issue
         id: validate
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Reads the issue's card on the board (the membership check), so it
+          # holds the board's credential where one is set.
+          GH_TOKEN: ${{ steps.board-app.outputs.token || secrets.PM_BOARD_TOKEN || secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
           set -eo pipefail
@@ -96,20 +129,37 @@ jobs:
             gh issue comment "$ISSUE_NUMBER" --body "[pm-issue-check] see job logs."
           fi
 
+      # Runs only on a finding that blocks. The membership check's drift
+      # never blocks, so an issue off the board alone does not reach it.
       - name: Auto-remediate board membership
         if: env.AUTO_REMEDIATE == 'true' && steps.validate.outputs.blocking == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Adds on the board, so it holds the board's credential where one is set.
+          GH_TOKEN: ${{ steps.board-app.outputs.token || secrets.PM_BOARD_TOKEN || secrets.GITHUB_TOKEN }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: |
-          # Best-effort auto-add to the configured board. Reads board id
-          # + owner from the adopter's project/config.yaml.
+          # Best-effort auto-add to the configured board. Reads the board's
+          # number from the adopter's project/config.yaml, and its owner as
+          # the capability resolves it: `gh.default_owner`, else the
+          # repository's owner. One owner, so no same-numbered board under
+          # another answers the add.
           set -e
-          BOARD_ID=$(python3 -c "import yaml,sys; d=yaml.safe_load(open('.pkit/capabilities/project-management/project/config.yaml'));print(d.get('projects_v2_board_id',''))")
-          if [ -n "$BOARD_ID" ] && [ -n "$PM_PROJECT_BOARD_OWNER" ]; then
-            gh project item-add "$BOARD_ID" --owner "$PM_PROJECT_BOARD_OWNER" --url "$ISSUE_URL"
-          else
-            echo "::warning::AUTO_REMEDIATE=true but board id or owner not set; skipping."
+          CONFIG=.pkit/capabilities/project-management/project/config.yaml
+          BOARD_ID=$(python3 -c "import yaml; d=yaml.safe_load(open('$CONFIG')) or {}; print(d.get('projects_v2_board_id') or '')")
+          OWNER=$(python3 -c "import yaml; d=yaml.safe_load(open('$CONFIG')) or {}; print((d.get('gh') or {}).get('default_owner') or '')")
+          OWNER=${OWNER:-$REPOSITORY_OWNER}
+          if [ -z "$BOARD_ID" ]; then
+            echo "::warning::AUTO_REMEDIATE=true but no board is configured; skipping."
+            exit 0
+          fi
+          set +e
+          ANSWER=$(gh project item-add "$BOARD_ID" --owner "$OWNER" --url "$ISSUE_URL" --format json)
+          set -e
+          # The add is made only where the board answers with the issue's
+          # card, whatever the tool's exit status.
+          if ! printf '%s' "$ANSWER" | python3 -c "import json,os,sys; d=json.load(sys.stdin); u=d.get('url'); sys.exit(0 if d.get('id') and (not u or u.rstrip('/') == os.environ['ISSUE_URL'].rstrip('/')) else 1)" 2>/dev/null; then
+            echo "::warning::the issue was not added to board #$BOARD_ID of $OWNER: the board did not answer with its card."
           fi
 
       - name: Fail on blocking findings

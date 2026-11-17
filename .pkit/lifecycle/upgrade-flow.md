@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/upgrade.py
+        - src/project_kit/cli.py
         - src/project_kit/candidates.py
         - src/project_kit/sync.py
         - src/project_kit/install.py
@@ -69,7 +70,7 @@ The upgrade command transitions an adopter project to a target backbone version.
    - **A component its bundle ships older:** an adapter or a capability the running pkit's bundle ships older than the version the project records refuses the transition. The refusal names the component, both versions, and a pkit whose bundle ships that version or newer. No flag overrides it.
    - **A clash of area names:** a project's own area at `.pkit/lifecycle/` refuses the transition ("A clash of area names", below). No flag overrides it.
    - **A file that is not the capabilities' rules index:** a file at `.pkit/rules/capabilities.md` <!-- unanchored: names the file the step reads or writes, not its content --> whose first line is not the backbone's marker refuses the transition ("The capabilities' rules index", below). No flag overrides it.
-   - **Compatibility resolution:** each installed component's post-upgrade `requires_backbone` must admit the target. It is read from the bundle where the bundle ships the component, and from the installed copy where it does not. Conflicts are surfaced so the adopter can address them: upgrade specific components, pin the backbone, or remove an incompatible component.
+   - **Compatibility resolution:** each installed component's post-upgrade `requires_backbone` must admit the target. It is read from the bundle where the bundle ships the component, and from the installed copy where it does not. An externally-sourced capability's range is read from its installed copy alone, since it is never read as shipped, whatever the bundle ships by its name. Conflicts are surfaced so the adopter can address them: upgrade specific components, pin the backbone, or remove an incompatible component.
    - **The dependency gates** run over the set the transition would leave ("The dependency gates", below).
    - **The collision flow** asks about each new naming collision, or refuses ("A new collision", below).
 2. **The target is recorded.** `backbone_version` becomes the target, by an edit of its own line, before anything else is written ([`manifest.md`, "Backbone manifest"](manifest.md#backbone-manifest-projectpkitmanifestyaml)). `completed_version` keeps its value or stays missing. Each capability manifest still at its root then moves under its `project/` ([`manifest.md`, "Where a capability's manifest lives"](manifest.md#where-a-capabilitys-manifest-lives)). Each skip chosen in step 1 is recorded there, and each project artefact an override chose to replace is removed.
@@ -262,6 +263,7 @@ The comparison vouches for content only under a tagged install, the one the CLI 
   - `completed_version` differs from `backbone_version`, or is missing
   - the pin is newer than the running pkit
 - **`capabilities install` and `capabilities upgrade` call it in both directions too,** at their entry, before they read or write anything ([`component-registry.md`, "Install pre-flight checks"](component-registry.md#install-pre-flight-checks)). Each copies the capability the running pkit's bundle ships. So each stops in sync's states, with sync's remedies, the command named as the operator would run it again.
+  - **`capabilities install --from`** calls it too, in each release that offers that install. It copies a capability it fetched from another repository, and gates and deploys it with the running pkit's code against the backbone the project records. Whether this release offers that install is in [the CLI reference, "Capabilities — two ways in"](../cli/README.md#capabilities--two-ways-in) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->.
   - **So every shipped file a project holds comes from the release its backbone records,** wherever a version names one content. A version names one content under a tagged install, the one the CLI README recommends ("Installing pkit on PATH").
   - **`capabilities register`** copies nothing and does not call the guard.
 - **`upgrade` calls it in the older direction only,** before it writes anything. It refuses a running pkit older than the newest of `backbone_version`, `completed_version` and the pin. It calls the propagation step, never the sync command, so the sync command's guard never stops it.
@@ -345,6 +347,8 @@ Instead, "upgrade" for an incubated capability **re-applies deploy from the in-r
 Sync's guard runs at the command's entry, before the origin is read. So this re-deploy stops under another pkit too, as `pkit sync`'s re-deploy of it does. A `kit-shipped` capability's upgrade path is the transition of one capability above.
 
 In the methodology's source repository, run by its own code, a `kit-shipped` capability's kit source *is* its subtree. So its upgrade re-applies deploy in place the same way: the deploy primitives re-run and its query commands are provisioned. Nothing is copied, no receipt is restamped and no migration is run. It is sync's self-host path for one capability.
+
+An `externally-sourced` capability moves by its pin, never as shipped (COR-041). `pkit capabilities upgrade` refuses it and writes nothing, since moving a pin is not built yet. `pkit upgrade` leaves it, and sync keeps its copy at its pin ([the lifecycle README, "The externally-sourced origin: match the pin"](README.md#the-externally-sourced-origin-match-the-pin) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 
 For capabilities, a **direction-split dependency check (COR-030)** runs before collision detection:
 

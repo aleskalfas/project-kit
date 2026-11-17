@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  ADR-096, accepted with this change (#3176), decides that a read of the
+  board tells a board that did not answer from one that answered empty, and
+  refines DEC-048 point 4 in place: where a board write fails beside the
+  report link, filing takes that write's code. The commands are unchanged
+  until the change that builds it (#3256), so no surface moves.

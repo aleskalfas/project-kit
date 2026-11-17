@@ -3,10 +3,11 @@
 `FakeRepo` stands in for the repository's labels, issues, pull requests and
 comments, answering the `gh` commands the mutators run through `gh_run`.
 `FakeBoard` stands in for a Projects-v2 board with a `Workstream` single-select
-field. It answers the board read seam's calls (`_lib/board_fields`, patched at
-its `gh_project_run` / `gh_run`) and the write seam's (`_lib/substrate_writes`,
-patched at its `_gh_call`), and it applies each write, so a read after a write
-sees it. Nothing here touches a network.
+field, board #7 of the repository's owner. It answers the board read seam's
+calls (`_lib/board_fields`, patched at its `gh_project_run` / `gh_run`; the
+GraphQL reads as `tests/pm_board_graphql.py` answers them) and the write seam's
+(`_lib/substrate_writes`, patched at its `_gh_call`), and it applies each write,
+so a read after a write sees it. Nothing here touches a network.
 """
 
 from __future__ import annotations
@@ -16,6 +17,13 @@ import re
 import subprocess
 from pathlib import Path
 from typing import Any
+
+from tests.pm_board_graphql import GraphBoard, is_seam_read
+
+#: The repository the fakes stand for, whose owner owns the board.
+REPOSITORY = "acme/repo"
+#: A state issue's marker, by which a walk sets its card aside.
+STATE_ISSUE_BODY = "<!-- pkit:state-issue -->\n"
 
 
 def _proc(cmd, stdout: str = "", *, returncode: int = 0, stderr: str = ""):
@@ -184,7 +192,14 @@ _OPTION = re.compile(
 class FakeBoard:
     """A Projects-v2 board with a `Workstream` single-select field.
 
-    `cards` maps an item id to `(issue number, option name or None)`.
+    `cards` maps an item id to `(issue number, option name or None)`, and
+    `archived` names the item ids of the cards archived. A walk of the cards
+    reads an archived card only where it asks for one
+    (`tests/pm_board_archive.py`), and a write of the option list clears the
+    value of every card whose option it drops, an archived card's too.
+    `withheld` names the item ids of cards whose issues the credential may not
+    read, which the board returns with nothing of their issue and no value, and
+    `state_issues` those that hold a state issue ([pkit:ADR-096] point 2).
     """
 
     def __init__(
@@ -192,6 +207,9 @@ class FakeBoard:
         options=(),
         cards=None,
         *,
+        archived=(),
+        withheld=(),
+        state_issues=(),
         field_type: str = "ProjectV2SingleSelectField",
         has_field: bool = True,
         fail_reads: bool = False,
@@ -204,10 +222,14 @@ class FakeBoard:
             item: {"number": number, "option_id": f"opt_{name}" if name else None}
             for item, (number, name) in (cards or {}).items()
         }
+        self.archived = set(archived)
+        self.withheld = set(withheld)
+        self.state_issues = set(state_issues)
         self.field_type = field_type
         self.has_field = has_field
         self.fail_reads = fail_reads
         self.writes: list[list[str]] = []
+        self.graph = _WorkstreamGraph(self)
         self._next = 0
 
     def install(self, monkeypatch, board_fields, substrate_writes) -> None:
@@ -224,49 +246,12 @@ class FakeBoard:
 
     def read(self, cmd, config, *, fallback_owner=None, check=False, **kwargs):
         cmd = list(cmd)
+        if cmd[1:3] == ["repo", "view"]:
+            return _proc(cmd, json.dumps({"nameWithOwner": REPOSITORY}))
         if self.fail_reads:
             return _proc(cmd, returncode=1, stderr="missing the read:project scope")
-        if cmd[1:3] == ["project", "view"]:
-            return _proc(cmd, json.dumps({"id": "PVT_1"}))
-        if cmd[1:3] == ["project", "field-list"]:
-            fields: list[dict[str, Any]] = [
-                {"id": "F_title", "name": "Title", "type": "ProjectV2Field"}
-            ]
-            if self.has_field:
-                fields.append(
-                    {
-                        "id": "F_ws",
-                        "name": "Workstream",
-                        "type": self.field_type,
-                        "options": [{"id": o["id"], "name": o["name"]} for o in self.options],
-                    }
-                )
-            return _proc(cmd, json.dumps({"fields": fields}))
-        query = next(a for a in cmd if a.startswith("query="))
-        if "options { id name color description }" in query:
-            return _proc(cmd, json.dumps({"data": {"node": {"options": self.options}}}))
-        if "items(first: 100" in query:
-            nodes = [
-                {
-                    "id": item,
-                    "content": {"number": card["number"], "title": f"Issue {card['number']}"},
-                    "fieldValueByName": {"optionId": card["option_id"]}
-                    if card["option_id"]
-                    else None,
-                }
-                for item, card in self.cards.items()
-            ]
-            payload = {
-                "data": {
-                    "node": {
-                        "items": {
-                            "pageInfo": {"hasNextPage": False, "endCursor": None},
-                            "nodes": nodes,
-                        }
-                    }
-                }
-            }
-            return _proc(cmd, json.dumps(payload))
+        if is_seam_read(cmd):
+            return self.graph.reply(cmd)
         raise AssertionError(f"unexpected board read: {cmd}")
 
     def write(self, cmd, config):
@@ -296,3 +281,57 @@ class FakeBoard:
                 card["option_id"] = None
         self.options = options
         return _proc(cmd)
+
+
+class _WorkstreamGraph(GraphBoard):
+    """The board's answers to the seam's GraphQL reads, from the fake's state."""
+
+    def __init__(self, board: FakeBoard) -> None:
+        super().__init__(node="PVT_1", number=7, owner=REPOSITORY.split("/", 1)[0])
+        self.board = board
+
+    def fields(self) -> list[dict[str, Any]]:
+        fields: list[dict[str, Any]] = [
+            {"id": "F_title", "name": "Title", "type": "ProjectV2Field"}
+        ]
+        if self.board.has_field:
+            fields.append(
+                {
+                    "id": "F_ws",
+                    "name": "Workstream",
+                    "type": self.board.field_type,
+                    "options": self.board.options,
+                }
+            )
+        return fields
+
+    def walk(self, value_field: str | None, archived: bool) -> list[dict[str, Any]]:
+        board = self.board
+        nodes: list[dict[str, Any]] = []
+        for item, card in board.cards.items():
+            if not archived and item in board.archived:
+                continue
+            if item in board.withheld:
+                nodes.append({"id": item, "type": "REDACTED", "content": None})
+                continue
+            option = next((o for o in board.options if o["id"] == card["option_id"]), None)
+            body = STATE_ISSUE_BODY if item in board.state_issues else ""
+            nodes.append(
+                {
+                    "id": item,
+                    "type": "ISSUE",
+                    "content": {
+                        "__typename": "Issue",
+                        "id": f"I_{card['number']}",
+                        "number": card["number"],
+                        "title": f"Issue {card['number']}",
+                        "body": body,
+                        "state": "OPEN",
+                        "repository": {"nameWithOwner": REPOSITORY},
+                    },
+                    "fieldValueByName": (
+                        {"optionId": option["id"], "name": option["name"]} if option else None
+                    ),
+                }
+            )
+        return nodes

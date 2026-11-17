@@ -1486,9 +1486,11 @@ FROM_RUN_CACHE = "run-cache"
 
 #: The version of the document `point_document` and `undefined_document` return,
 #: under the rule every reading document follows (the CLI README, "Friction
-#: checks"): raised when a key a reader relies on changes its meaning or goes, or a
-#: value of `outcome` does; never for a key added, nor for a value of `outcome`
-#: added, which a reader already reads as "could not tell".
+#: checks"). It rises only when one of the document's own keys, or a value of one of
+#: its sets such as `outcome`, goes, a break the changeset declares at `major`; never
+#: for a key or a value added, which a reader reads as "could not tell". No key or
+#: value comes to mean anything else, in place or by coming back (ADR-097 points 3
+#: to 5).
 DOCUMENT_SCHEMA_VERSION = 1
 
 

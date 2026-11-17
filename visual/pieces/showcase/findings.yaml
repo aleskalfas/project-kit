@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: d1cabe790044109276b95a2122dd6610a3eac5c869b746c06699a5fcd23acb5e
+  value: 0d9a346c15bf2d8ab3a0b2ade250aba4380b2ee013bf87361da42ff3213e5d04
   inputs:
     - file: components/capability.yaml
       sha256: 49ab721151fd9313be944c5458fc6137819d61fbbe1d0bed713a7f6e0c385b4a
@@ -17,9 +17,9 @@ key:
     - file: components/wiring.yaml
       sha256: 36623a694e67be519da4a4e36226e472059b220cace3806e036aad50673f4fb0
     - file: content.cs.yaml
-      sha256: bf1eed9d73de58a77244f5002d90b9a9fe5b0cca8685a8e54e7508a5533d03ed
+      sha256: 30e4b90a0dff28666799fd9ed3a71211b0fa037f698676bd27ae806c79d0ba80
     - file: content.en.yaml
-      sha256: 0a0d9bc14c548bd9fdcb5b519a199dfe5864de561f49e433e65b7eee00c7e5cb
+      sha256: dc27e45731c92cac390ee28e180cb8870fdccbcc456fdfc0ba54feea0bf8cfbe
     - file: piece.yaml
       sha256: 18bc7cb9651de9477c5c8e6d0572256c7507de7eb917513a63338eb5dc33fc49
     - library: foundations
@@ -41,7 +41,7 @@ key:
     - library: foundations
       version: 1.2.0
       path: roles.yaml
-      sha256: 5c3b630db1003fa945b4830dedf17d1eeb711e19a79d7456abb6705c7061ec08
+      sha256: d4b2b89578fe6e0da82ac82a47d565be0ce24569de76fcd301c69ff598036c72
     - library: neutral
       version: 1.1.0
       path: fonts/LICENSE-Source-Code-Pro.txt
@@ -73,11 +73,11 @@ key:
     - library: neutral
       version: 1.1.0
       path: tokens/base.tokens.json
-      sha256: 40b1ecb3fc5a06fb06f3cf1d618783080da30176fd5ab98a2997f778b3c98e14
+      sha256: 8ece0918ad3b3e357e6f50adc0f0403ccf837601a26cced9168a982b0a63b4d5
     - library: neutral
       version: 1.1.0
       path: tokens/dark.tokens.json
-      sha256: 7ba7bded81a68fe52436d84a7c3b14cc0a47c803c4c7de632acc9663fd682f86
+      sha256: f7f8159c3aa612a3ccefab4dc1c8fcb226a3ce25f6e21d59d190805edefa3601
     - library: neutral
       version: 1.1.0
       path: tokens/high-contrast.tokens.json
@@ -85,7 +85,7 @@ key:
     - library: neutral
       version: 1.1.0
       path: tokens/palette.tokens.json
-      sha256: 2fe92db15d1a1dec76ffbd5e9802db556fe39e6e80d4f1358f7b06c8109fe627
+      sha256: 1ba2d4fbdc3807df10d8c5a3beae7bc7783c4b48272eeb4fb26cf6e6f421b65e
     - library: neutral
       version: 1.1.0
       path: tokens/phone.tokens.json
@@ -109,7 +109,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: f8ba7b9ee4073ed2fe8cdcaf887e77e8c0bd41408c4f8e64a2acf03ccf22086f
+      sha256: 617a18adeed285318d34448749d5b266b1fc8f2ec02726a2b1d048b039a2e47d
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -157,11 +157,15 @@ key:
     - library: starter
       version: 1.1.0
       path: components/layers.yaml
-      sha256: c624dab9df2bb9dadc488241899b595f20bf7f2ce16ef88a0ff4da39479cd609
+      sha256: 4c6fb8dbfce7148faaecbe18ba69609682d4cb73d6ca802dfbcd9f8036d3edc3
     - library: starter
       version: 1.1.0
       path: components/legend.yaml
       sha256: 04a839254a5548115b1a7ee69f3184b7c4e434ffe7650c5584ddcc26f1c6307d
+    - library: starter
+      version: 1.1.0
+      path: components/level.yaml
+      sha256: d37170a88b1a29821b426b6bd54b8accc6f7f90f2d721d35a89cb234a4dab20e
     - library: starter
       version: 1.1.0
       path: components/link.yaml
@@ -243,6 +247,11 @@ findings:
     message: 'the piece uses `starter/layers`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: deck/slides[fits]/visual
+  - code: component-experimental
+    level: fact
+    message: 'the piece uses `starter/level`, which is experimental: its library may still change it in any release'
+    file: piece.yaml
+    where: deck/slides[fits]/visual/levels[decisions]
   - code: component-experimental
     level: fact
     message: 'the piece uses `starter/card`, which is experimental: its library may still change it in any release'

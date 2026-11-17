@@ -499,6 +499,16 @@ def course_path(drawn: Course) -> str:
     return " ".join(words)
 
 
+def box_frame(element: Mapping[str, Any]) -> tuple[float, float, float, float]:
+    """Where a box is drawn: its left, top, width and height. The stroke is drawn inside the
+    frame, so the box is inset by half its width."""
+    inset = float(element.get("stroke-width", 1)) / 2 if element.get("stroke") else 0.0
+    x, y = float(element["x"]) + inset, float(element["y"]) + inset
+    width = max(float(element["width"]) - 2 * inset, 0.0)
+    height = max(float(element["height"]) - 2 * inset, 0.0)
+    return x, y, width, height
+
+
 def find(elements: list[Mapping[str, Any]], trace: str) -> Mapping[str, Any] | None:
     """The element of the trace id `trace`, in the tree under `elements`."""
     stack = list(reversed(elements))
@@ -629,11 +639,7 @@ class Canvas:
         return stroke
 
     def _box(self, element: Mapping[str, Any]) -> str:
-        # The stroke is drawn inside the frame: the box is inset by half its width.
-        inset = float(element.get("stroke-width", 1)) / 2 if element.get("stroke") else 0.0
-        x, y = float(element["x"]) + inset, float(element["y"]) + inset
-        width = max(float(element["width"]) - 2 * inset, 0.0)
-        height = max(float(element["height"]) - 2 * inset, 0.0)
+        x, y, width, height = box_frame(element)
         rx = element.get("rx")
         attributes = attribute_text(
             [

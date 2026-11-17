@@ -1,0 +1,90 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+# Where its form comes from (DEC-007 point 3): the levels of Nancy Duarte's pyramid
+# (slide:ology, chapter 3), each a band filled in a shade of one colour, and Material
+# Design's filled card, which its fill alone sets apart from the page.
+about: >-
+  One level of an order, such as a level of layers: a box with rounded corners on its
+  colour family's fill, which holds a head and a text, each where the content gives it,
+  one under another, in the family's text. Where its list gives its place an order's
+  step, the step is its family, so its fill shows where it stands in the order. Where its
+  concept has a sign, the sign stands at the end of its head's row, or of its first row
+  where it has no head, and a run of its text that names a concept with a sign starts
+  with that sign. It is as wide as it is given, and as tall as what it holds.
+
+fields:
+  type: object
+  properties:
+    head:
+      type: string
+      description: What the level is, in a few words.
+      x-pkit-prose: true
+    text:
+      type: string
+      description: >-
+        What the level holds or does, in a sentence or two. It may be given as runs, each
+        plain or strong.
+      x-pkit-prose: true
+      x-pkit-runs: [plain, strong]
+
+colour: neutral
+
+values:
+  # How wide what the level holds is, inside its edge.
+  inner: "=:width - 2 * @starter.inset"
+  # The head's row holds the head and, at its end, the sign, with a gap between them where
+  # the sign is drawn. Where the level has no head, the sign ends the row of its text,
+  # which leaves room for it, as a card's does. `over` is how far the sign reaches below
+  # the head, and `beside` the room the text leaves it.
+  heading: "=max(head.height, sign.height)"
+  over: "=heading - head.height"
+  beside: "=over + min(over, @space.2)"
+
+parts:
+  # Its fill shows its family, or its step. The edge takes the family's line, which a
+  # step paints in its own colour, so on a step the fill alone sets the level apart.
+  box:
+    box:
+      fill: ":colour.fill"
+      stroke: ":colour.line"
+      stroke-width: "=@starter.edge"
+      rx: "=@starter.corner"
+    width: "=:width"
+    height: "=:height"
+  # The concept's sign, at the end of the head's row, as a card draws its own, in the
+  # family's text. A level whose family comes from no concept with a sign draws none, and
+  # the sign then has no size: a step names no concept.
+  sign:
+    sign: {fill: ":colour.text"}
+    x: "=:width - @starter.inset - sign.width"
+    y: "=@starter.inset + (heading - sign.height) / 2"
+    width: "=@starter.sign"
+    height: "=@starter.sign"
+  # The head and the text are the family's text on the family's fill, a pair the
+  # foundations declare, and on a step the order's text on its ends. The text keeps a gap
+  # from the head only where both are drawn: a part not drawn has no height. A run that
+  # names a concept with a sign starts with it, in the run's paint.
+  head:
+    when: head
+    text:
+      content: head
+      style: starter.type.head
+      fill: ":colour.text"
+    x: "=@starter.inset"
+    y: "=@starter.inset"
+    width: "=inner - sign.width - min(sign.width, @space.2)"
+  text:
+    when: text
+    text:
+      content: text
+      style: {by: text, plain: type.body, strong: starter.type.strong}
+      fill: ":colour.text"
+      sign: true
+    x: "=@starter.inset"
+    y: "=@starter.inset + head.height + min(head.height, text.height, @space.2)"
+    width: "=inner - beside"
+
+preferred:
+  height: "=max(text.bottom, sign.bottom) + @starter.inset"

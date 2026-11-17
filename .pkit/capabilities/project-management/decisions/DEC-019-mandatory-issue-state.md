@@ -6,6 +6,8 @@ date: 2026-05-24
 author: Ales Kalfas
 ---
 
+> **Partially superseded by [project-management:DEC-070-filing-another-board] and [project-management:DEC-071-filing-only-configured-board].** Wherever a board is configured, filing refuses a board other than the configured one: where the substrate map binds the state to the board (DEC-070), and in every other project with a board (DEC-071). Overturned: the per-invocation override at filing in "Multi-board adopters at v1".
+
 ## Context
 
 [project-management:DEC-012-classification-axes] mandates three classification axes per issue (Type, Priority, Workstream). Real adoption surfaces two more pieces of mandatory state that DEC-012 doesn't capture, and that don't fit the classification-axis shape:

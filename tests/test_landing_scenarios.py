@@ -2686,8 +2686,10 @@ def land(
         monkeypatch.setattr(accepted, "derive", lambda head, base: accepted.Derivation())
         # The project holds no seats, so no build's records are read (DEC-067 point 1).
         monkeypatch.setattr(lw.head_programs.topology, "read", lambda *args, **kwargs: None)
-        # The stub's change writes no answer and changes no grant list.
+        # The stub's change writes no answer, changes no grant list, and leaves the
+        # sync's switch off (DEC-072 point 3).
         monkeypatch.setattr(lw.fixers, "change_between", lambda *args: ())
+        monkeypatch.setattr(lw, "_switch_hold", lambda *args: lw.sync_switch.NOT_HELD)
         monkeypatch.setattr(lw, "_sleep", clock.sleep)
         monkeypatch.setattr(lw, "_monotonic", clock)
 

@@ -15,6 +15,12 @@ the moment it lands, closed mode applies. The addition is asked at a
 terminal, `--yes` authorises it, and off a terminal without `--yes` it is
 refused before the file is written (#2015).
 
+An entry names a user's login as GitHub spells it (DEC-021). A login the
+entry would take that GitHub did not answer for the credential is looked up
+first: GitHub's spelling is written where it names a user's account, a login
+it knows no account by is refused, and where it gives no answer the login is
+written as typed, with a warning.
+
 Per DEC-021. Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/add-member.py
 
@@ -22,8 +28,9 @@ Exit codes:
   0  entry added
   1  membership refusal (closed mode, invoker not a member) / off a terminal
      without --yes
-  2  usage error (bad args; capability not installed)
-  3  duplicate entry (github_login already present)
+  2  usage error (bad args; capability not installed; a login GitHub knows
+     no account by)
+  3  duplicate entry (github_login already present, in any letter case)
 """
 
 from __future__ import annotations
@@ -42,11 +49,15 @@ from _lib import bootstrap_gate, consent, session_guard
 from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
+    FROM_SERVICE,
+    USER_TYPE,
     check_membership,
     format_unresolved,
+    look_up_account,
     members_path,
     resolve_capability_root,
     resolve_invoker_identity,
+    same_account,
 )
 
 
@@ -156,14 +167,28 @@ def main() -> int:
             print(f"error: --github-login is required{or_me}.", file=sys.stderr)
             return 2
 
-    # Duplicate check.
+    # Duplicate check, without regard to case: GitHub looks an account's
+    # name up so, and the gate matches an answered login so.
     for entry in members:
-        if isinstance(entry, dict) and entry.get("github_login") == github_login:
+        if isinstance(entry, dict) and same_account(entry.get("github_login"), github_login):
             print(
-                f"error: an entry for github_login={github_login!r} already exists in {file_path}.",
+                f"error: an entry for github_login={entry.get('github_login')!r} already "
+                f"exists in {file_path}.",
                 file=sys.stderr,
             )
             return 3
+
+    # A login GitHub did not answer for the credential is looked up, so the
+    # entry names a user's login as GitHub spells it (DEC-021).
+    answered = (
+        args.me
+        and github_login == invoker.github_login
+        and getattr(invoker, "login_source", None) == FROM_SERVICE
+    )
+    if not answered:
+        github_login = _as_github_spells_it(github_login, config)
+        if github_login is None:
+            return 2
 
     # added_by: bootstrap when no prior members, else the invoker.
     added_by = "bootstrap" if not members else (invoker.github_login or "unknown")
@@ -183,6 +208,8 @@ def main() -> int:
     print(f"about to add to {file_path}:")
     for k, v in new_entry.items():
         print(f"  {k}: {v}")
+    if args.me and email and email == invoker.email:
+        print("  (the email is git's user.email)")
     stop = consent.authorise(
         "Proceed? [y/N] ",
         yes=args.yes,
@@ -209,6 +236,32 @@ def main() -> int:
             "the author of the PR."
         )
     return 0
+
+
+def _as_github_spells_it(login: str, config: dict) -> str | None:
+    """The login an entry takes for `login`, looked up on GitHub: its
+    spelling where GitHub names a user's account by it, `login` as typed
+    where it names another kind of account or gives no answer, or None, the
+    refusal said, where GitHub knows no account by it."""
+    looked_up = look_up_account(login, config)
+    if looked_up.missing:
+        print(f"error: GitHub knows no account by the login {login!r}.", file=sys.stderr)
+        return None
+    if looked_up.cause:
+        print(
+            f"[warn] GitHub gave no answer for the login {login!r}, since {looked_up.cause}. "
+            "Its spelling is unchecked, and the entry takes it as typed.",
+            file=sys.stderr,
+        )
+        return login
+    if looked_up.account_type != USER_TYPE or not looked_up.login:
+        return login
+    if looked_up.login != login:
+        print(
+            f"[note] GitHub spells the login {looked_up.login!r}, and the entry takes "
+            f"that spelling, not {login!r}."
+        )
+    return looked_up.login
 
 
 def _read_members(file_path: Path, yaml_loader: YAML) -> list[dict]:

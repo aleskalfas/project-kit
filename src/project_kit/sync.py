@@ -12,10 +12,11 @@ command that runs it (ADR-065 point 1):
   (`refuse_version_mismatch`), which stops under a pkit at another version than
   the project records, or over an unfinished upgrade. In the methodology's
   source it then runs the self-host branch alone. Elsewhere it runs the step,
-  naming each shipped capability the bundle ships at its recorded version, and
-  regenerates the derivable state: merge delivery in its auto-add tier, deploy,
-  the `.pkit/.gitignore` render, the agent workspace and provisioning. It writes
-  no manifest and no seed path, and runs no migration.
+  naming each shipped capability the bundle ships at its recorded version, then
+  brings each externally-sourced capability's copy to its pin (`match_pins`,
+  ADR-040), and regenerates the derivable state: merge delivery in its auto-add
+  tier, deploy, the `.pkit/.gitignore` render, the agent workspace and
+  provisioning. It writes no manifest and no seed path, and runs no migration.
 
 Project-owned content (`.pkit/<area>/project/`) is never overwritten. The two
 fixed-path files the harness expects, `.claude/settings.json` and `CLAUDE.md`,
@@ -43,6 +44,7 @@ from project_kit.manifest import (
     ORIGIN_INCUBATED_IN_REPO,
     ORIGIN_KIT_SHIPPED,
     BackboneManifest,
+    CapabilityPin,
     read_backbone_manifest,
     read_kit_version,
 )
@@ -121,18 +123,21 @@ def run_sync(target_root: Path, dry_run: bool = False) -> None:
     # (ADR-087 point 2).
     from project_kit import capabilities as caps
 
-    plans = plan_capabilities(
-        target_root, source_kit, caps.read_capability_records(target_root, release=source_kit)
-    )
+    records = caps.read_capability_records(target_root, release=source_kit)
+    plans = plan_capabilities(target_root, source_kit, records)
     copied = [plan for plan in plans if plan.disposition == COPY]
     # Each loaded set is read before the step copies its new version, and what it newly
     # binds is said after (ADR-076 point 6).
     before = loaded_rules.read_delivered(target_root)
     propagate(ctx, copied)
-    _report_sync_capabilities(plans, dry_run=dry_run)
-    loaded_rules.echo_bound(
-        target_root, loaded_rules.bound_by(before, delivered_by_copy(source_kit, copied))
+    # Each externally-sourced capability's copy, brought to its pin (ADR-040 point 3).
+    matches = match_pins(ctx, plans, records)
+    _report_sync_capabilities(plans, dry_run=dry_run, matches=matches)
+    delivered = delivered_by_copy(source_kit, copied)
+    delivered.extend(
+        (name, match.delivered) for name, match in matches.items() if match.delivered is not None
     )
+    loaded_rules.echo_bound(target_root, loaded_rules.bound_by(before, delivered))
 
     regenerate_derivable_state(ctx)
 
@@ -395,8 +400,9 @@ def plan_capabilities(
     in this order, the first that holds deciding:
 
     - incubated: the project's own, never reconciled with the bundle (COR-031)
-    - externally sourced: never read as shipped; its fetch brings it to its pin
-      once built (COR-041)
+    - externally sourced: never read as shipped, sync brings it to its pin
+      (`match_pins`, COR-041). Its plan carries the bundle's capability of the
+      same name, if any, so the report can name the overlap (ADR-040 point 6)
     - not in the bundle: COR-017's no-longer-shipped warning
     - the bundle's package names no version, or the record names none
     - bundled older than the record
@@ -422,7 +428,11 @@ def plan_capabilities(
             )
             continue
         if entry.origin != ORIGIN_KIT_SHIPPED:
-            plans.append(CapabilityPlan(entry.name, EXTERNAL))
+            plans.append(
+                CapabilityPlan(
+                    entry.name, EXTERNAL, caps.find_capability_in_source(source_kit, entry.name)
+                )
+            )
             continue
         record = records.get(entry.name) or caps.read_capability_record(
             target_root, entry.name, release=source_kit
@@ -449,8 +459,11 @@ def plan_capabilities(
     return plans
 
 
-def _report_sync_capabilities(plans: Sequence[CapabilityPlan], *, dry_run: bool) -> None:
-    """Sync's line for each registered capability: copied, or skipped and why."""
+def _report_sync_capabilities(
+    plans: Sequence[CapabilityPlan], *, dry_run: bool, matches: Mapping[str, PinMatch]
+) -> None:
+    """Sync's line for each registered capability: copied, matched to its pin, or
+    skipped or kept and why."""
     if not plans:
         return
     click.echo()
@@ -463,10 +476,7 @@ def _report_sync_capabilities(plans: Sequence[CapabilityPlan], *, dry_run: bool)
         elif plan.disposition == INCUBATED:
             report_incubated_capability(plan)
         elif plan.disposition == EXTERNAL:
-            click.echo(
-                f"    {'skipped':<12} {name} — externally sourced: sync brings it to its pin "
-                "once its fetch is built, and never reads it as shipped."
-            )
+            _report_pin_match(plan, matches.get(plan.name))
         elif plan.disposition == ORPHAN:
             click.echo(
                 f"    {'orphan':<12} {name} — no longer ships from source; "
@@ -498,6 +508,141 @@ def _report_sync_capabilities(plans: Sequence[CapabilityPlan], *, dry_run: bool)
                 f"    {'skipped':<12} {name} — the bundle's package.yaml names no version "
                 f"({plan.bundled!r}). Not copied."
             )
+
+
+# --- Each externally-sourced capability, at its pin (ADR-040 point 3) ------------
+
+# What sync made of an externally-sourced capability's pin.
+MATCHED = "matched"  # its copy brought to the content its pin names
+WOULD_MATCH = "would-match"  # a dry run's: nothing fetched, nothing written
+KEPT = "kept"  # its copy left as it was, and why
+UNPINNED = "unpinned"  # its manifest records no pin to match
+
+
+@dataclass(frozen=True)
+class PinMatch:
+    """What sync made of one externally-sourced capability's pin."""
+
+    outcome: str
+    pin: CapabilityPin | None = None
+    version: str | None = None  # the version its pin's content names, where fetched
+    why: str = ""  # why its copy was kept
+    delivered: Path | None = None  # its copy, once brought to its pin
+
+
+def match_pins(
+    ctx: install.InstallContext,
+    plans: Sequence[CapabilityPlan],
+    records: Mapping[str, CapabilityRecord],
+) -> dict[str, PinMatch]:
+    """Bring each externally-sourced capability's copy to its pin (ADR-040 point 3).
+
+    Match-the-pin, sync's propagation for this origin (COR-041; COR-059 point
+    2). For each plan of disposition `EXTERNAL`, the pin its manifest records is
+    fetched whole (`capability_fetch.fetched`), and what the fetch staged
+    replaces the copy outside its ``project/`` tier, a file the pin's content
+    does not hold removed and the artefacts the project skipped kept out
+    (`capabilities.copy_fetched_capability`). It writes no manifest, so the pin
+    and the recorded version never move.
+
+    A copy is kept as it was, with a loud warning, where its pin cannot be read
+    (point 7), where its tag now names another commit than the pin records,
+    where the pin holds no capability of its name, or where that capability
+    names another version than the project records: its tag has moved at the
+    source, and only a person moves a version, by uninstalling and installing
+    it again. So is one whose ``requires_backbone`` excludes the
+    backbone the project records, the gate install runs on the same content
+    (point 4). Sync runs on past each. Under ``--dry-run`` nothing is fetched.
+    Returns each externally-sourced capability's outcome, by name.
+    """
+    from project_kit import capabilities as caps
+    from project_kit import capability_fetch
+    from project_kit.connections import range_admits
+
+    backbone = read_backbone_manifest(ctx.target_root)
+    backbone_version = backbone.backbone_version if backbone is not None else None
+    matches: dict[str, PinMatch] = {}
+    for plan in plans:
+        if plan.disposition != EXTERNAL:
+            continue
+        pin = caps.read_capability_pin(ctx.target_root, plan.name)
+        if pin is None:
+            matches[plan.name] = PinMatch(UNPINNED)
+            continue
+        if ctx.dry_run:
+            matches[plan.name] = PinMatch(WOULD_MATCH, pin)
+            continue
+        record = records.get(plan.name) or caps.read_capability_record(
+            ctx.target_root, plan.name, release=ctx.source_kit
+        )
+        try:
+            with capability_fetch.fetched(pin, plan.name) as got:
+                staged = caps.fetched_capability(got.path, plan.name)
+                if staged is None:
+                    why = (
+                        f"what {caps.pin_text(pin)} holds at .pkit/capabilities/{plan.name}/ "
+                        f"has no package.yaml that names {plan.name!r}"
+                    )
+                elif staged.package.version != record.version:
+                    why = (
+                        f"{caps.pin_text(pin)} now holds v{staged.package.version}, and the "
+                        f"project records v{record.version}: the pin's tag has moved at its "
+                        "source, and sync moves no version. To take it, uninstall the "
+                        "capability and install it again"
+                    )
+                elif range_admits(staged.package.requires_backbone, backbone_version) is False:
+                    why = (
+                        f"v{staged.package.version} at {caps.pin_text(pin)} requires backbone "
+                        f"{staged.package.requires_backbone}, and the project records backbone "
+                        f"v{backbone_version}: sync lands no content whose range excludes the "
+                        "backbone the project records (ADR-040 point 4)"
+                    )
+                else:
+                    caps.copy_fetched_capability(ctx.target_root, staged, record.skipped)
+                    matches[plan.name] = PinMatch(
+                        MATCHED,
+                        pin,
+                        version=staged.package.version,
+                        delivered=ctx.target_root / ".pkit" / "capabilities" / plan.name,
+                    )
+                    continue
+        except (capability_fetch.FetchFailed, capability_fetch.FetchRefused) as exc:
+            why = str(exc).rstrip(".")
+        matches[plan.name] = PinMatch(KEPT, pin, why=why)
+        click.echo(
+            f"⚠ WARNING: capability {plan.name!r} was not brought to its pin, "
+            f"{caps.pin_text(pin)}: {why}. Its copy is kept as it was, and sync runs on.",
+            err=True,
+        )
+    return matches
+
+
+def _report_pin_match(plan: CapabilityPlan, match: PinMatch | None) -> None:
+    """Sync's line for an externally-sourced capability, and where the running
+    pkit ships a capability of the same name, a line that says so: it is never
+    read as this one (ADR-040 point 6)."""
+    from project_kit import capabilities as caps
+
+    name = repr(plan.name)
+    if match is None or match.outcome == UNPINNED or match.pin is None:
+        click.echo(
+            f"    {'kept':<12} {name} — externally sourced, and its manifest records no "
+            "pin: its copy is left as it is."
+        )
+    elif match.outcome == WOULD_MATCH:
+        click.echo(
+            f"    {'would match':<12} {name} — would fetch {caps.pin_text(match.pin)} and "
+            "bring its copy to it."
+        )
+    elif match.outcome == MATCHED:
+        click.echo(f"    {'matched':<12} {name} at v{match.version}, {caps.pin_text(match.pin)}")
+    else:
+        click.echo(f"    {'kept':<12} {name} — not brought to {caps.pin_text(match.pin)}.")
+    if plan.source is not None:
+        click.echo(
+            f"    {'':<12} the running pkit ships a capability of the same name "
+            f"(v{plan.source.package.version}); sync never reads it as this one."
+        )
 
 
 def report_incubated_capability(plan: CapabilityPlan) -> None:
