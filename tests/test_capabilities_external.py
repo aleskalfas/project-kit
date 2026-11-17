@@ -19,6 +19,7 @@ from click.testing import CliRunner, Result
 
 from project_kit import capabilities as caps
 from project_kit import capability_fetch, install, router, status, sync, upgrade
+from project_kit import cli as cli_mod
 from project_kit.cli import main
 from project_kit.manifest import (
     ORIGIN_EXTERNALLY_SOURCED,
@@ -42,8 +43,20 @@ _NAME = "fetched"
 _SKILL = Path("skills") / "fetched-skill.md"
 _SCRIPT = Path("scripts") / "run.sh"
 
+# The refusal of `install --from` until #3349 (#3359), as the command ships it,
+# taken before the fixture below lifts it.
+_HOLD = cli_mod._refuse_install_from_another_repository
+
 
 # --- fixtures --------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def install_from_unheld(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Lift the refusal of `install --from` (#3359), so every test here but the
+    refusal's own reaches the install it holds back. #3349 removes the refusal,
+    this fixture and that test together."""
+    monkeypatch.setattr(cli_mod, "_refuse_install_from_another_repository", lambda: None)
 
 
 @pytest.fixture
@@ -146,6 +159,43 @@ def _assert_nothing_installed(project: Path) -> None:
 
 def _said(result: Result) -> str:
     return " ".join(result.output.split())
+
+
+def _files(root: Path) -> dict[str, bytes]:
+    """Every file under *root* outside `.git/`, by its path, with its bytes."""
+    return {
+        path.relative_to(root).as_posix(): path.read_bytes()
+        for path in root.rglob("*")
+        if path.is_file() and path.relative_to(root).parts[0] != ".git"
+    }
+
+
+# --- the refusal until #3349 (#3359) ------------------------------------------------
+
+
+@pytest.mark.parametrize("flags", [(), ("--dry-run",), ("--plan",)], ids=["run", "dry", "plan"])
+def test_install_from_refuses_until_the_fetch_takes_a_pins_recorded_commit(
+    project: Path,
+    kit: Path,
+    upstream: GitRepo,
+    monkeypatch: pytest.MonkeyPatch,
+    flags: tuple[str, ...],
+) -> None:
+    """Refused before anything is fetched, naming why, and nothing in the project
+    changes, from a source whose tag the install it holds back would take."""
+    monkeypatch.setattr(cli_mod, "_refuse_install_from_another_repository", _HOLD)
+    _author(upstream, tag="v1.0.0")
+    before = _files(project)
+
+    result = _install("--from", str(upstream.root), "--ref", "v1.0.0", *flags)
+
+    assert result.exit_code == 1, result.output
+    said = _said(result)
+    assert "installing a capability from another repository (--from, --ref) is not" in said
+    assert "once the pin's ref has moved (#3349)" in said
+    assert "Nothing was fetched or written" in said
+    assert "Fetching" not in said
+    assert _files(project) == before
 
 
 # --- install at a pin (ADR-040 points 1 to 4) --------------------------------------
