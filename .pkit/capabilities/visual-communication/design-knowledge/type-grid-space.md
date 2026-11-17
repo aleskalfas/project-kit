@@ -19,7 +19,6 @@ How text is set, how a page is divided, and how the space between parts keeps a 
 - Do texts of one kind share face, size, weight and spacing, and do texts of different kinds differ clearly?
 - Do the page's sizes and spaces come from its brand's scale, or were some nudged by hand?
 - Which grid does the page sit on? Where does a part leave it, and why?
-- Can a line of body text be read without losing its place, at the size it is shown?
 - Read a paragraph as its reader would. Where does the eye tire before a line ends, or jump back too soon? Where does it miss the start of the next line?
 - Look at the uneven edge of a paragraph from a distance, or squint. Does it fall into a shape, or does one line stand out from the rest?
 - How do a text's lines change between the sizes and the languages it is drawn in?

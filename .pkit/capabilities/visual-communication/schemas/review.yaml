@@ -12,7 +12,9 @@
 # The body below is the reference instance: a second round, one of whose grades differs
 # from the round before. Two faults hold one grade, and its evidence names each by the id
 # the report gives it, then the reading beyond them. One grade only the asker's words would
-# raise.
+# raise. It shows some grades of some pages, to show the form, and is no whole review: a
+# review grades each rule it reads on each page it reads, and once for the piece where the
+# rule takes a grade there, or lists it under `not-graded` with why.
 
 pkit_schema: visual-communication:review
 schema_version: 1
@@ -93,4 +95,6 @@ not-graded:
   - rule: RS-GRAPHIC-008
     on:
       page: cover
-    why: A heading, a title and a label are not judged by this rule, and the cover holds nothing else.
+    why: >-
+      The cover holds its title with the subtitle under it, and its author and its link as
+      labels, and the rule does not judge a heading, a title or a label.
