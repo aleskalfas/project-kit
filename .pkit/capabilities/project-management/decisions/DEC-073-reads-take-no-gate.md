@@ -21,8 +21,8 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 **What the records say.**
 
 - **DEC-021 gates what mutates, and puts the check in every script.** Its decision has every operation that mutates external state check the member list, and its Context names what the gate guards against: issues filed in the wrong shape, misclassified, moved in bulk or mistitled. Its Tooling surface and its Implications put the check at the startup of every other verb-subject script, those that only read among them.
-- **CI runs reads.** [project-management:DEC-020-methodology-as-executable-commands] has CI use the environment check and the validation of an issue and of a pull request as its gating checks, and leaves the commands that mutate to people and agents (its Implications).
-- **CI's way through the gate.** DEC-021 has a workflow that runs a gated command pass a closed gate as a service identity added to the list, or, under a credential that names no user's account, by `PM_INVOKER_LOGIN` from a secret. CI is not exempt by design (its Implications, "CI invocations").
+- **CI runs reads.** [project-management:DEC-020-methodology-as-executable-commands] has CI use the environment check and the validation of an issue and of a pull request as its gating checks, and leaves the commands that mutate to people and agents, save the board sync the post-check workflow runs at an issue's filing, for that issue alone (its Implications).
+- **CI's way through the gate.** DEC-021 has a workflow that runs a gated command pass a closed gate as an account the list names, whether a service identity added to it or a person whose own token the workflow holds, or, under a credential that names no user's account, by `PM_INVOKER_LOGIN` from a secret. CI is not exempt by design (its Implications, "CI invocations").
 - **The mesh check reads, and still gates.** [project-management:DEC-022-methodology-mesh] has its check make no mutating call, and gate "like every other verb-subject script", so its scheduled workflow needs an entry in the list, or `PM_INVOKER_LOGIN` from a secret, in a closed project ("Authority").
 - **DEC-018 is split.** [project-management:DEC-018-workstream-taxonomy-and-lifecycle] has every workstream script, the two that only show and list among them, run the predicate at startup ("Authority"), while its Implications apply the gate to every workstream script that mutates.
 - **The prerequisite gate's coverage.** The capability's check of a project's prerequisites ([project-management:DEC-017-prerequisites-bootstrap-migrate-discipline]) is called at the top of each command, and a suite check keeps it complete: each registered command calls it, or is named as exempt, with its reason.
@@ -158,7 +158,7 @@ reads: []
 - **Not decided here:**
   - **Whether each command that can write and takes no gate should take it.** Point 5 names each, and [project-kit#3352](https://github.com/aleskalfas/project-kit/issues/3352) takes each up.
   - **Whether a read that mends what it finds should stop mending,** such as a read of a state issue that restores the marker a hand removed (ADR-071 point 5). While it mends, the command that makes it can write (point 1), and keeps its gate.
-  - **Whether the post-check workflow adds a missing card,** which [project-kit#3271](https://github.com/aleskalfas/project-kit/issues/3271) takes up. A step that adds it through a command of this capability takes that command's gate (point 6).
+  - **Whether the post-check workflow adds a missing card,** which [project-management:DEC-077-workflow-gives-missing-card] decides ([project-kit#3271](https://github.com/aleskalfas/project-kit/issues/3271)). A step that adds it through a command of this capability takes that command's gate (point 6).
 
 ## Rationale
 
