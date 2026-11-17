@@ -8,18 +8,19 @@ body: >
   assignee or hands it a Task, and a command makes a bare login an assignee
   only where GitHub answers that it names a user's account, refusing with the
   cause where the lookup fails. No claim on work from a bot's account counts.
-  Wherever an approval counts as a person's, in human mode and on the paths
-  agent mode keeps open beside a reviewer agent's verdict, none counts from a
-  bot's account, from an account whose kind the backbone cannot tell, from
-  one it cannot tell from the pull request's author, or from an account the
-  project registers as a reviewer agent's, nor as an approving review that
-  carries a reviewer agent's verdict marker. A bot's request for changes still
-  holds the merge until a person approves after it, and human mode assigns
-  none of those accounts as a reviewer. An account GitHub records as a bot's
-  but gives with no [bot] suffix is of a kind the backbone cannot tell, so its
-  claim is held, void only against a user of another login. Its build ships a
-  migration that warns of a reviewer agent's entry with no spelling, and of one
-  that names a member's own account. Once accepted, it refines DEC-019,
-  DEC-026, DEC-027, DEC-028, DEC-043 and ADR-041 in place, and overturns
-  nothing. It is accepted together with ADR-094, ADR-098, DEC-076 and DEC-078,
-  all five at once. No behaviour changes until the record is built.
+  In human mode, no approval counts from a bot's account, from an account
+  whose kind the backbone cannot tell, from one it cannot tell from the pull
+  request's author, or from an account the project registers as a reviewer
+  agent's, nor as an approving review that carries a reviewer agent's verdict
+  marker. A bot's request for changes still holds the merge until a person
+  approves after it, and human mode assigns none of those accounts as a
+  reviewer. An account GitHub records as a bot's but gives with no [bot]
+  suffix is of a kind the backbone cannot tell, so its claim is held, void
+  only against a user of another login. What agent mode counts beside a
+  reviewer agent's verdict is left to an issue of its own. Its build ships a
+  migration that warns of a reviewer agent's entry with no spelling, and of
+  one that names a member's own user account. Once accepted, it refines
+  DEC-019, DEC-026, DEC-027, DEC-028, DEC-043 and ADR-041 in place, and
+  overturns nothing. It is accepted together with ADR-094, ADR-098, DEC-076
+  and DEC-078, all five at once. No behaviour changes until the record is
+  built.
