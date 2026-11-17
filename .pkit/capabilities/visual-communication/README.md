@@ -566,7 +566,7 @@ You may hand it a build pipeline's drawings instead, fetched into a folder of th
 
 Each finding names the page, the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)), and where its fix belongs. A finding is one of four kinds, kept apart by what it cites:
 
-- **A fault,** which the agent's list names: a part missing or blank, a wrong font, text over text, a text that does not read over a picture, a wrong picture, an overlap, a fault of alignment, or a drawing that disagrees with a passing check.
+- **A fault,** which the agent's list names: a part missing or blank, a wrong font, text over text, a text that does not read over a picture, a wrong picture, an overlap or a join that misses, a fault of alignment, or a drawing that disagrees with a passing check.
 - **A rule finding,** which cites a rule by its id, and carries its grade where the grade is below `professional`. Today it only informs, since no rule binds on a piece's files yet.
 - **A brief finding,** which cites the part of the piece's brief that the drawing does not show.
 - **A note,** anything else worth a look. A note of taste names the practice it draws on, from the design knowledge. A note never fails.
@@ -580,6 +580,7 @@ Its findings are advice. They join no validation and hold no merge.
 Beside its findings, the reviewer grades each rule it reads, in one of four words: *below competent*, *competent*, *professional* or *excellent*. *Professional* is the work a professional designer hands over for that audience and medium. It never weighs effort, what the engine can draw, or progress ([visual-communication:DEC-042-grades-bar-and-loop] point 1).
 
 - **On each page, or once for the piece.** A rule that judges the pages together, such as the rule that the pages tell the story in order, takes one grade for the piece. Two rules take both, and the others take one on each page. The reviewer's body holds which. It lists a rule whose text leaves a page or the piece out as not graded, with why.
+- **A fault holds a grade.** A fault that a rule's words name, such as an offset between parts the rule asks to be lined up, holds that rule's grade below `professional` on the page that shows it, and the grade names the fault as its evidence ([visual-communication:DEC-042-grades-bar-and-loop] point 1).
 - **A rule's text settles the exact grade only where it names one.** Every other grade is the reviewer's reading, so a finding on it is for a person once its rule binds.
 - **Its marks.** A grade that only a tool the engine lacks would raise is marked a *need*, and one that only the asker's words would raise is marked as the asker's. Each goes to you as a question. The reviewer alone marks a grade ([visual-communication:DEC-042-grades-bar-and-loop] point 4).
 - **What it reads, in order.** It reads the brief's file, and its reports of the loop's earlier rounds as it wrote them, only once its grades are written, and then says why each grade differs from the round before ([visual-communication:DEC-042-grades-bar-and-loop] point 4).

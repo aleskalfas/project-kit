@@ -355,7 +355,7 @@ def test_the_configuration_refuses_a_browser_that_names_no_path(browser: object)
 @pytest.mark.parametrize(
     "bar",
     [
-        {"covers": ["COMM@1", "GRAPHIC@1"], "at-least": "professional"},
+        {"covers": ["COMM@1", "GRAPHIC@2"], "at-least": "professional"},
         {"covers": ["RS-COMM-003@1"], "at-least": "excellent"},
     ],
 )
