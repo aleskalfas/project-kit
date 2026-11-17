@@ -61,4 +61,4 @@ answers:
     revalidated:
       at: 2026-11-13T22:46:21Z
       outcome: unchanged
-      unchanged-because: The change adds DEC-070 as a proposed record, which binds nothing and changes no command until it is accepted and built, so nothing the README states about the commands, their identity checks or their assignees changes.
+      unchanged-because: The change adds DEC-076 as a proposed record, which binds nothing and changes no command until it is accepted and built, so nothing the README states about the commands, their identity checks or their assignees changes.
