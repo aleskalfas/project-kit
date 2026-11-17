@@ -285,7 +285,7 @@ A later consequence of that choice of DEC-046 point 5 is recognised as one by th
   - **Its scope takes in the three conditions of point 2:** whether the check measured each image clean, the review's line that it left the media out, and whether every file the check read to work out a value lies in a released version of a library that the lock names. For the check of a text's size, the piece's top, its brand and each component that draws a page are among those files.
   - **Until it lands,** no bar that covers `RS-GRAPHIC-005` gets the hold.
 - **The order of the later work, for economy.** No wait is decided here (point 6).
-  - **The review's field.** [project-kit#3328](https://github.com/aleskalfas/project-kit/issues/3328) words the review's reading of `media`. Its scope comes to take in the field by which the review's report says that it left the media out.
+  - **The review's field.** [project-kit#3375](https://github.com/aleskalfas/project-kit/issues/3375) words the review's reading of `media`, and the field by which the review's report says that it left the media out.
   - **The source's record** is accepted, and the follow-up lands, before a calibration runs. Landed later, the follow-up forces a new calibration.
 - **Left open: whose the piece's `audience` field is to change.** It steers the grades and switches no hold (point 4). A refinement of DEC-042 point 7 would decide it.
 - **No migration.** Nothing a project holds changes (COR-010).
