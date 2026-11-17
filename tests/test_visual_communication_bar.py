@@ -51,7 +51,7 @@ def test_a_bar_over_the_sets_the_review_grades_at_their_majors_fails_nothing(
     tmp_path: Path,
 ) -> None:
     root = project(tmp_path)
-    configured(root, "COMM@1", "GRAPHIC@1", "RS-COMM-003@1")
+    configured(root, "COMM@1", "GRAPHIC@2", "RS-COMM-003@1")
     assert found(root) == []
 
 
@@ -106,7 +106,7 @@ def test_a_set_that_inherits_one_through_another_of_the_projects_is_graded(
     assert found(root) == []
 
 
-@pytest.mark.parametrize("cover", ["COMM@2", "COMM@0", "RS-COMM-003@2", "GRAPHIC@2"])
+@pytest.mark.parametrize("cover", ["COMM@2", "COMM@0", "RS-COMM-003@2", "GRAPHIC@1"])
 def test_a_bar_whose_major_differs_from_the_sets_own_where_none_pins_it_fails(
     tmp_path: Path, cover: str
 ) -> None:
@@ -140,7 +140,7 @@ def test_a_bar_at_the_sets_own_major_fails_where_the_project_pins_another(
 
 def test_each_cover_is_judged_alone(tmp_path: Path) -> None:
     root = project(tmp_path)
-    configured(root, "COMM@2", "NOPE@1", "GRAPHIC@1")
+    configured(root, "COMM@2", "NOPE@1", "GRAPHIC@2")
     assert codes(root) == ["bar-major", "bar-ungraded"]
 
 

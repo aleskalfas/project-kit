@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "calibration.schema.json",
   "title": "The accepted calibration's data — visual-communication capability",
-  "description": "Formal shape of `calibration.yaml` in the capability's folder: the values a refinement of DEC-042 writes when whoever maintains the capability accepts a calibration's report (DEC-042 point 9). `pkit visual verdict` reads them to tell whether its verdict ends the designer's loop (DEC-042 points 9 and 10), and nothing else writes them: only the change of that refinement, which governs them. Absent, no calibration's report is accepted. It holds each rule with evidence of its own in the accepted report, with its set's major and a digest of its text; a digest of the reviewer's definition and one of the design knowledge; and the model the review ran on, with its effort. It holds no report, no grade, no bar and nothing of what the calibration was run on. Each digest is SHA-256, written `sha256:<hex>`, as a deploy's mark writes the digest of an agent's definition. Document-shaped schema. Companion per COR-018.",
+  "description": "Formal shape of `calibration.yaml` in the capability's folder: the values a refinement of DEC-042 writes when whoever maintains the capability accepts a calibration's report (DEC-042 point 9). `pkit visual verdict` reads them to tell whether its verdict ends the designer's loop (DEC-042 points 9 and 10), and nothing else writes them: only the change of that refinement, which governs them. Absent, no calibration's report is accepted. It holds each rule with evidence of its own in the accepted report, with its set's major and a digest of its text; a digest of the reviewer's definition, one of the design knowledge, one of the capability's code and one of its list of checks; and the model the review ran on, with its effort. It holds no report, no grade, no bar and nothing of what the calibration was run on. Each digest is SHA-256, written `sha256:<hex>`, as a deploy's mark writes the digest of an agent's definition. Document-shaped schema. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -10,6 +10,8 @@
     "rules",
     "reviewer",
     "design-knowledge",
+    "code",
+    "checks",
     "model"
   ],
   "additionalProperties": false,
@@ -43,6 +45,14 @@
     },
     "design-knowledge": {
       "description": "The digest of the design knowledge the calibration read, the capability's `design-knowledge/`: the SHA-256 of the canonical text (RFC 8785) of the SHA-256 of each file in it, by its path within the folder.",
+      "$ref": "#/$defs/digest"
+    },
+    "code": {
+      "description": "The digest of the capability's code the calibration ran on, the program files of its `scripts/` folder, those written in the language its commands run in: the SHA-256 of the canonical text (RFC 8785) of the SHA-256 of each such file, by its path within the folder. Each check the review reads lies in them, with the rest of the code, so every change to the code lapses the hold; a compiled cache, a folder's marker or an editor's file beside it lapses nothing (DEC-065 point 2).",
+      "$ref": "#/$defs/digest"
+    },
+    "checks": {
+      "description": "The digest of the capability's list of checks the calibration read, `checks.md`: the SHA-256 of its body, after its front matter, as UTF-8. A change to its front matter alone lapses nothing (DEC-065 point 2).",
       "$ref": "#/$defs/digest"
     },
     "model": {

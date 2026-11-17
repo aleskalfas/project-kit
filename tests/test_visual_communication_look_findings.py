@@ -27,7 +27,13 @@ from ruamel.yaml import YAML
 from tests import test_visual_communication_site as site
 from tests.test_visual_communication_boxes import COVERED, LOCAL
 from tests.test_visual_communication_checks import project_of
-from tests.test_visual_communication_look import plugins, report_of, run_look, viewing  # noqa: F401
+from tests.test_visual_communication_look import (  # noqa: F401
+    plugins,
+    report_of,
+    reports_hold_their_schema,
+    run_look,
+    viewing,
+)
 from tests.test_visual_communication_pipeline import (
     EVERY_WIDE,
     PHONE,
