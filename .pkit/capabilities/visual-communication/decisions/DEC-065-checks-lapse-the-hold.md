@@ -1,7 +1,7 @@
 ---
 id: DEC-065
 title: A change to a check the review reads lapses the hold
-status: proposed
+status: accepted
 date: 2026-11-17
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
