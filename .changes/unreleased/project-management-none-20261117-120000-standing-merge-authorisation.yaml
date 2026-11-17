@@ -7,7 +7,8 @@ body: >
   in the run that finds it ready, save where a person must see something
   first. A reviewer's finding for the person holds no such merge: it reaches
   the person after the merge, in the run's printout and the merge's trail, and
-  stays theirs to decide. An install and an upgrade write the key as an offer,
-  which authorises nothing, and the person turns it on by authorising a change
-  that sets it on. No command, schema or migration changes until the record is
-  accepted and built, so no surface moves.
+  a label on the Task's issue keeps it among what waits on them until they
+  judge it. An install and an upgrade write the key as an offer, which
+  authorises nothing, and the person turns it on by authorising a change that
+  sets it on. No command, schema, label or migration changes until the record
+  is accepted and built, so no surface moves.
