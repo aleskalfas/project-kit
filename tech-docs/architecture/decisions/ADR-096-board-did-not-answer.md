@@ -1712,10 +1712,12 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     expires within the hour, so the job mints one on each run from the App's
     key, the secret the project keeps instead. Which to set, if any, is the
     project's choice, made in its own copy.
-  - **One owner.** The template's add addresses the board as point 1 has it,
-    under the owner the capability resolves, and keeps no owner of its own: with
-    two, a board with the same number under the other owner could answer the add
-    with a card, and the add would count as made (point 3).
+  - **One owner.** The add made for a copy, which the board sync makes at an
+    issue's filing, addresses the board as point 1 has it, under the owner the
+    capability resolves, and the copy keeps no owner of its own: with two, a
+    board with the same number under the other owner could answer the add with a
+    card, and the add would count as made (point 3;
+    [project-management:DEC-077](../../../.pkit/capabilities/project-management/decisions/DEC-077-workflow-gives-missing-card.md)).
   - **Remediation.** A copy that remediates only on a finding that blocks adds
     no missing card, since the membership check's drift never blocks. Whether
     a copy should, on an issue off the board or on one the board did not answer
