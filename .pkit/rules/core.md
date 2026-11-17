@@ -34,10 +34,6 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ## Tool hygiene
 
-### 8. Pause and confirm before destructive operations (RS-OPS-008)
-
-**Pause and confirm before destructive operations,** such as `git reset --hard`, `git push --force`, `rm -rf`, deleting files outside `project/`, dropping tables or killing processes. Each needs the user's explicit confirmation, even where the task seemed to authorise it, and a confirmation covers that operation alone.
-
 ### 9. Conventional commits, one logical unit each (RS-OPS-009)
 
 **Use conventional commits and keep one logical unit per commit.** The branch-naming convention, `<type>/<issue-number>-<slug>`, is COR-008's: see its "Operational reference" section for the recommended type list, the convention and its examples.
