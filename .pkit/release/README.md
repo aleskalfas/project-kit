@@ -1116,14 +1116,12 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
     at which head and exits 3, and a re-run deletes the head branch; where
     it cannot tell whether the PR is out, it says how to take it out by
     hand. Where the run's first reading at the new head already shows the
-    PR merged, that is a merge as above, exit 0, with a warning naming the
-    head it merged at and the head that was checked. Once a run has exited
-    4, nothing takes the PR out on a push, and the queue may merge the
-    later head. A release merged at a later head is tagged as any other:
-    `release-tag.yml` runs on the push the merge makes ("Does not tag"
-    below), though the run read only the earlier head's checks. Whether
-    such a release is tagged before a person has looked at
-    it is open (#3357).
+    PR merged, that is a merge as above, exit 0, warned about as "Merges"
+    above says. Once a run has exited 4, nothing takes the PR out on a
+    push, and the queue may merge the later head. A release merged at a
+    later head is tagged as any other ("Does not tag" below), though the
+    run read only the earlier head's checks. Whether such a release is
+    tagged before a person has looked at it is open (#3357).
 
   Without a queue the merge is direct, pinned to the checked head; if GitHub
   then reports the PR queued rather than merged (a queue switched on
@@ -1156,8 +1154,7 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   project-neutral.
 
 It stays **human-gated**: a human decides to run it; nothing auto-merges.
-The one exception is a merge queue that merges a head pushed after the
-checks were read ("head moved" above), which #3357 tracks.
+One exception is the queue's merge of a later head ("head moved" above).
 
 ### The queue's check — `pkit release check-queue`
 

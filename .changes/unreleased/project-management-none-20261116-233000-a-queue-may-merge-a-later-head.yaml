@@ -1,8 +1,9 @@
 component: project-management
 kind: none
 body: >
-  DEC-026, DEC-028 and the README say how a push after a merge verb's
-  enqueue ends: the verb takes the pull request out of the merge queue only
-  while it waits, racing the queue, and once its run has returned nothing
-  takes it out, so the queue may merge a head nobody checked. What follows
-  such a merge is left to #3351. No command changes, so no surface moves.
+  DEC-026, DEC-028, DEC-055, the README and the pm skill say how a push
+  after a merge verb's enqueue ends: the verb takes the pull request out of
+  the merge queue only while it waits, racing the queue, and once its run
+  has returned nothing takes it out, so the queue may merge a head the
+  verb's gates did not check. What follows such a merge is left to #3351.
+  No command changes, so no surface moves.
