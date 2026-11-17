@@ -19,7 +19,8 @@ body: >
   only against a user of another login. What agent mode counts beside a
   reviewer agent's verdict is left to an issue of its own. Its build ships a
   migration that warns of a reviewer agent's entry with no spelling, and of
-  one that names a member's own user account. Once accepted, it refines
+  each that names a user's account, whose approvals stop counting in human
+  mode, in open mode as behind a closed gate. Once accepted, it refines
   DEC-019, DEC-026, DEC-027, DEC-028, DEC-043 and ADR-041 in place, and
   overturns nothing. It is accepted together with ADR-094, ADR-098, DEC-076
   and DEC-078, all five at once. No behaviour changes until the record is
