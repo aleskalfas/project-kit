@@ -1,7 +1,7 @@
 ---
 id: DEC-073
 title: A command that only reads and reports takes no membership gate
-status: proposed
+status: accepted
 date: 2026-11-16
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
