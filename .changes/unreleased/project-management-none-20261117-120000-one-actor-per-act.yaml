@@ -1,0 +1,16 @@
+component: project-management
+kind: none
+body: >
+  Design-ahead: the record DEC-078 decides that, in every project and under
+  every credential, each act the commands record has one actor, the account
+  GitHub answers the credential acts as, which the engine's cross-authority
+  gate judges and the journal records for a move. No audit comment names an
+  authoriser beside the account that posts it, and no comment carries an
+  email, in its text or its hidden stamp; the default render's metadata line
+  shows no actor. Where GitHub gives no login for the acting account, an act
+  names no actor: its audit record's actor is empty, and the commands make the
+  move, hand it to no engine and report it as unrecorded, a gap the drift check
+  flags, refusing nothing for want of an actor. Once accepted, it partially
+  supersedes DEC-014, DEC-044, DEC-050 and DEC-052, completes DEC-044 in place,
+  and corrects facts in DEC-021 and DEC-047. No behaviour changes until the
+  record is built.
