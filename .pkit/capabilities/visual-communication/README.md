@@ -92,6 +92,8 @@ pkit:
         - visual-communication:DEC-042#6
         - visual-communication:DEC-042#9
         - visual-communication:DEC-042#10
+        - visual-communication:DEC-046#1
+        - visual-communication:DEC-046#2
         - COR-017
         - COR-070#1
         - COR-073#3
@@ -571,7 +573,7 @@ Each finding names the page, the element's trace id where the element was drawn 
 - **A brief finding,** which cites the part of the piece's brief that the drawing does not show.
 - **A note,** anything else worth a look. A note of taste names the practice it draws on, from the design knowledge. A note never fails.
 
-One observation makes one finding, of the first kind in this list that applies, and it cites each ground it rests on. A page whose path, traced from where the eye enters, does not follow the order its relations and its lead or takeaway give is such an observation. It may break a rule as well as the brief. Where the piece keeps no brief, or the page's part of it gives no relation and no takeaway, the page's lead gives the order. Where the piece keeps no brief, such a path is a rule finding where a rule applies, and otherwise a note.
+One observation makes one finding, of the first kind in this list that applies, and it cites each ground it rests on. A page whose path, traced from where the eye enters, does not follow the order its relations and its lead or takeaway give is such an observation. It may break a rule as well as the brief. Where the piece keeps no brief, or the page's part of it gives no relation and no takeaway, the page's lead gives the order, and such a path is a rule finding where a rule applies, and otherwise a note.
 
 Its findings are advice. They join no validation and hold no merge.
 
@@ -580,10 +582,10 @@ Its findings are advice. They join no validation and hold no merge.
 Beside its findings, the reviewer grades each rule it reads, in one of four words: *below competent*, *competent*, *professional* or *excellent*. *Professional* is the work a professional designer hands over for that audience and medium. It never weighs effort, what the engine can draw, or progress ([visual-communication:DEC-042-grades-bar-and-loop] point 1).
 
 - **On each page, or once for the piece.** A rule that judges the pages together, such as the rule that the pages tell the story in order, takes one grade for the piece. Two rules take both, and the others take one on each page. The reviewer's body holds which. It lists a rule whose text leaves a page or the piece out as not graded, with why.
-- **Evidence of the level.** Before it grades a rule *professional*, the reviewer names the strongest thing under that rule that a professional would still mend before handing the page over. Where there is one, the grade is below `professional`, and its evidence names it. Before it grades a rule *excellent*, it names what makes the page an example of the rule. So finding nothing wrong is no evidence of *professional*.
+- **Evidence of the level.** Before it grades a rule *professional*, the reviewer names the strongest weakness on the page that the rule's own words fail on. It holds the grade below `professional` only where a reader meets it and a professional would not hand the page over without mending it. A weakness a professional would polish leaves the grade `professional`, and its evidence names it ([visual-communication:DEC-042-grades-bar-and-loop] point 6). Before it grades a rule *excellent*, it names what makes the page an example of the rule. So finding nothing wrong is no evidence of *professional*. A fault that cites no rule, such as a stray text, is no evidence of any rule's level, and moves no grade ([visual-communication:DEC-046-faults-lower-grades] point 2).
 - **A fault holds a grade.** A fault that a rule's words name, such as an offset between parts the rule asks to be lined up, holds that rule's grade below `professional` on the page that shows it, and the grade names the fault as its evidence ([visual-communication:DEC-042-grades-bar-and-loop] point 1).
-- **A weakness weighs on each rule it reaches.** A weakness of design that is no fault lowers the grade of every rule whose words reach it. The reviewer describes it in one finding, and each other grade it lowers names that finding.
-- **The page a reader meets.** A grade judges the page as a reader meets it. Where the cause lies, in the content, a component, the brand or the drawing, decides where the fix belongs, never whether the grade falls. A note never stands in for a grade: a doubt that names something a professional would mend lowers that rule's grade too.
+- **A weakness weighs on each rule whose words fail on it.** A weakness of design that is no fault lowers the grade of each rule whose own words fail on it, and never lowers a rule as a repeat of another rule's test ([visual-communication:DEC-046-faults-lower-grades] point 1). The reviewer describes it once, in the finding of the first of those rules by id, and each other rule's finding names it.
+- **The page a reader meets.** A grade judges the page as a reader meets it. Where the cause lies, in the content, a component, the brand or the drawing, decides where the fix belongs, never whether the grade falls. Where the reviewer can say a professional would mend what it sees before handing the page over, that is a rule finding, not a note. A doubt stays a note and moves no grade, so one observation gives one finding.
 - **A rule's text settles the exact grade only where it names one.** Every other grade is the reviewer's reading, so a finding on it is for a person once its rule binds.
 - **Its marks.** A grade that only a tool the engine lacks would raise is marked a *need*, and one that only the asker's words would raise is marked as the asker's. Each goes to you as a question. The reviewer alone marks a grade ([visual-communication:DEC-042-grades-bar-and-loop] point 4).
 - **What it reads, in order.** It reads the brief's file, and its reports of the loop's earlier rounds as it wrote them, only once its grades are written, and then says why each grade differs from the round before ([visual-communication:DEC-042-grades-bar-and-loop] point 4).

@@ -9,7 +9,6 @@ How text is set, how a page is divided, and how the space between parts keeps a 
 - **A comfortable line length.** Bringhurst asks for a comfortable *measure*, the length of a line, counted in characters. He gives one range for a single column of text in a serifed face at a text size, and a shorter one for text in several columns, so the measure he asks for depends on the face, the size and the columns. Matthew Butterick gives a range of his own, an average over a text counted with spaces, not a limit on each line, so his test reads a text's lines together rather than one line at a time. *Practical Typography*. The two nearly agree, and each speaks of one script, one kind of face and one medium.
 - **Line spacing that suits the line.** Bringhurst chooses the *leading*, the space between lines, to suit the face, the text and the measure. A longer line needs more of it, so the eye finds the start of the next. Butterick ties line spacing to the size of the type alone, which is what a brand's text style sets.
 - **The uneven ends of the lines.** A text whose lines share one straight edge ends unevenly on the other side, which typographers call the *rag*. Ellen Lupton: a good rag looks pleasantly uneven, with no line much longer or shorter than the rest. A bad one looks too even or too uneven, or begins to form regular shapes, which she likens to wedges, moons and diving boards. *Thinking with Type*, Text, Alignment.
-- **A text whose lines carry structure keeps it in its alignment.** Steve McConnell's fundamental theorem of formatting: good visual layout shows the logical structure of a program. So code's indents show which of its lines lie within which. *Code Complete*, "Layout and Style".
 - **Sizes come from a scale.** Bringhurst likens the sizes a typographer uses to the notes of a musical scale: chosen in a deliberate relation, not one at a time. Brown's modular scale derives a page's sizes from one ratio, so that they belong to one family of proportions. "More Meaningful Typography".
 - **Space keeps a rhythm.** Bringhurst adds and removes vertical space in measured intervals, so text keeps its rhythm down the page and lines up across columns. Josef Müller-Brockmann sizes a grid's fields from the lines of text, so text and pictures share one measure.
 - **The grid orders a page and a series of pages.** Müller-Brockmann divides a page into columns, rows, fields and the gutters between them. Text and pictures placed on that grid give each page an order, and give a series of pages one structure, so a reader learns where to look. The grid is an aid to deciding, not a guarantee of a good page. *Grid Systems in Graphic Design*.
@@ -23,7 +22,6 @@ How text is set, how a page is divided, and how the space between parts keeps a 
 - Read a paragraph as its reader would. Where does the eye tire before a line ends, or jump back too soon? Where does it miss the start of the next line?
 - Look at the uneven edge of a paragraph from a distance, or squint. Does it fall into a shape, or does one line stand out from the rest?
 - How do a text's lines change between the sizes and the languages it is drawn in?
-- Where a text lines up within itself, such as code's indents or a table's columns, does the drawing keep its indents and its columns?
 
 ## Works
 
@@ -32,6 +30,5 @@ How text is set, how a page is divided, and how the space between parts keeps a 
 - Tim Brown, "More Meaningful Typography", *A List Apart*, 2011.
 - Matthew Butterick, *Practical Typography*, practicaltypography.com, 2013.
 - Ellen Lupton, *Thinking with Type*, Princeton Architectural Press, second edition 2010.
-- Steve McConnell, *Code Complete: A Practical Handbook of Software Construction*, Microsoft Press, second edition 2004.
 - Josef Müller-Brockmann, *Grid Systems in Graphic Design*, Niggli, 1981.
 - Adam Wathan and Steve Schoger, *Refactoring UI*, 2018.

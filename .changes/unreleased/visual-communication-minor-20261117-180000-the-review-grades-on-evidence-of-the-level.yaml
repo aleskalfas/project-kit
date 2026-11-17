@@ -5,27 +5,34 @@ custom:
 body: >
   The graphic-design review grades a rule professional only on evidence of
   that level (#3396): before it grades a rule professional it names the
-  strongest thing under the rule a professional would still mend, and grades
-  the rule below professional where there is one, and before excellent it
-  names what makes the page an example. A weakness of design that is no fault
-  lowers every rule whose words reach it, described once. A note never stands
-  in for a grade, and a grade judges the page a reader meets, wherever the
-  cause lies. A page's lead gives the order of its path where its part of the
-  brief gives no relation and no takeaway. The reviewer reads the rule on one
-  focal point (`RS-GRAPHIC-001`) in four steps, the rule on the form
-  (`RS-GRAPHIC-007`) both ways, counting every difference a page draws, and
-  the rule on the pages' order (`RS-COMM-003`) by the one order that runs
-  through the leads. The design knowledge's topic on type teaches that a text
-  whose lines carry structure keeps it in its alignment, after Steve
-  McConnell. Four rules gain clearer words: `RS-GRAPHIC-001` leaves a page's
-  title and lead out where its layout gives it a lead, and counts no part seen
-  first only because reading starts there; `RS-GRAPHIC-003` says what
-  decoration is, a component's lines, fills and frames among it, and judges
-  everything the page draws; `RS-GRAPHIC-007` asks for emphasis where the
-  page's point needs it, so a page that draws what its point is about like the
-  rest breaks it; and `RS-COMM-003` asks that one reasoned order run through
-  the leads. So `GRAPHIC` rises to 3.0.0 and `COMM` to 2.0.0, new majors. A
-  project's set that inherits `visual-communication:GRAPHIC@2` or
+  strongest weakness the rule's own words fail on, and grades the rule below
+  professional where a reader meets it and a professional would not hand the
+  page over without mending it. A weakness a professional would polish leaves
+  the grade professional, named in its evidence. Before excellent it names
+  what makes the page an example. A fault that cites no rule moves no grade. A
+  weakness of design that is no fault lowers each rule whose own words fail on
+  it, never as a repeat of another rule's test, and is described once. What a
+  professional would mend before handing the page over is a rule finding, not
+  a note, and a doubt stays a note and moves no grade. A grade judges the page
+  a reader meets, wherever the cause lies, and a grade only a tool the engine
+  lacks would raise is marked a need. Where a page's part of the brief gives
+  no relation and no takeaway, a path that does not follow its lead is filed
+  as for a piece with no brief. The reviewer's steps for the rules on the
+  focal point (`RS-GRAPHIC-001`), the form (`RS-GRAPHIC-007`) and the pages'
+  order (`RS-COMM-003`) point to the design knowledge's topics, which gain
+  Minto's deductive order and a question on the strongest difference. Four
+  rules gain clearer words: `RS-GRAPHIC-001` has a page's title and lead rank
+  above the rest, and its focal point lie in the content, seen first after
+  them, a group of equal parts among what may be one, and no part made one by
+  the order of reading alone; `RS-GRAPHIC-003` says what decoration is,
+  whether the piece or a component draws it, counts marking the piece's
+  identity as part of a page's job, and leaves the frame out; `RS-GRAPHIC-007`
+  counts every visual variable, and only a difference a reader takes for
+  meaning; and `RS-COMM-003` reads the leads with the section openers' titles,
+  asks for one reasoned order in each group, a deductive order among them, and
+  breaks only on a lead that cannot be understood without a later page. So
+  `GRAPHIC` rises to 3.0.0 and `COMM` to 2.0.0, new majors. A project's set
+  that inherits `visual-communication:GRAPHIC@2` or
   `visual-communication:COMM@1` fails validation, and no rule of that set
   binds through it, until the project reads the reworded rules in
   `rule-sets/graphic.md` and `rule-sets/comm.md` and moves its pin to

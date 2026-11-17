@@ -73,7 +73,7 @@ A part may be empty, where the rule needs only the text or only the drawing. A r
 These rules judge what a piece says, page by page and across its pages.
 - **`RS-COMM-001`, a page makes one point, and shows it.** Sources: Michael Alley's assertion-evidence approach (*The Craft of Scientific Presentations*); Barbara Minto's vertical logic, each part supporting the one above it (*The Pyramid Principle*).
 - **`RS-COMM-002`, the big picture comes first.** Sources: Barbara Minto's pyramid principle, the answer before its arguments and their detail; Ben Shneiderman's "overview first, zoom and filter, then details on demand". For something new to the audience: David Ausubel's advance organisers, "the most important single factor influencing learning is what the learner already knows"; Dedre Gentner's structure-mapping theory of analogy (1983).
-- **`RS-COMM-003`, the pages tell the story in order.** Source: Barbara Minto's horizontal logic, where the headings alone, in order, carry the argument.
+- **`RS-COMM-003`, the pages tell the story in order.** Source: Barbara Minto's horizontal logic, where the headings alone, in order, carry the argument. The ideas of each group stand in one logical order, deductive or by time, by structure or by rank, so a lead follows from the one before where that order places it next.
 
 ### 7. The words fit the audience, and each fact names its source
 
