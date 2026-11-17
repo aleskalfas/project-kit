@@ -1,7 +1,7 @@
 ---
 rule-set: OPS
 loaded: true
-budget: 2300
+budget: 2308
 version: 6.1.0
 rules:
   RS-OPS-001:
@@ -47,7 +47,7 @@ rules:
       friction:
         anchors: {record: [COR-010]}
   RS-OPS-008:
-    status: proposed
+    status: accepted
     origin: {date: 2026-11-17, by: "Aleš Kalfas", why: "A destructive operation cannot be undone, so each one waits for the person's own confirmation, given for that operation alone (since the methodology's first release). Removing what an agent made itself, where a check shows nothing is lost, undoes no one's work, and asking before each one stopped the work for a question with nothing at stake. So such a removal needs no confirmation (project-kit#3393)."}
     pkit:
       friction:
