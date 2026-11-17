@@ -59,6 +59,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/values-2.schema.json
         - .pkit/capabilities/visual-communication/schemas/review.schema.json
         - .pkit/capabilities/visual-communication/schemas/calibration.schema.json
+        - .pkit/capabilities/visual-communication/schemas/look-report.schema.json
         - .pkit/capabilities/visual-communication/scripts/verdict.py
         - .pkit/capabilities/visual-communication/scripts/_lib/verdicts.py
         - .pkit/capabilities/visual-communication/scripts/_lib/calibration.py
@@ -943,6 +944,8 @@ A run replaces what an earlier run left in its own folder, so a folder never mix
 ### What the report says
 
 `report.json` says what the images cannot show as the renderer set it, and the command prints the same (DEC-015 point 3). It holds the piece, the lock, the renderer with its version, the tool, and the lists below. Each entry but an image's names the language, key and page it lies on.
+
+The schema [`look-report.schema.json`](schemas/look-report.schema.json) fixes the report's form through either renderer: every key below, and its type. The report names no schema of its own, and no check reads it.
 
 - **`images`:** each image, with its frames' file and its pixels. Through the SVG renderer, `on-white` is true where the page draws no ground of its own. Through the HTML renderer, `on-browser-ground` is true there instead. That image lies on the browser's own ground in the mode drawn, not on white, or under a forced palette on that palette's ground.
   - **`band`:** on each band of a page, its `number` from 1, how many the page has, `of`, and its `top` and `height` in the page's px. A page's bands follow one another in order.
