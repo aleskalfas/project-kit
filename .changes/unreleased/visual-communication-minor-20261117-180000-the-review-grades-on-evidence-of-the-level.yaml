@@ -1,0 +1,36 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  The graphic-design review grades a rule professional only on evidence of
+  that level (#3396): before it grades a rule professional it names the
+  strongest thing under the rule a professional would still mend, and grades
+  the rule below professional where there is one, and before excellent it
+  names what makes the page an example. A weakness of design that is no fault
+  lowers every rule whose words reach it, described once. A note never stands
+  in for a grade, and a grade judges the page a reader meets, wherever the
+  cause lies. A page's lead gives the order of its path where its part of the
+  brief gives no relation and no takeaway. The reviewer reads the rule on one
+  focal point (`RS-GRAPHIC-001`) in four steps, the rule on the form
+  (`RS-GRAPHIC-007`) both ways, counting every difference a page draws, and
+  the rule on the pages' order (`RS-COMM-003`) by the one order that runs
+  through the leads. The design knowledge's topic on type teaches that a text
+  whose lines carry structure keeps it in its alignment, after Steve
+  McConnell. Four rules gain clearer words: `RS-GRAPHIC-001` leaves a page's
+  title and lead out where its layout gives it a lead, and counts no part seen
+  first only because reading starts there; `RS-GRAPHIC-003` says what
+  decoration is, a component's lines, fills and frames among it, and judges
+  everything the page draws; `RS-GRAPHIC-007` asks for emphasis where the
+  page's point needs it, so a page that draws what its point is about like the
+  rest breaks it; and `RS-COMM-003` asks that one reasoned order run through
+  the leads. So `GRAPHIC` rises to 3.0.0 and `COMM` to 2.0.0, new majors. A
+  project's set that inherits `visual-communication:GRAPHIC@2` or
+  `visual-communication:COMM@1` fails validation, and no rule of that set
+  binds through it, until the project reads the reworded rules in
+  `rule-sets/graphic.md` and `rule-sets/comm.md` and moves its pin to
+  `GRAPHIC@3` or `COMM@2`. A bar that names `GRAPHIC@2`, `COMM@1` or a rule of
+  either at that major fails the capability's check (`bar-major`) until the
+  project names the new major in the configuration's `bar`. No migration moves
+  a pin or a bar, since the project's own reading of the reworded rules is what
+  each waits for.

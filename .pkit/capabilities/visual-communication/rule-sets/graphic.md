@@ -1,9 +1,9 @@
 ---
 rule-set: GRAPHIC
-version: 2.0.0
+version: 3.0.0
 rules:
   RS-GRAPHIC-001:
-    status: accepted
+    status: proposed
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
@@ -15,7 +15,7 @@ rules:
       friction:
         anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#8", "visual-communication:DEC-046#2", "visual-communication:DEC-046#3"]}
   RS-GRAPHIC-003:
-    status: accepted
+    status: proposed
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
@@ -39,7 +39,7 @@ rules:
       friction:
         anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#10"]}
   RS-GRAPHIC-007:
-    status: accepted
+    status: proposed
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
@@ -56,12 +56,13 @@ rules:
 
 The rules on whether a piece of visual work looks right, each taken from the canon of its field, with its source named in [visual-communication:DEC-028-principles-of-visual-communication], or, for `RS-GRAPHIC-008`, in [visual-communication:DEC-046-faults-lower-grades]. Each rule judges every piece, whatever its purpose (DEC-028 point 3). Each names what can be judged from the content's text, and what only the drawn page shows (DEC-028 point 4). The capability's operational rules are another set, `VIS`, which binds on a session's work, never on a piece.
 
-This set takes no scope. Its rules bind on an artefact only through a set of the project's own that inherits it, pinned to its major, as in `inherits: [visual-communication:GRAPHIC@2]` (COR-051 point 7). Where they bind, and how they guide while they bind nothing, is DEC-028 point 5.
+This set takes no scope. Its rules bind on an artefact only through a set of the project's own that inherits it, pinned to its major, as in `inherits: [visual-communication:GRAPHIC@3]` (COR-051 point 7). Where they bind, and how they guide while they bind nothing, is DEC-028 point 5.
 
 ## RS-GRAPHIC-001 — One focal point
 
-Each page has one focal point: what matters most is what is seen first. Size, weight, colour and position rank the rest below it.
+Each page has one focal point: what matters most is what is seen first. Size, weight, colour and position rank the rest below it. A part seen first only because reading starts there is no focal point: the order of reading alone ranks nothing.
 
+- **What it does not judge.** The page's frame, such as its title bar and its footer. On a page whose layout gives it a lead, its title and its lead are left out too: they state the point, and the focal point lies in the rest of the page, which shows it. On a page whose layout gives it no lead, such as a cover, the title is judged with the rest.
 - **From the text:** nothing, since what is seen first shows only once the page is drawn.
 - **On the drawn page:** the whole rule.
 
@@ -76,8 +77,9 @@ What belongs together is placed together and lined up, and what is separate is s
 
 Everything on a page helps it do its job, and what does not is left out. Decoration never competes with the content.
 
+- **Decoration** is whatever a page draws that carries none of its content, whoever draws it, a component among them: it shows no part of the content, and groups, parts or marks nothing the content gives.
 - **From the text:** whether each part the content places helps the page do its job.
-- **On the drawn page:** whether a decoration competes with the content.
+- **On the drawn page:** whether each thing the page draws helps it do its job, a component's lines, fills and frames among them, and whether a decoration competes with the content.
 
 ## RS-GRAPHIC-004 — The same meaning looks the same
 
@@ -108,14 +110,14 @@ Every difference a reader takes for meaning is one the content has, and every di
 - **An order** by position, size, numbering or arrows, and by steps of one shade only beside one of them.
 - **A quantity** by position or length, or by angle or area where neither serves.
 - **Kinds** by hue, with a label, an icon, a shape or a line style.
-- **Emphasis** only where the page's point needs it, or its job on a page with no single point.
+- **Emphasis** where the page's point needs it, and only there, or where its job needs it on a page with no single point.
 
-The strongest of these differences goes to what the page's point is about. Where that point is an order, the parts of the items that show the order do not take each concept's hue: they share one colour, or step in one shade. Each concept an item names keeps its colour on a mark of its own, such as its icon.
+The strongest of these differences goes to what the page's point is about. A page that draws what its point is about like the rest gives it no difference, and breaks this as one that gives the strongest difference to another part does. Where that point is an order, the parts of the items that show the order do not take each concept's hue: they share one colour, or step in one shade. Each concept an item names keeps its colour on a mark of its own, such as its icon.
 
 - **What it does not judge.** The page's frame, such as its title bar and its footer, and what lies inside a picture made elsewhere, such as a screenshot.
 - **From the text:** on a page whose point is an order, whether the content points the parts that show the order at one role, rather than each at its concept's, or the list of their items is given the steps of an order with no item naming a concept.
 - **What the text gives the drawn page.** The differences the content has: the order of a list its pattern draws in order, its quantities, the concepts and states it names, and what it marks.
-- **On the drawn page:** whether each difference the content has shows as what it is, and whether the page shows one the content lacks.
+- **On the drawn page:** whether each difference the content has shows as what it is, whether the page shows one the content lacks, and whether the strongest difference it draws goes to what its point is about.
 
 ## RS-GRAPHIC-008 — Running text is set to be read
 

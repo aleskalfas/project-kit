@@ -1,6 +1,6 @@
 ---
 rule-set: COMM
-version: 1.0.0
+version: 2.0.0
 rules:
   RS-COMM-001:
     status: accepted
@@ -15,7 +15,7 @@ rules:
       friction:
         anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#6"]}
   RS-COMM-003:
-    status: accepted
+    status: proposed
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
@@ -38,7 +38,7 @@ rules:
 
 The rules on whether a piece of visual work says the right thing, each taken from the canon of its field ([visual-communication:DEC-028-principles-of-visual-communication]). Each rule judges only a piece that explains, as its piece file's `explains` field says (DEC-028 point 3). Each names what can be judged from the content's text, and what only the drawn page shows (DEC-028 point 4).
 
-This set takes no scope. Its rules bind on an artefact only through a set of the project's own that inherits it, pinned to its major, as in `inherits: [visual-communication:COMM@1]` (COR-051 point 7). Where they bind, and how they guide while they bind nothing, is DEC-028 point 5.
+This set takes no scope. Its rules bind on an artefact only through a set of the project's own that inherits it, pinned to its major, as in `inherits: [visual-communication:COMM@2]` (COR-051 point 7). Where they bind, and how they guide while they bind nothing, is DEC-028 point 5.
 
 ## RS-COMM-001 — A page makes one point, and shows it
 
@@ -58,9 +58,10 @@ On a piece whose `explains` field is true, the piece, and each part of it, says 
 
 ## RS-COMM-003 — The pages tell the story in order
 
-On a piece whose `explains` field is true and whose pages are read in order, as a deck's are, its leads, read one after another, tell its story. Each follows from the one before. A page outside that order, such as an appendix or a backup slide, says so in its content, such as in its title.
+On a piece whose `explains` field is true and whose pages are read in order, as a deck's are, its leads, read one after another, tell its story. One reasoned order runs through them, such as an order of time, of structure or of rank, and each lead follows from the one before in that order. A lead that rests on what a later page shows, or a page whose place that order does not explain, breaks it. A page outside that order, such as an appendix or a backup slide, says so in its content, such as in its title.
 
 - **Which pieces.** A piece of one page, such as a single figure or a poster, is not judged by this rule. Nor is a piece whose reader picks the pages, such as a site.
+- **What following asks.** A lead follows from the one before where the order that runs through the leads places it next. A lead that names something an earlier one named does not follow from it by that alone.
 - **From the text:** the whole rule.
 - **On the drawn page:** nothing.
 

@@ -38,7 +38,7 @@
       "additionalProperties": false,
       "properties": {
         "covers": {
-          "description": "What the bar covers: rule sets by their ids, such as `COMM@1`, or single rules by theirs, such as `RS-COMM-003@1`, each with its set's major.",
+          "description": "What the bar covers: rule sets by their ids, such as `COMM@2`, or single rules by theirs, such as `RS-COMM-003@2`, each with its set's major.",
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
