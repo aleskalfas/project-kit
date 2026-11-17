@@ -1,0 +1,14 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  Core rule 8 (`backbone:RS-OPS-008`) now lets an agent remove what it
+  created itself without asking, where nothing is lost: a branch merged into
+  the default branch or its clean worktree, a process it started, or a file
+  or folder no commit holds, in the repository, its worktrees or a folder the
+  permission model lets it write. Every other destructive operation still
+  needs the user's explicit confirmation, one operation at a time. The set
+  `OPS` moves to 6.1.0, since the rule is loosened and no rule is tightened.
+  No migration: `.pkit/rules/core.md` keeps its path and arrives by sync as
+  before.
