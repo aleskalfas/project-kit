@@ -69,7 +69,7 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How verdicts and the merge gate move together
-  accDescr: A verdict approves or requests changes for the head it reviewed. An approval stands until the author changes what its reviewer checks, and then goes stale. Once each required reviewer's latest verdict is a standing approval and the checkboxes are ticked, the gate passes and the pull request merges at the head it judged.
+  accDescr: A verdict approves or requests changes for the head it reviewed. An approval stands until the author changes what its reviewer checks, and then goes stale. Once each required reviewer's latest verdict is a standing approval and the checkboxes are ticked, the gate passes and the pull request merges at the head it judged. A merge queue may instead merge a later head, pushed after the gate passed.
   posted([Verdict posted for a head]) --> approves[Approves]
   posted --> requests[Requests changes]
   requests -->|the author changes the work| posted
@@ -77,6 +77,7 @@ flowchart LR
   stale --> posted
   approves --> passes([Gate passes, each approval standing and each checkbox ticked])
   passes --> merged([Pull request merged at the head the gate judged])
+  passes -->|a push, and a merge queue merges the later head| later([Pull request merged at a later head])
 ```
 
 ## Verdict
@@ -136,7 +137,7 @@ A required reviewer is an agent whose approving [verdict](../glossary.md#term-ve
 
 Defined in [TERM-merge-gate](../glossary.md#term-merge-gate--merge-gate).
 
-**Why:** An approval counts only for what its [reviewer](../../core/glossary.md#term-reviewer--reviewer) saw. So the gate judges one [head](../../core/glossary.md#term-head--head), and the merge is pinned to it. A push between the two then fails the merge, rather than landing commits no [verdict](../glossary.md#term-verdict--verdict) covers ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). A [Task](../glossary.md#term-task--task)'s [checkboxes](../glossary.md#term-checkbox--checkbox) are checked before the merge, since closing the Task by the merge would otherwise pass them by ([DEC-007](../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
+**Why:** An approval counts only for what its [reviewer](../../core/glossary.md#term-reviewer--reviewer) saw. So the gate judges one [head](../../core/glossary.md#term-head--head), and the merge is pinned to it. A push between the two then fails a direct merge, rather than landing commits no [verdict](../glossary.md#term-verdict--verdict) covers ([DEC-028](../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). A [Task](../glossary.md#term-task--task)'s [checkboxes](../glossary.md#term-checkbox--checkbox) are checked before the merge, since closing the Task by the merge would otherwise pass them by ([DEC-007](../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
 
 The merge gate is the set of conditions project-management holds a [pull request](../../core/glossary.md#term-pull-request--pull-request) to before it lands it. Each [required reviewer](../glossary.md#term-required-reviewer--required-reviewer)'s latest verdict must be a standing approval, and the pull request's checks must be green ([DEC-026](../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)). The checkboxes of each [issue](../glossary.md#term-issue--issue) the pull request closes must be ticked.
 
@@ -152,7 +153,7 @@ The merge gate is the set of conditions project-management holds a [pull request
 
 **Always true:**
 
-- The merge is pinned to the head the gate judged (DEC-028).
+- Each merge or enqueue is pinned to the head the gate judged (DEC-028). A merge queue may still merge a later head, with commits no verdict covers (DEC-026).
 - A gate that passes gives no [authorisation](../glossary.md#term-authorisation--authorisation) to merge, which stays the person's ([DEC-055 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 - A person bypasses one required reviewer only with a reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records ([DEC-050](../../../../.pkit/capabilities/project-management/decisions/DEC-050-per-reviewer-override.md)).
 
