@@ -10,8 +10,12 @@ Held here:
 - **no verdict, or a refusal**: no bar gives no verdict, and nor does a report that grades
   a covered rule nowhere; what the verdict would rest on and cannot be read refuses;
 - **the hold**: ends no loop where no calibration's report is accepted, where the bar reaches
-  past the accepted rules, and where anything point 9 names has lapsed; ends it where the
-  accepted data is the reading of the state it was given at;
+  past the accepted rules, and where anything point 9 names has lapsed, a change to the
+  capability's code or to the body of its list of checks among it (DEC-065); ends it where
+  the accepted data is the reading of the state it was given at, and where only a file
+  beside the code or the list's front matter changed since;
+- **the code's digest**: it leaves out no file the capability ships in its scripts folder
+  but a folder's marker (DEC-065 point 2);
 - **the accepted calibration's data**: the shape the capability ships, which the command
   reads.
 
@@ -24,6 +28,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -31,10 +36,14 @@ from typing import Any
 import pytest
 
 from tests.in_process import load, run_main
-from tests.visual_communication_project import CAPABILITY, CONFIG, bound, project, write
+from tests.visual_communication_project import CAPABILITY, CONFIG, REPO, bound, project, write
 
 #: The parts of the capability's folder the command reads, copied for each test.
-COPIED = ("scripts", "schemas", "rule-sets", "agents", "design-knowledge")
+COPIED = ("scripts", "schemas", "rule-sets", "agents", "design-knowledge", "checks.md")
+
+#: The one kind of file the capability ships in its scripts folder that is not code: a
+#: folder's marker.
+MARKER = ".gitkeep"
 
 #: Where the copy keeps the accepted calibration's data, and a round's report.
 DATA = ".pkit/capabilities/visual-communication/calibration.yaml"
@@ -53,15 +62,19 @@ class Copy:
         self.root = root
         self.folder = root / ".pkit" / "capabilities" / "visual-communication"
         for part in COPIED:
+            if (CAPABILITY / part).is_file():
+                shutil.copyfile(CAPABILITY / part, self.folder / part)
+                continue
             shutil.copytree(
                 CAPABILITY / part,
                 self.folder / part,
                 ignore=shutil.ignore_patterns("__pycache__"),
             )
-        loaded = load(self.folder / "scripts", "verdict.py", "bar", "files")
+        loaded = load(self.folder / "scripts", "verdict.py", "bar", "files", "calibration")
         self.script: ModuleType = loaded[0]
         self.bar: ModuleType = loaded[1]
         self.files: ModuleType = loaded[2]
+        self.calibration: ModuleType = loaded[3]
 
     def run(self, *args: str) -> tuple[int, str, str]:
         done = run_main(self.script, *args, cwd=self.root)
@@ -440,6 +453,12 @@ def _appended(path: Path) -> None:
     path.write_text(path.read_text() + "\nOne more line.\n")
 
 
+def _commented(copy: Copy, code: str) -> None:
+    """A comment added to the program file `code` of the copy's scripts folder."""
+    path = copy.folder / "scripts" / code
+    path.write_text(path.read_text() + "# One more line.\n")
+
+
 @pytest.mark.parametrize(
     ("lapse", "said"),
     [
@@ -456,6 +475,26 @@ def _appended(path: Path) -> None:
         (
             lambda copy: write(copy.folder / "design-knowledge" / "new-topic.md", "A topic.\n"),
             "the design knowledge differs",
+        ),
+        (
+            lambda copy: _commented(copy, "_lib/scene_checks.py"),
+            "the capability's code, in `scripts/`, differs from the code the calibration ran on",
+        ),
+        (
+            lambda copy: _commented(copy, "_lib/plugins/svg.py"),
+            "the capability's code, in `scripts/`, differs",
+        ),
+        (
+            lambda copy: write(copy.folder / "scripts" / "_lib" / "left.py", "LEFT = 1\n"),
+            "the capability's code, in `scripts/`, differs",
+        ),
+        (
+            lambda copy: (copy.folder / "scripts" / "_lib" / "boxes.py").unlink(),
+            "the capability's code, in `scripts/`, differs",
+        ),
+        (
+            lambda copy: _appended(copy.folder / "checks.md"),
+            "the list of checks, `checks.md`, differs from the one the calibration read",
         ),
         (
             lambda copy: planted(copy, model={"name": "another-model-2.0", "effort": "high"}),
@@ -489,6 +528,11 @@ def _appended(path: Path) -> None:
         "the-reviewers-definition",
         "the-design-knowledge-changed",
         "the-design-knowledge-added-to",
+        "a-checks-code",
+        "a-renderer",
+        "a-program-file-added",
+        "a-program-file-removed",
+        "the-list-of-checks",
         "another-model",
         "another-effort",
         "no-effort",
@@ -513,6 +557,48 @@ def test_a_rule_the_bar_does_not_cover_lapses_nothing(copy: Copy) -> None:
     copy.accept(copy.answered("deck")["reading"])
     _reworded(copy, "RS-GRAPHIC-002")
     assert copy.answered("deck")["ends-the-loop"] is True
+
+
+def _beside(copy: Copy, name: str, data: bytes = b"\x00") -> None:
+    path = copy.folder / "scripts" / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+
+
+def _front_matter_changed(copy: Copy) -> None:
+    path = copy.folder / "checks.md"
+    text = path.read_text()
+    assert text.startswith("---\nreader: user\n")
+    path.write_text(text.replace("reader: user\n", "reader: user\n# A note.\n", 1))
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda copy: _beside(copy, "_lib/__pycache__/calibration.cpython-312.pyc"),
+        lambda copy: _beside(copy, ".gitkeep", b"marked\n"),
+        lambda copy: _beside(copy, "_lib/plugins/.gitkeep"),
+        lambda copy: _beside(copy, "_lib/calibration.py~", b"An editor's copy.\n"),
+        lambda copy: _beside(copy, ".DS_Store"),
+        _front_matter_changed,
+    ],
+    ids=[
+        "a-compiled-cache",
+        "a-folders-marker-changed",
+        "a-folders-marker-added",
+        "an-editors-file",
+        "a-systems-file",
+        "the-lists-front-matter",
+    ],
+)
+def test_a_file_beside_the_code_or_the_lists_front_matter_lapses_nothing(
+    copy: Copy, change: Any
+) -> None:
+    planted(copy)
+    copy.accept(copy.answered("deck")["reading"])
+    change(copy)
+    answered = copy.answered("deck")
+    assert (answered["ends-the-loop"], answered["why"]) == (True, [])
 
 
 def test_accepted_data_it_cannot_read_ends_no_loop(copy: Copy) -> None:
@@ -541,6 +627,37 @@ def test_a_rules_text_runs_from_its_heading_to_the_next_of_its_level_outside_fen
     assert copy.bar.rule_text(path, "RS-X-003") == ""
 
 
+# --- the code's digest --------------------------------------------------------------------------
+
+
+def test_the_codes_digest_leaves_out_no_file_shipped_in_the_scripts_folder_but_a_marker(
+    copy: Copy,
+) -> None:
+    """Each file the capability ships in its scripts folder is a program file the code's
+    digest takes, or a folder's marker. A program file of another kind fails here, in the
+    change that brings it, so that change decides how the digest sees it (DEC-065 point 2)."""
+    scripts = CAPABILITY / "scripts"
+    listed = subprocess.run(
+        ["git", "ls-files", "-z", "--", str(scripts.relative_to(REPO))],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    shipped = [REPO / each for each in listed.split("\0") if each]
+    taken = [path for path in shipped if copy.calibration.is_code(path)]
+    assert taken, "the digest takes no file the capability ships in its scripts folder"
+    left_out = [
+        path.relative_to(scripts).as_posix()
+        for path in shipped
+        if not copy.calibration.is_code(path) and path.name != MARKER
+    ]
+    assert left_out == [], (
+        f"the code's digest leaves out {left_out}: say how it sees a program file of their "
+        f"kind (DEC-065 point 2)"
+    )
+
+
 # --- the accepted calibration's data ------------------------------------------------------------
 
 
@@ -549,6 +666,8 @@ def _data(**fields: Any) -> dict[str, Any]:
         "rules": {"RS-GRAPHIC-001": {"major": 1, "text": f"sha256:{'a' * 64}"}},
         "reviewer": f"sha256:{'b' * 64}",
         "design-knowledge": f"sha256:{'c' * 64}",
+        "code": f"sha256:{'d' * 64}",
+        "checks": f"sha256:{'e' * 64}",
         "model": {"name": "a-model-1.0"},
     }
     return bound("calibration", **{**reading, **fields})
@@ -556,6 +675,13 @@ def _data(**fields: Any) -> dict[str, Any]:
 
 def test_the_data_takes_its_shape(copy: Copy) -> None:
     assert copy.files.shape_problems(_data(), "calibration") == []
+
+
+@pytest.mark.parametrize("key", ["code", "checks"])
+def test_the_data_without_a_digest_of_the_code_or_the_list_is_refused(copy: Copy, key: str) -> None:
+    data = _data()
+    del data[key]
+    assert copy.files.shape_problems(data, "calibration") != []
 
 
 @pytest.mark.parametrize(
@@ -568,6 +694,8 @@ def test_the_data_takes_its_shape(copy: Copy) -> None:
         {"rules": {"RS-GRAPHIC-001": {"major": 1, "text": "a" * 64}}},
         {"reviewer": f"sha256:{'B' * 64}"},
         {"design-knowledge": "sha256:abc"},
+        {"code": f"sha256:{'D' * 64}"},
+        {"checks": None},
         {"model": {"effort": "high"}},
         {"grades": []},
     ],
