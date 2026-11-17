@@ -77,6 +77,7 @@ LIST = "list"  # `gh pr list`
 CHECKS = "checks"  # `gh pr checks`
 ISSUE = "issue"  # `gh issue view`
 ISSUE_MERGES = "issue-merges"  # the GraphQL read of the PRs that close an issue
+CONTENTS = "contents"  # a file at a ref: the sync's switch, which no world here turns on
 UNKNOWN = "unknown"  # a request the fake does not model: answered with exit 1
 
 #: The requests a landing makes of the service — the reading, the squash
@@ -530,6 +531,11 @@ class HostingService:
         if kind == ISSUE:
             fields = (_option(args, "--json") or "").split(",")
             return _done(args, stdout=json.dumps({f: self.issue.get(f) for f in fields if f}))
+        if kind == CONTENTS:
+            # No world here holds the capability's configuration at a ref, so the
+            # sync's switch is off and no merge is held for it (DEC-072 point 3).
+            body = json.dumps({"message": "Not Found", "status": "404"})
+            return _done(args, 1, stdout=body, stderr="gh: Not Found (HTTP 404)")
         if kind == ISSUE_MERGES:
             merged = [self._merged_node()] if self.state == "MERGED" else []
             issue = {
@@ -1089,6 +1095,12 @@ def _kind(args: list[str]) -> str:
         return UNKNOWN
     if args[:2] == ["api", "repos/{owner}/{repo}"]:
         return DEFAULTS
+    if (
+        args[:1] == ["api"]
+        and len(args) > 1
+        and args[1].startswith("repos/{owner}/{repo}/contents/")
+    ):
+        return CONTENTS
     kinds: Mapping[tuple[str, str], str] = {
         ("pr", "view"): VIEW,
         ("pr", "list"): LIST,

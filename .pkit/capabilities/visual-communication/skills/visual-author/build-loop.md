@@ -41,7 +41,7 @@ A finding in a library version that the project does not correct asks for attent
 
 ## 3. Read
 
-`pkit visual pages <piece>` lists what can be drawn: its languages and keys, what is drawn by default, and each page by its number and trace id. `pkit visual look <piece>` draws pages as images in the clone's local `look/<piece>/`, or `look/<piece>.html/` for the HTML renderer's pages. It moves no lock, keeps no finding, and replaces what an earlier run left there ([The viewing step](../../outputs.md#the-viewing-step)).
+`pkit visual pages <piece>` lists what can be drawn: its languages and keys, what is drawn by default, and each page by its number and trace id. `pkit visual look <piece>` draws pages as images in the clone's local `look/<piece>/`, or `look/<piece>.html/` for the HTML renderer's pages. It moves no lock, keeps no findings record, and replaces what an earlier run left there. Its report gives each image what the checks found on it ([The viewing step](../../outputs.md#the-viewing-step)).
 
 **Which pages to draw:**
 
@@ -60,7 +60,8 @@ A finding in a library version that the project does not correct asks for attent
 
 | Entry | What it tells you | What to do |
 |---|---|---|
-| `dropped` | The tool drew nothing of a text or a run. | Read it as a part missing from the page, even where the image looks whole. Find the element by its frame, and mend what lost it. If you cannot, report it. |
+| `dropped` | The page does not show a text, a run or a span. Through the HTML renderer, `why` names the cause, and a `cut` or `covered` entry gives the `share` of the span's ink it loses. | Read it as a part missing from the page, even where the image looks whole, and find the element by its frame. Mend it where its cause lies, never by accepting it ([visual-communication:DEC-037-text-the-page-hides] point 1): `no ink` in the span's paint or the file; `off the page` and `cut` in the layout or the content, so the text stays inside its page; `covered` in the layout, the content, or the spacing a component or the brand sets between lines and between texts. Under forced colours alone, two covers are the draw order's to mend ([visual-communication:DEC-039-forced-colours-grounds-and-edges], its Rationale): a part between two texts, which the later text's ground lies over, drawn before both texts, or after both where it meets neither text's letters; and a clipped shape, such as a path or a sign, drawn before the text that rests on it. If you cannot mend it, report it. |
+| `dropped-not-read` | Through the SVG renderer, the causes of `dropped` the read does not reach: `cut` and `covered`. | Read the images for a text a part covers or the page's edge cuts. |
 | `losses` | What the renderer left out, accepted or not. | Treat one the piece does not accept as `loss` in step 4. |
 | `drawn-otherwise` | A run measured in more than one family, which the tool may set in one of them. | Trust the image less on that line. |
 | `band`, on an image | The image is one band of a page too tall for one, with its number and how many the page has. | Read each band the page has before you judge the page. |
@@ -228,7 +229,7 @@ The loop ends when all three hold.
 - before the piece goes to its audience
 - where you cannot read an image yourself
 
-Before you dispatch it, run `pkit visual look` once with all you want read, since it sees only what the last run drew. Name the piece. You may hand it a pipeline's drawings instead, naming the folder you fetched them into and the commit they show. Where its harness reads no image it stops and says so, and those pages stay not looked at.
+Before you dispatch it, run `pkit visual look` once with all you want read, since it sees only what the last run drew. Name the piece. You may hand it a pipeline's drawings instead, naming the folder you fetched them into and the commit they show. With the images and the piece, hand it what `pkit visual intent <piece>` prints, as it prints it: the brief's goals, relations and takeaways, without their reasons, which it grades against before it reads the brief's file ([`pkit visual intent <piece>`](../../README.md#pkit-visual-intent-piece)). It runs no command, so it has the intent only from you. Where you hand it none, it grades without the intent, and its report says so among what it read before grading. Where its harness reads no image it stops and says so, and those pages stay not looked at.
 
 It reads the piece's brief, and the capability's rule sets, beside the images. Its report names the brief it read, or that the piece has none. Each finding is one of four kinds, kept apart by what it cites:
 

@@ -176,18 +176,19 @@ class Journal:
     def of(cls, status: Any) -> Journal | None:
         """The journal a status payload carries, or None for no payload. Only an
         explicit `journal_logging.enabled: false` says no journal is kept: a
-        payload without the field comes from an engine that always kept one."""
+        payload without the field comes from an engine that always kept one. A
+        payload without its journal as a list of entries, each an object, is none
+        pm can read, never an empty journal (ADR-097 point 3)."""
         if not isinstance(status, dict):
             return None
-        logging = status.get("journal_logging")
-        kept = not (isinstance(logging, dict) and logging.get("enabled", True) is False)
+        logging = status.get("journal_logging", {})
+        enabled = logging.get("enabled", True) if isinstance(logging, dict) else None
         journal = status.get("journal")
-        entries = (
-            tuple(entry for entry in journal if isinstance(entry, dict))
-            if isinstance(journal, list)
-            else ()
-        )
-        return cls(kept, entries)
+        if not isinstance(enabled, bool) or not isinstance(journal, list):
+            return None
+        if not all(isinstance(entry, dict) for entry in journal):
+            return None
+        return cls(enabled, tuple(journal))
 
     def last_move_to(self, state: str) -> bool:
         """Whether the last move the journal records ends at ``state``."""

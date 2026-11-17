@@ -1,0 +1,17 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit visual verdict <piece>` gives the verdict against the project's bar from a
+  round's review report, kept alone as `round-<n>.yaml` in the clone's local
+  `reviews/<piece>/` folder (#3227). It says whether each page meets the bar, and the
+  piece, names each unmarked grade that fails it, each marked grade it leaves out and the
+  rules the bar covers, and gives no verdict, saying why, where the configuration holds
+  no bar or the report leaves out a covered rule. It says whether the verdict ends the
+  designer's loop: only where the capability ships an accepted calibration's data, the
+  new `visual-communication:calibration`, the bar covers only rules with evidence of
+  their own in it, and no covered set's major, covered rule's text, reviewer's
+  definition, design knowledge, model or effort has changed since. The capability ships
+  no such data yet, so the verdict informs. `--json` gives the verdict as one document,
+  with the reading the hold was compared on. A query: `pkit sync` provisions it.

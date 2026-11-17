@@ -238,7 +238,9 @@ class _FakeGitHub:
             }
             return _done(argv, json.dumps(issue))
         if argv[:2] == ["api", "user"]:
-            return _done(argv, "octocat\n")
+            # The membership library asks for the login and the account's type.
+            typed = "[.login, .type] | @tsv" in argv
+            return _done(argv, "octocat\tUser\n" if typed else "octocat\n")
         if argv == ["api", f"repos/{{owner}}/{{repo}}/branches/{self.base_branch}"]:
             # A ruleset protects the branch; its classic protection is off.
             off = {"enabled": False, "required_status_checks": {"enforcement_level": "off"}}
@@ -254,6 +256,15 @@ class _FakeGitHub:
                 "parameters": {"required_status_checks": checks},
             }
             return _done(argv, json.dumps([rule] if checks else []))
+        if argv[:1] == ["api"] and "/contents/" in argv[-1]:
+            # The capability's project configuration at a ref: the clone commits
+            # none, so the sync's switch is off everywhere (DEC-072 point 3).
+            return _done(
+                argv,
+                json.dumps({"message": "Not Found", "status": "404"}),
+                returncode=1,
+                stderr="gh: Not Found (HTTP 404)",
+            )
         if issue_branch_support.is_open_prs_reading(argv):
             # The open PRs of several local branches matching the issue (#1608).
             open_on = {BRANCH: [PR]} if self.state == "OPEN" else {}
@@ -688,6 +699,7 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
             gh_module,
             land,
             land.done_work,
+            land.done_work.sync_switch,
             land.review_pr,
             land.issue_branch,
             land.head_programs,
@@ -1942,6 +1954,23 @@ def test_a_step_after_the_merge_failing_is_merged_and_owed(world, capsys, monkey
     rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert out.splitlines()[-1] == f"merge: #{ISSUE} completed through its merged PR"
+
+
+def test_a_close_after_the_merge_failing_keeps_land_work_s_own_code(
+    world, capsys, monkeypatch
+) -> None:
+    """done-work exits 6 for a close owed (#3207); land-work decides on how its
+    run ended, so it exits 7, as for any step after the merge."""
+    run = world()
+    monkeypatch.setattr(run.land.done_work, "_invoke_close_issue", lambda *a, **k: 3)
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_RETRY == 7
+    assert out.splitlines()[-1] == (
+        f"merge: merged as {'c' * 7}, but a step after the merge failed: [warn] PR merged "
+        f"but close-issue exited 3 for #{ISSUE}. The merge is durable; re-run `close-issue "
+        f"{ISSUE} --mode pr-merge --pr {PR}` to close and cascade it. — run `land-work "
+        f"{ISSUE}` again to complete #{ISSUE}"
+    )
 
 
 def _then(run: _Run, monkeypatch: pytest.MonkeyPatch, after: Callable[[], None]) -> None:
@@ -5198,3 +5227,84 @@ def test_a_grant_s_words_reach_the_terminal_escaped(world, capsys, monkeypatch) 
     assert rc == run.land.EXIT_READY, out + err
     assert "\x1b" not in out + err and "\x07" not in out + err
     assert "\\x1b[1A" in out
+
+
+# ---- a change that turns on the sync's switch (DEC-072 point 3, #3301) ------------------
+
+_SWITCH_ON = "sync_board:\n  adds_with_no_terminal: true\n"
+_SWITCH_HELD = (
+    "; held for `sync_board.adds_with_no_terminal`, which an authorisation given up front "
+    "does not cover (above); merge at a terminal, authorising it yourself, with: "
+    f"pkit pm land-work {ISSUE}"
+)
+
+
+def _push_switch_on(run: _Run) -> str:
+    """A push to the PR's branch whose project configuration turns the sync's switch
+    on. The clone ignores `.pkit/`, so the base holds no configuration."""
+    config = run.work / _CONFIG
+    config.write_text(config.read_text(encoding="utf-8") + _SWITCH_ON, encoding="utf-8")
+    _git(run.work, "add", "-f", _CONFIG)
+    _git(run.work, "commit", "-q", "-m", "turn the switch on")
+    _git(run.work, "push", "-q", "origin", BRANCH)
+    head = _git(run.work, "rev-parse", "HEAD")
+    run.github.head = head
+    run.github.checks[head] = [_GREEN]
+    return head
+
+
+@pytest.mark.parametrize("authorised", [True, False], ids=["yes", "no-yes-off-a-terminal"])
+def test_a_change_that_turns_on_the_switch_stops_ready_for_a_merge_at_a_terminal(
+    world, capsys, authorised: bool
+) -> None:
+    """An authorisation given up front does not cover it, so the run stops at
+    `ready:`, says what turning it on means, and names the run at a terminal in
+    place of the command that merges on a `--yes`."""
+    run = world()
+    _push_switch_on(run)
+
+    rc, out, err = (run.authorised if authorised else run.run)(capsys=capsys)
+
+    assert rc == run.land.EXIT_READY, out + err
+    assert run.github.merges == []
+    lines = out.splitlines()
+    assert lines[-1].endswith(_SWITCH_HELD)
+    assert "--yes" not in lines[-1]
+    assert any("This change turns on `sync_board.adds_with_no_terminal`." in line for line in lines)
+
+
+def test_at_a_terminal_the_persons_yes_merges_a_change_that_turns_on_the_switch(
+    world, capsys, monkeypatch
+) -> None:
+    """At a terminal, done-work says what turning the switch on means, from the hold
+    land-work read, and asks: the person's own yes merges it."""
+    run = world()
+    _push_switch_on(run)
+    monkeypatch.setattr(run.land, "_interactive", lambda: True)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    asked: list[str] = []
+
+    def answer(prompt: str = "") -> str:
+        asked.append(prompt)
+        return "y"
+
+    monkeypatch.setattr("builtins.input", answer)
+
+    rc, out, err = run.run(capsys=capsys)
+
+    assert rc == 0, out + err
+    assert [merge[-1] for merge in run.github.merges] == [run.github.head]
+    assert "lets `pkit pm sync-board` add the missing cards" in out
+    assert any(prompt.startswith("Squash-merge PR") for prompt in asked)
+    # The hold was read from git objects, so done-work asked the host nothing of it.
+    assert not any("/contents/" in argv[-1] for argv in run.github.calls)
+
+
+def test_a_change_that_leaves_the_switch_off_merges_on_the_authorisation(world, capsys) -> None:
+    run = world()
+    _push_grants(run, _GRANT)
+
+    rc, out, err = run.authorised(capsys=capsys)
+
+    assert rc == 0, out + err
+    assert "sync_board.adds_with_no_terminal" not in out

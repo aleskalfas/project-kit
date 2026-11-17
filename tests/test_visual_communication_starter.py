@@ -6,7 +6,8 @@ component's reference renders, under the test brand, pass the check and draw eac
 each option and of each field of runs (DEC-007 point 3). The header's, on three axes, is
 previewed by `pkit visual render` and checked by `pkit visual check` in each of its twelve
 combinations, with nothing failing (DEC-005 point 6). A run that reads a colour family
-lies on that family's fill (`components.md`, *Values, states and colour*). A connector's
+lies on that family's fill, and one in an order's text on a step of the order
+(`components.md`, *Values, states and colour*). A connector's
 line reaches 3:1 against what it lies on in every mode, and crosses no item but its ends;
 a strong run keeps the body's size and line height. The README names what the components
 declare. A network's ties reach, by key path, the items its groups draw (DEC-011 point 3);
@@ -55,12 +56,13 @@ from tests.visual_communication_project import (
     write_list,
 )
 
-add, render, check, checks, keys, pl, reading, tokens, svg = load(
+add, render, check, checks, colour_steps, keys, pl, reading, tokens, svg = load(
     "visual-communication",
     "add.py",
     "render.py",
     "check.py",
     "checks",
+    "colour_steps",
     "keys",
     "pipeline",
     "reading",
@@ -488,6 +490,20 @@ UNSIGNED = [
 ]
 
 
+#: The labels of the checks of boxes (DEC-046 point 3). They ask the reviewer for attention
+#: on places of the reference pieces, such as a text whose insets at the top and the bottom
+#: of its card's box differ by 1.6 px, and fail nothing.
+BOX_LABELS = ("near-alignment", "box-overlap")
+
+#: The labels the tests of the reference pieces' checks read apart from the rest.
+APART = ("component-experimental", *SIGN_LABELS, *BOX_LABELS)
+
+
+def box_levels(judged: Iterable[tuple[Any, str]]) -> set[str]:
+    """The levels of the calls of the checks of boxes among a check's findings, `judged`."""
+    return {level for finding, level in judged if finding.code in BOX_LABELS}
+
+
 def on_signs(judged: Iterable[tuple[Any, str]]) -> list[tuple[str, str, str, str, str]]:
     """The calls for attention on concepts' signs among a check's findings, `judged`, as
     `UNSIGNED` gives each."""
@@ -504,17 +520,18 @@ def test_every_reference_piece_passes_the_check_under_the_test_brand(location: P
     """The test brand's newest version, the one the check of a version alone reads (DEC-019),
     states, once, that it gives `picture.logo` no value, and no piece states it (DEC-025
     point 9): a header draws with no logo. Beside it, the pieces ask for attention on the
-    concepts that map no sign."""
+    concepts that map no sign, and on the places the checks of boxes name."""
     report = checks.check(location)
     found = [
         (level, finding.code, finding.file, finding.where)
         for finding, level in report.judged
-        if finding.code != "component-experimental" and finding.code not in SIGN_LABELS
+        if finding.code not in APART
     ]
     assert found == [
         ("fact", "picture-role-unvalued", "visual/libraries/test-brand/1.1.0/", "picture.logo")
     ]
     assert on_signs(report.judged) == UNSIGNED
+    assert box_levels(report.judged) <= {"attention"}
     assert not report.failed()
     assert report.summary == [
         f"{len(COMPONENTS)} piece(s) in `visual`: the scenes of 0 read from their findings "
@@ -742,11 +759,25 @@ def frames(
         yield from frames(child, left, top)
 
 
+#: The text on every step of an order, which the foundations declare (DEC-032 point 1).
+ORDER_TEXT = read(FOUNDATIONS / "roles.yaml")["order"]["text"]
+
+
+def holds_its_text(fill: str, text: str) -> bool:
+    """Whether a box of `fill` is the ground a run in the paint `text` lies on: its family's
+    fill, or, for the order's text, a step of the order (DEC-032 point 4)."""
+    if text == ORDER_TEXT:
+        return colour_steps.is_step(fill)
+    family = FAMILY_TEXT.match(text)
+    return family is not None and fill == f"family.{family.group(1)}.fill"
+
+
 @pytest.mark.parametrize("language", LANGUAGES)
 def test_a_text_in_a_familys_text_lies_on_that_familys_fill(
     scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
 ) -> None:
-    checked = 0
+    """And a text in the order's text on a step: the levels of layers take one each."""
+    checked = on_steps = 0
     for (piece, lang), scene in scenes.items():
         if lang != language:
             continue
@@ -758,19 +789,19 @@ def test_a_text_in_a_familys_text_lies_on_that_familys_fill(
                     boxes.append((element.get("fill", ""), frame))
                 for paragraph in element.get("paragraphs", []):
                     for run in paragraph:
-                        family = FAMILY_TEXT.match(run["fill"])
-                        if family is None:
+                        if FAMILY_TEXT.match(run["fill"]) is None:
                             continue
                         checked += 1
+                        on_steps += run["fill"] == ORDER_TEXT
                         assert any(
-                            fill == f"family.{family.group(1)}.fill"
+                            holds_its_text(fill, run["fill"])
                             and under[0] <= frame[0]
                             and under[1] <= frame[1]
                             and frame[2] <= under[2]
                             and frame[3] <= under[3]
                             for fill, under in boxes
                         ), (piece, element["id"], run["text"])
-    assert checked > 0
+    assert checked > on_steps > 0
 
 
 #: Every combination of the modes of the foundations' value axes, which every brand has

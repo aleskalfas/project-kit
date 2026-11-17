@@ -32,6 +32,12 @@ roles:
   family.red.fill: {type: color}
   family.red.line: {type: color}
   family.red.text: {type: color}
+  # An order's roles (DEC-032 point 1): its first end, its last end and the text on every
+  # step, in the group of the families and apart from them (`order`, below). A brand that
+  # gives them no value draws every step as the neutral family, which marks no kind.
+  family.order.first: {type: color, default: '{family.neutral.fill}'}
+  family.order.last: {type: color, default: '{family.neutral.fill}'}
+  family.order.text: {type: color, default: '{family.neutral.text}'}
   space.1: {type: dimension}
   space.2: {type: dimension}
   space.3: {type: dimension}
@@ -83,6 +89,16 @@ families:
   purple: {fill: family.purple.fill, line: family.purple.line, text: family.purple.text}
   red: {fill: family.red.fill, line: family.red.line, text: family.red.text}
 
+# An order's roles, which no family holds and no concept maps to (DEC-032 point 1): which
+# role is the first end, which the last, which the text on every step, and which the page's
+# ground, from which the first end stands out at least as much as the last (DEC-004 point
+# 8). The engine and the checks read the ends from here, never from a role's name.
+order:
+  first: family.order.first
+  last: family.order.last
+  text: family.order.text
+  ground: background
+
 # The shapes a notation maps a concept to, by name, as the concept's sign where the
 # notation holds no icon for it (DEC-036 point 1). Each is one outline: its path in SVG's
 # path data, the rule that fills it and the side of the square its numbers lie within. A
@@ -115,7 +131,7 @@ shapes:
 
 # The pairs of shared colour roles that must contrast in every combination (DEC-004
 # point 8), at WCAG's levels: `text` 4.5, `large-text` and `marks` 3. Each family's text
-# contrasts with its fill.
+# contrasts with its fill, and an order's text with each of its ends.
 pairs:
   - {text: text-primary, under: background, level: text}
   - {text: family.neutral.text, under: family.neutral.fill, level: text}
@@ -124,3 +140,5 @@ pairs:
   - {text: family.orange.text, under: family.orange.fill, level: text}
   - {text: family.purple.text, under: family.purple.fill, level: text}
   - {text: family.red.text, under: family.red.fill, level: text}
+  - {text: family.order.text, under: family.order.first, level: text}
+  - {text: family.order.text, under: family.order.last, level: text}

@@ -1,0 +1,53 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+slides:
+  - id: parts
+    layout: slide
+    title: A level holds a head and a text, each where given
+    visual:
+      use: starter/list
+      item: {use: starter/level}
+      items:
+        - id: head
+          head: A head alone
+        - id: both
+          head: Both
+          text: The text stands under the head, in the family's text.
+        - id: text
+          text: A text alone, with nothing above it.
+
+  - id: concepts
+    layout: slide
+    title: It lies on its family's fill, a concept's sign at the end of its head
+    visual:
+      use: starter/list
+      item: {use: starter/level}
+      items:
+        - id: neutral
+          head: Neutral
+          text: Its own family, which marks no kind.
+        - id: person
+          concept: test-notation/person
+          head: A person
+          text: The concept's family, and its sign.
+        - id: runs
+          concept: test-notation/service
+          text:
+            - {text: Strong, style: strong}
+            - " where it matters, and plain for the rest, both in the family's text."
+
+  - id: steps
+    layout: slide
+    title: As the levels of layers, each takes a step of the order
+    visual:
+      use: starter/layers
+      levels:
+        - id: decisions
+          head: Decisions
+        - id: rules
+          head: Working rules
+        - id: commands
+          head: Commands and checks
+        - id: work
+          head: Your code and documents

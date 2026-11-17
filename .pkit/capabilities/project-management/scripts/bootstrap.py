@@ -66,7 +66,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, issue_list, session_guard
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    board_fields,
+    bootstrap_gate,
+    issue_list,
+    session_guard,
+)
 from _lib.gh import gh_run
 from _lib.label_contributions import (
     LabelContribution,
@@ -660,30 +667,35 @@ def _filed_starter_epic() -> dict[str, Any] | None:
 
 
 def _resolve_project_node_id(config: dict[str, Any], board_id: int | str) -> str | None:
-    """Resolve board NUMBER → Projects-v2 project node id via `gh project view` (a READ).
+    """Resolve board NUMBER → Projects-v2 project node id, through the board read
+    seam (`board_fields.read_project_node_id`, a READ).
 
-    Mirrors ``back-fill.py``'s / ``create-issue.py``'s resolver: scopes to the
-    configured ``gh.default_owner`` (or the current repo's owner) and reads ``.id``
-    off ``gh project view --format json``. Returns ``None`` when gh is absent, the
-    call fails, or the payload carries no id. Bootstrap resolves this ONCE at
-    adoption and caches it so create-issue can skip the per-create read (#310).
+    Scopes to the configured ``gh.default_owner`` (or the current repo's owner).
+    The id counts only where the board's own answer names the configured board,
+    its number and owner agreeing ([pkit:ADR-096] point 1), so a stored id is
+    written only from the board's own answer (point 6). Returns ``None`` when gh
+    is absent, the call fails, or the answer names no board or another one.
+    Bootstrap resolves this ONCE at adoption and stores it as a name of the
+    board, by which later reads address it (#310).
     """
-    owner = _resolve_board_owner(config)
-    view_args = ["gh", "project", "view", str(board_id), "--format", "json"]
-    if owner:
-        view_args += ["--owner", owner]
-    try:
-        proc = gh_run(view_args, config, check=False)
-    except FileNotFoundError:
-        return None
-    if proc.returncode != 0:
-        return None
-    try:
-        payload = json.loads(proc.stdout)
-    except (json.JSONDecodeError, ValueError):
-        return None
-    node_id = payload.get("id") if isinstance(payload, dict) else None
-    return node_id if isinstance(node_id, str) and node_id else None
+    board_config = dict(config, has_projects_v2_board=True, projects_v2_board_id=board_id)
+    return board_fields.read_project_node_id(
+        board_config, owner=_resolve_board_owner(config), gh_call=_board_gh_call
+    ).node_id
+
+
+def _board_gh_call(
+    args: list[str],
+    config: dict[str, Any],
+    *,
+    fallback_owner: str | None = None,
+    check: bool = False,
+) -> Any:
+    """Run a board READ through THIS module's `gh_run`, the owner the seam
+    resolved appended as `--owner`."""
+    if fallback_owner:
+        args = [*args, "--owner", fallback_owner]
+    return gh_run(args, config, check=check)
 
 
 def _resolve_board_owner(config: dict[str, Any]) -> str | None:

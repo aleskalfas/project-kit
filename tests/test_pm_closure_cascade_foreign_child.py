@@ -28,7 +28,6 @@ real `pkit` and the fake `gh` on PATH.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import re
@@ -52,7 +51,7 @@ from _lib import lifecycle_predicates as predicates  # noqa: E402
 
 from project_kit.process import CascadeResolution, ProcessEngine, load_definition  # noqa: E402
 from tests.in_process import MARK, InProcessPkit, load, run_main, start_in_process  # noqa: E402
-from tests.pm_lifecycle_world import fake_gh_in_process  # noqa: E402
+from tests.pm_lifecycle_world import fake_gh_in_process, load_script  # noqa: E402
 
 ADDRESS = "project-management:issue-lifecycle"
 CONTAINER = 5
@@ -969,12 +968,7 @@ def _writes_stay_here(calls: list[list[str]]) -> list[list[str]]:
 
 
 def test_create_issue_s_children_view_leaves_nothing_elsewhere(monkeypatch) -> None:
-    spec = importlib.util.spec_from_file_location(
-        "pm_create_issue_foreign_child", CAP_SCRIPTS / "create-issue.py"
-    )
-    assert spec is not None and spec.loader is not None
-    create_issue = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(create_issue)
+    create_issue = load_script("create-issue.py", "pm_create_issue_foreign_child")
     listed = {
         "id": 90042,
         "number": 42,
