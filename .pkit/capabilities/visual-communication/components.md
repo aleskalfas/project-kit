@@ -120,6 +120,9 @@ pkit:
         - visual-communication:DEC-038#5
         - visual-communication:DEC-038#6
         - visual-communication:DEC-038#7
+        - visual-communication:DEC-066#1
+        - visual-communication:DEC-066#2
+        - visual-communication:DEC-066#3
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -313,6 +316,25 @@ parts:
 
 - **Places and sizes** are formulas that give a length, in the component's own frame. A missing `x` or `y` is zero.
 - **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. A field of runs is filled where one of its runs holds text. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. Or it is a switch on a size, or, in a drawing of a layout, on `:as`, each branch `true`, `false` or a `when` of the two forms above ([Switches](#switches)). A part not drawn has zero size, at its place, so a formula that reads its frame holds.
+- **`lies-over`** names the parts that this one lies over on purpose, such as a badge over a card's box, as a list: `lies-over: [box]` (DEC-066 point 1). Any part may take it, wherever parts are written: a component's `parts`, a layout's drawing and a brand's drawing. It names parts written before it in the same `parts`, and so drawn before it, since the check of overlaps compares only the parts one group holds directly. So it names no part inside a component a part places, and no item of a list: a part that places a component, holds a slot or repeats over a list is named whole. It speaks of the parts' boxes, as the check does, not of what is drawn in them. It takes no switch: wherever the two parts overlap, under any option, at any size and in any language, the overlap is meant. Where they do not overlap, or where the check does not compare them, as where one is a line or holds the other, it changes nothing.
+- **What `lies-over` refuses,** when the component is read: a name that is no part of the same `parts`, the part's own name, the name of a part written after it, and a name written a second time. Each is a finding (*checks*, `lies-over-refused`), and says nothing, so the check asks for attention at that pair as at any pair no one named. A name's first writing names its part.
+- **What `lies-over` gives.** Where a library version the project's list marks released, and whose folder still holds what was released, names a pair so, validation states their overlap as a fact (*checks*, `box-overlap-meant`), which asks no one to act. For a copy of a library the capability ships, the list's hash must also be the one the capability records for that version. Anywhere else, as in a piece's own component or in a version not yet released, the word gives the check nothing: validation asks for attention at the pair, `box-overlap`, as at any pair no one named. The word never reaches the review, save the message of a refusal. The viewing step's report gives every overlap as `box-overlap`, with nothing of the word in its message, and the reviewer judges each on the image (DEC-066 point 2). The check of edges that nearly line up compares a pair named so as it compares any two siblings (DEC-066 point 3).
+
+A card's badge lies over the right edge of the card's box on purpose, and over nothing else. Where a long title pushes the badge down over another part, that overlap still asks for attention:
+
+```yaml
+parts:
+  box:
+    box: {fill: surface, stroke: line}
+    width: "=:width - @space.3"
+    height: "=:height"
+  badge:
+    lies-over: [box]
+    box: {fill: accent}
+    x: "=box.right - @space.3"
+    width: "=@space.4"
+    height: "=@space.4"
+```
 
 The figure draws its caption only when the content gives one:
 
@@ -843,7 +865,7 @@ Which text fills `version` and `date`:
 
 The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, its key over the size axes, `seam` (the version of the seam its plugins read), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms), `fixed-pages`, `physical-size` and `children`. `fixed-pages` says whether the pages are *fixed pages*: `true` where the top's layouts are its pages' forms and it asks for a height, by a formula or through its physical size, which each page then gets, as a deck's slides do (DEC-031 point 2). A site's pages take their own height, and a page alone and what a slot of pages places are none, so it is `false` for them. So a scene's pages are all fixed pages or none is, and the top's name decides nothing. `physical-size` holds the physical size of the piece's top, `{width, height}` in millimetres as the top declares it, or `null` where it declares none, and every page of the scene takes it ([A physical size](#a-physical-size)). Each element holds its `type`, `group`, a primitive's kind, or `path` for a sign, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
 
-A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A line adds `marker-start` and `marker-end` where it draws an arrowhead there. A tie's connector adds these:
+A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. An element whose part names parts under `lies-over` adds `lies-over`, of any type (DEC-066 point 2): `ids`, the trace ids of the elements those parts draw in the scene, in the order the part names them, and `library`, the version that holds the part, as `<library>@<version>`, none for a local component. A part it names that draws nothing in the scene, such as a slot left empty or a part whose `when` does not hold, adds no id, and where none of them draws, the element holds no `lies-over`. It holds no mark of whether that version is released, which is read where a finding is read. It is no property an element draws, so it names no source, and no renderer declares it or reports a loss of it, as of an element's `type`, `id`, `sources` and `children`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A line adds `marker-start` and `marker-end` where it draws an arrowhead there. A tie's connector adds these:
 
 - **`rx`:** the radius of its turns, as its part gives it, where it gives one. A renderer fits each turn to its legs ([Ties and connectors](#ties-and-connectors)).
 - **`points`:** where its route turns, every point of it, its ends first and last. A connector whose route does not turn holds no `points`, and keeps its ends as `x1 y1 x2 y2`.

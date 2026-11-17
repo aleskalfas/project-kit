@@ -133,6 +133,14 @@ the list. A released version whose folder no longer matches what was released is
 project's to restore, so a finding in it fails (DEC-002 point 7, DEC-003 point 9, DEC-013
 point 6).
 
+**An overlap's label** is computed when a finding is read too, in validation alone: an
+overlap the part on top names under `lies-over` is the fact `box-overlap-meant` where the
+version that holds that word is released and still as it was released, and, for a copy of a
+library the capability ships, listed with the hash the capability records for that version;
+elsewhere it is `box-overlap`, as at a pair no one named (DEC-066 point 2). Validation and the
+viewing step read every finding through one reading (`Reading`), which gives the viewing step
+every overlap as `box-overlap`.
+
 In the findings record, a finding's file is relative to the piece's folder, or, where it
 lies in a library version, to that version's folder, so the record stays true when the
 location moves or the piece is copied. The check gives every file relative to the project
@@ -290,8 +298,9 @@ HANDED_OUT_FILE_MISSING = "handed-out-file-missing"
 HANDED_OUT_FILE_CHANGED = "handed-out-file-changed"
 EXPORTS_UNREADABLE = "exports-unreadable"
 
-#: The properties of a scene element that are no property it draws.
-_STRUCTURE = ("type", "id", "sources", "children")
+#: The properties of a scene element that are no property it draws: beside its structure,
+#: the parts its part says it lies over on purpose (DEC-066 point 2).
+_STRUCTURE = ("type", "id", "sources", "children", boxes.LIES_OVER)
 
 _CONTENT_FILE = re.compile(r"^content\.(?P<language>[^.]+)\.yaml$")
 
@@ -425,6 +434,72 @@ def _grant_fix(given: grant.Grant, recorded: str) -> str:
     )
 
 
+class Reading:
+    """How each finding reads where it lies, worked out each time it is read and never
+    stored: validation's reading, and the viewing step's (DEC-002 point 7, DEC-066 point 2).
+
+    - **Its level** (`findings.as_read`), by whether the version the finding lies in is
+      released and still as it was released, and whether it is a copy of a library the
+      capability ships.
+    - **An overlap's label, in validation alone.** An overlap the part on top names under
+      `lies-over` reads as the fact `box-overlap-meant` where the version that holds the word
+      reads as released (`word_given`), and as `box-overlap` elsewhere. The viewing step
+      reads every overlap as `box-overlap`, with the message of any overlap.
+    """
+
+    def __init__(self, held: Held) -> None:
+        self.held = held
+        self._held_as: dict[tuple[str, Version], tuple[bool, bool]] = {}
+
+    def read(self, finding: Finding, *, validation: bool) -> tuple[Finding, str]:
+        """`finding` as it reads, with its level there: in validation where `validation`,
+        else in the viewing step."""
+        if validation and finding.lies_over_in and self.word_given(finding.lies_over_in):
+            finding = boxes.meant(finding)
+        name, _, text = finding.library.partition("@")
+        try:
+            version = Version.parse(text)
+        except ValueError:
+            return as_read(finding, False)
+        released, shipped = self._as_released(name, version)
+        return as_read(finding, released, shipped=shipped)
+
+    def word_given(self, library: str) -> bool:
+        """Whether the version `library` (`<name>@<version>`), which holds an overlap's word,
+        reads as released (DEC-066 point 2): the list marks it released, its folder still
+        matches the list's hash, and, for a copy of a library the capability ships, that hash
+        is the one the capability records for that version (`copies.Compared.restored`). A
+        version from another repository reads as one of the project's own library does."""
+        name, _, text = library.partition("@")
+        try:
+            version = Version.parse(text)
+        except ValueError:
+            return False
+        if not self.held.released(name, version) or self.held.hash_changes(name, version):
+            return False
+        return self.held.source(name) != SHIPPED_SOURCE or library in self.compared.restored
+
+    def _as_released(self, name: str, version: Version) -> tuple[bool, bool]:
+        """Whether the list marks a version released and its folder is still as it was
+        released; and whether it is a copy of a library the list names from the source
+        `shipped`, other than a released copy whose folder no longer matches. A copy that no
+        longer matches is the project's to restore (DEC-002 point 7, DEC-003 point 9). Any
+        other copy of a library the capability ships only whoever maintains the capability
+        corrects (DEC-013 point 6)."""
+        key = (name, version)
+        if key not in self._held_as:
+            released = self.held.released(name, version)
+            changed = released and bool(self.held.hash_changes(name, version))
+            shipped = self.held.source(name) == SHIPPED_SOURCE and not changed
+            self._held_as[key] = (released and not changed, shipped)
+        return self._held_as[key]
+
+    @cached_property
+    def compared(self) -> copies.Compared:
+        """Each copy of a library the capability ships, against what it ships."""
+        return copies.compare(self.held)
+
+
 class _Run:
     """One run of the check over a location."""
 
@@ -440,41 +515,20 @@ class _Run:
         self.reported: set[tuple[str, str, str, str, str]] = set()
         self.named: set[str] = set()
         self.notations: set[str] = set()
-        self.held_as: dict[tuple[str, Version], tuple[bool, bool]] = {}
+        self.reading = Reading(self.held)
         self.counts = {"pieces": 0, "read": 0, "computed": 0, "unchecked": 0, "final": 0}
 
     def add(self, finding: Finding) -> None:
         self.found.append(finding)
 
     def judged(self, finding: Finding) -> tuple[Finding, str]:
-        """A finding as it reads where it lies, with its level there."""
-        name, _, text = finding.library.partition("@")
-        try:
-            version = Version.parse(text)
-        except ValueError:
-            return as_read(finding, False)
-        released, shipped = self._as_released(name, version)
-        return as_read(finding, released, shipped=shipped)
+        """A finding as validation reads it where it lies, with its level there."""
+        return self.reading.read(finding, validation=True)
 
-    def _as_released(self, name: str, version: Version) -> tuple[bool, bool]:
-        """Whether the list marks a version released and its folder is still as it was
-        released; and whether it is a copy of a library the list names from the source
-        `shipped`, other than a released copy whose folder no longer matches. A copy that no
-        longer matches is the project's to restore (DEC-002 point 7, DEC-003 point 9). Any
-        other copy of a library the capability ships only whoever maintains the capability
-        corrects (DEC-013 point 6)."""
-        key = (name, version)
-        if key not in self.held_as:
-            released = self.held.released(name, version)
-            changed = released and bool(self.held.hash_changes(name, version))
-            shipped = self.held.source(name) == SHIPPED_SOURCE and not changed
-            self.held_as[key] = (released and not changed, shipped)
-        return self.held_as[key]
-
-    @cached_property
+    @property
     def compared(self) -> copies.Compared:
         """Each copy of a library the capability ships, against what it ships."""
-        return copies.compare(self.held)
+        return self.reading.compared
 
     def summary(self, only: str | None) -> list[str]:
         c = self.counts
@@ -2588,7 +2642,13 @@ def _stored(entry: Mapping[str, Any]) -> Finding:
         fix=str(entry.get("fix", "")),
         library=str(entry.get("library", "")),
         who=str(entry.get("who", "")),
+        lies_over_in=str(entry.get(LIES_OVER_IN, "")),
     )
+
+
+#: The field of a findings record's entry that names the version holding an overlap's word
+#: (`Finding.lies_over_in`, DEC-066 point 2).
+LIES_OVER_IN = "lies-over-in"
 
 
 def record_entry(finding: Finding) -> dict[str, Any]:
@@ -2604,6 +2664,8 @@ def record_entry(finding: Finding) -> dict[str, Any]:
     for name in ("fix", "library", "who"):
         if getattr(finding, name):
             entry[name] = getattr(finding, name)
+    if finding.lies_over_in:
+        entry[LIES_OVER_IN] = finding.lies_over_in
     return entry
 
 
