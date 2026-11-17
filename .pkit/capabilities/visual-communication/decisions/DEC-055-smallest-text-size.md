@@ -393,6 +393,7 @@ A piece is held to the check only where it names a medium (point 9). On every ot
   - DEC-042 point 2, since the check it names is this one. Its plain-terms summary and its points 6, 7, 9 and 10, DEC-030 point 2 and DEC-063 point 4's last sentence take DEC-064's edits and none of this record's.
   - DEC-046 point 8, since its bullet on the report stands. What a calibration's report names of this check is DEC-042 point 9's, by DEC-064's edit.
   - DEC-046 point 5's other bullets, each for its own reason:
+    - **"What the rule's first sentence judges":** whatever that sentence judges on a page, each text and each other part the page draws, it judges where the piece is shown. The edit above says which of the piece's pages a place shows, and changes nothing of what is judged there (point 12).
     - **"Who says where no text's size was measured":** this check states words inside a picture in its entry. It states in the piece each text whose minimum it cannot work out (points 4 and 10).
     - **"No small text fails twice"** holds through a finding that stands for its medium (point 12).
     - **"While the capability ships no such check"** holds, image by image, wherever the viewing step's report names no such check, as DEC-062 reads it. On a piece that names no medium, the check is named and its statement covers the scene, so the review names that statement.
