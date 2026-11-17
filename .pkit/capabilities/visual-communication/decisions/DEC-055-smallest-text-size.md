@@ -198,18 +198,19 @@ A scene check whose silence a reader leans on states its reach (DEC-063 point 1)
 - **Measured for its size alone.** The check measures a run's font size against the smallest sizes of the media the piece names. A run measured and clean was measured for that, and for nothing else (DEC-063 point 3). Whether it can be read as drawn stays the review's. So a text that cannot be read where `shown` says, in a medium `media` does not name, blames no check.
 - **The review reads `media` beside `shown`.** The reviewer reads the piece's file, and `media` in it. Where the piece names for each medium the sizes it shows, the review reads an image as shown in the media that show its size. It takes the place there from `shown`, as the rule has it.
 - **Where `shown` and `media` disagree, the review judges by `shown`.** The two disagree where `shown` names a way the piece is shown that is none of the media `media` names. They disagree too where `media` names a medium that `shown` does not. The review then leaves `media` out for every image, and reads each in every place `shown` names. Its report says so in one line.
-- **A review that left `media` out read the piece otherwise than the check measured it.** So the verdict ends no loop on that round (DEC-064 point 2).
+- **A review that left `media` out read the piece otherwise than the check measured it** (point 13).
 - **`media` is read from the piece's file as it stands,** as `shown` and the brief are. The check measured by `media` as the file held it at the look. A round reviews the look it ran, with no mend between (DEC-042 point 6), so the two are one state there. A review of an older look may read a newer `media`, and the report's form gains no medium to show it.
 - **What a mapping takes from the review.** A page that a mapping keeps from a medium is read for that medium by neither the check nor the review. So a `desktop` file that is in fact projected goes unread for the room, where the mapping gives `desktop` to the screen alone. With no mapping, the review reads every image in every place `shown` names.
 
 ### 13. The check narrows the verdict's hold
 
-A piece is held to the check only where it names a medium (point 9). So the review runs in two states: with every run of text its scenes hold measured, and with some or none. Which state the verdict's hold reaches is DEC-064's to decide. This point says what that record needs of this check.
+A piece is held to the check only where it names a medium (point 9). On every other piece, a page with a text under its medium's minimum reaches the review. Which rounds the verdict's hold reaches is DEC-064's to decide. This point says what that record needs of this check.
 - **It takes a defect from the rule's grades.** A text under a medium's minimum is the check's finding alone, and lowers no grade of `RS-GRAPHIC-005` (point 12). So the check narrows the hold (DEC-064 point 1).
-- **What it is for the check to have measured an image.** The viewing step's report names the check for the image, and gives the image no `text-size-unmeasured` (DEC-062 point 2). Words inside a picture stay out of its reach there, as on any piece (point 4).
-- **What it is for the review to have read an image as measured.** The review did not leave `media` out (point 12).
-- **A calibration's ladder names its media,** under a top that declares the smallest size of each. So the check measures every run the ladder's scenes hold, and each design passes it (DEC-064 point 3). Its report names those media, and the smallest size of each. DEC-046 point 8 comes to say so (Implications).
-- **A medium the ladder's top declares no value for** measures no ladder shown in it. A calibration then names another medium, waits, or leaves the rule out of its bar (DEC-064 point 3). A room is such a medium until a top declares its value (point 8).
+- **What the piece states that the check measures by:** its `media` (point 1). So the review read an image as the check measured it where it did not leave `media` out (point 12).
+- **What the check measures against:** the smallest sizes the piece's top declares (point 2). The hold reaches a piece only where that top lies in a released version of a library (DEC-064 point 2).
+- **Its findings on an image:** `text-too-small` and `text-size-unmeasured` (points 6 and 10). By them, DEC-064 point 2 says whether the check measured an image and found it clean. Words inside a picture stay out of its reach there, as on any piece (point 4).
+- **A calibration's ladder is read so too** (DEC-064 point 3). So it names its media, under a released top that declares the smallest size of each.
+- **A medium the ladder's top declares no value for** measures no ladder shown in it. A calibration then takes a ladder shown in another medium, waits, or leaves the rule out of its bar (DEC-064 point 3). A room is such a medium until a top declares its value (point 8).
 - **The smallest sizes lapse no hold** (DEC-064 point 5).
 
 ## Rationale
@@ -294,7 +295,7 @@ A piece is held to the check only where it names a medium (point 9). So the revi
 - **Whose it is to keep right.** That cost errs unsafe, where the reading per run errs safe. The asker owns the mapping, as `shown` (point 1), and a list keeps the wider reading.
 - **Why `shown` wins a disagreement.** The rule names `shown`, and a reviewer reads its words. Leaving `media` out then gives the wider reading, which errs toward naming a text that cannot be read.
 
-**Why the check narrows the hold.** A text under a medium's minimum lowers no grade where the check measured (point 12). So the review grades `RS-GRAPHIC-005` in two states, and DEC-064 gives the reasons the hold follows the measured one. This check makes the other state common. A piece is measured only once it names a medium (point 9), so every piece written before this record is unmeasured.
+**Why the check narrows the hold.** A text under a medium's minimum fails the check, and lowers no grade (points 6 and 12). So a page with one reaches the review only on a piece the check did not measure. DEC-064 gives the reasons the hold follows the measured pieces. This check makes the unmeasured piece common. A piece is measured only once it names a medium (point 9), so every piece written before this record is unmeasured.
 
 **Why the fixes that change `media` are the asker's.** A change to `media` changes what the check measures, and clears its finding with no text made larger. Where the piece is in fact shown as the new `media` say, that is the right fix, and only the asker knows it. DEC-064 gives the reasons ("Why where a piece is shown is the asker's").
 
@@ -302,7 +303,7 @@ A piece is held to the check only where it names a medium (point 9). So the revi
 
 - **A reach for the check,** in its entry and its code, with a test that holds the two equal. Each clause and statement takes a planted case, and each change to the check repeats the audit (DEC-063 point 1).
 - **The reviewer's own judgement** of each text a statement covers, a text the check compared with another medium among them (point 12).
-- **A narrower hold,** for a bar that covers `RS-GRAPHIC-005`, and none under such a bar until the command can tell (DEC-064, "What it costs").
+- **A narrower hold,** for a bar that covers `RS-GRAPHIC-005`, and none under such a bar until the command can tell. A piece under a top its project is still drafting gets none either (DEC-064, "What it costs").
 - **A question to the asker** before a fix that changes the piece's media (point 6).
 - **A fact on every draft that names no medium,** in every project. Its findings record gains `text-size-unmeasured` at its next render, and validation shows it from then on. It asks no act, and it stays until the piece names a medium.
 - **A page a mapping keeps from a medium** is read for that medium by neither the check nor the review (point 12).
@@ -361,14 +362,13 @@ A piece is held to the check only where it names a medium (point 9). So the revi
 
 ## Implications
 
-- **Accepted with DEC-064,** in the same change. Point 13 rests on DEC-064 points 1 to 3 and 5, and points 1 and 6 rest on its point 4. DEC-064 rests on points 1, 9, 12 and 13 of this record.
+- **Accepted with DEC-064,** in the same change. Point 13 rests on DEC-064 points 1 to 3 and 5, and points 1 and 6 rest on its point 4. DEC-064 rests on points 1, 2, 9, 10 and 12 of this record.
 - **Edits to accepted records,** made in this change once this record is accepted, each with a refinement pointer to this record. Accepting this record accepts them (COR-066 point 5).
   - **DEC-001 point 5, "Roles stand between structure and values,"** after its sentence on a sign's outline, comes to add that a fact of a top's pages that no brand gives is the top's to hold, and no raw value, since no brand may give it: its physical size (DEC-034 point 3) and the smallest text size it declares for a medium (points 2 and 3).
   - **DEC-005 point 1, "What it may use,"** comes to add that the formula of a top's smallest text size reads only the size of the page a run lies on, as `:page-width` and `:page-height`, and numbers (point 3), as `cross-size` alone reads `:place` and `:places` ([visual-communication:DEC-038-size-by-place] point 2). No other formula reads the two names, and that formula reads neither `:width` nor `:height`. Under a top whose slot holds pages, the page's size is not the size the top itself gets.
   - **DEC-005 point 1, "Where lengths come from,"** comes to add one length, for that formula alone: the size of the page a run lies on (point 3). A fixed smallest size is no formula's, and DEC-001 point 5 comes to name it no raw value.
   - **DEC-005 point 14, "Fails validation,"** comes to add a text drawn smaller than the smallest size the piece's top declares for a medium that, as the piece names it, shows the key it is drawn at (points 4 and 6).
   - **DEC-046 point 5,** the bullet "'As it was drawn' takes in where the piece is shown". After "The review takes the place from that declaration.", it comes to add: "Where the piece names for each medium the sizes it shows, the review reads an image as shown in the media that show its size, and takes the place there from that declaration. The rule's place is where a page is shown, so a page is judged only in the places that show it. Where that declaration and the piece's media disagree, the review leaves the media out for every image. It then reads each image in every place the declaration names, and says so in one line (refinement per [visual-communication:DEC-055-smallest-text-size] point 12)."
-  - **DEC-046 point 8,** the bullet "Its report says where no text's size was compared", comes to add: "It names the media the ladder names, and the smallest size of each (refinement per [visual-communication:DEC-055-smallest-text-size] point 13)."
   - **DEC-063 point 3, "Measured, with a finding,"** after its sentence on a pair of siblings with a near miss, comes to add: "Where a statement of the check also covers that place, the finding stands for what it names, and what else the check measures there counts as not measured (refinement per [visual-communication:DEC-055-smallest-text-size] point 12)." In "Not measured", "a place a statement covers" comes to read "a place a statement covers, but for what a finding there names". It completes the point, for the first check that gives both on one place.
 - **Read against this record, and left as they stand:**
   - DEC-001 point 2, since a renderer still adds no size, and what a viewer does is no renderer's.
@@ -388,7 +388,8 @@ A piece is held to the check only where it names a medium (point 9). So the revi
   - DEC-028 points 1 and 10, since the smallest size stays a check's. Point 10 takes no pointer, since this record decides nothing of what it says (Alternatives considered).
   - DEC-030 point 7, since what a check measures stays the check's, and the reviewer, which reads the piece's file, runs nothing more to read `media`.
   - DEC-034 point 3, since a physical size stays the top's, which DEC-001 point 5 comes to name beside the smallest size, and a share of the page keeps its share on paper.
-  - DEC-042 point 2, since the check it names is this one. Its points 7, 9 and 10, and DEC-030 point 2, take DEC-064's edits and none of this record's.
+  - DEC-042 point 2, since the check it names is this one. Its points 7, 9 and 10, DEC-030 point 2 and DEC-063 point 4's last sentence take DEC-064's edits and none of this record's.
+  - DEC-046 point 8, since its bullet on the report stands. What a calibration's report names of this check is DEC-042 point 9's, by DEC-064's edit.
   - DEC-046 point 5's other bullets, each for its own reason:
     - **"Who says where no text's size was measured":** this check states words inside a picture in its entry. It states in the piece each text whose minimum it cannot work out (points 4 and 10).
     - **"No small text fails twice"** holds through a finding that stands for its medium (point 12).
@@ -398,7 +399,7 @@ A piece is held to the check only where it names a medium (point 9). So the revi
     - **Point 2:** the report names it for an image, and carries its reach, as for any check with a reach. The report's form gains no medium, since silence is read per run (point 12).
     - **Point 3:** the reviewer reads the check from the report alone.
     - **Point 4:** the check lands for a calibration as that point says.
-  - DEC-063 points 1 to 4. The check states its reach and its statements as points 1 and 2 ask, and each statement names what it covers in point 2's terms. Point 3's other sentences stand, and silence is still read per place (point 12). Point 4's bullet on a check of a text's size stands.
+  - DEC-063 points 1 to 4. The check states its reach and its statements as points 1 and 2 ask, and each statement names what it covers in point 2's terms. Point 3's other sentences stand, and silence is still read per place (point 12). Point 4's bullet on a check of a text's size stands, and its last sentence takes DEC-064's edit.
   - `RS-GRAPHIC-005`, which judges a page where the piece is shown "as its `shown` field names". It holds as it stands, by this reading of its words:
     - **The place stays `shown`'s.** The review takes every place it judges in from `shown`, and judges by `shown` alone where `media` disagrees.
     - **A page is judged where it is shown.** `media` says only which of the piece's sizes reach each place, and the rule's "where the piece is shown" reaches a page only there. DEC-046 point 5 holds the rule's reading, and takes the edit above.
@@ -433,7 +434,7 @@ A piece is held to the check only where it names a medium (point 9). So the revi
   - **The account of the size axis's modes,** in the foundations' roles file and on the files' page. It comes to say that a mode names what a piece is drawn for, and the piece's media where it is shown.
   - **The command that starts a piece,** which takes the media as it takes where the piece is shown. The skill's page on a piece and the designer's agent file name the field beside `shown`.
 - **The hold** is DEC-064's. #3185 builds the command's reason, and a follow-up has the command tell where the check measured ([project-kit#FOLLOWUP]). DEC-064's Implications name both.
-- **UC-111,** "Have a piece designed and judged by the principles of visual communication", anchors the piece's schema, so #3185's change answers for it. Its variant 5b is revised as DEC-064's Implications say.
+- **UC-111,** "Have a piece designed and judged by the principles of visual communication", anchors the piece's schema, so #3185's change answers for it. It is revised as DEC-064's Implications say.
 - **The foundations take a new version** whose tops declare their smallest sizes, released as the capability's shipped libraries are ([visual-communication:DEC-013-shipped-library-releases]).
 - **No migration.** The field and the key are additions, and nothing a project holds changes (COR-010).
 - **Revisit this record** in each of these cases:
