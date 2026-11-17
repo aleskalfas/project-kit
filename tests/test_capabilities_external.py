@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import shutil
 import stat
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from click.testing import CliRunner, Result
 
 from project_kit import capabilities as caps
 from project_kit import capability_fetch, install, router, status, sync, upgrade
+from project_kit import cli as cli_mod
 from project_kit.cli import main
 from project_kit.manifest import (
     ORIGIN_EXTERNALLY_SOURCED,
@@ -41,8 +43,20 @@ _NAME = "fetched"
 _SKILL = Path("skills") / "fetched-skill.md"
 _SCRIPT = Path("scripts") / "run.sh"
 
+# The refusal of `install --from` until #3349 (#3359), as the command ships it,
+# taken before the fixture below lifts it.
+_HOLD = cli_mod._refuse_install_from_another_repository
+
 
 # --- fixtures --------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def install_from_unheld(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Lift the refusal of `install --from` (#3359), so every test here but the
+    refusal's own reaches the install it holds back. #3349 removes the refusal,
+    this fixture and that test together."""
+    monkeypatch.setattr(cli_mod, "_refuse_install_from_another_repository", lambda: None)
 
 
 @pytest.fixture
@@ -147,6 +161,43 @@ def _said(result: Result) -> str:
     return " ".join(result.output.split())
 
 
+def _files(root: Path) -> dict[str, bytes]:
+    """Every file under *root* outside `.git/`, by its path, with its bytes."""
+    return {
+        path.relative_to(root).as_posix(): path.read_bytes()
+        for path in root.rglob("*")
+        if path.is_file() and path.relative_to(root).parts[0] != ".git"
+    }
+
+
+# --- the refusal until #3349 (#3359) ------------------------------------------------
+
+
+@pytest.mark.parametrize("flags", [(), ("--dry-run",), ("--plan",)], ids=["run", "dry", "plan"])
+def test_install_from_refuses_until_the_fetch_takes_a_pins_recorded_commit(
+    project: Path,
+    kit: Path,
+    upstream: GitRepo,
+    monkeypatch: pytest.MonkeyPatch,
+    flags: tuple[str, ...],
+) -> None:
+    """Refused before anything is fetched, naming why, and nothing in the project
+    changes, from a source whose tag the install it holds back would take."""
+    monkeypatch.setattr(cli_mod, "_refuse_install_from_another_repository", _HOLD)
+    _author(upstream, tag="v1.0.0")
+    before = _files(project)
+
+    result = _install("--from", str(upstream.root), "--ref", "v1.0.0", *flags)
+
+    assert result.exit_code == 1, result.output
+    said = _said(result)
+    assert "installing a capability from another repository (--from, --ref) is not" in said
+    assert "once the pin's ref has moved (#3349)" in said
+    assert "Nothing was fetched or written" in said
+    assert "Fetching" not in said
+    assert _files(project) == before
+
+
 # --- install at a pin (ADR-040 points 1 to 4) --------------------------------------
 
 
@@ -155,8 +206,8 @@ def test_install_at_a_tag_lands_the_tags_content_and_records_the_pin(
 ) -> None:
     """The subtree lands whole at exactly the tag, outside the copy's `project/` tier,
     which arrives empty; the registration records the origin, and the manifest the
-    source and the ref beside the version (points 1 and 3)."""
-    _author(upstream, "1.0.0", tag="v1.0.0")
+    source, the ref and the commit the tag named beside the version (points 1 and 3)."""
+    tagged = _author(upstream, "1.0.0", tag="v1.0.0")
     _author(upstream, "1.1.0")  # a later commit the tag does not reach
 
     result = _install("--from", str(upstream.root), "--ref", "v1.0.0")
@@ -174,7 +225,7 @@ def test_install_at_a_tag_lands_the_tags_content_and_records_the_pin(
     manifest = read_component_manifest(copy / "project" / "manifest.yaml")
     assert manifest is not None
     assert manifest.version == "1.0.0"
-    assert manifest.pin == CapabilityPin(str(upstream.root), "v1.0.0")
+    assert manifest.pin == CapabilityPin(str(upstream.root), "v1.0.0", tagged)
     assert f"externally sourced from {upstream.root} at v1.0.0" in _said(result)
 
 
@@ -189,7 +240,9 @@ def test_install_at_a_commits_full_id_takes_exactly_that_commit(
 
     assert result.exit_code == 0, result.output
     assert "# v1.0.0" in (_copy(project) / _SKILL).read_text(encoding="utf-8")
-    assert caps.read_capability_pin(project, _NAME) == CapabilityPin(str(upstream.root), first)
+    assert caps.read_capability_pin(project, _NAME) == CapabilityPin(
+        str(upstream.root), first, first
+    )
 
 
 def test_install_dry_run_and_plan_fetch_and_write_nothing(
@@ -211,6 +264,75 @@ def test_install_names_from_and_ref_together(project: Path, kit: Path) -> None:
 
     assert result.exit_code == 2
     assert "--from and --ref go together" in result.output
+
+
+# --- the project's own tier, in whatever case (point 3) ------------------------------
+
+
+def _commit_in_index_only(upstream: GitRepo, files: dict[str, str], scratch: Path) -> str:
+    """Commit *files*, under the capability's subtree, through *upstream*'s index alone.
+
+    A working tree on a filesystem that ignores case could not hold `PROJECT/`
+    beside `project/`, so each file is written to git's objects and the index
+    directly. Returns the commit's id.
+    """
+    base = f".pkit/capabilities/{_NAME}"
+    blob = scratch / "blob"
+    for rel, text in files.items():
+        blob.write_text(text, encoding="utf-8")
+        oid = upstream.git("hash-object", "-w", str(blob)).stdout.strip()
+        upstream.git("update-index", "--add", "--cacheinfo", f"100644,{oid},{base}/{rel}")
+    upstream.git("commit", "-q", "-m", "a project tier in another case")
+    return upstream.head()
+
+
+def _project_tiers(folder: Path) -> list[str]:
+    """The names of *folder*'s entries that fold to `project`."""
+    return sorted(entry.name for entry in folder.iterdir() if entry.name.casefold() == "project")
+
+
+def test_the_fetch_leaves_out_the_project_tier_in_another_case(
+    upstream: GitRepo, tmp_path: Path
+) -> None:
+    """On a filesystem that ignores case, `PROJECT/` is the project's own `project/`."""
+    _author(upstream)
+    commit = _commit_in_index_only(
+        upstream,
+        {"PROJECT/manifest.yaml": "pin:\n  source: /elsewhere\n", "Project/notes.md": "x\n"},
+        tmp_path,
+    )
+
+    with capability_fetch.fetched(CapabilityPin(str(upstream.root), commit), _NAME) as got:
+        assert (got.path / "package.yaml").is_file()
+        assert _project_tiers(got.path) == []
+
+
+def test_sync_never_copies_a_project_tier_in_another_case_onto_the_projects_own(
+    project: Path, kit: Path, upstream: GitRepo
+) -> None:
+    """Were a fetch to stage `PROJECT/manifest.yaml`, the copy keeps it out: the
+    project's manifest, which records the pin, and its own files stay as they were."""
+    _author(upstream, tag="v1.0.0")
+    _installed(upstream)
+    copy = _copy(project)
+    notes = copy / "project" / "notes.md"
+    notes.write_text("the project's own\n", encoding="utf-8")
+    manifest = (copy / "project" / "manifest.yaml").read_bytes()
+    pin = caps.read_capability_pin(project, _NAME)
+    assert pin is not None
+
+    with capability_fetch.fetched(pin, _NAME) as got:
+        staged_tier = got.path / "PROJECT"
+        staged_tier.mkdir()
+        (staged_tier / "manifest.yaml").write_text("pin:\n  source: /elsewhere\n", encoding="utf-8")
+        (staged_tier / "notes.md").write_text("the source's\n", encoding="utf-8")
+        staged = caps.fetched_capability(got.path, _NAME)
+        assert staged is not None
+        caps.copy_fetched_capability(project, staged, ())
+
+    assert (copy / "project" / "manifest.yaml").read_bytes() == manifest
+    assert notes.read_text(encoding="utf-8") == "the project's own\n"
+    assert _project_tiers(copy) == ["project"]
 
 
 # --- refusals that write nothing ---------------------------------------------------
@@ -422,6 +544,29 @@ def test_the_fetch_turns_gits_prompt_off_and_reads_no_other_repository(
     assert set(lines) == {"prompt=0 dir="}
 
 
+def test_the_fetch_uses_no_transport_a_pin_does_not_need(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The source is a manifest's, which anyone who commits to the project can edit:
+    `ext`, a transport that runs a command, stays off even where the person's own
+    settings turn it on."""
+    ran = tmp_path / "ran"
+    monkeypatch.setenv("PKIT_TEST_RAN", str(ran))
+    monkeypatch.setenv("GIT_ALLOW_PROTOCOL", "ext:file")
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", "protocol.ext.allow")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", "always")
+    pin = CapabilityPin('ext::sh -c touch% "$PKIT_TEST_RAN"', "v1.0.0")
+
+    with (
+        pytest.raises(capability_fetch.FetchFailed, match="transport 'ext' not allowed"),
+        capability_fetch.fetched(pin, _NAME),
+    ):
+        pass
+
+    assert not ran.exists()
+
+
 @pytest.mark.parametrize(
     ("url", "shown"),
     [
@@ -490,12 +635,47 @@ def test_sync_keeps_the_copy_and_warns_where_its_source_cannot_be_reached(
     assert "Sync complete." in captured.out
 
 
-def test_sync_keeps_the_copy_where_its_tag_has_moved_to_another_version(
+def test_sync_keeps_the_copy_where_its_tag_has_moved_to_another_commit(
     project: Path, kit: Path, upstream: GitRepo, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Sync moves no version: a tag moved at its source is the person's to take."""
+    """The pin records the commit its tag named at install, so a tag moved at its
+    source to other content of the same version is not followed: it is the
+    person's to take, and the pin stays as it was (point 7)."""
+    tagged = _author(upstream, "1.0.0", tag="v1.0.0")
+    _installed(upstream)
+    (_copy(project) / _SKILL).write_text("edited here\n", encoding="utf-8")
+    moved = _author(upstream, "1.0.0", tag="v1.0.0", files={"README.md": "# moved\n"})
+
+    sync.run_sync(project)
+    captured = capsys.readouterr()
+
+    assert (_copy(project) / _SKILL).read_text(encoding="utf-8") == "edited here\n"
+    said = " ".join(captured.err.split())
+    assert "⚠ WARNING: capability 'fetched' was not brought to its pin" in said
+    assert f"now names commit {moved}, not {tagged}, the commit the pin records" in said
+    assert "kept         'fetched'" in captured.out
+    assert caps.read_capability_pin(project, _NAME) == CapabilityPin(
+        str(upstream.root), "v1.0.0", tagged
+    )
+
+
+def _record_no_commit(project: Path) -> None:
+    """Rewrite the installed capability's manifest with its pin's source and ref
+    alone, as a manifest written by hand may record it. Sync then follows the tag."""
+    path = _copy(project) / "project" / "manifest.yaml"
+    manifest = read_component_manifest(path)
+    assert manifest is not None and manifest.pin is not None
+    write_component_manifest(path, replace(manifest, pin=replace(manifest.pin, commit=None)))
+
+
+def test_sync_keeps_a_pin_recording_no_commit_whose_tag_moved_to_another_version(
+    project: Path, kit: Path, upstream: GitRepo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Sync moves no version: a tag moved at its source is the person's to take, where
+    the pin records no commit to hold it to either."""
     _author(upstream, "1.0.0", tag="v1.0.0")
     _installed(upstream)
+    _record_no_commit(project)
     _author(upstream, "2.0.0", tag="v1.0.0")
 
     sync.run_sync(project)
@@ -510,9 +690,11 @@ def test_sync_keeps_the_copy_whose_range_excludes_the_recorded_backbone(
 ) -> None:
     """Sync gates what it lands as install does (ADR-040 point 4): the pin's content
     at the recorded version, whose `requires_backbone` now excludes the backbone the
-    project records, is not landed, and the rest of sync runs."""
+    project records, is not landed, and the rest of sync runs. The content changes
+    under a pin that records no commit, which follows its tag."""
     _author(upstream, "1.0.0", tag="v1.0.0")
     _installed(upstream)
+    _record_no_commit(project)
     (_copy(project) / _SKILL).write_text("edited here\n", encoding="utf-8")
     _author(upstream, "1.0.0", tag="v1.0.0", requires_backbone=">=99.0.0")
 
@@ -650,9 +832,12 @@ def test_list_and_status_show_the_source_and_the_ref_beside_the_origin(
     assert f"fetched (externally-sourced from {upstream.root} at v1.0.0)" in reported
 
 
-def test_the_pin_reads_back_from_the_component_manifest(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "commit", ["0123456789abcdef" * 2 + "01234567", None], ids=["with-commit", "without"]
+)
+def test_the_pin_reads_back_from_the_component_manifest(tmp_path: Path, commit: str | None) -> None:
     path = tmp_path / "manifest.yaml"
-    pin = CapabilityPin("git@example.com:org/caps.git", "v1.2.3")
+    pin = CapabilityPin("git@example.com:org/caps.git", "v1.2.3", commit)
     write_component_manifest(
         path,
         ComponentManifest(

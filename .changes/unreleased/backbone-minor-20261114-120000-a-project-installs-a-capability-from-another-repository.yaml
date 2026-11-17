@@ -4,24 +4,17 @@ custom:
   category: Added
 body: >
   `pkit capabilities install <name> --from <git URL> --ref <tag or commit>`
-  installs the capability another git repository incubates at
+  is added, to install the capability another git repository incubates at
   `.pkit/capabilities/<name>/`, fetched whole at that tag or commit with
-  your own git credentials and none of pkit's (COR-041, ADR-040). It
-  fetches, reads the fetched `package.yaml`, gates it as any install does,
-  then installs or refuses, and a refusal writes nothing. The copy lands
-  outside the capability's `project/` tier, registered `externally-sourced`,
-  and its manifest records the source and the ref as its `pin`. A name
-  another capability holds, a branch as the ref, an abbreviated commit id,
-  a URL that carries a credential, and a capability already installed from
-  another pin are refused; a branch pin and moving a pin are not built yet.
-  A source that cannot be reached warns loudly and installs nothing. `pkit
-  sync` now brings each externally-sourced copy to its pin's content,
-  removing files the pin does not hold, and never moves the pin; where the
-  fetch fails, or the content's `requires_backbone` excludes the backbone
-  the project records, it keeps the copy and warns. `pkit upgrade` reads an
-  externally-sourced capability's range from its installed copy, never from
-  a capability the bundle ships by its name. `capabilities uninstall` removes
-  the copy and keeps the project's own files in its `project/` tier, and
-  `capabilities list` and `pkit status` show the source and the ref.
-  `capabilities upgrade` and `capabilities register` refuse an
-  externally-sourced capability. The CLI and lifecycle references say so.
+  your own git credentials (COR-041, ADR-040). In this release it refuses,
+  naming why, before it reads or writes anything, `--dry-run` and `--plan`
+  included: installing from another repository waits on a later release,
+  which changes how a fetch takes the commit a pin records once the pin's
+  ref has moved (#3349). A capability already registered
+  `externally-sourced` is not held: `pkit sync` brings its copy to its
+  pin's content and never moves the pin, `pkit upgrade` reads its range
+  from its copy, `capabilities uninstall` removes the copy and keeps the
+  project's own files in its `project/` tier, `capabilities list` and `pkit
+  status` show its source and its ref, and `capabilities upgrade` and
+  `capabilities register` refuse it. The CLI reference says so, and the
+  lifecycle reference says what sync does with such a capability.

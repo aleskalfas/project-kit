@@ -189,6 +189,7 @@ def _backbone(tip: str | None = "c0ffee") -> Any:
                 "source": "default",
                 "ref": "origin/main",
                 "commit": tip,
+                "resolved": "remote" if tip else None,
                 "problem": None,
                 "unborn": False,
             },

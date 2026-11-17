@@ -275,7 +275,7 @@ An approval scoped to `touches-ruled-artefact` also needs the backbone's `pkit r
 
 A missing fetch costs a re-review, never an unreviewed merge.
 
-**The merge is pinned to the head the gate checked.** `done-work` merges with `--match-head-commit` naming the head its gate judged the verdicts against, so a push between the gate and the merge fails the merge rather than landing commits no verdict covers.
+**The merge is pinned to the head the gate checked.** `done-work` merges with `--match-head-commit` naming the head its gate judged the verdicts against, so a push between the gate and the merge fails the merge rather than landing commits no verdict covers. On a base that merges through a queue, the enqueue is pinned the same way, at the request. A push `done-work` reads while it waits for the queue has it take the PR out of the queue, and the queue may merge the PR first, at a head the gate did not check. On a push the run did not read before it returned with the PR queued, nothing takes the PR out, and the queue may merge such a head too ([project-management:DEC-026-work-ownership-lifecycle], "Merging through a queue").
 
 **What it does not cover.** A clean merge of the base branch leaves every verdict fresh, so a semantic conflict the base introduces — changes that merge cleanly but no longer work together — is not re-reviewed. CI on the merged result is the backstop.
 

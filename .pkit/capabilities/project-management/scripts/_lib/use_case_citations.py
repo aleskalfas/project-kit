@@ -25,8 +25,9 @@ Four parts, so the validators that call them stay pure:
   - `Off` — `undefined` or `unfilled`: nothing defines or fills the point, and
     nothing is said about use cases;
   - `NotChecked` — any other unresolved `outcome`, one this reading does not
-    know, a document of a version it does not know, or no document at all:
-    there is no set to judge against, and it is never read as `Off`;
+    know or cannot read, a document of a version it does not know, or no
+    document at all: there is no set to judge against, and it is never read
+    as `Off`;
   - `Held` with `doubts` — `resolved`, with a filler whose state is neither
     `taken` nor `passed over`, such as `inert` or a state this reading does not
     know, or without the `fillers` key: partly checked;
@@ -271,14 +272,16 @@ def read_point(run: Runner = backbone.run) -> Reading:
 def reading_of(document: Mapping[str, Any]) -> Reading:
     """The state a `pkit connections resolve --json` document puts the point in
     (DEC-054 point 3), from its `outcome` and its fillers' `state` alone. A
-    document of a version this reading does not know, or one that does not say
-    how the point resolved — a backbone that predates `outcome` — is NotChecked.
+    document of a version this reading does not know, a version that is no
+    whole number such as `true` or `1.0` among them, one that does not say how
+    the point resolved — a backbone that predates `outcome` — or one whose
+    `outcome` is not text is NotChecked.
     A resolved point is wholly answered only where the document lists its
     fillers and each is `taken` or `passed over`; otherwise it is partly
     checked, since a state or a key this reading cannot read tells it nothing
     (ADR-097 point 3)."""
     version = document.get("schema_version", DOCUMENT_VERSION)
-    if version != DOCUMENT_VERSION:
+    if type(version) is not int or version != DOCUMENT_VERSION:
         return NotChecked(
             f"the backbone answered a document at version {version!r}; this reading "
             f"understands {DOCUMENT_VERSION}"
@@ -287,7 +290,7 @@ def reading_of(document: Mapping[str, Any]) -> Reading:
     listed = document.get("fillers")
     fillers = [f for f in listed if isinstance(f, Mapping)] if isinstance(listed, list) else []
     inert = [f for f in fillers if f.get("state") == INERT]
-    if outcome in OFF:
+    if isinstance(outcome, str) and outcome in OFF:
         return Off()
     if outcome != RESOLVED:
         return NotChecked(_unresolved(outcome, document, inert))
@@ -342,12 +345,16 @@ def _unresolved(
     outcome: Any, document: Mapping[str, Any], inert: Sequence[Mapping[str, Any]]
 ) -> str:
     """Why an unresolved point gave no set: its sentence for people and each inert
-    filler with its reason — or, for an outcome this reading does not know, that."""
-    if not isinstance(outcome, str):
+    filler with its reason — or, for an outcome this reading does not know or cannot
+    read, that. An outcome of any type but text, a list or a mapping among them, is no
+    outcome this reading can read."""
+    if outcome is None:
         return (
             "the backbone's document does not say how the point resolved (it predates "
             "`outcome`; upgrade the backbone)"
         )
+    if not isinstance(outcome, str):
+        return "the backbone's document gives the point no outcome this reading can read"
     why = str(document.get("why") or "").strip() or outcome
     if outcome not in UNREAD:
         return f"it ended as {outcome!r}, which this reading does not know ({why})"

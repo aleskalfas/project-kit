@@ -88,8 +88,8 @@ before). Each is what the board answered; a board that did not answer is apart
 from them (below):
 
   * **no card** — board membership is a post-creation step (DEC-019), so a
-    just-filed issue may have no card yet. set-field refuses with the exact
-    `gh project item-add` remediation instead of adding the card itself: adding an
+    just-filed issue may have no card yet. set-field refuses, naming the sync run
+    for the issue as the remediation, instead of adding the card itself: adding an
     issue to a board is a membership decision, explicitly NOT part of the
     field-value substrate (ADR-031 point 3), and a verb asked to set a field must
     not silently enlarge the board's contents. Never a silent no-op either way.
@@ -174,10 +174,12 @@ from _lib import (
     axis_carriage,
     axis_labels,
     board_fields,
+    board_status,
     body_parent_ref,
     bootstrap_gate,
     classification_rules,
     containment,
+    missing_card,
     provenance,
     session_guard,
     substrate_writes,
@@ -290,9 +292,9 @@ def main() -> int:
     substrate_map = axis_labels.load_substrate_map(capability_root)
 
     # `id` + `url` are for the board path: `id` is the issue's GraphQL node id (the
-    # key the card lookup asks `projectItems` on) and `url` renders the exact
-    # `gh project item-add` remediation when the card is missing. Both ride the one
-    # `gh issue view` round-trip this call already makes.
+    # key the card lookup asks `projectItems` on) and `url` names the owner the
+    # board is read under. Both ride the one `gh issue view` round-trip this call
+    # already makes.
     issue = gh_get_issue(args.issue_number, config, fields="title,body,labels,id,url")
     if issue is None:
         return 2
@@ -464,7 +466,9 @@ def main() -> int:
 
     board_writes: list[BoardWrite] = []
     if board_axes:
-        board_state = _read_board_state(config, issue=issue, issue_number=args.issue_number)
+        board_state = _read_board_state(
+            config, issue=issue, issue_number=args.issue_number, substrate_map=substrate_map
+        )
         board_results, board_writes = _plan_board_fields(
             board_axes=board_axes,
             state=board_state,
@@ -811,6 +815,7 @@ def _read_board_state(
     *,
     issue: dict,
     issue_number: int,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> BoardState:
     """The board's reads a field write needs: the board's node and live field
     list, from its own read, and the issue's card.
@@ -826,18 +831,16 @@ def _read_board_state(
     words, gh's stderr VERBATIM where there is one: the likely cause is a token
     without the `project` scope, and the remedy is in that text. A board that
     answered with no card for the issue yields `item_id=None` — the membership
-    case, which the planner refuses with the `gh project item-add` remediation
-    composed here (it has the owner and the issue URL).
+    case, which the planner refuses with the remediation composed here: the
+    sync, run for the issue, which gives an open issue its missing card
+    ([project-management:DEC-072-sync-gives-missing-cards] point 4).
     """
     number = board_fields.board_number(config)
     board_ref = f"Projects-v2 board #{number}" if number else "the Projects-v2 board"
     issue_url = issue.get("url") if isinstance(issue.get("url"), str) else None
     owner = board_fields.board_owner(config, repository_owner=board_fields.url_owner(issue_url))
-    remediation = (
-        f"gh project item-add {number or '<board-number>'} "
-        f"--owner {owner or '<board-owner>'} "
-        f"--url {issue_url or f'<url of issue #{issue_number}>'}"
-    )
+    holds = board_status.role(config, substrate_map) == "source"
+    remediation = missing_card.remedy(issue_number, board_holds_state=holds)
 
     fields_read = board_fields.read_fields(config, owner=owner)
     if not fields_read.ok or not fields_read.project_id:
@@ -902,7 +905,7 @@ def _plan_board_fields(
          words verbatim. No refusal: the axis is left unset, and the call takes
          the broken tool's code (``unanswered``).
       2. **no card** — the board answered, and the issue has no item on it.
-         Refused with the exact `gh project item-add` command rather than adding
+         Refused, naming the sync run for the issue, rather than adding
          the card: membership is a distinct operation (DEC-019; named out of the
          field-value substrate by ADR-031 point 3) and a decision about what
          belongs on the board, which a field write must not make silently.
@@ -953,8 +956,7 @@ def _plan_board_fields(
                         f"{axis}: issue #{issue_number} has NO CARD on "
                         f"{state.board_ref}, so there is no item whose "
                         f"`{field_name}` field could be set. {unset} Add the card, "
-                        f"then re-run:\n"
-                        f"      {state.membership_remediation}\n"
+                        f"then re-run: {state.membership_remediation}.\n"
                         f"      (set-field writes field VALUES; putting an issue on "
                         f"a board is a separate membership operation — DEC-019 — "
                         f"and not a side effect this verb takes on your behalf.)"

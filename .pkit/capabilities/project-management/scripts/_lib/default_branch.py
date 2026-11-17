@@ -77,7 +77,9 @@ class Unanswered(Exception):
 class Branch:
     """The default branch as the backbone declares and resolves it. `unborn` when
     it has no commit yet, so a reader of what it holds reads nothing (COR-054
-    point 4)."""
+    point 4). `resolved` is `remote` where the reference read is a remote-tracking
+    one, `local` for a local branch, and None where nothing resolves: read by the
+    sync's switch, which counts only the remote's copy."""
 
     name: str
     declared: bool
@@ -85,6 +87,7 @@ class Branch:
     commit: str | None
     problem: str | None
     unborn: bool = False
+    resolved: str | None = None
 
 
 @dataclass(frozen=True)
@@ -245,6 +248,7 @@ def _reading(document: Mapping[str, Any]) -> Reading:
             commit=_text(keys.text_or_null(branch_doc, "commit", branch)),
             problem=_text(keys.text_or_null(branch_doc, "problem", branch)),
             unborn=keys.flag(branch_doc, "unborn", branch),
+            resolved=_resolved(branch_doc, branch),
         ),
         Base(
             ref=keys.text(base_doc, "ref", base),

@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
         - .pkit/capabilities/project-management/package.yaml
         - .pkit/capabilities/project-management/rule-sets/pm.md
-      record: [COR-008, COR-017, ADR-076, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, COR-070, ADR-004, ADR-016, ADR-019, "ADR-025#5", ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066, ADR-096]
+      record: [COR-008, COR-017, ADR-076, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, COR-070, ADR-004, ADR-016, ADR-019, "ADR-025#5", ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066, ADR-096, ADR-097]
       artefact:
         - .pkit/decisions/README.md#checking-a-changes-numbering
 ---
@@ -192,7 +192,7 @@ The Status is read as [project-management:DEC-051-axis-carriage-activation] poin
 
 None falls back to the labels or the milestone, so no command acts on a position it guessed. Each command says what such a read means to it, in its own section below.
 
-A command reads only the cards of the issues it acts on: one issue's card, each ancestor's card its forward cascade walks, or the cards of the issues it lists. An archived card still places its issue. If part of a listing cannot be read, the command treats the board as unreadable, and never takes those issues for issues with no card.
+A command reads only the cards of the issues it acts on: one issue's card, each ancestor's card its forward cascade walks, or the cards of the issues it lists. `sync-board`, which acts on the whole board, reads where each open issue stands from its walk of every card on the board instead ([project-management:DEC-072-sync-gives-missing-cards]). An archived card still places its issue. If part of a listing cannot be read, the command treats the board as unreadable, and never takes those issues for issues with no card.
 
 Where a present map leaves `state` out, or marks it `unsupported`, the state degrades. It is read from the issues themselves, and the capability writes no board Status for it. So the Status stays with the people who move it on the board.
 
@@ -235,7 +235,7 @@ EPICs are PM-authority filing per [project-management:DEC-008-pm-and-implementer
 pkit project-management pre-check
 ```
 
-Read-only diagnostic. Walks every prerequisite the methodology depends on (gh auth, repo accessible, required labels present, default branch matches, config parses). Exit zero when every check passes; non-zero with remediation hints when something is missing.
+Read-only diagnostic. Walks every prerequisite the methodology depends on (gh auth, repo accessible, required labels present, default branch matches, config parses). Exit zero when every check passes; non-zero with remediation hints when something is missing. `--json` prints the checks as one document ([The prerequisites](#the-prerequisites-pre-check)).
 
 Pre-check is the **hard gate** on every pm operation per [project-management:DEC-017-prerequisites-bootstrap-migrate-discipline]. The project-manager invokes it as Step 0 of every action; CI workflows wire it in as a PR check.
 
@@ -311,7 +311,7 @@ For an **issue parent**, `create-issue --parent <N>` also sets GitHub's **native
 
 The **containment substrate is selectable** (per [project-management:DEC-039-containment-substrate-selection], contract ADR-035) via a top-level `containment: native | textual` key in the optional brownfield `substrate-map.yaml` (`schemas/substrate-map.yaml` documents the axes; the selector is a manual operator key beside `hierarchy:`, not a per-axis binding). `native` (the default, and the greenfield behaviour when no map is present, or when the key is absent from a present map) sets the native sub-issue link as described above. `textual` — for a tracker that does not support native sub-issues, or an operator who prefers the textual representation — makes `create-issue --parent` record *only* the textual child-side parent-ref and **skip the native link entirely**. The textual ref is the universal spine, written in **both** modes (so it is the containment record in `textual` mode). The selector intent lives in the committed map; no resolved value is written back (one-consumer contract). The mode resolves through the same substrate-map read seam (`scripts/_lib/axis_labels.containment_mode`) the other axes use.
 
-**`show-tree --limit` bounds the view, and a bounded view says so.** The flag is a deliberate view control for a large tracker and keeps its default. What changed is honesty about the result: the tree is built from the seam's corpus, which reports whether it was enumerated to exhaustion, so a render is labelled `[partial]` whenever it may be short — because the issue fetch struck the limit, or because the seam could not vouch for some parent's child set (an unreadable native panel), or because the PR fetch struck the limit (so PR-to-issue links and orphan-PR detection may miss PRs). The note names which it was, since the remedies differ and raising `--limit` cannot help with the unvouched case; a PR truncation is independent of the issue-side causes, so it is appended to whichever of them also holds — on stdout *and* stderr in text (so a redirected render keeps the caveat), as a `> **Partial view**` note in markdown, and as `"complete": false` with an `incomplete_reason` in JSON. Without that a reader cannot tell "this parent has no other children" from "I stopped looking" — and this is the diagnostic people use to judge whether a container is ready to close. A complete render carries no notice, so the label means something.
+**`show-tree --limit` bounds the view, and a bounded view says so.** The flag is a deliberate view control for a large tracker and keeps its default. What changed is honesty about the result: the tree is built from the seam's corpus, which reports whether it was enumerated to exhaustion, so a render is labelled `[partial]` whenever it may be short — because the issue fetch struck the limit, or because the seam could not vouch for some parent's child set (an unreadable native panel), or because the PR fetch struck the limit (so PR-to-issue links and orphan-PR detection may miss PRs). The note names which it was, since the remedies differ and raising `--limit` cannot help with the unvouched case; a PR truncation is independent of the issue-side causes, so it is appended to whichever of them also holds — on stdout *and* stderr in text (so a redirected render keeps the caveat), as a `> **Partial view**` note in markdown, and as `"complete": false` with an `incomplete_reason` in JSON ([The tree](#the-tree-show-tree)). Without that a reader cannot tell "this parent has no other children" from "I stopped looking" — and this is the diagnostic people use to judge whether a container is ready to close. A complete render carries no notice, so the label means something.
 
 **The children-view refresh refuses instead of labelling, on each of its triggers.** A render is discardable; this is a *write* that replaces each parent's comment wholesale, and that comment is the only parent-side view of children in `textual` mode, carrying no hedge of its own — so a short list published there is confidently wrong and outlives the command. `create-issue` skips the publish when the corpus is incomplete, leaving the previous render in place (stale beats wrong); `link-parent` refuses the refresh when the issue list was not read in full, and withholds any parent whose native sub-issues could not be read; `show-tree --refresh-children-views` exits non-zero without writing — both when the corpus is short and when it is *filtered*, since `--state open` yields a corpus that is complete for what it asked while every closed child is missing from it, which the completeness verdict cannot see. A truncated PR list does not trigger it: the refresh writes from issues alone. It names whichever fact the seam established — a struck limit, or a parent whose child set it could not vouch for — so the operator can tell whether raising `--limit` would help at all. The same refusal covers a corpus that could not be read at all, which previously rendered an *empty* children list — indistinguishable from a parent that genuinely has none.
 
@@ -399,7 +399,7 @@ A project may keep a written account of what its software must do, as use cases,
   | Command | What it does |
   |---|---|
   | `decline-use-case-task` | Keep the answer: the Task was declined now. The project-manager runs it on approving a plan you revised the Task out of. |
-  | `decline-use-case-task --show [--json]` | Print the kept answer — `declined` with the local time of the answer and of the next offer, `expired`, `none`, or `unreadable` with why. Read-only. |
+  | `decline-use-case-task --show [--json]` | Print the kept answer — `declined` with the local time of the answer and of the next offer, `expired`, `none`, or `unreadable` with why. Read-only. `--json` prints it as one document ([The use-case Task's answer](#the-use-case-tasks-answer-decline-use-case-task)). |
   | `decline-use-case-task --clear` | Drop the kept answer, so the next plan offers the Task again. |
 
   The answer is a git-ignored runtime file, `project/instance/use-case-task.json` under the capability's folder (declared in `package.yaml`'s `runtime_ignore:`), holding the UTC time of the answer and nothing else. A file that cannot be read never hides the Task: it is offered, and the gate says that an earlier answer could not be read.
@@ -418,7 +418,7 @@ A project may keep a written account of what its software must do, as use cases,
   [warning] body.use-cases-unchecked: UC-042 not checked: the use-case point answered, but <filler> gave no answer (<its reason>), so the set it holds may be incomplete.
   ```
 
-  `validate-issue --json` carries both labels among its `findings`, like any other finding.
+  `validate-issue --json` carries both labels among its `findings`, like any other finding ([The findings](#the-findings-validate-issue-and-validate-pr)).
 
 #### PR body validation — residual placeholder detection (per [project-management:DEC-031-reject-unauthored-placeholder-bodies])
 
@@ -471,7 +471,7 @@ For the standard development flow, seven verb-subject commands compose over `mov
 - **It merges in time.** What follows the merge runs — for `done-work` the move to Done, the close and cascade of every issue the PR closes and the branch clean-up, for `merge-pr` its `after_merge_pr` hooks and the clean-up — and the run exits 0. Where the move to Done or a close fails, `done-work` exits 5 or 6 instead, naming the step still owed ("What `done-work`'s exit code says" below). A merge counts only once GitHub reports it: on a base that requires a queue a plain `gh pr merge` enqueues and exits 0, and the verb waits for such a PR like any queued one.
 - **The wait ends first**, or `--no-wait` returns at once. The run exits 4 (see "Exit 4" below) and the issue stays in Review. Run the same verb again once the PR has merged: it runs only what follows the merge. `done-work` finds the merged PR from the issue's closing references as well as from the branch, so any clone completes it whatever its local branch holds — a local branch with commits the merge does not have is kept, not deleted — and it refuses only when the issue was reopened after the merge. `merge-pr` run again fires its `after_merge_pr` hooks and cleans up once: the clone records that the hooks fired (`pkit/merge-pr/<N>.json` in its git directory, shared by its worktrees), so a further run from it does nothing and says so. It completes a PR the queue merged, from any clone — another clone has no record and fires the idempotent hooks again — and one a run from this clone left owed; a PR someone else merged without a queue is refused. A run while the PR is still queued waits for it again rather than enqueueing it twice.
 - **The queue drops the PR** — its checks failed on the prospective merge, or it no longer merges cleanly onto what merged ahead of it; the verb declares it out of the queue on two readings running, never one. Nothing merged; the issue stays in Review and the run exits 3. Fix the branch, push and run the verb again: the head the queue dropped is not enqueued again unchanged unless `--force` says so, and the refusal gives GitHub's reason when it has one.
-- **A push after the enqueue** takes the PR out of the queue — GitHub's dequeue once it is in, the auto-merge cancelled while it waits to enter — so that commits nobody checked do not merge, and the run exits 3. It exits 3 as well where the PR merged before it could be taken out, and says at which head: that merge may hold the commits pushed after the gates checked the head, so look at it. So it does where taking the PR out failed or gave no answer, and says how to take it out yourself, since the PR may still merge those commits. Where the first reading the verb takes at the new head already shows the PR merged, there is nothing to take out: that is a merge, as where it merges in time above, and a warning names the head it merged at and the head the gates checked, since the merge may hold those commits.
+- **A push while the verb waits** has it take the PR out of the queue — GitHub's dequeue once it is in, the auto-merge cancelled while it waits to enter — and the run exits 3. Taking it out races the queue, so commits nobody checked may merge, and which way it goes turns on timing. The run exits 3 as well where the PR merged before it could be taken out, and says at which head: that merge may hold the commits pushed after the gates checked the head, so look at it. GitHub's `Closes #N` has closed the issues the PR closes all the same, on a merge into the default branch, and none has moved to Done. It exits 3 too where taking the PR out failed or gave no answer, and says how to take it out yourself, since the PR may still merge those commits. Where the first reading the verb takes at the new head already shows the PR merged, there is nothing to take out: that is a merge, as where it merges in time above, and a warning names the head it merged at and the head the gates checked, since the merge may hold those commits. Once a run has exited 4, nothing takes the PR out on a push: the queue may merge the later head, and the run that completes the merge compares no heads. What follows a merge at a head the gates did not check is not decided yet ([project-kit#3351](https://github.com/aleskalfas/project-kit/issues/3351)).
 
 The queue is the only path to such a base, and the squash commit it makes must still be the convention's. Refused before anything is posted or enqueued: `--admin`, which would merge around the queue; `--bypass-ci` (see the CI-status gate below); a queue whose merge method is not squash; and a repository whose default squash-commit title and message are not the PR title and body — the queue composes its commit from those and ignores what the merge command passes ([project-management:DEC-013-branch-and-pr-conventions], "Merge mechanics"). Set them with `gh api -X PATCH repos/{owner}/{repo} -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY`. Where the base has no queue — or the GitHub host's API knows no merge queues — both verbs merge directly, as they always have.
 
@@ -593,7 +593,7 @@ ready: 1a2b3c4 — CI passed, all required verdicts approved, what changed in 1 
   - **A sentence no reviewer checks** holds the run: the description gives a sentence on a document the change check does not mark `updated` (the `documents this change affects` step). The run stops at `ready:`, naming the edit that removes it. Once it is removed, the same command merges.
   - **A missing sentence** holds the run too: the change check marks a document `updated` that the description gives no sentence for. An edit of the description stales no verdict, and no move to review runs again, so nothing else stops it here. The run stops at `ready:`, naming the edit that writes it. Once it is written, the same command merges.
 
-  `done-work` lands the pinned head or nothing, save where the PR's head moved while a merge queue held it. Where the run saw the head move before the PR merged, it tries to take the PR out of the queue, and `land-work` stops with 3, having run nothing after a merge. The queue may have merged the PR before it could be taken out, or, where taking it out failed or gave no answer, may merge it still, and the last line says which ("Merging through a queue" above). Where the first reading at the moved head already shows the PR merged, the run warns, naming the head it merged at and the head the gates checked, and completes the merge as any other: `done-work` runs every step after it, and `land-work` ends `merge: merged`, exiting 0 where each of those steps succeeds. A merge in either case may hold commits nobody checked. `land-work` reports how its run ended — never its exit code, which one code covers several ends of — saying "merged" only when GitHub does.
+  `done-work` lands the pinned head or nothing, save where the PR's head moved while a merge queue held it. Where the run saw the head move before the PR merged, it tries to take the PR out of the queue, and `land-work` stops with 3, having run nothing after a merge. The queue may have merged the PR before it could be taken out, or, where taking it out failed or gave no answer, may merge it still, and the last line says which ("Merging through a queue" above). Where the first reading at the moved head already shows the PR merged, the run warns, naming the head it merged at and the head the gates checked, and completes the merge as any other: `done-work` runs every step after it, and `land-work` ends `merge: merged`, exiting 0 where each of those steps succeeds. A merge in either case may hold commits nobody checked. What a push after a run ended `merge: queued` comes to is in "Merging through a queue" above too. `land-work` reports how its run ended — never its exit code, which one code covers several ends of — saying "merged" only when GitHub does.
 
 The pinned head is checked at each step: the checks are read with the head they belong to; `review-pr` keeps only verdicts judged fresh at the pinned head and shows a reviewer the head only when it is the pinned one; the findings to judge are read with the head, and a head that moved stops the run; `done-work` refuses when the head is another before its gates and after its gate's read; and its merge request is pinned to the head, so a push in the last moment fails the merge, which `land-work` reports as a moved head.
 
@@ -1108,13 +1108,15 @@ What each command does where the board does not answer:
 | `set-field` | See "Failure + recovery", under "Batch substrate primitives", above |
 | `validate-issue` | Reports the membership check as `board_membership.unverified`, a warning, and never as an issue off the board (`board_membership.missing`) |
 | `merge-workstream`, `split-workstream`, `remove-workstream` | Exit 3, and change nothing. `remove-workstream --force` instead warns that the issue count could not be read, and removes the workstream ("Removing", under "Workstream lifecycle", below). Where the board answered, see "Cards the walk did not count", under "Workstream lifecycle", below |
-| `sync-board` | Exits 3. How it counts an add, and the cards it leaves alone, are in "Bringing a whole board level", below |
+| `sync-board` | Exits 3. How it counts an add, the cards it leaves alone, and its read of each card it added, are in "Bringing a whole board level", below |
 | `back-fill` | See "Where the board does not answer", under "Corpus back-fill", below |
 | `pre-check` | Where a `projects_v2_node_id` is stored, passes the board check on it alone, and reads nothing. Whether it reads the board all the same is [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)'s to decide. Where none is stored, it reads the board, and fails the board check, naming `gh.default_owner` as where the board's owner goes |
 
 `move-issue`, `start-work`, `review-work` and `close-issue` read the board where it holds the state, and exit 3, as "Where the Status is the source", below, says.
 
-**Filing an issue onto the board.** An issue belongs on the board from its filing ([project-management:DEC-019-mandatory-issue-state]), so in a project with a board, `create-issue` reads the board before it writes anything, `--dry-run` included. Where the board does not answer, nothing is filed, and the command exits 3. Where the map binds the state to the board, and the board answered with no single-select `Status` field, or no option for the state the issue is filed into, nothing is filed either, and the command exits 1. Once the issue is filed, its card counts as added only where the board answers with the issue's card. Where the card is not added, or, where the board carries the state, its first Status is not written, the issue stays filed. The command then says so, leading with the filed issue, and exits 5. Read 5 as the issue filed: finish the step it names, and do not file the issue again. Where the board does not hold the state, a `--board` naming another board is read by its number, and the stored node of the configured one is no name of it. Where it holds the state, such a `--board` is refused before the board is read ("Where the Status is the source", below).
+**Filing an issue onto the board.** An issue belongs on the board from its filing ([project-management:DEC-019-mandatory-issue-state]), so in a project with a board, `create-issue` reads the board before it writes anything, `--dry-run` included. Where the board does not answer, nothing is filed, and the command exits 3. Where the map binds the state to the board, and the board answered with no single-select `Status` field, or no option for the state the issue is filed into, nothing is filed either, and the command exits 1. Once the issue is filed, its card counts as added only where the board answers with the issue's card. Where the card is not added, or, where the board carries the state, its first Status is not written, the issue stays filed. The command then says so, leading with the filed issue, and exits 5. Read 5 as the issue filed: finish the step it names, and do not file the issue again.
+
+**A `--board` names the configured board, or is refused.** Every issue belongs on the configured board, which every command reads and writes, so `create-issue --board <N>` is refused, with exit 2, unless N is the configured board's number, the two read as numbers ([project-management:DEC-071-filing-only-configured-board]). It is refused where N names another board, and in a project with no board, where a filing adds the issue to no board. A number below 1, which no board has, is refused first, with a message that says so. Each refusal comes before anything is written or asked and before the board is read, `--dry-run` included, and says what holds in the project's own case. Leave `--board` out to file onto the configured board, and where the issue belongs on another board too, add a card there after filing with `gh project item-add`. No command reads or writes that card. Where the configuration declares a board and gives no number for it, the refusal names the missing number as the fault to mend.
 
 **The post-check workflow's credential.** The workflow template, `templates/.github/workflows/pm-issue-check.yml`, runs under the workflow's own token, which reaches no Projects v2 board. Under it, the membership check reports the board unanswered on each issue, as a warning, and lets the issue through. To have the workflow read the board, set a credential the board answers in your copy's repository settings:
 
@@ -1134,8 +1136,8 @@ Where a Projects v2 board is configured and the map carries the state off it, it
 - **A closed issue's card** says where its work stood before the close. Where the issue did not close as completed, that tells finished work from a won't-do close. A card that then places the issue nowhere is named, with what the board said, and no ancestor moves
 - **`start-work` and `review-work`** refuse at their early check in the same cases
 - **`create-issue`** gives the new card its first Status: Todo, or Backlog for an issue filed with a milestone. What it does where the Status has no option for that state, or the write fails, is in "Filing an issue onto the board", above
-- **`create-issue --board <N>`** is refused, with exit 2, unless N is the configured board's number. An issue filed onto another board would have no card on the configured board, so no command could read its position. The refusal comes before anything is written or asked and before the board is read, `--dry-run` included. Leave `--board` out to file onto the configured board, and where the issue belongs on the other board too, add a card there after filing with `gh project item-add`. That card carries no position ([project-management:DEC-070-filing-another-board])
-- **A closed issue is Done whatever its card says,** so a close that leaves the card as it was needs nothing more. `sync-board` refuses here, so after `reopen-issue`, set the card's Status by hand
+- **`create-issue --board <N>`** is refused unless N is the configured board's number, as in every project ("A `--board` names the configured board, or is refused", above). Here the refusal gives this case's reason: an issue filed onto another board would have no card on the configured board, so no command could read its position, and a card added to the other board after filing carries no position ([project-management:DEC-070-filing-another-board])
+- **A closed issue is Done whatever its card says,** so a close that leaves the card as it was needs nothing more. `sync-board` writes no Status here, so after `reopen-issue`, set the card's Status by hand
 
 **Where the Status is a projection.** The same writers write it after each move, and the issue's own state stays the source.
 
@@ -1145,9 +1147,23 @@ Where a Projects v2 board is configured and the map carries the state off it, it
 - **The option a state takes is its display name** in `workflow.yaml`: Todo, Backlog, In Progress, Review and Done. It is matched exactly first, then without regard to case. `pre-check` warns, with the remedy, for each state the board's Status has no option for.
 - **`close-issue` and `reopen-issue` leave the card as it was.** They do not move an issue through `move-issue`, and neither do the closes `done-work` makes of the other issues a pull request closes. Run `sync-board` after them.
 
-**Bringing a whole board level.** A card dragged by hand, a write that failed or a board set up after its issues were filed leaves cards out of step. `pkit pm sync-board` reads every issue's state as the lifecycle does: closed is Done, and an open issue is read from its state label, its milestone or neither. It writes the Status only on the cards that differ, adds a card for each open issue that has none, and names each card whose Status disagreed. An add counts only where the board answers with the issue's card. Cards of other repositories, pull requests and drafts are left alone, and so is a card the board withheld, or one whose state has no option.
+**Bringing a whole board level.** A card dragged by hand, a write that failed, an issue filed outside the capability, a card removed, or a board set up after its issues were filed leaves the board out of step with the issues. `pkit pm sync-board` reads every card on the board, an archived one included, and every open issue, and gives each open issue with no card its card, in every project with a board, whatever carries the state ([project-management:DEC-072-sync-gives-missing-cards]). It writes a Status only where the Status is the projection, and never guesses an issue's position:
 
-`--dry-run` prints the plan and writes nothing. Otherwise `sync-board` asks before its first write, and `--yes` runs it with nobody at a terminal. The membership gate and the foreign-repo guard run as in the other writers. Where no board is configured, the map binds the state to the board, or a present map leaves the state out, it refuses, saying which, and reads nothing.
+- **Where the Status is the projection,** it reads every issue's state as the lifecycle does: closed is Done, and an open issue is read from its state label, its milestone or neither. It writes the Status only on the cards that differ, and on each card it adds, and names each card whose Status disagreed.
+- **Where the board holds the state,** it writes no Status, on a card it adds or on any other. An added issue's position stays undetermined until a person sets its card's Status on the board. Its plan and its report name each open issue whose card does not place it, as the state's reader sorts it from the walk, and each open issue whose only card is archived, which the board's views hide. Where the board has no single-select `Status` field, it names that fault once in their place, and the adds go on.
+- **Where the state degrades,** it writes no Status, which stays with the people who move it.
+
+On a card it adds it writes no other field. Where the project's hooks seed a board field on a card filing adds, the run names `pkit pm back-fill` as the way to seed it, which seeds the field on every issue that lacks it. An add counts only where the board answers with the issue's card. Cards of other repositories, pull requests and drafts are left alone, and so is a card the board withheld, or one whose state has no option.
+
+**Where the board holds the state, a card is added only in a run at a terminal, or with the project's switch on.** The board's own automation may set a Status when a card is added, and every command would read it as the issue's position, though nobody chose it. So a run with no terminal adds no card there unless `sync_board.adds_with_no_terminal` is `true` in `project/config.yaml`, whatever option it passes: `--yes` is no consent to that automation. With cards to add, such a run prints its plan and refuses, with the command to run at a terminal. With none to add, it exits clean. Turning the switch on is that consent, for every session that runs the sync in the project, a person's or an agent's, and each card such a run adds that shows a Status is named only in its output. The switch is off by default. It counts only where both the working tree the run starts from and the shared remote's copy of the default branch turn it on, never a local branch, so it is off in a project with no remote, where cards are added at a terminal. A change that turns it on is held by `done-work`, `merge-pr` and `land-work` until the person authorises that merge themselves, at a terminal: an authorisation given up front does not cover it, and each says what turning it on means. A merge outside these commands, or a direct commit to the default branch, passes no such hold.
+
+**After its adds, where the board holds the state,** it reads each card it added again, by the card the add answered with. It names each that shows a Status as one the sync did not write, which every command now reads as the issue's position, for you to check on the board, and suggests clearing none. A card it does not find is not confirmed, and a card with no Status may still get one from the automation later, so check each card added on the board. What the read finds, or its failure, changes no exit code.
+
+**Only the issues a run names.** `pkit pm sync-board 12 14` limits the run's writes, plan and report to those issues. A named issue it has nothing to do for is listed with why: on the board already, with nothing to write; a state issue; or not among the open issues the run read, with no card, which does not tell a closed issue from a number no issue holds.
+
+`--dry-run` prints the plan and writes nothing, and says which adds would need a run at a terminal or the switch. Otherwise `sync-board` asks before its first write in a run whose standard input is a terminal, and `--yes` runs it with nobody to ask. The membership gate and the foreign-repo guard run as in the other writers. Where no board is configured, it refuses, and reads nothing.
+
+**Each other message that reports a missing card** names `pkit pm sync-board <N>` for the issue it reports: the membership check, `set-field`'s refusal, the back-fill's blocked write, a move or a filing whose card was not added, and a Status that could not be read for want of a card. A filing whose add failed where the host's answer gave no number for the new issue says so, and names `pkit pm sync-board` run for the whole board instead, which adds that card with every other open issue's that lacks one. Where the board holds the state, it also says that the sync adds the card only at a terminal or with the switch on, and that its Status is then set on the board; a filing whose add failed also names the Status it would have written.
 
 #### Opening and editing a PR — `open-pr` / `edit-pr`
 
@@ -1280,7 +1296,7 @@ Without an interactive shell, a merge that would rewrite references refuses befo
 Both surface the methodology-relevant view of an existing issue / PR. Three output modes:
 
 - **Default** — a terse, human-readable summary with banner and labels.
-- **`--json`** — the full summary structure as machine-readable JSON.
+- **`--json`** — the full summary structure as one JSON document ([An issue](#an-issue-show-issue), [A pull request](#a-pull-request-show-pr)).
 - **`--field <name>`** — print just one field's value with **no surrounding chrome** (no banner, no label, no heading), so an agent can capture a single value as a *bare* command instead of piping the full view through `grep`/`tail`. Scalars print bare; lists print one item per line; `sections` prints one `present`/`absent` line per required section; `body` prints verbatim from `show-issue`, and from `show-pr` with control characters escaped ("What these commands print" above). An absent field (e.g. a missing milestone) prints nothing and still exits 0.
 
 `--field` and `--json` are mutually exclusive — passing both is a usage error (non-zero exit). An unknown field name fails to stderr listing the valid field set (non-zero exit); the same set is shown in `--help`.
@@ -1602,6 +1618,8 @@ pkit pm back-fill --apply             # drive the reviewed plan (confirmation-ga
 pkit pm back-fill --emit-script       # draft-not-apply: a script you run yourself; pm writes nothing
 ```
 
+The plan `--json` prints, and `--plan <file>` reads, is in [The back-fill's plan](#the-back-fills-plan-back-fill).
+
 **Where the board does not answer.** The report reads the board's cards once. Where the board does not answer, each `set-board-field` intent is reported as blocked, saying the board did not answer, and never as an issue that needs board membership; nothing is written for it.
 
 **Change kinds, and where each one's intent is declared.** The declaration point differs by substrate, because the substrate-map cannot carry a board field-id or a milestone title (DEC-037 §3):
@@ -1746,7 +1764,7 @@ The commands write only that block, and keep every other byte of the file. Each 
 
 **Commands for advanced use:**
 
-- `pkit pm list-fixers [--json]` lists each declared fixer, its types and your answer for each: granted, refused or not asked. It also says why an entry starts no agent, and lists each grant that no entry names.
+- `pkit pm list-fixers [--json]` lists each declared fixer, its types and your answer for each: granted, refused or not asked. It also says why an entry starts no agent, and lists each grant that no entry names. `--json` prints it as one document ([The fixers](#the-fixers-list-fixers)).
 - `pkit pm grant-fixer <agent> [--type <type>]...` grants the agent every type the point gives it, or only the types named. It refuses an agent or a type that no entry names.
 - `pkit pm revoke-fixer <agent> [--type <type>]...` records a refusal for the agent's types. It works on the grant list alone while the point does not resolve, so a grant that validation reports can always be revoked.
 
@@ -1886,6 +1904,196 @@ It exits 0 when each was applied, 1 when it refused and wrote nothing, and 3 whe
 **Answering a question.** `answer-question` records your answer and who gave it, `--by`, else `git config user.name`. While the artefact's friction stays the one the question was asked on, the next `fix-drift` quotes both in the fixer's brief, as data. An answered question no longer counts in `land-work`'s line.
 
 A run's folder is removed once each of its proposals was accepted or refused. These four commands pass the bootstrap gate, as `fix-drift` does.
+
+## What the commands print for a program
+
+Each command below prints one JSON document for a program to read, where you ask it for machine-readable output. Each keeps to the rule the CLI reference states for such a document ([Machine-readable output](../../cli/README.md#machine-readable-output) <!-- unanchored: the rule is ADR-097's, which the page anchors, and the CLI reference anchors this page, so an anchor back would make a cycle -->). A key, or a value of a set, may be added. One goes only as a breaking change of this capability, which raises the document's `schema_version` where it carries one. None comes to mean anything else. A document whose entry below names no `schema_version` carries no version.
+
+- **How a caller reads one.** By key, ignoring a key it does not read. It reads a key it needs and does not find, a `null` this page does not explain and a value it does not know as could not tell, unless the document's entry names another reading. A run that prints no document is no answer.
+- **The mark.** A set marked *named no reading* is one that named no reading of a value a caller does not know before the rule was stated. It keeps the mark until it gains its first value, and reads meanwhile like any other set.
+- **What GitHub gives,** such as a state or a mergeable state, has GitHub's values, not this capability's.
+- **A value written for people,** such as a reason, a detail or a summary, is in the contract by its key and its purpose, never by its words.
+
+### The prerequisites: `pre-check`
+
+`pkit pm pre-check --json` prints a list, one item for each check. Where it cannot find the capability, it prints none and exits 2.
+
+- `label`: which check, in words.
+- `status` (*named no reading*): `ok` where the check passed, `fail` where it failed, `warn` where it found something to mend that blocks nothing, and `skip` where it did not run.
+- `detail`: what it found, in words.
+- `remediation`: how to mend what it found, in words, or `null` where it names no remedy.
+
+A `fail` makes the command exit 1, and the list prints then too.
+
+### What a tracker holds: `adopt-existing`
+
+`pkit pm adopt-existing --json` prints what it read of the tracker and the substrate map it drafts from it, and exits 0. Where it refuses, as where it can read neither the labels nor the issues, it prints none and exits 2.
+
+- `posture`: that it drafts and writes nothing, in words.
+- `inventory`: what it read.
+  - `labels`: each label of the repository, with `name`, and `issue_usage`, how many issues of the sample carry it.
+  - `title_prefixes`: each prefix the sample's titles carry, with `prefix` and `count`.
+  - `open_count` and `closed_count`: the open and the closed issues of the sample.
+  - `sampled_issue_count`: how many issues the sample holds.
+  - `sample_truncated` and `labels_truncated`: whether it stopped reading the issues, or the labels, at its limit, so what it read is part of the tracker.
+  - `has_blocked_label`: whether the repository has the label the state axis reads as blocked.
+  - `milestones_in_use`: the milestones the sample's issues carry.
+  - `has_board`: whether your configuration names a board.
+  - `board_fields`: the names of the board's fields, empty where no board is named or its fields could not be read.
+  - `projects_v2_node_id`: the board's node id, or `null` where no board is named or it could not be read.
+- `inferences`: one for each axis, with:
+  - `axis` (*named no reading*): `type`, `priority`, `workstream` or `state`.
+  - `binding`: the binding it drafts for the axis, carried in the substrate map's shape, so its keys are the map's ([Where each axis lives](#where-each-axis-lives--the-board-flag-and-the-substrate-map-per-project-managementdec-062-axes-chosen-in-the-map)). `null` where nothing it read carries the axis, which the draft then marks unsupported.
+  - `evidence`: why, in words.
+  - `confidence` (*named no reading*): `high`, `low` or `none`.
+- `hierarchy`: `mode`, the hierarchy mode it drafts, `advisory` (*named no reading*), and `evidence`, why, in words.
+- `draft_substrate_map`: the draft, carried in the substrate map's shape.
+- `schema_check`: `ran`, whether it checked the draft against the map's schema; `valid`, whether the draft passed, which tells nothing where `ran` is `false`; and `errors`, what the check found, in words.
+
+### The back-fill's plan: `back-fill`
+
+`pkit pm back-fill --json` prints the plan the report shows ([Corpus back-fill](#corpus-back-fill--seeding-and-repairing-a-value-across-every-issue-per-project-managementdec-037-adoption-ceremony-2)), and `--plan <file>` reads it back.
+
+- `schema_version`: `1`. `--plan` refuses a plan of another version.
+- `truncated`: whether reading the issues stopped at `--limit`, so the plan may leave some out.
+- `residual_pre_check`: the checks the plan is gated on, with `passed`, whether no check failed, and `checks`, each with `label`, `status` and `detail`, as `pre-check` gives them ([The prerequisites](#the-prerequisites-pre-check)). Where nothing is declared, no check runs: `passed` is `true` and `checks` is empty.
+- `intent_errors`: each declaration that could not become an intent, and why, in words.
+- `intents`: each change the declarations ask for, with:
+  - `kind` (*named no reading*): `set-board-field`, `assign-milestone` or `set-axis-label`.
+  - `citation`: where it is declared, in words.
+  - `field_id`, `single_select_option_id` and `text_value`: the board's field, and the option or the text it sets, for `set-board-field`.
+  - `milestone_title`: for `assign-milestone`.
+  - `axis`, `axis_value`, the methodology's value, and `label_value`, the label it resolves to, for `set-axis-label`, with `carrier_labels`, your labels that count as a value of the axis.
+  - Each key of another kind is `null`, and `carrier_labels` empty.
+- `proposed`: each write proposed for an issue, with `issue_number`, `issue_title`, `kind` and `citation`, as its intent's, and:
+  - `argv`: the exact write, or `null` where it is blocked.
+  - `observed`: the value the issue held when the plan was made, for people, or `null`.
+  - `prediction` (*named no reading*): `already-satisfied`, `would-write` or `blocked`.
+  - `blocked_reason`: why it is blocked, in words, and empty where it is not.
+  - `axis`: for `set-axis-label`, else `null`.
+
+`--apply` reads each issue again before it writes, so a caller never takes `observed` or `prediction` for what the write will find.
+
+### An issue: `show-issue`
+
+`pkit pm show-issue <N> --json` prints the issue's methodology view ([Read-only diagnostics](#read-only-diagnostics--show-issue--show-pr)). Where the issue cannot be read, it prints none.
+
+- `title`.
+- `structural_type`: the type its title gives it, from `schemas/issue-types.yaml`, or `null` where it gives none.
+- `state`: GitHub's, lower-cased.
+- `assignees`: their logins.
+- `milestone`: its title, or `null`.
+- `parent_ref`: the body's first line, past an integration marker, as written. Empty where the body is.
+- `classification`: `type`, the issue's `type:` labels; `priority` and `workstream`, each the labels that carry the axis, as text for people, such as `<your label> -> <value>` on an axis your labels carry through the substrate map.
+- `other_labels`: each label on no axis.
+- `required_sections`: each section its type requires, with `heading`, and `present`, whether the body holds it.
+- `criteria` and `doc_impact`: the items of its criteria and of its `## Doc impact`, in the order `check-criterion` numbers them.
+- `body`: without the version footer.
+- `url`: or `null`.
+
+### A pull request: `show-pr`
+
+`pkit pm show-pr <PR> --json` prints the pull request's methodology view. Where the pull request cannot be read, it prints none.
+
+- `title`; `state`, GitHub's, lower-cased; `is_draft`.
+- `mergeable`: GitHub's, upper-cased, such as `MERGEABLE`, `CONFLICTING` or `UNKNOWN`, and empty where GitHub gives none.
+- `head` and `base`: the branches' names.
+- `merged_at`: GitHub's time of the merge, or `null`.
+- `url`: or `null`.
+- `conventional_commits`: the title read as a conventional commit: `matched`, and where it is `true`, `type`, `scope` (`null` where the title names none) and `summary`. Where `matched` is `false`, the other three are left out.
+- `closes`: each issue the body closes with a keyword, by its number.
+- `reviewers`: the logins asked to review.
+- `has_doc_impact_section`: whether the body holds `## Doc impact`.
+- `review`: each reviewer's latest verdict, with:
+  - `reviewer`.
+  - `verdict` (*named no reading*): `APPROVED` or `CHANGES_REQUESTED`.
+  - `path` (*named no reading*): `remote` for a verdict posted as `Reviewer agent: …`, and `local` for one posted as `Reviewer agent (local, <name>): …`.
+  - `body`: the comment, its reasons included.
+  - `stale`: whether it is stale by the merge gate's rule ([When a verdict stays fresh](#when-a-verdict-stays-fresh-per-project-managementdec-028-agent-as-approver-paths)), and `freshness`, why, in words.
+- `body`: the description.
+- `review_history`: for each reviewer on each path, `reviewer`, `path` and `verdicts`, each verdict it posted, oldest first, with `verdict`, `timestamp`, `url`, `body`, `stale` and `freshness`, as in `review`, and `current`, whether it is the one `review` shows.
+
+### The findings: `validate-issue` and `validate-pr`
+
+`pkit pm validate-issue <N> --json` and `pkit pm validate-pr <N> --json` print the findings. A finding that blocks makes the command exit 1, and the document prints then too. Where the issue or the pull request cannot be read, it prints none.
+
+- `issue_number` and `issue_title`, or `pr_number` and `pr_title`.
+- `findings`: each, with:
+  - `severity` (*named no reading*): `hard-reject` or `bypassable-with-audit`, which block, or `warning`, which does not, as `schemas/validation-severity.yaml` defines them.
+  - `label`: the check's name, such as `board_membership.missing`.
+  - `detail`: what it found, in words.
+
+### The tree: `show-tree`
+
+`pkit pm show-tree --format json` prints the tree as one document.
+
+- `issues`: each issue read, by its number, with:
+  - `number`, `title`, `state`, GitHub's, lower-cased, `structural_type` (or `null`) and `milestone` (or `null`).
+  - `parent_number`: the parent it sits under in the tree, or `null`.
+  - `children`: its children in this repository, by number.
+  - `child_substrate`: for each child, by number, where it was found (*named no reading*): `native`, a native sub-issue, or `textual`, a child whose first line names the issue.
+  - `children_in_other_repositories`: each native sub-issue in another repository, with `ref`, `owner/repo#N`, `repository` and `number`. Their state is not read.
+  - `parent_resolution`: how its two records of its parent stand, or `null` where they were not compared:
+    - `kind` (*named no reading*): `agreed`, `native-only`, `textual-only`, `disagree` or `none`.
+    - `native_parent`: the native parent's number, or `null`, and `native_parent_known`: where it is `false`, the native parent is not known, so `native_parent` and `kind` say nothing of it.
+    - `first_line_parent`: the parent the first line names, or `null`.
+    - `first_line_form` (*named no reading*): `conforming`, `non-conforming`, `milestone` or `none`.
+    - `first_line_names_itself`: whether the first line names the issue itself, which names no parent.
+- `prs`: each pull request read, with `number`, `title`, `state` and `closes`.
+- `orphans`: `open_issues_with_no_parent_ref`, `tasks_not_under_container` and `prs_without_closing_issue_in_repo`, each a list of numbers.
+- `tree_roots`: the issues with no parent in the tree.
+- `complete`: `false` where the tree may be short, and `incomplete_reason`, why, in words, or `null` where it is complete ([Issue body — parent-ref first line](#issue-body--parent-ref-first-line)).
+
+### The workstreams: `list-workstreams` and `show-workstream`
+
+`pkit pm list-workstreams --json` prints what `project/workstreams.yaml` holds. Where the command refuses, it prints none.
+
+- `form` (*named no reading*): how the file holds its entries, `mapping` or `list`, or `empty` where it gives no `workstreams:` list or mapping, or cannot be read.
+- `errors`: each problem it found in the file, in words.
+- `duplicate_names`: each name that more than one active entry shares.
+- `entries`: each entry `--status` selects, active by default, in the file's order, with:
+  - `slug`; `name`, the slug where the file gives none; and `description`, empty where there is none.
+  - `status` (*named no reading*): `active` or `deprecated`.
+  - `deprecated_reason`: empty where there is none.
+
+`pkit pm show-workstream <slug> --json` prints one entry, in the same shape. Where no entry has the slug, it prints none.
+
+### The mesh: `check-mesh`
+
+`pkit pm check-mesh --json` compares this repository with its peers. Where it refuses, it prints none. Where no peer is configured, it prints `status`, `skipped` (*named no reading*), and `reason`, in words. Otherwise:
+
+- `target`: this repository, `owner/repo`, with `<unknown>` for an owner or a name it could not find.
+- `peers`: each peer, `owner/repo`.
+- `drift`: each difference, with:
+  - `kind` (*named no reading*): `capability-version`, `type-labels`, `priority-labels`, `workstream-labels`, `members` or `milestones`.
+  - `peer`: the peer that differs.
+  - For `capability-version`, `local` and `peer_value`, the two versions. For each other kind, `in_local_only` and `in_peer_only`, what only one side holds.
+  - `severity` (*named no reading*): `warning`.
+- `summary`: in words.
+
+### The use-case Task's answer: `decline-use-case-task`
+
+`pkit pm decline-use-case-task --show --json` prints the kept answer ([Use cases in planning and in bodies](#use-cases-in-planning-and-in-bodies-per-project-managementdec-054-use-case-validation)).
+
+- `state` (*named no reading*): `declined`, `expired`, `none` or `unreadable`.
+- `declined_at` and `offered_again_at`: the time of the answer and of the next offer, in UTC, `YYYY-MM-DDTHH:MM:SSZ`, and `null` unless the state is `declined` or `expired`.
+- `declined_at_local` and `offered_again_at_local`: the same, in local time, for people, and `null` alike.
+- `why`: why the answer cannot be read, in words, and `null` unless it is `unreadable`.
+
+### The fixers: `list-fixers`
+
+`pkit pm list-fixers --json` prints the fixers the point declares and your answers ([8. (Optional) Grant the fixers your capabilities declare](#8-optional-grant-the-fixers-your-capabilities-declare)). Where the point does not resolve, it exits 1, and the document prints then too. Where the point or the grant list cannot be read, it prints none and exits 1.
+
+- `schema_version`: `1`. A reader refuses a version it does not know.
+- `point`: the point read, `pkit::work-tracking:fixers`.
+- `resolved`: whether the point resolves. Where it does not, no fixer may start.
+- `why`: why the point resolves as it does, in words, and empty where it gives entries; and `inert`, each filler that gives nothing and its fix, in words.
+- `fixers`: each agent declared, with `agent`, and `types`, each type it fixes, with:
+  - `type` and `description`.
+  - `origin`: what declares it, as the point names it.
+  - `answer` (*named no reading*): `granted` or `refused`, or `null` where you were not asked.
+  - `problems`: each reason the entry starts no agent, with `severity` (*named no reading*), `error`, which fails validation, or `warning` or `report`, which do not, and `text`, in words.
+- `stale`: each grant no entry names, with `agent`, `type`, and `revoke`, the command that revokes it.
 
 ## Connections
 

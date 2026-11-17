@@ -526,6 +526,13 @@ def _allow_member(module, monkeypatch) -> None:
     monkeypatch.setattr(module.bootstrap_gate, "enforce", lambda *a, **kw: True)
 
 
+def _switch_off(module, monkeypatch) -> None:
+    """The merge verbs hold a change that turns on the sync's switch, read from the
+    host (DEC-072 point 3). That hold is no audit's, and this file's change turns
+    nothing on (its hold: `tests/test_pm_sync_switch.py`)."""
+    monkeypatch.setattr(module, "_switch_hold", lambda *a, **kw: module.sync_switch.NOT_HELD)
+
+
 _RED = [{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}]
 
 
@@ -563,6 +570,7 @@ def _wire_done_work(dw, monkeypatch) -> None:
     monkeypatch.setattr(
         dw, "_gh_get_status_rollup", lambda n, config: dw._RollupReading(tuple(_RED))
     )
+    _switch_off(dw, monkeypatch)
     _direct_merge(dw, monkeypatch)
     monkeypatch.setattr(dw.pr_merge, "delete_branch", lambda n, h, c, **kw: None)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", lambda b, c, **kw: None)
@@ -610,6 +618,7 @@ def _wire_merge_pr(mp, monkeypatch) -> None:
         "_gather_unticked_findings",
         lambda n, body, closing, config: {},
     )
+    _switch_off(mp, monkeypatch)
     _direct_merge(mp, monkeypatch)
     monkeypatch.setattr(mp.pr_merge, "delete_branch", lambda n, h, c, **kw: None)
     monkeypatch.setattr(mp.pr_merge, "cleanup_local", lambda b, c, **kw: None)
