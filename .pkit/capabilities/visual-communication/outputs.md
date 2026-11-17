@@ -1090,8 +1090,8 @@ Once whoever maintains the capability accepts a calibration's report, a refineme
 - **`rules`:** each rule with evidence of its own in the accepted report, by its id, with the major of its set and the digest of its text.
 - **`reviewer`:** the digest of the reviewer's definition.
 - **`design-knowledge`:** the digest of the design knowledge.
-- **`code`:** the digest of the capability's code, each program file in `scripts/`.
-- **`checks`:** the digest of the list of checks, the body of `checks.md` after its front matter.
+- **`code`:** the digest of the capability's code.
+- **`checks`:** the digest of the list of checks.
 - **`model`:** the full name of the model the calibration's review ran on, with its effort where the harness has one.
 - **Each digest** is a SHA-256 of what it names, written `sha256:<hex>`, as [`calibration.schema.json`](schemas/calibration.schema.json) sets out.
 - **The reading** holds the same values as they stand now, in the data's shape: for the rules the bar covers, and the model the round's report names.
