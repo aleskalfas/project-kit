@@ -9,6 +9,11 @@
 #   rule gets no hold.
 # - `reviewer` — the digest of the reviewer's definition, `agents/graphic-design-reviewer.md`.
 # - `design-knowledge` — the digest of the design knowledge, `design-knowledge/`.
+# - `code` — the digest of the capability's code, each program file of `scripts/`. Every
+#   change to the code lapses the hold, and a compiled cache or another kind of file beside
+#   it lapses nothing.
+# - `checks` — the digest of the list of checks, the body of `checks.md` after its front
+#   matter.
 # - `model` — the model the calibration's review ran on, by its full name, with its effort
 #   where the harness has one.
 #
@@ -32,6 +37,8 @@ rules:
     text: sha256:78e2cf9d0ee17c9ec50649ae515e30248896c5d1ea3db8fd33f6562c4b4e9057
 reviewer: sha256:3edcdaedaf46b44fa8a96059fea380438bbebc9ca23ac39d0b548b0c507cf3f9
 design-knowledge: sha256:9d50099cf7a74e87485070baa8ad7e662d518490f1e8c5f47aa9a3c14f7307c4
+code: sha256:06d7a586b4757751ea904e35b1c8b172226bccbee950138f5f036ababfd3d8f2
+checks: sha256:dbfd837e678aaf5d68615b6fe0505136182897f1db7c4f5fef5715c88ae60589
 model:
   name: example-model-1.0
   effort: high

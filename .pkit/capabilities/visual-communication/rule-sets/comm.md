@@ -7,7 +7,7 @@ rules:
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#6"]}
+        anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#6", "visual-communication:DEC-046#2"]}
   RS-COMM-002:
     status: accepted
     origin: {decision: "visual-communication:DEC-028"}

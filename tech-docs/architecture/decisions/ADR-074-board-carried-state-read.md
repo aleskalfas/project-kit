@@ -271,10 +271,12 @@ failed batch for issues with no card.
 - **Not where the state lives.** That is the project's choice, in its map
   (DEC-062).
 - **Not what the forward cascade does at an ancestor the read cannot place.**
-  DEC-006 holds that a container is never behind the work under it, and DEC-051
-  point 6 that no command acts on a position it could not read. At such an
-  ancestor the two pull apart, and which gives way is a question for a
-  project-management record, not for this one.
+  DEC-006 holds that no container is to stand behind the work under it, and
+  DEC-051 point 6 that no command acts on a position it could not read. At such
+  an ancestor the two pull apart, and which gives way is a question for a
+  project-management record, not for this one:
+  [project-management:DEC-075](../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md)
+  decides it.
 - **Not what a card a person moves by hand means.** Whether a card dragged back
   from In Progress is a move back, owing a reason and releasing the owner, is the
   question DEC-006 leaves open. The read says where a card stands, and nothing of

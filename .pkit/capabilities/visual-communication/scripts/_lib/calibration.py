@@ -1,29 +1,39 @@
 """The accepted calibration's data, and whether the verdict ends the designer's loop
-(visual-communication DEC-042 points 9 and 10).
+(visual-communication DEC-042 points 9 and 10, DEC-065).
 
 - **The data.** A refinement of DEC-042 writes it when whoever maintains the capability
   accepts a calibration's report: `calibration.yaml` in the capability's folder, bound to
   `visual-communication:calibration`. Nothing else writes it, and this module only reads
   it. Absent, no report is accepted. It holds each rule with evidence of its own in the
   accepted report, with its set's major and a digest of its text; a digest of the
-  reviewer's definition and one of the design knowledge; and the model the review ran on,
-  with its effort where the harness has one.
+  reviewer's definition, one of the design knowledge, one of the capability's code and one
+  of its list of checks; and the model the review ran on, with its effort where the harness
+  has one.
 - **The reading** is the same values as they stand now: each rule the bar covers, with its
-  set's major and a digest of its text; the two digests; and the model the round's report
+  set's major and a digest of its text; the four digests; and the model the round's report
   names. It has the data's shape, so the change that writes the data can take it from the
   reading of the state the calibration ran on.
 - **The hold is on** where a report is accepted, the bar covers only rules with evidence of
   their own in it (point 10), and nothing has lapsed (point 9): no covered set's major, no
-  covered rule's text, neither definition, nor the model or its effort differs from the
-  data. Otherwise each reason it is off is said. A lapse only withdraws the hold: nothing
-  here starts a calibration.
+  covered rule's text, none of the four digests, nor the model or its effort differs from
+  the data. Otherwise each reason it is off is said. A lapse only withdraws the hold:
+  nothing here starts a calibration.
 - **Each digest** is SHA-256, written `sha256:<hex>`, as a deploy's mark writes the digest of
   an agent's definition:
   - a rule's text, its section in the body of its set's file (`bar.rule_text`), as UTF-8;
   - the reviewer's definition: the bytes of the capability's own
     `agents/graphic-design-reviewer.md`, as the deploy digests the file it writes from;
   - the design knowledge: the canonical text (RFC 8785) of the SHA-256 of each file in the
-    capability's `design-knowledge/`, by its path within that folder.
+    capability's `design-knowledge/`, by its path within that folder;
+  - the capability's code: the same, of each program file in its `scripts/` folder, the
+    files written in the language its commands run in (`is_code`). Each check the review
+    reads lies there, with the values of its own it measures by, its reach and the viewing
+    step's code that gives its findings, and so does the rest of the code, so every change
+    to the code lapses the hold. A compiled cache, a folder's marker or an editor's file
+    beside the code lapses nothing (DEC-065 point 2);
+  - the list of checks: the body of the capability's `checks.md`, after its front matter,
+    as UTF-8. Its front matter says nothing of what a check means, so a change to it alone
+    lapses nothing.
 - **Another definition of the reviewer.** The deploy runs the definition of a name that
   wins among the places that ship one, and the project's place wins over every other
   (COR-013 point 8). A capability cannot ask the picker that decides it (ADR-057 point 1),
@@ -36,13 +46,13 @@ Reads only, and needs no network.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from _lib import files
-from _lib.bar import Covered, rule_text
+from _lib.bar import Covered, body, rule_text
 from _lib.reading import ReadError, canonical_bytes, sha256
 from _lib.root import CAPABILITIES_DIR, SHIPPED
 
@@ -56,6 +66,14 @@ DEFINITION = SHIPPED / "agents" / f"{REVIEWER}.md"
 
 #: The design knowledge's folder (DEC-030 point 8).
 DESIGN_KNOWLEDGE = SHIPPED / "design-knowledge"
+
+#: The folder of the capability's code, and the suffix of the language its commands run in,
+#: which marks a program file (DEC-065 point 2).
+SCRIPTS = SHIPPED / "scripts"
+PROGRAM = ".py"
+
+#: The capability's list of checks, whose body the reviewer reads for what a check means.
+CHECKS = SHIPPED / "checks.md"
 
 #: The project's place of agents' definitions, relative to the project root.
 PROJECT_AGENTS = ".pkit/agents/project"
@@ -76,13 +94,16 @@ class Unreadable(Exception):
 class Reading:
     """The values the hold is compared on, as they stand now, in the data's shape: each
     rule covered with its set's major and the digest of its text, the digest of the
-    reviewer's definition, or None where the capability ships none, the digest of the
-    design knowledge, and the model. `others` are the other definitions of the reviewer's
-    name in the project, each by its path."""
+    reviewer's definition, or None where the capability ships none, the digests of the
+    design knowledge and of the capability's code, the digest of its list of checks, or
+    None where it ships none, and the model. `others` are the other definitions of the
+    reviewer's name in the project, each by its path."""
 
     rules: Mapping[str, Mapping[str, Any]]
     reviewer: str | None
     design_knowledge: str
+    code: str
+    checks: str | None
     model: Mapping[str, Any]
     others: tuple[str, ...]
 
@@ -93,6 +114,8 @@ class Reading:
             "rules": {rule: dict(values) for rule, values in self.rules.items()},
             "reviewer": self.reviewer,
             "design-knowledge": self.design_knowledge,
+            "code": self.code,
+            "checks": self.checks,
             "model": dict(self.model),
         }
 
@@ -115,6 +138,8 @@ def read(root: Path, covered: Sequence[Covered], model: Mapping[str, Any]) -> Re
         },
         reviewer=digest(DEFINITION.read_bytes()) if DEFINITION.is_file() else None,
         design_knowledge=folder_digest(DESIGN_KNOWLEDGE),
+        code=folder_digest(SCRIPTS, is_code),
+        checks=_checks_digest(),
         model={key: model[key] for key in ("name", "effort") if key in model},
         others=tuple(_other_definitions(root)),
     )
@@ -165,23 +190,30 @@ def off(reading: Reading, data: Mapping[str, Any] | None) -> list[str]:
                 f"the text of `{rule}` differs from the text the calibration read ({LAPSES})"
             )
     reasons.extend(_definitions_off(reading, data))
+    reasons.extend(_code_off(reading, data))
     reasons.extend(_model_off(reading.model, data["model"]))
     return reasons
 
 
-def folder_digest(folder: Path) -> str:
-    """The digest of the files in `folder`, at any depth: the canonical text of each one's
-    SHA-256, by its path within the folder."""
+def folder_digest(folder: Path, takes: Callable[[Path], bool] = Path.is_file) -> str:
+    """The digest of the files in `folder`, at any depth, that `takes` takes, every file by
+    default: the canonical text of each one's SHA-256, by its path within the folder."""
     found = (
         {
             path.relative_to(folder).as_posix(): sha256(path.read_bytes())
             for path in sorted(folder.rglob("*"))
-            if path.is_file()
+            if takes(path)
         }
         if folder.is_dir()
         else {}
     )
     return digest(canonical_bytes(found))
+
+
+def is_code(path: Path) -> bool:
+    """Whether the code's digest takes `path`: a file written in the language the
+    capability's commands run in (DEC-065 point 2)."""
+    return path.is_file() and path.suffix == PROGRAM
 
 
 def _definitions_off(reading: Reading, data: Mapping[str, Any]) -> list[str]:
@@ -200,6 +232,29 @@ def _definitions_off(reading: Reading, data: Mapping[str, Any]) -> list[str]:
         )
     if reading.design_knowledge != data["design-knowledge"]:
         reasons.append(f"the design knowledge differs from the one the calibration read ({LAPSES})")
+    return reasons
+
+
+def _checks_digest() -> str | None:
+    """The digest of the list of checks' body, its bytes as they stand, or None where the
+    capability ships no list."""
+    if not CHECKS.is_file():
+        return None
+    return digest(body(CHECKS.read_bytes().decode("utf-8")).encode("utf-8"))
+
+
+def _code_off(reading: Reading, data: Mapping[str, Any]) -> list[str]:
+    reasons = []
+    if reading.code != data["code"]:
+        reasons.append(
+            f"the capability's code, in `{SCRIPTS.name}/`, differs from the code the "
+            f"calibration ran on ({LAPSES})"
+        )
+    if reading.checks != data["checks"]:
+        reasons.append(
+            f"the list of checks, `{CHECKS.name}`, differs from the one the calibration read "
+            f"({LAPSES})"
+        )
     return reasons
 
 

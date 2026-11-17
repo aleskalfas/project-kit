@@ -131,13 +131,11 @@ def rule_text(path: Path, rule: str) -> str:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return ""
-    front = _FRONT.match(text)
-    body = text[front.end() :] if front else text
     opens = re.compile(rf"^{re.escape(rule)}(?![A-Za-z0-9-])")
     taken: list[str] = []
     level = 0
     fence = ""
-    for line in body.splitlines():
+    for line in body(text).splitlines():
         fenced = _FENCE.match(line)
         if fence:
             if fenced and fenced[1][0] == fence[0] and len(fenced[1]) >= len(fence):
@@ -153,6 +151,12 @@ def rule_text(path: Path, rule: str) -> str:
         if level:
             taken.append(line)
     return "\n".join(taken).rstrip("\n") + "\n" if taken else ""
+
+
+def body(text: str) -> str:
+    """A Markdown file's `text` after its front matter, or all of it where it has none."""
+    front = _FRONT.match(text)
+    return text[front.end() :] if front else text
 
 
 def _graded(project: Sequence[RuleSet]) -> dict[str, RuleSet]:
