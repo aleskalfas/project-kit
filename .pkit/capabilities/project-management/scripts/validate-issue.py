@@ -25,6 +25,16 @@ flag directly ([project-management:DEC-051-axis-carriage-activation] decision
 point 4). The file's one remaining flag read serves board MEMBERSHIP (DEC-019),
 a different question from carriage.
 
+Membership is read through the board read seam, as every card is
+([pkit:ADR-096] point 5): the issue's card on the configured board, found among
+the issue's own cards, in the request that shows the board answered. It has
+three outcomes: a card, which satisfies the check; a board that answered with no
+card, the drift DEC-019 names (`board_membership.missing`); and a board that did
+not answer (`board_membership.unverified`), reported in the seam's words at
+DEC-019's drift severity and never as an issue off the board. That severity
+lets the issue through, so the check exits as it does. A project with no board
+makes no call.
+
 Membership predicate per DEC-021 runs at startup; closed mode refuses
 non-members (the gate applies to all mutating + read commands in the
 v0.3.0 stub).
@@ -47,6 +57,7 @@ import argparse
 import json
 import re
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -59,11 +70,14 @@ sys.path.insert(0, str(_HERE))
 from _lib import (
     axis_carriage,
     axis_labels,
+    board_fields,
+    board_status,
     body_parent_ref,
     body_rules,
     bootstrap_gate,
     classification_rules,
     decision_ids,
+    missing_card,
     title_rules,
     use_case_citations,
 )
@@ -94,6 +108,11 @@ class Finding:
     severity: str
     label: str
     detail: str
+
+
+#: Reads an issue's card on the configured board: given the config and the
+#: issue, the seam's :class:`board_fields.ItemLookup`.
+MembershipReader = Callable[[dict, dict], board_fields.ItemLookup]
 
 
 def main() -> int:
@@ -209,6 +228,9 @@ def main() -> int:
         # The records (DEC-010): asked of the backbone only for a body that
         # cites a decision id.
         records=decision_ids.lookup,
+        # The issue's card on the configured board (DEC-019): read through the
+        # board read seam only where a board is configured.
+        membership=_read_membership,
     )
 
     if args.json:
@@ -246,6 +268,7 @@ def _validate_issue(
     substrate_map: axis_labels.SubstrateMap | None = None,
     use_cases: use_case_citations.Reader | None = None,
     records: decision_ids.Reader | None = None,
+    membership: MembershipReader | None = None,
 ) -> list[Finding]:
     findings: list[Finding] = []
     title = str(issue.get("title", ""))
@@ -620,10 +643,8 @@ def _validate_issue(
         )
 
     # Board membership drift (per DEC-019 / mandatory-issue-state.yaml).
-    # Only fires for board-substrate adopters. We surface a finding when
-    # the issue is open + board configured + the issue's `projectItems`
-    # is empty (best-effort; the gh JSON surface for project membership
-    # is limited at v1 so this is gated to data we have).
+    # Only fires for board-substrate adopters, and only where the caller gives
+    # `membership`, the reader of the issue's card on the configured board.
     #
     # This is the file's ONE read of the board flag, and it must stay a flag
     # read: MEMBERSHIP ("is this issue ON the configured board") is a different
@@ -632,44 +653,36 @@ def _validate_issue(
     # board adopter who wrote a single label binding — see the carriage accessor's
     # own "What this module does NOT decide".
     has_board = bool(config.get("has_projects_v2_board", False))
-    if has_board and state_fields.get("board_membership"):
-        project_items = issue.get("projectItems")
+    if has_board and state_fields.get("board_membership") and membership is not None:
         board_field = state_fields["board_membership"]
         sev = _severity_from_token(board_field.get("drift_severity"))
-        if isinstance(project_items, list) and len(project_items) == 0:
+        card = membership(config, issue)
+        if card.ok and card.item_id is None:
             findings.append(
                 Finding(
                     sev,
                     "board_membership.missing",
-                    "issue is not on the configured Projects v2 board. Mandatory per DEC-019.",
+                    "issue is not on the configured Projects v2 board. Mandatory per DEC-019."
+                    + _card_remedy(issue, config, substrate_map),
                 )
             )
-        elif not isinstance(project_items, list):
-            # UNVERIFIED is not MISSING, and it is not satisfied either (#740).
-            # `projectItems` absent / null / non-list means membership could not
-            # be DETERMINED — an unreadable board, a token without the project
-            # scope, or a partial-success GraphQL reply carrying an errors array.
-            # The prior condition (`is not None and isinstance(list) and len==0`)
-            # skipped this branch entirely, so an undeterminable membership was
-            # silently indistinguishable from a satisfied one: a check that
-            # passes on a value it could not read is indistinguishable, in the
-            # adopter's repo, from a check that does not exist.
-            #
-            # Reported at DEC-019's OWN `drift_severity` (warning) — this adds no
-            # severity, verdict token, exit code, or network call; the payload is
-            # already fetched. The message is deliberately distinct from
-            # `.missing`: sending an adopter to "add this issue to the board"
-            # when the issue may already be on it is the wrong diagnosis, and a
-            # wrong diagnosis teaches distrust of the gate.
+        elif not card.ok:
+            # UNVERIFIED is not MISSING, and it is not satisfied either (#740):
+            # the board did not answer, so nothing is known of the issue's card
+            # ([pkit:ADR-096] point 5). Reported at DEC-019's OWN
+            # `drift_severity`, wherever the check runs: a fault of the check's
+            # credential is none of the issue's, so it takes neither the reject
+            # DEC-019 gives an issue off the board at filing nor the broken
+            # tool's code. Sending an adopter to "add this issue to the board"
+            # when it may already be on it is the wrong diagnosis.
             findings.append(
                 Finding(
                     sev,
                     "board_membership.unverified",
-                    "could not determine Projects v2 board membership "
-                    "(no projectItems in the issue payload — board unreadable, "
-                    "token missing the project scope, or a partial API reply). "
-                    "Membership is mandatory per DEC-019; this is NOT a report "
-                    "that the issue is off the board.",
+                    "could not determine Projects v2 board membership: "
+                    f"{card.error or 'the board did not answer'}. Membership is "
+                    "mandatory per DEC-019; this is NOT a report that the issue "
+                    "is off the board.",
                 )
             )
 
@@ -872,12 +885,50 @@ def _read_members(capability_root: Path, yaml_loader: YAML) -> list[dict]:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    """Fetch issue title/body/labels/assignees via `gh issue view`."""
+    """Fetch issue title/body/labels/assignees via `gh issue view`, with the
+    issue's node id and url, by which its card on the board is read
+    (:func:`_read_membership`), and its number and state, by which a missing
+    card's finding names the sync (:func:`_card_remedy`). The issue's own list
+    of cards is not asked: it names no board, so it cannot tell the configured
+    board from another, and its empty answer cannot tell no card from none
+    visible ([pkit:ADR-096] point 5)."""
     return gh_get_issue(
         issue_number,
         config,
-        fields="title,body,labels,assignees,projectItems",
+        fields="id,number,url,state,title,body,labels,assignees",
     )
+
+
+def _read_membership(config: dict, issue: dict) -> board_fields.ItemLookup:
+    """The issue's card on the configured board, read through the board read
+    seam ([pkit:ADR-096] point 5): an archived card counts, and the absence of
+    one counts only where the request shows the board answered. The board is
+    read under its owner (`board_fields.board_owner`): `gh.default_owner`, else
+    the repository's, which the issue's url names."""
+    node = issue.get("id")
+    if not isinstance(node, str) or not node:
+        return board_fields.ItemLookup(
+            ok=False, error="the issue's read carried no node id, so its card was not looked up"
+        )
+    url = issue.get("url")
+    owner = board_fields.board_owner(
+        config, repository_owner=board_fields.url_owner(url if isinstance(url, str) else None)
+    )
+    return board_fields.resolve_item_id(config, issue_node_id=node, owner=owner)
+
+
+def _card_remedy(issue: dict, config: dict, substrate_map: axis_labels.SubstrateMap | None) -> str:
+    """What gives the issue its missing card, as a sentence the finding ends on:
+    the sync, run for the issue ([project-management:DEC-072-sync-gives-missing-cards]
+    point 4). Empty unless the issue's read shows it open, since the sync gives a
+    closed issue no card, and where the read carries no number."""
+    if str(issue.get("state") or "").upper() != "OPEN":
+        return ""
+    number = issue.get("number")
+    if not isinstance(number, int):
+        return ""
+    holds = board_status.role(config, substrate_map) == "source"
+    return f" {missing_card.remedy(number, board_holds_state=holds)}."
 
 
 def _print_findings(issue_number: int, issue: dict, findings: list[Finding]) -> None:

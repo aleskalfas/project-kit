@@ -885,6 +885,66 @@ def test_a_yes_at_the_terminal_merges_the_head_the_question_names(dw, monkeypatc
     assert calls["merge_head"] == "sha-gate"
 
 
+@pytest.mark.parametrize(
+    "hold",
+    [
+        pytest.param({"turns_on": True}, id="turns-it-on"),
+        pytest.param({"unread": "the host did not answer"}, id="could-not-be-read"),
+    ],
+)
+@pytest.mark.parametrize("terminal", [False, True], ids=["off-a-terminal", "at-a-terminal"])
+def test_yes_does_not_merge_a_change_that_turns_on_the_syncs_switch(
+    dw, monkeypatch, capsys, hold, terminal
+) -> None:
+    """An authorisation given up front does not cover a change that turns on the
+    sync's switch, nor one whose effect on it could not be read: the merge waits
+    for the person, who is told what turning it on means (DEC-072 point 3)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw, "_switch_hold", lambda *a, **kw: dw.sync_switch.Hold(**hold))
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: terminal, raising=False)
+
+    run = dw.run(["42", "--yes"])
+
+    assert (run.kind, run.exit_code) == (dw.DECLINED, 2)
+    assert calls["merged"] is False
+    assert "lets `pkit pm sync-board` add the missing cards with nobody at a terminal" in (
+        run.reason
+    )
+    assert "runs `pkit pm done-work 42` at a terminal" in run.reason
+
+
+def test_the_persons_yes_at_a_terminal_merges_a_change_that_turns_on_the_switch(
+    dw, monkeypatch, capsys
+) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw, "_switch_hold", lambda *a, **kw: dw.sync_switch.Hold(turns_on=True))
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    monkeypatch.setattr("builtins.input", lambda prompt="": "y")
+
+    run = dw.run(["42"])
+
+    assert (run.kind, run.exit_code) == (dw.MERGED, 0)
+    assert calls["merged"] is True
+    assert "This change turns on `sync_board.adds_with_no_terminal`." in capsys.readouterr().out
+
+
+def test_the_hold_reads_the_head_and_base_the_merge_is_for(dw, monkeypatch) -> None:
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    _no_terminal(monkeypatch)
+    read: list[tuple[str, str]] = []
+
+    def hold(head, base, capability_root, config):
+        read.append((head, base))
+        return dw.sync_switch.NOT_HELD
+
+    monkeypatch.setattr(dw, "_switch_hold", hold)
+
+    run = dw.run(["42", "--yes"])
+
+    assert run.kind == dw.MERGED
+    assert read and read[0][0] == "sha-head"
+
+
 def test_a_step_after_the_merge_failing_is_owed_not_refused(dw, monkeypatch) -> None:
     """The merge stands; what failed after it is owed to a re-run."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
@@ -1138,6 +1198,9 @@ def _wire_main_seams(
         )(),
     )
     monkeypatch.setattr(dw.session_guard, "enforce", lambda **kw: True)
+    # The hold on a change that turns on the sync's switch reads the host; this
+    # wiring's change turns nothing on (its hold: `tests/test_pm_sync_switch.py`).
+    monkeypatch.setattr(dw, "_switch_hold", lambda *a, **kw: dw.sync_switch.NOT_HELD)
     # This file targets done-work's approval / CI / checkbox gates, not the
     # #747 prerequisite gate (covered in test_pm_bootstrap_gate*.py); the fake
     # capability root above has no tree to stamp, so neutralise it here — the
@@ -2520,6 +2583,9 @@ if args[:2] == ["issue", "view"]:
 if args[:2] == ["pr", "view"]:
     print(json.dumps(state["pr"]))
     sys.exit(0)
+if args[:2] == ["api", "user"]:
+    print("octocat\\tUser")
+    sys.exit(0)
 if args[:1] == ["api"]:
     print("octocat")
 sys.exit(0)
@@ -2894,6 +2960,9 @@ if args[:1] == ["api"] and args[1].startswith("repos/{owner}/{repo}/issues/"):
             sys.exit(1)
         print(json.dumps(dict(issue, number=int(number), state=issue["state"].lower())))
         sys.exit(0)
+if args[:2] == ["api", "user"]:
+    print("octocat\\tUser")
+    sys.exit(0)
 if args[:1] == ["api"]:
     print("octocat")
 sys.exit(0)
@@ -4234,10 +4303,11 @@ def test_a_later_run_closes_and_cascades_with_the_real_verbs(
 #
 # The merge cannot be undone (DEC-026), so a step after it that fails is owed,
 # never refused. The run exits with the code that names the step, whatever the
-# step's own code, and never with 1, 2 or 3, which say that nothing merged. The
-# same holds however the merge was made: by this run, by the queue this run
-# waited for, or found made by an earlier one. The failing step exits 3 here,
-# the code of a failed merge; the tests above have it exit 1 and 2.
+# step's own code, and never with 1, 2 or 3, which end a run that runs no step
+# after a merge. The same holds however the merge was made: by this run, by
+# the queue this run waited for, or found made by an earlier one. The failing
+# step exits 3 here, the code of a failed merge; the tests above have it exit
+# 1 and 2.
 
 
 def _merged_by_the_run(

@@ -183,7 +183,7 @@ Batch planning reads the use-case point and it holds entries, every filler that 
 ### Preconditions
 
 - The request has been recognised as batch planning, and the intent and reference material are clear (otherwise Scenario 2 comes first).
-- `pkit connections resolve pkit::work-tracking:use-cases --json` gives `outcome: resolved`, no filler whose `state` is `inert`, and a `value` with entries.
+- `pkit connections resolve pkit::work-tracking:use-cases --json` gives `outcome: resolved`, its `fillers` listed with each one's `state` `taken` or `passed over`, and a `value` with entries.
 - An active use case describes every behaviour the intent involves, and the plan leaves out none the intent touches (otherwise Scenario 6).
 
 ### Walkthrough
@@ -246,11 +246,11 @@ The walk finds a gap of either kind: a use case the intent touches that no plann
 
 ### Trigger
 
-The point resolved, and a filler that was meant to answer did not: the document's `outcome` is `resolved`, and one of its fillers has `state: inert`.
+The point resolved, and a filler that was meant to answer may not have: the document's `outcome` is `resolved`, and one of its fillers has a `state` other than `taken` and `passed over` — `inert`, or a state the procedure does not know — or the document has no `fillers`.
 
 ### Preconditions
 
-- More than one filler is declared for the point — the project's own filler file beside a capability's, say — and one gave no answer while another answered.
+- Here a filler is `inert`: more than one filler is declared for the point — the project's own filler file beside a capability's, say — and one gave no answer while another answered.
 
 ### Walkthrough
 
@@ -261,7 +261,7 @@ The point resolved, and a filler that was meant to answer did not: the document'
 ### Behind the scenes
 
 - Walk the entries the point holds, as in Scenario 5.
-- The plan says the set may be incomplete, and names the filler that did not answer, with its `reason`.
+- The plan says the set may be incomplete, and why: it names each filler that did not answer, or is in a state the procedure does not know, with its `reason`, or says that the document has no `fillers`.
 - Behaviour no held use case describes is a *possible* gap: what the missing filler would have supplied is unknown, not absent.
 - An empty `value` in this state is not an empty set, and never leads to Scenario 9's prerequisite Task.
 - On filing, `edit-issue` names a cited id the held set lacks as not checked, never as unknown. That notice is about the check, not against the body: pass it on to the user and go on.
@@ -296,7 +296,7 @@ The point is defined and filled, and its resolution gave no set: an `outcome` ot
 
 ### Trigger
 
-The point resolved in full and holds nothing: `outcome: resolved`, no inert filler, an empty `value`.
+The point resolved in full and holds nothing: `outcome: resolved`, its `fillers` listed with each one's `state` `taken` or `passed over`, and an empty `value`.
 
 ### Preconditions
 

@@ -369,10 +369,11 @@ def _read_board_fields(config: dict[str, Any]) -> tuple[list[dict[str, Any]], bo
     board field might carry an axis (e.g. workstream).
 
     The read itself lives in the board READ seam (`_lib/board_fields`, #724) — the
-    single home for board name → id resolution, which grew out of this very read.
-    The argv, the owner precedence, and the ``([], True)``-on-failure contract are
-    unchanged; ``_board_gh_call`` keeps the invocation on this module's own
-    ``gh_run`` binding.
+    single home for every read of the board, which grew out of this very read:
+    one read of the board itself, whose answer counts only where it names the
+    configured board ([pkit:ADR-096] point 1). The owner precedence and the
+    ``([], True)``-on-failure contract are unchanged; ``_board_gh_call`` keeps the
+    invocation on this module's own ``gh_run`` binding.
     """
     if board_fields.board_number(config) is None:
         return [], False
@@ -390,8 +391,9 @@ def _read_project_node_id(config: dict[str, Any]) -> str | None:
     place, the same draft-not-apply posture as the substrate-map. Returns ``None``
     when no board is configured or the read fails.
 
-    Delegates to the board READ seam (`_lib/board_fields`, #724) — same argv, same
-    owner precedence, same ``None``-on-failure contract.
+    Delegates to the board READ seam (`_lib/board_fields`, #724) — same owner
+    precedence, same ``None``-on-failure contract; the id counts only where the
+    board's own answer names the configured board ([pkit:ADR-096] point 1).
     """
     if board_fields.board_number(config) is None:
         return None
@@ -410,8 +412,8 @@ def _board_gh_call(
     """Run a board READ through THIS module's ``gh_run``, owner spliced as before.
 
     The seam accepts the runner so a delegating caller keeps its own invocation
-    path: the owner is appended exactly where this script appended it before the
-    extraction, so the argv ``gh`` receives is unchanged.
+    path: a `gh project` read's owner is appended where this script appended it
+    before the extraction; the seam's GraphQL reads name the owner themselves.
     """
     if fallback_owner:
         args = [*args, "--owner", fallback_owner]

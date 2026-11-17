@@ -66,7 +66,7 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
-from _lib import axis_carriage, axis_labels, default_branch, friction_answers
+from _lib import axis_carriage, axis_labels, default_branch, friction_answers, missing_card
 from _lib.checkbox_gate import unticked_boxes  # noqa: F401 — re-export
 
 # Canonical state ordering — the one move-issue's forward checks and the forward
@@ -119,7 +119,8 @@ class StatusRead:
         if self.outcome == "no-card":
             return (
                 f"#{number} has no card on {self.board}, so its position cannot be "
-                "read from the board's Status"
+                "read from the board's Status: "
+                f"{missing_card.remedy(number, board_holds_state=True)}"
             )
         if self.outcome == "unset":
             return (
@@ -139,8 +140,8 @@ class StatusRead:
             return "fix what `gh` said above, then run this again"
         if self.outcome == "no-card":
             return (
-                f"add #{number} to {self.board} and set its Status to where the issue "
-                "stands, then run this again"
+                f"once #{number} has its card, set its Status to where the issue stands: "
+                "Todo, Backlog, In Progress or Review, then run this again"
             )
         return (
             f"set the Status of #{number}'s card to where the issue stands: Todo, "

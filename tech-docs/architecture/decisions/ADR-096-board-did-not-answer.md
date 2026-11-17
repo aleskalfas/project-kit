@@ -108,9 +108,9 @@ board, an issue's add among them, which no other record decides.
   CI job that gates on it. So where DEC-017 has the check fail on a board that
   did not answer, an outage of the service's boards, or a credential the board
   does not answer, stops them all in a project with a board, and a CI job under
-  the workflow's own token, which reaches no board, fails on each run. Whether the check fails or warns there is DEC-017's to decide, and
-  [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)
-  proposes that it warn.
+  the workflow's own token, which reaches no board, fails on each run. Whether the check fails or warns there is DEC-017's to decide, and DEC-017
+  has it warn
+  ([project-management:DEC-074](../../../.pkit/capabilities/project-management/decisions/DEC-074-board-check-warns.md)).
 - **New reports and refusals** reach projects whose credential the board does
   not answer, and boards on which no issue the read sees shows a card, such as
   an empty board, or a repository's first issues on a shared board. The
@@ -140,9 +140,6 @@ board, an issue's add among them, which no other record decides.
   configuration gives no owner, the owner is the one the capability resolves
   for the repository
   ([project-management:DEC-023](../../../.pkit/capabilities/project-management/decisions/DEC-023-gh-host-and-owner.md)).
-  Where one filing names another board in its place, as DEC-019 lets it, that
-  board is the configured board for that filing's own reads and writes, and for
-  nothing else. It is read by its number, since no node is stored for it.
 - **A read of the board itself** is addressed to the board, by its node where
   one is stored or by its owner and number. It reads the board's identity, its
   fields or its cards.
@@ -551,7 +548,7 @@ Two rules order these around the act:
   of the state the command writes. Where that write makes a read anyway, that
   read is the one, made before the act and carried to the write. Filing is
   such a command in every project with a board, since an issue owes its card
-  from filing (DEC-019), and its read asks the board the filing adds to. The
+  from filing (DEC-019), and its read asks the configured board. The
   refusal says why the board did not answer, or what its answer lacks, gives
   the service's words, and names the way out that cause gives (point 6).
 - **After it.** Once the act is made, whoever made it, these are the only
@@ -673,19 +670,18 @@ ADR-053 stands, refined as the Implications name.
 - **Not one home for the add.** ADR-031 point 3 keeps the add out of the
   constructor for field values, and point 3 here binds every place an add is
   made.
-- **Not the override at filing.** DEC-019 lets one filing name a board other
-  than the configured one, and that board stands in for the configured one in
-  the filing's own reads and writes (the terms): its read first asks that
-  board, and its add and first Status go to it. Every other command reads the
-  configured board, so an issue added only to another has no card there. What
-  a filing that names another board does where the map binds the state to the
-  board is the capability's to decide
-  ([project-kit#3205](https://github.com/aleskalfas/project-kit/issues/3205)).
+- **Not a filing's board option.** The filing command refuses a board option
+  that does not name the configured board, before it reads any board
+  ([project-management:DEC-070](../../../.pkit/capabilities/project-management/decisions/DEC-070-filing-another-board.md),
+  [project-management:DEC-071](../../../.pkit/capabilities/project-management/decisions/DEC-071-filing-only-configured-board.md)),
+  so the only board this record's reads and writes ask about is the configured
+  one (refinement per
+  [project-management:DEC-071](../../../.pkit/capabilities/project-management/decisions/DEC-071-filing-only-configured-board.md)).
 - **Not the health check's gate.** DEC-017 sets what its failure stops, and
-  [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)
-  proposes that it warn where the board does not answer. This record says what
-  counts as the board's answer to it, and adds a warning beside it that fails
-  nothing.
+  has the check warn where the board does not answer
+  ([project-management:DEC-074](../../../.pkit/capabilities/project-management/decisions/DEC-074-board-check-warns.md)).
+  This record says what counts as the board's answer to it, and adds a warning
+  beside it that fails nothing.
 
 ## Rationale
 
@@ -862,8 +858,7 @@ Filing is such a command in every project with a board: an issue owes its card
 from filing, and DEC-019 rejects at filing an issue with none. Where the board
 holds the state, the first Status is such a write too, and an issue filed
 without it has no position, which every command that reads a position refuses
-or skips. So filing refuses first: it files no issue DEC-019 rejects, save one
-that names another board, as DEC-019's own override lets it (Boundaries), and
+or skips. So filing refuses first: it files no issue DEC-019 rejects, and
 leaves no partial state. The price is this record's own choice, not DEC-017's:
 an outage of the service's boards, or a credential the board does not answer,
 is a filing outage in every project with a board, through the skill or not, and
@@ -986,9 +981,9 @@ operation of several commands running its first before a later one refuses on
 the board, and a board write no act requires going unmade, such as a Status
 that only mirrors the state, which point 4 reports with its repair.
 Whether the check fails or only warns there is DEC-017's to decide, a record of
-the capability's own, and
-[project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)
-proposes that it warn. This record holds either way.
+the capability's own, and DEC-017 has it warn
+([project-management:DEC-074](../../../.pkit/capabilities/project-management/decisions/DEC-074-board-check-warns.md)).
+This record holds either way.
 
 ADR-053 refuses a call that fuses where an axis lives with the board's read,
 since a board outage would then become a filing outage on paths that never
@@ -1145,10 +1140,10 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   a later write to the board meets it before it acts (point 4). ADR-031
   point 5 gates back-fill on the board in this way, only where a board field
   is to be written. Not decided here: what the check's failure stops is
-  DEC-017's, and a change to it is a
-  record of the capability's own, which
-  [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)
-  proposes. This record holds with it or without it.
+  DEC-017's, and a change to it is a record of the capability's own,
+  [project-management:DEC-074](../../../.pkit/capabilities/project-management/decisions/DEC-074-board-check-warns.md),
+  which has the check warn and does not narrow its stop. This record holds
+  with it or without it.
 - **Let the health check fail where the page shows no witness.** The case: the
   measured kind of token, one that may get the board and no witness, would
   stop at the check. Rejected: the check cannot tell that from a repository
@@ -1553,16 +1548,14 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     resolves, read through the seam as point 6 has every read. This record says
     what counts as the board's answer to it, and adds a warning beside it, where
     the page shows no witness, which fails nothing. Whether the check fails or
-    warns where the board does not answer stays DEC-017's, and
-    [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)
-    proposes that it warn.
+    warns where the board does not answer stays DEC-017's, and DEC-017 has it
+    warn
+    ([project-management:DEC-074](../../../.pkit/capabilities/project-management/decisions/DEC-074-board-check-warns.md)).
   - **DEC-036 point 3:** the check degrades where an axis's substrate is
     unsupported, and a declared board that does not resolve is no such axis.
-  - **DEC-019:** an issue off the board keeps its severities. The override at
-    filing stays its own, its board standing in for the configured one in that
-    filing's own reads and writes (the terms). The health check stays
-    environment health, no per-issue scan: the page is a fixed sample, read for
-    the credential's reach, and its warning names no issue.
+  - **DEC-019:** an issue off the board keeps its severities. The health check
+    stays environment health, no per-issue scan: the page is a fixed sample,
+    read for the credential's reach, and its warning names no issue.
   - **DEC-020:** each command's exit codes stay its contract, and the health
     check no per-issue scan, as for DEC-019.
   - **DEC-024:** a hook keeps its clean exit.
@@ -1590,8 +1583,7 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     added. Where the board holds the state and answers with no single-select
     Status field, or with no option for the state the issue is filed into,
     filing refuses before it creates the issue. Where the Status only mirrors,
-    filing goes on, and reports the Status not written in one line. A filing
-    that names another board reads that board first, by its number;
+    filing goes on, and reports the Status not written in one line;
   - **a command whose act needs a later write to the board** reads the board
     before its act, and refuses there where the board does not answer;
   - **what an act sets off on another issue:** where the board does not answer

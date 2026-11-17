@@ -409,6 +409,7 @@ def test_the_corpus_leaves_a_state_issue_out(containment, monkeypatch) -> None:
     assert [row["number"] for row in corpus.rows] == [7]
     assert corpus.rows[0] == {"number": 7, "state": "open"}
     assert corpus.complete is True
+    assert corpus.state_issues == frozenset({8})
 
 
 def test_a_page_full_with_a_state_issue_still_reached_its_limit(containment, monkeypatch) -> None:

@@ -41,7 +41,7 @@ A finding in a library version that the project does not correct asks for attent
 
 ## 3. Read
 
-`pkit visual pages <piece>` lists what can be drawn: its languages and keys, what is drawn by default, and each page by its number and trace id. `pkit visual look <piece>` draws pages as images in the clone's local `look/<piece>/`, or `look/<piece>.html/` for the HTML renderer's pages. It moves no lock, keeps no finding, and replaces what an earlier run left there ([The viewing step](../../outputs.md#the-viewing-step)).
+`pkit visual pages <piece>` lists what can be drawn: its languages and keys, what is drawn by default, and each page by its number and trace id. `pkit visual look <piece>` draws pages as images in the clone's local `look/<piece>/`, or `look/<piece>.html/` for the HTML renderer's pages. It moves no lock, keeps no findings record, and replaces what an earlier run left there. Its report gives each image what the checks found on it ([The viewing step](../../outputs.md#the-viewing-step)).
 
 **Which pages to draw:**
 
@@ -229,7 +229,7 @@ The loop ends when all three hold.
 - before the piece goes to its audience
 - where you cannot read an image yourself
 
-Before you dispatch it, run `pkit visual look` once with all you want read, since it sees only what the last run drew. Name the piece. You may hand it a pipeline's drawings instead, naming the folder you fetched them into and the commit they show. Where its harness reads no image it stops and says so, and those pages stay not looked at.
+Before you dispatch it, run `pkit visual look` once with all you want read, since it sees only what the last run drew. Name the piece. You may hand it a pipeline's drawings instead, naming the folder you fetched them into and the commit they show. With the images and the piece, hand it what `pkit visual intent <piece>` prints, as it prints it: the brief's goals, relations and takeaways, without their reasons, which it grades against before it reads the brief's file ([`pkit visual intent <piece>`](../../README.md#pkit-visual-intent-piece)). It runs no command, so it has the intent only from you. Where you hand it none, it grades without the intent, and its report says so among what it read before grading. Where its harness reads no image it stops and says so, and those pages stay not looked at.
 
 It reads the piece's brief, and the capability's rule sets, beside the images. Its report names the brief it read, or that the piece has none. Each finding is one of four kinds, kept apart by what it cites:
 
