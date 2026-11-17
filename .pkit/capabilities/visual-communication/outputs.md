@@ -62,6 +62,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/look-report.schema.json
         - .pkit/capabilities/visual-communication/scripts/verdict.py
         - .pkit/capabilities/visual-communication/scripts/_lib/verdicts.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
         - .pkit/capabilities/visual-communication/scripts/_lib/calibration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
@@ -1062,6 +1063,7 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 - **No bar.** Where the configuration holds no bar, no verdict is given, and the designer's loop ends as DEC-030 point 2 says (DEC-042 point 3).
 - **A covered rule the report leaves out.** Where the report neither grades a rule the bar covers nor lists it as not graded, no verdict is given, since one that passed would rest on no grade of that rule. The command names each such rule.
 - **Refused.** The command prints `error: …` and exits 1 where no report of the piece is kept, the report or the configuration cannot be read, the report's schema refuses it, or the report is of another piece or round than it is kept as. So does a bar the configuration's schema refuses, or one the capability's check fails, such as a bar over what the check does not find graded.
+- **A document that does not parse.** Where the report's document does not parse as YAML, the command refuses it as one that cannot be read, and gives no verdict from it. Its message names the report as one whose document does not parse, and what the reader found where it stopped. Where the reader names that place, the message gives its line and column in `round-<n>.yaml`. Written plain, a value that holds `: ` does not parse, and nor does one that opens with a quoted phrase and goes on after it. The reviewer writes each value in words as a block scalar, which parses words of either kind.
 
 Otherwise it exits 0, whatever the verdict, and 2 on a usage error.
 

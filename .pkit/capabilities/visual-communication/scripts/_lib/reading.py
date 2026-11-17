@@ -27,7 +27,7 @@ from typing import Any
 
 from ruamel.yaml import YAML
 from ruamel.yaml.constructor import SafeConstructor
-from ruamel.yaml.error import YAMLError
+from ruamel.yaml.error import MarkedYAMLError, YAMLError
 
 #: The one YAML version the capability reads.
 YAML_VERSION = "1.2"
@@ -44,6 +44,18 @@ _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 class ReadError(Exception):
     """A file, or a value, the capability cannot read under its one reading."""
+
+
+class ParseError(ReadError):
+    """A YAML document that does not parse. `line` and `column`, from 1, say where the reading
+    stopped, and are None where the reader names no place; `problem` says what it found
+    there."""
+
+    def __init__(self, message: str, problem: str, line: int | None, column: int | None) -> None:
+        super().__init__(message)
+        self.problem = problem
+        self.line = line
+        self.column = column
 
 
 class _Constructor(SafeConstructor):
@@ -71,7 +83,7 @@ def load_yaml(text: str, source: str = "") -> Any:
     try:
         value = _yaml().load(text)
     except YAMLError as exc:
-        raise ReadError(f"{where}does not parse as YAML: {_first_line(exc)}") from exc
+        raise _parse_error(exc, where) from exc
     _check_json_value(value, where)
     return value
 
@@ -145,6 +157,16 @@ def _declared_version(text: str) -> str | None:
         if not line.startswith("%"):
             return None
     return None
+
+
+def _parse_error(exc: YAMLError, where: str) -> ParseError:
+    """The refusal of a document the reader stopped in, with the place it stopped at."""
+    said = _first_line(exc)
+    message = f"{where}does not parse as YAML: {said}"
+    if not isinstance(exc, MarkedYAMLError) or exc.problem_mark is None:
+        return ParseError(message, said, None, None)
+    mark = exc.problem_mark
+    return ParseError(message, exc.problem or said, mark.line + 1, mark.column + 1)
 
 
 def _first_line(exc: Exception) -> str:
