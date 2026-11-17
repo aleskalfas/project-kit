@@ -11,7 +11,7 @@
 #   in the home folder, and a relative one below the repository's top. Absent, the step
 #   looks where Chrome and Chromium install themselves.
 # - `bar` — the bar the designer's loop runs to (DEC-042 point 3): `covers`, the rule sets
-#   or single rules it covers, each with its set's major, such as `[COMM@1, GRAPHIC@1]`,
+#   or single rules it covers, each with its set's major, such as `[COMM@1, GRAPHIC@2]`,
 #   and `at-least`, the grade each page and the piece must reach, `professional` or
 #   `excellent`. A project keeps one bar. The capability ships none, and its check fails
 #   a bar that covers what the review does not grade or whose major differs from the one

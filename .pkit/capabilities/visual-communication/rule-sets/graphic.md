@@ -1,6 +1,6 @@
 ---
 rule-set: GRAPHIC
-version: 1.1.0
+version: 2.0.0
 rules:
   RS-GRAPHIC-001:
     status: accepted
@@ -13,7 +13,7 @@ rules:
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#8"]}
+        anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#8", "visual-communication:DEC-046#2", "visual-communication:DEC-046#3"]}
   RS-GRAPHIC-003:
     status: accepted
     origin: {decision: "visual-communication:DEC-028"}
@@ -25,13 +25,13 @@ rules:
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#9"], artefact: ["visual-communication:RS-GRAPHIC-007"]}
+        anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#9", "visual-communication:DEC-046#2"], artefact: ["visual-communication:RS-GRAPHIC-007"]}
   RS-GRAPHIC-005:
     status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#10"]}
+        anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#10", "visual-communication:DEC-046#2", "visual-communication:DEC-046#5"]}
   RS-GRAPHIC-006:
     status: accepted
     origin: {decision: "visual-communication:DEC-028"}
@@ -43,14 +43,20 @@ rules:
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-001#6", "visual-communication:DEC-004#10", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#9", "visual-communication:DEC-028#10", "visual-communication:DEC-028#11", "visual-communication:DEC-032#3"]}
+        anchors: {record: ["visual-communication:DEC-001#6", "visual-communication:DEC-004#10", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#9", "visual-communication:DEC-028#10", "visual-communication:DEC-028#11", "visual-communication:DEC-032#3", "visual-communication:DEC-046#6"]}
+  RS-GRAPHIC-008:
+    status: accepted
+    origin: {decision: "visual-communication:DEC-046"}
+    pkit:
+      friction:
+        anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-046#4"]}
 ---
 
 # GRAPHIC — how a piece looks
 
-The rules on whether a piece of visual work looks right, each taken from the canon of its field ([visual-communication:DEC-028-principles-of-visual-communication]). Each rule judges every piece, whatever its purpose (DEC-028 point 3). Each names what can be judged from the content's text, and what only the drawn page shows (DEC-028 point 4). The capability's operational rules are another set, `VIS`, which binds on a session's work, never on a piece.
+The rules on whether a piece of visual work looks right, each taken from the canon of its field, with its source named in [visual-communication:DEC-028-principles-of-visual-communication], or, for `RS-GRAPHIC-008`, in [visual-communication:DEC-046-faults-lower-grades]. Each rule judges every piece, whatever its purpose (DEC-028 point 3). Each names what can be judged from the content's text, and what only the drawn page shows (DEC-028 point 4). The capability's operational rules are another set, `VIS`, which binds on a session's work, never on a piece.
 
-This set takes no scope. Its rules bind on an artefact only through a set of the project's own that inherits it, pinned to its major, as in `inherits: [visual-communication:GRAPHIC@1]` (COR-051 point 7). Where they bind, and how they guide while they bind nothing, is DEC-028 point 5.
+This set takes no scope. Its rules bind on an artefact only through a set of the project's own that inherits it, pinned to its major, as in `inherits: [visual-communication:GRAPHIC@2]` (COR-051 point 7). Where they bind, and how they guide while they bind nothing, is DEC-028 point 5.
 
 ## RS-GRAPHIC-001 — One focal point
 
@@ -110,3 +116,11 @@ The strongest of these differences goes to what the page's point is about. Where
 - **From the text:** on a page whose point is an order, whether the content points the parts that show the order at one role, rather than each at its concept's, or the list of their items is given the steps of an order with no item naming a concept.
 - **What the text gives the drawn page.** The differences the content has: the order of a list its pattern draws in order, its quantities, the concepts and states it names, and what it marks.
 - **On the drawn page:** whether each difference the content has shows as what it is, and whether the page shows one the content lacks.
+
+## RS-GRAPHIC-008 — Running text is set to be read
+
+Running text is text meant to be read continuously, line after line, such as a paragraph. It is set so that a reader keeps their place. Its lines are neither too long nor too short to read with ease, for its typeface, its size and the number of columns it stands in. The space between its lines suits their length. Where its lines share a straight edge on one side only, their other ends look pleasantly uneven: neither almost straight nor ragged, with no line much longer or shorter than the rest, and forming no regular shape, such as a wedge or a curve.
+
+- **What it does not judge.** A heading, a title, a label, a cell of a table and an item of a list, however many lines each takes. A text whose lines the content breaks, such as code. Placeholder lines that stand for text in a drawing of a screen, and what lies inside a picture made elsewhere. A text in a script written without spaces between words. How short the last line of a paragraph is, since it ends where the text ends. The ends of the lines of a centred text. The gaps between the words of a text set with two straight edges. Which text ranks first, which is `RS-GRAPHIC-001`'s. Whether a kind of text keeps one look, which is `RS-GRAPHIC-004`'s. Whether a text can be read at all where it is shown, which is `RS-GRAPHIC-005`'s.
+- **From the text:** nothing, since a line's length and its spacing show only once the page is drawn.
+- **On the drawn page:** the whole rule, on each image, so in each language and at each size the piece is drawn in.
