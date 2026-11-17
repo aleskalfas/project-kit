@@ -21,6 +21,9 @@ shortfalls:
   - at: "3d"
     issue: "#3229"
     record: ADR-040#1
+  - at: "3d"
+    issue: "#3349"
+    record: ADR-040#1
   - at: 13
     issue: "#1765"
     record: ADR-034#1
@@ -129,6 +132,9 @@ pkit:
 
 > [!WARNING]
 > **Not built yet:** the system pins a tag or a commit's full id, and refuses a branch. [ADR-040](../../../../../architecture/decisions/ADR-040-external-source-write-path.md) decides that a branch may be the ref, and #3229 tracks it.
+
+> [!WARNING]
+> **Not built yet:** the system refuses `--from` and `--ref`, naming why, before it reads anything, and writes nothing. ADR-040 decides that the system pulls the capability at the ref the project pins, and #3349 lifts the refusal.
 
 - **3e.** The capability is authored in another repository, as in 3d, and the project is the methodology's source repository, run by its own code. The system refuses, since a fetched copy would be bundled into the [distribution](../../../glossary.md#term-distribution--distribution) from there, and writes nothing ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)). The use case ends.
 - **4a.** The [backbone](../../../glossary.md#term-backbone--backbone) lies outside the capability's [range](../../../glossary.md#term-range--range), or a capability it requires is missing or outside its range. The system refuses, naming what to install or upgrade first, and writes nothing ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-030](../../../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
