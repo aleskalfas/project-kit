@@ -15,6 +15,11 @@
 # raise. It shows some grades of some pages, to show the form, and is no whole review: a
 # review grades each rule it reads on each page it reads, and once for the piece where the
 # rule takes a grade there, or lists it under `not-graded` with why.
+#
+# Each value in words is written as a folded block scalar, `>-` after its key and its words
+# on the lines below, so that it parses whatever its words hold. The evidence of
+# `RS-GRAPHIC-005` opens with a quoted phrase and holds `: `, which a plain value, or one in
+# quotes, does not parse with.
 
 pkit_schema: visual-communication:review
 schema_version: 1
@@ -24,43 +29,58 @@ schema_version: 1
 piece: deck
 round: 2
 model:
-  name: example-model-1.0
-  effort: high
+  name: >-
+    example-model-1.0
+  effort: >-
+    high
 read-before-grading:
   - kind: images
-    what: Every image of the run, each band of each page, and the forced images.
+    what: >-
+      Every image of the run, each band of each page, and the forced images.
   - kind: frames
-    what: The frames beside each image.
+    what: >-
+      The frames beside each image.
   - kind: report
-    what: report.json of the run.
+    what: >-
+      report.json of the run.
   - kind: piece
-    what: piece.yaml, the content of each language, and the brand it names.
+    what: >-
+      piece.yaml, the content of each language, and the brand it names.
   - kind: intent
-    what: The goals, relations and takeaways the dispatcher handed over, without their reasons.
+    what: >-
+      The goals, relations and takeaways the dispatcher handed over, without their reasons.
   - kind: rule-sets
-    what: The rule sets the capability ships, each from its file.
+    what: >-
+      The rule sets the capability ships, each from its file.
   - kind: design-knowledge
-    what: The index, and the topics the pages needed.
+    what: >-
+      The index, and the topics the pages needed.
 read-after-grading:
   - kind: brief-file
-    what: brief.yaml, for its reasons.
+    what: >-
+      brief.yaml, for its reasons.
   - kind: earlier-reports
-    what: round-1.md, the whole report of round 1, as it was written.
+    what: >-
+      round-1.md, the whole report of round 1, as it was written.
 grades:
   - rule: RS-COMM-001
     on:
       page: layers
     grade: professional
-    evidence: The lead answers the title, and the stepped figure shows the answer.
+    evidence: >-
+      The lead answers the title, and the stepped figure shows the answer.
   - rule: RS-GRAPHIC-001
     on:
       page: layers
     grade: competent
-    evidence: The eye enters at the footer's mark before it reaches the top level.
-    other-cause: The page's frame, which the library draws, carries the mark.
+    evidence: >-
+      The eye enters at the footer's mark before it reaches the top level.
+    other-cause: >-
+      The page's frame, which the library draws, carries the mark.
     since-last-round:
       was: below competent
-      why: The mark is smaller than in the round before, so it no longer outranks the figure.
+      why: >-
+        The mark is smaller than in the round before, so it no longer outranks the figure.
   - rule: RS-GRAPHIC-002
     on:
       page: layers
@@ -73,25 +93,31 @@ grades:
     on:
       page: layers
     grade: professional
-    evidence: Each text and part reads as drawn where the deck is projected, and the page is taken in at a glance.
+    evidence: >-
+      "Readable where it is shown": each text and part reads as drawn where the deck is
+      projected, and the page is taken in at a glance.
   - rule: RS-COMM-001
     on:
       page: plan
     grade: competent
-    evidence: The lead lists the plan's three phases, and answers no question the title asks.
+    evidence: >-
+      The lead lists the plan's three phases, and answers no question the title asks.
     mark:
       kind: asker
-      names: The title and the lead of the page plan, which the asker has seen.
+      names: >-
+        The title and the lead of the page plan, which the asker has seen.
   - rule: RS-COMM-003
     on:
       piece: true
     grade: professional
-    evidence: Each lead follows from the one before it.
+    evidence: >-
+      Each lead follows from the one before it.
 not-graded:
   - rule: RS-COMM-001
     on:
       page: cover
-    why: A page whose layout has no lead is not judged by this rule.
+    why: >-
+      A page whose layout has no lead is not judged by this rule.
   - rule: RS-GRAPHIC-008
     on:
       page: cover

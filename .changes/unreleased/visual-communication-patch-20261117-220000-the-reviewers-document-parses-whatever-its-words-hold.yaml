@@ -1,0 +1,16 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The graphic-design reviewer writes each value in words of its grades'
+  document, every `what`, `evidence`, `other-cause`, `names` and `why` and
+  the model's `name` and `effort`, as a folded block scalar, so the document
+  parses whatever its words hold (#3391). Written plain or in quotes, a value
+  that held `: `, or opened with a quoted phrase and went on after it, did not
+  parse. The reference instance, `review.yaml`, shows that form for every such
+  value. `pkit visual verdict` refuses a report whose document does not parse,
+  as before, and its message now names the report as one whose document does
+  not parse, with the line and column of `round-<n>.yaml` where the reading
+  stopped and what the reader found there. Before, it could name the line
+  where the mapping it stopped in began instead.

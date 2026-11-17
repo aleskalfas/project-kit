@@ -21,7 +21,8 @@ designer's loop (visual-communication DEC-042 points 1, 9 and 10).
   name, no report kept, a report that cannot be read, that its schema refuses, or that is of
   another piece or round than where it is kept; and a configuration that cannot be read, is
   not bound as the configuration, or holds a bar its schema refuses or the capability's
-  check fails.
+  check fails. A report whose document does not parse is named as such, with the line and
+  column where the reading stopped.
 
 Reads only, and needs no network.
 """
@@ -35,7 +36,7 @@ from pathlib import Path
 from typing import Any
 
 from _lib import bar, calibration, files, names
-from _lib.reading import ReadError, read_yaml
+from _lib.reading import ParseError, ReadError, read_yaml
 from _lib.root import CONFIG, LOCAL
 
 #: Where the review's reports of each piece are kept, relative to the project root.
@@ -231,6 +232,8 @@ def _report(path: Path, piece: str, number: int) -> dict[str, Any]:
         raise Refused(f"no report of round {number} of `{piece}` is kept: {path.name} is missing")
     try:
         report = files.read_bound(path, "review")
+    except ParseError as exc:
+        raise Refused(_unparsed(path, exc)) from exc
     except (files.FileError, ReadError) as exc:
         raise Refused(str(exc)) from exc
     problems = files.shape_problems(report, "review")
@@ -242,6 +245,15 @@ def _report(path: Path, piece: str, number: int) -> dict[str, Any]:
             f"kept as round {number} of `{piece}`"
         )
     return report
+
+
+def _unparsed(path: Path, exc: ParseError) -> str:
+    """The refusal of a report whose document does not parse, naming where the reading
+    stopped."""
+    said = f"{path}: the report's document does not parse as YAML, so no verdict is read from it"
+    if exc.line is None:
+        return f"{said}: {exc.problem}"
+    return f"{said}: the reading stopped at line {exc.line}, column {exc.column}: {exc.problem}"
 
 
 def _bar_of(root: Path) -> dict[str, Any] | None:

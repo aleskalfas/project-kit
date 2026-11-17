@@ -1062,6 +1062,7 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 - **No bar.** Where the configuration holds no bar, no verdict is given, and the designer's loop ends as DEC-030 point 2 says (DEC-042 point 3).
 - **A covered rule the report leaves out.** Where the report neither grades a rule the bar covers nor lists it as not graded, no verdict is given, since one that passed would rest on no grade of that rule. The command names each such rule.
 - **Refused.** The command prints `error: …` and exits 1 where no report of the piece is kept, the report or the configuration cannot be read, the report's schema refuses it, or the report is of another piece or round than it is kept as. So does a bar the configuration's schema refuses, or one the capability's check fails, such as a bar over what the check does not find graded.
+- **A document that does not parse.** Where the report's document does not parse as YAML, the command refuses it as one that cannot be read, and gives no verdict from it. Its message names the report as one whose document does not parse, with the line and column of `round-<n>.yaml` where the reading stopped, and what the reader found there. The reviewer writes each value in words as a block scalar, which parses whatever its words hold. A value written plain or in quotes that holds `: `, or that opens with a quoted phrase and goes on after it, does not parse.
 
 Otherwise it exits 0, whatever the verdict, and 2 on a usage error.
 
