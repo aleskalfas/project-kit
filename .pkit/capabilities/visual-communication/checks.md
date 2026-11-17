@@ -145,6 +145,8 @@ pkit:
         - visual-communication:DEC-062#1
         - visual-communication:DEC-063#1
         - visual-communication:DEC-063#2
+        - visual-communication:DEC-065#1
+        - visual-communication:DEC-065#2
       artefact:
         - .pkit/capabilities/visual-communication/components.md#a-brands-drawing
         - .pkit/capabilities/visual-communication/components.md#a-components-file
@@ -202,6 +204,7 @@ pkit:
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
         - .pkit/capabilities/visual-communication/outputs.md#what-the-report-says
+        - .pkit/capabilities/visual-communication/outputs.md#when-it-ends-the-loop
 ---
 
 # What the check reports
@@ -485,7 +488,7 @@ Computing a piece's scenes, one for each language and each key over the size axe
 
 **A finding on several pages.** A page drawn in a layout draws the top's other fields ([Layouts](components.md#layouts)), such as a site's header and footer ([The foundations](files.md#the-foundations)). A finding in what such a field draws is read alike on each page that draws it, and is reported once (DEC-022 point 8). It lies at the first such page, and its message ends naming each page. A finding in a page's own part is that page's alone.
 
-**In the viewing step's report.** The viewing step runs these checks on the scenes it computes, and its report gives the findings of every row of this table, as of every finding computing a scene finds, such as `loss` ([Losses](#losses)) and a picture file's an image shows ([Picture files](#picture-files)), and of no check that computes no scene: each on the images it holds on, and apart those on no image drawn ([what the report says](outputs.md#what-the-report-says), DEC-062 point 1). A check whose silence a reader leans on states its *reach* at the end of its row: the kinds of place it measures and those it leaves out, beside an id of its own, by which the report names each image it measured, and what it states as a fact where it could measure nothing (DEC-063 points 1 and 2). A check with no reach counts as having measured nothing, though its findings stand. A reach's words are in the check's code, which the report carries, so a change to them is a change of code, and a test holds the two equal.
+**In the viewing step's report.** The viewing step runs these checks on the scenes it computes, and its report gives the findings of every row of this table, as of every finding computing a scene finds, such as `loss` ([Losses](#losses)) and a picture file's an image shows ([Picture files](#picture-files)), and of no check that computes no scene: each on the images it holds on, and apart those on no image drawn ([what the report says](outputs.md#what-the-report-says), DEC-062 point 1). A check whose silence a reader leans on states its *reach* at the end of its row: the kinds of place it measures and those it leaves out, beside an id of its own, by which the report names each image it measured, and what it states as a fact where it could measure nothing (DEC-063 points 1 and 2). A check with no reach counts as having measured nothing, though its findings stand. A reach's words are in the check's code, which the report carries, so a change to them is a change of code, and a test holds the two equal. The graphic-design review reads what each check means from this page's body, and what each found from that report. So a change to the capability's code, or to this page below its front matter, lapses the hold by which the review's verdict ends the designer's loop ([When it ends the loop](outputs.md#when-it-ends-the-loop), DEC-065 point 2). A change to its front matter alone lapses nothing.
 
 Each fails, unless its row says otherwise.
 
