@@ -22,6 +22,7 @@ pkit:
         - project-management:DEC-055#3
         - project-management:DEC-061#6
         - project-management:DEC-062#5
+        - project-management:DEC-075
       artefact:
         - TERM-issue-lifecycle
         - TERM-authorisation
@@ -170,7 +171,16 @@ Defined in [TERM-cascade](../glossary.md#term-cascade--cascade).
 
 **Why:** A parent's progress follows from its children's, never the other way round. So a parent [issue](../glossary.md#term-issue--issue) behind the work under it is brought level, on nobody's say-so. Closing a parent is a commitment, so the cascade stops at each one for a person to authorise its close ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
-The cascade is what one issue's move does to the issues above it. Moving forward, it brings each one that is behind up to the issue's state, as far as In Progress. When a child closes, the cascade makes a parent whose children are all done eligible to close, and never closes that parent.
+The cascade is what one issue's move does to the issues above it. Moving forward, it brings each one that is behind up to the issue's state, as far as In Progress. It brings up only an issue above that it can place in a state, tell as the parent and write to ([DEC-075](../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md)). When a child closes, the cascade makes a parent whose children are all done eligible to close, and never closes that parent.
+
+The forward cascade has these limits:
+
+- A read the cascade is planned on gets no reply, before a move that schedules or starts the work. The move is refused, with nothing written, unless its run skips the cascade ([DEC-075 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#1-a-move-that-schedules-or-starts-work-is-refused-where-a-first-read-gets-no-answer)).
+- A read of an issue above gets no reply anywhere else, such as on a move that ends the work, or after the move. The move stands, and the cascade writes nothing to that issue or above it (DEC-075 points 1 and [4](../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#4-the-walk-goes-on-past-an-ancestor-left-and-where-it-ends)).
+- A read places an issue above in no state of the lifecycle, or a write to it fails. That issue moves no further, and the cascade goes on past it (DEC-075 points 2 to 4).
+- After the move, the moved issue, or an issue above it, no longer has the parent it had when the cascade was planned. The cascade writes nothing to that parent, nor above that parent (DEC-075 points [2](../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#2-the-cascade-writes-to-an-ancestor-only-from-reads-made-after-the-move) and 4).
+
+In each of the last three cases, a warning names what the cascade left, and how to bring it level ([DEC-075 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#5-when-the-report-is-a-warning-and-how-to-finish)). An issue above moved back, or given as a parent, after the cascade was planned may stay behind with no warning (DEC-075 point 2). A later forward move under it brings it level.
 
 **Attributes:** None.
 
@@ -184,6 +194,7 @@ The cascade is what one issue's move does to the issues above it. Moving forward
 **Always true:**
 
 - It moves an issue above only forward, and never past In Progress (DEC-006).
+- It moves an issue above only on a read of that issue made after the move (DEC-075 point 2).
 - It never moves a child because its parent moved (DEC-006).
 - A move back from In Progress moves no other issue. A parent issue moves back only while no child of it is In Progress or in Review, so it never stands behind its children (DEC-006).
 - A [won't-do close](../glossary.md#term-wont-do-close--wont-do-close) from Todo or Backlog moves no issue above. A [completed close](../glossary.md#term-completed-close--completed-close) brings each issue above that is behind up to In Progress, since completed work is progress (DEC-006).

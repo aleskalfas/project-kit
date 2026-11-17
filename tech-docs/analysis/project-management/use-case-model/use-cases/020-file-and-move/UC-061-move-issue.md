@@ -25,6 +25,15 @@ shortfalls:
   - at: "7a"
     issue: "#1215"
     record: project-management:DEC-007
+  - at: "5b"
+    issue: "#2305"
+    record: project-management:DEC-075
+  - at: "5d"
+    issue: "#2305"
+    record: project-management:DEC-075
+  - at: "5e"
+    issue: "#2305"
+    record: project-management:DEC-075
 pkit:
   friction:
     anchors:
@@ -73,6 +82,7 @@ pkit:
         - project-management:DEC-067#1
         - project-management:DEC-067#3
         - project-management:DEC-067#4
+        - project-management:DEC-075
         - COR-004
         - COR-017
         - COR-021
@@ -157,6 +167,22 @@ pkit:
 - **4d.** The issue moves after the system read where it stands, such as while the developer is asked to authorise the move. Just before the system writes anything, it reads again where the issue stands (`move-issue.py`). Where the issue stands elsewhere now, the system writes and [journals](../../../glossary.md#term-journal--journal) nothing, and says where the issue stands. The use case ends.
 - **4e.** The read the system makes just before it writes, as in variant 4d, cannot place the issue. The system refuses and writes nothing, as in variant 4c. The use case ends.
 - **5a.** A move of the cascade fails part-way. The system warns, and names the issues it did not move. Running the same move again finishes the cascade, since a move already made is not made twice ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
+- **5b.** The move schedules or starts the work, and GitHub or the board gives no reply to a read the cascade is planned on. After the checks of steps 2 and 3, the system refuses before it asks or writes anything, and names that read ([DEC-075 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#1-a-move-that-schedules-or-starts-work-is-refused-where-a-first-read-gets-no-answer)). Run again once the read gets a reply, the command runs the cascade too, and a run that skips the cascade makes the move alone. The use case ends.
+
+> [!WARNING]
+> **Not built yet:** the system makes the move, and the cascade stops at that read, with a warning. `promote-issue` and `start-work` cannot skip the cascade. [DEC-075](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md) decides both, and #2305 tracks it.
+
+- **5c.** A read of an issue above gets no reply on a move variant 5b does not refuse, such as the move to Review. The move stands, and the cascade writes nothing to that issue or above it ([DEC-075 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#4-the-walk-goes-on-past-an-ancestor-left-and-where-it-ends)). The system warns, naming the read that got no reply. Running the same move again once the read gets a reply finishes the cascade, as in variant 5a.
+- **5d.** A read places an issue above in no state of the lifecycle, such as its card with no Status. The cascade leaves that issue where it stands, goes on past it, and warns of it (DEC-075 points [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#2-the-cascade-writes-to-an-ancestor-only-from-reads-made-after-the-move) and [4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#4-the-walk-goes-on-past-an-ancestor-left-and-where-it-ends)).
+
+> [!WARNING]
+> **Not built yet:** where the substrate map binds the state to the board, the cascade stops at such an issue. Where a label carries the state, the cascade passes the issue with no warning. [DEC-075](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md) decides that the cascade goes on past the issue and warns of it, and #2305 tracks it.
+
+- **5e.** An issue above moves, or the moved issue or an issue above gets another parent, after the system planned the cascade. Just before the cascade writes to an issue above, the system reads that issue again, and writes from that read alone ([DEC-075 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#2-the-cascade-writes-to-an-ancestor-only-from-reads-made-after-the-move)). Where that read gets no reply, or an issue below has another parent, the cascade writes nothing there or above it, and warns.
+
+> [!WARNING]
+> **Not built yet:** the cascade writes from the read that planned it, unless the engine places the issue above elsewhere after the move. It checks no parent again. [DEC-075](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md) decides both, and #2305 tracks it.
+
 - **6a.** The issue is assigned to someone else. `start-work` refuses, and changes nothing (`start-work.py`).
 - **6b.** The issue is still in Todo. `start-work` refuses, names the move to make first, and changes nothing (`composed_move.py`).
 - **1d.** While the issue is in Todo or Backlog, the developer decides that it will not be done, and asks for a [won't-do close](../../../glossary.md#term-wont-do-close--wont-do-close): `pkit pm close-issue <N> --reason "<R>"`. The system checks each [checkbox](../../../glossary.md#term-checkbox--checkbox), then asks the developer at the terminal to authorise the close, or takes `--yes` as that [authorisation](../../../glossary.md#term-authorisation--authorisation) ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and [DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)). With no terminal and no `--yes`, the system refuses and writes nothing. Once the close is authorised, the system posts the reason, closes the issue as not planned and moves it to Done (DEC-006 and DEC-007).
