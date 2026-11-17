@@ -239,6 +239,11 @@ def path(trace: str, **paints: Any) -> dict[str, Any]:
     return {**shape, "d": "M0 0H20V20H0Z", "stroke-width": 1, **paints}
 
 
+def cover(trace: str, fill: str, d: str = "M0 0H400V100H0Z") -> dict[str, Any]:
+    """A path in the page's whole frame, filled `fill` within its outline `d`, unstroked."""
+    return {**path(trace, fill=fill), "width": 400, "height": 100, "d": d, "stroke-width": 0}
+
+
 def ground(fill: str, under: str | None) -> dict[str, Any]:
     """A text of one run painted `fill`, on a ground painted `under`, if any."""
     held = painted("figure/t", fill)
@@ -259,6 +264,10 @@ def _contrast_runs() -> None:
     unpainted = runs("figure/t", [{**run("ink"), "fill": None}])
     found = checks.drawn_contrast(page(filled("figure/back", "ink"), unpainted), COLOURED, BOTH)
     assert [f.message.split(" has ")[0] for f in found] == ["`black` on `ink`"]
+    # A span over a picture leaves the text's other spans measured.
+    under_the_first = {**PICTURE, "width": 40}
+    two = runs("figure/t", [run("ink"), run("pale")])
+    assert contrast(PAPER, under_the_first, two) == [("default",), ("colour-scheme.dark",)]
 
 
 def _contrast_signs() -> None:
@@ -285,24 +294,38 @@ def _contrast_fills() -> None:
     assert contrast(filled("figure/back", "ink"), ground("pale", "paper"), keys=["default"]) == [
         ("default",)
     ]
+    # A run's ground lies over a picture as over any fill.
+    assert contrast(PICTURE, ground("pale", "paper"), keys=["default"]) == [("default",)]
+    # A path's fill lies under a span and a sign drawn after it, where its outline, by its
+    # rule, fills their middle, whatever its frame holds.
+    ink, pale = filled("figure/back", "ink"), painted("figure/t", "pale")
+    sign = path("figure/sign", fill="pale", stroke="pale")
+    assert contrast(ink, cover("figure/cover", "paper"), pale, keys=["default"]) == [("default",)]
+    assert contrast(ink, cover("figure/cover", "paper"), sign, keys=["default"]) == [("default",)]
+    assert contrast(ink, cover("figure/corner", "paper", "M400 0V100H0Z"), pale) == []
+    holed = cover("figure/holed", "paper", "M0 0H400V100H0Z M10 5H30V15H10Z")
+    assert contrast(ink, holed, pale, keys=["default"]) == [("default",)]
+    assert contrast(ink, {**holed, "fill-rule": "evenodd"}, pale) == []
 
 
 def _contrast_over_a_picture() -> None:
     assert contrast(PICTURE, painted("figure/t", "pale")) == []
+    assert contrast(PAPER, PICTURE, painted("figure/t", "pale")) == []
     assert contrast(PICTURE, path("figure/sign", fill="pale", stroke="pale")) == []
     assert contrast(PICTURE, PAPER, painted("figure/t", "pale")) != []
-
-
-def _contrast_whole_text_over_a_picture() -> None:
-    picture = {**PICTURE, "width": 40}
-    two = runs("figure/t", [run("ink"), run("pale")])
-    assert contrast(PAPER, picture, two) == []
-    assert contrast(PAPER, two) != []
+    assert contrast(PICTURE, cover("figure/cover", "paper"), painted("figure/t", "pale")) != []
+    # Only the span over the picture is left out.
+    under_the_first = {**PICTURE, "width": 40}
+    assert contrast(PAPER, under_the_first, runs("figure/t", [run("pale"), run("ink")])) == []
 
 
 def _contrast_over_nothing() -> None:
     assert contrast(painted("figure/t", "pale")) == []
     assert contrast(path("figure/sign", fill="pale", stroke="pale")) == []
+    # A path that only strokes its outline draws no fill under the text.
+    unfilled = {**cover("figure/outline", "paper"), "fill": None}
+    stroked = {**unfilled, "stroke": "paper", "stroke-width": 1}
+    assert contrast(stroked, painted("figure/t", "pale")) == []
     assert contrast(ground("pale", "paper"), keys=["default"]) == [("default",)]
 
 
@@ -324,11 +347,6 @@ def _contrast_no_opaque_fill() -> None:
     assert contrast(PAPER, *hazes[1:], painted("figure/t", "pale"), keys=["default"]) == [
         ("default",)
     ]
-
-
-def _contrast_path_under() -> None:
-    cover = path("figure/cover", fill="paper", width=400, height=100)
-    assert contrast(filled("figure/back", "ink"), cover, painted("figure/t", "pale")) == []
 
 
 def _contrast_off_the_middle() -> None:
@@ -372,14 +390,12 @@ PLANTED: dict[tuple[str, str, int], Callable[[], None]] = {
     ("contrast-as-drawn", "measures", 1): _contrast_signs,
     ("contrast-as-drawn", "measures", 2): _contrast_fills,
     ("contrast-as-drawn", "leaves-out", 0): _contrast_over_a_picture,
-    ("contrast-as-drawn", "leaves-out", 1): _contrast_whole_text_over_a_picture,
-    ("contrast-as-drawn", "leaves-out", 2): _contrast_over_nothing,
-    ("contrast-as-drawn", "leaves-out", 3): _contrast_unknown_role,
-    ("contrast-as-drawn", "leaves-out", 4): _contrast_no_ink,
-    ("contrast-as-drawn", "leaves-out", 5): _contrast_no_opaque_fill,
-    ("contrast-as-drawn", "leaves-out", 6): _contrast_path_under,
-    ("contrast-as-drawn", "leaves-out", 7): _contrast_off_the_middle,
-    ("contrast-as-drawn", "leaves-out", 8): _contrast_draws_nothing,
+    ("contrast-as-drawn", "leaves-out", 1): _contrast_over_nothing,
+    ("contrast-as-drawn", "leaves-out", 2): _contrast_unknown_role,
+    ("contrast-as-drawn", "leaves-out", 3): _contrast_no_ink,
+    ("contrast-as-drawn", "leaves-out", 4): _contrast_no_opaque_fill,
+    ("contrast-as-drawn", "leaves-out", 5): _contrast_off_the_middle,
+    ("contrast-as-drawn", "leaves-out", 6): _contrast_draws_nothing,
 }
 
 

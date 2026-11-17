@@ -17,6 +17,7 @@ What colour can say, what it cannot, and how a text or a line stands out from wh
 - Is the data an order, a spread around a midpoint, or kinds, and does its scheme match, by Brewer's account?
 - Picture the page in grey, or projected in a bright room. What does a reader lose, and what second channel would keep it?
 - Where does a text or a line lie on a ground of nearly its own lightness, a picture included?
+- Where does strong colour cover a large area, such as a ground or a wide band? Does the page need it there, or would a muted ground let the small marks that matter stand out, as Tufte and Imhof teach?
 
 ## Works
 
