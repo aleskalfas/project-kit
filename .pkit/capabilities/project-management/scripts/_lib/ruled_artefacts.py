@@ -188,7 +188,18 @@ def ruled_altered(
         return RuledAlteration(
             error=f"{command}: it exited {proc.returncode}" + (f": {said[-1]}" if said else "")
         )
-    entries = _entries(proc.stdout or "")
+    try:
+        document = json.loads(proc.stdout or "")
+    except ValueError:
+        return RuledAlteration(error=f"{command}: its answer is not JSON")
+    return alteration_of(document, command)
+
+
+def alteration_of(document: Any, command: str = f"`pkit {' '.join(COMMAND)}`") -> RuledAlteration:
+    """The command's document as the artefacts the change altered, or why it cannot be
+    read: each key read by its key (ADR-097 point 3), a missing one never read as a
+    state the artefact is not at."""
+    entries = _entries(document)
     if isinstance(entries, str):
         return RuledAlteration(error=f"{command}: {entries}")
     if entries is None:
@@ -206,20 +217,16 @@ def ruled_altered(
     )
 
 
-def _entries(stdout: str) -> list[tuple[str, list[Mapping[str, Any]]]] | str | None:
+def _entries(document: Any) -> list[tuple[str, list[Mapping[str, Any]]]] | str | None:
     """Each altered artefact's change and states — the base's, the head's,
     those that hold it — then each artefact's the change brought under a rule
     without altering it, from the command's document; or why the document
     cannot be read; or `None` for a document without `brought_unaltered`,
     which a backbone older than this capability needs gives."""
-    try:
-        document = json.loads(stdout)
-    except ValueError:
-        return "its answer is not JSON"
     if not isinstance(document, dict):
         return "its answer is not a document"
     version = document.get("schema_version")
-    if version != SCHEMA_VERSION:
+    if type(version) is not int or version != SCHEMA_VERSION:
         return f"it answered schema_version {version!r}; this reads {SCHEMA_VERSION}"
     artefacts = document.get("artefacts")
     if not isinstance(artefacts, list):
@@ -236,7 +243,11 @@ def _entries(stdout: str) -> list[tuple[str, list[Mapping[str, Any]]]] | str | N
         change = entry.get("change")
         if change not in known:
             return f"it lists an artefact altered as {change!r}, which this does not read"
-        sides = [entry.get("base"), entry.get("head")]
+        if "base" not in entry or "head" not in entry:
+            return "it lists an artefact without its base or its head"
+        sides = [entry["base"], entry["head"]]
+        if change == UNALTERED and None in sides:
+            return "it lists an artefact brought under a rule without its base or its head"
         present = [side for side in sides if side is not None]
         if not present or not all(_side_reads(side) for side in present):
             return "it lists an artefact without a readable location, path and rules"

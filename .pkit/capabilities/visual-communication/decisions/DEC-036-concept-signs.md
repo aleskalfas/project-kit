@@ -49,7 +49,7 @@ Terms:
 - **The ground** lies behind each piece of the run on each line it spans, its sign included, and is the fill the run is measured against ([visual-communication:DEC-004-brands-and-notations] point 8).
 - **Measured within the line.** The engine measures the sign in the run's typography role, and the gap between the sign and the run's first character and the ground's room at the run's two ends within the line (DEC-012 point 4). The gap, the room and the ground's corners come from roles the foundations declare for them, as every length comes from a role (DEC-005 point 1).
 - **One span for runs that run on.** Runs next to each other in one paragraph that name one concept and draw its sign draw one sign, before the first. Those that take one ground take it once, with room at the span's two ends alone.
-- **Held with the run.** The scene's line holds each run's sign and ground with the run's piece, and the room the engine gave them, and each renderer draws them with the run.
+- **Held with the run.** The scene's line holds each run's sign and ground with the run's piece, and the room the engine gave them, and each renderer draws them with the run. Under forced colours the HTML renderer draws a run's ground in its line's ground, and its span draws none of its own (refinement per [visual-communication:DEC-039-forced-colours-grounds-and-edges] point 3).
 
 ### 4. Under forced colours, a sign takes what any drawn mark takes
 

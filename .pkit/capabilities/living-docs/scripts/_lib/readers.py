@@ -12,6 +12,13 @@ so the point is read through the backbone's read command, `pkit connections
 resolve <point> --json` (the lifecycle README, "Reading one point from a
 script"). The command exits 1 on an unresolved point and still prints its
 document, so the document decides, never the exit code.
+
+The document is read by its keys (ADR-097 point 3). The point holds every reader
+only where it resolved with each filler `taken` or `passed over`: a filler in a
+state this capability does not know may not have answered, so the readers it
+would have given cannot be told. That, a key the reading needs that is missing,
+null or of another type, and a version it does not know each leave the point
+unresolved, with why, never read as the readers it lists.
 """
 
 from __future__ import annotations
@@ -23,12 +30,22 @@ from dataclasses import dataclass
 from typing import Any
 
 from _lib import backbone
+from _lib import document_keys as keys
 
 #: The point, and where a project's own filler file for it lives, under the
 #: internal documentation root (the lifecycle README, "Where a project filler
 #: file lives").
 READERS_POINT = "pkit::documentation:readers"
 FILLER_SUBPATH = "pkit/fillers/pkit/documentation/readers.yaml"
+
+#: The version of the point's document this reading understands. A document without
+#: `schema_version` comes from a backbone that predates the key: version 1 (the CLI
+#: reference, `connections resolve`).
+DOCUMENT_VERSION = 1
+
+#: The states of a filler that answered, or was not meant to (COR-052 point 6).
+ANSWERED = frozenset({"taken", "passed over"})
+INERT = "inert"
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -67,25 +84,52 @@ def read_readers(run: Runner = backbone.run) -> Readers:
 
 def readers_of(document: Mapping[str, Any]) -> Readers:
     """The `pkit connections resolve --json` document as Readers."""
-    if document.get("defined") is False:
-        return Readers(False, why=f"it is not defined: {document.get('why', '')}")
-    if not document.get("resolved"):
+    command = f"`pkit connections resolve {READERS_POINT} --json`"
+    version = document.get("schema_version", DOCUMENT_VERSION)
+    if type(version) is not int or version != DOCUMENT_VERSION:
+        return Readers(
+            False,
+            why=f"{command} answered schema_version {version!r}; this capability reads "
+            f"{DOCUMENT_VERSION}",
+        )
+    try:
+        return _readers(document)
+    except keys.Untold as exc:
+        return Readers(
+            False, why=f"{command} answered a document this capability cannot read: {exc}"
+        )
+
+
+def _readers(document: Mapping[str, Any]) -> Readers:
+    if not keys.flag(document, "defined", ""):
+        return Readers(False, why=f"it is not defined: {keys.text(document, 'why', '')}")
+    if not keys.flag(document, "resolved", ""):
         return Readers(False, why=_unresolved_why(document))
+    untold = [
+        f"{keys.text(filler, 'name', where)} ({keys.text(filler, 'state', where)})"
+        for where, filler in keys.objects(document, "fillers", "")
+        if keys.text(filler, "state", where) not in ANSWERED
+    ]
+    if untold:
+        return Readers(
+            False,
+            why=f"a filler's readers cannot be told, since its state is not one in which it "
+            f"answered: {'; '.join(untold)}",
+        )
     ids = sorted(
-        str(entry["id"])
-        for entry in document.get("entries") or []
-        if isinstance(entry, Mapping) and isinstance(entry.get("id"), str)
+        keys.text(entry, "id", where) for where, entry in keys.objects(document, "entries", "")
     )
     return Readers(True, ids=tuple(ids))
 
 
 def _unresolved_why(document: Mapping[str, Any]) -> str:
     """The backbone's reason, with each inert filler and its own reason."""
-    why = str(document.get("why") or "it does not resolve")
+    why = keys.text(document, "why", "") or "it does not resolve"
     inert = [
-        f"{filler.get('name')} ({filler.get('supplies')}): {filler.get('reason')}"
-        for filler in document.get("fillers") or []
-        if isinstance(filler, Mapping) and filler.get("state") == "inert"
+        f"{keys.text(filler, 'name', where)} ({keys.text(filler, 'supplies', where)}): "
+        f"{keys.text(filler, 'reason', where)}"
+        for where, filler in keys.objects(document, "fillers", "")
+        if keys.text(filler, "state", where) == INERT
     ]
     return f"{why} — inert: {'; '.join(inert)}" if inert else why
 

@@ -1,0 +1,13 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Project-management refuses a backbone document whose `schema_version` is
+  `true`, `false` or `1.0`, as a version it does not know (ADR-097 point 3).
+  Before, body validation's reading of the use-case point read `true` and `1.0`
+  as version 1, the list of accepted records a change alters did the same, and
+  an agent's run read `1.0` as version 1. Body validation now reads such a point
+  as one it could not check, under `body.use-cases-unchecked`, the accepted
+  records' list is none, with why, and the run is one with no answer. No
+  backbone released so far prints such a version.

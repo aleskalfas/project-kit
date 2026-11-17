@@ -19,8 +19,11 @@ shortfalls:
     issue: "#1765"
     record: ADR-034#1
   - at: "3d"
-    issue: "#131"
-    record: COR-041
+    issue: "#3229"
+    record: ADR-040#1
+  - at: "3d"
+    issue: "#3349"
+    record: ADR-040#1
   - at: 13
     issue: "#1765"
     record: ADR-034#1
@@ -30,6 +33,7 @@ pkit:
       path:
         - src/project_kit/cli.py
         - src/project_kit/capabilities.py
+        - src/project_kit/capability_fetch.py
         - src/project_kit/agents_overlay.py
         - src/project_kit/write_categories.py
         - src/project_kit/declared_rule_sets.py
@@ -52,6 +56,7 @@ pkit:
         - ADR-009#7
         - ADR-059
         - ADR-034#1
+        - ADR-040#1
         - ADR-076#2
         - ADR-076#6
         - ADR-088#3
@@ -123,16 +128,20 @@ pkit:
 - **3a.** The name is reserved, or an [adapter](../../../glossary.md#term-adapter--adapter) holds it. The system refuses, saying which, and writes nothing. The use case ends.
 - **3b.** No capability of that name ships with the running CLI. The system refuses, naming `pkit capabilities list`, and writes nothing. A capability the project authors is registered instead ([UC-016](../010-develop/UC-016-keep-capability.md)).
 - **3c.** The capability is installed already. The system refuses, naming `pkit capabilities upgrade <name>`, and writes nothing. The use case ends.
-- **3d.** The capability is authored in another repository, from which the adopter shares it, such as an organisation's own ([COR-041](../../../../../../.pkit/decisions/core/COR-041-external-source-distribution.md)). The system pulls it whole, at a ref of that repository the project pins, and checks it as steps 4 and 5 do. It settles each collision as variant 7b does, and records the capability with the [component origin](../../../glossary.md#term-component-origin--component-origin) `externally-sourced`. The path goes on at step 9.
+- **3d.** The project is not the methodology's source repository (6a). The capability is authored in another repository, from which the adopter shares it, such as an organisation's own ([COR-041](../../../../../../.pkit/decisions/core/COR-041-external-source-distribution.md)). The system pulls it whole, at a ref of that repository the project pins, and checks it as steps 4 and 5 do. It settles each collision as variant 7b does, and records the capability with the [component origin](../../../glossary.md#term-component-origin--component-origin) `externally-sourced` before the path goes on at step 9.
 
 > [!WARNING]
-> **Not built yet:** the system installs only a capability that ships with the running CLI, or one the project authors. COR-041 decides that a capability from another repository is pulled whole at a pinned ref, and #131 tracks it.
+> **Not built yet:** the system pins a tag or a commit's full id, and refuses a branch. [ADR-040](../../../../../architecture/decisions/ADR-040-external-source-write-path.md) decides that a branch may be the ref, and #3229 tracks it.
 
+> [!WARNING]
+> **Not built yet:** the system refuses `--from` and `--ref`, naming why, before it reads anything, and writes nothing. ADR-040 decides that the system pulls the capability at the ref the project pins, and #3349 lifts the refusal.
+
+- **3e.** The capability is authored in another repository, as in 3d, and the project is the methodology's source repository, run by its own code. The system refuses, since a fetched copy would be bundled into the [distribution](../../../glossary.md#term-distribution--distribution) from there, and writes nothing ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)). The use case ends.
 - **4a.** The [backbone](../../../glossary.md#term-backbone--backbone) lies outside the capability's [range](../../../glossary.md#term-range--range), or a capability it requires is missing or outside its range. The system refuses, naming what to install or upgrade first, and writes nothing ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-030](../../../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
 - **4b.** The capability's version lies outside a range an installed capability declares for it. The system warns, naming each such dependent and its range, and refuses unless the adopter passes `--force` ([COR-030](../../../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
 - **4c.** A [process](../../../glossary.md#term-process--process) [connection](../../../glossary.md#term-connection--connection) the capability marks mandatory has no installed upstream, or none at a compatible version. The system refuses with `capability '<name>' v<version> has <n> unmet mandatory process connection(s):`, and lists them. It ends with `Install or upgrade the upstream first, then retry (COR-053 point 6).`, and writes nothing.
 - **5a.** A [rule set](../../../glossary.md#term-rule-set--rule-set) of the capability takes a name a project rule set declares. The system refuses, naming the set and both files, and writes nothing ([COR-051 point 3](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)).
-- **6a.** The project is not the methodology's source repository. The system takes the capability from the [distribution](../../../glossary.md#term-distribution--distribution) of the running CLI, and copies it, as variants 7b and 8a say ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
+- **6a.** The project is not the methodology's source repository. The system takes the capability from the distribution of the running CLI, and copies it, as variants 7b and 8a say ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
 - **7a.** In the source repository, a [skill](../../../glossary.md#term-skill--skill) or an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) of the capability collides with other content of the project. The system lists each, refuses with `rename the colliding artifact(s) in your capability tree, then retry.`, and writes nothing.
 - **7b.** The project is not the source repository (6a), and a skill or an agent definition of the capability collides with one the project holds. For each, the system prints `<kind> '<name>' collides with existing <path>`, and asks `[override / skip / inspect]` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)):
   - **override:** the capability's file replaces the project's once the copy is in place. Git holds the project's file, so the adopter can get it back.

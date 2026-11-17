@@ -4,7 +4,7 @@ schema_version: 1
 slides:
   - id: stack
     layout: slide
-    title: Ebenen übereinander gestapelt, die oberste zuerst
+    title: Ebenen übereinander gestapelt, die oberste zuerst, jede eine Stufe der Reihenfolge
     visual:
       use: starter/layers
       levels:
@@ -23,10 +23,10 @@ slides:
 
   - id: tinted
     layout: slide
-    title: Jede Ebene getönt nach dem Begriff, den sie nennt
+    title: Jede Ebene getönt nach dem Begriff, den sie nennt, ohne Schattierung nach ihrem Platz
     visual:
       use: starter/layers
-      level: {use: starter/card, fill: tint}
+      shade: plain
       levels:
         - id: people
           concept: test-notation/person

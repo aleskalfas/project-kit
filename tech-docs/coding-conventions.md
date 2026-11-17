@@ -17,6 +17,7 @@ pkit:
         - software-engineering:DEC-002#3
         - software-engineering:DEC-002#4
         - PRJ-010
+        - ADR-097
       artefact:
         - CONTRIBUTING.md#running-checks
 ---
@@ -37,6 +38,13 @@ Write the names, docstrings and comments of your change plainly and precisely, i
 ## Lint, format and types
 
 PRJ-010 decides how pyright checks the code. The package is in strict mode through a ratchet, everything else in standard mode, and the package keeps no suppression. What ruff's lint and format ask of the code is in [`CONTRIBUTING.md`](../CONTRIBUTING.md), "Running checks", its paragraph "Lint and format". Where a suppression is allowed, and how it names its rules and its reason, is in the same section's bullet "Suppressions", under "Type checking".
+
+## Machine-readable output
+
+Code that prints a document for a program to read, such as a command's `--json` output, or that reads one, follows [ADR-097](architecture/decisions/ADR-097-machine-output-contract.md). The CLI reference states the rule for every command project-kit ships, under "Command output conventions".
+
+- **Printing a document.** A key, or a value of a key's set, may be added, unless it changes how another key reads, as a key that marks a list partial does. One goes only as a declared breaking change, which raises the document's version where it carries one. No key or value comes to mean anything else, so a new meaning takes a new key.
+- **Reading a document.** The code finds what it needs by key, and ignores a key it does not read. It reads a key it needs and does not find, a `null` its contract does not explain, and a value it does not know as could not tell, unless the contract names another reading. It refuses a version it does not know.
 
 ## Tests
 

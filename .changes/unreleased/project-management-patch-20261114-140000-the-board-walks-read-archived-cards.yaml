@@ -1,0 +1,14 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The commands that walk the board's cards read its archived cards too, as any
+  other. `remove-workstream` and `merge-workstream` count an archived card that
+  holds the option, so a removal refuses while one does, and a merge moves it
+  to the survivor before it drops the option, rather than clearing its value
+  unread. `sync-board` and `back-fill` count an issue whose only card is
+  archived as an issue with a card: `sync-board` keeps that card's Status in
+  step instead of planning to add a card for the issue, and `back-fill` plans
+  the field's write on that card instead of reporting the issue as not on the
+  board.

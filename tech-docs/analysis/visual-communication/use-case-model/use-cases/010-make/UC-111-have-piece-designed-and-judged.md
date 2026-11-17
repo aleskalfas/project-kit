@@ -6,6 +6,10 @@ actor: core:ACT-developer
 other-actors:
   - core:ACT-ai-agent
 requirements: []
+shortfalls:
+  - at: 5b
+    issue: "#3148"
+    record: visual-communication:DEC-042#6
 pkit:
   friction:
     anchors:
@@ -28,6 +32,10 @@ pkit:
         - visual-communication:DEC-028#5
         - visual-communication:DEC-030#2
         - visual-communication:DEC-030#3
+        - visual-communication:DEC-042#6
+        - visual-communication:DEC-042#7
+        - visual-communication:DEC-042#9
+        - visual-communication:DEC-042#10
         - COR-017
 ---
 
@@ -61,13 +69,18 @@ pkit:
 - **1a.** The piece does not explain, such as a map of a system or a board people fill in. A rule for pieces that explain does not judge it.
 - **4a.** The harness cannot read images. The reviewer stops and says so, and judges nothing on the drawn pages.
 - **5a.** The developer asks the AI agent to mend the piece where a finding asks. The AI agent mends the piece, and the path rejoins at step 3.
+- **5b.** The project set a bar, and a calibration of the review is accepted that reaches it. The AI agent mends the piece alone, round after round, and the system renders and reviews it each round, until the review's grades meet the bar. The AI agent then polishes the piece within a bound, and hands the developer the last round that met the bar, with each grade that still blocks it and each question open. It changes every word that is not the developer's own, and asks the developer only where a fix would change the developer's words. The path ends there.
 
-**Postconditions:** The piece is drawn, and each break of a rule the reviewer found is mended or left to the developer with its finding.
+> [!WARNING]
+> **Not built yet:** the designer's loop does not end at a bar. [DEC-042 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-042-grades-bar-and-loop.md#6-the-loop-runs-to-the-bar-into-polish-within-a-bound) decides that it does, and #3148 tracks it.
+
+**Postconditions:** The piece is drawn, and each break of a rule the reviewer found is mended or left to the developer with its finding. Where variant 5b ran, the piece meets the bar the project set, or the developer holds the last round that met it with what blocks it.
 
 **Minimal guarantees:**
 
 - The reviewer's report says which pages, languages and modes it looked at, so a page it did not read never reads as clean ([DEC-015 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md#7-the-reviewers-first-form)).
 - The reviewer's findings join no validation and hold no merge, until a record gives them a place there (DEC-015 point 7).
+- The AI agent never changes the developer's words without the developer's word, and the loop of variant 5b ends within a bound (DEC-042 points [6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-042-grades-bar-and-loop.md#6-the-loop-runs-to-the-bar-into-polish-within-a-bound) and [7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-042-grades-bar-and-loop.md#7-whose-words-the-designer-changes-alone-and-what-it-asks)).
 
 ## Open for the design
 
@@ -86,4 +99,5 @@ What the developer needs here that no accepted record decides yet:
   - **Step 3:** the viewing step draws what a renderer drew for each page as an image ([DEC-015 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md#1-the-viewing-step-draws-a-renderers-output-and-adds-nothing-to-the-seam)), under the lock a render wrote ([DEC-015 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-015-viewing-step-and-reviewer.md#4-it-reads-under-the-lock-and-writes-nothing-committed)).
   - **Step 5, variant 4a and the guarantees:** the reviewer advises, reads images and stops where the harness reads none, and says which pages it looked at (DEC-015 point 7).
   - **Variant 5a:** the skill that guides whoever draws a piece renders, checks, reads and mends it until it can stop, its content first (`skills/visual-author/build-loop.md`).
+  - **Variant 5b:** the review grades each rule in words, a project's bar is set in the capability's configuration, and the designer's loop runs to the bar, into polish and within a bound. It runs only once a calibration of the review is accepted, and only where the bar covers rules that calibration gave evidence for (DEC-042 points [1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-042-grades-bar-and-loop.md#1-the-review-grades-each-rule-in-words), [3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-042-grades-bar-and-loop.md#3-a-project-sets-its-bar-in-the-capabilitys-configuration), [6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-042-grades-bar-and-loop.md#6-the-loop-runs-to-the-bar-into-polish-within-a-bound), [9](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-042-grades-bar-and-loop.md#9-the-verdict-ends-the-loop-once-a-calibrations-report-is-accepted) and [10](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-042-grades-bar-and-loop.md#10-where-the-hold-reaches)). The designer changes alone every word that is not the asker's ([DEC-042 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-042-grades-bar-and-loop.md#7-whose-words-the-designer-changes-alone-and-what-it-asks)).
   - **Variant 1a:** a rule says in its wording which pieces it judges, as a rule for pieces that explain does, and a reviewer reads that from the piece's fields ([DEC-001](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md), "Why a piece declares what it is selected by"). `COMM` judges only a piece that explains, and `GRAPHIC` every piece ([DEC-028 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-028-principles-of-visual-communication.md#3-which-pieces-each-set-judges)).

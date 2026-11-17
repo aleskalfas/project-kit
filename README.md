@@ -271,7 +271,7 @@ A plugin holds whatever its author put in it, so its column marks what a plugin 
 | Adds little to every session's context | ✅ only what you write | ✅ names and descriptions, full text only when used | ❌ its rules load whole |
 | Works with other agent tools | ✅ you write each tool's files | ❌ Claude Code, claude.ai and Cowork | ❌ [Claude Code only](.pkit/adapters/README.md#currently-shipped), today |
 | You choose every line and every allow | ✅ | ✅ in a plugin you build | ❌ its files are synced, and its allows return |
-| Setups others built, from a catalog | ❌ | ✅ marketplaces | ❌ [only the capabilities it ships](.pkit/cli/README.md#capabilities--two-ways-in) |
+| Setups others built, from a catalog | ❌ | ✅ marketplaces | ❌ [no catalog: the capabilities it ships, and from a later release one from a repository you name](.pkit/cli/README.md#capabilities--two-ways-in) |
 | Rules load into every session | ✅ | ✅ through a hook at session start, not a `CLAUDE.md` | ✅ |
 | An improvement reaches every project, on any machine | ❌ copied by hand, or one machine's `~/.claude/` | ✅ through its marketplace, on each machine that installs it | ✅ at each project's next upgrade |
 | Taking an update keeps your own files | ❌ merged by hand | ✅ a plugin stays in `~/.claude/plugins/` | ✅ one owner per file, with listed exceptions |

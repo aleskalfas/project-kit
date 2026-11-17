@@ -72,6 +72,27 @@ def test_load_hooks_file_parses_hooks_block(hooks, capability_root) -> None:
     assert doc["hooks"]["after_create_issue"][0]["kind"] == "assign-milestone"
 
 
+@pytest.mark.parametrize(
+    ("declared", "seeds"),
+    [
+        pytest.param(None, False, id="no-hooks-file"),
+        pytest.param("  after_create_issue:\n    - kind: assign-milestone\n", False, id="other"),
+        pytest.param(
+            "  after_close_issue:\n    - kind: set-board-field\n", False, id="other-event"
+        ),
+        pytest.param("  after_create_issue:\n    - kind: set-board-field\n", True, id="seeds"),
+    ],
+)
+def test_seeds_board_field_reads_filings_hooks(hooks, capability_root, declared, seeds) -> None:
+    """Whether filing's hooks seed a board field on a new card, which a card the
+    sync adds does not get (DEC-072 point 2)."""
+    if declared is not None:
+        (capability_root / "project" / "hooks.yaml").write_text(
+            "schema_version: 1\nhooks:\n" + declared, encoding="utf-8"
+        )
+    assert hooks.seeds_board_field(capability_root) is seeds
+
+
 # --- event validation ----------------------------------------------------
 
 
