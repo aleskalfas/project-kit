@@ -258,6 +258,13 @@ card out unsaid, and the credential reads every card of that repository. A
 command that needs only the states or cards of the issues it lists makes a
 listing read, never a walk (refinement per
 [project-management:DEC-072](../../../.pkit/capabilities/project-management/decisions/DEC-072-sync-gives-missing-cards.md)).
+Project-management's board sync, in a run limited to the issues it names, counts
+as a command that acts on the whole board, not as one that needs only the cards
+of the issues it lists: it walks the board to decide whether each named issue
+has a card, since a whole walk decides an absence with no witness, where a
+listing read decides one only with a witness (ADR-096 points 1 and 2;
+refinement per
+[project-management:DEC-077](../../../.pkit/capabilities/project-management/decisions/DEC-077-workflow-gives-missing-card.md)).
 
 A listing read is whole or nothing. A batch that fails makes the board one that
 could not be read, for the whole listing. A listing never takes the issues of a
