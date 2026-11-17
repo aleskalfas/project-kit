@@ -13,6 +13,7 @@ body: >
   names ways through it; the project's switch where the board holds the
   state consents for no run an event on an issue starts; and a run of the
   sync named for some issues walks the board. It refines DEC-019, DEC-020,
-  DEC-021, DEC-072 and ADR-074 in place. The template, the commands and the
+  DEC-021, DEC-072 and ADR-074 in place, and edits DEC-071, DEC-073 and
+  ADR-096 to keep their facts true. The template, the commands and the
   README are unchanged until the Task that builds it, which declares its own
   changeset, so no surface moves here.
