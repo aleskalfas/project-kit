@@ -39,6 +39,14 @@ What the files say today of where a piece is shown:
 
 So neither the size a piece is drawn at nor its top says where it is shown. A deck projected in a room that names no size is drawn at `desktop`, and under a brand with no size it can name no other. One page file may be read on a laptop and projected. A piece drawn at two sizes has its own files at each, since a file an export makes serves one size ([visual-communication:DEC-023-html-page-modes] point 1), and no file says which is shown where. And how large a page stands depends on how it is shown: the width it is shown in and the format it reaches its reader in both change it.
 
+What one source of a room's smallest size states. DEC-028 point 10 names the display image size standard for a projected image (ANSI/INFOCOMM V202.01). Its publisher's page on that standard's terms ([AVIXA, "Display Image Size"](https://www.avixa.org/standards/discas-calculators/discas/learn-more-about-display-size)) says this, as read on 17 November 2026:
+- **An element's height, against the image's.** Its `%Element Height` is "the height of an element in relation to the overall Image Height". An element is "a group of pixels conveying an item of information (e.g., a character at a given font size)".
+- **A least height for each viewing ratio.** A table gives the least `%Element Height` for each range of a "Viewing Ratio", for what the page calls basic decision making. It runs from 0.50% at a ratio of 0.80 to 1.00, up to 5.00% at a ratio of 9.00 to 10.00. The page does not define the viewing ratio.
+- **The content, apart.** Users of the standard "should vary this percentage according to the content".
+- **Two words for one height.** The page states the share against "Image Height", and elsewhere against "screen height". It gives the standard no number.
+
+So the least share differs tenfold across that table, by the viewing ratio.
+
 Terms:
 - A page's *medium*, in DEC-028's sense and this record's, is how the page reaches a reader's eye. It is not a renderer's medium, the format a renderer draws into (DEC-001 point 2).
 - A medium's *smallest size* is the least font size a text may take on a page shown in it.
@@ -145,15 +153,10 @@ Each is reported as severely as any formula's finding (DEC-005 point 14), and na
 
 - **The foundations' tops** declare a smallest size for each medium their pages are made for, as each top's account of its pages names those media.
 - **Each value names its source beside it,** a standard or a guideline of legibility for that medium, and the measure that source states. Which media a top declares, and the value for each, are the foundations' data, reviewed in the change that sets them, as a brand's scales are.
-- **A source may state another measure than a font size.** DEC-028 point 10 names the display image size standard for a projected image (ANSI/INFOCOMM V202.01). Its publisher's page on that standard's terms is one such source ([AVIXA, "Display Image Size"](https://www.avixa.org/standards/discas-calculators/discas/learn-more-about-display-size)).
-- **What that page says,** as read on 17 November 2026:
-  - **An element's height, against the image's.** Its `%Element Height` is "the height of an element in relation to the overall Image Height". An element is "a group of pixels conveying an item of information (e.g., a character at a given font size)".
-  - **A least height for each viewing ratio.** A table gives the least `%Element Height` for each range of a "Viewing Ratio", for what the page calls basic decision making. It runs from 0.50% at a ratio of 0.80 to 1.00, up to 5.00% at a ratio of 9.00 to 10.00. The page does not define the viewing ratio.
-  - **The content, apart.** Users of the standard "should vary this percentage according to the content".
-  - **Two words for one height.** The page states the share against "Image Height", and elsewhere against "screen height". It gives the standard no number.
-- **So a room's value rests on the room too.** The least share differs tenfold across that table, by a ratio that no file of a piece holds. A value drawn from such a source therefore assumes one viewing ratio. A room where the ratio is greater is the review's to judge, by the place `shown` names (point 12).
+- **A source may state another measure than a font size.** The publisher's page on the display image size standard is one such source. It states an element's height as a share of the image's, and the least share for each range of a viewing ratio (Context).
+- **So a room's value rests on the room too.** That least share differs by a ratio that no file of a piece holds. A value drawn from such a source therefore assumes one viewing ratio. A room where the ratio is greater is the review's to judge, by the place `shown` names (point 12).
 - **A value from such a source says how it became a font size.** It states the share the source gives, and the viewing ratio that share is given for. It states the share of its font size a character is taken to stand at, since a character stands less tall than its font size. The top's account of its media states the assumed ratio too, for a piece's author.
-- **This record sets no value, and rests none on that standard.** It rests on the publisher's page alone. The standard's own text, its definition of the viewing ratio and its formula are not read here. The work that sets a room's value reads the standard first, in the edition it cites. It settles there what the viewing ratio measures, and which height the share is of.
+- **This record sets no value, and rests none on that standard.** It rests on the publisher's page alone, as Context reads it. The standard's own text, its definition of the viewing ratio and its formula are not read here. The work that sets a room's value reads the standard first, in the edition it cites. It settles there what the viewing ratio measures, and which height the share is of.
 - **Where the standard cannot be read,** no shipped top declares a room's value. A piece shown in a room is then stated as unmeasured there (point 10), and the review judges it by `shown`. The value waits until the standard is read, or until another source states its measure in full.
 
 ### 9. An addition, which reaches a piece through its media and its lock
@@ -233,7 +236,7 @@ A piece is held to the check only where it names a medium (point 9). On every ot
 
 **Why two forms.** Each form fits how one kind of medium shows a page:
 - **A fixed length for a screen at hand.** It shows a page at its own size where its window holds it (DEC-020 point 4). CSS sets a px by the angle it takes at arm's length. So a fixed px is a size its reader sees.
-- **A share for a room.** A room's screen shows a page as large as its image, whatever its px. So only a share of the page says how large its text stands in the room. The standard on projected images states an element's height in relation to the image's height too (point 8).
+- **A share for a room.** A room's screen shows a page as large as its image, whatever its px. So only a share of the page says how large its text stands in the room. The standard on projected images states an element's height in relation to the image's height too (Context).
 - **A share for a sheet.** A sheet takes a page at the top's physical size by one scale, so a share of the page is a size on paper.
 - **The top chooses,** since which form fits depends on the kind of page as well as the medium. Neither form reads more than the page's size, so neither lets a brand in.
 
@@ -263,7 +266,7 @@ A piece is held to the check only where it names a medium (point 9). On every ot
 - **Chosen before it ships,** since format 1 keeps a name it accepted (DEC-003 point 3).
 
 **Why the font size.** It is what a typography role gives, and what the scene holds for each run. So the check reads it with no font's measures, and a brand's author sets it directly.
-- **Not every source states it.** The standard on projected images states an element's height in relation to the image's height (point 8). A value from such a source is converted once, where the top declares it, and says how.
+- **Not every source states it.** The standard on projected images states an element's height in relation to the image's height (Context). A value from such a source is converted once, where the top declares it, and says how.
 - **The letters' height is a reading's.** How tall a face's letters stand in their font size differs by face. The drawn page shows it, so the review judges it, under the rule.
 
 **Why at each key.** A brand's values and a page's size both differ by key, and each key has its own scene (DEC-005 point 6). A key's larger type is the piece's way to meet a stricter medium that shows it, so each key is measured with its own values.
@@ -336,7 +339,7 @@ A piece is held to the check only where it names a medium (point 9). On every ot
 - **A fixed length for every medium.** Rejected: a room's screen shows a page as large as its image, whatever its px, so a page's px say nothing of how large its text stands there.
 - **Measuring each export by how its viewer shows a page.** Rejected: the window, a zoom and a print's scale are the reader's or the presenter's, and no file records them ("Why one finding for every renderer").
 - **A smallest size for each renderer, from its declaration.** Rejected: a renderer adds no size ("Why one finding for every renderer").
-- **The height of the letters, such as the x-height, in place of the font size.** Not taken, though it is nearer what the standard on projected images states (point 8). The scene holds a run's font size and no height of its letters. That height differs by face, so a brand's choice of face would move what a top declares. A value converts once instead, and the review judges a face whose letters stand small ("Why the font size").
+- **The height of the letters, such as the x-height, in place of the font size.** Not taken, though it is nearer what the standard on projected images states (Context). The scene holds a run's font size and no height of its letters. That height differs by face, so a brand's choice of face would move what a top declares. A value converts once instead, and the review judges a face whose letters stand small ("Why the font size").
 - **The finding at the component's part that chooses the style, or at the brand's role.** Rejected ("Why at the piece's file").
 - **A share's fault always at the top's file.** Rejected: under a brand's drawing or in a slot, it would lie in a released version not at fault alone.
 - **A share's fault at the top's file wherever the top alone shows it.** Rejected: for a division by zero or a length of zero or less, the check cannot tell that from one scene under one brand.
@@ -358,7 +361,7 @@ A piece is held to the check only where it names a medium (point 9). On every ot
 - **A refinement pointer on DEC-028 point 10,** which leaves the smallest size to a check. Not taken: this record decides nothing of what that point says. `RS-GRAPHIC-005` rests on that point, so a pointer alone would ask for the rule's answer again with nothing to judge.
 - **`media` required of every piece.** Rejected: format 1 would refuse files it accepted (DEC-003 point 3).
 - **The viewing step's report repeating the media it computed under.** Not taken: it gives the report's form a medium, for a difference that opens only where a review reads an older look. The reviewer already reads `shown` and the brief from the files as they stand (point 12).
-- **A room's value set from the publisher's page alone, where the standard cannot be read.** Rejected: that page does not define the viewing ratio, so the value could not state what it assumes (point 8).
+- **A room's value set from the publisher's page alone, where the standard cannot be read.** Rejected: that page does not define the viewing ratio (Context), so the value could not state what it assumes (point 8).
 - **The designer free to change `media` to mend a finding.** Rejected (DEC-064, "Why where a piece is shown is the asker's").
 - **Where the verdict's hold reaches, decided in this record.** Rejected: the reason holds for every check that takes a defect from a rule's grades (DEC-064, "Why a record of its own").
 
