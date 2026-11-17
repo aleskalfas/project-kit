@@ -2,17 +2,23 @@ component: project-management
 kind: none
 body: >
   DEC-082, which a person accepts in this change (#3394), decides how many
-  subagents the project-manager agent runs at once: one setting of the
-  capability's committed configuration, read from the default branch, gives
-  the ceiling, `off`, a number or `max`, and `max` where it is absent. Every
-  subagent a session runs takes a slot: builders, reviewers, fixers, helpers
-  and their own, and resumed runs. The agent starts first what its work in
-  flight waits for, then a Task a directive named, then the next Task
-  nothing blocks, nearest the work just done; a worker's directing seat may
-  set the worker's pace on its state issue, a person any seat's, and the
-  lowest binds; the build and review commands hold to the pace from a
-  register of the clone's runs; a lowered pace stops nothing that runs. It
-  overturns DEC-059 and DEC-061 in part, and refines DEC-058, DEC-059 and
-  DEC-063 in place. The configuration, the state issues, the commands, the
+  subagents the project-manager agent runs at once in a clone, all its
+  sessions together: one setting of the capability's committed
+  configuration, read from the default branch, gives the ceiling, `off`, a
+  number or `max`, and 4 where it is absent. `max` runs as many as the work
+  calls for, bounded only by the machine and the account's usage limits.
+  Every subagent the agent runs takes a slot: builders, reviewers, fixers, a
+  lead's helpers, each with a share of the lead's slots, and their own, and
+  resumed runs; a run a person starts at a terminal takes none. The agent
+  starts first what its work in flight waits for, then a Task a directive
+  named, then a plan's reviewer, then the next Task nothing blocks, nearest
+  the work just done; a worker's directing seat may set the worker's pace on
+  its state issue, and a person any seat's, which replaces what a directing
+  seat set before it; the lowest binds; the build and review commands hold
+  the agent's calls to the pace from a register of the clone's runs; a
+  lowered pace stops nothing that runs. It overturns DEC-059, DEC-061 and
+  DEC-063 in part, refines DEC-058, DEC-059, DEC-063 and ADR-071 in place,
+  and has a new architecture record, proposed in this change, overturn
+  ADR-073 in part. The configuration, the state issues, the commands, the
   agent and the work loop are unchanged until the Task that builds them,
   which declares its own changeset, so no surface moves here.
