@@ -108,9 +108,9 @@ board, an issue's add among them, which no other record decides.
   CI job that gates on it. So where DEC-017 has the check fail on a board that
   did not answer, an outage of the service's boards, or a credential the board
   does not answer, stops them all in a project with a board, and a CI job under
-  the workflow's own token, which reaches no board, fails on each run. Whether the check fails or warns there is DEC-017's to decide, and
-  [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)
-  proposes that it warn.
+  the workflow's own token, which reaches no board, fails on each run. Whether the check fails or warns there is DEC-017's to decide, and DEC-017
+  has it warn
+  ([project-management:DEC-074](../../../.pkit/capabilities/project-management/decisions/DEC-074-board-check-warns.md)).
 - **New reports and refusals** reach projects whose credential the board does
   not answer, and boards on which no issue the read sees shows a card, such as
   an empty board, or a repository's first issues on a shared board. The
@@ -678,10 +678,10 @@ ADR-053 stands, refined as the Implications name.
   one (refinement per
   [project-management:DEC-071](../../../.pkit/capabilities/project-management/decisions/DEC-071-filing-only-configured-board.md)).
 - **Not the health check's gate.** DEC-017 sets what its failure stops, and
-  [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)
-  proposes that it warn where the board does not answer. This record says what
-  counts as the board's answer to it, and adds a warning beside it that fails
-  nothing.
+  has the check warn where the board does not answer
+  ([project-management:DEC-074](../../../.pkit/capabilities/project-management/decisions/DEC-074-board-check-warns.md)).
+  This record says what counts as the board's answer to it, and adds a warning
+  beside it that fails nothing.
 
 ## Rationale
 
@@ -981,9 +981,9 @@ operation of several commands running its first before a later one refuses on
 the board, and a board write no act requires going unmade, such as a Status
 that only mirrors the state, which point 4 reports with its repair.
 Whether the check fails or only warns there is DEC-017's to decide, a record of
-the capability's own, and
-[project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)
-proposes that it warn. This record holds either way.
+the capability's own, and DEC-017 has it warn
+([project-management:DEC-074](../../../.pkit/capabilities/project-management/decisions/DEC-074-board-check-warns.md)).
+This record holds either way.
 
 ADR-053 refuses a call that fuses where an axis lives with the board's read,
 since a board outage would then become a filing outage on paths that never
@@ -1140,10 +1140,10 @@ holds it, the lesson ADR-031 point 4 draws for writes.
   a later write to the board meets it before it acts (point 4). ADR-031
   point 5 gates back-fill on the board in this way, only where a board field
   is to be written. Not decided here: what the check's failure stops is
-  DEC-017's, and a change to it is a
-  record of the capability's own, which
-  [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)
-  proposes. This record holds with it or without it.
+  DEC-017's, and a change to it is a record of the capability's own,
+  [project-management:DEC-074](../../../.pkit/capabilities/project-management/decisions/DEC-074-board-check-warns.md),
+  which has the check warn and does not narrow its stop. This record holds
+  with it or without it.
 - **Let the health check fail where the page shows no witness.** The case: the
   measured kind of token, one that may get the board and no witness, would
   stop at the check. Rejected: the check cannot tell that from a repository
@@ -1548,9 +1548,9 @@ holds it, the lesson ADR-031 point 4 draws for writes.
     resolves, read through the seam as point 6 has every read. This record says
     what counts as the board's answer to it, and adds a warning beside it, where
     the page shows no witness, which fails nothing. Whether the check fails or
-    warns where the board does not answer stays DEC-017's, and
-    [project-kit#3193](https://github.com/aleskalfas/project-kit/issues/3193)
-    proposes that it warn.
+    warns where the board does not answer stays DEC-017's, and DEC-017 has it
+    warn
+    ([project-management:DEC-074](../../../.pkit/capabilities/project-management/decisions/DEC-074-board-check-warns.md)).
   - **DEC-036 point 3:** the check degrades where an axis's substrate is
     unsupported, and a declared board that does not resolve is no such axis.
   - **DEC-019:** an issue off the board keeps its severities. The health check

@@ -44,6 +44,7 @@ The backbone manifest's `components` list is the canonical install record. The o
 
 **Install an externally-sourced capability** (COR-041) → install, with the capability fetched from another git repository rather than read from the running pkit's bundle: `pkit capabilities install <name> --from <git URL> --ref <tag or commit>`.
 
+- **Availability:** whether this release offers an install from another repository is in [the CLI reference, "Capabilities — two ways in"](../cli/README.md#capabilities--two-ways-in), under "From another repository" <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->. The bullets below say what that install does.
 - **Its order:** sync's guard and the check of the name run before the fetch, which takes the subtree at `.pkit/capabilities/<name>/` whole at the ref. The other checks then read the fetched subtree and its `package.yaml`, before any file is placed ("Install pre-flight checks" below). A refusal writes nothing.
 - **A name already held:** never overwritten. What holds one, when install checks it and what it says are in [the CLI reference, "Capabilities — two ways in"](../cli/README.md#capabilities--two-ways-in), under "From another repository" <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->.
 - **Its entry and manifest:** it appends a `{kind, name, origin: externally-sourced, manifest}` entry. Its per-component manifest records the `pin`, its source, its ref and the commit the ref named, beside the version ([`manifest.md`, "Per-component manifest"](manifest.md#per-component-manifest-one-per-installed-component)).
@@ -82,7 +83,7 @@ agent_choices:
 - **When it stops:** before anything is read or written, under `--dry-run` and `--plan` too. Under another pkit, both would preview another release's capability.
 - **No override:** nothing overrides it. Its message names sync's remedies for the state it finds.
 - **The methodology's source** is exempt, as it is for sync.
-- **An install from another repository** (`--from`) runs it too. Which checks run before the fetch is in "Its order", under "Install an externally-sourced capability" above.
+- **An install from another repository** (`--from`) runs it too, in each release that offers that install. Which checks run before the fetch, and where to read whether this release offers that install, are under "Install an externally-sourced capability" above.
 
 **The six checks.** `--plan` runs after the first, since an installed capability has no install plan. It stops there, and writes nothing.
 
