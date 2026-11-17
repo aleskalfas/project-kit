@@ -110,6 +110,28 @@ def importable(monkeypatch: pytest.MonkeyPatch, *plugins: ModuleType) -> None:
         monkeypatch.setitem(sys.modules, plugin.__name__, plugin)
 
 
+#: The schema of the report a look writes beside its images (DEC-062, Implications).
+LOOK_REPORT = "look-report"
+
+
+def reports_held(monkeypatch: pytest.MonkeyPatch, viewing: ModuleType) -> list[str]:
+    """Each report a look writes through `viewing`, the module of the test's look, held to
+    its schema for the length of the test, whatever the renderer, a stop's report among them.
+    Gives the list each refusal joins, `<folder>: <JSON pointer>: <message>`, for the test
+    to hold empty once it ends."""
+    refused: list[str] = []
+    write = viewing.write
+
+    def held(root: Path, folder: str, viewed: Any) -> str:
+        report = json.loads(viewed.files[viewing.REPORT])
+        problems = viewing.files.shape_problems(report, LOOK_REPORT)
+        refused.extend(f"{folder}: {problem}" for problem in problems)
+        return write(root, folder, viewed)
+
+    monkeypatch.setattr(viewing, "write", held)
+    return refused
+
+
 def version_folder(root: Path, name: str, version: str, location: str = "visual") -> Path:
     return root / location / "libraries" / name / version
 
