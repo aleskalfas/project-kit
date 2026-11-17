@@ -413,9 +413,9 @@ answers:
       - 20261117T153003Z-779ada22.yaml
       - 20261117T160442Z-1f4fe70c.yaml
     revalidated:
-      at: 2026-11-17T21:51:43Z
+      at: 2026-11-17T22:34:53Z
       outcome: unchanged
-      unchanged-because: "Judged as the page stands merged with the two changes that updated it apart: one named the code and the list of checks among what ends no loop once changed, in the verdict command's entry, and one added the stray text to the reviewer's list of faults. This change leaves both passages. The verdict command still exits 1 when it refuses, as the outputs page's 'When no verdict is given' lists, which now names a report whose document does not parse among the refusals. The account of the reviewer's report, a document of a fixed form that review.schema.json holds, stands, since the body now writes each value in words as a block scalar and the schema and its fields are as they were."
+      unchanged-because: "Judged as the page stands merged with the two changes that updated it apart: one named the code and the list of checks among what ends no loop once changed, in the verdict command's entry, and one added the stray text to the reviewer's list of faults. This change edits neither passage, nor any other line of the page. The verdict command still exits 1 when it refuses, as its entry says, citing the outputs page's 'When no verdict is given', which now names a report whose document does not parse among the refusals. The page's account of the reviewer's report, a document of a fixed form that review.schema.json holds, with the grades, what the reviewer read before grading and the model it ran on, stands: the reviewer's body now has it write each value in words as a folded block scalar, which is read as text as each such value was, and neither the schema nor its fields changed."
   - artefact: .pkit/capabilities/visual-communication/files.md
     read:
       - 20261103T053645Z-9b958b41.yaml
@@ -598,9 +598,9 @@ answers:
       - 20261117T153003Z-779ada22.yaml
       - 20261117T160442Z-1f4fe70c.yaml
     revalidated:
-      at: 2026-11-17T21:51:03Z
+      at: 2026-11-17T22:34:53Z
       outcome: unchanged
-      unchanged-because: Judged as the page stands merged, with the two answers written on it apart, which found it true of the code's and the list of checks' digests in the accepted data, the look's report's schema, the reviewer's reading of the checks of boxes and the check of contrast reading a path's fill. This change adds to the reading of YAML a refusal that carries the line and column where the reading stopped, with the message it gave before, and has the reviewer write each value in words as a block scalar. The page's account of how the files are read, of where the reviewer's reports are kept and that validation checks none of them, of the calibration's data and of the bar reaches neither, so the page holds.
+      unchanged-because: "Judged as the page stands merged, with the two answers written on it apart, which found it true of the code's and the list of checks' digests in the accepted data, the look's report's schema, the reviewer's reading of the checks of boxes, the colour topic's note of taste and the check of contrast reading a path's fill. This change has the reading of YAML refuse a document that does not parse with a ParseError, a ReadError whose message is the one it gave before. The ParseError carries what the reader found where it stopped and, where the reader names that place, its line and column, and neither where it names none. The change also has the reviewer write each value in words of its document as a folded block scalar. Neither reaches the page's account of how the files are read, since the reading refuses what it refused before and a block scalar is read as text; nor where the reviewer's reports are kept and that validation checks none of them; nor the calibration's data or the bar. So the page holds."
   - artefact: .pkit/capabilities/visual-communication/checks.md
     read:
       - 20261102T235145Z-1a0d93cb.yaml
@@ -805,9 +805,9 @@ answers:
       - 20261117T153003Z-779ada22.yaml
       - 20261117T160442Z-1f4fe70c.yaml
     revalidated:
-      at: 2026-11-17T21:51:16Z
+      at: 2026-11-17T22:34:53Z
       outcome: unchanged
-      unchanged-because: "Judged as the page stands merged, with the two answers written on it apart: one updated it for the list of checks' digest and the hold, and one found it true of the reviewer's reading of the checks of boxes, the contrast-drawn entry and the viewing step's report. This change adds to the reading of YAML a refusal that carries the line and column where the reading stopped, with the message it gave before, so file-unreadable and component-unreadable say what they said, and no check's meaning, reach, severity or fix moves. It reaches no passage those changes reached, so the page holds."
+      unchanged-because: "Judged as the page stands merged, with the two answers written on it apart: one updated it for the list of checks' digest and the hold, and one found it true of the reviewer's reading of the checks of boxes, the contrast-drawn entry and the viewing step's report. This change has the reading of YAML refuse a document that does not parse with a ParseError, a ReadError whose message is the one it gave before. The ParseError carries what the reader found where it stopped and, where the reader names that place, its line and column, and neither where it names none; no check reads them. file-unreadable and component-unreadable give the reader's message, so they say what they said, and no check's meaning, reach, severity or fix moves. The change reaches no passage those changes reached, so the page holds."
   - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-111-have-piece-designed-and-judged.md
     read:
       - 20261108T215357Z-e935f32b.yaml
@@ -847,6 +847,6 @@ answers:
       - 20261117T140215Z-7620bbb2.yaml
       - 20261117T151447Z-4fdb6bb7.yaml
     revalidated:
-      at: 2026-11-17T21:50:59Z
+      at: 2026-11-17T22:34:53Z
       outcome: unchanged
-      unchanged-because: "Judged as the use case stands merged, with the two answers written on it apart: one for the reviewer's reading of the checks of boxes, its faults' ids and its stray text, and one for the code and the list of checks lapsing the hold, which variant 5b and its realisation name. This change alters only how the reviewer's report writes each value in words in its document, as a block scalar so that the document parses. The use case says that a reviewer reports each break of a rule as a finding that names the rule and the page, what its report says it looked at, and when variant 5b's loop runs; none of the three changes makes another's untrue, so the use case holds."
+      unchanged-because: "Judged as the use case stands merged, with the two answers written on it apart: one found it true of the reviewer's reading of the checks of boxes, its faults' ids and its stray text, and one updated it for the code and the list of checks lapsing the hold, so that variant 5b and its source name the capability's code among what the calibration measured. Of the files and records the use case rests on, this change alters only the reviewer's body, which now has the reviewer write each value in words of its document as a folded block scalar, rather than as a plain value, which does not parse where it holds `: `. The change alters the capability's code besides, which variant 5b already counts among what the calibration measured, so the variant's condition stands as written. The use case says that a reviewer reports each break of a rule as a finding that names the rule and the page, that it stops where the harness reads no images, what its report says it looked at, that its findings join no validation, and when variant 5b's loop runs. The form of a value changes none of these, and none of the three changes makes another's untrue, so the use case holds."
