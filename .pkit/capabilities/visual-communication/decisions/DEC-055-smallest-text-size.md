@@ -207,9 +207,11 @@ A scene check whose silence a reader leans on states its reach (DEC-063 point 1)
 A piece is held to the check only where it names a medium (point 9). On every other piece, a page with a text under its medium's minimum reaches the review. Which rounds the verdict's hold reaches is DEC-064's to decide. This point says what that record needs of this check.
 - **It takes a defect from the rule's grades.** A text under a medium's minimum is the check's finding alone, and lowers no grade of `RS-GRAPHIC-005` (point 12). So the check narrows the hold (DEC-064 point 1).
 - **What the piece states that the check measures by:** its `media` (point 1). So the review read an image as the check measured it where it did not leave `media` out (point 12).
-- **What the check measures against:** the smallest sizes the piece's top declares (point 2). The hold reaches a piece only where that top lies in a released version of a library (DEC-064 point 2).
+- **What the check measures against:** the smallest sizes the piece's top declares (point 2).
+- **What the check takes as given:** the width the piece's brand gives a page at a size, as the width the page is shown in (point 3).
+- **Both released.** The hold reaches a piece only where that top and that brand each lie in a released version of a library (DEC-064 point 2).
 - **Its findings on an image:** `text-too-small` and `text-size-unmeasured` (points 6 and 10). By them, DEC-064 point 2 says whether the check measured an image and found it clean. Words inside a picture stay out of its reach there, as on any piece (point 4).
-- **A calibration's ladder is read so too** (DEC-064 point 3). So it names its media, under a released top that declares the smallest size of each.
+- **A calibration's ladder is read so too** (DEC-064 point 3). So it names its media, under a released brand and a released top that declares the smallest size of each.
 - **A medium the ladder's top declares no value for** measures no ladder shown in it. A calibration then takes a ladder shown in another medium, waits, or leaves the rule out of its bar (DEC-064 point 3). A room is such a medium until a top declares its value (point 8).
 - **The smallest sizes lapse no hold** (DEC-064 point 5).
 
@@ -245,7 +247,7 @@ A piece is held to the check only where it names a medium (point 9). On every ot
 
 **Why the check states its own fact beside a formula's finding.** The formula's finding says that a formula could not be worked out. It is another check's, which states no reach, so it says nothing a reader may take for this check's silence. With no statement of this check's own, the texts of that page would read as measured and clean (DEC-063 point 3). DEC-046 point 5 has the check state a text whose minimum it cannot work out, in the piece where it meets one.
 
-**Why the brand's width stands for the width a page is shown in.** The check knows no reader's window or document's column. The brand's width at a size is the one statement the files make of it: how wide a page is drawn for that device (DEC-021 point 1, DEC-022 point 3). Against any other width the check would need one no file gives. So on a screen at hand, a brand that draws its pages wider than its devices' windows shrinks every text there, and the check does not see it, as it does not see a reader's zoom. In a room it does not escape, since a share reads the page's own size.
+**Why the brand's width stands for the width a page is shown in.** The check knows no reader's window or document's column. The brand's width at a size is the one statement the files make of it: how wide a page is drawn for that device (DEC-021 point 1, DEC-022 point 3). Against any other width the check would need one no file gives. So on a screen at hand, a brand that draws its pages wider than its devices' windows shrinks every text there, and the check does not see it, as it does not see a reader's zoom. The verdict's hold therefore reaches a piece only under a released brand, which its designer did not write (point 13). In a room it does not escape, since a share reads the page's own size.
 
 **Why a piece may name the sizes each medium shows.** Each size a piece is drawn at has a scene and files of its own (DEC-005 point 6, DEC-023 point 1), and which file is shown where is the piece's to say, as its media are.
 - **Held each to each,** a deck drawn at `desktop` for a laptop and at `projector` for a room would hold its desktop texts to the room's smallest size too, a bar the laptop's reader does not need. Where its brand gives the slide one width at both sizes, as the neutral brand does, that bar is one length at both, and the projector's larger type would gain the check nothing.
@@ -303,7 +305,7 @@ A piece is held to the check only where it names a medium (point 9). On every ot
 
 - **A reach for the check,** in its entry and its code, with a test that holds the two equal. Each clause and statement takes a planted case, and each change to the check repeats the audit (DEC-063 point 1).
 - **The reviewer's own judgement** of each text a statement covers, a text the check compared with another medium among them (point 12).
-- **A narrower hold,** for a bar that covers `RS-GRAPHIC-005`, and none under such a bar until the command can tell. A piece under a top its project is still drafting gets none either (DEC-064, "What it costs").
+- **A narrower hold,** for a bar that covers `RS-GRAPHIC-005`, and none under such a bar until the command can tell. A piece under a top or a brand its project is still drafting gets none either (DEC-064, "What it costs").
 - **A question to the asker** before a fix that changes the piece's media (point 6).
 - **A fact on every draft that names no medium,** in every project. Its findings record gains `text-size-unmeasured` at its next render, and validation shows it from then on. It asks no act, and it stays until the piece names a medium.
 - **A page a mapping keeps from a medium** is read for that medium by neither the check nor the review (point 12).
@@ -362,7 +364,7 @@ A piece is held to the check only where it names a medium (point 9). On every ot
 
 ## Implications
 
-- **Accepted with DEC-064,** in the same change. Point 13 rests on DEC-064 points 1 to 3 and 5, and points 1 and 6 rest on its point 4. DEC-064 rests on points 1, 2, 9, 10 and 12 of this record.
+- **Accepted with DEC-064,** in the same change. Point 13 rests on DEC-064 points 1 to 3 and 5, and points 1 and 6 rest on its point 4. DEC-064 rests on points 1, 2, 3, 9, 10 and 12 of this record.
 - **Edits to accepted records,** made in this change once this record is accepted, each with a refinement pointer to this record. Accepting this record accepts them (COR-066 point 5).
   - **DEC-001 point 5, "Roles stand between structure and values,"** after its sentence on a sign's outline, comes to add that a fact of a top's pages that no brand gives is the top's to hold, and no raw value, since no brand may give it: its physical size (DEC-034 point 3) and the smallest text size it declares for a medium (points 2 and 3).
   - **DEC-005 point 1, "What it may use,"** comes to add that the formula of a top's smallest text size reads only the size of the page a run lies on, as `:page-width` and `:page-height`, and numbers (point 3), as `cross-size` alone reads `:place` and `:places` ([visual-communication:DEC-038-size-by-place] point 2). No other formula reads the two names, and that formula reads neither `:width` nor `:height`. Under a top whose slot holds pages, the page's size is not the size the top itself gets.

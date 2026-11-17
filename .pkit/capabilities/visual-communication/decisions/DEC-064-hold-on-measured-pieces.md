@@ -12,7 +12,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 - **The verdict ends a loop only on a round in that state.** Three things hold of such a round:
   - the check measured each image the review read, and found it clean;
   - the review read the piece as the check measured it;
-  - the designer wrote none of the values the check measured against.
+  - the designer wrote none of the values the check measured against or took as given.
 - **Elsewhere the verdict informs.** Where the command that gives the verdict cannot tell, it informs too.
 - **Where a piece is shown is the asker's to say.** The designer never changes that statement to clear a finding without asking.
 - **The checks of boxes do not narrow the hold.** They fail no page, so a place they name reaches the review either way.
@@ -25,7 +25,7 @@ The verdict ends the designer's loop only where an accepted calibration reaches 
 - **A calibration waits for each check the reviewer's body is written to read.** Otherwise the verdict would end loops "for a review that does not run as it was measured" ([visual-communication:DEC-046-faults-lower-grades] point 8).
 - **A check that has landed has not measured every piece.** A check's silence counts only where it measured ([visual-communication:DEC-063-where-a-check-measures] point 3). The check of a text's size measures a piece only where the piece names its media ([visual-communication:DEC-055-smallest-text-size] point 9). Every piece written before that check names none.
 - **No agent reaches a switch of the hold.** No agent reads the bar, which lies in configuration the project reviews (DEC-042 point 3). Only the change that records an accepted calibration writes the calibrated data (DEC-042 point 9).
-- **The designer writes some of a piece's components.** It writes a piece's local components and a version not yet released of the project's own library. It never writes a released version ([visual-communication:DEC-030-design-agents] point 5). A piece's top may be a local component (the components' page, "Patterns, blocks and top components").
+- **The designer writes some of what a piece is drawn with.** It writes a piece's local components and a version not yet released of the project's own library. It never writes a released version ([visual-communication:DEC-030-design-agents] point 5). A piece's top may be a local component (the components' page, "Patterns, blocks and top components"). A brand of the project's own lies in the project's own library, so the designer may write one in a version not yet released.
 
 What a check's not measuring does differs by check:
 
@@ -48,7 +48,7 @@ Terms:
 
 ## Decision
 
-**Only a check that takes a defect from a rule's grades narrows the hold. The checks of boxes take none, and this record chooses, for its cost, not to narrow the hold by them. Under a bar that covers such a rule, the verdict ends a loop only on a round that check measured and found clean. The review read that round as the check measured it, against values the designer did not write. Where the command cannot tell, the verdict informs. A calibration's ladder is read the same way. Where a piece is shown is the asker's statement, which the designer changes only on the asker's word.**
+**Only a check that takes a defect from a rule's grades narrows the hold. The checks of boxes take none, and this record chooses, for its cost, not to narrow the hold by them. Under a bar that covers such a rule, the verdict ends a loop only on a round that check measured and found clean. The review read that round as the check measured it, and the designer wrote none of the values the check measured against or took as given. Where the command cannot tell, the verdict informs. A calibration's ladder is read the same way. Where a piece is shown is the asker's statement, which the designer changes only on the asker's word.**
 
 ### 1. Only a check that takes a defect from a rule's grades narrows the hold
 
@@ -58,9 +58,9 @@ Terms:
 - **The checks of boxes do not narrow the hold, by choice.** A defect at a place they name holds its rule's grade, as one the reviewer finds from the frames does (DEC-063 point 4). They fail no page, so such a place reaches the review whether or not they measured it. So they take no defect. Their not measuring still changes who sums the frames, and this record chooses not to narrow the hold by it. The Rationale gives the reason, which is cost.
 - **A later check.** The record that has a check take a defect from a rule's grades names this point. It says two things of its check:
   - what a piece states that the check measures by;
-  - which values the check measures against, and which file declares them.
+  - which values the check measures against or takes as given, and which file declares each.
 
-  Point 2 says what it is for a check to have measured an image, and no check's record says that again. DEC-055 points 1, 2 and 10 are the first case.
+  Point 2 says what it is for a check to have measured an image, and no check's record says that again. DEC-055 points 1, 2, 3 and 10 are the first case.
 
 ### 2. The hold reaches a round only where each such check measured it clean, as the review read it
 
@@ -68,14 +68,14 @@ Take a project's bar that covers a rule a check takes a defect from. The verdict
 
 - **The check measured each image the review read, and found it clean.** The viewing step's report names the check for the image. It gives the image no finding of that check: neither a statement that the check could measure nothing, nor a defect (DEC-062 point 2 and DEC-063 point 3).
 - **The review read each image as the check measured it.** It left out nothing the piece states that the check measures by. The review leaves a piece's media out where they disagree with its `shown` field (DEC-055 point 12), and the hold then does not reach that round.
-- **The designer wrote none of the values the check measured against.** Where a file declares such a value, that file lies in a released version of a library, which the piece's lock names. The designer never writes one (DEC-030 point 5). For the check of a text's size, the file is the piece's top (DEC-055 point 2). So a piece whose top is a local component, or lies in a version not yet released, gets no hold.
+- **The designer wrote none of the values the check measured against or took as given.** A value the check takes as given is one it reads as a fact of how the piece is shown, and compares with nothing. Where a file declares a value of either kind, that file lies in a released version of a library, which the piece's lock names. The designer never writes one (DEC-030 point 5). For the check of a text's size, the files are two. The piece's top declares the smallest sizes (DEC-055 point 2). The piece's brand, with each brand it builds on, gives the width a page is drawn at, which the check takes as the width the page is shown in (DEC-055 point 3). So a piece gets no hold where its top is a local component, or where its top or its brand lies in a version not yet released.
 
 What follows from the three:
 
 - **Elsewhere the verdict informs,** and the loop ends as DEC-030 point 2 says.
 - **Where the command cannot tell, the verdict informs.** The command says so among its reasons that the hold is off. That holds wherever the data it would read is missing, cannot be read or is of another round. It holds under every such bar while the command reads no such data (point 6).
 - **A bar that covers no such rule** is reached as DEC-042 point 10 says, with nothing added.
-- **Read on each piece, at each round.** The hold's other conditions are the project's. This one is the piece's, at the round the verdict is given for. A piece gains it by naming its media, under a released top that declares each. A round loses it where one of the three fails.
+- **Read on each piece, at each round.** The hold's other conditions are the project's. This one is the piece's, at the round the verdict is given for. A piece gains it by naming its media, under a released top that declares each and a released brand. A round loses it where one of the three fails.
 - **A round the hold does not reach ends the loop of DEC-042 point 6.** That loop runs only over rounds the hold reaches.
   - **At its first review.** Where the hold does not reach the first review, the loop ends as DEC-030 point 2 says.
   - **At a later round.** The designer stops there, and hands over as DEC-042 point 6 says. It says which of the three failed. That round is never "the last round whose verdict met the bar".
@@ -88,7 +88,7 @@ A calibration whose bar covers such a rule fixes this of its held-out ladder bef
 - **All three conditions of point 2 hold of it.** They are read of every image of every design, and of the calibration's review:
   - each such check measured the image, and found it clean;
   - the review left out nothing the ladder states that the check measures by;
-  - each value the check measured against lies in a released version of a library.
+  - each value the check measured against or took as given lies in a released version of a library.
 - **Why each design passes the check.** The designer mends a check's failure before a loop's review (DEC-042 point 6), and point 2 gives no hold to a round where one stayed. A ladder's designs are fixed, and nobody mends one. So each is drawn to pass, and the outside judge ranks the designs as they then stand.
 - **Its report names what each such check measured by, and against.** An example is the ladder's media and the smallest size of each (DEC-055 points 1 and 2).
 - **A ladder that cannot be read so.** A calibration then takes another ladder that can, leaves the rule out of its bar, or waits. An example is a ladder shown in a medium whose smallest size no top declares. The calibration takes a ladder shown in another medium.
@@ -101,7 +101,7 @@ This point holds wherever the designer mends a piece, under a bar or not, as DEC
 - **Changed only on the asker's word.** A fix that would change either is asked of the person, as a fix that would change the asker's words is (DEC-042 point 7). The designer says what it recommends.
 - **Naming media on a piece that names none is such a change.** The designer may recommend the media its `shown` field reads as. It writes them once the asker agrees.
 - **At every level.** This holds at every level of the setting by which the core will decide how much agents decide without asking ([project-kit#2801](https://github.com/aleskalfas/project-kit/issues/2801)). The asker's words are kept so too (DEC-042 point 7).
-- **What stays the designer's.** It changes alone what the piece is drawn with, such as a style, a brand of the project's own, or a size the piece is drawn at. Where the piece maps its media, a size it adds reaches a medium only once the asker says that medium shows it. A top it writes itself gets no hold (point 2).
+- **What stays the designer's.** It changes alone what the piece is drawn with, such as a style, a brand of the project's own, or a size the piece is drawn at. Where the piece maps its media, a size it adds reaches a medium only once the asker says that medium shows it. A top or a brand it writes itself gets no hold (point 2).
 - **Who the piece is for is not taken in.** The piece's `audience` field steers the review's grades (DEC-042 point 1). It decides none of point 2's conditions, and no check measures by it. Whose it is to change is left open (Implications).
 - **Kept by the designer's own rule.** No command can tell whose word changed a field of the piece's file. The designer tells the person each change it made to either, as it tells every change (DEC-030 point 2). A breach also shows in the committed change to the piece's file, to whoever reads it.
 
@@ -113,7 +113,7 @@ This point holds wherever the designer mends a piece, under a bar or not, as DEC
   - **By who sets it.** The designer wrote no value the hold rests on (point 2). A released version passed its owner's check when it was released ([visual-communication:DEC-003-change-over-time] point 6). A shipped top's value names its source beside it (DEC-055 point 8).
 - **The check's code, its reach and its statements** lapse the hold as every check's do (DEC-062, Implications, "What lapses the hold").
 - **What the narrowing does not guard against.** It guards against no comparison at all, and a value the designer wrote. It guards too against a review that read the piece otherwise than the check measured it. Five cases still get the hold:
-  - a piece measured against a poor value of a released top, such as one of the project's own library;
+  - a piece measured against a poor value of a released top, such as one of the project's own library, or under a released brand that draws its pages wider than the windows that show them;
   - a piece moved to another released top, which declares less;
   - a piece whose `shown` field and media agree, and are both wrong;
   - a piece whose `shown` field and media disagree, where the review missed it. Whether they disagree is the reviewer's reading of words. The review then reads by the media, and nobody judges a place only `shown` names;
@@ -175,9 +175,10 @@ A later consequence of that choice of DEC-046 point 5 is recognised as one by th
 
 **Why the designer wrote none of the values.** DEC-042 keeps every switch of the hold from an agent. The designer may write a piece's top, as a local component or in a version not yet released (DEC-030 point 5). A top that declares a tiny smallest size passes every run. The check then measured the piece and found it clean, and `shown` and the media still agree.
 
+- **A value the check takes as given serves as well.** On a screen at hand the check compares a fixed length with a text's size at the width the brand gives the page (DEC-055 point 3). The designer may write a brand of the project's own, in a version not yet released. A brand that draws its pages wider, with its type scaled by as much, passes texts that shrink below the smallest size in the window that shows them. The check again measured the piece and found it clean.
 - **Nothing else would stop it.** A change to the media alone makes `shown` disagree, and the review then leaves the media out. A change to a value shows nowhere.
-- **A released version is the test a command can make.** The designer never writes one, and the piece's lock names the version (DEC-030 point 5).
-- **What it costs.** A piece under a top the project is still drafting gets no hold until that top is released.
+- **A released version is the test a command can make.** The designer never writes one, of a brand as of a top, and the piece's lock names the version (DEC-030 point 5).
+- **What it costs.** A piece under a top or a brand the project is still drafting gets no hold until that version is released.
 
 **Why the review must have read the piece as the check measured it.** Take a deck whose `shown` says it is projected, and whose media name a screen at hand alone. The check measures every run against the screen, and states nothing. The review leaves the media out, and judges the room as far as the image shows (DEC-055 point 12). That is the unmeasured state, on a piece every image of which the check measured.
 
@@ -205,7 +206,7 @@ A later consequence of that choice of DEC-046 point 5 is recognised as one by th
 
 - **No accepted data could hold the values.** They are each top's by design, a project's own top among them.
 - **A poor value is a lesser case of no value.** Both let pages reach the review that a calibration did not show it. Point 5 says how they differ. Point 2 closes the case where the designer sets the value.
-- **What this leaves to the review.** A poor value in a released top still gets the hold. Whether a text can be read where the piece is shown is graded all the same.
+- **What this leaves to the review.** A poor value in a released top or brand still gets the hold. Whether a text can be read where the piece is shown is graded all the same.
 
 ### What it costs
 
@@ -213,7 +214,7 @@ A later consequence of that choice of DEC-046 point 5 is recognised as one by th
   - the piece names no medium, or its top declares no smallest size for a medium it names;
   - the piece is drawn at a size no medium shows, or a share gives no smallest size on a page (DEC-055 point 10);
   - the review left the media out, or a finding of the check stayed;
-  - the piece's top is a local component, or lies in a version not yet released.
+  - the piece's top is a local component, or its top or its brand lies in a version not yet released.
 - **No piece shown in a room, under a shipped top,** until a top declares a room's value. That waits on reading the standard (DEC-055 point 8). A room is a deck's usual medium.
 - **No hold at all under such a bar, until the command can tell.** That takes in a bar over `GRAPHIC` whole, on every piece, from the check's landing to the follow-up's. The check the calibration waited for leaves its rule's hold waiting on one more piece of work.
 - **A question to the asker** wherever a fix would change where the piece is shown, and before a piece that names no medium comes to name one.
@@ -246,15 +247,15 @@ A later consequence of that choice of DEC-046 point 5 is recognised as one by th
 
 - **This change adds a record, and changes nothing a project could observe.** The work that builds it changes the command that gives the verdict, and declares its own changeset.
 - **Accepted with DEC-055,** in the same change.
-  - **This record rests on** DEC-055 points 1, 2, 9, 10 and 12: a piece's media, a top's smallest size, when the check measures a piece, its statement, and what the review leaves out.
+  - **This record rests on** DEC-055 points 1, 2, 3, 9, 10 and 12: a piece's media, a top's smallest size, the width the check takes as given, when the check measures a piece, its statement, and what the review leaves out.
   - **Resting on this record:** DEC-055 point 13, on points 1 to 3 and 5, and DEC-055 points 1 and 6, on point 4.
 - **Edits to accepted records,** made in this change once this record is accepted, each with a refinement pointer to this record. Accepting this record accepts them (COR-066 point 5).
   - **DEC-042's plain-terms summary.** After "Until then the grades only inform.", it comes to add: "Where a check takes a defect from the grades of a rule the bar covers, so that the defect lowers none of them, the loop runs so only on a round that check measured and found clean, as point 10 says (refinement per [visual-communication:DEC-064-hold-on-measured-pieces] points 1 and 2)."
   - **DEC-042 point 6, its scope sentence.** After "Elsewhere the designer's loop ends as DEC-030 point 2 says.", it comes to add: "Point 10 reads the hold on each round where a check takes a defect from the grades of a rule the bar covers. A loop whose first review the hold does not reach ends as DEC-030 point 2 says. A loop the hold reached ends at the first later round the hold does not reach, by this point's hand-over (refinement per [visual-communication:DEC-064-hold-on-measured-pieces] point 2)."
   - **DEC-042 point 6, the bullet "Then the person, with the last round that met the bar".** After "or at its last round where none did.", it comes to add: "A round the hold does not reach (point 10) is never the last round whose verdict met the bar. Where the loop ends at such a round, the designer says which of point 10's three conditions failed (refinement per [visual-communication:DEC-064-hold-on-measured-pieces] point 2)."
   - **DEC-042 point 10, the bullet "Any project within what was calibrated".** "while nothing point 9 names lapses the hold." comes to read: "while nothing point 9 names lapses the hold. Where a check takes a defect from the grades of a rule the bar covers, the next bullet narrows that to the rounds the check measured (refinement per [visual-communication:DEC-064-hold-on-measured-pieces] points 1 and 2)."
-  - **DEC-042 point 10,** after the bullet "Any project within what was calibrated", gains a bullet: "**Only a round measured by each check that takes a defect from a covered rule's grades.** Where a check takes a defect from the grades of a rule the bar covers, the verdict ends the loop only on a round of which three things hold. That check measured each image the round's review read, with no statement of it and no defect it found on the image. The review read each image as the check measured it. Each value the check measured against lies in a released version of a library. Elsewhere it informs. Where the command cannot tell, it informs, and says so among its reasons. A round the hold does not reach ends the loop of point 6 (refinement per [visual-communication:DEC-064-hold-on-measured-pieces] points 1 and 2)." It narrows the point.
-  - **DEC-042 point 9,** the bullet "a held-out ladder". After "Each calibration takes a fresh ladder", it comes to add: "Where a check takes a defect from the grades of a rule the bar covers, the ladder is read as point 10 reads a round. That check measures every image of every design, with no statement of it and no defect it found on any. The calibration's review reads each image as the check measured it, and each value the check measured against lies in a released version of a library. So each design passes that check, and the outside judge ranks the designs as they then stand. The calibration's report names what each such check measured by, and against. For the check of a text's size, an example, that is the ladder's media and the smallest size of each (refinement per [visual-communication:DEC-064-hold-on-measured-pieces] point 3)."
+  - **DEC-042 point 10,** after the bullet "Any project within what was calibrated", gains a bullet: "**Only a round measured by each check that takes a defect from a covered rule's grades.** Where a check takes a defect from the grades of a rule the bar covers, the verdict ends the loop only on a round of which three things hold. That check measured each image the round's review read, with no statement of it and no defect it found on the image. The review read each image as the check measured it. Each value the check measured against or took as given lies in a released version of a library. Elsewhere it informs. Where the command cannot tell, it informs, and says so among its reasons. A round the hold does not reach ends the loop of point 6 (refinement per [visual-communication:DEC-064-hold-on-measured-pieces] points 1 and 2)." It narrows the point.
+  - **DEC-042 point 9,** the bullet "a held-out ladder". After "Each calibration takes a fresh ladder", it comes to add: "Where a check takes a defect from the grades of a rule the bar covers, the ladder is read as point 10 reads a round. That check measures every image of every design, with no statement of it and no defect it found on any. The calibration's review reads each image as the check measured it, and each value the check measured against or took as given lies in a released version of a library. So each design passes that check, and the outside judge ranks the designs as they then stand. The calibration's report names what each such check measured by, and against. For the check of a text's size, an example, that is the ladder's media and the smallest size of each (refinement per [visual-communication:DEC-064-hold-on-measured-pieces] point 3)."
   - **DEC-042 point 7,** after the bullet "By where they came from", gains a bullet: "**Where the piece is shown is the asker's too.** A piece's `shown` field and the media it names are the asker's statement of where it is shown. The designer writes them from what the asker says, and shows them to the asker as it shows the goals. A fix that would change either is asked as one that would change the asker's words. So is naming media on a piece that names none (refinement per [visual-communication:DEC-064-hold-on-measured-pieces] point 4)." The bullet lies outside the last two, so it holds at every level of the setting.
   - **DEC-042 point 7, "What it asks".** "where a fix would change the asker's words or cut a fact a goal or relation rests on" comes to read "where a fix would change the asker's words or where the piece is shown, or cut a fact a goal or relation rests on".
   - **DEC-030 point 2, "What it asks the person,"** in its first case. After that case's refinement pointer, it comes to add: "A fix that would change where the piece is shown, as its `shown` field and its media say it, is asked so too (refinement per [visual-communication:DEC-064-hold-on-measured-pieces] point 4)."
@@ -278,7 +279,7 @@ A later consequence of that choice of DEC-046 point 5 is recognised as one by th
   - **The designer's body and the skill's page on a piece** come to say point 4, and that a round the hold does not reach ends the loop (point 2).
 - **The follow-up, [project-kit#FOLLOWUP],** has the command tell (point 6). It stands beside [project-kit#3296](https://github.com/aleskalfas/project-kit/issues/3296), which has the command compare the checks the review reads.
   - **It settles the source first,** in a record that refines point 6. That record also weighs whether the checks of boxes narrow the hold through their statement.
-  - **Its scope takes in the three conditions of point 2:** whether the check measured each image clean, the review's line that it left the media out, and whether the piece's top is released.
+  - **Its scope takes in the three conditions of point 2:** whether the check measured each image clean, the review's line that it left the media out, and whether the piece's top and its brand are released.
   - **Until it lands,** no bar that covers `RS-GRAPHIC-005` gets the hold.
 - **The order of the later work, for economy.** No wait is decided here (point 6).
   - **The review's field.** [project-kit#3328](https://github.com/aleskalfas/project-kit/issues/3328) words the review's reading of `media`. Its scope comes to take in the field by which the review's report says that it left the media out.
