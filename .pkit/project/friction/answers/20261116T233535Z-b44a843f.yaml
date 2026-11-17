@@ -109,3 +109,7 @@ answers:
             kind: record
             value: ADR-096
           reason: "ADR-096 now cites DEC-074 where it said project-kit#3193 proposes that the board check warn. The README's pre-check row under 'When the board does not answer', which still leaves that to project-kit#3193, changes with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-097
+          reason: "ADR-097 now cites DEC-074 point 4 where it spoke of project-kit#3193's draft: DEC-074 gives each of pre-check's checks a key in its report that keeps its check for good, and cites ADR-097 for how the report stays stable. None of ADR-097's points changes, so 'What the commands print for a program' keeps to the rule as it did. The fields 'The prerequisites: pre-check' lists for the report, which name no key for each check, change with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
