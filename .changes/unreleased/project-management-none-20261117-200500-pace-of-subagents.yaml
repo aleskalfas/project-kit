@@ -1,0 +1,15 @@
+component: project-management
+kind: none
+body: >
+  DEC-082, which a person accepts in this change (#3394), decides how many
+  subagents the project-manager agent runs at once: one setting of the
+  capability's committed configuration, read from the default branch, gives
+  the ceiling, `off`, a number or `max`, and `off` where it is absent.
+  Builders and reviewers count alike. The agent starts first what its work in
+  flight waits for, then the next Task nothing blocks, nearest the work just
+  done; a worker's directing seat, or a person, sets the worker's pace within
+  the ceiling on its state issue; a lowered pace stops nothing that runs. It
+  refines DEC-059, DEC-061 and DEC-063 in place. The configuration, the
+  topology, the state issues, the agent and the work loop are unchanged until
+  the Task that builds them, which declares its own changeset, so no surface
+  moves here.
