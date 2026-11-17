@@ -388,7 +388,7 @@ A piece is held to the check only where it names a medium (point 9). On every ot
   - DEC-028 points 1 and 10, since the smallest size stays a check's. Point 10 takes no pointer, since this record decides nothing of what it says (Alternatives considered).
   - DEC-030 point 7, since what a check measures stays the check's, and the reviewer, which reads the piece's file, runs nothing more to read `media`.
   - DEC-034 point 3, since a physical size stays the top's, which DEC-001 point 5 comes to name beside the smallest size, and a share of the page keeps its share on paper.
-  - DEC-042 point 2, since the check it names is this one. Its points 7, 9 and 10, DEC-030 point 2 and DEC-063 point 4's last sentence take DEC-064's edits and none of this record's.
+  - DEC-042 point 2, since the check it names is this one. Its plain-terms summary and its points 6, 7, 9 and 10, DEC-030 point 2 and DEC-063 point 4's last sentence take DEC-064's edits and none of this record's.
   - DEC-046 point 8, since its bullet on the report stands. What a calibration's report names of this check is DEC-042 point 9's, by DEC-064's edit.
   - DEC-046 point 5's other bullets, each for its own reason:
     - **"Who says where no text's size was measured":** this check states words inside a picture in its entry. It states in the piece each text whose minimum it cannot work out (points 4 and 10).
