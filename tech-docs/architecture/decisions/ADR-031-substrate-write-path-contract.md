@@ -289,7 +289,8 @@ twin of ADR-026's fail-closed:
 - **Residual-pre-check gate.** The back-fill refuses on the subset of `pre-check`
   that still hard-fails in brownfield (DEC-036 made `pre-check` degrade to a
   capability matrix rather than hard-refuse): `gh` auth invalid, repo inaccessible,
-  `substrate-map.yaml` fails to parse, or — a fourth member (DEC-037 §2) — a covered
+  `substrate-map.yaml` fails to parse, or — a fourth member (DEC-037 §2), back-fill's
+  own, computed apart from pre-check — a covered
   `set-board-field` intent is declared yet the Projects-v2 board node-id cannot be
   resolved at all (a conjunction computed after intent resolution; a global
   precondition surfaced once, distinct from the per-issue not-on-board `blocked`
