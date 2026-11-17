@@ -10,7 +10,9 @@
 # `round-<n>.yaml`.
 #
 # The body below is the reference instance: a second round, one of whose grades differs
-# from the round before.
+# from the round before. Two faults hold one grade, and its evidence names each by the id
+# the report gives it, then the reading beyond them. One grade only the asker's words would
+# raise.
 
 pkit_schema: visual-communication:review
 schema_version: 1
@@ -57,14 +59,27 @@ grades:
     since-last-round:
       was: below competent
       why: The mark is smaller than in the round before, so it no longer outranks the figure.
-  - rule: RS-GRAPHIC-005
+  - rule: RS-GRAPHIC-002
     on:
       page: layers
     grade: competent
-    evidence: The top level's text is too fine for a projector.
+    evidence: >-
+      F1, alignment, at deck/slides[layers]/body/levels[middle]; F2, alignment, at
+      deck/slides[layers]/body/levels[base]. Beyond them, the note on the levels stands
+      nearer the footer than the figure it explains.
+  - rule: RS-GRAPHIC-005
+    on:
+      page: layers
+    grade: professional
+    evidence: Each text and part reads as drawn where the deck is projected, and the page is taken in at a glance.
+  - rule: RS-COMM-001
+    on:
+      page: plan
+    grade: competent
+    evidence: The lead lists the plan's three phases, and answers no question the title asks.
     mark:
-      kind: need
-      names: A size of the library's text that reads at a projector's distance.
+      kind: asker
+      names: The title and the lead of the page plan, which the asker has seen.
   - rule: RS-COMM-003
     on:
       piece: true
@@ -75,3 +90,7 @@ not-graded:
     on:
       page: cover
     why: A page whose layout has no lead is not judged by this rule.
+  - rule: RS-GRAPHIC-008
+    on:
+      page: cover
+    why: A heading, a title and a label are not judged by this rule, and the cover holds nothing else.

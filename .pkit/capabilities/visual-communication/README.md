@@ -566,7 +566,7 @@ You may hand it a build pipeline's drawings instead, fetched into a folder of th
 
 Each finding names the page, the element's trace id where the element was drawn ([Trace ids](components.md#trace-ids)), and where its fix belongs. A finding is one of four kinds, kept apart by what it cites:
 
-- **A fault,** which the agent's list names: a part missing or blank, a wrong font, text over text, a text that does not read over a picture, a wrong picture, an overlap or a join that misses, a fault of alignment, or a drawing that disagrees with a passing check.
+- **A fault,** which the agent's list names: a part missing or blank, a wrong font, text over text, a text that does not read over a picture, a wrong picture, an overlap or a join that misses, a fault of alignment, a drawing that disagrees with a passing check, or a stray text.
 - **A rule finding,** which cites a rule by its id, and carries its grade where the grade is below `professional`. Today it only informs, since no rule binds on a piece's files yet.
 - **A brief finding,** which cites the part of the piece's brief that the drawing does not show.
 - **A note,** anything else worth a look. A note of taste names the practice it draws on, from the design knowledge. A note never fails.
