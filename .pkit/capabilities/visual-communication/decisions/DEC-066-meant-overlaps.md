@@ -1,7 +1,7 @@
 ---
 id: DEC-066
 title: A part names the parts it lies over on purpose
-status: proposed
+status: accepted
 date: 2026-11-17
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
