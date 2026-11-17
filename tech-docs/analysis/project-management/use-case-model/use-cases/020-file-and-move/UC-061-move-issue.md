@@ -181,7 +181,7 @@ pkit:
 - **5e.** An issue above moves, or the moved issue or an issue above gets another parent, after the system planned the cascade. Just before the cascade writes to an issue above, the system reads that issue again, and writes from that read alone ([DEC-075 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md#2-the-cascade-writes-to-an-ancestor-only-from-reads-made-after-the-move)). Where that read gets no reply, or an issue below has another parent, the cascade writes nothing there or above it, and warns.
 
 > [!WARNING]
-> **Not built yet:** the cascade writes from the read that planned it, unless the engine places the issue above elsewhere after the move. It checks no parent again. [DEC-075](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md) decides both, and #2305 tracks it.
+> **Not built yet:** the cascade writes from the read that planned it, unless the engine places the issue above elsewhere after the move. The cascade checks no parent again. [DEC-075](../../../../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md) decides both, and #2305 tracks it.
 
 - **6a.** The issue is assigned to someone else. `start-work` refuses, and changes nothing (`start-work.py`).
 - **6b.** The issue is still in Todo. `start-work` refuses, names the move to make first, and changes nothing (`composed_move.py`).
