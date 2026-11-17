@@ -18,7 +18,8 @@ grade that fails it, each marked grade it leaves out, and the rules the bar cove
 
 It then says whether the verdict ends the designer's loop: only where a calibration's
 report is accepted, the bar covers only rules with evidence of their own in it, and nothing
-the accepted data names has lapsed (`calibration`). Where it ends no loop, or no verdict is
+the accepted data names has lapsed, the capability's code and its list of checks among it,
+each by its digest (`calibration`; DEC-065). Where it ends no loop, or no verdict is
 given, it says why, and the loop ends as DEC-030 point 2 says. It starts nothing: a lapse
 only withdraws the hold, and a new calibration is a person's to start.
 
