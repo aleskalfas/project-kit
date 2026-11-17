@@ -358,42 +358,6 @@ answers:
       at: 2026-11-14T19:22:24Z
       outcome: unchanged
       unchanged-because: The window, the order and step 3's ignore entry stand, and no migration of an externally-sourced capability runs.
-  - artefact: .pkit/lifecycle/upgrade-flow.md
-    read:
-      - 20261109T103219Z-76953beb.yaml
-      - 20261109T194840Z-39b3598b.yaml
-      - 20261109T195651Z-606019d5.yaml
-      - 20261110T025546Z-69a44f1e.yaml
-      - 20261110T212240Z-c6177e80.yaml
-      - 20261111T082938Z-b6b1d9a3.yaml
-      - 20261111T085757Z-ec4f3511.yaml
-      - 20261111T143433Z-c966325a.yaml
-      - 20261111T205252Z-4cfa1660.yaml
-      - 20261111T211406Z-59d1a8df.yaml
-      - 20261111T215248Z-91725510.yaml
-      - 20261112T091032Z-823069cd.yaml
-      - 20261112T094911Z-6ef4bac4.yaml
-      - 20261112T162755Z-424e83da.yaml
-      - 20261113T015341Z-df578670.yaml
-      - 20261113T074852Z-8d5346ed.yaml
-      - 20261113T134717Z-36e0821f.yaml
-      - 20261113T140535Z-dad8bdc7.yaml
-      - 20261113T155900Z-499e23c9.yaml
-      - 20261113T162107Z-5e55cd43.yaml
-      - 20261113T164650Z-0b1377a1.yaml
-      - 20261113T181005Z-1533807d.yaml
-      - 20261113T194652Z-522f1d81.yaml
-      - 20261113T221124Z-bd48f436.yaml
-      - 20261114T165854Z-0aa5ab74.yaml
-      - 20261115T224511Z-687cfec6.yaml
-      - 20261115T225309Z-fb593e04.yaml
-      - 20261116T071805Z-ffb1106a.yaml
-    revalidated:
-      deferred:
-        - anchor:
-            kind: record
-            value: ADR-065
-          reason: "The page describes the upgrade as built, with main's install from another repository in it: a transition reads an externally-sourced capability's range from its copy alone, moves no pin, and runs no copy refusal. The refined ADR-065 points 4, 6 and 7 add to step 1 the refusal of a copy out of line and the fetch of a moved pin, to step 3 the landing of that content, to the gates and the collision flow a moved pin's content, and let such a pin move down. The open #3229 builds them and brings the page's step 1, its gates, its collisions and its per-component upgrade in line."
   - artefact: .pkit/release/README.md
     read:
       - 20261025T221340Z-215a759f.yaml
