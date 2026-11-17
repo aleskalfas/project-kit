@@ -1,8 +1,8 @@
 ---
 id: DEC-077
 title: The post-check workflow gives a card missing at filing, where the board does not hold the state
-status: proposed
-date: 2026-11-16
+status: accepted
+date: 2026-11-17
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
