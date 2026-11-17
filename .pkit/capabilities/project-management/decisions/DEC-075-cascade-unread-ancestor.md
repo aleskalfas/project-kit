@@ -1,7 +1,7 @@
 ---
 id: DEC-075
 title: A move that schedules or starts work is refused where a read its cascade is planned on gets no answer
-status: proposed
+status: accepted
 date: 2026-11-14
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
