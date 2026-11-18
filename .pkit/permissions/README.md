@@ -69,7 +69,7 @@ The permission model decides each tool call an agent makes, from grants of privi
 
 ## Grants and verdicts
 
-The model grants privileges to subjects, and the decision core gives each tool call one verdict from those grants (COR-028 point 1). The locked commands below add a verdict that rests on no grant (ADR-095 point 3).
+The model grants privileges to subjects, and the decision core gives each tool call one verdict from those grants (COR-028 point 1). The locked commands below add a verdict that rests on no grant.
 
 - **A subject** is `all`, `operator` or `agent:<name>`. `all` is every agent and the operator, and `operator` is the person who drives the session. "Default-agent subject resolution" below says which subject a call is decided for.
 - **A grant** holds these keys, in the shape `.pkit/schemas/permission-grants.schema.json` gives:
@@ -89,7 +89,7 @@ The model grants privileges to subjects, and the decision core gives each tool c
   - **`abstain`:** no grant decides the call. The harness's own rules decide it: the allows and denies in its settings. The adapter writes them from its baseline and the model (COR-028 point 2). A call they neither allow nor deny goes to the harness's permission mode, which may ask the operator.
   - **`ask`:** the call runs a command the catalog's `locks` name, which changes what judges later calls ("The locked commands" below). The core gives it with no model, and the hook puts the call to the operator in every mode.
 - **The posture** decides a call no grant covers. Under `lenient`, the default, the core abstains. Under `strict`, it denies. The posture is in `.pkit/permissions/project/config.yaml`.
-- **The locked commands** are judged with no model, beside the grants ([ADR-095](../../tech-docs/architecture/decisions/ADR-095-hook-out-of-reach.md) point 3, [ADR-099](../../tech-docs/architecture/decisions/ADR-099-named-folders-under-copy.md) point 1). [The Claude Code adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy) says how the hook gives them.
+- **The locked commands** are judged with no model, beside the grants. [The Claude Code adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy) says how the hook gives them.
   - **What they are.** The catalog's `locks` name the commands that change what judges every later call. Among them are realizing the model, turning the hook on or off, and widening the sandbox. The backbone's upgrade and the installer's commands that write a guarded folder are among them too.
   - **Their verdicts.** On a shell call the core's `own_verdict()` reads as one of them, it gives the interlock's `ask`, which the hook gives in every mode. On a call it reads as naming a folder where the hook puts no ask, it gives a `deny`.
   - **A mention meets none.** The reading errs away from a mention, so a commit message that names such a command meets nothing. Where the reading is in doubt, it gives no verdict of its own.
