@@ -6,38 +6,56 @@ body: >
   The graphic-design review grades a rule professional only on evidence of
   that level (#3396): before it grades a rule professional it names the
   strongest weakness the rule's own words fail on, and grades the rule below
-  professional where a reader meets it and a professional would not hand the
-  page over without mending it. A weakness a professional would polish leaves
-  the grade professional, named in its evidence. Before excellent it names
-  what makes the page an example. A fault that cites no rule moves no grade. A
-  weakness of design that is no fault lowers each rule whose own words fail on
-  it, never as a repeat of another rule's test, and is described once. What a
-  professional would mend before handing the page over is a rule finding, not
-  a note, and a doubt stays a note and moves no grade. A grade judges the page
-  a reader meets, wherever the cause lies, and a grade only a tool the engine
-  lacks would raise is marked a need. Where a page's part of the brief gives
-  no relation and no takeaway, a path that does not follow its lead is filed
-  as for a piece with no brief. The reviewer's steps for the rules on the
-  focal point (`RS-GRAPHIC-001`), the form (`RS-GRAPHIC-007`) and the pages'
-  order (`RS-COMM-003`) point to the design knowledge's topics, which gain
-  Minto's deductive order and a question on the strongest difference. Four
-  rules gain clearer words: `RS-GRAPHIC-001` has a page's title and lead rank
-  above the rest, and its focal point lie in the content, seen first after
-  them, a group of equal parts among what may be one, and no part made one by
-  the order of reading alone; `RS-GRAPHIC-003` says what decoration is,
-  whether the piece or a component draws it, counts marking the piece's
-  identity as part of a page's job, and leaves the frame out; `RS-GRAPHIC-007`
-  counts every visual variable, and only a difference a reader takes for
-  meaning; and `RS-COMM-003` reads the leads with the section openers' titles,
-  asks for one reasoned order in each group, a deductive order among them, and
-  breaks only on a lead that cannot be understood without a later page. So
-  `GRAPHIC` rises to 3.0.0 and `COMM` to 2.0.0, new majors. A project's set
-  that inherits `visual-communication:GRAPHIC@2` or
-  `visual-communication:COMM@1` fails validation, and no rule of that set
-  binds through it, until the project reads the reworded rules in
-  `rule-sets/graphic.md` and `rule-sets/comm.md` and moves its pin to
-  `GRAPHIC@3` or `COMM@2`. A bar that names `GRAPHIC@2`, `COMM@1` or a rule of
-  either at that major fails the capability's check (`bar-major`) until the
-  project names the new major in the configuration's `bar`. No migration moves
-  a pin or a bar, since the project's own reading of the reworded rules is what
-  each waits for.
+  professional where the rule's own words fail on the weakness and a
+  professional would not hand the page over without mending it. Otherwise it
+  is polish, and the grade stays professional, named in its evidence. Before
+  excellent it names what makes the page an example. A fault that cites no
+  rule moves no grade. A weakness of design that is no fault lowers a second
+  rule only where that rule's own test, which no other rule asks, fails on it,
+  and is described once, in the finding of the first rule by id that it
+  lowers. What the reviewer sees under a rule's words is a rule finding, not
+  a note, where a reader meets it and the reviewer can say a professional
+  would mend it before handing the page over; a doubt stays a note and moves
+  no grade. A grade judges the page a reader meets, wherever the cause lies, and
+  a grade only a tool the engine lacks would raise is marked a need. Where a
+  page's part of the brief gives no relation and no takeaway, a path that does
+  not follow its lead is filed as for a piece with no brief. The reviewer's
+  steps for the rules on the focal point (`RS-GRAPHIC-001`), the form
+  (`RS-GRAPHIC-007`) and the pages' order (`RS-COMM-003`) point to the design
+  knowledge's topics, which gain Minto's deductive order, Duarte's movement
+  between what is and what could be, and a question on the strongest
+  difference. Four rules are reworded, with the new record DEC-068 as their
+  origin. `RS-GRAPHIC-001`: a page's focal point is what shows its point;
+  nothing but what shows the point outranks the title and the lead, and among
+  the rest of the page what shows the point is seen first. On a page with no
+  lead, such as a cover, the title is judged with the rest and may be the
+  focal point itself. A group the content gives as one, or a list whose point
+  is its order, may be the focal point as one, and no part is one by the
+  order of reading alone. A figure's caption is its lead only where the
+  figure has a title, a page taller than its screen is judged on the screen a
+  reader meets first, and the page's frame, such as a footer, may not outrank
+  the title, the lead or what shows the point. `RS-GRAPHIC-003`: decoration
+  is what carries none of the content, whether the piece or a component draws
+  it; a part drawn louder than its job needs, such as a heavy grid or border,
+  competes as decoration does; marking whose piece it is is part of a page's
+  job; and the frame is judged by whether it competes with the content.
+  `RS-GRAPHIC-007`: it counts every visual variable, and only a difference a
+  reader takes for meaning; the strongest difference in the page's content,
+  below its title and its lead, goes to what its point is about; it leaves
+  the frame out, and leaves whether what shows the point is seen first to
+  `RS-GRAPHIC-001`. `RS-COMM-003`: the leads, read with the titles of the
+  section openers, keep one reasoned order a reader can name in each group,
+  such as a deductive order or one of time, of structure or of rank. It
+  breaks on a lead that cannot be understood without what a later page shows,
+  and on a lead whose place that order does not explain; a page with no lead,
+  such as a cover, an agenda or a closing page, is not judged by its place.
+  So `GRAPHIC` rises to 3.0.0 and `COMM` to 2.0.0, new majors. A project's set
+  that inherits `visual-communication:GRAPHIC@1` or `GRAPHIC@2`, or
+  `visual-communication:COMM@1`, fails validation, and no rule of that set
+  binds through it, until the project reads again `RS-GRAPHIC-008` and the
+  four reworded rules, in `rule-sets/graphic.md` and `rule-sets/comm.md`, and
+  moves its pins to `GRAPHIC@3` and `COMM@2`. A bar that names `GRAPHIC@1`,
+  `GRAPHIC@2`, `COMM@1` or a rule of either set at such a major fails the
+  capability's check (`bar-major`) until the project names the new major in
+  the configuration's `bar`. No migration moves a pin or a bar, since the
+  project's own reading of the rules is what each waits for.

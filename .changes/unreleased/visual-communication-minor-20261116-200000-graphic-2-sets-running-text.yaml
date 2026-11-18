@@ -26,3 +26,6 @@ body: >
   capability's check (`bar-major`) until the project names `@2` in the
   configuration's `bar`. No migration moves a pin or a bar, since the
   project's own reading of the new rule is what each waits for.
+  `GRAPHIC@2` never ships: the same release raises the set to 3.0.0 (#3396),
+  so a project writes `GRAPHIC@3` in its set's `inherits` and in its `bar`
+  instead, as that change's note says.

@@ -1,29 +1,4 @@
 answers:
-  - artefact: .pkit/capabilities/visual-communication/rule-sets/comm.md#RS-COMM-001
-    read:
-      - 20261108T215357Z-e935f32b.yaml
-      - 20261110T222245Z-de38af02.yaml
-      - 20261110T222753Z-50414ce4.yaml
-      - 20261111T115332Z-fe0ee923.yaml
-      - 20261116T070049Z-7ae3a863.yaml
-      - 20261116T074044Z-8e03e0ad.yaml
-      - 20261116T094808Z-1da6c2c1.yaml
-      - 20261117T151447Z-4fdb6bb7.yaml
-    revalidated:
-      at: 2026-11-17T23:09:44Z
-      outcome: unchanged
-      unchanged-because: DEC-028 point 6 gains a sentence in its bullet on RS-COMM-003 alone, naming Minto's four orders of a group and what following means there. Its bullet on this rule, Alley's assertion-evidence and Minto's vertical logic, is as it was, so whether a page's lead answers its title and its main visual shows that answer stands as the rule states it.
-  - artefact: .pkit/capabilities/visual-communication/rule-sets/comm.md#RS-COMM-002
-    read:
-      - 20261108T215357Z-e935f32b.yaml
-      - 20261110T222245Z-de38af02.yaml
-      - 20261110T222753Z-50414ce4.yaml
-      - 20261111T115332Z-fe0ee923.yaml
-      - 20261116T070049Z-7ae3a863.yaml
-    revalidated:
-      at: 2026-11-17T23:09:48Z
-      outcome: unchanged
-      unchanged-because: DEC-028 point 6 gains a sentence in its bullet on RS-COMM-003 alone, naming Minto's four orders of a group and what following means there. Its bullet on this rule, Minto's answer before its arguments, Shneiderman's overview first and the sources for something new, is as it was, and RS-COMM-003 now says that an answer given first, as this rule asks, breaks nothing, so the two rules agree.
   - artefact: .pkit/capabilities/visual-communication/rule-sets/comm.md#RS-COMM-003
     read:
       - 20261108T215357Z-e935f32b.yaml
