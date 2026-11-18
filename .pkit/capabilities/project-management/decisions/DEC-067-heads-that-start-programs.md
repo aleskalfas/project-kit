@@ -60,7 +60,7 @@ Unless a person names it (point 4), no temporary checkout of the head or of its 
 
 ### 4. A person at a terminal can name a head for one run
 
-At a terminal, the command shows the head's commit and the repository it comes from. It says the head's programs would start under the person's account, and that reading the head's diff needs no checkout. The person answers by typing the commit's short id.
+At a terminal, the command shows the head's commit and the repository it comes from. It says the head's programs would start under the person's account, and under a credential that names no user's account, that they would start under the credential the session holds, which acts as no person's account (refinement per [project-management:DEC-076-app-credentials]). It says too that reading the head's diff needs no checkout. The person answers by typing the commit's short id.
 
 - **What the word covers.** That one run of that command: the commit named, its merge with the base, and the reviewers the run starts. Another run, or a later head, asks again.
 - **What gives it.** Only that answer. No flag, no run authorised up front and no run off a terminal gives it.
