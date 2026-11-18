@@ -4,7 +4,7 @@ custom:
   category: Added
 body: >
   The configuration holds a project's bar and the bounds of the designer's loop
-  (#3222). `bar: {covers: [COMM@1, GRAPHIC@2], at-least: professional}` names the
+  (#3222). `bar: {covers: [COMM@2, GRAPHIC@3], at-least: professional}` names the
   rule sets or single rules it covers, each with its set's major, and the grade
   each page and the piece must reach, `professional` or `excellent`.
   `bounds: {to-the-bar: 5, polish: 2}` sets the rounds the loop may run to the

@@ -11,12 +11,12 @@ location: visual
 # A change to it needs the maintainer's own yes.
 bar:
   covers:
-    - COMM@1
-    - RS-GRAPHIC-001@2
-    - RS-GRAPHIC-002@2
-    - RS-GRAPHIC-003@2
-    - RS-GRAPHIC-004@2
-    - RS-GRAPHIC-005@2
-    - RS-GRAPHIC-006@2
-    - RS-GRAPHIC-007@2
+    - COMM@2
+    - RS-GRAPHIC-001@3
+    - RS-GRAPHIC-002@3
+    - RS-GRAPHIC-003@3
+    - RS-GRAPHIC-004@3
+    - RS-GRAPHIC-005@3
+    - RS-GRAPHIC-006@3
+    - RS-GRAPHIC-007@3
   at-least: professional
