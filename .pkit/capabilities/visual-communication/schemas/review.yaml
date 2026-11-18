@@ -72,8 +72,9 @@ grades:
     grade: professional
     evidence: >-
       The lead answers the title, and the stepped figure shows the point the lead states.
-      The strongest weakness weighed: the lead answers the title only after it repeats the
-      title's words, which a professional would hand over as it is.
+      The strongest weakness weighed: the lead answers the title for the top and the middle
+      levels, and leaves the base to the figure, which a professional would polish by naming
+      the base in the lead.
   - rule: RS-GRAPHIC-001
     on:
       page: layers
@@ -130,12 +131,11 @@ grades:
       piece: true
     grade: professional
     evidence: >-
-      The sections keep a deductive order, from what the layers are to the plan that builds
-      them, and the pages within each keep an order of structure, from the whole to its
-      parts. The strongest weakness weighed: the title of the second section's opening page
-      follows from the first section's last statement by a step the deck leaves out, why the
-      layers need a plan, which a reader supplies at once, and a professional would hand the
-      deck over as it is.
+      The deck has no sections, so its pages are one group, and their statements keep a
+      deductive order: the lead of the page plan, which lists the plan's three phases,
+      follows from the lead of the page layers. The strongest weakness weighed: it follows
+      by a step the deck leaves to its reader, why the layers need a plan, which a reader
+      supplies at once, and a professional would hand the deck over as it is.
 not-graded:
   - rule: RS-COMM-001
     on:
