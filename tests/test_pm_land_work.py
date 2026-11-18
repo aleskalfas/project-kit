@@ -127,6 +127,18 @@ def _done(args: list[str], stdout: str = "", returncode: int = 0, stderr: str = 
     return subprocess.CompletedProcess(args, returncode, stdout, stderr)
 
 
+def _rest_comment(n: int, comment: dict[str, Any]) -> dict[str, Any]:
+    """``comment``, as `gh`'s JSON gives it, as GitHub's REST interface gives it:
+    an id, and the author as a user's account unless it names its type."""
+    author = comment.get("author") or {}
+    return {
+        "id": n + 1,
+        "user": {"login": author.get("login"), "type": author.get("type", "User")},
+        "body": comment.get("body"),
+        "created_at": comment.get("createdAt"),
+    }
+
+
 @dataclass
 class _FakeGitHub:
     """One PR, its issue and its checks, as GitHub would answer for them."""
@@ -278,6 +290,19 @@ class _FakeGitHub:
                 "timelineItems": {"nodes": []},
             }
             return _done(argv, json.dumps({"data": {"repository": {"issue": issue}}}))
+        if argv[:2] == [
+            "api",
+            f"repos/{{owner}}/{{repo}}/issues/{PR}/comments?per_page=100&page=1",
+        ]:
+            # The merge gate reads the PR's comments with each author's type
+            # (project-management DEC-079 point 3).
+            return _done(
+                argv, json.dumps([_rest_comment(n, c) for n, c in enumerate(self.comments)])
+            )
+        if argv[:2] == ["api", "--paginate"] and argv[2].startswith(
+            f"repos/{{owner}}/{{repo}}/pulls/{PR}/reviews"
+        ):
+            return _done(argv, "")
         return _done(argv, returncode=1, stderr=f"the fake GitHub does not know {argv}")
 
     def _view(self) -> dict[str, Any]:
@@ -5069,7 +5094,9 @@ def test_a_named_head_starts_its_programs_for_that_run_alone(replaced, capsys, m
     assert rc == run.land.EXIT_READY, out + err
     assert ran.exists()
     (word,) = [c["body"] for c in run.github.comments if f"named head {head}" in c["body"]]
-    assert "octocat" in word and "`land-work`" in word
+    # It names no person as having named the head: GitHub shows the account
+    # that posted it, the act's actor (project-management DEC-078 point 2).
+    assert "octocat" not in word and "`land-work`" in word
     # The reviewers the run starts are covered by the word.
     assert run.confined and not any(run.confined)
 
