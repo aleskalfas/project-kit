@@ -54,7 +54,7 @@ REVIEWS = ".pkit/capabilities/visual-communication/project/local/reviews"
 
 #: The bar most tests set: one rule judged on each page, and one judged on the pieces as a
 #: whole.
-COVERS = ("RS-GRAPHIC-001@3", "RS-COMM-003@2")
+COVERS = ("RS-GRAPHIC-001@4", "RS-COMM-003@2")
 
 
 class Copy:
@@ -275,7 +275,7 @@ def test_it_prints_the_verdict_and_why_it_ends_no_loop(copy: Copy) -> None:
     assert code == 0
     lines = out.splitlines()
     assert lines[0] == f"report: round 1 of `deck`, in {REVIEWS}/deck/round-1.yaml"
-    assert lines[1] == "bar: at least professional on RS-GRAPHIC-001@3, RS-COMM-003@2"
+    assert lines[1] == "bar: at least professional on RS-GRAPHIC-001@4, RS-COMM-003@2"
     assert lines[2] == "rules covered: RS-GRAPHIC-001, RS-COMM-003"
     assert lines[3:8] == [
         "verdict: the piece fails the bar",
@@ -307,7 +307,7 @@ def test_a_project_with_no_configuration_has_no_bar(copy: Copy) -> None:
 
 
 def test_a_covered_rule_the_report_grades_nowhere_gives_no_verdict(copy: Copy) -> None:
-    configured(copy, *COVERS, "RS-GRAPHIC-002@3")
+    configured(copy, *COVERS, "RS-GRAPHIC-002@4")
     kept(
         copy,
         [grade("RS-GRAPHIC-001", page="cover")],
@@ -514,14 +514,14 @@ def test_a_bar_that_reaches_past_the_accepted_rules_ends_no_loop(copy: Copy) -> 
 def test_a_bar_over_some_of_the_accepted_rules_gets_the_hold(copy: Copy) -> None:
     planted(copy)
     copy.accept(copy.answered("deck")["reading"])
-    configured(copy, "RS-GRAPHIC-001@3")
+    configured(copy, "RS-GRAPHIC-001@4")
     assert copy.answered("deck")["ends-the-loop"] is True
 
 
 def _new_major(copy: Copy) -> None:
     path = copy.folder / "rule-sets" / "graphic.md"
-    path.write_text(path.read_text().replace("version: 3.0.0", "version: 4.0.0", 1))
-    configured(copy, "RS-GRAPHIC-001@4", "RS-COMM-003@2")
+    path.write_text(path.read_text().replace("version: 4.0.0", "version: 5.0.0", 1))
+    configured(copy, "RS-GRAPHIC-001@5", "RS-COMM-003@2")
 
 
 def _reworded(copy: Copy, rule: str = "RS-GRAPHIC-001") -> None:
@@ -544,7 +544,7 @@ def _commented(copy: Copy, code: str) -> None:
 @pytest.mark.parametrize(
     ("lapse", "said"),
     [
-        (_new_major, "is at major 4, and the calibration read major 3"),
+        (_new_major, "is at major 5, and the calibration read major 4"),
         (_reworded, "the text of `RS-GRAPHIC-001` differs"),
         (
             lambda copy: _appended(copy.folder / "agents" / "graphic-design-reviewer.md"),

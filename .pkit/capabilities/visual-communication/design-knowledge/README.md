@@ -13,3 +13,4 @@ It teaches how to design and how to judge, and nothing in it fails a piece. A re
 - [Type, grid and space](type-grid-space.md): read it when you set or judge text, the grid a page is built on, and the space between its parts.
 - [Colour for meaning and for contrast](colour.md): read it when colour tells things apart or ranks them, or when a text or a line has to stand out from what lies under it.
 - [Diagrams, and consistency across a piece](diagrams.md): read it when a page draws things and the links between them, or when one meaning comes back on several pages.
+- [Working in layers](working-in-layers.md): read it when a page lays notes, labels or a route over a base, such as a process, a schema, a map or a chart, and when you attach a note or a label to what it explains or names.
