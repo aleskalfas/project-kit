@@ -936,12 +936,13 @@ def main() -> int:
     print(f"\n[ok] transitioned #{args.issue_number}: {current_state} → {args.to}")
 
     # Fire after_move_issue hooks per DEC-024. The occurrence is the issue's
-    # count of landed moves, the one the transition audit key counts by: the
-    # journal's length as read before this move or, where no journal is kept,
-    # the timeline's state-label events, read after it and only if a
-    # `post-comment` hook is about to post. Either has grown by the time the
-    # issue can make the same transition again, so its hook comment posts again
-    # (#1243).
+    # count of landed moves, the one the transition audit key counts by: where
+    # labels carry the state, the timeline's state-label events, journaled or
+    # not, read after this move and only if a `post-comment` hook is about to
+    # post (DEC-078 point 4); where a board or a derivation carries it, the
+    # journal's length as read before this move. Either has grown by the time
+    # the issue can make the same transition again, so its hook comment posts
+    # again (#1243), the first only whether or not the journal recorded a move.
     fire_hooks(
         "after_move_issue",
         context={
@@ -1737,37 +1738,42 @@ def _landed_moves(
     """The transition audit key's "has a move landed since?" component.
 
     It must stay put across a failed attempt and its retry, and have grown by the
-    time the issue could make the same transition again. What counts the moves
-    follows where the project's audit trail is (DEC-049):
+    time the issue could make the same transition again, whether or not the
+    journal recorded the first (DEC-078 point 4). What counts the moves follows
+    where the state is carried:
 
-    * Where the project keeps a journal: the journal's length, as a bare number.
-      A move is journaled only after its label write succeeds (#901).
-    * Where it keeps none: the issue's count of state-label events on the GitHub
-      timeline, labels put on and taken off (#954). A landed move changes the
-      state label, and a failed label write changes nothing. The count is
-      tagged, so it can never equal a journal length read on another attempt,
-      after the project turned logging on or off.
-    * Empty when it cannot be known: the engine is unreachable, the timeline
-      cannot be read, or no label carries state (a board or a derivation does,
-      and `move-issue` writes no label there). Two attempts that both land here
-      look alike.
+    * Where labels carry it: the issue's count of state-label events on the
+      GitHub timeline, labels put on and taken off (#954), whether or not the
+      project keeps a journal. A landed move changes the state label, and a
+      failed label write changes nothing. So a move made again after one the
+      engine did not journal, as where a gate of its transition refused the
+      entry or the engine could not be reached, posts its own comment. The count
+      is tagged, so it can never equal a journal length read on another attempt.
+    * Where a board or a derivation carries it, `move-issue` writes no label, and
+      the tracker gives no count of the moves made: the journal's length, as a
+      bare number, where the project keeps one (a move is journaled only after
+      its write succeeds, #901), and empty where it keeps none. There the same
+      move made again posts its own comment only where the journal recorded a
+      move between the two, a limit DEC-078 point 4 states.
+    * Empty, too, when it cannot be known: the timeline cannot be read, or the
+      engine is unreachable. Two attempts that both land here look alike.
 
-    The timeline is read only in the second case, and only on the bypass path
-    that keys an audit comment and for a `post-comment` hook about to post on
-    `after_move_issue`, which names its occurrence by the same count.
+    The timeline is read only where labels carry the state, and only on the
+    bypass path that keys an audit comment and for a `post-comment` hook about to
+    post on `after_move_issue`, which names its occurrence by the same count.
     """
-    if not _journal_logging_off(status):
-        length = _journal_length_from_status(status)
-        return "" if length is None else str(length)
-    if not state_timeline.label_carries_state(config, substrate_map):
+    if state_timeline.label_carries_state(config, substrate_map):
+        events = state_timeline.state_label_events(
+            issue_number,
+            config,
+            substrate_map,
+            run=gh_run,
+        )
+        return "" if events is None else f"state-label-events:{len(events)}"
+    if _journal_logging_off(status):
         return ""
-    events = state_timeline.state_label_events(
-        issue_number,
-        config,
-        substrate_map,
-        run=gh_run,
-    )
-    return "" if events is None else f"state-label-events:{len(events)}"
+    length = _journal_length_from_status(status)
+    return "" if length is None else str(length)
 
 
 # Hand a completed move to the engine (`pkit process move --from`, best-effort):

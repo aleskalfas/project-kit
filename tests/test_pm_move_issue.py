@@ -987,13 +987,41 @@ def test_journal_logging_off_needs_the_engine_to_say_so(mi) -> None:
     assert not mi._journal_logging_off(None)
 
 
-def test_landed_moves_is_the_journal_length_where_a_journal_is_kept(mi, monkeypatch) -> None:
+_KEPT = {"journal_logging": {"enabled": True, "committed": False}, "journal": [{}, {}]}
+_ON_BOARD = {"has_projects_v2_board": True}
+
+
+def _board_map(mi):
+    return mi.axis_labels.SubstrateMap(axes={"state": {"board": True}})
+
+
+def test_landed_moves_is_the_journal_length_where_the_board_carries_the_state(
+    mi, monkeypatch
+) -> None:
+    """The tracker gives no count of the moves made there, so the journal's
+    length stands, where a journal is kept (DEC-078 point 4)."""
     monkeypatch.setattr(mi, "gh_run", _no_gh)
-    kept = {"journal_logging": {"enabled": True, "committed": False}, "journal": [{}, {}]}
-    assert mi._landed_moves(42, kept, {}, None) == "2"
-    assert mi._landed_moves(42, {"journal": [{}, {}]}, {}, None) == "2"
+    assert mi._landed_moves(42, _KEPT, _ON_BOARD, _board_map(mi)) == "2"
+    assert mi._landed_moves(42, {"journal": [{}, {}]}, _ON_BOARD, _board_map(mi)) == "2"
     # An unreachable engine: unknown, as before logging became optional.
-    assert mi._landed_moves(42, None, {}, None) == ""
+    assert mi._landed_moves(42, None, _ON_BOARD, _board_map(mi)) == ""
+
+
+def test_landed_moves_counts_the_timeline_where_labels_carry_the_state_journal_or_not(
+    mi, monkeypatch
+) -> None:
+    """A move the journal missed is counted all the same, so the same audited
+    move made again after it posts its own comment (DEC-078 point 4)."""
+    events = [
+        {"event": "labeled", "label": {"name": "state:todo"}},
+        {"event": "unlabeled", "label": {"name": "state:todo"}},
+        {"event": "labeled", "label": {"name": "state:backlog"}},
+    ]
+    gh = _TimelineGh(events)
+    monkeypatch.setattr(mi, "gh_run", gh)
+    assert mi._landed_moves(42, _KEPT, {}, None) == "state-label-events:3"
+    # The engine unreachable changes nothing where the timeline answers.
+    assert mi._landed_moves(42, None, {}, None) == "state-label-events:3"
 
 
 def test_landed_moves_counts_state_label_events_when_logging_is_off(mi, monkeypatch) -> None:
@@ -1020,8 +1048,7 @@ def test_landed_moves_reads_no_timeline_when_no_label_carries_state(mi, monkeypa
     """The map binds state to the board, so `move-issue` writes no label and the
     timeline's label events say nothing about moves."""
     monkeypatch.setattr(mi, "gh_run", _no_gh)
-    on_board = mi.axis_labels.SubstrateMap(axes={"state": {"board": True}})
-    assert mi._landed_moves(42, _LOGGING_OFF, {"has_projects_v2_board": True}, on_board) == ""
+    assert mi._landed_moves(42, _LOGGING_OFF, _ON_BOARD, _board_map(mi)) == ""
 
 
 def test_audit_comment_is_posted_before_the_label_write() -> None:
