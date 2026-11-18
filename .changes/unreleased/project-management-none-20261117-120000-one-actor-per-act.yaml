@@ -1,7 +1,7 @@
 component: project-management
 kind: none
 body: >
-  Design-ahead: the record DEC-078 decides that, in every project and under
+  Design-ahead: the record DEC-078, accepted, decides that, in every project and under
   every credential, each act the commands record has one actor, the account
   the backbone's reading of the acting account (ADR-094) names the credential
   acts as, which the engine's cross-authority gate judges and the journal
@@ -18,8 +18,16 @@ body: >
   no actor of its own (ADR-098), its floor on the backbone rising to that
   release. Where labels carry the state, an audited move's comment key, and
   the occurrence of the hook that fires after a move, count the moves made,
-  journaled or not. Once accepted, it partially supersedes DEC-014, DEC-044,
-  DEC-050, DEC-052 and DEC-067, refines DEC-021, DEC-024, DEC-033, DEC-044 and
-  DEC-049 in place, and corrects facts in DEC-021 and DEC-047. It is accepted
-  together with ADR-094, ADR-098, DEC-076 and DEC-079, all five at once. No
-  behaviour changes until the record is built.
+  journaled or not. It partially supersedes DEC-014, DEC-044, DEC-050, DEC-052
+  and DEC-067, whose top lines say what it overturns: the bypass template's
+  name and email, an audit record's display name and email, the reviewer
+  override's name and email, the authoriser on the bot-authored path, and who
+  named a head. It refines in place DEC-021's paragraph on every other reader
+  of the invoker's identity, DEC-024's idempotency of the after-move hook's
+  comment, DEC-033 D5's hand-off to the engine with no actor, DEC-044 point
+  4's metadata line, which shows no actor, and DEC-049 point 1's move left
+  unrecorded for want of an actor, and corrects facts in DEC-021 and DEC-047.
+  It reads DEC-055 point 3 as true, unedited. It was accepted together with
+  ADR-094, ADR-098, DEC-076 and DEC-079, all five at once. No behaviour
+  changes until the record is built; the build that builds point 3 raises the
+  capability's floor on the backbone.

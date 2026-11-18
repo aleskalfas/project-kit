@@ -6,6 +6,8 @@ date: 2026-11-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [project-management:DEC-078-one-actor-per-act].** Under every credential, the comment a head named at a terminal leaves names the commit and the command, and no person as having named the head: the account that posts it is the act's actor. Overturned: point 4's "and who named it", in its bullet "What it leaves". The rest stands.
+
 **In plain terms:** some commands of this capability run the change check from a checkout of a pull request's head. That starts programs the head holds, under the account of whoever runs the command. These commands do so only for a head on the base's own repository that holds none of a sandboxed build's commits. A person at a terminal can also name a head for one run.
 
 Any other head, such as a fork's, starts nothing, and no flag changes that. Where the check needs such a program, the command asks the person at its terminal. With nobody there, nothing merges through it.
