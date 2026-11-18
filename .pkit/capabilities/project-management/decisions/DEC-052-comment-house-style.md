@@ -6,6 +6,8 @@ date: 2026-09-12
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [project-management:DEC-078-one-actor-per-act].** The authoriser the commands know is the account that posts the comment, so an override comment names none beside it. Overturned: the Implications' parenthetical that keeps the authoriser on the bot-authored path. The rest stands.
+
 > This record fixes one **content + house-style model** for every comment the capability
 > *posts* on a GitHub issue or PR — such as filing, override/audit, move, and review
 > verdict, which pkit **authors**, plus freeform notes and adopter hook messages, which it

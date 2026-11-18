@@ -6,6 +6,8 @@ date: 2026-05-27
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [ADR-095](ADR-095-hook-out-of-reach.md).** The permission commands ADR-095 point 2 names, which it serves from the installed release where the machine holds one, ask no version control, since it runs what the checkout's configuration names. Overturned for them: step 1 of "How the root is found", asking version control first, with the Rationale "Why defer to version control first"; step 2's taking of the nearest marker of either kind; and the rejection of the alternative "Reimplement the repository search instead of asking git". They find the root by an upward search alone, from the real path of the folder they run in, reading version control's marker by hand and taking a repository's marker before the methodology's, held by test to version control's answer in symlinked paths, linked worktrees, submodules and a methodology installed below a repository's root. They keep step 2's test that a marker is genuine. They can part from version control's answer where the checkout's own configuration or the environment places the repository elsewhere, or version control declines a repository or stops at a file system's boundary. Everything else stands: the contract, and both steps for every other command.
+
 ## Context
 
 Every `pkit` command operates against a *project root* — the directory that holds the project's installed methodology (and usually its version-control repository). A command must resolve that root before doing anything else: install writes inside it, refresh rewrites kit-owned content beneath it, status reports against it, the authoring commands stamp relative to it.

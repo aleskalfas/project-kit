@@ -159,7 +159,17 @@ cannot be read is a finding: no brand owes a picture role (DEC-025 point 4).
 A part may carry `when`: a field the content fills, a field of runs where one of its
 runs holds text, `{<option>: [<word>, ...]}`, or a switch on a size (below) whose each
 branch is `true`, `false`, or one of those. A missing part has zero size at its
-place. Its place is `x` and `y` (zero if absent), its
+place.
+
+**`lies-over`,** on any part, names the parts written before it in the same `parts`, so
+drawn before it, that it lies over on purpose (DEC-066 point 1). It takes no switch. Each
+name that is no part of the same `parts`, the part's own, one of a part written after it,
+and a name's second writing are refused when the component is read, each a finding of its
+own, `lies-over-refused`, that names the part and the name alone, and say nothing: a name's
+first writing names its part (`Component.lies_over`). The scene carries what it names
+(`scene`), and nothing else of the engine reads it.
+
+A part's place is `x` and `y` (zero if absent), its
 size `width` and `height`, each a formula. A line has `x1 y1 x2 y2`; or, in a component
 that takes ends, `connect: straight` or `connect: corners`, the connector tool, which
 runs from its start to its end, straight or with corners, never around anything, and
@@ -264,7 +274,13 @@ PRIMITIVES = ("box", "ellipse", "text", "line", "image", "sign")
 PLACING = ("use", "slot", "repeat")
 KINDS = PRIMITIVES + PLACING
 
-#: The keys each kind of part takes beside its kind and `when`.
+#: The key any part may take, beside `when`, that names the parts written before it that it
+#: lies over on purpose (DEC-066 point 1); and the finding on each name it gives that names
+#: none of them.
+LIES_OVER = "lies-over"
+LIES_OVER_REFUSED = "lies-over-refused"
+
+#: The keys each kind of part takes beside its kind, `when` and `lies-over`.
 PART_KEYS: Mapping[str, tuple[str, ...]] = {
     "box": ("x", "y", "width", "height"),
     "ellipse": ("x", "y", "width", "height"),
@@ -1108,6 +1124,9 @@ class Component:
         # Each field of runs, with its words; and those some text part chooses by.
         self.runs = runs_of(self.fields)
         self.chosen_by: set[str] = set()
+        # The parts each part names under `lies-over` that it lies over, by its name, each
+        # name it gives that names none refused (DEC-066 point 1).
+        self.lies_over: dict[str, tuple[str, ...]] = {}
         self.colour: str | None = data.get("colour")
         self.values = self._mapping(data, "values")
         self.preferred = self._mapping(data, "preferred")
@@ -1485,6 +1504,7 @@ class Component:
                 self._shape(f"preferred.{size}", f"asks for no size `{size}`")
         for part in self.parts.values():
             self._read_part(part)
+        self._read_lies_over()
         for name in self.exposes:
             if name not in self.parts:
                 self._shape("exposes", f"exposes `{name}`, which is no part of it")
@@ -1503,6 +1523,43 @@ class Component:
             self._shape("fields", f"marks a field `{PAGES}`, and declares no layouts")
         self._read_paged_sizes()
         self._read_physical_size(data)
+
+    def _read_lies_over(self) -> None:
+        """The parts each part names under `lies-over`, which it lies over on purpose
+        (DEC-066 point 1): names of parts written before it in the same `parts`, and so drawn
+        before it. A name that is no part of them, the part's own, one of a part written
+        after it, and a name's second writing are each refused, naming the part and the name
+        alone, and say nothing; a name's first writing names its part. A value that is no
+        list is `component-shape`, and names none."""
+        order = list(self.parts)
+        for place, (name, part) in enumerate(self.parts.items()):
+            if LIES_OVER not in part.spec:
+                continue
+            where = f"parts.{name}.{LIES_OVER}"
+            given = part.spec[LIES_OVER]
+            if not isinstance(given, list):
+                self._shape(where, f"the part `{name}` takes a list of names under `{LIES_OVER}`")
+                continue
+            named: list[str] = []
+            written: set[str] = set()
+            for each in given:
+                said = f"the part `{name}` names `{each}` under `{LIES_OVER}`"
+                if isinstance(each, str) and each in written:
+                    why = f"{said} a second time"
+                elif each == name:
+                    why = f"the part `{name}` names itself under `{LIES_OVER}`"
+                elif not isinstance(each, str) or each not in self.parts:
+                    why = f"{said}, which is no part of the same `parts`"
+                elif order.index(each) > place:
+                    why = f"{said}, a part written after it, so drawn over it"
+                else:
+                    written.add(each)
+                    named.append(each)
+                    continue
+                if isinstance(each, str):
+                    written.add(each)
+                self._issue(LIES_OVER_REFUSED, where, f"{why}: the name says nothing")
+            self.lies_over[name] = tuple(named)
 
     def _read_paged_sizes(self) -> None:
         """A list whose items are pages takes no `cross-size` (DEC-038 point 1): it repeats
@@ -1590,7 +1647,7 @@ class Component:
                     f"the height of the text `{part.name}` has two owners: the part gives "
                     "it, and its measured text sets it",
                 )
-            elif key not in (kind, "when", *PART_KEYS[kind]):
+            elif key not in (kind, "when", LIES_OVER, *PART_KEYS[kind]):
                 self._shape(f"{where}.{key}", f"the {kind} `{part.name}` takes no `{key}`")
         connects = kind == "line" and "connect" in spec
         for key in REQUIRED.get(kind, ()):

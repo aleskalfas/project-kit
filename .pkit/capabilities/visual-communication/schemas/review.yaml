@@ -12,9 +12,17 @@
 # The body below is the reference instance: a second round, one of whose grades differs
 # from the round before. Two faults hold one grade, and its evidence names each by the id
 # the report gives it, then the reading beyond them. One grade only the asker's words would
-# raise. It shows some grades of some pages, to show the form, and is no whole review: a
-# review grades each rule it reads on each page it reads, and once for the piece where the
-# rule takes a grade there, or lists it under `not-graded` with why.
+# raise. Each grade of `professional` names the strongest weakness it weighed that the rule's
+# own words fail on, which a professional would polish or hand over as it is, and a page a
+# rule does not judge quotes the rule's words that leave it out. It shows some grades of some
+# pages, to show the form, and is no whole review: a review grades each rule it reads on each
+# page it reads, and once for the piece where the rule takes a grade there, or lists it under
+# `not-graded` with why.
+#
+# Each value in words is written as a folded block scalar, `>-` after its key and its words
+# on the lines below, which parses words that hold `: `, quote marks, a ` #` or a
+# backslash. The evidence of `RS-GRAPHIC-005` holds `: `, and opens with a quoted phrase
+# and goes on after it. Written plain, a value that does either does not parse.
 
 pkit_schema: visual-communication:review
 schema_version: 1
@@ -24,43 +32,59 @@ schema_version: 1
 piece: deck
 round: 2
 model:
-  name: example-model-1.0
-  effort: high
+  name: >-
+    example-model-1.0
+  effort: >-
+    high
 read-before-grading:
   - kind: images
-    what: Every image of the run, each band of each page, and the forced images.
+    what: >-
+      Every image of the run, each band of each page, and the forced images.
   - kind: frames
-    what: The frames beside each image.
+    what: >-
+      The frames beside each image.
   - kind: report
-    what: report.json of the run.
+    what: >-
+      report.json of the run.
   - kind: piece
-    what: piece.yaml, the content of each language, and the brand it names.
+    what: >-
+      piece.yaml, the content of each language, and the brand it names.
   - kind: intent
-    what: The goals, relations and takeaways the dispatcher handed over, without their reasons.
+    what: >-
+      The goals, relations and takeaways the dispatcher handed over, without their reasons.
   - kind: rule-sets
-    what: The rule sets the capability ships, each from its file.
+    what: >-
+      The rule sets the capability ships, each from its file.
   - kind: design-knowledge
-    what: The index, and the topics the pages needed.
+    what: >-
+      The index, and the topics the pages needed.
 read-after-grading:
   - kind: brief-file
-    what: brief.yaml, for its reasons.
+    what: >-
+      brief.yaml, for its reasons.
   - kind: earlier-reports
-    what: round-1.md, the whole report of round 1, as it was written.
+    what: >-
+      round-1.md, the whole report of round 1, as it was written.
 grades:
   - rule: RS-COMM-001
     on:
       page: layers
     grade: professional
-    evidence: The lead answers the title, and the stepped figure shows the answer.
+    evidence: >-
+      The lead answers the title, and the stepped figure shows the point the lead states.
+      The strongest weakness weighed: the lead answers the title for the top and the middle
+      levels, and leaves the base to the figure, which a professional would polish by naming
+      the base in the lead.
   - rule: RS-GRAPHIC-001
     on:
       page: layers
-    grade: competent
-    evidence: The eye enters at the footer's mark before it reaches the top level.
-    other-cause: The page's frame, which the library draws, carries the mark.
-    since-last-round:
-      was: below competent
-      why: The mark is smaller than in the round before, so it no longer outranks the figure.
+    grade: professional
+    evidence: >-
+      The head and the stepped figure, which bears the point out, each stand above every
+      part of the rest. The mark in the footer is the page's frame, which this rule does not
+      rank. The strongest weakness weighed: the note on the levels, the heaviest part of the
+      rest, stands below the figure by less than any other part does, which a professional
+      would polish by setting the note back.
   - rule: RS-GRAPHIC-002
     on:
       page: layers
@@ -69,32 +93,64 @@ grades:
       F1, alignment, at deck/slides[layers]/body/levels[middle]; F2, alignment, at
       deck/slides[layers]/body/levels[base]. Beyond them, the note on the levels stands
       nearer the footer than the figure it explains.
+  - rule: RS-GRAPHIC-003
+    on:
+      page: layers
+    grade: competent
+    evidence: >-
+      The mark in the footer, a part of the page's frame, still pulls the reader's eye from
+      the stepped figure, which a professional would quiet before handing the page over.
+    other-cause: >-
+      The mark comes with the frame the library draws around each slide, not from the piece.
+    since-last-round:
+      was: below competent
+      why: >-
+        In round 1 the mark was drawn larger and drew the eye before the figure did. Smaller
+        now, it competes with the figure less.
   - rule: RS-GRAPHIC-005
     on:
       page: layers
     grade: professional
-    evidence: Each text and part reads as drawn where the deck is projected, and the page is taken in at a glance.
+    evidence: >-
+      "Readable where it is shown": each text and part reads as drawn where the deck is
+      projected, and the page is taken in at a glance. The strongest weakness weighed is the
+      note on the levels, the most text the page holds, which slows the glance a little, and
+      a professional would polish it.
   - rule: RS-COMM-001
     on:
       page: plan
     grade: competent
-    evidence: The lead lists the plan's three phases, and answers no question the title asks.
+    evidence: >-
+      The lead lists the plan's three phases, and does not say what the title opens.
     mark:
       kind: asker
-      names: The title and the lead of the page plan, which the asker has seen.
+      names: >-
+        The title and the lead of the page plan, which the asker has seen.
   - rule: RS-COMM-003
     on:
       piece: true
     grade: professional
-    evidence: Each lead follows from the one before it.
+    evidence: >-
+      The deck has no sections, so its pages are one group, and their statements keep a
+      deductive order: the lead of the page plan, which lists the plan's three phases,
+      follows from the lead of the page layers. The strongest weakness weighed: it follows
+      by a step the deck leaves to its reader, why the layers need a plan, which a reader
+      supplies at once, and a professional would hand the deck over as it is.
 not-graded:
   - rule: RS-COMM-001
     on:
       page: cover
-    why: A page whose layout has no lead is not judged by this rule.
+    why: >-
+      "Which pages": a page whose job is not to make a point is one whose job is to open,
+      divide, list, close or stand outside the pages that make the piece's points, such as a
+      cover, an agenda, a section's opening page, a page that sums up the pages before it by
+      listing their statements, as text or in a table, a page of references, a page of
+      questions or thanks, or an appendix's divider. Its kind tells it, and it is not judged
+      by this rule.
   - rule: RS-GRAPHIC-008
     on:
       page: cover
     why: >-
-      The cover holds its title with the subtitle under it, and its author and its link as
-      labels, and the rule does not judge a heading, a title or a label.
+      "What it does not judge": a heading, a title, a label, a cell of a table and an item of
+      a list, however many lines each takes. The cover holds its title, its subtitle, which is
+      a heading under the title, and its author and its link, which are labels.
