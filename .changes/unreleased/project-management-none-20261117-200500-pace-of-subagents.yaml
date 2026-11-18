@@ -2,17 +2,18 @@ component: project-management
 kind: none
 body: >
   DEC-082, which a person accepts in this change (#3394), decides how many
-  subagents the project-manager agent runs at once in a clone, all its
+  slots the project-manager agent's runs hold at once in a clone, all its
   sessions together: one setting of the capability's committed
   configuration, read from the default branch, gives the ceiling, `off`, a
   number or `max`, and 4 where it is absent. `max` runs as many as the work
   calls for, bounded only by the machine and the account's usage limits.
-  Every subagent the agent runs takes a slot: builders, reviewers, fixers, a
-  lead's helpers, each with a share of the lead's slots, and their own, and
-  resumed runs; a run a person starts at a terminal takes none. The agent
-  starts first what its work in flight waits for, then a Task a directive
-  named, then a plan's reviewer, then the next Task nothing blocks, nearest
-  the work just done; a worker's directing seat may set the worker's pace on
+  Every subagent the agent runs holds a slot while it runs: builders, whose
+  builds keep the slot through their checks, reviewers, fixers, a lead's
+  helpers, each with a share of the lead's slots that it hands to its own
+  subagents, and resumed runs; a run a person starts themselves takes none.
+  The agent starts first what its work in flight waits for, then a Task a
+  directive named, then a plan's reviewer, then the next Task nothing
+  blocks, nearest the work just done; a worker's directing seat may set the worker's pace on
   its state issue, and a person any seat's, which replaces what a directing
   seat set before it; the lowest binds; the build and review commands hold
   the agent's calls to the pace from a register of the clone's runs; a
