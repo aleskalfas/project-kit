@@ -80,8 +80,8 @@ src/project_kit/permissions.py reportMissingTypeArgument 23
 src/project_kit/permissions.py reportOptionalMemberAccess 1
 src/project_kit/permissions.py reportOptionalSubscript 2
 src/project_kit/permissions.py reportPossiblyUnboundVariable 1
-src/project_kit/permissions.py reportUnknownArgumentType 59
-src/project_kit/permissions.py reportUnknownMemberType 136
+src/project_kit/permissions.py reportUnknownArgumentType 58
+src/project_kit/permissions.py reportUnknownMemberType 134
 src/project_kit/permissions.py reportUnknownParameterType 21
 src/project_kit/permissions.py reportUnknownVariableType 172
 src/project_kit/permissions.py reportUnnecessaryIsInstance 1
