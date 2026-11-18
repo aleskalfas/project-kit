@@ -65,13 +65,17 @@ def test_rule_20_keeps_its_number_and_title():
 
 def test_rule_20_names_the_delegate_and_its_bounds():
     """A person may name a delegate to decide the answers no change owes (COR-064): named
-    in the default branch's configuration. The rule names where the delegate is named and
-    what a session does with neither the person nor the delegate, and that a reviewer checks
-    every such answer, whoever decided it, blocking the merge or the direct commit on one that
-    does not hold (COR-064 point 4). The delegate's own bound, never on its own draft, is the
-    agents README's, which the rule cites."""
+    in the default branch's configuration, and deciding only where COR-072 hands it the
+    answer. The rule names where the delegate is named and what a session does with neither
+    the person nor the delegate, and that a reviewer checks every such answer, whoever decided
+    it, blocking the merge or the direct commit on one that does not hold (COR-064 point 4).
+    The delegate's own bound, never on its own draft, is the agents README's, which the rule
+    cites."""
     rule = _rule_20()
-    assert "or the delegate the default branch's configuration names (`friction.delegate`)" in rule
+    assert (
+        "or the delegate the default branch's configuration names decided it where COR-072"
+        " hands it the answer" in rule
+    )
     assert (
         "The reviewer checks these too, whoever decided them, and blocks the merge, or the"
         " direct commit, on an answer or an `updated` sentence that does not hold." in rule
