@@ -8,6 +8,9 @@ Held here:
   before grading and after; the full name of the model it ran on; strict in every mapping,
   the methodology's container kept free in each; and no bar, no value and no number but the
   format's and the round's;
+- **its words**: the reference instance writes each value the schema gives as words as a
+  folded block scalar, which parses words that hold `: ` or open with a quoted phrase, as
+  the reviewer's body asks (#3391);
 - **the reviewer's body** lists a place for each rule the capability ships, and the places
   match what the rule-set files say they judge; its report opens with the document, then
   says what it looked at, then gives its findings;
@@ -29,6 +32,8 @@ from collections.abc import Iterator
 from typing import Any
 
 import pytest
+from ruamel.yaml import YAML
+from ruamel.yaml.scalarstring import FoldedScalarString
 
 from tests.in_process import load
 from tests.visual_communication_project import CAPABILITY, SCHEMAS, bound
@@ -385,6 +390,58 @@ def test_the_body_names_the_schema_it_reports_in_and_that_schema_ships() -> None
     assert "visual-communication:review" in text
     assert (SCHEMAS / "review.schema.json").is_file()
     assert (SCHEMAS / "review.yaml").is_file()
+
+
+#: The schema's own type for a value in words.
+TEXT = "defs.schema.json#/$defs/text"
+
+
+def words_keys(schema: Any) -> set[str]:
+    """Each key whose value the schema gives as words, anywhere within `schema`."""
+    found: set[str] = set()
+    if isinstance(schema, dict):
+        for key, value in schema.get("properties", {}).items():
+            if isinstance(value, dict) and value.get("$ref") == TEXT:
+                found.add(key)
+        for value in schema.values():
+            found |= words_keys(value)
+    return found
+
+
+def written_in_words(data: Any, keys: set[str]) -> Iterator[tuple[str, Any]]:
+    """Each value of `data`, as the round-trip reader reads it, under one of `keys`."""
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key in keys:
+                yield key, value
+            yield from written_in_words(value, keys)
+    elif isinstance(data, list):
+        for value in data:
+            yield from written_in_words(value, keys)
+
+
+def test_the_reference_instance_writes_each_value_in_words_as_a_block_scalar() -> None:
+    """A value in words written plain does not parse where it holds `: ` or opens with a
+    quoted phrase and goes on after it, so the body has each written as a folded block
+    scalar, and the reference instance shows that form for every one (#3391)."""
+    schema = json.loads((SCHEMAS / "review.schema.json").read_text(encoding="utf-8"))
+    keys = words_keys(schema)
+    assert keys == {"name", "effort", "what", "names", "evidence", "other-cause", "why"}
+    data = YAML().load((SCHEMAS / "review.yaml").read_text(encoding="utf-8"))
+    written = list(written_in_words(data, keys))
+    assert {key for key, _ in written} == keys
+    plain = [(key, value) for key, value in written if not isinstance(value, FoldedScalarString)]
+    assert plain == []
+    assert any(": " in value and value.startswith('"') for _, value in written)
+    rule = next(
+        line
+        for line in section("Your report").splitlines()
+        if line.startswith("**Each value in words, as a block scalar.**")
+    )
+    assert "`>-`" in rule
+    assert "`review.yaml`" in rule
+    for key in keys:
+        assert f"`{key}`" in rule, key
 
 
 def test_the_reference_instance_is_not_changed_by_a_check_of_it() -> None:

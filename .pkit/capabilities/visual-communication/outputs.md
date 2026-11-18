@@ -62,6 +62,7 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/look-report.schema.json
         - .pkit/capabilities/visual-communication/scripts/verdict.py
         - .pkit/capabilities/visual-communication/scripts/_lib/verdicts.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
         - .pkit/capabilities/visual-communication/scripts/_lib/calibration.py
         - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
@@ -176,6 +177,7 @@ pkit:
         - visual-communication:DEC-063#1
         - visual-communication:DEC-065#1
         - visual-communication:DEC-065#2
+        - visual-communication:DEC-066#2
         - ADR-097
       artefact:
         - .pkit/capabilities/visual-communication/components.md#exposes
@@ -966,7 +968,7 @@ The schema [`look-report.schema.json`](schemas/look-report.schema.json) fixes th
 
 What the checks found on the scenes the run computed (DEC-062 points 1 and 2), through either renderer:
 
-- **`findings`,** on each image: each finding that holds on it. A finding gives its `check`, the id of the check that found it where that check states a [reach](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->, else `null`; its `label`, `level`, `location` and `message`, as the check gives them; and its `language`, `key` and `page`, each `null` where it holds in every language, at every key or on no page. Its key is a whole key for a finding of a check of colour that names a combination, as `contrast-drawn` does, once for each it names, and a key over the size axes for any other, which holds alike in every combination its scene serves.
+- **`findings`,** on each image: each finding that holds on it. A finding gives its `check`, the id of the check that found it where that check states a [reach](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->, else `null`; its `label`, `level`, `location` and `message`, as validation reads them where the finding lies, save that every overlap is `box-overlap`, with nothing in its message of a part's `lies-over`, whatever names the pair ([parts](components.md#parts), DEC-066 point 2); and its `language`, `key` and `page`, each `null` where it holds in every language, at every key or on no page. Its key is a whole key for a finding of a check of colour that names a combination, as `contrast-drawn` does, once for each it names, and a key over the size axes for any other, which holds alike in every combination its scene serves.
   - **Which image takes it.** Each image of its language and key, those for every language or every key among them, on its page or on no page. A band takes its page's. A finding the checks give once for several places, as for a concept told by its colour alone, is given to each image that shows one of them.
   - **A forced image** takes the findings of its language, its key over the size axes and its page, and none of a check of colour that names a combination: its colours are the browser's palette's, which no check measures (DEC-027 point 6).
   - **Given once.** A loss the report lists under `losses` for the image is not given again.
@@ -1062,6 +1064,7 @@ A project's build pipeline may draw each piece's HTML pages on every change it c
 - **No bar.** Where the configuration holds no bar, no verdict is given, and the designer's loop ends as DEC-030 point 2 says (DEC-042 point 3).
 - **A covered rule the report leaves out.** Where the report neither grades a rule the bar covers nor lists it as not graded, no verdict is given, since one that passed would rest on no grade of that rule. The command names each such rule.
 - **Refused.** The command prints `error: …` and exits 1 where no report of the piece is kept, the report or the configuration cannot be read, the report's schema refuses it, or the report is of another piece or round than it is kept as. So does a bar the configuration's schema refuses, or one the capability's check fails, such as a bar over what the check does not find graded.
+- **A document that does not parse.** Where the report's document does not parse as YAML, the command refuses it as one that cannot be read, and gives no verdict from it. Its message names the report as one whose document does not parse, and what the reader found where it stopped. Where the reader names that place, the message gives its line and column in `round-<n>.yaml`. Written plain, a value that holds `: ` does not parse, and nor does one that opens with a quoted phrase and goes on after it. The reviewer writes each value in words as a block scalar, which parses words of either kind.
 
 Otherwise it exits 0, whatever the verdict, and 2 on a usage error.
 

@@ -36,7 +36,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### 8. Pause and confirm before destructive operations (RS-OPS-008)
 
-**Pause and confirm before destructive operations,** such as `git reset --hard`, `git push --force`, `rm -rf`, deleting files outside `project/`, dropping tables or killing processes. Each needs the user's explicit confirmation, even where the task seemed to authorise it, and a confirmation covers that operation alone.
+**Pause and confirm before destructive operations,** such as `git reset --hard`, `git push --force`, `rm -rf`, deleting what others made, dropping tables or killing processes. Each needs the user's explicit confirmation for it alone, even where the task seemed to authorise it. Removing what you made yourself needs none where a check shows nothing is lost: a branch whose tip a merge into the default branch took; that branch's worktree, by an unforced `git worktree remove`, once its agent workspace holds nothing others wrote; a process you started, by its id; or your scratch file, by its path.
 
 ### 9. Conventional commits, one logical unit each (RS-OPS-009)
 

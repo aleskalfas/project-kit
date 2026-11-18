@@ -61,9 +61,11 @@ is read, and none is used up (DEC-016 point 5).
   checks that state a reach and measured it, and each such check that did not, with why: a
   check of colour measures no forced image, and none measures an image where the checks'
   code stopped on its scene, or on a scene a check compares with it. It carries each
-  check's reach as the code that ran states it, and the capability's version. A loss the
-  report lists in its own list is not given again. The findings record is not read, and none
-  is kept (`_Made.checked`).
+  check's reach as the code that ran states it, and the capability's version. Each finding
+  is read as validation reads it where it lies, its level by whether its version is released,
+  save that every overlap reads as `box-overlap`, whatever names the pair (`checks.Reading`,
+  DEC-066 point 2). A loss the report lists in its own list is not given again. The findings
+  record is not read, and none is kept (`_Made.checked`).
 - **A run replaces** what an earlier run left in its renderer's folder, as one change
   (`write`), and leaves the other renderer's folder where it lies.
 """
@@ -976,6 +978,7 @@ class _Made:
         that did not, with why, written into its entry; and the findings it gives to no
         image drawn, `on-no-image`, each once for each key it holds for."""
         reaching = [check for check in checks.SCENE_CHECKS if check.reach is not None]
+        reading = checks.Reading(self.project.held)
         given: dict[int, set[str]] = {}
         for image in self.images:
             held: list[dict[str, Any]] = []
@@ -985,7 +988,7 @@ class _Made:
                     continue
                 given.setdefault(index, set()).add(key)
                 if not self._listed(each, image):
-                    held.append(_said_found(self.project, each, key))
+                    held.append(_said_found(self.project, reading, each, key))
             image["findings"] = held
             unmeasured = {check.id: self._unmeasured(check, image) for check in reaching}
             image["measured-by"] = [check.id for check in reaching if not unmeasured[check.id]]
@@ -993,7 +996,7 @@ class _Made:
                 {"check": id_, "why": why} for id_, why in unmeasured.items() if why
             ]
         apart = [
-            _said_found(self.project, each, key)
+            _said_found(self.project, reading, each, key)
             for index, each in enumerate(self.found.found)
             for key in each.combinations or (each.size or "",)
             if key not in given.get(index, set())
@@ -1079,16 +1082,20 @@ def _holds_on(project: pl.Project, found: Found, image: Mapping[str, Any]) -> st
     return key
 
 
-def _said_found(project: pl.Project, found: Found, key: str) -> dict[str, Any]:
+def _said_found(
+    project: pl.Project, reading: checks.Reading, found: Found, key: str
+) -> dict[str, Any]:
     """A finding as the report gives it (DEC-062 point 1): its check's id where the check
-    states a reach, else None; its label, level, location and message; its language, None
-    where it holds in every language; the key it holds for, None where it holds at every
-    key; and its page, None where its place lies on no page."""
-    finding = checks.rooted(found.finding, project.piece)
+    states a reach, else None; its label, level, location and message, as the viewing step
+    reads it where it lies (`checks.Reading`), so every overlap as `box-overlap`, with nothing
+    of a part's `lies-over` (DEC-066 point 2); its language, None where it holds in every
+    language; the key it holds for, None where it holds at every key; and its page, None where
+    its place lies on no page."""
+    finding, level = reading.read(checks.rooted(found.finding, project.piece), validation=False)
     return {
         "check": found.check.id or None,
         "label": finding.code,
-        "level": finding.level,
+        "level": level,
         "location": checks.place(finding),
         "message": finding.message,
         "language": found.language,

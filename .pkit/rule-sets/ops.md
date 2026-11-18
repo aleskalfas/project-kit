@@ -1,8 +1,8 @@
 ---
 rule-set: OPS
 loaded: true
-budget: 2300
-version: 6.0.0
+budget: 2308
+version: 6.1.0
 rules:
   RS-OPS-001:
     status: accepted
@@ -48,7 +48,7 @@ rules:
         anchors: {record: [COR-010]}
   RS-OPS-008:
     status: accepted
-    origin: {date: 2026-06-13, by: "Aleš Kalfas", why: "A destructive operation cannot be undone, so each one waits for the person's own confirmation, given for that operation alone (since the methodology's first release)."}
+    origin: {date: 2026-11-17, by: "Aleš Kalfas", why: "A destructive operation cannot be undone, so each one waits for the person's own confirmation, given for that operation alone (since the methodology's first release). Removing what an agent made itself, where a check shows nothing is lost, undoes no one's work, and asking before each one stopped the work for a question with nothing at stake. So such a removal needs no confirmation (project-kit#3393)."}
     pkit:
       friction:
         unanchored-because: "A rule about what an agent asks before an operation that cannot be undone; no record or file carries it out."
@@ -188,7 +188,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### RS-OPS-008 — Pause and confirm before destructive operations
 
-**Pause and confirm before destructive operations,** such as `git reset --hard`, `git push --force`, `rm -rf`, deleting files outside `project/`, dropping tables or killing processes. Each needs the user's explicit confirmation, even where the task seemed to authorise it, and a confirmation covers that operation alone.
+**Pause and confirm before destructive operations,** such as `git reset --hard`, `git push --force`, `rm -rf`, deleting what others made, dropping tables or killing processes. Each needs the user's explicit confirmation for it alone, even where the task seemed to authorise it. Removing what you made yourself needs none where a check shows nothing is lost: a branch whose tip a merge into the default branch took; that branch's worktree, by an unforced `git worktree remove`, once its agent workspace holds nothing others wrote; a process you started, by its id; or your scratch file, by its path.
 
 ### RS-OPS-009 — Conventional commits, one logical unit each
 

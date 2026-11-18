@@ -1,0 +1,15 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  Core rule 8 (`backbone:RS-OPS-008`) now lets an agent remove what it made
+  itself without asking, where a check shows nothing is lost: a branch whose
+  tip a merge into the default branch took; that branch's worktree, by an
+  unforced `git worktree remove`, once its agent workspace holds nothing
+  others wrote; a process it started, by its id; or its scratch file, by its
+  path. Every other destructive operation, deleting what others made among
+  them, still needs the user's explicit confirmation for it alone. The set
+  `OPS` moves to 6.1.0, since the rule is loosened and no rule is tightened.
+  No migration: `.pkit/rules/core.md` keeps its path and arrives by sync as
+  before.
