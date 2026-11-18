@@ -17,7 +17,7 @@ A failed lookup or install never fails the upgrade. When the install succeeds bu
 
 The step runs outside any project, where it is the whole of `pkit upgrade`, and in an un-pinned project. A pinned project's upgrade never runs it: the pin moves through `uvx`, and the installed tool is left alone.
 
-The install moves only projects that follow the tool. A pinned project keeps running its pin while the router can fetch it, at the cost of a `uvx` run per command whenever the pin and the tool differ ([ADR-064](ADR-064-upgrade-pins-by-default.md)).
+The install moves only projects that follow the tool. A pinned project keeps running its pin while the router can fetch it, at the cost of a `uvx` run per command whenever the pin and the tool differ ([ADR-064](ADR-064-upgrade-pins-by-default.md)). An install also moves, in every project on the machine, pinned or not, the permission commands [ADR-095](ADR-095-hook-out-of-reach.md) point 2 serves from the installed release, and remaking the hook's copy from it moves the hook of every project that turns the hook on.
 
 This record supersedes [ADR-044](ADR-044-upgrade-self-update-detect-instruct.md), whose upgrade detects a stale tool and only prints the command.
 
@@ -81,7 +81,7 @@ The step installs the tool from the distribution URL compiled into it. It touche
 
 ## Rationale
 
-**Why install rather than print.** The friction is a stale tool the operator has to notice and fix with another command. A printed command names the fix. An install removes the step. ADR-044's first reason against installing is reach: replacing the shared tool moves every project that follows it. Pinning by default takes pinned projects out of that reach while the router can fetch their pins. They keep their versions, and pay a `uvx` run per command (ADR-064). The install moves only un-pinned projects. Some passed `--no-pin`, and asked to follow the tool. Others have not been pinned by any upgrade yet. They run the new tool over their older content, as they would after an install by hand, until their own upgrade pins them.
+**Why install rather than print.** The friction is a stale tool the operator has to notice and fix with another command. A printed command names the fix. An install removes the step. ADR-044's first reason against installing is reach: replacing the shared tool moves every project that follows it. Pinning by default takes pinned projects out of that reach while the router can fetch their pins. They keep their versions, and pay a `uvx` run per command (ADR-064). The install moves only un-pinned projects. Some passed `--no-pin`, and asked to follow the tool. Others have not been pinned by any upgrade yet. They run the new tool over their older content, as they would after an install by hand, until their own upgrade pins them. An install also moves, in every project on the machine, pinned or not, the permission commands ADR-095 point 2 serves from the installed release, and remaking the hook's copy from it moves the hook of every project that turns the hook on.
 
 **Why the pin does not retire the install.** ADR-044 expects the per-project pin to make an install unnecessary, so building one first would be work the pin removes (COR-007). The pin does not remove it. An un-pinned project runs the installed tool. Outside any project there is only the tool to update. And a pinned project runs in-process only while its pin equals the tool. So the tool has to move.
 
@@ -105,7 +105,7 @@ The step installs the tool from the distribution URL compiled into it. It touche
 
 ### Alternatives considered
 
-- **Detect and print only, never install.** This is ADR-044's ruling, which this record supersedes. Not kept: it leaves the manual step. Its first reason, the install's reach over every project, does not hold for pinned projects, and its others are answered above. Printing is the fallback of point 3.
+- **Detect and print only, never install.** This is ADR-044's ruling, which this record supersedes. Not kept: it leaves the manual step. Its first reason, the install's reach over every project, does not hold for pinned projects, and its others are answered above. An install also moves, in every project on the machine, pinned or not, the permission commands ADR-095 point 2 serves from the installed release, and remaking the hook's copy from it moves the hook of every project that turns the hook on. Printing is the fallback of point 3.
 - **Ask `[y/N]` before installing.** ADR-044's planned next step. Not taken, for the reasons above.
 - **Install in every session, with or without a terminal.** Rejected: a pipeline would replace its machine's tool with nobody watching.
 - **Go on in the old process after the install.** Rejected: the project would be brought to the old bundle and pinned there.

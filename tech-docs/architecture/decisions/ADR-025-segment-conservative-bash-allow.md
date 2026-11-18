@@ -85,10 +85,10 @@ unasked. Under `Bash(git:*)`, `git -c … push` ran unasked while
 `GIT_CONFIG_PARAMETERS=… git push` prompted: one injection, two verdicts.
 
 The decision core is harness-neutral, propagated, and imported by **both** the
-claude-code PreToolUse hook (which runs in the adopter tree at decision time,
-under bare `python3` inside the macOS Seatbelt box per
-[ADR-014](ADR-014-macos-sandbox-platform-stance.md)) and the `pkit permissions`
-CLI. [ADR-002](ADR-002-permission-realizer-ownership.md) /
+claude-code PreToolUse hook (which runs outside the sandbox, from a copy of the
+installed release or, in a working run, from the project's tree at the default
+branch's head, per [ADR-095](ADR-095-hook-out-of-reach.md) point 2) and the
+`pkit permissions` CLI. [ADR-002](ADR-002-permission-realizer-ownership.md) /
 [ADR-003](ADR-003-permission-core-code-home.md) pin the **same-code invariant**:
 hook and CLI must decide identically from one `decide()`. So any change to how a
 compound is classified lives in that one neutral core, never in the adapter hook
@@ -210,7 +210,7 @@ heredoc stays untrusted.
 ### 3. No shell parser
 
 The core keeps its dumb regex segmenter (`_SEP`). A real shell parser is
-**rejected on altitude grounds**: the hook runs bare `python3` in-sandbox
+**rejected on altitude grounds**: the hook runs bare `python3`
 ([ADR-014](ADR-014-macos-sandbox-platform-stance.md)), and importing an
 adversarial-input parser into a fail-open, security-adjacent component trades
 a bounded, auditable splitter for parsing fragility in the worst place to host
@@ -430,7 +430,7 @@ is not merely deferred for sequencing — it is *unsound* and must not be built
 as stated. (Surfaced by the `critic` pass.)
 
 **Why no shell parser (altitude).** The hook is fail-open and runs under bare
-`python3` inside Seatbelt (ADR-014). A shell parser is an adversarial-input
+`python3` (ADR-014). A shell parser is an adversarial-input
 parser; hosting one in a fail-open, security-adjacent, dependency-constrained
 component imports parsing fragility exactly where a parse bug becomes a silent
 auto-allow. The dumb splitter's failure mode is the *safe* one — it abstains on
@@ -513,7 +513,7 @@ no new ownership tier and changes no prior decision.
   file it writes.
 
 - **A real shell parser in the decision core.** Rejected on altitude grounds —
-  the hook runs bare `python3` in-sandbox (ADR-014) and is fail-open; an
+  the hook runs bare `python3` (ADR-014) and is fail-open; an
   adversarial-input parser there trades a bounded, abstain-on-doubt splitter for
   parsing fragility in a security-adjacent component. The dumb splitter stays;
   conservatism lives in the classification.

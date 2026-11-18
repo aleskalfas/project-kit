@@ -176,6 +176,7 @@ Each item says what holds the intent and what is left ([COR-028](../../../.pkit/
 - **The person's own instructions, and an organisation's managed settings,** reach the run, as they reach every run (ADR-066 point 11).
 - **The reviewers' runs** are unconfined, in the seat's clone (ADR-066 point 10). A reviewer that checks out the change and runs its code runs a build's commits outside a sandbox, with the seat's access, until a record confines the reviewers' runs.
 - **A process the run leaves behind** past its limit, as ADR-066 point 11 states for every run. Started inside the sandbox, it stays inside it, and no check or hand-back runs while one is left (point 1).
+- **A working run's hook and model** are read from the repository's history, which sandboxed commands in the caller's sessions can write, and the hook judges by that model alone, bounded by no model a person realized (ADR-095 point 3). They are a member of ADR-095 point 1's class, and point 2 stands as it decides until a record applies that rule to it.
 
 ### 11. The probe
 
