@@ -25,7 +25,20 @@ from ruamel.yaml import YAML
 
 from tests import test_visual_communication_site as site
 from tests.in_process import load
-from tests.test_visual_communication_boxes import STEP, element, group, line, px, scene
+from tests.test_visual_communication_boxes import (
+    STEP,
+    element,
+    filling,
+    group,
+    items,
+    line,
+    node,
+    on_page,
+    px,
+    scene,
+    text,
+    tied,
+)
 from tests.test_visual_communication_checks import COLOURS, colour, page, project_of, run, runs
 from tests.test_visual_communication_checks import box as filled
 from tests.test_visual_communication_checks import text as painted
@@ -159,16 +172,19 @@ def _pages_beside(measure: Callable[[dict[str, Any]], list[Any]]) -> None:
 
 def _near_other_lines() -> None:
     assert near(A, element("figure/b", y=60, width=43)) == []
+    _between_other_lines()
 
 
 def _near_held_edges() -> None:
     outer = element("figure/card", width=100, height=100)
     assert near(outer, element("figure/head", x=2.5, y=2.5, width=95, height=95)) == []
+    _between_held_edges()
 
 
 def _near_inset_on_an_edge() -> None:
     outer = element("figure/card", width=100, height=100)
     assert near(outer, element("figure/head", x=0.5, y=10, width=96.5, height=80)) == []
+    _between_inset_on_an_edge()
 
 
 def _near_gap_not_beside() -> None:
@@ -182,6 +198,135 @@ def _near_states_no_step() -> None:
     assert near(*pair, step=boxes.Step("space.1", 1.0)) == [boxes.NEAR_ALIGNMENT_UNMEASURED]
     [stated] = boxes.near_alignment(scene(*pair), None)
     assert (stated.level, stated.who) == (findings.FACT, "")
+    one = group("figure/one", element("figure/one/a"), width=200, height=200)
+    two = group("figure/two", element("figure/two/b", x=2.5, y=60), width=200, height=200)
+    assert near(one, two, step=None) == [boxes.NEAR_ALIGNMENT_UNMEASURED]
+    lists = on_page(items("page/a", 20, 12), items("page/b", 400, 14))
+    assert [f.code for f in boxes.near_alignment(lists, None)] == [boxes.NEAR_ALIGNMENT_UNMEASURED]
+
+
+BETWEEN = boxes.NEAR_ALIGNMENT_BETWEEN_GROUPS
+
+
+def in_two_groups(first: dict[str, Any], second: dict[str, Any]) -> list[str]:
+    """The labels the check of edges that nearly line up gives `first`, in the group
+    `figure/one`, and `second`, in the group `figure/two`, the two groups' frames alike."""
+    one = group("figure/one", first, width=200, height=200)
+    two = group("figure/two", second, width=200, height=200)
+    return near(one, two)
+
+
+def _near_between_groups() -> None:
+    assert in_two_groups(element("figure/one/a"), element("figure/two/b", x=2.5, y=60)) == [BETWEEN]
+    outer = element("figure/one/card", width=100, height=100)
+    assert in_two_groups(outer, element("figure/two/head", x=10, y=10, width=78, height=80)) == [
+        BETWEEN
+    ]
+
+
+def _near_lists() -> None:
+    found = boxes.near_alignment(on_page(items("page/a", 20, 12), items("page/b", 400, 14)), STEP)
+    assert [(f.code, f.message.split(" `")[0]) for f in found] == [
+        (BETWEEN, "the spacings of the lists")
+    ]
+
+
+def _between_pages() -> None:
+    _pages_beside(lambda given: boxes.near_alignment(given, STEP))
+    one = group("figure/one", element("figure/one/a"), width=50, height=50)
+    two = group("figure/two", element("figure/two/b", x=2.5), y=100, width=50, height=50)
+    assert boxes.near_alignment({"pages": [], "children": [one, two]}, STEP) == []
+
+
+def _group_with_no_sibling() -> None:
+    one = group("figure/one", element("figure/one/a", x=10), width=50, height=50)
+    two = group("figure/two", element("figure/two/b", x=2.5), y=100, width=100, height=50)
+    assert near(one, two) == []
+
+
+def _tie_s_part() -> None:
+    assert boxes.near_alignment(tied(), STEP) == []
+    assert [f.code for f in boxes.near_alignment(tied(connector=False), STEP)] == [BETWEEN]
+
+
+def _text_s_lines() -> None:
+    box = element("figure/box", width=100, height=20)
+    assert near(box, text("figure/lead", x=-97.5, y=60, width=200, lines=(80,))) == []
+    assert near(box, filling("figure/lead", x=2.5, y=60, width=100)) == [boxes.NEAR_ALIGNMENT]
+    first = text("figure/first", width=200, lines=(80,))
+    second = text("figure/second", x=-97.5, y=40, width=200, lines=(80,), anchor="middle")
+    assert near(first, second) == []
+
+
+def _text_s_insets() -> None:
+    box = element("figure/box", width=100, height=30)
+    assert near(box, text("figure/label", x=8, y=4, width=82, height=22)) == []
+    assert near(box, filling("figure/label", x=8, y=4, width=82, height=22)) == [
+        boxes.NEAR_ALIGNMENT
+    ]
+    room = text("figure/text", width=100, height=40, lines=(60,))
+    assert near(room, element("figure/box", x=10, y=10, width=78, height=20)) == []
+
+
+def _text_s_gaps() -> None:
+    row = [text(f"figure/{n}", x=x, width=100, lines=(60,)) for n, x in enumerate((0, 116, 235))]
+    assert near(*row) == []
+    filled = [filling(f"figure/{n}", x=x, width=100) for n, x in enumerate((0, 116, 235))]
+    assert near(*filled) == [boxes.NEAR_ALIGNMENT]
+
+
+def _spacings(found: list[Any]) -> list[Any]:
+    return [f for f in found if f.message.startswith("the spacings of the lists")]
+
+
+def _other_groups_spacings() -> None:
+    def rows(trace: str, x: float, gap: float) -> dict[str, Any]:
+        parts = [element(f"{trace}/{n}", y=n * (40 + gap), width=200) for n in range(4)]
+        return group(trace, *parts, x=x, y=40, width=200, height=300)
+
+    assert (
+        _spacings(
+            boxes.near_alignment(on_page(rows("page/a", 20, 12), rows("page/b", 400, 14)), STEP)
+        )
+        == []
+    )
+    unlike = on_page(items("page/a", 20, 12), items("page/b", 400, 14, drawn_by="tests/tag"))
+    assert _spacings(boxes.near_alignment(unlike, STEP)) == []
+    first, tall = node("page/tree#1", 0, 300, (14, 16))
+    second, other = node("page/tree#2", tall + 12, 300, (14, 16))
+    tree = group("page/tree", first, second, x=20, y=20, width=300, height=tall + 12 + other)
+    assert boxes.near_alignment(on_page(tree), STEP) == []
+
+
+def _gap_between_groups() -> None:
+    one = group("page/one", element("page/one/a"), element("page/one/b", x=48), width=88)
+    two = group("page/two", element("page/two/c", x=10, width=40), x=88, width=50)
+    assert boxes.near_alignment(on_page(one, two), STEP) == []
+
+
+def _list_s_own_spacing() -> None:
+    first = items("page/a", 20, 12)
+    for n, entry in enumerate(first["children"][2:], start=3):
+        entry["y"] = (n - 1) * 42 + 2
+    found = boxes.near_alignment(on_page(first, items("page/b", 400, 14)), STEP)
+    assert [f.code for f in found].count(boxes.NEAR_ALIGNMENT) == 1
+    assert _spacings(found) == []
+
+
+def _between_other_lines() -> None:
+    assert in_two_groups(element("figure/one/a"), element("figure/two/b", y=60, width=43)) == []
+
+
+def _between_held_edges() -> None:
+    outer = element("figure/one/card", width=100, height=100)
+    held = element("figure/two/head", x=2.5, y=2.5, width=95, height=95)
+    assert in_two_groups(outer, held) == []
+
+
+def _between_inset_on_an_edge() -> None:
+    outer = element("figure/one/card", width=100, height=100)
+    held = element("figure/two/head", x=0.5, y=10, width=96.5, height=80)
+    assert in_two_groups(outer, held) == []
 
 
 def _overlap_pair() -> None:
@@ -366,16 +511,26 @@ PLANTED: dict[tuple[str, str, int], Callable[[], None]] = {
     ("edges-nearly-in-line", "measures", 0): _near_pair,
     ("edges-nearly-in-line", "measures", 1): _near_insets,
     ("edges-nearly-in-line", "measures", 2): _near_spacings,
-    ("edges-nearly-in-line", "leaves-out", 0): lambda: _apart_in_groups(near, 2.5),
-    ("edges-nearly-in-line", "leaves-out", 1): lambda: _lines_and_ties(near),
-    ("edges-nearly-in-line", "leaves-out", 2): lambda: _of_no_area(near),
-    ("edges-nearly-in-line", "leaves-out", 3): lambda: _pages_beside(
+    ("edges-nearly-in-line", "measures", 3): _near_between_groups,
+    ("edges-nearly-in-line", "measures", 4): _near_lists,
+    ("edges-nearly-in-line", "leaves-out", 0): lambda: _lines_and_ties(near),
+    ("edges-nearly-in-line", "leaves-out", 1): lambda: _of_no_area(near),
+    ("edges-nearly-in-line", "leaves-out", 2): lambda: _pages_beside(
         lambda given: boxes.near_alignment(given, STEP)
     ),
-    ("edges-nearly-in-line", "leaves-out", 4): _near_other_lines,
-    ("edges-nearly-in-line", "leaves-out", 5): _near_held_edges,
-    ("edges-nearly-in-line", "leaves-out", 6): _near_inset_on_an_edge,
-    ("edges-nearly-in-line", "leaves-out", 7): _near_gap_not_beside,
+    ("edges-nearly-in-line", "leaves-out", 3): _between_pages,
+    ("edges-nearly-in-line", "leaves-out", 4): _group_with_no_sibling,
+    ("edges-nearly-in-line", "leaves-out", 5): _tie_s_part,
+    ("edges-nearly-in-line", "leaves-out", 6): _text_s_lines,
+    ("edges-nearly-in-line", "leaves-out", 7): _text_s_insets,
+    ("edges-nearly-in-line", "leaves-out", 8): _text_s_gaps,
+    ("edges-nearly-in-line", "leaves-out", 9): _other_groups_spacings,
+    ("edges-nearly-in-line", "leaves-out", 10): _gap_between_groups,
+    ("edges-nearly-in-line", "leaves-out", 11): _list_s_own_spacing,
+    ("edges-nearly-in-line", "leaves-out", 12): _near_other_lines,
+    ("edges-nearly-in-line", "leaves-out", 13): _near_held_edges,
+    ("edges-nearly-in-line", "leaves-out", 14): _near_inset_on_an_edge,
+    ("edges-nearly-in-line", "leaves-out", 15): _near_gap_not_beside,
     ("edges-nearly-in-line", "states", 0): _near_states_no_step,
     ("boxes-that-overlap", "measures", 0): _overlap_pair,
     ("boxes-that-overlap", "leaves-out", 0): lambda: _apart_in_groups(overlap, -20),

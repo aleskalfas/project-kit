@@ -213,7 +213,7 @@ from _lib.libraries import (
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml, sha256
 from _lib.root import CONFIG, SHIPPED
-from _lib.scene import SceneResult
+from _lib.scene import SceneResult, line_left
 from _lib.scene_checks import SIZES, Found, Reach, SceneCheck
 from _lib.shipped import read as read_shipped
 
@@ -3341,7 +3341,7 @@ def _text_contrast(
     colours: Mapping[str, Mapping[str, Any]],
     keys: Sequence[str],
 ) -> list[Finding]:
-    left, width = x + float(text["x"]), float(text["width"])
+    left = x + float(text["x"])
     step = float(text["line-height"])
     paragraphs = text.get("paragraphs") or [[{}]]
     # Each look of a run and the fills under its spans, in the order first met, and each
@@ -3350,10 +3350,8 @@ def _text_contrast(
     looks: list[tuple[Any, ...]] = []
     for index, line in enumerate(text["lines"]):
         runs = paragraphs[line.get("paragraph", 0)] or [{}]
-        drawn = float(line.get("width", 0))
-        at = {"middle": left + (width - drawn) / 2, "end": left + width - drawn}.get(
-            str(text.get("text-anchor")), left
-        )
+        # Where the text stands the line in its width is the scene's to say (`line_left`).
+        at = left + line_left(text, line)
         top = y + float(text["y"]) + index * step
         middle = top + step / 2
         # A line with no span is measured at its start, in its paragraph's first run.

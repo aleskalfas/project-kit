@@ -8,7 +8,10 @@ Held here:
   left out, a grade of a rule the bar does not cover counts for nothing, and the same report
   gives the same verdict again;
 - **no verdict, or a refusal**: no bar gives no verdict, and nor does a report that grades
-  a covered rule nowhere; what the verdict would rest on and cannot be read refuses;
+  a covered rule nowhere; what the verdict would rest on and cannot be read refuses, and a
+  report whose document does not parse is named so, with the line the reading stopped at
+  where the reader names it and with none where it names none, while the same words as a
+  block scalar give the verdict (#3391);
 - **the hold**: ends no loop where no calibration's report is accepted, where the bar reaches
   past the accepted rules, and where anything point 9 names has lapsed, a change to the
   capability's code or to the body of its list of checks among it (DEC-065); ends it where
@@ -337,6 +340,85 @@ def test_a_report_it_cannot_read_refuses(copy: Copy, setup: Any, said: str) -> N
     code, out, err = copy.run("deck")
     assert (code, out) == (1, "")
     assert said in err
+
+
+def written(copy: Copy, *evidence: str) -> int:
+    """A round's document as a reviewer writes it, in YAML, kept alone: its first grade fails
+    the bar most tests set, and `evidence` gives the lines of its evidence, each indented
+    under the grade's other keys. Returns the line of the document the evidence opens on."""
+    head = [
+        "pkit_schema: visual-communication:review",
+        "schema_version: 1",
+        "piece: deck",
+        "round: 1",
+        "model:",
+        "  name: a-model-1.0",
+        "read-before-grading:",
+        "  - kind: images",
+        "    what: Every image of the run.",
+        "grades:",
+        "  - rule: RS-GRAPHIC-001",
+        "    on:",
+        "      page: layers",
+        "    grade: competent",
+    ]
+    tail = [
+        "  - rule: RS-COMM-003",
+        "    on:",
+        "      piece: true",
+        "    grade: professional",
+        "    evidence: Each lead follows from the one before it.",
+    ]
+    lines = [*head, *(f"    {line}" for line in evidence), *tail]
+    write(copy.root / REVIEWS / "deck" / "round-1.yaml", "\n".join(lines) + "\n")
+    return len(head) + 1
+
+
+#: Words a value in words may hold that a plain value does not parse with (#3391): a `: `,
+#: and a quoted phrase the value opens with and goes on after.
+UNPARSED = pytest.mark.parametrize(
+    "words",
+    ["The lead: it answers no question.", '"Two compete" for the eye, and the figure loses.'],
+    ids=["holding-a-colon", "opening-with-a-quoted-phrase"],
+)
+
+
+@UNPARSED
+def test_a_report_whose_document_does_not_parse_is_named_with_the_line_it_stopped_at(
+    copy: Copy, words: str
+) -> None:
+    configured(copy, *COVERS)
+    line = written(copy, f"evidence: {words}")
+    for args in (("deck",), ("deck", "--json")):
+        code, out, err = copy.run(*args)
+        assert (code, out) == (1, "")
+        assert (
+            f"{REVIEWS}/deck/round-1.yaml: the report's document does not parse as YAML, so no "
+            f"verdict is read from it: the reading stopped at line {line}, column "
+        ) in err
+
+
+def test_a_report_whose_document_does_not_parse_where_the_reader_names_no_place_gives_none(
+    copy: Copy,
+) -> None:
+    """A character YAML does not allow stops the reader before it names a line (#3391)."""
+    configured(copy, *COVERS)
+    written(copy, "evidence: >-", "  The lead\x07 answers no question.")
+    code, out, err = copy.run("deck")
+    assert (code, out) == (1, "")
+    assert (
+        f"{REVIEWS}/deck/round-1.yaml: the report's document does not parse as YAML, so no "
+        "verdict is read from it: "
+    ) in err
+    assert "the reading stopped at" not in err
+
+
+@UNPARSED
+def test_the_same_words_as_a_block_scalar_give_the_verdict(copy: Copy, words: str) -> None:
+    configured(copy, *COVERS)
+    written(copy, "evidence: >-", f"  {words}")
+    (failing,) = copy.answered("deck")["verdict"]["pages"][0]["failing"]
+    assert failing["evidence"] == words
 
 
 @pytest.mark.parametrize(
