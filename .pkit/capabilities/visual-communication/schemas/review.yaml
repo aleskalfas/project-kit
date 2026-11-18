@@ -12,7 +12,8 @@
 # The body below is the reference instance: a second round, one of whose grades differs
 # from the round before. Two faults hold one grade, and its evidence names each by the id
 # the report gives it, then the reading beyond them. One grade only the asker's words would
-# raise. Each grade of `professional` names the strongest weakness it weighed, and a page a
+# raise. Each grade of `professional` names the strongest weakness it weighed that the rule's
+# own words fail on, which a professional would polish or hand over as it is, and a page a
 # rule does not judge quotes the rule's words that leave it out. It shows some grades of some
 # pages, to show the form, and is no whole review: a review grades each rule it reads on each
 # page it reads, and once for the piece where the rule takes a grade there, or lists it under
@@ -71,8 +72,8 @@ grades:
     grade: professional
     evidence: >-
       The lead answers the title, and the stepped figure shows the point the lead states.
-      The strongest weakness weighed: the lead opens on the title's own words before it
-      states the point, which a professional would leave as it is.
+      The strongest weakness weighed: the lead answers the title only after it repeats the
+      title's words, which a professional would hand over as it is.
   - rule: RS-GRAPHIC-001
     on:
       page: layers
@@ -81,7 +82,8 @@ grades:
       The head and the stepped figure, which bears the point out, each stand above every
       part of the rest. The mark in the footer is the page's frame, which this rule does not
       rank. The strongest weakness weighed: the note on the levels, the heaviest part of the
-      rest, which a professional would set back a little further.
+      rest, stands below the figure by less than any other part does, which a professional
+      would polish by setting the note back.
   - rule: RS-GRAPHIC-002
     on:
       page: layers
@@ -111,7 +113,8 @@ grades:
     evidence: >-
       "Readable where it is shown": each text and part reads as drawn where the deck is
       projected, and the page is taken in at a glance. The strongest weakness weighed is the
-      note's five lines, the most text the page holds, which a professional would polish.
+      note on the levels, the most text the page holds, which slows the glance a little, and
+      a professional would polish it.
   - rule: RS-COMM-001
     on:
       page: plan
@@ -129,9 +132,10 @@ grades:
     evidence: >-
       The sections keep a deductive order, from what the layers are to the plan that builds
       them, and the pages within each keep an order of structure, from the whole to its
-      parts. The strongest weakness weighed is the title of the second section's opening
-      page, which repeats a word of the first's, a tie the rule does not count, and a
-      professional would hand the deck over as it is.
+      parts. The strongest weakness weighed: the title of the second section's opening page
+      follows from the first section's last statement by a step the deck leaves out, why the
+      layers need a plan, which a reader supplies at once, and a professional would hand the
+      deck over as it is.
 not-graded:
   - rule: RS-COMM-001
     on:
@@ -139,9 +143,9 @@ not-graded:
     why: >-
       "Which pages": a page whose job is not to make a point is one whose job is to open,
       divide, list, close or stand outside the pages that make the piece's points, such as a
-      cover, an agenda, a section's opening page, a page that sums up the pages before it, a
-      page of references, a page of questions or thanks, or an appendix's divider. Its kind
-      tells it, and it is not judged by this rule.
+      cover, an agenda, a section's opening page, a page that sums up the pages before it in
+      their statements alone, a page of references, a page of questions or thanks, or an
+      appendix's divider. Its kind tells it, and it is not judged by this rule.
   - rule: RS-GRAPHIC-008
     on:
       page: cover

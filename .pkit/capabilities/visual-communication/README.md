@@ -96,6 +96,7 @@ pkit:
         - visual-communication:DEC-068#1
         - visual-communication:DEC-068#4
         - visual-communication:DEC-068#6
+        - visual-communication:DEC-068#7
         - visual-communication:DEC-068#9
         - COR-017
         - COR-070#1
@@ -576,7 +577,7 @@ Each finding names the page, the element's trace id where the element was drawn 
 - **A brief finding,** which cites the part of the piece's brief that the drawing does not show.
 - **A note,** anything else worth a look. A note of taste names the practice it draws on, from the design knowledge. A note never fails.
 
-One observation makes one finding, of the first kind in this list that applies, and it cites each ground it rests on. A page whose path, traced from where the eye enters, does not follow the order its relations and its lead or takeaway give is such an observation. It may break a rule as well as the brief. Where the piece keeps no brief, or the page's part of it gives no relation and no takeaway, the page's lead gives the order, and such a path is a rule finding where a rule applies, and otherwise a note.
+One observation makes one finding, of the first kind in this list that applies, and it cites each ground it rests on. A page whose path, traced from where the eye enters, does not follow the order its relations and its lead or takeaway give is such an observation. It may break a rule as well as the brief. Where the piece keeps no brief, or the page's part of it gives no relation and no takeaway, the page's statement gives the order, its lead or its title where it has no lead, and such a path is a rule finding where a rule applies, and otherwise a note.
 
 Its findings are advice. They join no validation and hold no merge.
 
