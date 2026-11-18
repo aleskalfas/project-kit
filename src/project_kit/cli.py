@@ -155,6 +155,7 @@ if TYPE_CHECKING:
         untag_version,
     )
 else:
+    acting_account = _OnFirstUse("project_kit.acting_account")
     agent_runs = _OnFirstUse("project_kit.agent_runs")
     default_branch = _OnFirstUse("project_kit.default_branch")
     friction_check = _OnFirstUse("project_kit.friction_check")
@@ -1942,8 +1943,6 @@ def account_read(as_json: bool) -> None:
     """
     import json
 
-    from project_kit import acting_account
-
     reading = acting_account.read()
     if as_json:
         click.echo(json.dumps(reading.document(), sort_keys=True))
@@ -1962,8 +1961,6 @@ def _account_request(run: Callable[[object], dict[str, Any]]) -> dict[str, Any]:
     """Read a JSON request on standard input and answer it with `run`. A request
     it refuses prints no document and exits 1, saying why."""
     import json
-
-    from project_kit import acting_account
 
     text = click.get_text_stream("stdin").read()
     try:
@@ -1994,8 +1991,6 @@ def account_spell(as_json: bool) -> None:
     """
     import json
 
-    from project_kit import acting_account
-
     document = _account_request(acting_account.spell_document)
     if as_json:
         click.echo(json.dumps(document, sort_keys=True))
@@ -2014,8 +2009,6 @@ def account_compare(as_json: bool) -> None:
     GitHub nothing. Exit 1, with no document, on a request it refuses.
     """
     import json
-
-    from project_kit import acting_account
 
     document = _account_request(acting_account.compare_document)
     if as_json:
