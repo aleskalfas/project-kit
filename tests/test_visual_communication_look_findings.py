@@ -238,8 +238,11 @@ def test_two_checks_that_share_a_label_are_told_apart_by_their_ids(tmp_path: Pat
     one = checks.SceneCheck("one", id="one", labels=("shared",), reach=reach)
     other = checks.SceneCheck("other", id="other", labels=("shared",), reach=reach)
     finding = checks.Finding("shared", checks.FACT, "found", file="piece.yaml", where="figure")
+    reading = checks.Reading(drawn.held)
     said = [
-        viewing._said_found(drawn, checks.Found(finding, check, "en", "default"), "default")
+        viewing._said_found(
+            drawn, reading, checks.Found(finding, check, "en", "default"), "default"
+        )
         for check in (one, other)
     ]
     assert [each["check"] for each in said] == ["one", "other"]
