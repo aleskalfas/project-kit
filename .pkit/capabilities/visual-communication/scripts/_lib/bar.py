@@ -9,8 +9,8 @@ bar covers only what the review grades, and in the major its set's pin says.
   not load into sessions, and each rule of a project's own set that inherits one of them
   (DEC-030 point 6). A set of the project's own covers only its own rules, never those it
   inherits. A rule withdrawn or superseded is not graded.
-- **A cover** is a set's id, or one rule's id, with the set's major: `COMM@1`,
-  `RS-COMM-003@1`. A cover naming nothing the review grades fails (`bar-ungraded`).
+- **A cover** is a set's id, or one rule's id, with the set's major: `COMM@2`,
+  `RS-COMM-003@2`. A cover naming nothing the review grades fails (`bar-ungraded`).
 - **The major** a cover names must be the major the project pins for the set, as a project
   set's `inherits` writes it, or the set's own major where no set of the project pins it
   (`bar-major`), as a pin behind its set fails (COR-051 point 7).

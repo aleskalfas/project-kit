@@ -92,6 +92,12 @@ pkit:
         - visual-communication:DEC-042#6
         - visual-communication:DEC-042#9
         - visual-communication:DEC-042#10
+        - visual-communication:DEC-046#2
+        - visual-communication:DEC-068#1
+        - visual-communication:DEC-068#4
+        - visual-communication:DEC-068#6
+        - visual-communication:DEC-068#7
+        - visual-communication:DEC-068#9
         - COR-017
         - COR-070#1
         - COR-073#3
@@ -206,7 +212,7 @@ Visual work made from reusable parts. A *piece*, such as a presentation or a fig
 - **Two agents:** `graphic-designer`, which designs a piece from its brief and builds the project's own libraries ([The designer](#the-designer)), and `graphic-design-reviewer`, which reads a piece's drawn pages and reports what no check measures ([The reviewer](#the-reviewer)).
 - **The skill** `visual-author`, which guides whoever draws a piece, from its first files to pages that read ([Drawing a piece](#drawing-a-piece)).
 - **Its operational rules,** the loaded rule set `VIS` in `rule-sets/vis.md` and the file generated from it, `rules.md` ([COR-070](../../decisions/core/COR-070-capability-loaded-rules.md)). Wherever the capability is installed, every session loads `rules.md` ([A capability's rules](../../rules/README.md#a-capabilitys-rules)). Its rules say how an agent goes on where the session's sandbox stops a look ([visual-communication:DEC-024-outside-programs-sandbox] point 6).
-- **The rules of visual communication,** in two rule sets ([visual-communication:DEC-028-principles-of-visual-communication] point 2). `COMM`, in `rule-sets/comm.md`, asks whether a piece says the right thing. `GRAPHIC`, in `rule-sets/graphic.md`, asks whether it looks right. A project's own rule set may inherit either, as in `inherits: [visual-communication:COMM@1]` ([COR-051](../../decisions/core/COR-051-rule-sets.md) point 7). They bind on no piece yet, since a piece's content is not something rules bind on. Until then they guide whoever designs or judges a piece (DEC-028 point 5).
+- **The rules of visual communication,** in two rule sets ([visual-communication:DEC-028-principles-of-visual-communication] point 2). `COMM`, in `rule-sets/comm.md`, asks whether a piece says the right thing. `GRAPHIC`, in `rule-sets/graphic.md`, asks whether it looks right. A project's own rule set may inherit either, as in `inherits: [visual-communication:COMM@2]` ([COR-051](../../decisions/core/COR-051-rule-sets.md) point 7). They bind on no piece yet, since a piece's content is not something rules bind on. Until then they guide whoever designs or judges a piece (DEC-028 point 5).
 - **Its design knowledge,** in [`design-knowledge/`](design-knowledge/README.md): what the published practice of visual communication teaches, a short file for each topic, each idea credited to its author, and an index that says when to read each topic ([visual-communication:DEC-030-design-agents] point 8). The designer and the reviewer read it. It holds no rule, no value and no threshold.
 - `decisions/DEC-NNN-*.md`: the principles every piece, library and renderer follows.
 
@@ -530,7 +536,7 @@ Writes a brand out as code, as the declaration `code/<name>.yaml` in the locatio
 
 ## The designer
 
-`graphic-designer` turns a piece's brief into a piece ([visual-communication:DEC-030-design-agents] point 2). It names the content's structure, and the order each page explains in, before it chooses a form. It settles where a page's path starts before it ranks what is seen first, takes type, colour and space from the brand's roles, and writes the reason for each choice into the brief. It writes the piece's own file, its content in every language, its brief and its local components. It also builds the project's own libraries, in a version not yet released. It renders, checks and looks only through the commands, as the skill `visual-author` walks them ([Drawing a piece](#drawing-a-piece)). The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
+`graphic-designer` turns a piece's brief into a piece ([visual-communication:DEC-030-design-agents] point 2). It names the content's structure, and the order each page explains in, before it chooses a form. It settles where a page's path starts before it ranks the page's head, its focal point and the action it asks above the rest, takes type, colour and space from the brand's roles, and writes the reason for each choice into the brief. It writes the piece's own file, its content in every language, its brief and its local components. It also builds the project's own libraries, in a version not yet released. It renders, checks and looks only through the commands, as the skill `visual-author` walks them ([Drawing a piece](#drawing-a-piece)). The adapter deploys it as it deploys any agent ([Deploy mechanics](../../agents/README.md#deploy-mechanics)).
 
 **Its grant.** It writes within the location, which the overlay category `visual-communication.work` grants it ([visual-communication:DEC-030-design-agents] point 5):
 
@@ -571,7 +577,7 @@ Each finding names the page, the element's trace id where the element was drawn 
 - **A brief finding,** which cites the part of the piece's brief that the drawing does not show.
 - **A note,** anything else worth a look. A note of taste names the practice it draws on, from the design knowledge. A note never fails.
 
-One observation makes one finding, of the first kind in this list that applies, and it cites each ground it rests on. A page whose path, traced from where the eye enters, does not follow the order its relations and its lead or takeaway give is such an observation. It may break a rule as well as the brief. Where the piece keeps no brief, it is a rule finding where a rule applies, and otherwise a note.
+One observation makes one finding, of the first kind in this list that applies, and it cites each ground it rests on. A page whose path, traced from where the eye enters, does not follow the order its relations and its lead or takeaway give is such an observation. It may break a rule as well as the brief. Where the piece keeps no brief, or the page's part of it gives no relation and no takeaway, the page's statement gives the order, its lead or its title where it has no lead, and such a path is a rule finding where a rule applies, and otherwise a note.
 
 Its findings are advice. They join no validation and hold no merge.
 
@@ -580,7 +586,10 @@ Its findings are advice. They join no validation and hold no merge.
 Beside its findings, the reviewer grades each rule it reads, in one of four words: *below competent*, *competent*, *professional* or *excellent*. *Professional* is the work a professional designer hands over for that audience and medium. It never weighs effort, what the engine can draw, or progress ([visual-communication:DEC-042-grades-bar-and-loop] point 1).
 
 - **On each page, or once for the piece.** A rule that judges the pages together, such as the rule that the pages tell the story in order, takes one grade for the piece. Two rules take both, and the others take one on each page. The reviewer's body holds which. It lists a rule whose text leaves a page or the piece out as not graded, with why.
+- **Evidence of the level.** Before it grades a rule *professional*, the reviewer names the strongest weakness on the page that the rule's own words fail on. A break the rule's text settles is below `professional`. A weakness the text leaves to judgment holds the grade below `professional` only where a reader meets it and a professional would not hand the page over without mending it. Where a professional would polish it, the grade stays `professional`, and its evidence names it ([visual-communication:DEC-042-grades-bar-and-loop] points 1 and 6). A doubt stays a note, and moves no grade. Before it grades a rule *excellent*, it names what makes the page an example of the rule. So finding nothing wrong is no evidence of *professional*. A fault that cites no rule is no evidence of any rule's level and moves no grade ([visual-communication:DEC-046-faults-lower-grades] point 2).
 - **A fault holds a grade.** A fault that a rule's words name, such as an offset between parts the rule asks to be lined up, holds that rule's grade below `professional` on the page that shows it, and the grade names the fault as its evidence ([visual-communication:DEC-042-grades-bar-and-loop] point 1).
+- **A weakness lowers each rule whose own words fail on it.** A weakness of design that is no fault lowers each rule whose own words fail on it, by the condition above. The reviewer describes it once, in the finding of the first rule by id that it lowers. Each other rule it lowers takes a finding that names it, which is no second finding of the observation, and does not describe it again ([visual-communication:DEC-068-focal-point-in-the-content] point 9).
+- **The page a reader meets.** A grade judges the page as a reader meets it. Where the cause lies, in the content, a component, the brand or the drawing, decides where the fix belongs, never whether the grade falls.
 - **A rule's text settles the exact grade only where it names one.** Every other grade is the reviewer's reading, so a finding on it is for a person once its rule binds.
 - **Its marks.** A grade that only a tool the engine lacks would raise is marked a *need*, and one that only the asker's words would raise is marked as the asker's. Each goes to you as a question. The reviewer alone marks a grade ([visual-communication:DEC-042-grades-bar-and-loop] point 4).
 - **What it reads, in order.** It reads the brief's file, and its reports of the loop's earlier rounds as it wrote them, only once its grades are written, and then says why each grade differs from the round before ([visual-communication:DEC-042-grades-bar-and-loop] point 4).
