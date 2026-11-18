@@ -6,6 +6,8 @@ date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [COR-072](COR-072-delegation-levels.md).** Where a standing authorisation merges a change, the change's reviewers judge alone whether it needed a record, and one that finds it did holds the merge for a person, who decides. Overturned, for such a merge: point 3's "and the person who authorises its merge judge it again". Every other choice stands, the author's judgement before the work and the person's decision where a reviewer holds the merge among them.
+
 **In plain terms:** where an accepted record decides something, that record governs, and the rest of the system, such as the code, the documents and the skills, carries the decision out. This record calls that rest the record's projection. A choice that later work will build on, such as a library, an interface others use or a convention, starts with its record, accepted before work rests on it. Where the system and an accepted record disagree, the system is checked first for falling short, and a record changes only by a decision a person accepts. A record keeps the choice and its reasons, and the detail that carries it out lives in the projection. What no record decides stands as built until a record decides it. A scratchpad note comes before all of this: it explores, then retires into a record or another artefact.
 
 ## Context
