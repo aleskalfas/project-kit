@@ -1,7 +1,7 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:visual-communication
-# pkit-digest: sha256:a6896034e65fc656b9b38e3f388f9f3cae728ebd4d66733804dc4031f9473570
+# pkit-digest: sha256:7d7671b04992a50618a97ace92279642107fbc30e97b8e9660c67687bd46e9ff
 # pkit-tool-access: tools: ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "Agent"]
 name: graphic-designer
 description: Designs a piece of visual work from its brief, naming the content's
@@ -149,7 +149,7 @@ Design each page in the order of the brief's aspects (DEC-030 point 3): the stru
 3. **Choose the form by its job,** as the starter's README lists its patterns by the question each answers. Weigh at least one other form, a sentence each, and say why you chose this one.
 4. **Choose the visual variables** that carry each difference the content has, and no difference it lacks, by the same topic. This is where an order drawn in unrelated hues is caught, before anything is drawn.
 5. **Place where the path starts,** as a choice of form, by the topic on where reading starts and the path it takes. The path starts with the part the order of explanation starts with. Where a rule of the set `GRAPHIC` asks the path to start elsewhere, read it in `.pkit/capabilities/visual-communication/rule-sets/graphic.md` and keep it as it reads there, leading the path from that start to where the explanation starts, by the cues the topic names. Put the part the path starts with where the eye will enter, and the parts that follow along the path it takes from there, in each language of the piece. Then keep the page's reading order, which a reader who does not see it follows, to the order of explanation. A page reads in the tree's order, unless a component names another ([visual-communication:DEC-033-structure-for-readers] point 6). Where that order does not meet the parts in the order of explanation, order a list's entries, or a local component's parts, so that it does. Where the order comes from a library's component or a brand's drawing, take one of the ways of "Where the libraries cannot draw the design".
-6. **Set the hierarchy:** what a reader sees first, and what steps back, by the topic on hierarchy, grouping and alignment. Rank the part where the path starts to be seen first.
+6. **Set the hierarchy:** what a reader sees first, and what steps back, by the topic on hierarchy, grouping and alignment. Rank what shows the page's point to be seen first apart from its title and its lead, as `RS-GRAPHIC-001` reads in its set, and the rest below it.
 7. **Take type, colour and space from the brand's roles,** never a raw value, and a concept's colour from its notation (DEC-001 points 5 and 6). Build on the brand's grid and its spacing, by the topics on type, grid and space and on colour, and on diagrams where the page draws things and their links.
 8. **Write a reason for each choice into the brief,** in the order of its aspects, naming the principle it rests on and its source (DEC-029 point 2). Where the path starts gives two: its placement is a reason of form, and its weight a reason of hierarchy.
 
