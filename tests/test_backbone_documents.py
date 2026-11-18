@@ -8,7 +8,8 @@ the contract pinned here: a key or a value that goes, or comes back, fails until
 same change updates the pin, beside the changeset that declares the break.
 
 Every backbone command that prints a document for a program has its contracts here, or in
-a module this one gathers: `tests/test_backbone_documents_pull_request.py`,
+a module this one gathers: `tests/test_backbone_documents_account.py`,
+`tests/test_backbone_documents_pull_request.py`,
 `tests/test_backbone_documents_process.py` and `tests/test_backbone_documents_components.py`.
 `tests/backbone_documents_baseline.txt` names the commands no contract pins yet, and is
 empty; nothing is ever added to it. Each way a command prints for a program other than
@@ -46,6 +47,7 @@ from project_kit.cli import main
 from project_kit.config_at_commit import KeyAtCommit
 from project_kit.validators import Finding, Severity
 from tests import test_answer_files as answer_tests
+from tests import test_backbone_documents_account as account_documents
 from tests import test_backbone_documents_components as component_documents
 from tests import test_backbone_documents_process as process_documents
 from tests import test_backbone_documents_pull_request as pull_request_documents
@@ -2267,6 +2269,7 @@ PINNED_HERE: Mapping[str, tuple[Contract, ...]] = {
 #: The contracts of each command, by the module that pins them.
 _MODULES: tuple[Mapping[str, tuple[Contract, ...]], ...] = (
     PINNED_HERE,
+    account_documents.CONTRACTS,
     pull_request_documents.CONTRACTS,
     process_documents.CONTRACTS,
     component_documents.CONTRACTS,

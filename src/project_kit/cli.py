@@ -70,6 +70,7 @@ if TYPE_CHECKING:
     from ruamel.yaml.comments import CommentedMap
 
     from project_kit import (
+        acting_account,
         agent_runs,
         default_branch,
         friction_check,
@@ -114,6 +115,7 @@ if TYPE_CHECKING:
         refuse_final_release_tag,
         release_summary,
     )
+    from project_kit.report import RedactionFinding
     from project_kit.scaffolds import (
         AreaVariant,
         MigrationScope,
@@ -1901,6 +1903,130 @@ def _echo_graph(
             ),
             nl=False,
         )
+
+
+# --- the acting account (per ADR-094) ----------------------------------
+
+
+@main.group("account")
+def account() -> None:
+    """The account on the hosting service the credential acts as, and the one
+    spelling accounts are compared in (ADR-094).
+
+    `read` asks GitHub, through `gh`, which account the credential acts as.
+    `spell` and `compare` read a JSON request on standard input and ask GitHub
+    nothing. `--json` writes each document as one line of JSON, which is how a
+    capability's script calls them; without it, each prints lines for people.
+    Reference: `.pkit/cli/README.md`, "Account commands".
+    """
+
+
+def _account_json_option(command: Callable[..., None]) -> Callable[..., None]:
+    return click.option(
+        "--json",
+        "as_json",
+        is_flag=True,
+        default=False,
+        help="Write the document as one line of JSON.",
+    )(command)
+
+
+@account.command("read")
+@_account_json_option
+def account_read(as_json: bool) -> None:
+    """Which account the credential acts as, as GitHub answers it.
+
+    Names an account only from GitHub's answer, a user's by its login and a
+    bot's with its `[bot]` suffix; otherwise says why it names none. Read-only.
+    Exit 0 whenever it read; the document says what it found.
+    """
+    import json
+
+    from project_kit import acting_account
+
+    reading = acting_account.read()
+    if as_json:
+        click.echo(json.dumps(reading.document(), sort_keys=True))
+    elif reading.named:
+        click.echo(f"The credential acts as {acting_account.kind_phrase(reading)}.")
+    elif reading.unnamed:
+        click.echo(
+            "The credential names no user's account, and pkit cannot name the account it "
+            f"acts as: {reading.because()}."
+        )
+    else:
+        click.echo(f"pkit cannot tell which account is acting: {reading.because()}.")
+
+
+def _account_request(run: Callable[[object], dict[str, Any]]) -> dict[str, Any]:
+    """Read a JSON request on standard input and answer it with `run`. A request
+    it refuses prints no document and exits 1, saying why."""
+    import json
+
+    from project_kit import acting_account
+
+    text = click.get_text_stream("stdin").read()
+    try:
+        request: object = json.loads(text)
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise click.ClickException(f"the request on standard input is no JSON: {exc}") from exc
+    try:
+        return run(request)
+    except acting_account.FormError as exc:
+        raise click.ClickException(f"refused: {exc}") from exc
+
+
+def _spelled_line(account: Mapping[str, Any]) -> str:
+    """One account of a spell or compare document, for people."""
+    if account["account"] is None:
+        return f"{account['login']!r}: no spelling ({account['reason']})"
+    return f"{account['login']!r}: {account['account']} ({account['kind']})"
+
+
+@account.command("spell")
+@_account_json_option
+def account_spell(as_json: bool) -> None:
+    """Put each account a JSON request names into the one spelling.
+
+    Reads `{"accounts": [<account>, ...]}` on standard input, each account an
+    object with its `form` and `login`. Asks GitHub nothing. Exit 1, with no
+    document, on a request it refuses, a form it does not know among it.
+    """
+    import json
+
+    from project_kit import acting_account
+
+    document = _account_request(acting_account.spell_document)
+    if as_json:
+        click.echo(json.dumps(document, sort_keys=True))
+        return
+    for spelled in document["accounts"]:
+        click.echo(_spelled_line(spelled))
+
+
+@account.command("compare")
+@_account_json_option
+def account_compare(as_json: bool) -> None:
+    """Answer whether accounts are one, two, or cannot be told apart.
+
+    Reads `{"pairs": [[<account>, <account>], ...], "folds": [{"account":
+    <account>, "among": [<account>, ...]}, ...]}` on standard input. Asks
+    GitHub nothing. Exit 1, with no document, on a request it refuses.
+    """
+    import json
+
+    from project_kit import acting_account
+
+    document = _account_request(acting_account.compare_document)
+    if as_json:
+        click.echo(json.dumps(document, sort_keys=True))
+        return
+    for pair in document["pairs"]:
+        left, right = pair["accounts"]
+        click.echo(f"{pair['answer']}: {left['login']!r} and {right['login']!r}")
+    for question in document["folds"]:
+        among = ", ".join(repr(entry["account"]["login"]) for entry in question["among"])
+        click.echo(f"{question['answer']}: {question['account']['login']!r} among {among}")
 
 
 @main.group("connections")
@@ -4193,6 +4319,7 @@ def _run_report_list(*, tree: bool = False) -> None:
         list_my_reports,
         list_my_reports_tree,
         local_reported_notes,
+        posting_account,
     )
 
     if not gh_authenticated():
@@ -4201,6 +4328,12 @@ def _run_report_list(*, tree: bool = False) -> None:
             f"    https://github.com/{REPORT_TARGET}/issues?q=is%3Aissue+author%3A%40me"
         )
         return
+    # Whose reports: the acting account, or none named (ADR-094 point 6).
+    reading = posting_account()
+    if reading.account is None:
+        raise click.ClickException(
+            f"pkit cannot tell whose reports to list: {reading.because()}. Nothing was listed."
+        )
 
     # The one-tracking-truth cross-tag (#664): a row whose issue a local
     # reported/ note references is tagged [note: <slug>] — derived live,
@@ -4211,7 +4344,7 @@ def _run_report_list(*, tree: bool = False) -> None:
     notes = local_reported_notes(target_root, REPORT_TARGET) if target_root else {}
 
     if tree:
-        rows = list_my_reports_tree(REPORT_TARGET, target_root)
+        rows = list_my_reports_tree(REPORT_TARGET, target_root, account=reading.account)
         if rows is None:
             raise click.ClickException("could not read your reports (gh error).")
         if not rows:
@@ -4224,7 +4357,7 @@ def _run_report_list(*, tree: bool = False) -> None:
                 click.echo(f"      └ {_tracked_fix_row(n, fix)}")
         return
 
-    reports = list_my_reports(REPORT_TARGET, target_root)
+    reports = list_my_reports(REPORT_TARGET, target_root, account=reading.account)
     if reports is None:
         raise click.ClickException("could not read your reports (gh error).")
     if not reports:
@@ -4528,8 +4661,10 @@ def _run_report(
     """Reporter path (#662 realization of ADR-047). The **API post is
     primary**: with `gh` authenticated, the full payload (body + any overflow
     comment) is shown once, the confirm names the target AND the posting
-    identity ("posts as @<gh login> to <owner/repo>"), and only then does the
-    `gh` post run — the note travels as the issue body, never URL-embedded.
+    identity ("posts as @<account> to <owner/repo>", the account the acting-account
+    reading names, ADR-094 point 6), and only then does the `gh` post run — the
+    note travels as the issue body, never URL-embedded. Where the reading names
+    no account, nothing posts: the payload is kept as a draft, saying why.
 
     The prefilled-URL form survives only where it is honest: no `gh` auth, or
     an explicit `--url`/`--open` — and only within `URL_BUDGET` (over it the
@@ -4567,9 +4702,9 @@ def _run_report(
         attach_note,
         build_new_issue_url,
         compose_report,
-        current_login,
         gh_authenticated,
         lint_redaction,
+        posting_account,
         render_finding,
         stage_report,
     )
@@ -4614,7 +4749,7 @@ def _run_report(
         raise click.ClickException(str(exc)) from exc
 
     payload = SendPayload(body)
-    findings: list = []
+    findings: list[RedactionFinding] = []
     note_path: Path | None = None
     if scratchpad_note:
         note_path = scratchpads.resolve_note(target_root, scratchpad_note)
@@ -4671,12 +4806,29 @@ def _run_report(
         return
 
     # API-primary gated path: gh authenticated; asked at a terminal, refused off one.
+    # It posts only as an account it can name, and otherwise keeps the draft
+    # (ADR-094 point 6).
+    reading = posting_account()
+    if reading.account is None:
+        draft = stage_report(
+            target_root,
+            kind=kind,
+            title=title,
+            payload=payload,
+            findings=findings,
+            note_path=note_path,
+            project=project,
+            workstream=ws,
+        )
+        click.echo(_unnamed_post_message(reading, draft.draft_id))
+        _echo_stage_location(project_root, target_root)
+        return
     if findings and not _confirm_past_redaction_findings(
         [render_finding(f) for f in findings], refusal=_POST_REFUSAL
     ):
         click.echo("Not posted — edit the note and re-run.")
         return
-    if _confirm_send_payload(kind, payload, current_login(), refusal=_POST_REFUSAL):
+    if _confirm_send_payload(kind, payload, reading, refusal=_POST_REFUSAL):
         outcome = _post_confirmed_payload(
             target_root,
             kind=kind,
@@ -4782,23 +4934,39 @@ _POST_REFUSAL = (
 )
 
 
-def _confirm_send_payload(kind: str, payload, login: str | None, *, refusal: str) -> bool:
+def _unnamed_post_message(reading: acting_account.Reading, draft_id: str) -> str:
+    """What a send says where the acting account is not named (ADR-094 point
+    6): nothing was posted, why, and the two ways the kept draft still goes."""
+    return (
+        f"Not posted: pkit cannot tell which account it would post as: {reading.because()}.\n"
+        f"Kept as a draft: pkit report submit {draft_id}\n"
+        "Submit it once `pkit account read` names the account, or file it through the "
+        "prefilled form (`--url`), which the browser's signed-in account authors."
+    )
+
+
+def _confirm_send_payload(
+    kind: str, payload, reading: acting_account.Reading, *, refusal: str
+) -> bool:
     """Show the FULL send payload (body + any overflow comment) once and
-    confirm it as a single gesture, naming both the target and the posting
-    identity (#662 — the identity is surfaced so a CLI-vs-browser split can
-    never misattribute an API post). Off a terminal `refusal` is raised and no
+    confirm it as a single gesture, naming both the target and the account it
+    posts as, the acting account `reading` names, said to be a bot's where it
+    is one (#662 — the account is surfaced so a CLI-vs-browser split can never
+    misattribute an API post; ADR-094 point 6). The caller asks only where
+    `reading` names an account. Off a terminal `refusal` is raised and no
     answer is read (#2003)."""
+    from project_kit.acting_account import kind_phrase
     from project_kit.project_config import confirm_at_terminal
     from project_kit.report import REPORT_TARGET
 
-    who = f"@{login}" if login else "your gh CLI identity (login unresolved)"
+    who = kind_phrase(reading)
     click.echo(
         "tip: the paired `report-author` skill guides composing (COR-005) — "
         "hand-running the verbs skips that help.\n"
     )
     click.echo(
-        f"This posts a PUBLIC {kind} issue to {REPORT_TARGET} as {who} — your "
-        "gh CLI identity — with this body:\n"
+        f"This posts a PUBLIC {kind} issue to {REPORT_TARGET} as {who} — the account "
+        "gh's credential acts as — with this body:\n"
     )
     click.echo(payload.body)
     if payload.overflow_comment is not None:
@@ -4808,7 +4976,7 @@ def _confirm_send_payload(kind: str, payload, login: str | None, *, refusal: str
             "send, per ADR-047):\n"
         )
         click.echo(payload.overflow_comment)
-    return confirm_at_terminal(f"\nPost as {who} to {REPORT_TARGET}?", refusal=refusal)
+    return confirm_at_terminal(f"\nPost as @{reading.account} to {REPORT_TARGET}?", refusal=refusal)
 
 
 def _post_confirmed_payload(
@@ -5220,11 +5388,11 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
     not lost, it is simply invisible from this one (#693).
     """
     from project_kit.report import (
-        current_login,
         drafts_dir,
         gh_authenticated,
         list_staged,
         load_staged,
+        posting_account,
     )
 
     project_root = find_target_root()
@@ -5260,6 +5428,13 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
         )
     if not gh_authenticated():
         raise click.ClickException("submit posts via gh — authenticate first (`gh auth login`).")
+    reading = posting_account()
+    if reading.account is None:
+        raise click.ClickException(
+            f"not posted — draft kept ({draft.draft_id}): pkit cannot tell which account it "
+            f"would post as: {reading.because()}. Submit it once `pkit account read` names "
+            "the account."
+        )
     note_path = (target_root / draft.note) if draft.note else None
     if note_path is not None and note_path.is_file():
         # The note may have changed since it was staged (#2923); the draft is kept.
@@ -5280,7 +5455,7 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
     ):
         click.echo("Not posted — draft kept; edit the source note and restage.")
         return
-    if not _confirm_send_payload(draft.kind, draft.payload, current_login(), refusal=refusal):
+    if not _confirm_send_payload(draft.kind, draft.payload, reading, refusal=refusal):
         click.echo(f"\nNot posted — draft kept ({draft.draft_id}).")
         return
     outcome = _post_confirmed_payload(
@@ -10276,9 +10451,10 @@ def _load_engine(address: str, subject: str | None) -> ProcessEngine:
 )
 @click.option(
     "--actor",
-    default="operator",
-    show_default=True,
-    help="Evaluate gate prechecks as this actor (cross-authority).",
+    default=None,
+    help="Evaluate gate prechecks as this actor (cross-authority), in its binding's terms. "
+    "None is taken by default: without it, a cross-authority gate whose authorisation names "
+    "its producer is shown `?`, not judged (ADR-098).",
 )
 @click.option(
     "--json",
@@ -10287,7 +10463,7 @@ def _load_engine(address: str, subject: str | None) -> ProcessEngine:
     default=False,
     help="Emit structured JSON instead of the narrative view.",
 )
-def process_status(address: str, subject: str | None, actor: str, as_json: bool) -> None:
+def process_status(address: str, subject: str | None, actor: str | None, as_json: bool) -> None:
     """Where the subject is · why · how it got here · legal moves · next hint."""
     from project_kit import process as process_mod
 
@@ -10312,11 +10488,12 @@ def process_status(address: str, subject: str | None, actor: str, as_json: bool)
 )
 @click.option(
     "--actor",
-    default="operator",
-    show_default=True,
-    help="The actor being gated (cross-authority is computed against this).",
+    default=None,
+    help="The actor being gated, in its binding's terms (cross-authority is computed against "
+    "this). None is taken by default: without it, a cross-authority gate whose authorisation "
+    "names its producer refuses, not judged (ADR-098).",
 )
-def process_can_move(address: str, to_state: str, subject: str | None, actor: str) -> None:
+def process_can_move(address: str, to_state: str, subject: str | None, actor: str | None) -> None:
     """Validate a candidate move; refuse (fail-closed) with a self-explaining reason."""
     from project_kit import process as process_mod
 
@@ -10329,33 +10506,6 @@ def process_can_move(address: str, to_state: str, subject: str | None, actor: st
     click.echo(f"  {marker} {reason}")
     if not allowed:
         raise SystemExit(1)
-
-
-def _resolve_actor_identity() -> str:
-    """Resolve the GitHub login of whoever is driving, for the `--actor` default.
-
-    The cross-authority gate (COR-033 P4) compares `--actor` against an
-    authorisation artifact's `produced_by` login, so the default must be a real
-    GitHub login — not an authorisation token. We resolve it via `gh api user`
-    rather than importing the project-management capability's membership helper:
-    the binary must not depend on a capability tree (dependency boundary).
-
-    Falls back to `"operator"` when `gh` is missing/unauthenticated, preserving
-    the prior default so the command never fails on identity resolution alone.
-    """
-    import subprocess
-
-    try:
-        result = subprocess.run(
-            ["gh", "api", "user", "-q", ".login"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except (OSError, FileNotFoundError):
-        return "operator"
-    login = result.stdout.strip() if result.returncode == 0 else ""
-    return login or "operator"
 
 
 @process.command("move")
@@ -10379,9 +10529,10 @@ def _resolve_actor_identity() -> str:
 @click.option(
     "--actor",
     default=None,
-    help="The actor performing the move (recorded in the journal; gated "
-    "cross-authority). Defaults to the resolved gh login of the "
-    "current user.",
+    help="The actor performing the move, in its binding's terms (recorded in the journal; "
+    "gated cross-authority). None is taken by default: without it, a cross-authority gate "
+    "whose authorisation names its producer refuses the move, and a move through no such "
+    "gate is journaled with no actor (ADR-098).",
 )
 @click.option(
     "--reason",
@@ -10401,8 +10552,6 @@ def process_move(
     """Execute a legal move; append the journal entry. Refuses an illegal move."""
     from project_kit import process as process_mod
 
-    if actor is None:
-        actor = _resolve_actor_identity()
     engine = _load_engine(address, subject)
     try:
         result = engine.move(to_state, actor, from_state=from_state, reason=reason)

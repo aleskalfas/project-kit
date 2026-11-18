@@ -24,6 +24,7 @@ pkit:
         - PRJ-008
         - ADR-047#2
         - ADR-047#3
+        - ADR-094#6
         - ADR-050#1
         - ADR-050#2
         - COR-043#3
@@ -64,7 +65,7 @@ pkit:
      - the [versions](../../../glossary.md#term-version--version) of pkit itself, the [backbone](../../../glossary.md#term-backbone--backbone), Python and each installed capability the system ships
      - the [adapter](../../../glossary.md#term-adapter--adapter)'s name and the operating system
    - a hidden marker of the report's kind
-3. With `gh` signed in, the system shows the whole report and asks `Post as @<login> to <target>?`. The question names the adopter's `gh` identity, and the [report target](../../../glossary.md#term-report-target--report-target), project-kit's own repository ([ADR-047 point 3](../../../../../architecture/decisions/ADR-047-report-cross-repo-write.md#3-fixed-distribution-set-target--not-configurable-per-adopter-not-a---repo)).
+3. With `gh` signed in, the system shows the whole report and asks `Post as @<account> to <target>?`. The question names the account the adopter's `gh` credential acts as, as GitHub answers it ([ADR-094 point 6](../../../../../architecture/decisions/ADR-094-acting-account-reading.md#6-pkit-report-posts-only-as-an-account-it-can-name)). It also names the [report target](../../../glossary.md#term-report-target--report-target), project-kit's own repository ([ADR-047 point 3](../../../../../architecture/decisions/ADR-047-report-cross-repo-write.md#3-fixed-distribution-set-target--not-configurable-per-adopter-not-a---repo)).
 4. The adopter confirms. The system posts the report there as an issue, and prints `[ok] filed: <url>`. The issue carries the label `report:bug` only where the adopter may set labels on the report target. The hidden marker names the kind either way (`report.py`).
 5. Later, the adopter runs `pkit report`. The system lists each report the adopter filed, or another person filed for them (1d), with its number, kind, state and title. It writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)).
 6. The adopter runs `pkit report show <number>`. The system shows the report's state, and each [tracked fix](../../../glossary.md#term-tracked-fix--tracked-fix) with that fix's state. It also shows how many comments the report has, and the latest one's first line. It writes nothing (REQ-005).
@@ -80,11 +81,13 @@ pkit:
 - **2b.** The project has [capabilities](../../../glossary.md#term-capability--capability) the system does not ship, such as the project's own. The environment block counts them, and leaves out their names unless `--include-private` asks for them.
 - **3a.** `gh` is not signed in, or the adopter passes `--url`. The system prints a prefilled link to a new issue, and warns that the browser's signed-in account files it. With a note attached, the output ends with `pkit scratchpad reported <slug> <issue-ref>`, the command that moves the note once the report is filed ([COR-043 point 3](../../../../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md#3-entering-the-state-is-produced-by-an-actual-send-never-by-intent)). The adopter files the report in the browser, and the path goes on at step 5.
 - **3b.** On the path of 3a, the report is longer than a link can carry, 6000 characters. The system refuses the link, naming the ways that remain, and the use case ends.
+- **3c.** The system cannot tell which account the `gh` credential acts as, such as under an App installation's token, or with GitHub not answering. The system posts nothing, and says why. It keeps the report as a draft, and prints `pkit report submit <id>`, which posts it once the account is named ([ADR-094 point 6](../../../../../architecture/decisions/ADR-094-acting-account-reading.md#6-pkit-report-posts-only-as-an-account-it-can-name)). The use case ends.
 - **4a.** The adopter declines. The system posts nothing, and prints the prefilled link where the report fits one. The use case ends.
 - **4b.** `gh` fails to post the report. The system prints the prefilled link instead, or stages the report for `pkit report submit <id>` where the report is too long for a link. The use case ends.
 - **4c.** The issue is posted, but the comment carrying the rest of a long attached note fails. The system moves no note, names the issue, and prints how to finish by hand. The use case ends.
 - **5a.** The adopter passes `--tree`. The system lists, under each report, its [tracked fixes](../../../glossary.md#term-tracked-fix--tracked-fix) with their states.
 - **5b.** `gh` is not signed in. The system prints a link to the adopter's issues on the [report target](../../../glossary.md#term-report-target--report-target) instead.
+- **5c.** The system cannot tell which account the `gh` credential acts as. It says it cannot tell whose reports to list, and lists nothing (ADR-094 point 6). The path goes on at step 6.
 
 **Postconditions:** The [report](../../../glossary.md#term-report--report) is an issue on project-kit's repository, with the adopter's [versions](../../../glossary.md#term-version--version) attached. The adopter sees the report's state, and each [tracked fix](../../../glossary.md#term-tracked-fix--tracked-fix), from their own [project](../../../glossary.md#term-project--project).
 

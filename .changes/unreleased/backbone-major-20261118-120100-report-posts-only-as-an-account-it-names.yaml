@@ -1,0 +1,15 @@
+component: backbone
+kind: major
+custom:
+  category: Changed
+body: >
+  `pkit report` posts only as an account it can name (ADR-094 point 6). Its
+  confirmation names the account `pkit account read` names, and says when it is
+  a bot's. Where the reading names none, such as under an App installation's
+  token or a workflow's own token, the report posts nothing, even once you
+  confirm: it says it cannot tell which account it would post as, and why, and
+  keeps the payload as a draft, for `pkit report submit <id>` once the account
+  is named, or the prefilled form (`--url`). `report submit` refuses the same
+  way and keeps the draft. `pkit report` lists the reports of the account the
+  reading names, and where it names none says it cannot tell whose reports to
+  list, and exits 1. The CLI reference says so.

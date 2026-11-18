@@ -1287,26 +1287,126 @@ def test_cli_move_cross_authority_bites_on_real_actor(
     assert "moved to 'done'" in other.output
 
 
-def test_resolve_actor_identity_uses_gh_login(monkeypatch: pytest.MonkeyPatch) -> None:
-    # The `--actor` default must resolve a real gh login (not a token), so the
-    # cross-authority comparison is against the right namespace.
-    from project_kit import cli as cli_mod
-
-    def _fake_run(argv, **kwargs):
-        assert argv == ["gh", "api", "user", "-q", ".login"]
-        return subprocess.CompletedProcess(argv, 0, stdout="octocat\n", stderr="")
-
-    monkeypatch.setattr(subprocess, "run", _fake_run)
-    assert cli_mod._resolve_actor_identity() == "octocat"
+# --- the actor is the caller's (ADR-098) -----------------------------------
 
 
-def test_resolve_actor_identity_falls_back_when_gh_absent(
-    monkeypatch: pytest.MonkeyPatch,
+def test_cli_move_names_no_default_actor(
+    fixture_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from project_kit import cli as cli_mod
+    # The engine asks nobody: with no `--actor`, a cross-authority gate whose
+    # authorisation names its producer refuses the move, naming the producer and
+    # how to name the actor — never the `gh` login, never a placeholder.
+    subprocess.run(["git", "init", "-q"], cwd=fixture_repo, check=True)
+    monkeypatch.chdir(fixture_repo)
+    real_run = subprocess.run
 
-    def _no_gh(argv, **kwargs):
-        raise FileNotFoundError("gh not installed")
+    def _no_service(argv, *args, **kwargs):
+        assert argv[0] != "gh", f"the engine asked the hosting service: {argv}"
+        return real_run(argv, *args, **kwargs)
 
-    monkeypatch.setattr(subprocess, "run", _no_gh)
-    assert cli_mod._resolve_actor_identity() == "operator"
+    monkeypatch.setattr(subprocess, "run", _no_service)
+    _set_state(fixture_repo, "ready")
+    (fixture_repo / "_review").write_text(json.dumps({"by": "alice"}), encoding="utf-8")
+    result = CliRunner().invoke(main, ["process", "move", "fixture:demo", "--to", "done"])
+    assert result.exit_code == 1, result.output
+    assert "no actor was named" in result.output
+    assert "'alice'" in result.output
+    assert "--actor" in result.output
+    assert "operator" not in result.output
+
+
+@pytest.mark.parametrize("actor", [None, "", "   "], ids=["none", "empty", "blank"])
+def test_no_actor_named_leaves_a_named_producer_unjudged(
+    fixture_repo: Path, actor: str | None
+) -> None:
+    _set_state(fixture_repo, "ready")
+    (fixture_repo / "_review").write_text(json.dumps({"by": "bob"}), encoding="utf-8")
+    engine = _engine(fixture_repo)
+    allowed, reason, _pos = engine.can_move("done", actor=actor)
+    assert allowed is False
+    assert reason.startswith("refused: no actor was named.")
+    assert "'bob'" in reason
+    result = _engine(fixture_repo).move("done", actor=actor)
+    assert result.ok is False
+    assert result.journal_entry is None
+    payload = json.loads(render_status_json(_engine(fixture_repo), actor=actor))
+    [approve] = payload["legal_moves"]
+    assert (approve["allowed"], approve["indeterminate"], approve["needs_actor"]) == (
+        False,
+        True,
+        True,
+    )
+    narrative = strip_ansi(render_status_narrative(_engine(fixture_repo), actor=actor))
+    assert "? done  [approve]" in narrative
+    assert "no actor was named" in narrative
+
+
+@pytest.mark.parametrize("review", [None, {}, {"by": "  "}], ids=["absent", "no-by", "blank"])
+def test_no_actor_named_still_judges_a_gate_the_actor_cannot_change(
+    fixture_repo: Path, review: dict | None
+) -> None:
+    # Where the authorisation does not exist, or names no producer, the gate is
+    # shut whatever the actor: judged as for any actor, not left unjudged.
+    _set_state(fixture_repo, "ready")
+    if review is not None:
+        (fixture_repo / "_review").write_text(json.dumps(review), encoding="utf-8")
+    payload = json.loads(render_status_json(_engine(fixture_repo), actor=None))
+    [approve] = payload["legal_moves"]
+    assert (approve["allowed"], approve["indeterminate"], approve["needs_actor"]) == (
+        False,
+        False,
+        False,
+    )
+
+
+def test_needs_actor_is_false_on_every_other_entry(fixture_repo: Path) -> None:
+    # The broken gate out of draft is indeterminate for another cause: its
+    # `needs_actor` is false, so a reader tells it from a gate needing an actor.
+    payload = json.loads(render_status_json(_engine(fixture_repo), actor=None))
+    entries = {move["to"]: move for move in payload["legal_moves"]}
+    assert entries["done"]["indeterminate"] is True
+    assert entries["done"]["needs_actor"] is False
+    assert entries["ready"]["needs_actor"] is False
+
+
+@pytest.mark.parametrize("producer", ["Alice", " alice ", "ALICE\t"], ids=repr)
+def test_cross_authority_sets_case_and_whitespace_aside(fixture_repo: Path, producer) -> None:
+    _set_state(fixture_repo, "ready")
+    (fixture_repo / "_review").write_text(json.dumps({"by": producer}), encoding="utf-8")
+    allowed, reason, _pos = _engine(fixture_repo).can_move("done", actor="alice")
+    assert allowed is False
+    assert "produced by the actor being gated" in reason
+
+
+def test_cross_authority_folds_case_as_unicode_does(fixture_repo: Path) -> None:
+    # The engine folds every letter's case: a match only refuses (ADR-098 point 2).
+    _set_state(fixture_repo, "ready")
+    (fixture_repo / "_review").write_text(json.dumps({"by": "STRASSE"}), encoding="utf-8")
+    allowed, _reason, _pos = _engine(fixture_repo).can_move("done", actor="straße")
+    assert allowed is False
+
+
+def test_a_gate_not_judged_for_want_of_an_actor_makes_no_wait(fixture_repo: Path) -> None:
+    # The only move out of `ready` is the cross-authority approve. Not judged,
+    # it reads for a wait as one that may be open; refused, it leaves none.
+    _set_state(fixture_repo, "ready")
+    (fixture_repo / "_review").write_text(json.dumps({"by": "bob"}), encoding="utf-8")
+    engine = _engine(fixture_repo)
+    position = engine.resolve_position()
+    unjudged = engine.legal_move_checks(position, None)
+    assert engine.has_no_legal_move(position, unjudged) is False
+    refused = engine.legal_move_checks(position, "bob")
+    assert engine.has_no_legal_move(position, refused) is True
+
+
+def test_a_move_with_no_actor_through_no_cross_authority_gate_is_journaled_empty(
+    fixture_repo: Path,
+) -> None:
+    (fixture_repo / "_checks_ok").write_text("", encoding="utf-8")
+    engine = _engine(fixture_repo)
+    result = engine.move("ready", actor=None)
+    assert result.ok is True
+    assert result.journal_entry is not None
+    assert result.journal_entry["actor"] == ""
+    narrative = strip_ansi(render_status_narrative(_engine(fixture_repo), actor=None))
+    assert "[submit] by no named actor" in narrative

@@ -83,7 +83,9 @@ def journal_move(
     `actor` is the invoker's resolved GitHub login. The engine compares it
     against an authorisation artifact's `produced_by` login for the
     cross-authority gate (COR-033 P4). When it is None (login unresolved), we
-    omit `--actor` and let the engine apply its own resolved-identity default.
+    omit `--actor`, and the engine takes none (ADR-098): a cross-authority gate
+    whose authorisation names its producer refuses the move, which is then
+    reported unrecorded like any refusal.
 
     `reason`, when given, is recorded on the journal entry (`--reason`): the
     forward cascade names the child move that caused a parent's, a close names

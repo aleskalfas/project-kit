@@ -1,0 +1,23 @@
+component: backbone
+kind: major
+custom:
+  category: Changed
+body: >
+  The process engine takes only the actor its caller names (ADR-098). `pkit
+  process move` no longer takes your `gh` login where `--actor` is left out,
+  nor `status` and `can-move` take `operator`. With no actor named, a
+  cross-authority gate (`authorisation-artifact`) whose authorisation names its
+  producer is not judged: `move` and `can-move` refuse, saying no actor was
+  named, and `status` marks the move `?`, which `status --json` gives as
+  `indeterminate` with the new key `needs_actor` true. A gate whose
+  authorisation does not exist, or names no producer, is shut as for any actor,
+  and a move none of whose gates compares the actor is journaled with an empty
+  actor, shown as made by no named actor. The engine now compares the actor
+  with the producer setting aside case and surrounding whitespace, so a
+  producer that differs from the actor only in those reads as the actor. Name
+  the actor with `--actor` on every call, in your binding's terms; a person
+  running a move by hand names it as the binding's reference says. The
+  migration `3.0.0/001-engine-takes-named-actor` names each process definition
+  of a capability incubated in your repository or sourced from another that
+  holds such a gate, and changes nothing. The engine page, the process
+  reference, its walkthrough and the CLI reference say so.
