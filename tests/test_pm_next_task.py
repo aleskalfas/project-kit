@@ -22,6 +22,7 @@ from typing import Any
 
 import pytest
 
+from tests import pm_assignee_lookup
 from tests.pm_ownership_support import (
     FakeGitHub,
     clone_with,
@@ -46,6 +47,13 @@ def _load(name: str, script: str) -> ModuleType:
     sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login these tests assign as a user's account;
+    a test of the lookup gives its own answers (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
 
 
 @pytest.fixture(scope="module")

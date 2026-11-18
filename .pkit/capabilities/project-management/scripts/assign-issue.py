@@ -11,6 +11,8 @@ Reassigns an existing GitHub issue. Default semantics per
 DEC-019:
   * Membership-gated (DEC-021).
   * `--me` shorthand assigns to the resolved invoker identity.
+  * No account it adds is a bot's, and a bare login is added only where
+    GitHub answers that it names a user's account (DEC-079 point 1).
   * `--assignee <login>` assigns to a specific user (or multiple via
     comma-separated list, matching `gh`'s native multiplicity).
   * `--unassign <login>` removes a specific assignee.
@@ -26,7 +28,8 @@ Or via the dispatcher:
 Exit codes:
   0  reassigned (or dry-run reported)
   1  membership refusal
-  2  usage error
+  2  usage error, or an account to assign refused, as a bot's account or one
+     GitHub did not confirm as a user's (DEC-079 point 1)
   3  gh failure
 """
 
@@ -43,7 +46,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, session_guard
+from _lib import assignees, bootstrap_gate, session_guard
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -197,6 +200,14 @@ def main() -> int:
     if target == current:
         print("\n[noop] target matches current; nothing to change.")
         return 0
+
+    # Each account this run makes an assignee names a person: never a bot's, and
+    # a bare login only where GitHub answers that it names a user's account
+    # (DEC-079 point 1). An assignee the issue already has is not made one here.
+    refused = assignees.first_refusal((a for a in target if a not in current), invoker, config)
+    if refused:
+        print(f"error: {refused}", file=sys.stderr)
+        return 2
 
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")

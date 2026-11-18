@@ -10,11 +10,19 @@ from typing import Any
 
 import pytest
 
+from tests import pm_assignee_lookup
 from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
 from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "start-work.py"
+
+
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login these tests assign as a user's account;
+    a test of the lookup gives its own answers (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
 
 
 @pytest.fixture(scope="module")
@@ -512,6 +520,32 @@ def test_proceeds_from_backlog(run_main) -> None:
         ("assignee", "me"),
         ("move", "in-progress"),
     ]
+
+
+def test_the_account_start_work_would_assign_github_answers_as_a_bot_is_refused(
+    run_main, monkeypatch, capsys
+) -> None:
+    """No command makes a bot's account an assignee, and nothing is written
+    before the refusal (DEC-079 point 1)."""
+    pm_assignee_lookup.answer(
+        monkeypatch,
+        {"me": pm_assignee_lookup.membership.LookedUp(login="me", account_type="Bot")},
+    )
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]))
+    assert rc == 2
+    assert mutations == []
+    assert "`me` names an account of type Bot, not a user's" in capsys.readouterr().err
+
+
+def test_the_account_github_answered_the_credential_acts_as_is_assigned_with_no_lookup(
+    sw, run_main, monkeypatch
+) -> None:
+    asked = pm_assignee_lookup.answer(monkeypatch)
+    me = sw.Identity(github_login="me", email=None, login_source="service")
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), invoker=me)
+    assert rc == 0
+    assert ("assignee", "me") in mutations
+    assert asked == []
 
 
 def test_proceeds_when_already_in_progress(run_main) -> None:

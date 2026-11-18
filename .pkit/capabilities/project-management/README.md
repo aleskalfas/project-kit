@@ -2285,16 +2285,24 @@ Git's `user.email` is read in every case. At a closed gate it counts only where 
 
 **One request per process.** A command asks GitHub once for each host, and the commands it loads in its own process take the same answer, as `land-work` loads `done-work` and `review-pr`. Each command it starts as a process of its own asks again: `move-issue` under `start-work`, `review-work`, `close-issue`, `promote-issue` and `done-work`; `close-issue` under `done-work`; `start-work` under `next-task`; and `edit-issue` under `close-milestone`, once for each issue it rolls forward. Each request waits at most `GH_USER_TIMEOUT`, 10 seconds, and counts against GitHub's limits on requests. A fault between a parent's request and a child's can leave the two on different accounts.
 
-**Every reader of the identity takes the same login.** Each caller of `resolve_invoker_identity` reads it: the 51 commands that call it, and `_lib/comment.py`, `_lib/criterion_cli.py` and `_lib/head_programs.py`, for the commands that comment, tick a criterion and name a head. What each reads it for:
+**Every reader of the identity takes the same login.** Each caller of `resolve_invoker_identity` reads it: the 51 commands that call it, and `_lib/comment.py` and `_lib/criterion_cli.py`, for the commands that comment and tick a criterion. What each reads it for:
 
-- **The gate.** Every caller but `_lib/head_programs.py` checks membership with it.
-- **Whose work it is.** `create-issue`'s default assignee, `assign-issue --me`, the Task assignees `start-work` compares with it and the assignee it writes, the Tasks `next-task` offers, which leave out one assigned to another account, and the author `review-work` leaves out of the reviewers it asks for by role.
+- **The gate.** Every caller checks membership with it.
+- **Whose work it is.** `create-issue`'s default assignee, `assign-issue --me`, the Task assignees `start-work` compares with it and the assignee it writes, the Tasks `next-task` offers, which leave out one assigned to another account, and the author `review-work` leaves out of the reviewers it asks for by role. Where GitHub answered that login as a user's account, it is an assignee with no lookup of its own (see "An assignee names a person" below).
 - **Claims and seats.** The account a clone's claims are made and released under, in `create-issue`, `edit-issue`, `move-issue`, `promote-issue`, `start-work`, `review-work`, `close-issue` and `done-work`; the seat `next-task` takes work for, and the seat a comment is posted from; the holder `take-seat` and `release-seat` act for; and the seat `seats` lists as this clone's.
 - **The engine's actor.** The actor `move-issue` and `close-issue` hand the lifecycle's gates.
-- **Audit comments.** The account that authorised a bypass, an override or a forced step, in the audit comments of `move-issue`, `done-work`, `merge-pr` and `review-work`, in the one an instance-ownership bypass posts, and in the word a person leaves on a head. Git's email stands beside the login there.
+- **Audit comments: none.** No audit comment names an authoriser beside the account that posts it, or carries an email, so none reads the identity ([project-management:DEC-078-one-actor-per-act] point 2). The account that posts a bypass's, an override's or a forced step's comment is its act's actor, and GitHub shows it beside the comment.
 - **The member list.** `add-member --me`, an entry's `added_by` and a bootstrap's first member, and `remove-member --me`.
 
 So under a credential that acts as a user's account kept for a workflow, `start-work` assigns new work to that account, and refuses a Task assigned to the person the agent works for, as assigned to someone else.
+
+**An assignee names a person** ([project-management:DEC-079-bots-are-no-person] point 1). No command makes a bot's account an assignee: not `create-issue`, by `--assignee` or by default, `assign-issue`, `--me` among it, `start-work`'s assignment or `handoff-issue`, whether or not a member's entry names the account. Each confirms every account it makes an assignee, before it writes anything:
+
+- **By its form.** `<name>[bot]` and `app/<name>` name a bot's account, and a string with no spelling, such as `@someone`, names none (`handoff-issue --to` sets a leading `@` aside first). Each is refused with no request.
+- **A bare login, on GitHub's word.** GitHub lets some bots be assigned by a login with no suffix, such as its own coding agent, so a bare login is assigned only where GitHub answers that it names a user's account. The account GitHub answered the credential acts as needs no lookup. Any other login, `PM_INVOKER_LOGIN`'s among them, is looked up with `gh api users/<login>`, as `add-member` looks an entry's login up, once for each assignee a command names.
+- **A lookup that confirms nothing refuses,** naming the login and its cause: an account of another type, such as `Bot` or `Organization`; no account with the login; or no answer, such as a rate limit, a server error or no network, which passes once GitHub answers and the command is run again. On a host other than `github.com`, a login mistyped and an account the host hides from the credential read alike, so the refusal says that a second run changes neither: check the login, or run the command under a credential that sees the account.
+
+These refusals are preconditions of their commands, never a `hard-reject` finding, so `--force` does not reach them. A project that assigns work to a bot, such as GitHub's coding agent, assigns it on GitHub's own surface.
 
 ## Citing this capability's decisions
 

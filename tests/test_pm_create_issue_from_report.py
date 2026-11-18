@@ -22,6 +22,8 @@ from pathlib import Path
 
 import pytest
 
+from tests import pm_assignee_lookup
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "create-issue.py"
@@ -33,6 +35,13 @@ _TARGET_REFUSAL = (
     "Error: the maintainer side (inbox/link/unlink) runs only inside the "
     "report target repo (acme/target-repo). Cd into it and retry."
 )
+
+
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login these tests assign as a user's account;
+    a test of the lookup gives its own answers (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
 
 
 @pytest.fixture(scope="module")

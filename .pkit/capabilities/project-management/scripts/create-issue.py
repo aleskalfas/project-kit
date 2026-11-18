@@ -110,7 +110,8 @@ Exit codes:
      Task filed into a pool off a terminal without --yes, or the board carries
      the state and answered with no single-select Status field, or no option
      for the state the issue is filed into (nothing filed)
-  2  usage error / validation refusal
+  2  usage error / validation refusal / an assignee refused, as a bot's account
+     or one GitHub did not confirm as a user's (DEC-079 point 1)
   3  gh failure (auth, network, repo not found, ...), or the board the filing
      adds the issue to did not answer (nothing filed)
   4  issue created, but --from-report link failed, and every write the filing
@@ -138,6 +139,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
+    assignees,
     axis_carriage,
     axis_labels,
     board_answer,
@@ -781,6 +783,13 @@ def main() -> int:
             f"{format_unresolved(invoker.unresolved_cause)}. Pass --assignee explicitly.",
             file=sys.stderr,
         )
+        return 2
+    # An assignee names a person: a bot's account is never one, and a bare login
+    # is one only where GitHub answers that it names a user's account (DEC-079
+    # point 1). A precondition, never a finding, so `--force` does not reach it.
+    refused = assignees.refusal(assignee, invoker, config)
+    if refused:
+        print(f"error: {refused}", file=sys.stderr)
         return 2
 
     # Labels. Axis-labels are RESOLVED through the seam's write-path resolver

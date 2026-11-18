@@ -18,6 +18,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests import pm_assignee_lookup
 from tests.pm_board_graphql import FieldsBoard, flag_value, is_seam_read, query_of
 from tests.pm_board_world import LABEL_STATE
 from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with, use
@@ -26,6 +27,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "create-issue.py"
 )
+
+
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login these tests assign as a user's account;
+    a test of the lookup gives its own answers (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
 
 
 @pytest.fixture(scope="module")
@@ -469,6 +477,33 @@ def _file_with_instance(
     use(ci.instance_claims, monkeypatch, github)
     rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, extra)
     return rc, calls, github
+
+
+@pytest.mark.parametrize("assignee", ["robot[bot]", "app/robot", "@robot"])
+def test_filing_refuses_an_assignee_that_names_no_users_account_by_its_form(
+    ci, tmp_path, monkeypatch, capsys, assignee
+) -> None:
+    """Refused with no request and nothing filed (DEC-079 point 1)."""
+    asked = pm_assignee_lookup.answer(monkeypatch)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, ("--assignee", assignee))
+    assert rc == 2
+    assert not _issue_created(calls)
+    assert asked == []
+    assert f"error: `{assignee}` names " in capsys.readouterr().err
+
+
+def test_filing_refuses_a_bare_login_github_does_not_answer_as_a_users(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """The service lets its coding agent be assigned by a login with no suffix,
+    so a bare login is looked up."""
+    agent = pm_assignee_lookup.membership.LookedUp(login="Copilot", account_type="Bot")
+    asked = pm_assignee_lookup.answer(monkeypatch, {"Copilot": agent})
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, ("--assignee", "Copilot"))
+    assert rc == 2
+    assert not _issue_created(calls)
+    assert asked == ["Copilot"]
+    assert "`Copilot` names an account of type Bot" in capsys.readouterr().err
 
 
 def test_with_no_instance_id_filing_is_unchanged(ci, tmp_path, monkeypatch, capsys) -> None:

@@ -79,7 +79,9 @@ Exit codes:
      instance claimed the issue in the same instant and keeps it, or claimed
      it first, so this clone did not move the issue / the clash guard refused
      an issue another instance owns / this clone's seat could not be confirmed
-     / this code cannot read the topology in full (DEC-061 point 9)
+     / this code cannot read the topology in full (DEC-061 point 9) / the
+     account it would assign refused, as a bot's account or one GitHub did not
+     confirm as a user's (DEC-079 point 1)
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -108,6 +110,7 @@ from _lib import (
     session_guard,
 )
 from _lib import lifecycle_inference as infer
+from _lib.assignees import refusal as assignee_refusal
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -345,6 +348,16 @@ def main() -> int:
     # Where the account acting cannot be told, no assignee is written (#3162).
     unassigned = None if invoker.github_login else format_unresolved(invoker.unresolved_cause)
     assignee = invoker.github_login or f"none: {unassigned}"
+    # The account this run would assign names a person: never a bot's, and a
+    # bare login only where GitHub answers that it names a user's account
+    # (DEC-079 point 1). Asked before anything is written.
+    if invoker.github_login and not any(
+        isinstance(a, dict) and a.get("login") == invoker.github_login for a in assignees
+    ):
+        refused = assignee_refusal(invoker.github_login, invoker, config)
+        if refused:
+            print(f"error: {refused}", file=sys.stderr)
+            return 2
     print(f"start-work: #{args.issue_number}")
     print(f"  branch:    {branch_name}")
     print(f"  base:      {base}")

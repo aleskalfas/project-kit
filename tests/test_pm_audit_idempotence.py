@@ -36,7 +36,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tests import pull_request_backbone
+from tests import pm_assignee_lookup, pull_request_backbone
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
@@ -70,6 +70,13 @@ def _load(script: str, module_name: str):
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login these tests hand a Task to as a user's
+    account (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
 
 
 @pytest.fixture(scope="module")
