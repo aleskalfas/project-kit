@@ -12,7 +12,8 @@ body: >
   professional would polish it, the grade stays professional, and its
   evidence names it. A doubt stays a note, and moves no grade. Before
   excellent it names what makes the page an example. A fault that cites no
-  rule moves no grade. A weakness of design that is no fault lowers each rule
+  rule moves no grade as a fault, though a stray text that competes with the
+  content lowers `RS-GRAPHIC-003` as a weakness. A weakness of design that is no fault lowers each rule
   whose own words fail on it, by that condition, as a fault holds the grade of
   each rule whose words name it, and is described once, in the finding of the
   first rule by id that it lowers. A grade judges the page a reader meets,
@@ -25,20 +26,22 @@ body: >
   Schoger's ranking of a page's actions, and a question on whether the facts
   that matter most take the variables read most accurately. The designer
   ranks a page's head, its focal point and the action it asks above the rest.
-  Four rules are reworded, with the new record DEC-068 as their origin:
+  Five rules are reworded, with the new record DEC-068 as their origin:
   `RS-GRAPHIC-001`, one focal point: a page's head, its focal point and the
   action it asks of its reader stand above the rest, in any order among them.
   `RS-GRAPHIC-003`, nothing extra: it says what decoration and a page's frame
   are, and judges the frame as any part. `RS-GRAPHIC-007`, the form says what
   the content says: the strongest difference goes to what the point is about,
-  or to the action the page asks. `RS-COMM-003`, the pages tell the story in
-  order: each page's lead, or its title, keeps one of five named orders, and
-  a page that states no point stands where its kind does. So `GRAPHIC` rises
+  or to the action the page asks. `RS-COMM-001`, a page makes one point, and
+  shows it: a page whose title states its point needs no lead.
+  `RS-COMM-003`, the pages tell the story in order: each page's lead, or its
+  title, keeps one of five named orders, and a page whose content states no
+  point stands where its kind does. So `GRAPHIC` rises
   to 3.0.0 and `COMM` to 2.0.0, new majors. A project's set that inherits
   `visual-communication:GRAPHIC@1` or `GRAPHIC@2`, or
   `visual-communication:COMM@1`, fails validation, and no rule of that set
   binds through it, until the project reads again `RS-GRAPHIC-008` and the
-  four reworded rules, in `rule-sets/graphic.md` and `rule-sets/comm.md`, and
+  five reworded rules, in `rule-sets/graphic.md` and `rule-sets/comm.md`, and
   moves its pins to `GRAPHIC@3` and `COMM@2`. A bar that names `GRAPHIC@1`,
   `GRAPHIC@2`, `COMM@1` or a rule of either set at such a major fails the
   capability's check (`bar-major`) until the project names the new major in

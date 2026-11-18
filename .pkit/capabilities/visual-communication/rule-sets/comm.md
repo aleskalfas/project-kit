@@ -3,11 +3,11 @@ rule-set: COMM
 version: 2.0.0
 rules:
   RS-COMM-001:
-    status: accepted
-    origin: {decision: "visual-communication:DEC-028"}
+    status: proposed
+    origin: {decision: "visual-communication:DEC-068"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#6", "visual-communication:DEC-046#2"]}
+        anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#6", "visual-communication:DEC-046#2", "visual-communication:DEC-068#10"]}
   RS-COMM-002:
     status: accepted
     origin: {decision: "visual-communication:DEC-028"}
@@ -45,7 +45,7 @@ This set takes no scope. Its rules bind on an artefact only through a set of the
 On a piece whose `explains` field is true, where a page's layout has a title and a lead, the lead answers the title, and the main visual shows that answer.
 
 - **Its title and its lead.** A page's title names what the page is about. Its lead is the sentence under the title that states the page's point, such as what fills a deck's `lead` slot. A figure's caption counts as its lead.
-- **Which pages.** A page whose layout has no lead, such as a cover, the page that opens a section or the questions, is not judged by this rule. A page whose layout has a lead and leaves it empty breaks it.
+- **Which pages.** A page whose layout has no lead, such as a cover, the page that opens a section or the questions, is not judged by this rule. A page whose layout has a lead and leaves it empty breaks it, unless its title states the page's point. Its main visual then shows the title's point.
 - **From the text:** whether the lead answers the title, and whether the main visual's content holds that answer.
 - **On the drawn page:** whether the main visual shows that answer.
 
@@ -62,7 +62,7 @@ On a piece whose `explains` field is true and whose pages are read in order, as 
 
 - **Which pieces.** A piece of one page, such as a single figure or a poster, is not judged by this rule. Nor is a piece whose reader picks the pages, such as a site.
 - **Its groups.** A piece with no sections has one group, its pages. The sections' order is read through the titles of the pages that open them.
-- **A page whose statement states no point,** such as a cover, an agenda or a closing page, is judged by where its kind stands: a cover first, an agenda before what it lists, and a closing page, such as one of questions or thanks, last of the pages in order.
+- **A page whose content states no point** is judged by where its kind stands. A page that introduces others, such as a cover or an agenda, stands before them. A page that closes others, such as one of questions or thanks, stands after them.
 - **What following asks.** A statement follows from the one before where the order that runs through its group places it next. A statement that names something an earlier one named does not follow from it by that alone. A statement that gives an answer before the pages that bear it out, as `RS-COMM-002` asks, can be understood without them, and breaks nothing.
 - **From the text:** the whole rule.
 - **On the drawn page:** nothing.
