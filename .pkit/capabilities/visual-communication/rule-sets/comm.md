@@ -42,12 +42,12 @@ This set takes no scope. Its rules bind on an artefact only through a set of the
 
 ## RS-COMM-001 — A page makes one point, and shows it
 
-On a piece whose `explains` field is true, where a page's layout has a title and a lead, the lead answers the title, and the main visual shows that answer.
+On a piece whose `explains` field is true, where a page has a lead, its main visual shows the point the lead states, and where it has a title too, the lead answers the title. Where a page's lead slot is empty, its title states the page's point, and its main visual, where it draws one, shows the title's point.
 
 - **Its title and its lead.** A page's title names what the page is about. Its lead is the sentence under the title that states the page's point, such as what fills a deck's `lead` slot. A figure's caption counts as its lead.
-- **Which pages.** A page whose layout has no lead, such as a cover, the page that opens a section or the questions, is not judged by this rule. A page whose layout has a lead and leaves it empty breaks it, unless its title states the page's point. Its main visual then shows the title's point.
-- **From the text:** whether the lead answers the title, and whether the main visual's content holds that answer.
-- **On the drawn page:** whether the main visual shows that answer.
+- **Which pages.** A page whose content states no point, such as a cover, an agenda, a section's opening page or a page of questions, is not judged by this rule. Any other page whose lead slot is empty breaks it, unless its title states the page's point.
+- **From the text:** where a page has a title and a lead, whether the lead answers the title; where its lead slot is empty, whether its title states the page's point; and whether the main visual's content holds the point its lead or its title states.
+- **On the drawn page:** whether the main visual shows that point.
 
 ## RS-COMM-002 — The big picture comes first
 
@@ -63,6 +63,7 @@ On a piece whose `explains` field is true and whose pages are read in order, as 
 - **Which pieces.** A piece of one page, such as a single figure or a poster, is not judged by this rule. Nor is a piece whose reader picks the pages, such as a site.
 - **Its groups.** A piece with no sections has one group, its pages. The sections' order is read through the titles of the pages that open them.
 - **A page whose content states no point** is judged by where its kind stands. A page that introduces others, such as a cover or an agenda, stands before them. A page that closes others, such as one of questions or thanks, stands after them.
+- **A page that sums up** the pages before it stands after them, and breaks nothing by repeating them.
 - **What following asks.** A statement follows from the one before where the order that runs through its group places it next. A statement that names something an earlier one named does not follow from it by that alone. A statement that gives an answer before the pages that bear it out, as `RS-COMM-002` asks, can be understood without them, and breaks nothing.
 - **From the text:** the whole rule.
 - **On the drawn page:** nothing.
