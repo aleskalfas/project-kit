@@ -1,19 +1,19 @@
 ---
 rule-set: GRAPHIC
-version: 3.0.0
+version: 4.0.0
 rules:
   RS-GRAPHIC-001:
     status: accepted
     origin: {decision: "visual-communication:DEC-068"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#8", "visual-communication:DEC-029#2", "visual-communication:DEC-029#3", "visual-communication:DEC-068#1", "visual-communication:DEC-068#2", "visual-communication:DEC-068#3", "visual-communication:DEC-068#4", "visual-communication:DEC-068#8", "visual-communication:DEC-068#10"], artefact: ["visual-communication:RS-COMM-001", "visual-communication:RS-GRAPHIC-003"]}
+        anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#8", "visual-communication:DEC-029#2", "visual-communication:DEC-029#3", "visual-communication:DEC-068#1", "visual-communication:DEC-068#2", "visual-communication:DEC-068#3", "visual-communication:DEC-068#4", "visual-communication:DEC-068#8", "visual-communication:DEC-068#10", "visual-communication:DEC-069#5"], artefact: ["visual-communication:RS-COMM-001", "visual-communication:RS-GRAPHIC-003"]}
   RS-GRAPHIC-002:
     status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#8", "visual-communication:DEC-046#2", "visual-communication:DEC-046#3"]}
+        anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#8", "visual-communication:DEC-046#2", "visual-communication:DEC-046#3", "visual-communication:DEC-069#5"]}
   RS-GRAPHIC-003:
     status: accepted
     origin: {decision: "visual-communication:DEC-068"}
@@ -31,32 +31,38 @@ rules:
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#10", "visual-communication:DEC-046#2", "visual-communication:DEC-046#5"]}
+        anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#10", "visual-communication:DEC-046#2", "visual-communication:DEC-046#5", "visual-communication:DEC-069#5"]}
   RS-GRAPHIC-006:
     status: accepted
     origin: {decision: "visual-communication:DEC-028"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#10"]}
+        anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#10", "visual-communication:DEC-069#5"]}
   RS-GRAPHIC-007:
     status: accepted
     origin: {decision: "visual-communication:DEC-068"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-001#6", "visual-communication:DEC-004#10", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#9", "visual-communication:DEC-028#10", "visual-communication:DEC-028#11", "visual-communication:DEC-032#3", "visual-communication:DEC-046#6", "visual-communication:DEC-068#4", "visual-communication:DEC-068#5"], artefact: ["visual-communication:RS-GRAPHIC-001", "visual-communication:RS-GRAPHIC-003"]}
+        anchors: {record: ["visual-communication:DEC-001#6", "visual-communication:DEC-004#10", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#9", "visual-communication:DEC-028#10", "visual-communication:DEC-028#11", "visual-communication:DEC-032#3", "visual-communication:DEC-046#6", "visual-communication:DEC-068#4", "visual-communication:DEC-068#5", "visual-communication:DEC-069#6"], artefact: ["visual-communication:RS-GRAPHIC-001", "visual-communication:RS-GRAPHIC-003"]}
   RS-GRAPHIC-008:
     status: accepted
     origin: {decision: "visual-communication:DEC-046"}
     pkit:
       friction:
         anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-046#4"]}
+  RS-GRAPHIC-009:
+    status: accepted
+    origin: {decision: "visual-communication:DEC-069"}
+    pkit:
+      friction:
+        anchors: {record: ["visual-communication:DEC-004#2", "visual-communication:DEC-021#4", "visual-communication:DEC-021#5", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-030#4", "visual-communication:DEC-042#7", "visual-communication:DEC-046#2", "visual-communication:DEC-046#3", "visual-communication:DEC-069#1", "visual-communication:DEC-069#2", "visual-communication:DEC-069#3", "visual-communication:DEC-069#4", "visual-communication:DEC-069#5", "visual-communication:DEC-069#8"]}
 ---
 
 # GRAPHIC — how a piece looks
 
-The rules on whether a piece of visual work looks right, each taken from the canon of its field, with its source named in [visual-communication:DEC-028-principles-of-visual-communication], or, for `RS-GRAPHIC-008`, in [visual-communication:DEC-046-faults-lower-grades]. Each rule judges every piece, whatever its purpose (DEC-028 point 3). Each names what can be judged from the content's text, and what only the drawn page shows (DEC-028 point 4). The capability's operational rules are another set, `VIS`, which binds on a session's work, never on a piece.
+The rules on whether a piece of visual work looks right, each taken from the canon of its field, with its source named in [visual-communication:DEC-028-principles-of-visual-communication], or, for `RS-GRAPHIC-008`, in [visual-communication:DEC-046-faults-lower-grades], or, for `RS-GRAPHIC-009`, in [visual-communication:DEC-069-leaders-and-layers]. Each rule judges every piece, whatever its purpose (DEC-028 point 3). Each names what can be judged from the content's text, and what only the drawn page shows (DEC-028 point 4). The capability's operational rules are another set, `VIS`, which binds on a session's work, never on a piece.
 
-This set takes no scope. Its rules bind on an artefact only through a set of the project's own that inherits it, pinned to its major, as in `inherits: [visual-communication:GRAPHIC@3]` (COR-051 point 7). Where they bind, and how they guide while they bind nothing, is DEC-028 point 5.
+This set takes no scope. Its rules bind on an artefact only through a set of the project's own that inherits it, pinned to its major, as in `inherits: [visual-communication:GRAPHIC@4]` (COR-051 point 7). Where they bind, and how they guide while they bind nothing, is DEC-028 point 5.
 
 ## RS-GRAPHIC-001 — One focal point
 
@@ -141,3 +147,13 @@ Running text is text meant to be read continuously, line after line, such as a p
 - **What it does not judge.** A heading, a title, a label, a cell of a table and an item of a list, however many lines each takes. A text whose lines the content breaks, such as code. Placeholder lines that stand for text in a drawing of a screen, and what lies inside a picture made elsewhere. A text in a script written without spaces between words. How short the last line of a paragraph is, since it ends where the text ends. The ends of the lines of a centred text. The gaps between the words of a text set with two straight edges. Which text ranks first, which is `RS-GRAPHIC-001`'s. Whether a kind of text keeps one look, which is `RS-GRAPHIC-004`'s. Whether a text can be read at all where it is shown, which is `RS-GRAPHIC-005`'s.
 - **From the text:** nothing, since a line's length and its spacing show only once the page is drawn.
 - **On the drawn page:** the whole rule, on each image, so in each language and at each size the piece is drawn in.
+
+## RS-GRAPHIC-009 — A leader ends at what it explains, by a course the eye can follow
+
+A leader is a line drawn from a note or a label to what it explains or names. Each leader ends at one thing its note or label explains or names, and a reader tells at once what it joins. A leader may fork to each thing its note or label explains or names alike. The page's leaders cross each other no more often than they must in an arrangement that counts, and each crossing is at a clear angle. A leader crosses any other line only at a clear angle, and runs along no line that is no leader. Leaders may run parallel to each other where they stand far enough apart that each is followed alone, and never so close that they read as one line.
+
+- **Which arrangements count.** An arrangement is an order of the notes and labels on the page, and their places. Every image of one language draws them in one order, and only their places may differ by size: the images drawn as one scene, such as a piece's light and dark modes, share their places, and each size, such as a page's narrow and wide sizes, has places of its own. One counts only where it bends no meaning, so it keeps an order the content gives as meaning, such as a numbering or a sequence its words carry, and a relation the brief names, such as its order of explanation, and where it adds no break, of any rule or of another clause of this one, to those the page as drawn holds, on any image of its language. Its crossings among leaders are compared by their number, and are no breaks it adds. But a crossing it makes at an angle that is not clear, with a leader or with any other line, is a break it adds. Its crossings are counted first on the image of its language where it crosses most, and where two arrangements tie there, on the next. The page as drawn is counted the same way. Nothing else bounds an arrangement: one that changes a word only whoever asked for the piece may change counts, and so does one that the libraries the piece uses do not draw, so a crossing that only such a word, or what a library draws, forces still fails. A piece's languages are each judged alone, so an order that only one language's images could keep counts for that language.
+- **Over a picture made elsewhere.** The clauses on a leader's course judge a leader the piece draws against the lines a reader sees in a picture under it, such as a map's roads or a technical drawing's outlines, on the image.
+- **What it does not judge.** A line that is no leader, such as an arrow from one step to the next, a link between two items or a route on a map: how such lines cross or run along each other. A mark that spans the parts a note explains, such as a bracket or a band. Whether a note or a label takes a leader at all, which is `RS-GRAPHIC-003`'s where the leader is extra, and where one with none stands, which is `RS-GRAPHIC-002`'s. A leader over a part that is not its end, such as through a card or a text, which `RS-GRAPHIC-002` sets apart. Whether a leader can be seen where the piece is shown, which is `RS-GRAPHIC-005`'s. Whether the leaders keep one look, which is `RS-GRAPHIC-004`'s, and what their look says, which is `RS-GRAPHIC-007`'s. What lies inside a picture made elsewhere.
+- **From the text:** whether the content ties each note or label it gives a leader to an item its words explain or name.
+- **On the drawn page:** whether a reader tells which note or label and which things each leader joins, and whether its course crosses or runs along another line as the rule allows.

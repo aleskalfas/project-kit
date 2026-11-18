@@ -272,7 +272,7 @@ The configuration may hold a *bar*, under the key `bar`, and the *bounds* of the
 
 ```yaml
 bar:
-  covers: [COMM@2, GRAPHIC@3]
+  covers: [COMM@2, GRAPHIC@4]
   at-least: professional
 bounds:
   to-the-bar: 5
