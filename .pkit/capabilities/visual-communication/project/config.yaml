@@ -12,11 +12,12 @@ location: visual
 bar:
   covers:
     - COMM@2
-    - RS-GRAPHIC-001@3
-    - RS-GRAPHIC-002@3
-    - RS-GRAPHIC-003@3
-    - RS-GRAPHIC-004@3
-    - RS-GRAPHIC-005@3
-    - RS-GRAPHIC-006@3
-    - RS-GRAPHIC-007@3
+    - RS-GRAPHIC-001@4
+    - RS-GRAPHIC-002@4
+    - RS-GRAPHIC-003@4
+    - RS-GRAPHIC-004@4
+    - RS-GRAPHIC-005@4
+    - RS-GRAPHIC-006@4
+    - RS-GRAPHIC-007@4
+    - RS-GRAPHIC-009@4
   at-least: professional
