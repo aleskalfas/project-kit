@@ -1,8 +1,8 @@
 ---
 id: COR-072
 title: A person chooses how much agents decide in their place, by area of work
-status: proposed
-date: 2026-11-07
+status: accepted
+date: 2026-11-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
