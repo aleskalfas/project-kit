@@ -6,6 +6,8 @@ date: 2026-07-03
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [ADR-095](ADR-095-hook-out-of-reach.md).** The permission commands that report the hook's verdict or the model it judges by, realize the permission model, make the hook's copy, turn the permission hook on or off, or name or remove a folder where the hook puts no ask ([ADR-093](ADR-093-writes-outside-the-repository.md) point 4), as their own work or as a step of it, are served from the installed release where the machine holds one, whatever the checkout or its pin say. There, for them, neither the routing by the checkout and the pin, in the Summary and the Decision, nor D1's lock holds. Their code is the installed release's while the content they read is the checkout's at its pin, the mismatch the rejected alternative of re-execing only the code names, so each reads only what its release reads whole, and writes only in the layout it read. On a machine that holds no installed release, those that report the verdict or the model are routed by the checkout and the pin, as the Summary and the Decision say, and the others refuse. Everything else stands: the three routes and their order, D1, D2 and D3, for every other command.
+
 ## Summary
 
 **In plain terms:** the installed `pkit` binary becomes aware of both *where it is
