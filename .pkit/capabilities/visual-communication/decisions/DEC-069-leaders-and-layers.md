@@ -1,5 +1,5 @@
 ---
-id: DEC-068
+id: DEC-069
 title: A leader ends at what it explains, by a course the eye can follow, and a page's layers read apart
 status: proposed
 date: 2026-11-18
@@ -240,15 +240,15 @@ The six cases are a process whose notes stand beside its steps (P), a schema who
 
 - **This change, first, adds this record alone,** proposed. Nothing rests on it until a person accepts it (COR-066 point 1). The work below follows, in this change.
 - **Edits to [visual-communication:DEC-046-faults-lower-grades],** made in this change once this record is accepted (COR-066 point 5):
-  - **Point 2,** its bullet "Among the faults, these are named by no rule of `GRAPHIC`". Its last item, "a join that misses between parts that are not steps", comes to add: save a leader and the thing it ends at, which `RS-GRAPHIC-009` names (refinement per DEC-068, point 4).
-  - **Point 3,** its bullet "A join that misses". "Between parts that are not steps it cites none" comes to read: between a leader and the thing it ends at, it cites `RS-GRAPHIC-009`, whose words "ends at one thing" name it (refinement per DEC-068, point 4); between other parts that are not steps it cites none.
-  - **Its Rationale,** "What this costs". Its last sentence, "For craft the cost is small, since only a join that misses between parts that are not steps cites no rule", comes to say that such a join cites no rule save between a leader and its thing (refinement per DEC-068, point 4).
+  - **Point 2,** its bullet "Among the faults, these are named by no rule of `GRAPHIC`". Its last item, "a join that misses between parts that are not steps", comes to add: save a leader and the thing it ends at, which `RS-GRAPHIC-009` names (refinement per DEC-069, point 4).
+  - **Point 3,** its bullet "A join that misses". "Between parts that are not steps it cites none" comes to read: between a leader and the thing it ends at, it cites `RS-GRAPHIC-009`, whose words "ends at one thing" name it (refinement per DEC-069, point 4); between other parts that are not steps it cites none.
+  - **Its Rationale,** "What this costs". Its last sentence, "For craft the cost is small, since only a join that misses between parts that are not steps cites no rule", comes to say that such a join cites no rule save between a leader and its thing (refinement per DEC-069, point 4).
 - **Edits to [visual-communication:DEC-028-principles-of-visual-communication],** made the same way. Each adds `RS-GRAPHIC-009` where the record says it of `RS-GRAPHIC-008`:
-  - **Its summary.** "This record names its source, or, for `RS-GRAPHIC-008`, on running text, DEC-046 does" comes to add: and, for `RS-GRAPHIC-009`, on leaders, DEC-068 does (refinement per that record, point 8).
+  - **Its summary.** "This record names its source, or, for `RS-GRAPHIC-008`, on running text, DEC-046 does" comes to add: and, for `RS-GRAPHIC-009`, on leaders, DEC-069 does (refinement per that record, point 8).
   - **Its Decision line.** The same addition.
-  - **Point 1.** "Each is taken from a source this record names, or, for `RS-GRAPHIC-008`, from one DEC-046 names" comes to add: or, for `RS-GRAPHIC-009`, from one DEC-068 names (refinement per that record, point 8).
-  - **Its Rationale,** "Why the reasons live in a record". "The record gives each rule's id, title, sources and reason, or, for `RS-GRAPHIC-008`, DEC-046 does" comes to add that DEC-068 gives them for `RS-GRAPHIC-009`.
-  - **Its Implications.** "Each rule cites this record as its origin, but `RS-GRAPHIC-008`, whose origin is DEC-046" comes to add: and `RS-GRAPHIC-009`, whose origin is DEC-068 (refinement per that record, point 8).
+  - **Point 1.** "Each is taken from a source this record names, or, for `RS-GRAPHIC-008`, from one DEC-046 names" comes to add: or, for `RS-GRAPHIC-009`, from one DEC-069 names (refinement per that record, point 8).
+  - **Its Rationale,** "Why the reasons live in a record". "The record gives each rule's id, title, sources and reason, or, for `RS-GRAPHIC-008`, DEC-046 does" comes to add that DEC-069 gives them for `RS-GRAPHIC-009`.
+  - **Its Implications.** "Each rule cites this record as its origin, but `RS-GRAPHIC-008`, whose origin is DEC-046" comes to add: and `RS-GRAPHIC-009`, whose origin is DEC-069 (refinement per that record, point 8).
 - **Read against this record, and left as they stand:**
   - DEC-028 points 3, 4 and 5, since the rule takes the shape they give, and points 8 and 11, since the readings of points 5 and 6 read their rules' words without changing them, and a reading is the reviewer's body's;
   - DEC-030 point 3, since the designer's steps are its body's, and point 8, since it asks at least six topics, and one more joins them;
