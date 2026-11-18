@@ -6,6 +6,8 @@ date: 2026-05-29
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [ADR-095](ADR-095-hook-out-of-reach.md).** How the hook a project's settings register, and the permission commands, load the core when they run is overturned: that hook loads it from a copy made from the installed release, never from the project's tree, and each command loads it from the release that serves it, which is the project's tree only where the project is itself a source checkout of the methodology whose own code the entry point runs. A working run's hook loads it from the project's tree at the default branch's head, as ADR-073 point 2 decides, so the core's propagation into a project's tree serves that run, and it stands until a follow-up decides whether sync goes on carrying it. Everything else stands: the core's home in the backbone's tree, the direction of its imports, its recognizers as data and its catalog's tier.
+
 ## Context
 
 [COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md) establishes permissions as a harness-neutral model the methodology owns, realized by each harness's adapter. [ADR-002](ADR-002-permission-realizer-ownership.md) records the first realizer's *ownership* boundary — who owns which region of `.claude/settings.json`. This ADR records the sibling boundary ADR-002 does not touch: the *code-home* boundary — where the shared decision logic physically lives in the source tree. Ownership and code-home are distinct questions; ADR-002 settles the former, ADR-003 the latter. It was raised and resolved in the architect review of the `2026-05-29-permission-system-implementation.md` implementation plan, named there as ADR-worthy.
