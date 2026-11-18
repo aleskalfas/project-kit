@@ -29,6 +29,9 @@ body: >
   `GRAPHIC@4` in the set's `inherits`. A bar that names an earlier major of
   `GRAPHIC`, or a rule of the set at such a major, fails the capability's
   check (`bar-major`) until the project names `@4` in the configuration's
-  `bar`, and decides whether it covers `RS-GRAPHIC-009`. A new major of a set
+  `bar`, and decides whether it covers `RS-GRAPHIC-009`. Where the same
+  release raises the set to 3.0.0 too, `GRAPHIC@3` never ships, so a project
+  writes `GRAPHIC@4` wherever another note of the release says `GRAPHIC@3`,
+  and reads the reworded rules beside `RS-GRAPHIC-009`. A new major of a set
   a bar covers lapses the hold. No migration moves a pin or a bar, since the
   project's own reading of the new rule is what each waits for.
