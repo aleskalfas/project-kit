@@ -121,7 +121,7 @@ grades:
       page: plan
     grade: competent
     evidence: >-
-      The lead lists the plan's three phases, and answers no question the title asks.
+      The lead lists the plan's three phases, and does not say what the title opens.
     mark:
       kind: asker
       names: >-
