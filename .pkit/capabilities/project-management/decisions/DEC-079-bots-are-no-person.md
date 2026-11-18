@@ -1,8 +1,8 @@
 ---
 id: DEC-079
 title: A bot's account stands for no person, and in human mode a reviewer agent's gives no approval and is asked for none
-status: proposed
-date: 2026-11-17
+status: accepted
+date: 2026-11-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 

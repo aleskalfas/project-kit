@@ -1,8 +1,8 @@
 ---
 id: ADR-098
 title: The process engine takes only the actor its caller names
-status: proposed
-date: 2026-11-17
+status: accepted
+date: 2026-11-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 

@@ -1,8 +1,8 @@
 ---
 id: DEC-076
 title: Under a credential that names no user's account, no person stands for the acting account
-status: proposed
-date: 2026-11-13
+status: accepted
+date: 2026-11-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 

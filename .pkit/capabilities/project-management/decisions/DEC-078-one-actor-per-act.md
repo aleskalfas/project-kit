@@ -1,8 +1,8 @@
 ---
 id: DEC-078
 title: Each act has one actor, the account its credential acts as, and no comment names another
-status: proposed
-date: 2026-11-17
+status: accepted
+date: 2026-11-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
