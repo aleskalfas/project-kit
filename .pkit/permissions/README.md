@@ -27,7 +27,7 @@ pkit:
         - .pkit/rules/core.md
         - .pkit/skills/core/capability-author.md
         - .pkit/.gitignore
-      record: [COR-007, COR-019, COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-009, ADR-032, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
+      record: [COR-007, COR-019, COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-009, ADR-032, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066, ADR-095, ADR-099]
       artefact:
         - .pkit/cli/README.md#surface
         - .pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json
@@ -69,7 +69,7 @@ The permission model decides each tool call an agent makes, from grants of privi
 
 ## Grants and verdicts
 
-The model grants privileges to subjects, and the decision core gives each tool call one verdict from those grants (COR-028 point 1).
+The model grants privileges to subjects, and the decision core gives each tool call one verdict from those grants (COR-028 point 1). The locked commands below add a verdict that rests on no grant (ADR-095 point 3).
 
 - **A subject** is `all`, `operator` or `agent:<name>`. `all` is every agent and the operator, and `operator` is the person who drives the session. "Default-agent subject resolution" below says which subject a call is decided for.
 - **A grant** holds these keys, in the shape `.pkit/schemas/permission-grants.schema.json` gives:
@@ -87,11 +87,18 @@ The model grants privileges to subjects, and the decision core gives each tool c
   - **`allow`:** an allow grant of the subject covers the call within its scope, and no grant denies it. The harness runs the call with no prompt. For a Bash command, "Compound commands" below says when a grant covers it.
   - **`deny`:** a deny grant of the subject covers the call, or an allow grant covers it outside the grant's scope ("Scope enforcement" below). A deny wins over every allow, whatever the order of the grants. The harness refuses the call, and asks nobody.
   - **`abstain`:** no grant decides the call. The harness's own rules decide it: the allows and denies in its settings. The adapter writes them from its baseline and the model (COR-028 point 2). A call they neither allow nor deny goes to the harness's permission mode, which may ask the operator.
+  - **`ask`:** the call runs a command the catalog's `locks` name, which changes what judges later calls ("The locked commands" below). The core gives it with no model, and the hook puts the call to the operator in every mode.
 - **The posture** decides a call no grant covers. Under `lenient`, the default, the core abstains. Under `strict`, it denies. The posture is in `.pkit/permissions/project/config.yaml`.
-- **A fault** while the hook decides gives an abstain, never a deny, so the hook fails open. The harness's native denies of the guardrails still refuse the forms of the guardrails' commands they name. That is the double lock ([the Claude Code adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
+- **The locked commands** are judged with no model, beside the grants ([ADR-095](../../tech-docs/architecture/decisions/ADR-095-hook-out-of-reach.md) point 3, [ADR-099](../../tech-docs/architecture/decisions/ADR-099-named-folders-under-copy.md) point 1). [The Claude Code adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy) says how the hook gives them.
+  - **What they are.** The catalog's `locks` name the commands that change what judges every later call. Among them are realizing the model, turning the hook on or off, and widening the sandbox. The backbone's upgrade and the installer's commands that write a guarded folder are among them too.
+  - **Their verdicts.** On a shell call the core's `own_verdict()` reads as one of them, it gives the interlock's `ask`, which the hook gives in every mode. On a call it reads as naming a folder where the hook puts no ask, it gives a `deny`.
+  - **A mention meets none.** The reading errs away from a mention, so a commit message that names such a command meets nothing. Where the reading is in doubt, it gives no verdict of its own.
+  - **The tools they judge.** They judge the calls of the shell tool, the PowerShell tool and the monitor tool alike. The grants and the guardrails judge the shell tool's calls alone.
+  - **Apart from `decide()`.** They change no verdict of `decide()`, so `pkit permissions probe` does not report them. Only the backbone's catalog declares a lock ("Capability-contributed privilege *definitions*" below).
+- **A fault** while the hook decides drops only the judgement that rests on it, and never denies, so the hook fails open. Where the model will not load, the hook judges by the guardrails alone, beside the core's own verdicts. The harness's native denies of the guardrails, and its native locks, still refuse the forms of the commands they name. That is the double lock ([the Claude Code adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
 - **What the harness cannot enforce** is reported, never dropped (COR-028 point 3). The adapter declares what its harness enforces, and `pkit permissions diff` names the model's intent beyond it, such as network egress in Claude Code.
 - **One loader, one core.** The hook and the `pkit permissions` commands build the model through the same loader. `pkit permissions probe` decides through the same core as the hook.
-- **Only while the hook is registered.** With the hook off, only the harness's native rules hold. A grant only the hook realizes, such as of `text-filter`, `uv-run` or `workspace`, then allows nothing. An adapter's hook may also ask the operator where the core abstains, as Claude Code's does in two cases ([its README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
+- **Only while the hook is registered.** With the hook off, only the harness's native rules hold. A grant only the hook realizes, such as of `text-filter`, `uv-run` or `workspace`, then allows nothing. An adapter's hook may also ask the operator where the core abstains, as Claude Code's does in several cases ([its README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
 
 ### Profiles
 
@@ -143,6 +150,8 @@ The hook resolves the subject for every PreToolUse call, in this order:
 ## Compound commands (segment splitting + leading-`cd` strip)
 
 The decision core splits a compound Bash command into segments, and decides on what each segment matches. The command reaches the core as one string. The core splits it on `&&`, `||`, `|`, `;`, a background `&` and a newline, with a dumb regex splitter, which is no shell parser.
+
+This split serves the grants and the guardrails. The locked commands are read apart, by a scan that tracks quotes ("Grants and verdicts" above).
 
 Within each segment the core reads the words as the shell does. It splits them at spaces and tabs, and removes quotes and backslashes by the standard library's POSIX quoting rules. So a grant or a deny matches `"--force"` as `--force`, and matches `git commit -m "fix: x"` as the command the shell runs.
 
@@ -253,7 +262,7 @@ Each form counts only where these hold:
 
 A segment left with redirections and assignments alone, or behind only a word such as `{` or `do`, keeps the command untrusted.
 
-A lookalike stays untrusted, such as `2>&1t`, `{fd}>/dev/null` or `>&word`. So does every other redirection, such as `> out.txt`, `< in.txt`, `>|`, `<>`, a here-string or a heredoc.
+A lookalike stays untrusted, such as `2>&1t`, `{fd}>/dev/null` or `>&word`. So does every other redirection, such as `> out.txt`, `< in.txt`, `>|`, `<>`, a here-string or a heredoc. The locked commands' reading takes a heredoc's body as data instead, save one fed to a shell that reads its script from it.
 
 ### Denies, and what an abstain says
 
@@ -422,7 +431,7 @@ A capability may define privileges of its own, beside the denies it ships ("Wher
 
 - **One shape.** The fragment reuses the document shape of `.pkit/schemas/privilege-catalog.yaml`, with no new schema.
 - **Installed capabilities only.** As for grants, only a capability the manifest registers contributes, and an orphan folder contributes nothing.
-- **The merge rule:** additive only, rejecting collisions, and forbidding guardrails. Each fragment id is rewritten to a capability-scoped key, `<cap>:<name>`. So a fragment can extend the recognized vocabulary in its own namespace, but can never overwrite a backbone or peer privilege. A `guardrail: true` fragment entry is rejected.
+- **The merge rule:** additive only, rejecting collisions, and forbidding guardrails and locks. Each fragment id is rewritten to a capability-scoped key, `<cap>:<name>`. So a fragment can extend the recognized vocabulary in its own namespace, but can never overwrite a backbone or peer privilege. A `guardrail: true` fragment entry is rejected, and so is each of a fragment's `locks`.
 - **Referencing one.** A grant references a scoped privilege with the COR-019 token whose id half carries the scope, `[privilege-catalog:<cap>:<name>]`, per COR-019's id-scope clarification.
 - **Inert until granted.** A fragment privilege is inert until a grant references it. What narrows an agent's reach is the deny grant the capability also ships. A tool-call deny is a speed bump that shapes behaviour, not a security boundary.
 - **Visible.** `pkit permissions overview` attributes each merged privilege to its contributing capability, and shows any rejected fragment.

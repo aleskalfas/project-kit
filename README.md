@@ -39,7 +39,7 @@ pkit:
         - .pkit/agents/core/convention-compliance-reviewer.md
         - .pkit/capabilities/project-management/scripts/create-issue.py
         - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
-      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, COR-070, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, PRJ-015, ADR-007, "ADR-025#5", ADR-049, ADR-064, ADR-065]
+      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, COR-070, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, PRJ-015, ADR-007, "ADR-025#5", ADR-049, "ADR-095#3", ADR-064, ADR-065]
       artefact:
         - ACT-adopter
         - ACT-ai-agent
@@ -53,6 +53,7 @@ pkit:
         - .pkit/decisions/README.md#the-no-shared-files-invariant
         - .pkit/decisions/README.md#two-further-id-spaces
         - .pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command
+        - .pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy
         - .pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip
         - .pkit/lifecycle/upgrade-flow.md#a-new-collision
         - .pkit/lifecycle/manifest.md#a-data-points-question
@@ -135,7 +136,7 @@ status: proposed
 
 ### Routine commands run unasked, and dangerous ones are denied
 
-**You see fewer prompts, and the common forms of the dangerous commands are refused.** `pkit permissions setup autonomy` activates a permission profile, and turns on the hook that enforces it in Claude Code and, except on macOS, the OS sandbox (COR-028). Then `git`, `gh` and `pkit` run unasked, and `sudo`, a recursive `rm` and `git push --force` are denied to every agent. The example runs only its first step, activating the `autonomous` profile, and the probe shows what the hook will decide, asking as you, the operator:
+**You see fewer prompts, and the common forms of the dangerous commands are refused.** `pkit permissions setup autonomy` activates a permission profile, and turns on the hook that enforces it in Claude Code and, except on macOS, the OS sandbox (COR-028). Then `git`, `gh` and `pkit` run unasked, and `sudo`, a recursive `rm` and `git push --force` are denied to every agent. A command that changes what judges later calls, such as `pkit permissions apply`, asks you in every mode ([the Claude Code adapter's README](.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)). The example runs only its first step, activating the `autonomous` profile, and the probe shows what the hook will decide, asking as you, the operator:
 
 ```console
 $ pkit permissions profile activate autonomous | grep "^profile"
