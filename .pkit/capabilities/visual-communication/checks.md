@@ -660,7 +660,7 @@ It holds the scene findings, the losses among them. The findings on files, libra
 - `pkit_schema: visual-communication:findings` and `schema_version: 1`.
 - `key`: a fingerprint of every file the scenes were computed from ([input sets](#the-input-set-of-each-kind)).
 - `findings`: each finding, with its `code` (its label, save on an overlap that holds `lies-over-in`), its `level` (`fails`, `attention` or `fact`, the level where the project can correct the file), its `message` and its `where`. It may hold `file`, `fix`, `library` (`<library>@<version>`, where it lies in a library version), `who` and `lies-over-in`.
-- `lies-over-in` stands on an overlap whose part on top names the part beneath under `lies-over`: the version that holds that part, as `<library>@<version>`. The overlap's `code`, `level` and `message` are those of a pair no one named. Its label in validation, `box-overlap` or `box-overlap-meant`, and the message that goes with it, are worked out from `lies-over-in` each time the finding is read, as its level is, and never stored ([Severities](#severities)).
+- `lies-over-in` stands on an overlap whose part on top names the part beneath under `lies-over`: the version that holds that part, as `<library>@<version>`. The overlap's `code`, `level` and `message` are those of a pair no one named. What its label and message become in validation, [Severities](#severities) says.
 - A finding's `file` is relative to the piece's folder, or, where it lies in a library version, to that version's folder. So the record holds when the location moves or the piece is copied. The check gives each file relative to the project root.
 
 The record of the test piece `flow`, with a word too wide for its card, trimmed:
