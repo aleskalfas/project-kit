@@ -104,8 +104,9 @@ except ImportError:  # pragma: no cover
     except ImportError:  # pragma: no cover
         gh_run = None  # type: ignore[assignment]
 try:
-    from _lib import audit_log, comment_log
+    from _lib import account_kind, audit_log, comment_log
 except ImportError:  # pragma: no cover - a test that puts `_lib` itself on the path
+    import account_kind  # type: ignore[no-redef]
     import audit_log  # type: ignore[no-redef]
     import comment_log  # type: ignore[no-redef]
 
@@ -304,6 +305,13 @@ def _author_of(comment: Any) -> str:
     return str(getattr(comment, "author", "") or "")
 
 
+def _from_a_bot(author: str) -> bool:
+    """Whether the comment's author is spelled as a bot's account,
+    ``<name>[bot]`` as the REST API gives it or ``app/<name>`` as ``gh`` does
+    (DEC-079 point 2)."""
+    return account_kind.of_form(author) == account_kind.BOT
+
+
 def _created_at(comment: Any) -> str | None:
     for name in ("created_at", "createdAt"):
         value = _field(comment, name)
@@ -346,8 +354,16 @@ def parse_events(comments: Iterable[Any], assignee_login: str | None) -> list[Ow
     The authenticity filter (ADR-041 §1 / DEC-043 point 3): a stamped comment counts
     **only** if its author equals the issue's expected ``assignee_login`` — a
     forged stamp pasted from another account is ignored. With no assignee
-    (``None``), no marker authenticates, so the issue reads as unclaimed. Returned
+    (``None``), no marker authenticates, so the issue reads as unclaimed. A stamp
+    from an account spelled as a bot's never counts, even on an issue assigned to
+    that account, which the service lets some bots be (DEC-079 point 2). Returned
     in the order of the comments, which GitHub lists in the order of their ids.
+
+    Not built yet: a stamp whose author is of a kind unknown, such as a bot's
+    account the service gives with no suffix, still counts on an issue whose
+    assignee bears its login. DEC-079 point 2 holds it, neither counted nor
+    freed, and waits on the reading of an account's kind that ADR-094 decides
+    (#3171).
     """
     out: list[OwnershipEvent] = []
     if not assignee_login:
@@ -356,6 +372,8 @@ def parse_events(comments: Iterable[Any], assignee_login: str | None) -> list[Ow
         author = _author_of(c)
         if author != assignee_login:
             continue  # forgery / another account — not trusted
+        if _from_a_bot(author):
+            continue  # a bot answers for no claim on work
         ev = audit_log.parse(str(_field(c, "body") or ""))
         if ev is None or ev.type not in EVENTS:
             continue
