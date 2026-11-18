@@ -1,5 +1,5 @@
 ---
-id: ADR-098
+id: ADR-100
 title: A seat's clone runs its builds at once, one for each Task, and counts its runs in one register
 status: proposed
 date: 2026-11-18
@@ -169,7 +169,7 @@ Standing, each read for every build: point 5's state file, its waiting and its r
 - **Edits to accepted records,** made in this change once a person accepts this record ([COR-066](../../../.pkit/decisions/core/COR-066-accepted-before-landing.md) point 5):
   - **Overturned in part.** ADR-073 gains this line at the top of its body, before its Summary, and its words stay as they stood under it:
 
-    > **Partially superseded by [ADR-098](ADR-098-runs-in-seat-clone.md).** A clone runs several builds at once, as many as its pace allows on the agent's call ([project-management:DEC-082-pace-of-subagents]), one for each Task, each with a state file of its own, keyed by its Task. A session acts on each build it finds as its work allows, and hand-backs in one clone take turns. Overturned: point 5's "One build at a time in a seat's clone. A build started while one runs is refused"; in point 5's "Recovery", "before any other work: it waits on a running one"; and in point 6's exit 1, "a build already running", which refuses only a build of the same Task that runs or waits, and, on the agent's call, a build with no slot free. Point 5's state file, its waiting and its recovery are each build's own, as ADR-098 points 1 to 3 say. ADR-098's "What this overturns in ADR-073, and what stands" lists each passage. The rest stands.
+    > **Partially superseded by [ADR-100](ADR-100-runs-in-seat-clone.md).** A clone runs several builds at once, as many as its pace allows on the agent's call ([project-management:DEC-082-pace-of-subagents]), one for each Task, each with a state file of its own, keyed by its Task. A session acts on each build it finds as its work allows, and hand-backs in one clone take turns. Overturned: point 5's "One build at a time in a seat's clone. A build started while one runs is refused"; in point 5's "Recovery", "before any other work: it waits on a running one"; and in point 6's exit 1, "a build already running", which refuses only a build of the same Task that runs or waits, and, on the agent's call, a build with no slot free. Point 5's state file, its waiting and its recovery are each build's own, as ADR-100 points 1 to 3 say. ADR-100's "What this overturns in ADR-073, and what stands" lists each passage. The rest stands.
 
   - **Refined in place:** none.
   - **An edit that changes no decision:** none.
