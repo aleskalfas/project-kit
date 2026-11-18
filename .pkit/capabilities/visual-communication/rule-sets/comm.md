@@ -3,7 +3,7 @@ rule-set: COMM
 version: 2.0.0
 rules:
   RS-COMM-001:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-068"}
     pkit:
       friction:
@@ -15,7 +15,7 @@ rules:
       friction:
         anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#6"]}
   RS-COMM-003:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-068"}
     pkit:
       friction:

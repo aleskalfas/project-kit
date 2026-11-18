@@ -3,7 +3,7 @@ rule-set: GRAPHIC
 version: 3.0.0
 rules:
   RS-GRAPHIC-001:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-068"}
     pkit:
       friction:
@@ -15,7 +15,7 @@ rules:
       friction:
         anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#8", "visual-communication:DEC-046#2", "visual-communication:DEC-046#3"]}
   RS-GRAPHIC-003:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-068"}
     pkit:
       friction:
@@ -39,7 +39,7 @@ rules:
       friction:
         anchors: {record: ["visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#10"]}
   RS-GRAPHIC-007:
-    status: proposed
+    status: accepted
     origin: {decision: "visual-communication:DEC-068"}
     pkit:
       friction:

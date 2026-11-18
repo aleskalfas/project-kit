@@ -1,7 +1,7 @@
 ---
 id: DEC-068
 title: Head, focal point and action stand above the rest; weaknesses lower each rule they fail
-status: proposed
+status: accepted
 date: 2026-11-17
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
