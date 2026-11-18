@@ -1,6 +1,6 @@
 # The calibration's control
 
-- bar: ['RS-COMM-003', 'RS-GRAPHIC-001', 'RS-GRAPHIC-002', 'RS-GRAPHIC-003', 'RS-GRAPHIC-006', 'RS-GRAPHIC-007'] at least professional; order: lowest
+- bar: ['RS-COMM-003', 'RS-GRAPHIC-001', 'RS-GRAPHIC-002', 'RS-GRAPHIC-003', 'RS-GRAPHIC-006', 'RS-GRAPHIC-007'] at least professional; order: counting
 
 ## The head: each claim about the inputs, from a check
 
@@ -35,11 +35,11 @@
 - judge-1: the key records no plan commit
 - judge-2: the key records no plan commit
 
-## The control, on the judges' grades (order: lowest)
+## The control, on the judges' grades (order: counting)
 
 Each clause, its counterparts' agreement, each judge read as the review, and whether it enters:
 
-- condition 1, page 1, first draft below last failed: **contested**. XGX maintainer fail, judge-1 fail, judge-2 fail; VNH maintainer fail, judge-1 fail, judge-2 pass. As the review: judge-1 does not hold, judge-2 holds.
+- condition 1, page 1, first draft below last failed: **contested**. XGX maintainer fail, judge-1 fail, judge-2 fail; VNH maintainer fail, judge-1 fail, judge-2 pass. As the review: judge-1 holds, judge-2 holds.
 - condition 1, page 1, last failed below first passed: **contested**. VNH maintainer fail, judge-1 fail, judge-2 pass; GPM maintainer pass, judge-1 pass, judge-2 pass. As the review: judge-1 holds, judge-2 does not hold.
 - condition 1, page 1, first passed about equal to last polished: **entered**. GPM maintainer pass, judge-1 pass, judge-2 pass; LTV maintainer pass, judge-1 pass, judge-2 pass. As the review: judge-1 holds, judge-2 holds.
 - condition 2, page 1, last failed fails and first passed passes: **contested**. VNH maintainer fail, judge-1 fail, judge-2 pass; GPM maintainer pass, judge-1 pass, judge-2 pass. As the review: judge-1 holds, judge-2 does not hold.
@@ -47,7 +47,7 @@ Each clause, its counterparts' agreement, each judge read as the review, and whe
 - condition 1, page 2, first passed about equal to last polished: **contested**. BRS maintainer pass, judge-1 pass, judge-2 pass; ZKD maintainer pass, judge-1 fail, judge-2 pass. As the review: judge-1 does not hold, judge-2 holds.
 - condition 2, page 2, last failed fails and first passed passes: **entered**. LMZ maintainer fail, judge-1 fail, judge-2 fail; BRS maintainer pass, judge-1 pass, judge-2 pass. As the review: judge-1 holds, judge-2 holds.
 - condition 1, page 3, first draft below last failed: **contested**. HMC maintainer fail, judge-1 fail, judge-2 fail; FXK maintainer fail, judge-1 pass, judge-2 pass. As the review: judge-1 holds, judge-2 holds.
-- condition 1, page 3, last failed below first passed: **contested**. FXK maintainer fail, judge-1 pass, judge-2 pass; ZCG maintainer pass, judge-1 pass, judge-2 pass. As the review: judge-1 does not hold, judge-2 does not hold.
+- condition 1, page 3, last failed below first passed: **contested**. FXK maintainer fail, judge-1 pass, judge-2 pass; ZCG maintainer pass, judge-1 pass, judge-2 pass. As the review: judge-1 holds, judge-2 does not hold.
 - condition 2, page 3, last failed fails and first passed passes: **contested**. FXK maintainer fail, judge-1 pass, judge-2 pass; ZCG maintainer pass, judge-1 pass, judge-2 pass. As the review: judge-1 does not hold, judge-2 does not hold.
 - condition 1, page 4, first draft below last failed: **contested**. NKR maintainer fail, judge-1 fail, judge-2 fail; MCM maintainer fail, judge-1 pass, judge-2 pass. As the review: judge-1 holds, judge-2 holds.
 - condition 1, page 4, last failed below first passed: **contested**. MCM maintainer fail, judge-1 pass, judge-2 pass; WMG maintainer pass, judge-1 pass, judge-2 pass. As the review: judge-1 does not hold, judge-2 does not hold.

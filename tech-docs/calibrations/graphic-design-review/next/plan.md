@@ -126,14 +126,13 @@ DEC-042's Context gives them as conditions [project-kit#3151](https://github.com
 ### Condition 1, order
 
 - **The clauses:** the first draft below the last failed, the last failed below the first passed, both strict, and the first passed about equal to the last polished, where both meet the bar in either order (the first plan's answer 9).
-- **The order from grades** is the method `order_check.py` chooses on the development set, by a rule fixed before it ran (`dev/order-check.md`): `lowest`, the lowest of a version's unmarked grades on the covered rules. A rule the review leaves ungraded counts in none.
+- **The order from grades** is `counting`, which the maintainer chose for the first plan (its answer 8) and kept for this one, on 2026-11-18, after `order_check.py` had run on the development set (`dev/order-check.md`). A version ranks by how many covered rules it meets at each grade, from the highest. A rule the review leaves ungraded counts in none.
 - **How the check reads:**
   - It takes the pairs where one design dominates another in a judge's grades: at least as high on every covered rule, and higher on one. So the pairs favour no method, and the maintainer's order enters nowhere.
   - It maps each judge's grades onto the spread of the review's grades by their rank, ties broken at random, and moves each grade a step at the rate the review's runs disagree.
   - It counts, for each method, the pairs each keeps, ties and inverts, over 500 seeded draws.
-- **The rule:** the fewest inverted pairs on the review-like spread, then the most kept, then `counting`, the first plan's.
-- **On the development set,** `lowest` inverts 6.0% of the pairs and ties 42.9%; `counting` inverts 9.7% and ties 30.4%.
-- **The maintainer chose `counting`** for the first plan (its answer 8). This plan proposes `lowest` by the check, and the maintainer decides before the run.
+- **What the check found.** On the review-like spread, `counting` keeps 59.9% of the pairs, ties 30.4% and inverts 9.7%. `lowest-then-average` keeps 61.8%, `average` 60.1% and `lowest` 51.1%, which ties 42.9%.
+- **Why not the check's own rule.** The rule `order_check.py` fixed before it ran, the fewest inverted pairs first, picks `lowest`. But condition 1's clauses are strict, so a tie fails them as an inversion does, and `lowest` keeps the fewest pairs. `counting` keeps nearly as many as the best, and keeping it changes no choice after its result was seen.
 - **As evidence, toward no acceptance:** Kendall's tau-b between the review's order and the maintainer's on each page, and the share of his ordered pairs the review keeps in order. One rule on every page: a design with no reading in the reference is left out, and so is a design with no reading in that run, each named.
 
 ### Condition 2, the pass line

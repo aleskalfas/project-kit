@@ -1,6 +1,6 @@
 {
  "control": {
-  "method": "lowest",
+  "method": "counting",
   "clauses": [
    {
     "condition": 1,
@@ -32,7 +32,7 @@
      }
     ],
     "judges": {
-     "judge-1": "does not hold",
+     "judge-1": "holds",
      "judge-2": "holds"
     },
     "status": "contested"
@@ -312,7 +312,7 @@
      }
     ],
     "judges": {
-     "judge-1": "does not hold",
+     "judge-1": "holds",
      "judge-2": "does not hold"
     },
     "status": "contested"

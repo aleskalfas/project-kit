@@ -29,9 +29,10 @@ and asks which method keeps its order once the grades look like the review's.
 - **What each method gives** on each pair and draw: *kept*, the dominant design scores higher;
   *tied*; or *inverted*, the other scores higher.
 
-The method the plan fixes is the one with the fewest inverted pairs in the review-like
-scenario, then the most kept, and `counting`, the first plan's, where two are equal on both
-(plan.md section 2).
+The check's rule picks the method with the fewest inverted pairs in the review-like
+scenario, then the most kept, and `counting`, the first plan's, where two are equal on both.
+The plan fixes the method the calibration uses, with the check's result before it
+(plan.md section 3).
 """
 
 from __future__ import annotations
