@@ -1,8 +1,8 @@
 ---
 id: ADR-095
 title: A sandboxed command alone cannot change the permission hook or widen what it allows
-status: proposed
-date: 2026-11-14
+status: accepted
+date: 2026-11-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 

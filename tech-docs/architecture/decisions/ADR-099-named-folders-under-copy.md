@@ -1,8 +1,8 @@
 ---
 id: ADR-099
 title: A named folder lifts only the file tools' ask, and an agent's call to name one is denied
-status: proposed
-date: 2026-11-17
+status: accepted
+date: 2026-11-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
