@@ -14,13 +14,15 @@ pkit:
         - .pkit/adapters/claude-code/tool-access.json
         - src/project_kit/visibility.py
         - .pkit/permissions/decide.py
+        - .pkit/permissions/projection.py
+        - .pkit/schemas/privilege-catalog.yaml
         - src/project_kit/permissions.py
         - .pkit/rules/core.md
         - .pkit/schemas/harness-requirements.yaml
         - .pkit/agents/tool_access.py
         - .pkit/agents/definition_source.py
         - .pkit/cli/install-pkit.sh
-      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
+      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", ADR-095, ADR-099, "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
       artefact:
         - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
         - .pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift
@@ -58,7 +60,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 
 The kit's permissions story for Claude Code — what allows and denies are pre-configured in adopters' `.claude/settings.json`. Two halves per the universal area pattern (COR-005):
 
-- **`core/settings.json`** — kit baseline. Universal allows (`gh`, `git`, `ssh`, common UNIX tools, kit-shipped script execution, agent-tool allows, `Skill(update-config)`) and universal safety denies (`git push --force` variants, `git reset --hard`, `rm -rf` family, `sudo`). The discriminator is "would every project-kit adopter benefit?" The baseline also registers the start hook under the top-level `hooks` key (*The agent workspace* below).
+- **`core/settings.json`** — kit baseline. Universal allows (`gh`, `git`, `ssh`, common UNIX tools, kit-shipped script execution, agent-tool allows, `Skill(update-config)`) and universal safety denies (`git push --force` variants, `git reset --hard`, `rm -rf` family, `sudo`). It also carries the *native locks* on the commands the decision core locks (ADR-095 point 4, ADR-099 point 1): an `ask` on each plain form of a command that changes what judges later calls, and a `deny` on naming a folder where the hook puts no ask, each for the shell tool and the PowerShell tool alike. They are derived from the catalog's `locks` by `projection.native_locks()`, which a test holds the file to. The discriminator is "would every project-kit adopter benefit?" The baseline also registers the start hook under the top-level `hooks` key (*The agent workspace* below).
 - **`project/settings.json`** — adopter's project-specific additions on top of the baseline (language tooling, enterprise hosts, project-specific paths). Adopters typically add allows here; denies stay in the kit baseline.
 
 The file Claude Code actually reads is the adopter's `.claude/settings.json`, merged from these two by `merge-settings.sh`, which `pkit init`, `pkit sync` and `pkit merge` run (COR-002 / COR-004). See **How adopters use this adapter** below.
@@ -417,6 +419,14 @@ A guardrail behind a runner the core reads is denied in every mode, as `find . -
 
 Its reason names each such guardrail and what hides the form, never the command's text. It asks too on an `Edit` or `Write` to an absolute path outside the session's repository, in every permission mode (ADR-034 point 2). A fault in either check leaves the abstain. `pkit permissions probe` drives the core's `hook_decide()` alone, so where the hook asks, the probe reports the core's abstain.
 
+**The locked commands, in every mode.** Some commands change what judges every later call: those that realize the model (`pkit permissions apply`, `profile activate`), turn the hook on or off, run the setup of autonomy, widen the sandbox (`sandbox enable`, `disable`, `exclude`, `accommodate`), run the backbone's upgrade, or have the installer write a guarded folder (`uv tool install` of the methodology's tool or with `--force`, `uv tool upgrade`, `uv self update`, `uv python install`, and the like). The catalog's `locks` name them. The core's `hook_own_verdict()` reads a shell call, of the shell tool, the PowerShell tool or the tool that monitors a command, and gives the interlock's `ask` on one it reads as such a command, with no model, so the hook gives it in every mode, auto and bypass mode among them (ADR-095 point 3). It gives a `deny` on a call it reads as naming a folder where the hook puts no ask (`pkit permissions folders name`); its reason gives the line the person runs from a terminal of their own (ADR-099 point 1). It reads the methodology's command as `pkit` and through uv's runners (`uvx project-kit`, `uvx --from project-kit pkit`, `uv tool run`, `uv tool uvx`), past their options and pkit's own.
+
+Its reading errs away from a mention, unlike the guardrails' readings, which err toward the deny. So a commit message or a pull request's body that names such a command meets nothing. The scan tracks quotes and backslashes as the shell does, sets a comment and a heredoc's body aside, and splits only at separators outside quotes; it reads a substitution as a call, one level deep, and a heredoc fed to a shell that reads its script from standard input as that script. It finds a command after the words that open a compound command, and past the wrappers and runners the harness strips. Where the call is in doubt, as with a `$'` quote, a substitution inside a substitution, or a PowerShell call that holds a backtick, a here-string, a block comment, `--%`, two single quotes inside a quoted string or a typographic quote, the core gives no verdict of its own and the native lock stands. Where a runner runs a command the core cannot read that may be a locked one, the hook asks as it does on a hidden guardrail, meeting the mode (ADR-025 point 7). A deny stands above the interlock's ask, which stands above the model's allow. `pkit permissions probe` drives `hook_decide()` alone, so it reports none of these verdicts.
+
+**The ask before leaving the sandbox.** The hook asks, in every mode, before a shell call whose `dangerouslyDisableSandbox` is `true`, or whose request it cannot read, whatever the model or the native rules allow; only a deny stands above it (ADR-095 point 4).
+
+**Each judgement apart.** A fault in one judgement drops no other (ADR-095 point 4). Where the model will not load, the hook judges by the catalog's guardrails alone, so the guardrail deny, the core's own verdicts and the ask before a write outside the repository still hold. Where the decision core or the catalog cannot load, the ask before leaving the sandbox still holds.
+
 **In auto and bypass mode the hook does not ask where a Bash call may hide a guardrail.** The person chose not to be asked there, yet [Claude Code's hooks reference](https://code.claude.com/docs/en/hooks) says a hook's `ask` forces a prompt in auto mode. So the hook abstains there, and the harness's own mode and rules decide the call. A rule such as `Bash(git:*)` may then run a hidden form unasked.
 
 The core never reads the mode, so its allow and deny, a strict posture's deny included, are the same in every mode. The hook reads the mode from the payload's `permission_mode` field. The hooks reference's "Common input fields" gives `auto` for auto mode and `bypassPermissions` for bypass mode. A missing field, or a value the hook does not know, keeps the ask.
@@ -425,8 +435,10 @@ The core never reads the mode, so its allow and deny, a strict posture's deny in
 
 **The double-lock.** The non-negotiable guardrail denies — every privilege the catalog flags `guardrail: true` (currently `privilege-escalation`, `destructive-fs`, `vcs-history-rewrite`) — are enforced in two independent layers:
 
-1. **fail-open hook half** — synthesized as `{subject: all, effect: deny}` grants in the model, derived from the privileges the catalog flags `guardrail: true` (the catalog is the single source of truth). The hook **fails open on decision faults** (malformed payload, ambiguous model): any such fault yields a silent abstain, never a silent block. Set `PKIT_PERMISSIONS_DEBUG=1` to surface decision fault reasons on stderr.
+1. **fail-open hook half** — synthesized as `{subject: all, effect: deny}` grants in the model, derived from the privileges the catalog flags `guardrail: true` (the catalog is the single source of truth). The hook **fails open on decision faults** (malformed payload, ambiguous model): such a fault drops only the judgement that rests on it (*Each judgement apart* above), never a silent block. Set `PKIT_PERMISSIONS_DEBUG=1` to surface decision fault reasons on stderr.
 2. **fail-closed native half** — the catastrophic `deny` patterns in `settings/core/settings.json`. These hold even if the hook is absent, faults, or is version-skewed, so failing open in layer 1 can never bypass them.
+
+The locked commands are double-locked the same way: the core's own verdicts in the hook, and the native locks in `settings/core/settings.json`. A native rule names only the plain form, under `pkit` and each runner, with a wildcard where a runner's call writes its options, a version or a source. The naming deny's wildcard stands only before the package, or before the source option that names it, so a version written onto the package's name, or an option after it, passes the native deny and meets the core's alone (ADR-099 point 1). No native rule names the forms that remove or list folders.
 
 **Enforcement-runtime fault taxonomy (ADR-002 point 4).** The fail-open contract covers *decision faults* (hook ran, couldn't resolve). A distinct class — *enforcement-runtime faults* — means the hook **cannot start at all** (python3 missing, decide.py absent, syntax error). This class is **fail-loud**, not fail-open: `pkit permissions enable` and `pkit permissions sandbox enable` run a startup self-check after registering the hook and warn loudly if the hook cannot start, so the operator learns enforcement is not running rather than believing a dead hook is gating calls. `pkit permissions overview` also surfaces this state when enforcement is registered-but-dead: it runs the self-check and reports "ENFORCEMENT-RUNTIME FAULT — hook CANNOT START" with the diagnosed reason.
 
@@ -436,7 +448,7 @@ The core never reads the mode, so its allow and deny, a strict posture's deny in
 pkit permissions enable
 ```
 
-Registers the hook under the top-level `hooks.PreToolUse` key in `.claude/settings.json` (command `${CLAUDE_PROJECT_DIR}/.pkit/adapters/claude-code/permission-hook.py`, matcher `*`) and ensures the fail-closed native guardrail denies are present. Refuses if the claude-code adapter isn't installed. Idempotent.
+Registers the hook under the top-level `hooks.PreToolUse` key in `.claude/settings.json` (command `${CLAUDE_PROJECT_DIR}/.pkit/adapters/claude-code/permission-hook.py`, matcher `*`) and ensures the fail-closed native guardrail denies, and the native locks' asks and denies, are present. `pkit permissions apply` ensures them too. Refuses if the claude-code adapter isn't installed. Idempotent.
 
 After registering, runs the **enforcement-runtime self-check** (per ADR-002 point 4): drives the hook script under `python3` with a probe payload to verify it can start. If the hook cannot start (python3 missing, decide.py absent, etc.), outputs a loud WARNING naming the fault and the remediation — rather than silently proceeding with a dead hook that fail-opens on every call.
 
