@@ -140,7 +140,7 @@ pkit:
 4. Unless the project turns [audit comments](../../../glossary.md#term-audit-comment--audit-comment) off, the system posts the reason in an audit comment that names the move, before the move ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)). It then moves the issue to Backlog, and attaches the Milestone. Where the project keeps a [journal](../../../glossary.md#term-journal--journal), the move goes into it with its reason ([DEC-049](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 
 > [!WARNING]
-> **Not built yet:** the audit comment says who bypassed the check and why, and names no move. [DEC-052](../../../../../../.pkit/capabilities/project-management/decisions/DEC-052-comment-house-style.md) decides that the comment of a move names the move it made, and #756 tracks it.
+> **Not built yet:** the audit comment says why the check was bypassed, and names no move. [DEC-052](../../../../../../.pkit/capabilities/project-management/decisions/DEC-052-comment-house-style.md) decides that the comment of a move names the move it made, and #756 tracks it.
 
 5. The system runs the [cascade](../../../glossary.md#term-cascade--cascade). Each issue above that is behind is brought forward, one declared move at a time (DEC-006). Where a journal is kept, each move goes into it with its cause.
 6. The developer starts the work: `pkit pm start-work <N>`. The system cuts the issue's branch, assigns the developer, and moves the issue to In Progress, a move the issue lifecycle leaves to the agent. The cascade runs as in step 5 (DEC-006 and DEC-026).

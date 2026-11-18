@@ -83,6 +83,7 @@ TERM-audit-comment:
           - COR-010
           - COR-048#5
           - COR-059#4
+          - project-management:DEC-078#2
 TERM-authorisation:
   name: authorisation
   noun-forms: [authorisations]
@@ -812,7 +813,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#audit-comment).
 
-**Example:** `promote-issue 1712 --reason "scheduled this week"` posts an audit comment on #1712 that names who bypassed the check, and why, before it moves #1712 to Backlog.
+**Example:** `promote-issue 1712 --reason "scheduled this week"` posts an audit comment on #1712 that says why the check was bypassed, before it moves #1712 to Backlog. The account that posted it, which GitHub shows beside it, is who bypassed the check ([DEC-078 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-078-one-actor-per-act.md#2-no-comment-names-an-authoriser-beside-its-poster-or-carries-an-email)).
 
 **Distinctions:**
 
