@@ -27,7 +27,7 @@ How to grade:
 2. For each page, grade each rule of `COMM` and `GRAPHIC` that judges a page, in words: *below competent*, *competent*, *professional* or *excellent*. Grade once for the piece as a whole each rule that judges the pages together, such as `RS-COMM-003`.
 3. Under each grade, say in `evidence` what on the page decides it.
 4. For each grade below *professional*, give in `words` each passage of the rule's text that the page breaks, copied word for word from its set's file. Give no passage of another rule, and no words of your own there.
-5. Where a rule takes no grade on a page, or for the piece, list it under `not-graded`, with the passage of its text that leaves it out.
+5. Where a rule takes no grade on a page, or for the piece, such as `RS-GRAPHIC-009` on a page that draws no leader, list it under `not-graded`, with the passage of its text that leaves it out.
 6. Grade the design on its own. Do not grade on a curve, and do not guess what other designs exist.
 
 Your reply: one fenced YAML block in the form `<SCHEMA>` gives, and nothing before it. It names `judge: <JUDGE>`, `folder: <CODE>`, your model by its full name, and under `read` what you read, by kind and by path. Each grade names its page by the id `handed.md` gives it.

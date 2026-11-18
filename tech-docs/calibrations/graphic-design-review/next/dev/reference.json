@@ -1,10 +1,10 @@
 {
-  "about": "The development set's reference, in the form plan.md section 1 fixes for the next calibration: the first ladder's reference as the first run fixed it (2026-11-17/run/reference.json), with TXF moved from `out` to `no-reading`; and what the new form adds: each covered set's major, the places each covered rule is graded on, the order's method as plan.md section 3 fixes it, the model's name and the reads each document may list. It changes no reading, line or pair of the first run's. Codes are the judges' blind codes; decks are the ladder's version folders.",
+  "about": "The development set's reference, in the form plan.md section 1 fixes for the next calibration: the first ladder's reference as the first run fixed it (2026-11-17/run/reference.json), with TXF moved from `out` to `no-reading`; and what the new form adds: each covered set's major, as the default branch holds it, the places each covered rule is graded on, the order's method as plan.md section 3 fixes it, the model's name and the reads each document may list. It changes no reading, line or pair of the first run's. Codes are the judges' blind codes; decks are the ladder's version folders.",
   "piece": "ladder-scratch",
   "bar": {
     "covers": ["RS-COMM-003", "RS-GRAPHIC-001", "RS-GRAPHIC-002", "RS-GRAPHIC-003", "RS-GRAPHIC-006", "RS-GRAPHIC-007"],
     "at-least": "professional",
-    "majors": {"COMM": 1, "GRAPHIC": 2}
+    "majors": {"COMM": 2, "GRAPHIC": 4}
   },
   "places": {
     "RS-COMM-003": ["piece"],

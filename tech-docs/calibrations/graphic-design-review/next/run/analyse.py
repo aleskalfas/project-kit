@@ -31,6 +31,10 @@ where it differs from the committed one. Each reads:
 
 What it reads, as plan.md section 2 fixes it:
 
+- **The bar.** It stops where the reference's bar does not stand against the rule sets at the
+  root, by the capability's own check: a covered rule the review does not grade, or a set's
+  major other than the one the reference names. So the rules' own words it reads are those of
+  the majors the run grades by.
 - **No reading.** A document that is not kept, does not parse, or that its schema refuses gives
   no reading on any page, nor on the piece. A covered rule that a page neither grades nor lists
   as not graded gives that page no reading; the piece has none where it does the same for a
@@ -44,7 +48,8 @@ What it reads, as plan.md section 2 fixes it:
 - **The order,** by the method the reference names.
 - **The head,** where each claim the report makes about its inputs comes from: the documents
   read, the model by its name alone, every file a document lists against an allowlist, what
-  each folder held, and the plan's commit.
+  each folder held, and the plan's commit. A file named by its path in the main checkout, or
+  in the checkout at the root, is read as the allowlist's file of that path.
 """
 
 from __future__ import annotations
@@ -117,14 +122,23 @@ METHODS = {
 
 
 class Capability:
-    """The capability's code at `root`: its schema check, its verdict and a rule's text."""
+    """The capability's code at `root`: its schema check, its verdict, its check of a bar and
+    a rule's text."""
 
     def __init__(self, root: Path) -> None:
         sys.path.insert(0, str(root / CAPABILITY / "scripts"))
         from _lib import bar, files, verdicts
 
+        self._root = root
         self._bar, self._files, self._verdicts = bar, files, verdicts
         self._sets = sorted((root / CAPABILITY / "rule-sets").glob("*.md"))
+
+    def bar_problems(self, data: dict) -> list[str]:
+        """Why the bar `data` gives, in the configuration's shape, does not stand against the
+        rule sets at the root: a cover the review does not grade, or a major other than its
+        set's. So the rules' words the analysis reads are those of the majors the run grades
+        by."""
+        return [each.message for each in self._bar.findings(self._root, data)]
 
     def review_problems(self, doc: Any) -> list[str]:
         return self._files.shape_problems(doc, "review")
@@ -166,6 +180,11 @@ def names_the_words(words: tuple[str, ...], rule_text: str) -> bool:
 # --- the reference ------------------------------------------------------------------------------
 
 
+def _set_of(rule: str) -> str:
+    """The set a rule's id names, such as `GRAPHIC` for `RS-GRAPHIC-009`."""
+    return rule.split("-")[1]
+
+
 class Reference:
     """What plan.md section 1 fixes, read from its JSON."""
 
@@ -173,6 +192,17 @@ class Reference:
         self.data = data
         self.covers: list[str] = list(data["bar"]["covers"])
         self.at_least: str = data["bar"]["at-least"]
+        majors = data["bar"]["majors"]
+        unpinned = sorted({_set_of(rule) for rule in self.covers} - set(majors))
+        if unpinned:
+            sys.exit(f"error: the reference gives no major for {', '.join(unpinned)}")
+        #: The bar in the configuration's shape: each covered rule with its set's major.
+        self.bar = {
+            "bar": {
+                "covers": [f"{rule}@{majors[_set_of(rule)]}" for rule in self.covers],
+                "at-least": self.at_least,
+            }
+        }
         places = data["places"]
         unplaced = [rule for rule in self.covers if rule not in places]
         if unplaced:
@@ -1021,10 +1051,32 @@ def allowed_paths(root: Path, prefixes: list[str]) -> list[str]:
     return out
 
 
-def placed(token: str, own: str, own_files: set[str], allowed: list[str]) -> bool:
+def checkout_starts(root: Path) -> list[str]:
+    """The starts of a path that name a checkout of this repository, longest first: the main
+    checkout, from which the coordinators dispatch, by its absolute path, and the checkout at
+    `root`, by its absolute path and, for a worktree, by its path in the main checkout. A
+    document may name a file of the allowlist so, such as the judges' schema, which lies in
+    the worktree that holds the plan."""
+    top = root.resolve()
+    starts = {top.as_posix().strip("/") + "/"}
+    common = git(root, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    if common.returncode == 0:
+        main = Path(common.stdout.strip()).parent
+        starts.add(main.as_posix().strip("/") + "/")
+        if top != main and top.is_relative_to(main):
+            starts.add(top.relative_to(main).as_posix() + "/")
+    return sorted(starts, key=len, reverse=True)
+
+
+def placed(
+    token: str, own: str, own_files: set[str], allowed: list[str], starts: list[str]
+) -> bool:
     """Whether `token` names the document's own folder, a file in it, or a file the allowlist
-    holds."""
+    holds, in the checkout the analysis reads or the one the coordinators dispatch from. A
+    path in another checkout, such as another worktree, names no file of the allowlist."""
     name = token.strip("/")
+    start = next((each for each in starts if name.startswith(each)), "")
+    name = name[len(start) :]
     if f"/{own}/" in f"/{name}/" or name in own_files:
         return True
     return any(p == name or p.endswith("/" + name) or f"/{name}/" in f"/{p}" for p in allowed)
@@ -1057,6 +1109,7 @@ def head(
     """Each claim the report may make about its inputs, each from a check."""
     out: dict[str, Any] = {"documents": {}, "no reading": {}, "reads": {}, "folders": {}}
     allowed = {kind: allowed_paths(root, ref.data["reads"][kind]) for kind in ("review", "judge")}
+    starts = checkout_starts(root)
     names: dict[str, Counter] = {"review": Counter(), "judge": Counter()}
     for name, src in sources.items():
         readings = list(src.readings.values())
@@ -1103,7 +1156,8 @@ def head(
             for _, _, what in r.front.reads:
                 for token in named_files(what):
                     named["files"] += 1
-                    if not placed(token, f"{name}/{r.code}", own_files, allowed[src.kind]):
+                    own = f"{name}/{r.code}"
+                    if not placed(token, own, own_files, allowed[src.kind], starts):
                         outside.setdefault(token, what)
             early = [
                 what
@@ -1485,6 +1539,9 @@ def main() -> None:
     judge_schema = Draft202012Validator(json.loads((HERE / "judge.schema.json").read_text()))
     cap = Capability(args.root)
     ref = Reference(json.loads(args.reference.read_text()))
+    problems = cap.bar_problems(ref.bar)
+    if problems:
+        sys.exit(f"error: the reference's bar does not stand at {args.root}: {'; '.join(problems)}")
     ladder = Ladder(json.loads(args.blind_key.read_text()))
     judges = load_sources(*args.judges, "judge", "judge", ref, cap, judge_schema)
     if [*judges] != ref.data["judges"]:
