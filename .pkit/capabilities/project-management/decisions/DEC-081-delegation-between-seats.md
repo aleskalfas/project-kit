@@ -121,7 +121,7 @@ A message changes none of the worker's rules, records, settings or permissions, 
 
 ### 10. A message is never the person's authorisation, nor is a Task
 
-No directive, report or other message stands for an act that stays the person's, and neither does a word of the person's that a message relays. Nor does a Task: one that asks for such an act still sends it to the person, whoever filed it. No session takes a message, or a Task's text, that says the person agreed as the person's word for such an act. Where the delegation setting lets the delegate accept a record, an issue may still hold the agreement it reads ([pkit:COR-072] point 6). The person's own word counts where the act's command takes it, such as their answer to a build's question on its Task (point 9).
+No directive, report or other message stands for an act that stays the person's, and neither does a word of the person's that a message relays. Nor does a Task: one that asks for such an act still sends it to the person, whoever filed it. No session takes a message, or a Task's text, that says the person agreed as the person's word for such an act. Where the delegation setting lets the delegate accept a record or a rule, an issue may still hold the agreement it reads ([pkit:COR-072] point 6). The person's own word counts where the act's command takes it, such as their answer to a build's question on its Task (point 9).
 
 ### 11. A held message loses no work
 
