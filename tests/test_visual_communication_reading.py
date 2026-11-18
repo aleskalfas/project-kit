@@ -55,6 +55,33 @@ def test_yaml_that_json_cannot_hold_or_that_is_ambiguous_is_refused(text: str, s
         reading.load_yaml(text, "x.yaml")
 
 
+@pytest.mark.parametrize(
+    ("text", "line", "column"),
+    [
+        ("a: 1\nwhy: The lead: it answers.\n", 2, 14),
+        ('a: 1\nb:\n  why: "Two" compete.\n', 3, 14),
+    ],
+    ids=["holding-a-colon", "opening-with-a-quoted-phrase"],
+)
+def test_yaml_that_does_not_parse_says_where_the_reading_stopped(
+    text: str, line: int, column: int
+) -> None:
+    """Where it stopped, not where the mapping it stopped in began (#3391)."""
+    with pytest.raises(reading.ParseError, match="does not parse as YAML") as refused:
+        reading.load_yaml(text, "x.yaml")
+    assert (refused.value.line, refused.value.column) == (line, column)
+    assert refused.value.problem
+    assert isinstance(refused.value, reading.ReadError)
+
+
+def test_yaml_whose_reader_names_no_place_has_no_line_or_column() -> None:
+    """A character YAML does not allow stops the reader before it names a place (#3391)."""
+    with pytest.raises(reading.ParseError, match="does not parse as YAML") as refused:
+        reading.load_yaml("why: >-\n  The lead\x07 answers.\n", "x.yaml")
+    assert (refused.value.line, refused.value.column) == (None, None)
+    assert refused.value.problem
+
+
 def test_read_yaml_names_a_file_that_is_not_utf8(tmp_path: Path) -> None:
     path = tmp_path / "x.yaml"
     path.write_bytes(b"a: \xff\n")

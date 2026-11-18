@@ -8,7 +8,10 @@ Held here:
   left out, a grade of a rule the bar does not cover counts for nothing, and the same report
   gives the same verdict again;
 - **no verdict, or a refusal**: no bar gives no verdict, and nor does a report that grades
-  a covered rule nowhere; what the verdict would rest on and cannot be read refuses;
+  a covered rule nowhere; what the verdict would rest on and cannot be read refuses, and a
+  report whose document does not parse is named so, with the line the reading stopped at
+  where the reader names it and with none where it names none, while the same words as a
+  block scalar give the verdict (#3391);
 - **the hold**: ends no loop where no calibration's report is accepted, where the bar reaches
   past the accepted rules, and where anything point 9 names has lapsed, a change to the
   capability's code or to the body of its list of checks among it (DEC-065); ends it where
@@ -51,7 +54,7 @@ REVIEWS = ".pkit/capabilities/visual-communication/project/local/reviews"
 
 #: The bar most tests set: one rule judged on each page, and one judged on the pieces as a
 #: whole.
-COVERS = ("RS-GRAPHIC-001@2", "RS-COMM-003@1")
+COVERS = ("RS-GRAPHIC-001@3", "RS-COMM-003@2")
 
 
 class Copy:
@@ -244,7 +247,7 @@ def test_a_bar_at_excellent_fails_a_professional_grade(copy: Copy) -> None:
 
 
 def test_a_set_covered_takes_each_of_its_rules(copy: Copy) -> None:
-    configured(copy, "COMM@1")
+    configured(copy, "COMM@2")
     rules = [f"RS-COMM-00{n}" for n in range(1, 6)]
     kept(copy, [grade(rule, page="cover") for rule in rules])
     answered = copy.answered("deck")
@@ -272,7 +275,7 @@ def test_it_prints_the_verdict_and_why_it_ends_no_loop(copy: Copy) -> None:
     assert code == 0
     lines = out.splitlines()
     assert lines[0] == f"report: round 1 of `deck`, in {REVIEWS}/deck/round-1.yaml"
-    assert lines[1] == "bar: at least professional on RS-GRAPHIC-001@2, RS-COMM-003@1"
+    assert lines[1] == "bar: at least professional on RS-GRAPHIC-001@3, RS-COMM-003@2"
     assert lines[2] == "rules covered: RS-GRAPHIC-001, RS-COMM-003"
     assert lines[3:8] == [
         "verdict: the piece fails the bar",
@@ -304,7 +307,7 @@ def test_a_project_with_no_configuration_has_no_bar(copy: Copy) -> None:
 
 
 def test_a_covered_rule_the_report_grades_nowhere_gives_no_verdict(copy: Copy) -> None:
-    configured(copy, *COVERS, "RS-GRAPHIC-002@2")
+    configured(copy, *COVERS, "RS-GRAPHIC-002@3")
     kept(
         copy,
         [grade("RS-GRAPHIC-001", page="cover")],
@@ -337,6 +340,85 @@ def test_a_report_it_cannot_read_refuses(copy: Copy, setup: Any, said: str) -> N
     code, out, err = copy.run("deck")
     assert (code, out) == (1, "")
     assert said in err
+
+
+def written(copy: Copy, *evidence: str) -> int:
+    """A round's document as a reviewer writes it, in YAML, kept alone: its first grade fails
+    the bar most tests set, and `evidence` gives the lines of its evidence, each indented
+    under the grade's other keys. Returns the line of the document the evidence opens on."""
+    head = [
+        "pkit_schema: visual-communication:review",
+        "schema_version: 1",
+        "piece: deck",
+        "round: 1",
+        "model:",
+        "  name: a-model-1.0",
+        "read-before-grading:",
+        "  - kind: images",
+        "    what: Every image of the run.",
+        "grades:",
+        "  - rule: RS-GRAPHIC-001",
+        "    on:",
+        "      page: layers",
+        "    grade: competent",
+    ]
+    tail = [
+        "  - rule: RS-COMM-003",
+        "    on:",
+        "      piece: true",
+        "    grade: professional",
+        "    evidence: Each lead follows from the one before it.",
+    ]
+    lines = [*head, *(f"    {line}" for line in evidence), *tail]
+    write(copy.root / REVIEWS / "deck" / "round-1.yaml", "\n".join(lines) + "\n")
+    return len(head) + 1
+
+
+#: Words a value in words may hold that a plain value does not parse with (#3391): a `: `,
+#: and a quoted phrase the value opens with and goes on after.
+UNPARSED = pytest.mark.parametrize(
+    "words",
+    ["The lead: it answers no question.", '"Two compete" for the eye, and the figure loses.'],
+    ids=["holding-a-colon", "opening-with-a-quoted-phrase"],
+)
+
+
+@UNPARSED
+def test_a_report_whose_document_does_not_parse_is_named_with_the_line_it_stopped_at(
+    copy: Copy, words: str
+) -> None:
+    configured(copy, *COVERS)
+    line = written(copy, f"evidence: {words}")
+    for args in (("deck",), ("deck", "--json")):
+        code, out, err = copy.run(*args)
+        assert (code, out) == (1, "")
+        assert (
+            f"{REVIEWS}/deck/round-1.yaml: the report's document does not parse as YAML, so no "
+            f"verdict is read from it: the reading stopped at line {line}, column "
+        ) in err
+
+
+def test_a_report_whose_document_does_not_parse_where_the_reader_names_no_place_gives_none(
+    copy: Copy,
+) -> None:
+    """A character YAML does not allow stops the reader before it names a line (#3391)."""
+    configured(copy, *COVERS)
+    written(copy, "evidence: >-", "  The lead\x07 answers no question.")
+    code, out, err = copy.run("deck")
+    assert (code, out) == (1, "")
+    assert (
+        f"{REVIEWS}/deck/round-1.yaml: the report's document does not parse as YAML, so no "
+        "verdict is read from it: "
+    ) in err
+    assert "the reading stopped at" not in err
+
+
+@UNPARSED
+def test_the_same_words_as_a_block_scalar_give_the_verdict(copy: Copy, words: str) -> None:
+    configured(copy, *COVERS)
+    written(copy, "evidence: >-", f"  {words}")
+    (failing,) = copy.answered("deck")["verdict"]["pages"][0]["failing"]
+    assert failing["evidence"] == words
 
 
 @pytest.mark.parametrize(
@@ -432,14 +514,14 @@ def test_a_bar_that_reaches_past_the_accepted_rules_ends_no_loop(copy: Copy) -> 
 def test_a_bar_over_some_of_the_accepted_rules_gets_the_hold(copy: Copy) -> None:
     planted(copy)
     copy.accept(copy.answered("deck")["reading"])
-    configured(copy, "RS-GRAPHIC-001@2")
+    configured(copy, "RS-GRAPHIC-001@3")
     assert copy.answered("deck")["ends-the-loop"] is True
 
 
 def _new_major(copy: Copy) -> None:
     path = copy.folder / "rule-sets" / "graphic.md"
-    path.write_text(path.read_text().replace("version: 2.0.0", "version: 3.0.0", 1))
-    configured(copy, "RS-GRAPHIC-001@3", "RS-COMM-003@1")
+    path.write_text(path.read_text().replace("version: 3.0.0", "version: 4.0.0", 1))
+    configured(copy, "RS-GRAPHIC-001@4", "RS-COMM-003@2")
 
 
 def _reworded(copy: Copy, rule: str = "RS-GRAPHIC-001") -> None:
@@ -462,7 +544,7 @@ def _commented(copy: Copy, code: str) -> None:
 @pytest.mark.parametrize(
     ("lapse", "said"),
     [
-        (_new_major, "is at major 3, and the calibration read major 2"),
+        (_new_major, "is at major 4, and the calibration read major 3"),
         (_reworded, "the text of `RS-GRAPHIC-001` differs"),
         (
             lambda copy: _appended(copy.folder / "agents" / "graphic-design-reviewer.md"),
