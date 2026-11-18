@@ -18,8 +18,10 @@ body: >
   seat set before it; the lowest binds; the build and review commands hold
   the agent's calls to the pace from a register of the clone's runs; a
   lowered pace stops nothing that runs; and the agent tells the person its
-  pace once in each session, saying then too where the commands cannot tell
-  its call, and holding itself to the pace for the rest of the session.
+  pace once in each session, a session with no seat among them, saying then
+  too where the commands cannot tell its call though the sign is declared for
+  the project's harness, and holding itself to the pace for the rest of the
+  session.
   Counting slots, not subagents that run at once, departs from #3394's
   unit, as the record says. It overturns DEC-059, DEC-061 and
   DEC-063 in part, refines DEC-058, DEC-059, DEC-063 and ADR-071 in place,
