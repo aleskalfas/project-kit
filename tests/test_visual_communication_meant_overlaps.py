@@ -313,46 +313,53 @@ def test_a_word_in_a_brands_released_drawing_gives_the_fact(tmp_path: Path) -> N
     assert "in test-brand@1.1.0, released" in message
 
 
-#: A top of the `tests` library whose one layout is a page's form, drawing a tab over a band.
-SHEET = local(
-    about="A top whose one layout draws a tab over a band at the top of its page.",
-    fields={
-        "type": "object",
-        "properties": {
-            "pages": {"type": "array", "items": {"type": "object"}, "x-pkit-pages": True}
-        },
-    },
-    layouts={
-        "one": {
-            "slots": {"head": {"type": "string"}},
-            "required": ["head"],
-            "parts": {
-                "band": {"box": {"fill": "accent"}, "width": "=:width", "height": "=@space.2"},
-                "tab": {
-                    "lies-over": ["band"],
-                    "box": {"fill": "surface"},
-                    "x": "=@space.4",
-                    "y": "=@space.1",
-                    "width": "=@space.4",
-                    "height": "=@space.3",
-                },
-                "head": {
-                    "text": {"content": "head", "style": "type.body", "fill": "text-primary"},
-                    "y": "=@space.4",
-                    "width": "=:width",
-                },
+def sheet(tmp_path: Path, *named: str) -> Path:
+    """The piece `flow` of one page, its top `tests/sheet`, whose one layout is a page's form
+    and draws a tab over a band at the top of the page, the tab naming `named` under
+    `lies-over`. The version is not yet released."""
+    root = lay_out_drawing(project(tmp_path), picture=False, top="tests/sheet")
+    tab = {
+        "lies-over": list(named),
+        "box": {"fill": "surface"},
+        "x": "=@space.4",
+        "y": "=@space.1",
+        "width": "=@space.4",
+        "height": "=@space.3",
+    }
+    head = {
+        "text": {"content": "head", "style": "type.body", "fill": "text-primary"},
+        "y": "=@space.4",
+        "width": "=:width",
+    }
+    top = local(
+        about="A top whose one layout draws a tab over a band at the top of its page.",
+        fields={
+            "type": "object",
+            "properties": {
+                "pages": {"type": "array", "items": {"type": "object"}, "x-pkit-pages": True}
             },
-        }
-    },
-    preferred={"width": "=@size.figure", "height": "=@space.4 * 4"},
-)
+        },
+        layouts={
+            "one": {
+                "slots": {"head": {"type": "string"}},
+                "required": ["head"],
+                "parts": {
+                    "band": {"box": {"fill": "accent"}, "width": "=:width", "height": "=@space.2"},
+                    "tab": tab,
+                    "head": head,
+                },
+            }
+        },
+        preferred={"width": "=@size.figure", "height": "=@space.4 * 4"},
+    )
+    write(root / "visual/libraries/tests/1.0.0/components/sheet.yaml", top)
+    pages = [{"id": "a", "layout": "one", "head": "A"}]
+    write(root / PIECE_FOLDER / "content.en.yaml", yaml_text(bound("content", pages=pages)))
+    return root
 
 
 def test_a_word_in_a_tops_released_drawing_of_a_layout_gives_the_fact(tmp_path: Path) -> None:
-    root = lay_out_drawing(project(tmp_path), picture=False, top="tests/sheet")
-    write(root / "visual/libraries/tests/1.0.0/components/sheet.yaml", SHEET)
-    pages = [{"id": "a", "layout": "one", "head": "A"}]
-    write(root / PIECE_FOLDER / "content.en.yaml", yaml_text(bound("content", pages=pages)))
+    root = sheet(tmp_path, "band")
     release(root, "tests")
     [(label, level, where, _)] = overlaps(root)
     assert (label, level, where) == (boxes.BOX_OVERLAP_MEANT, findings.FACT, "sheet/pages[a]/band")
@@ -422,6 +429,14 @@ def test_a_names_second_writing_is_refused_and_its_first_still_names_its_part(
     }
     [(label, _, where, _)] = overlaps(root)
     assert (label, where) == (boxes.BOX_OVERLAP_MEANT, BOX)
+
+
+def test_a_refusal_in_a_tops_own_drawing_of_a_layout_points_under_the_layout(
+    tmp_path: Path,
+) -> None:
+    root = sheet(tmp_path, "ghost")
+    [(where, _, level)] = refusals(root)
+    assert (where, level) == ("layouts.one.parts.tab.lies-over", findings.FAILS)
 
 
 def test_a_word_that_is_no_list_is_a_fault_of_the_components_shape(tmp_path: Path) -> None:
