@@ -90,7 +90,7 @@ This contract applies uniformly to all kinds.
 
 ### Idempotency
 
-- Each kind declares `idempotent: true|false` in its schema. Kit-shipped kinds are idempotent (`set-board-field` writes the same value; `post-comment` checks for an existing comment with the same template stamp; `assign-milestone` is a no-op when already set).
+- Each kind declares `idempotent: true|false` in its schema. Kit-shipped kinds are idempotent (`set-board-field` writes the same value; `post-comment` checks for an existing comment with the same template stamp, and for the hook that fires after a move, where labels carry the state, the stamp names the move's occurrence by the moves made on the issue's timeline, journaled or not, so a replay finds the comment it posted and the same move made again posts its own (DEC-078 point 4) (refinement per [project-management:DEC-078-one-actor-per-act]); `assign-milestone` is a no-op when already set).
 - `custom-script` runs with `PKIT_HOOK_REPLAY=true` in its env when re-fired, so the script can detect replay and short-circuit.
 
 ### Ordering — serial in declared order

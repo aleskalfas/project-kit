@@ -273,11 +273,11 @@ def test_the_top_line_is_the_first_paragraph_of_the_body(body: str, line: str | 
 def test_a_point_of_a_record_this_repository_overturns_in_part_says_so() -> None:
     """In this repository, project-management DEC-059 overturns DEC-035 point 1 for a
     project with a topology, while the point stands as it stood: its lookup carries
-    DEC-035's top line, which names DEC-059."""
+    DEC-035's top line, which names DEC-059 first."""
     found = refs.lookup_citations(REPO, ["project-management:DEC-035#1", "COR-001"])
     line = found[0].partial_supersession
     assert line is not None
-    assert line.startswith("**Partially superseded by [DEC-059](DEC-059-topology-of-seats.md).**")
+    assert line.startswith("**Partially superseded by [DEC-059](DEC-059-topology-of-seats.md)")
     assert found[1].partial_supersession is None
 
 
