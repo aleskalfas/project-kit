@@ -64,17 +64,48 @@ The per-change human gesture
 COR-039 requires cannot be "the agent ran `report`" (an autonomous agent could
 file to a public repo under the user's identity without the human seeing the
 body). So:
-- Interactive: a **target-naming confirmation of the exact body before send**
-  ("posts a PUBLIC issue to `<owner/repo>` under your gh identity — confirm").
-- Autonomy / `--yes`: **degrade to producing the draft** (the prefilled-issue URL,
-  or a file) — **do not post.** This is a deliberate **asymmetry**: everywhere
-  else in the CLI `--yes` means "proceed"; for `report`'s foreign write it means
-  "produce, don't send." It unifies with the no-`gh`-auth fallback (same "make the
-  draft, don't post" path) and with the URL-first posture.
+- Interactive: a **confirmation before the API post that names the target and the
+  posting account** (#662). With `gh` authenticated, the full send payload, the
+  body and any overflow comment, is shown once, and the confirm names the target
+  and the posting account, the account the backbone's reading of the acting account
+  names, said to be a bot's where it is one ("posts as `@<account>` to
+  `<owner/repo>`"), before the `gh` post. The note travels as the issue body, never
+  URL-embedded. Where the reading names no account, `pkit report` posts nothing
+  through the service: it says it cannot tell which account it would post as, and
+  why, and keeps the payload as a draft, as autonomy does (refinement per
+  [ADR-094](ADR-094-acting-account-reading.md)).
+- Autonomy / `--yes`: **degrade to producing the draft** — **do not post.** The
+  composed payload is staged to a local draft, and a human posts it with the
+  interactive-only `pkit report submit <id>`, which re-shows the payload and
+  confirms, so `--yes` produces and never posts (#662). This is a deliberate
+  **asymmetry**: everywhere else in the CLI `--yes` means "proceed"; for `report`'s
+  foreign write it means "produce, don't send." It unifies with the no-`gh`-auth
+  fallback (same "make the draft, don't post" path) and with the URL-first posture.
+- The prefilled-URL form serves only where it is honest: with no `gh` auth, or an
+  explicit `--url`, within a ~6000-char budget, beyond which the form hard-fails at
+  GitHub's edge. It always warns that the browser's logged-in account, not the CLI
+  identity, authors the submit (the #659 misattribution).
 
-> **Refinement ([COR-043](../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md) arc, #642, 2026-08-10) — the confirmed unit is the send payload, not only the body.** An attached scratchpad note that exceeds the issue-body budget is sent as an excerpted body **plus one overflow comment** carrying the full as-sent text — mechanically a second API call to the same foreign issue, but **one logical send**: the *entire payload* (body + overflow comment, with the truncation flagged) is shown and confirmed as **a single gesture before any post**. Partial failure fails closed and loud: if the issue posts but the overflow comment fails, nothing is stamped `reported` (the send did not complete as confirmed), the created issue is named to the operator with the remediation (retry the comment or edit the issue), and the error is surfaced verbatim. This does **not** relax the three bars: no new write category (same target, same issue, one confirm), no override flag, no configurable target. Reviewers should continue to reject any *independent* second write — this refinement covers only the overflow comment of an already-confirmed send. Additionally, the redaction lint over attached content runs at **compose time on every path** — drafts and URL-first included — since "redaction by construction" is a property of the composed payload, not of the channel that carries it.
+**The confirmed unit is the send payload, not only the body** (#642; refinement per
+[COR-043](../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md)). An
+attached scratchpad note that exceeds the issue-body budget is sent as an excerpted
+body **plus one overflow comment** carrying the full as-sent text — mechanically a
+second API call to the same foreign issue, but **one logical send**: the *entire
+payload* (body + overflow comment, with the truncation flagged) is shown and
+confirmed as **a single gesture before any post**. Partial failure fails closed and
+loud: if the issue posts but the overflow comment fails, nothing is stamped
+`reported` (the send did not complete as confirmed), the created issue is named to
+the operator with the remediation (retry the comment or edit the issue), and the
+error is surfaced verbatim. Reviewers reject any *independent* second write: only
+the overflow comment of an already-confirmed send is covered. The redaction lint
+over attached content runs at **compose time on every path** — drafts and URL-first
+included — since "redaction by construction" is a property of the composed payload,
+not of the channel that carries it.
 
-> **Refinement (#662, 2026-08-11) — same bars, new send-path realization.** The never-silent gesture is now realized as a **confirm-before-API-post primary path**: with `gh` authenticated, the full send payload (body + any overflow comment) is shown once and the confirm names both the target and the posting identity ("posts as `@<gh login>` to `<owner/repo>`") before the `gh` post — the note travels as the issue body, never URL-embedded. Autonomy / `--yes` **stages** the composed payload to a local draft, and a human posts it with the interactive-only `pkit report submit <id>`, which re-shows the payload and confirms — so `--yes` still produces and never posts. The prefilled-URL form survives only where it is honest — no `gh` auth, or an explicit `--url`, within a ~6000-char budget (beyond it the form hard-fails at GitHub's edge) — and always warns that the browser's logged-in account, not the CLI identity, authors the submit (the #659 misattribution). All three bars are unchanged: categorical scope, no override flag, fixed target, one confirmed logical send.
+**The three bars hold** for the overflow comment and the send path alike:
+categorical scope, so no new write category (same target, same issue, one confirm);
+no override flag; a fixed target, not a configurable one; and one confirmed
+logical send.
 
 ### 3. Fixed, distribution-set target — not configurable-per-adopter, not a `--repo`
 

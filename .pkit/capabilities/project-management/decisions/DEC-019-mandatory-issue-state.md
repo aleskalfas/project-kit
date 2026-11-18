@@ -68,18 +68,18 @@ The three layers do not overlap. Per-pm-operation scanning of every issue's boar
 
 ### Mandatory assignment
 
-**Required at filing**, default-but-overridable. `create-issue.py` defaults the assignee to the filer (resolved per DEC-021's identity resolution); `--assignee=<github-login>` overrides; `--assignee=<login>,<login2>` allows multiple per GitHub's native multiplicity.
+**Required at filing**, default-but-overridable. `create-issue.py` defaults the assignee to the filer: the acting account, resolved per DEC-021's identity resolution, and under a credential that names no user's account, the person the agent works for (DEC-076 point 3), held to `values_constrained_to: members` as any assignee is, so a member where the gate is closed. Without one, `create-issue.py` takes the assignee named in the call, as any assignee is taken (DEC-079 point 1), and refuses a filing that names none (refinement per [project-management:DEC-076-app-credentials]). `--assignee=<github-login>` overrides; `--assignee=<login>,<login2>` allows multiple per GitHub's native multiplicity.
 
 **Reassignment authority**: any current team member per the DEC-021 membership gate. In open mode (no `members.yaml`), anyone with repo access. No additional role check at v1.
 
 **`validate-issue.py` checks**:
 
-- Hard-reject at filing if assignee is missing (shouldn't happen given default-to-filer; the rule is the safety net).
+- Hard-reject at filing if assignee is missing (shouldn't happen given default-to-filer; where the credential names no user's account and the session names no person, no filer is defaulted, and `create-issue.py`'s refusal of a filing that names no assignee keeps the check from meeting one; the rule is the safety net).
 - Warning on existing issues with no assignee (rare drift; legitimate when an issue predates the methodology).
 
-**Methodologically NOT a classification axis.** Assignment names a person, not a category from a constrained set. The schema entry above captures this — `substrate: native-assignee-field`, `values_constrained_to: members`.
+**Methodologically NOT a classification axis.** Assignment names a person, not a category from a constrained set. So the assignee is never a bot's account, as the backbone's one spelling of accounts reads an account's kind ([pkit:ADR-094] point 3), whether or not a member's entry names it, and a bare login is made an assignee only where the hosting service answers that it names a user's account, a lookup that fails refusing with its cause (DEC-079 point 1). The schema entry above captures this — `substrate: native-assignee-field`, `values_constrained_to: members`, open in open mode to any account but a bot's (refinement per [project-management:DEC-079-bots-are-no-person]).
 
-**Self-assignment shorthand.** `assign-issue.py 42 --me` is sugar for `--assignee=<my-resolved-github-login>`. `create-issue.py` defaults to filer = "me" implicitly when `--assignee` is omitted.
+**Self-assignment shorthand.** `assign-issue.py 42 --me` is sugar for `--assignee=<my-resolved-github-login>`. `create-issue.py` defaults to filer = "me" implicitly when `--assignee` is omitted. "Me" is the filer the default at filing names: the acting account resolved per DEC-021, and under a credential that names no user's account, the person the agent works for, held to `values_constrained_to: members` as any assignee is. Without one, `assign-issue.py --me` refuses (refinement per [project-management:DEC-076-app-credentials]).
 
 **Cascade interaction.** Assignment is stable across state transitions. A PR-merge close (per [project-management:DEC-006-state-machine-and-cascade]) does not auto-update the assignee to the PR author. The original filer stays on the hook unless explicitly reassigned.
 
