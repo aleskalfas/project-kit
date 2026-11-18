@@ -248,9 +248,7 @@ def _pkit_version() -> str:
     return parts[-1] if parts else ""
 
 
-def _render_provenance_comment(
-    invoker, from_state, *to_states: str, cause: str | None = None
-) -> str:
+def _render_provenance_comment(from_state, *to_states: str, cause: str | None = None) -> str:
     """DEC-049 `full` projection: a provenance-stamped record of a governed move,
     carrying the pkit version — the governed-vs-ungoverned boundary made visible on
     the issue. Absence of such a comment beside a timeline label change flags an
@@ -258,12 +256,13 @@ def _render_provenance_comment(
 
     A move through several states names each (`todo → backlog → in-progress`), and
     a move another move caused — a forward-cascaded one — names that ``cause`` on a
-    line of its own, as its journal entry's reason does."""
-    actor = getattr(invoker, "github_login", None) or getattr(invoker, "email", None) or "unknown"
+    line of its own, as its journal entry's reason does. It names no actor: the
+    account that posts it is the move's actor, which GitHub shows beside it
+    (DEC-078 point 2)."""
     version = _pkit_version()
     stamp = f" — pkit {version}" if version else ""
     move = " → ".join(state for state in (from_state, *to_states) if state)
-    comment = f"{_AUDIT_MARKER}\n{actor} moved {move} (governed by pkit){stamp}"
+    comment = f"{_AUDIT_MARKER}\nMoved {move} (governed by pkit){stamp}"
     return f"{comment}\n{cause}" if cause else comment
 
 
@@ -578,7 +577,6 @@ def main() -> int:
             verb="move-issue",
             flag="--bypass-owner",
             bypass=args.bypass_owner,
-            invoker=invoker,
             dry_run=args.dry_run,
         )
         instance_claims.say_guard(decision)
@@ -847,11 +845,9 @@ def main() -> int:
             _landed_moves(args.issue_number, engine_status, config, substrate_map),
         )
         rendered = (
-            _render_move_back_comment(
-                capability_root, invoker, current_state, args.to, move_back_reason
-            )
+            _render_move_back_comment(capability_root, current_state, args.to, move_back_reason)
             if move_back
-            else _render_audit_comment(capability_root, invoker, bypass_reason)
+            else _render_audit_comment(capability_root, bypass_reason)
         )
         audit_comment = rendered + "\n\n" + key
         if not _post_transition_audit_once(args.issue_number, audit_comment, key, config):
@@ -921,7 +917,7 @@ def main() -> int:
     if projection == "full" and not audit_reason:
         _gh_comment(
             args.issue_number,
-            _render_provenance_comment(invoker, current_state, args.to),
+            _render_provenance_comment(current_state, args.to),
             config,
         )
 
@@ -1347,13 +1343,13 @@ def _move_back_journal_reason(reason: str) -> str | None:
 
 
 def _render_move_back_comment(
-    capability_root: Path, invoker: object, from_state: str, to_state: str, reason: str
+    capability_root: Path, from_state: str, to_state: str, reason: str
 ) -> str:
     """The move back's audit comment (DEC-006, DEC-049 point 2): the canonical
     audit line carrying the reason the work stopped, and the move below it, as a
     writer that says more than the template appends its prose (`_lib/audit`)."""
     return (
-        f"{_render_audit_comment(capability_root, invoker, reason)}\n\n"
+        f"{_render_audit_comment(capability_root, reason)}\n\n"
         f"Moved back from {from_state} to {to_state}, since the work stopped "
         "(project-management DEC-006)."
     )
@@ -2749,7 +2745,7 @@ def _project_cascaded_move(
     line, and the move stands."""
     if context.projection != _audit.PROJECTION_FULL or len(reached) < 2:
         return
-    body = _render_provenance_comment(context.invoker, *reached, cause=reason)
+    body = _render_provenance_comment(*reached, cause=reason)
     failure = _comment_failure(number, body, context.config)
     if failure is not None:
         print(

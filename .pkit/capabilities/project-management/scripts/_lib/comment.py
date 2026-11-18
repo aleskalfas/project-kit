@@ -318,8 +318,10 @@ def structured_comment_reason(body: str) -> str | None:
     comment: a DEC-028 reviewer verdict (`done-work`'s agent-mode gate-checker
     reads the first line), a human-mode `Approved`-prefix approval
     (`done-work.py` counts a non-author comment that starts with `Approved`), or
-    an audit-trail note (the DEC-014 `Bypassed by …` template / the
-    `Approved by bypass:` bypass-audit line). Those are emitted only as
+    an audit-trail note (the bypass line of the validation-severity schema's
+    audit-comment template, `Bypassed: …`, its earlier form `Bypassed by …`,
+    which older audit comments carry, or the `Approved by bypass:`
+    bypass-audit line). Those are emitted only as
     side-effects of the verbs that own them — the freeform verb refuses to
     impersonate them so a note can never be counted as a gate decision or read
     as an audit record.
@@ -336,7 +338,7 @@ def structured_comment_reason(body: str) -> str | None:
             "first line starts with `Approved` — `done-work` would count it as a "
             "human-mode approval"
         )
-    if first.startswith("Bypassed by ") or first.startswith("Approved by bypass:"):
+    if first.startswith(("Bypassed:", "Bypassed by ", "Approved by bypass:")):
         return "first line matches an audit-comment template (DEC-014 / bypass audit)"
     return None
 

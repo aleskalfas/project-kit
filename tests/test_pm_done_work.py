@@ -1255,18 +1255,17 @@ def test_ci_gate_refuses_failing_and_pending(dw) -> None:
 
 
 def test_done_work_ci_bypass_audit_body_follows_template(dw) -> None:
-    """done-work's CI-bypass audit follows the schema template + its own stamp."""
-    identity = dw.Identity(github_login="octocat", email="octo@example.com")
+    """done-work's CI-bypass audit follows the schema template + its own stamp,
+    and names no authoriser beside its poster, and no email (DEC-078 point 2)."""
     key = dw._bypass_audit_key(dw.CI_BYPASS_AUDIT_WRITER, "advisory guard", "sha1")
     body = dw._ci_bypass_audit_body(
-        identity,
         "advisory guard on a decision-only PR",
         ("guard (FAILURE)",),
         key,
     )
     assert body.startswith(dw.CI_BYPASS_AUDIT_MARKER)
     assert body.splitlines()[-1] == key
-    assert "Bypassed by octocat <octo@example.com>: " in body
+    assert "Bypassed: advisory guard on a decision-only PR" in body
     assert "guard (FAILURE)" in body
 
 
@@ -1276,8 +1275,7 @@ def test_done_work_post_ci_bypass_audit_idempotent(dw, monkeypatch) -> None:
 
     captured: list[list[str]] = []
     key = dw._bypass_audit_key(dw.CI_BYPASS_AUDIT_WRITER, "override", "sha1")
-    identity = dw.Identity(github_login="octocat", email="octo@example.com")
-    prior = dw._ci_bypass_audit_body(identity, "override", ("x (FAILURE)",), key, "sha1")
+    prior = dw._ci_bypass_audit_body("override", ("x (FAILURE)",), key, "sha1")
 
     def fake_gh_run(args, config, **kwargs):
         captured.append(list(args))
@@ -1305,7 +1303,6 @@ def test_done_work_post_ci_bypass_audit_idempotent(dw, monkeypatch) -> None:
     ok = dw._post_ci_bypass_audit(
         496,
         "override",
-        identity,
         ("x (FAILURE)",),
         {},
         head="sha1",
@@ -1389,7 +1386,9 @@ def _wire_main_seams(
     monkeypatch.setattr(
         dw,
         "resolve_invoker_identity",
-        lambda config=None: dw.Identity(github_login="octocat", email="o@e.com"),
+        lambda config=None: sys.modules["_lib.membership"].Identity(
+            github_login="octocat", email="o@e.com"
+        ),
     )
     monkeypatch.setattr(
         dw,
@@ -1454,7 +1453,6 @@ def _wire_main_seams(
         pr_number,
         audit,
         reason,
-        invoker,
         config,
         **kwargs,
     ):
@@ -1485,7 +1483,7 @@ def _wire_main_seams(
 
     monkeypatch.setattr(dw, "_gh_get_required_checks", _stub_required)
 
-    def _stub_ci_audit(pr_number, reason, invoker, checks, config, *, head=""):
+    def _stub_ci_audit(pr_number, reason, checks, config, *, head=""):
         calls["ci_audit"] = True
         calls["ci_audit_head"] = head
         calls["ci_audit_checks"] = checks

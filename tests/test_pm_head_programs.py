@@ -27,7 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 sys.path.insert(0, str(SCRIPTS_DIR))
-from _lib import audit_log, escaped_output, head_programs  # noqa: E402
+from _lib import audit, audit_log, escaped_output, head_programs  # noqa: E402
 from _lib.comment_log import LogComment, LogRead  # noqa: E402
 
 HEAD = "a" * 40
@@ -226,14 +226,7 @@ def word(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
     monkeypatch.setattr(head_programs, "post_audit_once", post)
     monkeypatch.setattr(
-        head_programs,
-        "resolve_invoker_identity",
-        lambda **_k: SimpleNamespace(github_login="octocat", email=None),
-    )
-    monkeypatch.setattr(
-        head_programs,
-        "render_audit_comment",
-        lambda _root, invoker, reason: f"{invoker.github_login}: {reason}",
+        head_programs, "render_audit_comment", lambda _root, reason: f"Bypassed: {reason}"
     )
     return posted
 
@@ -264,7 +257,20 @@ def test_the_question_says_what_naming_the_head_starts(word, monkeypatch, capsys
     assert HEAD in out and "someone/kit" in out
     assert "under your account" in out and f"`gh pr diff {PR}`" in out
     (body,) = word
-    assert HEAD in body and "`land-work`" in body and "octocat" in body
+    assert HEAD in body and "`land-work`" in body
+
+
+def test_the_comment_a_word_leaves_names_no_person(word, monkeypatch) -> None:
+    """It names the commit and the command, and no person as having named the head:
+    the account that posts it is the act's actor (DEC-078 point 2)."""
+    monkeypatch.setattr(head_programs, "render_audit_comment", audit.render_audit_comment)
+    _ask(monkeypatch, HEAD[:7])
+    (body,) = word
+    assert body.splitlines()[:2] == [
+        "<!-- pkit-audit -->",
+        f"Bypassed: named head {HEAD} for one run of `land-work`: the programs it holds "
+        "start under the account that runs the command, for that run",
+    ]
 
 
 @pytest.mark.parametrize(

@@ -770,7 +770,9 @@ _CAP_ROOT = Path(".pkit/capabilities/project-management")
 def test_load_audit_template_reads_schema_marker(mi) -> None:
     tmpl = mi._load_audit_template(_CAP_ROOT)
     assert "<!-- pkit-audit -->" in tmpl
-    assert "Bypassed by <name> <<email>>: <reason>" in tmpl
+    assert "Bypassed: <reason>" in tmpl
+    # No authoriser beside the poster, and no email (DEC-078 point 2).
+    assert "<name>" not in tmpl and "<email>" not in tmpl
 
 
 def test_load_audit_template_falls_back_on_bad_root(mi) -> None:
@@ -778,18 +780,13 @@ def test_load_audit_template_falls_back_on_bad_root(mi) -> None:
 
 
 def test_render_audit_comment_canonical(mi) -> None:
-    invoker = SimpleNamespace(github_login="alice", email="alice@x.io")
-    out = mi._render_audit_comment(_CAP_ROOT, invoker, "verbal PM approval")
-    assert out.startswith("<!-- pkit-audit -->")
-    assert "Bypassed by alice <alice@x.io>: verbal PM approval" in out
+    out = mi._render_audit_comment(_CAP_ROOT, "verbal PM approval")
+    assert out == "<!-- pkit-audit -->\nBypassed: verbal PM approval"
 
 
-def test_render_audit_comment_no_email_is_clean(mi) -> None:
-    invoker = SimpleNamespace(github_login="alice", email=None)
-    out = mi._render_audit_comment(_CAP_ROOT, invoker, "reason")
-    assert out.startswith("<!-- pkit-audit -->")
-    assert "Bypassed by alice: reason" in out
-    assert "<<" not in out and "<>" not in out  # no empty angle brackets
+def test_the_fallback_template_matches_the_schemas(mi) -> None:
+    """The fallback must match the schema's canonical form."""
+    assert mi._load_audit_template(_CAP_ROOT) == mi._AUDIT_TEMPLATE_FALLBACK
 
 
 # ---- audit projection intensity (DEC-049) ---------------------------
@@ -805,18 +802,18 @@ def test_audit_projection_levels(mi) -> None:
 
 
 def test_render_provenance_comment(mi, monkeypatch) -> None:
+    """It names no actor: the account that posts it is the move's (DEC-078 point 2)."""
     monkeypatch.setattr(mi, "_pkit_version", lambda: "1.148.1")
-    invoker = SimpleNamespace(github_login="alice", email=None)
-    out = mi._render_provenance_comment(invoker, "backlog", "in-progress")
-    assert out.startswith("<!-- pkit-audit -->")
-    assert "alice moved backlog → in-progress" in out
-    assert "pkit 1.148.1" in out
+    out = mi._render_provenance_comment("backlog", "in-progress")
+    assert (
+        out == "<!-- pkit-audit -->\nMoved backlog → in-progress (governed by pkit) — pkit 1.148.1"
+    )
 
 
 def test_render_provenance_comment_no_version(mi, monkeypatch) -> None:
     monkeypatch.setattr(mi, "_pkit_version", lambda: "")
-    out = mi._render_provenance_comment(SimpleNamespace(github_login="a", email=None), None, "done")
-    assert "a moved done (governed by pkit)" in out
+    out = mi._render_provenance_comment(None, "done")
+    assert "Moved done (governed by pkit)" in out
     assert "pkit " not in out  # no dangling version stamp
 
 
@@ -859,9 +856,8 @@ class _FakeIssueComments:
 def _post(mi, from_state, to_state, reason, landed_moves):
     # `main` strips the reason before rendering and keying; mirror it.
     reason = reason.strip()
-    invoker = SimpleNamespace(github_login="alice", email="alice@x.io")
     key = mi._transition_audit_key(from_state, to_state, reason, landed_moves)
-    body = mi._render_audit_comment(_CAP_ROOT, invoker, reason) + "\n\n" + key
+    body = mi._render_audit_comment(_CAP_ROOT, reason) + "\n\n" + key
     return mi._post_transition_audit_once(42, body, key, {})
 
 

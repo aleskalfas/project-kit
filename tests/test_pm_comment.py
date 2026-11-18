@@ -119,6 +119,9 @@ def test_structured_reason_flags_approved_prefix() -> None:
 
 
 def test_structured_reason_flags_audit_templates() -> None:
+    # The template's bypass line (DEC-047 point 5), and its earlier form, which
+    # older audit comments carry.
+    assert comment.structured_comment_reason("Bypassed: urgent hotfix") is not None
     assert (
         comment.structured_comment_reason("Bypassed by Ada <ada@x.io>: urgent hotfix") is not None
     )

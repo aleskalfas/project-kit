@@ -276,10 +276,6 @@ class _Writer:
     legacy_stamp: str
 
 
-def _identity(module):
-    return module.Identity(github_login="alice", email="alice@example.test")
-
-
 def _dw_bypass(dw, reason, scope):
     return dw._post_bypass_audit_idempotent(42, reason, {}, head=scope)
 
@@ -288,7 +284,6 @@ def _dw_ci_bypass(dw, reason, scope):
     return dw._post_ci_bypass_audit(
         7,
         reason,
-        _identity(dw),
         ("tests (FAILURE)",),
         {},
         head=scope,
@@ -303,14 +298,13 @@ def _dw_reviewer_override(dw, reason, scope):
         block_comment_url=None,
         head=scope,
     )
-    return dw._post_reviewer_override_audit(7, audit_rec, reason, _identity(dw), {})
+    return dw._post_reviewer_override_audit(7, audit_rec, reason, {})
 
 
 def _mp_ci_bypass(mp, reason, scope):
     return mp._post_ci_bypass_audit(
         7,
         reason,
-        _identity(mp),
         ("tests (FAILURE)",),
         {},
         head=scope,
@@ -324,8 +318,7 @@ def _mi_transition(mi, reason, scope):
     landed_moves = scope.removeprefix("sha")
     reason = reason.strip()
     key = mi._transition_audit_key("todo", "backlog", reason, landed_moves)
-    invoker = SimpleNamespace(github_login="alice", email="alice@example.test")
-    body = mi._render_audit_comment(CAPABILITY_ROOT, invoker, reason) + "\n\n" + key
+    body = mi._render_audit_comment(CAPABILITY_ROOT, reason) + "\n\n" + key
     return mi._post_transition_audit_once(42, body, key, {})
 
 

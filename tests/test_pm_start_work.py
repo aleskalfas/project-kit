@@ -785,7 +785,7 @@ def test_a_bypass_posts_its_reason_and_starts_the_work_unclaimed(run_main, sw, c
     ]
     audit = github.issues[42].comments[-1]["body"]
     assert audit.startswith("<!-- pkit-audit -->")
-    assert "Bypassed by me: instance 3's session is gone" in audit
+    assert "Bypassed: instance 3's session is gone" in audit
     assert "<!-- pkit-audit-key: ownership-guard:" in audit
     captured = capsys.readouterr()
     assert "--bypass let this clone, instance 2, act on it" in captured.err

@@ -547,7 +547,6 @@ def _guard(ic, gh: FakeGitHub, clone, bypass: str | None = None, dry_run: bool =
         verb="edit-issue",
         flag="--bypass-owner",
         bypass=bypass,
-        invoker=ME,
         dry_run=dry_run,
         run=gh,
     )
@@ -636,7 +635,7 @@ def test_a_bypass_posts_its_reason_once(ic, root: Path) -> None:
     assert first.bypassed and second.bypassed
     assert not first.refused
     (audit,) = _audits(gh)
-    assert audit.startswith("<!-- pkit-audit -->\nBypassed by me <me@example.com>: its session")
+    assert audit.startswith("<!-- pkit-audit -->\nBypassed: its session")
     assert "The clash guard was bypassed: #7 is owned by instance 3, and this clone" in audit
     assert first.line.startswith("[warn] ownership: #7 is owned by instance 3, and --bypass-owner")
 

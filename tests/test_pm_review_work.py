@@ -502,7 +502,9 @@ def test_human_review_says_why_it_leaves_no_author_out_where_pkit_cannot_tell(
     """The account acting stands for the author; where `gh api user` refuses,
     no member is left out, and a warning says so, and why (#3162)."""
     forbidden = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
-    unresolved = rw.Identity(github_login=None, email=None, unresolved_cause=forbidden)
+    unresolved = sys.modules["_lib.membership"].Identity(
+        github_login=None, email=None, unresolved_cause=forbidden
+    )
     rc, _gh_calls, _moves = run_main(
         _task(["state:in-progress"]), config=_HUMAN_REVIEW, members=_PMS, invoker=unresolved
     )
@@ -730,7 +732,7 @@ def test_bypass_owner_posts_its_reason_first_and_once(run_main, rw, monkeypatch,
     assert move.runs[0][-2:] == ["--bypass-owner", "instance 3's session is gone"]
     audits = [c["body"] for c in github.issues[42].comments if "pkit-audit-key" in c["body"]]
     assert len(audits) == 1
-    assert "Bypassed by me: instance 3's session is gone" in audits[0]
+    assert "Bypassed: instance 3's session is gone" in audits[0]
     captured = capsys.readouterr()
     assert "--bypass-owner let this clone, instance 2, act on it" in captured.err
     assert "audit comment already present; idempotent skip" in captured.out
@@ -1117,8 +1119,8 @@ def test_the_refusal_joins_the_body_validator_s_findings(rw, monkeypatch, capsys
 # record survives a failed flip or move (DEC-049 point 2). The PR a run opens has no
 # thread to comment on until then, so there it follows the opening.
 
-#: The headline, as the schema's audit template renders it for the test's invoker.
-HEADLINE = "Bypassed by me: `review-work --force` passed each refusal below"
+#: The headline, as the schema's audit template renders it.
+HEADLINE = "Bypassed: `review-work --force` passed each refusal below"
 #: A finding of the body validator, as a line of the audit comment names it.
 NO_DOC_IMPACT = "- `[hard-reject] body.doc-impact: no Doc impact`"
 #: A change check that could not be run at the head, as that comment names it.
@@ -1199,11 +1201,9 @@ def test_force_on_a_pr_it_opens_comments_once_the_pr_exists(run_main, rw) -> Non
 
 def test_the_comment_names_the_person_with_their_email(rw) -> None:
     """Who gave the override, in the template's form."""
-    invoker = SimpleNamespace(github_login="alice", email="alice@example.com")
-    body = rw._force_audit_body(["`a refusal`"], LISTED, "the-key", CAP_ROOT, invoker)
+    body = rw._force_audit_body(["`a refusal`"], LISTED, "the-key", CAP_ROOT)
     assert body.splitlines()[1] == (
-        "Bypassed by alice <alice@example.com>: `review-work --force` passed each refusal "
-        f"below at PR head {LISTED[:7]}."
+        f"Bypassed: `review-work --force` passed each refusal below at PR head {LISTED[:7]}."
     )
 
 

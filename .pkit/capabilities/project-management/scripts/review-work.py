@@ -150,7 +150,6 @@ from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
-    Identity,
     check_membership,
     format_unresolved,
     resolve_capability_root,
@@ -429,7 +428,6 @@ def main() -> int:
             verb="review-work",
             flag="--bypass-owner",
             bypass=args.bypass_owner,
-            invoker=invoker,
             dry_run=args.dry_run,
         )
         instance_claims.say_guard(decision)
@@ -494,9 +492,7 @@ def main() -> int:
         opened_url = url
         print(f"  opened ready PR: {url}")
         # The first moment the PR exists, so the one write this comment follows.
-        if not _force_audited(
-            pr_number, findings, "", capability_root, invoker, config, opened_url=url
-        ):
+        if not _force_audited(pr_number, findings, "", capability_root, config, opened_url=url):
             return 3
     elif existing_pr.get("isDraft"):
         # Flip draft → ready — validate the draft's current body first.
@@ -510,9 +506,7 @@ def main() -> int:
         findings = _ready_findings(description.body, classification, capability_root) + sentences
         if not _body_ok(findings, args.force, next_step=_edit_step(args.issue_number, pr_number)):
             return 1
-        if not _force_audited(
-            pr_number, findings, description.head, capability_root, invoker, config
-        ):
+        if not _force_audited(pr_number, findings, description.head, capability_root, config):
             return 3
         if not _gh_pr_ready(pr_number, config):
             return 3
@@ -528,9 +522,7 @@ def main() -> int:
             return EXIT_UNDERIVED
         if not _body_ok(sentences, args.force, next_step=_edit_step(args.issue_number, pr_number)):
             return 1
-        if not _force_audited(
-            pr_number, sentences, description.head, capability_root, invoker, config
-        ):
+        if not _force_audited(pr_number, sentences, description.head, capability_root, config):
             return 3
         print(f"  PR #{pr_number} already ready; idempotent skip")
 
@@ -970,11 +962,9 @@ def _quoted(finding: pr_validation.Finding) -> str:
     return code(_said(finding).replace("<!--", "\\x3c!--"))
 
 
-def _force_audit_body(
-    quoted: list[str], head: str, key: str, capability_root: Path, invoker: Identity
-) -> str:
-    """The audit comment of a `--force`: the template's line, which names who gave
-    the override, then each refusal it passed, `quoted`, below it, where `_lib.audit`
+def _force_audit_body(quoted: list[str], head: str, key: str, capability_root: Path) -> str:
+    """The audit comment of a `--force`: the template's line, then each refusal it
+    passed, `quoted`, below it, where `_lib.audit`
     has a writer add what the template has no field for, then the idempotency `key`.
     `head` is the PR's head, empty for a PR this run opens. The template's reason is
     the run's own words: a head's text in it could fill a placeholder."""
@@ -982,7 +972,7 @@ def _force_audit_body(
     reason = f"`review-work --force` passed each refusal below{at_head}."
     return "\n".join(
         [
-            render_audit_comment(capability_root, invoker, reason),
+            render_audit_comment(capability_root, reason),
             "",
             *(f"- {refusal}" for refusal in quoted),
             "",
@@ -996,7 +986,6 @@ def _force_audited(
     findings: list[pr_validation.Finding],
     head: str,
     capability_root: Path,
-    invoker: Identity,
     config: dict,
     *,
     opened_url: str | None = None,
@@ -1016,7 +1005,7 @@ def _force_audited(
         "pr",
         pr_number,
         key,
-        _force_audit_body(quoted, head, key, capability_root, invoker),
+        _force_audit_body(quoted, head, key, capability_root),
         config,
         run=gh_run,
         present_note="--force audit comment already present; idempotent skip",

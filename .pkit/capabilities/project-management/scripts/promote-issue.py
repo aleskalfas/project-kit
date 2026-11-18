@@ -248,7 +248,6 @@ def main() -> int:
             verb="promote-issue",
             flag="--bypass-owner",
             bypass=args.bypass_owner,
-            invoker=invoker,
             dry_run=args.dry_run,
         )
         instance_claims.say_guard(decision)

@@ -810,7 +810,6 @@ def guard(
     verb: str,
     flag: str,
     bypass: str | None,
-    invoker: Any,
     dry_run: bool = False,
     run: Run | None = None,
 ) -> Guard:
@@ -862,7 +861,7 @@ def guard(
         )
     key = audit.audit_key(GUARD_AUDIT_WRITER, str(n), why, me, reason)
     body = (
-        f"{audit.render_audit_comment(clone.capability_root, invoker, reason)}\n\n"
+        f"{audit.render_audit_comment(clone.capability_root, reason)}\n\n"
         f"The clash guard was bypassed: {why}, and this clone, {me}, acted on it "
         f"(DEC-035 point 6).\n\n{key}"
     )

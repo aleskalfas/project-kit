@@ -43,7 +43,6 @@ from _lib import audit_log, comment_log, default_branch, friction_answers, pr_he
 from _lib.audit import audit_key, render_audit_comment
 from _lib.comment import post_audit_once
 from _lib.gh import gh_run
-from _lib.membership import resolve_invoker_identity
 
 #: The audit event a Task's log records a build's commits with, and the field that
 #: names them.
@@ -231,14 +230,16 @@ def ask(
 def _word_left(head: str, command: str, number: int, capability_root: Path, config: dict) -> bool:
     """Post the comment a person's word leaves, whatever `audit.projection` says, since
     with no comment nothing starts (DEC-067 point 4): whether it is on the pull
-    request. A fresh act's key makes each run's word a comment of its own."""
+    request. A fresh act's key makes each run's word a comment of its own. It
+    names the commit and the command, and no person as having named the head:
+    the account that posts it is the act's actor, which GitHub shows beside it
+    (DEC-078 point 2)."""
     key = audit_key(NAMED_WRITER, head, command, audit_log.new_act_id())
-    invoker = resolve_invoker_identity(config=config)
     reason = (
         f"named head {head} for one run of `{command}`: the programs it holds start under "
-        "their account for that run"
+        "the account that runs the command, for that run"
     )
-    body = "\n".join([render_audit_comment(capability_root, invoker, reason), "", key])
+    body = "\n".join([render_audit_comment(capability_root, reason), "", key])
     return post_audit_once("pr", number, key, body, config, run=gh_run)
 
 

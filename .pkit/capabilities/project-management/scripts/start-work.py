@@ -334,7 +334,6 @@ def main() -> int:
             verb="start-work",
             flag="--bypass",
             bypass=args.bypass,
-            invoker=invoker,
             dry_run=args.dry_run,
         )
         instance_claims.say_guard(decision)

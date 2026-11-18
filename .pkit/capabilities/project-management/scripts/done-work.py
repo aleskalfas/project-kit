@@ -340,7 +340,6 @@ from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
-    Identity,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -763,7 +762,6 @@ def run(
             verb="done-work",
             flag="--bypass-owner",
             bypass=args.bypass_owner,
-            invoker=invoker,
             dry_run=args.dry_run,
         )
         if owner_guard.refused:
@@ -1239,7 +1237,6 @@ def run(
                 pr_number,
                 audit,
                 override_reason,
-                invoker,
                 config,
                 capability_root=capability_root,
                 comments=pr_comments,
@@ -1258,7 +1255,6 @@ def run(
         if not _post_ci_bypass_audit(
             pr_number,
             args.bypass_ci.strip(),
-            invoker,
             ci_gate.failing_checks,
             config,
             head=pr_head,
@@ -3367,7 +3363,6 @@ def _ci_unreadable_refusal(pr_number: int | None, problem: str) -> str:
 
 
 def _ci_bypass_audit_body(
-    invoker: Identity,
     reason: str,
     failing_checks: tuple[str, ...],
     key: str,
@@ -3377,7 +3372,6 @@ def _ci_bypass_audit_body(
     (`_lib.audit.render_ci_bypass_audit_body`) under this script's kind marker."""
     return render_ci_bypass_audit_body(
         CI_BYPASS_AUDIT_MARKER,
-        invoker,
         reason,
         failing_checks,
         head,
@@ -3388,7 +3382,6 @@ def _ci_bypass_audit_body(
 def _post_ci_bypass_audit(
     pr_number: int | None,
     reason: str,
-    invoker: Identity,
     failing_checks: tuple[str, ...],
     config: dict,
     *,
@@ -3400,7 +3393,7 @@ def _post_ci_bypass_audit(
         "pr",
         pr_number,
         key,
-        _ci_bypass_audit_body(invoker, reason, failing_checks, key, head),
+        _ci_bypass_audit_body(reason, failing_checks, key, head),
         config,
         run=gh_run,
         present_note="ci-bypass audit comment already present; idempotent skip",
@@ -3451,7 +3444,6 @@ def _override_scope_sentence(audit: _OverrideAudit) -> str:
 def _reviewer_override_audit_body(
     audit: _OverrideAudit,
     reason: str,
-    invoker: Identity,
     capability_root: Path | None = None,
 ) -> str:
     """Render one per-reviewer-override audit comment (DEC-050 Decision 4).
@@ -3462,8 +3454,9 @@ def _reviewer_override_audit_body(
     this writer does not fork the format. The per-reviewer detail DEC-050
     requires (which reviewer, its provenance, its state at override time, the
     block link, and what the override did to the rest of the gate) is additive
-    prose BELOW that line: the template carries actor + reason and has no fields
-    for the rest. The DEC-050 idempotency key closes the comment.
+    prose BELOW that line: the template carries the reason and has no fields
+    for the rest. It names nobody beside the account that posts it (DEC-078
+    point 2). The DEC-050 idempotency key closes the comment.
 
     PROSE and verdict-grammar-distinct by construction: the first line is the
     `<!-- pkit-audit -->` marker (an HTML comment), no line matches the DEC-028
@@ -3476,7 +3469,7 @@ def _reviewer_override_audit_body(
     )
     reason = reason.strip()
     lines = [
-        render_audit_comment(capability_root, invoker, reason),
+        render_audit_comment(capability_root, reason),
         "",
         f"Overridden reviewer `{audit.reviewer}` ({provenance}).",
         f"Reviewer state at override time: {audit.state}.",
@@ -3493,7 +3486,6 @@ def _post_reviewer_override_audit(
     pr_number: int | None,
     audit: _OverrideAudit,
     reason: str,
-    invoker: Identity,
     config: dict,
     *,
     capability_root: Path | None = None,
@@ -3521,7 +3513,7 @@ def _post_reviewer_override_audit(
         "pr",
         pr_number,
         _reviewer_override_key(audit.reviewer, reason, audit.head),
-        _reviewer_override_audit_body(audit, reason, invoker, capability_root),
+        _reviewer_override_audit_body(audit, reason, capability_root),
         config,
         run=gh_run,
         comments=comments,
