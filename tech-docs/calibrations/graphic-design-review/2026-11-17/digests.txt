@@ -1,0 +1,34 @@
+# The values the hold is compared on, read at origin/main b8a4e111d before the first run (visual-communication DEC-042 point 9, DEC-065 points 1 and 2).
+# The bar: RS-COMM-003@1, RS-GRAPHIC-001@2, -002@2, -003@2, -006@2 and -007@2, at least professional. The model is pinned as each review names it: Fable, at its default effort.
+{
+ "rules": {
+  "RS-COMM-003": {
+   "major": 1,
+   "text": "sha256:c51383cce1c690b21091620fbf257cb9a34ff7cdbd5e03e07a68bac3fc75809d"
+  },
+  "RS-GRAPHIC-001": {
+   "major": 2,
+   "text": "sha256:f8a191c4598b4d6ed0af56c8539c4f676d6a9f6f52006de6e3e1f448828c43ad"
+  },
+  "RS-GRAPHIC-002": {
+   "major": 2,
+   "text": "sha256:cd92b624f0764fa8e23659fbf4b221caf90854f5b7c60d89480f2af8e2c361b1"
+  },
+  "RS-GRAPHIC-003": {
+   "major": 2,
+   "text": "sha256:aae0b23e3bcecd98c22b042fbf7a3d0315b61e87b5b785c650222b81ab383d0c"
+  },
+  "RS-GRAPHIC-006": {
+   "major": 2,
+   "text": "sha256:0ba29d0dd8caf93453e7d7a1b38711f074ec9522bd6c0a1e2b64523ff1cd619c"
+  },
+  "RS-GRAPHIC-007": {
+   "major": 2,
+   "text": "sha256:9a8f32fe92f84a467d8907fe96e6ff2cf82ae4ecff092bc14bb85c89e9e6c080"
+  }
+ },
+ "reviewer": "sha256:068b20abfd515782f414fe40eb886bd2a81beb90ba08f77eb8045f057a65a9a0",
+ "design-knowledge": "sha256:f9d1152c29df65b6abf231879642c6cfa7e17447e88fb8d1623cc4d9168a02cf",
+ "code": "sha256:9219cbda9032da9ea6d943a32bdb6b297ab9177bf28e731711944b72b296463a",
+ "checks": "sha256:d1d5b2211758e3f0a5a603b0183cfd88b89c05c72b43976962ac31d4ac28ba82"
+}

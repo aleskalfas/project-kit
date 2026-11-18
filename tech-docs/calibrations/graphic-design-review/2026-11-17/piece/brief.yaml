@@ -1,0 +1,11 @@
+pkit_schema: visual-communication:brief
+schema_version: 1
+# The calibration's brief for the held-out ladder (project-kit#3230, answer 15): filled word for
+# word from the judges' brief, `.agent-workspace/ladder-judge/judge-brief.md`, with no word of its
+# own. The deck's audience and media are in `piece.yaml`. Each page states its point in its lead,
+# so no page takes a takeaway: the brief's form gives one only where a page has no lead, and never
+# a copy of one (files.md, "The brief"). Answer 15 asked for the leads as takeaways; that part is
+# not followed, and the maintainer is told.
+piece:
+  goals:
+    - A four-page deck that introduces an online board-game platform to developers new to it.

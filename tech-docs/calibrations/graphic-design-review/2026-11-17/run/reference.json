@@ -1,0 +1,72 @@
+{
+  "about": "The calibration's reference, fixed before the first run, as plan.md sections 0 to 2 give it (project-kit#3230). Codes are the judges' blind codes; decks are the ladder's version folders.",
+  "bar": {
+    "covers": ["RS-COMM-003", "RS-GRAPHIC-001", "RS-GRAPHIC-002", "RS-GRAPHIC-003", "RS-GRAPHIC-006", "RS-GRAPHIC-007"],
+    "at-least": "professional"
+  },
+  "runs": 3,
+  "pages": {
+    "1": {
+      "order": ["LTV", "GPM", "VNH", "PBV", "TXV", "RWC", "GZD", "MPS", "KST", "XGX"],
+      "pass": ["LTV", "GPM"],
+      "fail": ["VNH", "PBV", "RWC", "GZD", "MPS", "KST", "XGX"],
+      "no-reading": ["TXV"],
+      "out": []
+    },
+    "2": {
+      "order": ["ZKD", "MNH", "BRS", "BBR", "PVD", "HLW", "LMZ", "TDF", "TNZ", "MLV"],
+      "pass": ["ZKD", "MNH", "BRS"],
+      "fail": ["PVD", "HLW", "LMZ", "TDF", "TNZ", "MLV"],
+      "no-reading": ["BBR"],
+      "out": []
+    },
+    "3": {
+      "order": ["ZCG", "RTJ", "TXF", "FXK", "CKM", "HMC", "WBW", "MZK", "VFF", "XPD"],
+      "pass": ["ZCG", "RTJ"],
+      "fail": ["FXK", "CKM", "HMC", "WBW", "VFF", "XPD"],
+      "no-reading": ["MZK"],
+      "out": ["TXF"]
+    },
+    "4": {
+      "order": ["TLG", "WMG", "MCM", "WDH", "WDB", "FTW", "NKR", "ZWT", "HGS", "VVL"],
+      "pass": ["TLG", "WMG"],
+      "fail": ["MCM", "WDH", "FTW", "NKR", "ZWT", "VVL"],
+      "no-reading": ["WDB", "HGS"],
+      "out": []
+    }
+  },
+  "decks": {
+    "pass": ["rounds/round-5", "variants/RS-GRAPHIC-004"],
+    "fail": ["rounds/round-1", "rounds/round-2", "rounds/round-3", "rounds/round-4",
+             "sets/capability-main", "sets/form-contradicts", "sets/grey-boxes",
+             "variants/RS-COMM-003", "variants/RS-GRAPHIC-001", "variants/RS-GRAPHIC-002",
+             "variants/RS-GRAPHIC-003", "variants/RS-GRAPHIC-006", "variants/RS-GRAPHIC-007"],
+    "no-reading": ["variants/RS-COMM-001", "variants/RS-COMM-002", "variants/RS-COMM-004",
+                   "variants/RS-COMM-005", "variants/RS-GRAPHIC-005"]
+  },
+  "counterparts": {
+    "1": {"first-draft": "XGX", "last-failed": "VNH", "first-passed": "GPM", "last-polished": "LTV"},
+    "2": {"first-draft": "LMZ", "last-failed": "LMZ", "first-passed": "BRS", "last-polished": "ZKD"},
+    "3": {"first-draft": "HMC", "last-failed": "FXK", "first-passed": "ZCG", "last-polished": "ZCG"},
+    "4": {"first-draft": "NKR", "last-failed": "MCM", "first-passed": "WMG", "last-polished": "TLG"},
+    "deck": {"first-draft": "rounds/round-1", "last-failed": "rounds/round-4",
+             "first-passed": "rounds/round-5", "last-polished": "rounds/round-5"}
+  },
+  "weak-deck": {"deck": "sets/capability-main", "pages": {"1": "MPS", "2": "HLW", "3": "WBW", "4": "FTW"}},
+  "pairs": {
+    "RS-COMM-003": {"on": "piece", "base": "rounds/round-5", "variant": "variants/RS-COMM-003"},
+    "RS-GRAPHIC-001": {"on": "4", "base": "TLG", "variant": "WDH", "variant-deck": "variants/RS-GRAPHIC-001"},
+    "RS-GRAPHIC-002": {"on": "2", "base": "ZKD", "variant": "MLV", "variant-deck": "variants/RS-GRAPHIC-002"},
+    "RS-GRAPHIC-003": {"on": "1", "base": "LTV", "variant": "KST", "variant-deck": "variants/RS-GRAPHIC-003"},
+    "RS-GRAPHIC-006": {"on": "2", "base": "ZKD", "variant": "PVD", "variant-deck": "variants/RS-GRAPHIC-006"},
+    "RS-GRAPHIC-007": {"on": "1", "base": "LTV", "variant": "PBV", "variant-deck": "variants/RS-GRAPHIC-007"}
+  },
+  "weak-deck-by-rule": {
+    "RS-COMM-003": [],
+    "RS-GRAPHIC-001": ["MPS", "HLW", "WBW", "FTW"],
+    "RS-GRAPHIC-002": ["MPS", "WBW", "FTW"],
+    "RS-GRAPHIC-003": ["MPS"],
+    "RS-GRAPHIC-006": [],
+    "RS-GRAPHIC-007": ["HLW", "WBW", "FTW"]
+  }
+}
