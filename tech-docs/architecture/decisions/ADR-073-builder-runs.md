@@ -54,10 +54,12 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 
 - **No settings file** of the person's, the project's or the clone's loads, as in a confined run (ADR-066 point 3). Nothing the builder writes in its clone, a settings file or a hook among them, shapes its own run or a later one.
 - **Read from the default branch,** as the backbone resolves it (COR-054), at its head when the build starts, which the build's start event names (point 9), never from the Task's branch:
-  - the project's native permission rules for the harness, the allows and the denies its settings file holds
+  - the project's native permission rules for the harness, the allows, the asks and the denies its settings file holds
   - the permission model that pkit's hook judges against, and the hook's own code, so the code that judges is never the clone's
   - the builder's agent definition, as the deploy resolves it (ADR-066 point 3)
   - the runner itself and the deploy's resolution of an agent, as a confined run reads them (ADR-066 point 3)
+
+  The project's native permission rules the runner reads from the default branch are the allows, the asks and the denies its settings file holds, so a working run gets every native lock [ADR-095](ADR-095-hook-out-of-reach.md) point 4 lists, once the default branch's settings carry them, and the mode that refuses what no rule allows refuses each call one of those asks catches, as it refuses each call the hook asks before where its hook is of ADR-095's build (ADR-095 point 4) (refinement per ADR-095).
 - **What the runner adds:**
   - the build's denies (DEC-063 point 4), as native denies, which fail closed
   - every deny of the settings files the run leaves out, and every deny the model holds for the builder or for every agent (ADR-066 point 3)

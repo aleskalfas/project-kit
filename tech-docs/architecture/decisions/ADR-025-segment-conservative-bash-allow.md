@@ -200,6 +200,13 @@ segment that only assigns or exports, for the segments after it. The segment
 splitter stays dumb: the conservatism lives in the classification, not in
 parsing the shell's grammar.
 
+**The core's ask before a command [ADR-095](ADR-095-hook-out-of-reach.md) point
+3 interlocks** (refinement per ADR-095). For this ask a heredoc's body is data,
+save one fed to a shell that reads its script from standard input, which is
+read as that shell's script, and the substitutions in a body behind an unquoted
+delimiter, which are read as calls, as inside double quotes. For a grant a
+heredoc stays untrusted.
+
 ### 3. No shell parser
 
 The core keeps its dumb regex segmenter (`_SEP`). A real shell parser is
@@ -217,6 +224,24 @@ close is such a construct, and a fault abstains like any other. A shell option
 that changes how quotes are read, such as zsh's `RC_QUOTES`, changes only the
 text of an argument. Conservatism is achieved by abstaining on anything the
 dumb splitter cannot trust, not by parsing harder.
+
+**The core's ask before a command ADR-095 point 3 interlocks** (refinement per
+ADR-095). Beside its dumb segmenter, the core keeps, for this ask, a dumb scan
+that tracks quotes and reads a backslash as the POSIX shell does, sets aside
+each heredoc's body whose opener stands outside quotes or in a substitution
+that double quotes hold, up to its terminator line, and each comment, and then
+splits only at separators outside quotes. It reads the command after each word
+that opens a compound command or one of its bodies, after a case arm's pattern,
+which it finds by following a `case` to its `esac`, after a subshell's `(` or a
+group's `{`, and past the wrappers the harness strips, and a substitution as a
+call of its own, one level deep. It tells a here-string's `<<<` and a shift
+inside arithmetic from a heredoc's opener, and reads no more of the shell's
+grammar. In a PowerShell call it reads a backslash as PowerShell does, as an
+ordinary character. A `$'` quote, a substitution inside a substitution, and any
+other construct it cannot read are doubt, on which it gives no verdict of its
+own. Its faults and doubts so give no verdict, in the hook that fails open,
+while the native rule stands beside it (ADR-095's Rationale, "A mention is
+data").
 
 ### 4. Code home — the shared neutral core, not the adapter hook
 
@@ -315,6 +340,19 @@ native double-lock — is kept, and the merge layer / hook remains a
 not read a tighter allow path as a hardened deny path. Real confinement is
 still the OS sandbox, and real merge enforcement is still adopter-wired CI.
 
+**The core's ask before a command ADR-095 point 3 interlocks** (refinement per
+ADR-095). The forms and runners stay the set that point lists, one matcher for
+every reading. For this ask, a shell fed a heredoc's body as its script, the
+wrappers the harness strips and the toolchain's runners that run a release of
+the methodology, the installed one or one they fetch, join the runners. Every
+other reading errs toward the deny, as the point says. The reading of this ask
+errs away from a mention: a misread misses a call rather than refusing one that
+only names the command. It matches a program by the base name the call gives,
+never by resolving a link. The two directions are deliberate, and neither
+reading takes the other's place: one for both would loosen a guardrail or
+refuse a commit message that names a command (ADR-095's Rationale, "A mention
+is data").
+
 ### 6. The broader widening is deferred per COR-007
 
 A general "auto-approve any compound whose every segment is independently
@@ -344,6 +382,16 @@ requires. Whether an adapter asks on such an abstain is this point's to
 decide. How an adapter carries out any other abstain is its documentation's,
 as ADR-002's Implications leave it. The Claude Code adapter's hook is the
 realization.
+
+The core gives asks of its own, each naming its kind (ADR-095 points 2 to 4):
+the interlock's, and the one where the bound that binds cannot be used for a
+cause the core finds, which the adapter puts in every mode; and a revoked
+grant's, which the adapter meets as it meets this point's abstain. Where the
+adapter meets an ask by abstaining, it treats the call as the core's abstain.
+Where the reading of the interlock's ask cannot read what a runner runs, the
+core gives this point's verdict, naming beside the guardrails the interlocked
+commands it cannot rule out, and the adapter asks on it as on any such verdict
+(refinement per ADR-095).
 
 ## Rationale
 

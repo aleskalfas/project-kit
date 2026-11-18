@@ -11,7 +11,7 @@ supersedes: ADR-044
 
 **In plain terms:** an upgrade can take a project no further than the pkit tool that runs it, and that tool is one install every project on the machine shares. So `pkit upgrade` first asks the release source whether a newer pkit exists. When the installed tool is behind, the upgrade installs the latest release with `uv` and runs itself again under the new tool. One command brings both the tool and the project up to date.
 
-The upgrade installs only when the pkit running it is the installed tool. Where it cannot or may not install, it prints the command instead. That covers no terminal, `--no-self-update`, a dry run, a failed install, and a pkit other than the installed tool.
+The upgrade installs only when the pkit running it is the installed tool. Where it cannot or may not install, it prints the command instead. That covers no terminal, a session anchor or the harness's mark of a process its shell tools or hooks start, `--no-self-update`, a dry run, a failed install, and a pkit other than the installed tool.
 
 A failed lookup or install never fails the upgrade. When the install succeeds but the upgrade detects it cannot run again under the new tool, the upgrade stops before it syncs or pins. It names the command to re-run. The failed hand-overs it cannot detect are in the Implications.
 
@@ -49,7 +49,7 @@ When the install succeeds, the upgrade hands itself over, replacing its own proc
 
 ### 3. Print the command where it cannot or may not install, and stop where the hand-over fails
 
-The upgrade installs nothing when standard input or standard output is not a terminal, when `--no-self-update` is passed, or when the process carries `PKIT_SELF_UPDATED=1`. It prints the install command instead, with a note to run `pkit upgrade` again, unless it stops as below. It prints the same when the install exits non-zero or cannot be started. A sandbox that refuses the install ends here. This test governs the upgrade's replacement of the installed tool (refinement per [ADR-090](ADR-090-self-fetch-over-https.md) point 5). The install script, `.pkit/cli/install-pkit.sh`, installs with nobody at a terminal, and only where it finds no pkit installed (refinement per [ADR-090](ADR-090-self-fetch-over-https.md) point 5).
+The upgrade installs nothing when standard input or standard output is not a terminal, when `--no-self-update` is passed, or when the process carries `PKIT_SELF_UPDATED=1`. It prints the install command instead, with a note to run `pkit upgrade` again, unless it stops as below. The upgrade installs nothing under a session anchor, or the harness's mark of a process its shell tools or hooks start ([ADR-093](ADR-093-writes-outside-the-repository.md) point 4), either, each set at all, even empty, and prints the command, as it does without a terminal, naming the person's own terminal, since an install replaces the release the permission hook's copy is made from ([ADR-095](ADR-095-hook-out-of-reach.md) point 3) (refinement per ADR-095). It prints the same when the install exits non-zero or cannot be started. A sandbox that refuses the install ends here. This test governs the upgrade's replacement of the installed tool (refinement per [ADR-090](ADR-090-self-fetch-over-https.md) point 5). The install script, `.pkit/cli/install-pkit.sh`, installs with nobody at a terminal, and only where it finds no pkit installed (refinement per [ADR-090](ADR-090-self-fetch-over-https.md) point 5).
 
 The upgrade installs only under the installed tool. A pkit run another way is not that tool: through `uv run`, a pip install or a `uvx` served from uv's cache. Such a pkit prints the newer release and its command, and the upgrade goes on under it. So does any pkit when `uv` cannot say where its tools live, unless a hand-over started it.
 
@@ -117,7 +117,7 @@ The step installs the tool from the distribution URL compiled into it. It touche
 
 ## Implications
 
-- **The command.** `pkit upgrade` may run `uv tool install --force`, at a terminal and under the installed tool only. `--no-self-update` keeps the printed command alone, for that run. The CLI reference describes the flags and the messages (`.pkit/cli/README.md`, `upgrade`).
+- **The command.** `pkit upgrade` may run `uv tool install --force` at a terminal, under the installed tool and under neither a session anchor nor the harness's mark of a process its shell tools or hooks start only. `--no-self-update` keeps the printed command alone, for that run. The CLI reference describes the flags and the messages (`.pkit/cli/README.md`, `upgrade`).
 - **`uv` only.** The printed command and the installed one are both `uv` commands, so the step rests on the `uv`-only install ([PRJ-004](../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 - **Permissions.** The methodology adds no permission rule that lets the install past a sandbox. pkit works with the permission layer, not around it (core rules 14 and 15).
 - **Pinned projects and the tool.** An upgrade never updates the tool for a pinned project. After each raise the pin is ahead of the tool, and the project runs every command through `uvx`. That lasts until the tool is updated another way: an upgrade outside any project, an upgrade in an un-pinned project, or an install by hand.

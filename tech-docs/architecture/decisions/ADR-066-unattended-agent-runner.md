@@ -233,7 +233,7 @@ DEC-056 point 5 makes a fixer start no other agent. A run could start one in two
 - **Inside a working run, the hook runs,** registered by the runner from outside the run's clone, with its code and its model read from the default branch (refinement per [ADR-073](ADR-073-builder-runs.md) point 2).
 - **The runner reads the realised state back** (COR-028 point 2). The harness reports, at start, its mode, its tools, its MCP servers, its plugins, any hook it ran, and whether its sandbox started. Any of these that does not match the run's settings ends the run at once, and its files are set aside.
 - **After the run,** the harness's report of the calls it refused, and the check of point 7, show what the run tried and what it changed.
-- **Inside an unconfined run,** the hook runs as in a session started in the run's folder. That folder is the person's checkout for a review, and the drift command's clone for a fixer. Which subject the hook judges there is not known (point 11).
+- **Inside an unconfined run,** the hook runs as in a session started in the run's folder. That folder is the person's checkout for a review, and the drift command's clone for a fixer. Which subject the hook judges there is not known (point 11). The model the hook judges by there, beside the run's own, is the snapshot of the nearest realized folder that holds the run's folder, which is the run's anchor, such as the person's checkout for a review. A clone a command makes for a run outside every realized folder gets the hook's own verdicts and its model's denies and asks ([ADR-095](ADR-095-hook-out-of-reach.md) point 4) (refinement per ADR-095).
 
 ### 10. What a run in the unconfined form gets
 
