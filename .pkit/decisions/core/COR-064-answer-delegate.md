@@ -34,7 +34,7 @@ With no delegate named, every such answer is a person's, as COR-050 point 3 sets
 
 ### 1. The answers a delegate decides
 
-A delegate decides, in a person's place, the answers that COR-050 point 3 leaves to a person. These are the **answers no change owes**:
+A delegate decides, in a person's place, the answers that COR-050 point 3 leaves to a person, where COR-072 hands them to it (refinement per COR-072). These are the **answers no change owes**:
 - an answer an agent writes on an artefact its change was not asked about, such as one for the debt the whole-repository check reports
 - a revisit entry for a link's target that the change check does not ask for (COR-050 point 16)
 - a revalidation that replaces revalidations answered apart, where the change was not asked for it (COR-062 point 7)
