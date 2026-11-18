@@ -15,7 +15,8 @@ body: >
   repository's topology. The project-manager agent holds the tools for
   messaging and for listing sessions, allowed by a privilege the capability
   defines and grants only to its own agent, which the permissions overview
-  reports as a widening. It overturns DEC-035, DEC-059 and DEC-068 in part,
+  reports as a widening and which binds once a person realizes the model.
+  It overturns DEC-035, DEC-059 and DEC-068 in part,
   refines DEC-059, DEC-061, DEC-063 and DEC-068 in place, with ADR-016,
   ADR-021 and ADR-071, and corrects a fact in DEC-029. The agent's
   definition, the grants, the overview, the topology, the state issues and
