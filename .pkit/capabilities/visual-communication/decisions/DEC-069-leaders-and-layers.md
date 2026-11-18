@@ -1,7 +1,7 @@
 ---
 id: DEC-069
 title: A leader ends at what it explains, by a course the eye can follow, and a page's layers read apart
-status: proposed
+status: accepted
 date: 2026-11-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
