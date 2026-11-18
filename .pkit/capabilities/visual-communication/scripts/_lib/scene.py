@@ -134,6 +134,13 @@ MARKERS = ("marker-start", "marker-end")
 #: The type of element each kind of part draws, where it is not the kind's own name.
 DRAWN_AS = {"repeat": "group", "sign": "path"}
 
+#: The key of an element whose part names the parts drawn before it that it lies over on
+#: purpose: the trace ids of what they draw (`IDS`), and the library version that holds the
+#: part (`LIBRARY`), where one does (DEC-066 points 1 and 2).
+LIES_OVER = "lies-over"
+IDS = "ids"
+LIBRARY = "library"
+
 
 def length(value: float) -> float:
     """A length as the scene holds it."""
@@ -309,6 +316,23 @@ def compute_scene(
     )
 
 
+def _lies_over(instance: Instance, parts: Mapping[str, Element]) -> None:
+    """On each element of `instance` whose part names parts under `lies-over`, what it lies
+    over on purpose (DEC-066 point 2): the trace ids of the elements those parts draw here,
+    and the library version that holds the part, `<library>@<version>`, where one does. A
+    named part that draws nothing here adds none, and an element whose named parts draw
+    nothing holds none. It is no property the element draws, so it names no source."""
+    for name, named in instance.component.lies_over.items():
+        drawn = parts.get(name)
+        ids = [parts[each].id for each in named if each in parts]
+        if drawn is None or not ids:
+            continue
+        said: dict[str, Any] = {IDS: ids}
+        if "@" in instance.library:
+            said[LIBRARY] = instance.library
+        drawn.set(LIES_OVER, said)
+
+
 def fixed_pages(top: Instance) -> bool:
     """Whether the pages of the top `top` are fixed pages (DEC-031 point 2): its layouts are
     its pages' forms, and it asks for a height, by a formula or through its physical size,
@@ -373,12 +397,15 @@ class _Emitter:
         if instance.is_page:
             element.set("page", True)
             self.pages.append(instance.trace)
+        parts: dict[str, Element] = {}
         for name, node in instance.nodes.items():
             drawn = self.part(instance, name, node) if node.present else None
             if drawn is not None:
                 element.children.append(drawn)
+                parts[name] = drawn
             elif node.unvalued:
                 self.unvalued[f"{instance.trace}/{name}"] = node.unvalued
+        _lies_over(instance, parts)
         # The pages of a top whose layouts are its pages' forms, each at the top's origin. A
         # page that takes its own height names where that height comes from (DEC-022 point 3).
         for page in instance.pages:

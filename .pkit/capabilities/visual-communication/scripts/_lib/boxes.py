@@ -5,7 +5,8 @@ and boxes that overlap, among siblings.
 Each check does the arithmetic and judges nothing. Each finding asks the reviewer for
 attention, who judges on the image whether the place it names is a fault or is meant, and
 none fails (DEC-002 point 7, DEC-030 point 7): a component may place one part on another on
-purpose, and a box may differ from what is drawn in it.
+purpose, and a box may differ from what is drawn in it. The one exception is an overlap a
+released version says is meant, which validation states as a fact (below).
 
 - **The boxes read** are the scene's: each element's frame, in px of its page, relative to
   its parent (`components.md`, "What a scene holds"). The frames the viewing step writes
@@ -67,6 +68,16 @@ brand offers, and hardly chosen.
 `overlaps` reports two siblings whose boxes overlap by more than a pixel each way, where
 neither holds the other, a text a sibling covers among them. It reads a text's whole box.
 
+- **A meant overlap** (DEC-066 points 1 and 2). An element whose part names, under
+  `lies-over`, parts drawn before it holds their trace ids, and the library version that
+  holds the part, where one does (`components.md`, "What a scene holds"). An overlap of the
+  element with one it names carries that version (`Finding.lies_over_in`), and its message is
+  that of any overlap. Whether the version is released is read where the finding is read:
+  validation states the overlap as a fact, `box-overlap-meant` (`meant`), where it is released
+  and still as it was released, and reads it as `box-overlap` elsewhere; the viewing step
+  reads every overlap as `box-overlap` (`checks.Reading`). Every two siblings are compared as
+  before, so a pair named so is measured, and the check of edges compares it too.
+
 **Each states its reach** (`NEAR_ALIGNMENT_CHECK`, `BOX_OVERLAP_CHECK`), beside its id, in
 the words of its entry in the list of checks, since the reviewer leans on its silence
 (DEC-063 point 1). Both compare no scenes: each finding is one scene's. Where the brand
@@ -81,11 +92,11 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from _lib.findings import ATTENTION, FACT, Finding
-from _lib.scene import fills_width, stands
+from _lib.scene import IDS, LIBRARY, LIES_OVER, fills_width, stands
 from _lib.scene_checks import Reach, SceneCheck
 
 #: The calls for attention of the two checks of boxes: edges that nearly line up among
@@ -93,6 +104,10 @@ from _lib.scene_checks import Reach, SceneCheck
 NEAR_ALIGNMENT = "near-alignment"
 NEAR_ALIGNMENT_BETWEEN_GROUPS = "near-alignment-between-groups"
 BOX_OVERLAP = "box-overlap"
+
+#: The fact validation states, in place of `BOX_OVERLAP`, at an overlap that a released
+#: version, still as it was released, says is meant (DEC-066 point 2).
+BOX_OVERLAP_MEANT = "box-overlap-meant"
 
 #: The fact the check of edges that nearly line up states at a key where it could measure
 #: nothing (DEC-063 point 2).
@@ -183,7 +198,7 @@ NEAR_ALIGNMENT_CHECK = SceneCheck(
 BOX_OVERLAP_CHECK = SceneCheck(
     "boxes of siblings that overlap",
     id="boxes-that-overlap",
-    labels=(BOX_OVERLAP,),
+    labels=(BOX_OVERLAP, BOX_OVERLAP_MEANT),
     reach=Reach(
         measures=(
             "the boxes of each two siblings, for an overlap of more than a pixel across and "
@@ -274,7 +289,10 @@ class Box:
     """A part's box: its trace id, its type, and its place and size in px. `stands` is,
     for a text that does not fill its width, the share of its width at which it stands its
     lines (`SHARES`), its room on the side or sides it does not stand them on; None for any
-    other part, which draws to every edge of its box (DEC-067 point 3)."""
+    other part, which draws to every edge of its box (DEC-067 point 3). Where its part names
+    siblings drawn before it under `lies-over`, `lies_over` holds their trace ids, and
+    `lies_over_in` the library version that holds the part, "" where none does (DEC-066
+    point 2)."""
 
     trace: str
     type: str
@@ -283,6 +301,8 @@ class Box:
     width: float
     height: float
     stands: float | None = None
+    lies_over: tuple[str, ...] = ()
+    lies_over_in: str = ""
 
     def start(self, axis: str) -> float:
         return self.x if axis == ACROSS else self.y
@@ -408,14 +428,10 @@ def _tree(scene: Mapping[str, Any]) -> _Part:
         children: Sequence[Mapping[str, Any]] = holder.element.get("children") or []
         for order, child in enumerate(children):
             box = _box(child)
-            placed = Box(
-                box.trace,
-                box.type,
-                round(holder.placed.x + box.x, PLACES),
-                round(holder.placed.y + box.y, PLACES),
-                box.width,
-                box.height,
-                box.stands,
+            placed = replace(
+                box,
+                x=round(holder.placed.x + box.x, PLACES),
+                y=round(holder.placed.y + box.y, PLACES),
             )
             part = _Part(child, box, placed, holder, order, holder.page)
             if part.page is None and part.trace in pages:
@@ -466,7 +482,12 @@ def _box(element: Mapping[str, Any]) -> Box:
     x, y = float(element.get("x", 0)), float(element.get("y", 0))
     width, height = float(element.get("width", 0)), float(element.get("height", 0))
     room = kind == "text" and not fills_width(element)
-    return Box(trace, kind, x, y, width, height, stands(element) if room else None)
+    at = stands(element) if room else None
+    named = element.get(LIES_OVER)
+    if not isinstance(named, Mapping):
+        return Box(trace, kind, x, y, width, height, at)
+    ids = tuple(str(each) for each in named.get(IDS) or ())
+    return Box(trace, kind, x, y, width, height, at, ids, str(named.get(LIBRARY) or ""))
 
 
 def _apart(first: float, second: float) -> float:
@@ -1081,7 +1102,9 @@ def _lists_finding(lists: _Lists, pairs: Sequence[_Pair], step: Step) -> Finding
 
 def overlaps(scene: Mapping[str, Any]) -> list[Finding]:
     """Each two siblings of `scene` whose boxes overlap by more than a pixel of rounding each
-    way, where neither holds the other."""
+    way, where neither holds the other. Where the one drawn over names the other under
+    `lies-over`, the finding carries the library version that holds that word, and reads as
+    any other until it is read (`meant`)."""
     found = []
     for group in _groups(_tree(scene)):
         compared = [part.box for part in group.siblings()]
@@ -1100,9 +1123,26 @@ def overlaps(scene: Mapping[str, Any]) -> list[Finding]:
                         where=under.trace,
                         fix=PART_IT,
                         who=REVIEWER,
+                        lies_over_in=over.lies_over_in if under.trace in over.lies_over else "",
                     )
                 )
     return found
+
+
+def meant(finding: Finding) -> Finding:
+    """An overlap's finding as validation reads it where the library version that holds its
+    word, `lies_over_in`, is released and still as it was released (DEC-066 point 2): the
+    fact `box-overlap-meant`, which asks no act, so names no one and no fix. Its message is
+    the overlap's, and says that the part on top names the part beneath under `lies-over`."""
+    return replace(
+        finding,
+        code=BOX_OVERLAP_MEANT,
+        level=FACT,
+        message=f"{finding.message}; the part on top names the one beneath under `lies-over` "
+        f"in {finding.lies_over_in}, released, which says the overlap is meant",
+        fix="",
+        who="",
+    )
 
 
 def _px(length: float) -> str:

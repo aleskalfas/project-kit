@@ -1,0 +1,21 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  A part may name, under `lies-over`, the parts written before it in the same `parts` that
+  it lies over on purpose, such as a badge over a card's box (DEC-066, #3327). Any part
+  takes it, in a component, a top's drawing of a layout and a brand's drawing. When the
+  component is read, a name that is no part of the same `parts`, the part's own, a part
+  written after it and a name written twice are each refused as `lies-over-refused`, and
+  say nothing. The scene's element holds `lies-over`, the trace ids it names and the
+  library version that holds the part. No renderer draws it or reports a loss of it, and
+  the seam's version is unchanged. Validation gives an overlap that a released version,
+  still as it was released, names as the fact `box-overlap-meant`, from the scenes or the
+  findings record, which gains the field `lies-over-in`. For a copy of a library the
+  capability ships, the list must also keep the hash the capability records. Anywhere else,
+  validation gives the overlap as `box-overlap`, as at a pair no one named. The viewing
+  step's report gives every overlap as `box-overlap`. It now gives each finding's level as
+  validation reads it where the finding lies, so a finding in a released version asks for
+  attention there rather than failing. The graphic-design reviewer takes no `lies-over` as
+  a ruling. No shipped library changes.
