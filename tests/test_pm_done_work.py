@@ -66,24 +66,62 @@ def _mark_bootstrapped(cap_root: Path) -> None:
     )
 
 
-def _stub_pr_view(reviews, comments, author_login: str | None = "author"):
-    """`author_login=None` stands for a PR whose author GitHub returns as null."""
+def _stub_pr_view(reviews, comments, author_login: str | None = "author", *, failing=()):
+    """`author_login=None` stands for a PR whose author GitHub returns as null.
+
+    The gate reads the author from `gh pr view`, and the reviews and comments
+    from GitHub's REST interface, each author with its type (DEC-079 point 3).
+    A review is given as its `state`, with its reviewer's `login` (a person,
+    `reviewer`, by default), `type` (`User` by default) and `body`. A comment
+    is given as gh writes it, `{"author": {"login": ...}, "body": ...}`, with
+    an optional `type` in its author (`User` by default). `failing` names the
+    reads that fail: `reviews` or `comments`.
+    """
 
     def fake_gh_run(args, config, **kwargs):
         import subprocess
 
-        return subprocess.CompletedProcess(
-            args=args,
-            returncode=0,
-            stdout=json.dumps(
+        def done(stdout: str, returncode: int = 0) -> subprocess.CompletedProcess:
+            return subprocess.CompletedProcess(
+                args=args, returncode=returncode, stdout=stdout, stderr="HTTP 502"
+            )
+
+        if args[1:3] == ["pr", "view"]:
+            author = None if author_login is None else {"login": author_login}
+            return done(json.dumps({"author": author}))
+        path = next(a for a in args if a.startswith("repos/"))
+        if "/reviews" in path:
+            if "reviews" in failing:
+                return done("", 1)
+            lines = [
+                json.dumps(
+                    {
+                        "login": r.get("login", "reviewer"),
+                        "type": r.get("type", "User"),
+                        "state": r["state"],
+                        "body": r.get("body", ""),
+                    }
+                )
+                for r in reviews
+            ]
+            return done("\n".join(lines))
+        if "/comments" in path:
+            if "comments" in failing:
+                return done("", 1)
+            entries = [
                 {
-                    "author": None if author_login is None else {"login": author_login},
-                    "reviews": reviews,
-                    "comments": comments,
+                    "id": n,
+                    "user": {
+                        "login": (c.get("author") or {}).get("login"),
+                        "type": (c.get("author") or {}).get("type", "User"),
+                    },
+                    "created_at": "2026-11-18T00:00:00Z",
+                    "body": c.get("body", ""),
                 }
-            ),
-            stderr="",
-        )
+                for n, c in enumerate(comments, start=1)
+            ]
+            return done(json.dumps(entries))
+        raise AssertionError(f"unexpected gh call: {args}")
 
     return fake_gh_run
 
@@ -281,6 +319,171 @@ def test_gate_refuses_when_nothing_qualifies(dw, monkeypatch) -> None:
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is False
     assert "approval gate not satisfied" in result.refusal_message
+
+
+# ---- only a person's approval counts in human mode (DEC-079 point 3) ----
+
+_HEAD = "a" * 40
+_BASE = "b" * 40
+
+
+def _refused_for(dw, monkeypatch, reviews=(), comments=(), **kwargs):
+    monkeypatch.setattr(dw, "gh_run", _stub_pr_view(list(reviews), list(comments), **kwargs))
+    result = dw._check_approval_gate(99, {}, None, {})
+    assert result.passed is False
+    return result.refusal_message
+
+
+def test_gate_counts_no_approving_review_from_a_bots_account(dw, monkeypatch) -> None:
+    message = _refused_for(
+        dw, monkeypatch, reviews=[{"state": "APPROVED", "login": "robot[bot]", "type": "Bot"}]
+    )
+    assert "latest state: none" in message
+    assert (
+        "          → Left out, as no person's approval: an APPROVED review by @robot[bot]: "
+        "a bot's account approves nothing as a person."
+    ) in message.splitlines()
+
+
+def test_gate_counts_no_approving_review_from_an_account_of_a_kind_unknown(dw, monkeypatch) -> None:
+    """A bot the service gives with no `[bot]` suffix is of a kind unknown."""
+    message = _refused_for(
+        dw, monkeypatch, reviews=[{"state": "APPROVED", "login": "Copilot", "type": "Bot"}]
+    )
+    assert "an APPROVED review by @Copilot: its account is of a kind unknown" in message
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        "<!-- pkit-verdict -->",
+        f"<!-- pkit-verdict sha={_HEAD} -->",
+        f"<!-- pkit-verdict sha={_HEAD} base={_BASE} -->",
+    ],
+    ids=["bare", "sha", "sha-and-base"],
+)
+def test_gate_counts_no_approving_review_that_carries_the_verdict_marker(
+    dw, monkeypatch, marker
+) -> None:
+    """`review-pr` delivers a verdict as a native review whose body is the
+    stamped verdict comment; in human mode it approves nothing, whoever posted
+    it, in each of the marker's forms."""
+    body = f"Reviewer agent (local, pm-reviewer): APPROVED\n\nLooks fine.\n\n{marker}\n"
+    message = _refused_for(dw, monkeypatch, reviews=[{"state": "APPROVED", "body": body}])
+    assert (
+        "an APPROVED review by @reviewer: it carries a reviewer agent's verdict marker"
+    ) in message
+
+
+def test_an_approval_that_does_not_count_clears_no_request_for_changes(dw, monkeypatch) -> None:
+    """Left out of the order of reviews, a bot's approval clears nothing."""
+    message = _refused_for(
+        dw,
+        monkeypatch,
+        reviews=[
+            {"state": "CHANGES_REQUESTED"},
+            {"state": "APPROVED", "login": "robot[bot]", "type": "Bot"},
+        ],
+    )
+    assert "latest state: CHANGES_REQUESTED" in message
+
+
+def test_a_bots_request_for_changes_holds_the_review_path(dw, monkeypatch) -> None:
+    message = _refused_for(
+        dw,
+        monkeypatch,
+        reviews=[
+            {"state": "APPROVED"},
+            {"state": "CHANGES_REQUESTED", "login": "robot[bot]", "type": "Bot"},
+        ],
+    )
+    assert "latest state: CHANGES_REQUESTED" in message
+
+
+def test_the_native_request_for_changes_review_pr_delivers_holds_until_a_person_approves(
+    dw, monkeypatch
+) -> None:
+    """The request for changes `review-pr` delivers stands in the order of
+    reviews as any review's does: no approving review passes until a person
+    approves after it."""
+    verdict = (
+        "Reviewer agent (local, pm-reviewer): CHANGES_REQUESTED\n\n"
+        f"<!-- pkit-verdict sha={_HEAD} base={_BASE} -->\n"
+    )
+    held = [{"state": "APPROVED"}, {"state": "CHANGES_REQUESTED", "body": verdict}]
+    message = _refused_for(dw, monkeypatch, reviews=held)
+    assert "latest state: CHANGES_REQUESTED" in message
+
+    monkeypatch.setattr(
+        dw, "gh_run", _stub_pr_view([*held, {"state": "APPROVED", "login": "carol"}], [])
+    )
+    assert dw._check_approval_gate(99, {}, None, {}).passed is True
+
+
+def test_a_persons_approval_after_a_bots_request_for_changes_passes(dw, monkeypatch) -> None:
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(
+            [
+                {"state": "CHANGES_REQUESTED", "login": "robot[bot]", "type": "Bot"},
+                {"state": "APPROVED"},
+            ],
+            [],
+        ),
+    )
+    assert dw._check_approval_gate(99, {}, None, {}).passed is True
+
+
+@pytest.mark.parametrize(
+    ("login", "kind", "reason"),
+    [
+        ("robot[bot]", "Bot", "a bot's account approves nothing as a person"),
+        ("Copilot", "Bot", "its account is of a kind unknown, so it approves nothing"),
+        ("acme", "Organization", "its account is of a kind unknown, so it approves nothing"),
+    ],
+    ids=["bot", "bot-with-no-suffix", "organization"],
+)
+def test_gate_counts_no_approved_comment_from_an_account_that_is_no_users(
+    dw, monkeypatch, login, kind, reason
+) -> None:
+    message = _refused_for(
+        dw,
+        monkeypatch,
+        comments=[{"author": {"login": login, "type": kind}, "body": "Approved"}],
+    )
+    assert f"an `Approved` comment by @{login}: {reason}." in message
+
+
+def test_an_earlier_persons_approved_comment_still_counts_past_a_bots(dw, monkeypatch) -> None:
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(
+            [],
+            [
+                {"author": {"login": "carol"}, "body": "Approved"},
+                {"author": {"login": "robot[bot]", "type": "Bot"}, "body": "Approved"},
+            ],
+        ),
+    )
+    result = dw._check_approval_gate(99, {}, None, {})
+    assert result.passed is True
+    assert result.passed_via == "`Approved` comment from @carol"
+
+
+@pytest.mark.parametrize("failing", ["reviews", "comments"])
+def test_gate_refuses_where_the_approvals_cannot_be_read_whole(dw, monkeypatch, failing) -> None:
+    """A read cut short could miss the request for changes that holds, so the
+    gate judges no part of the approvals."""
+    message = _refused_for(
+        dw,
+        monkeypatch,
+        reviews=[{"state": "APPROVED"}],
+        comments=[{"author": {"login": "carol"}, "body": "Approved"}],
+        failing=(failing,),
+    )
+    assert f"The PR's {failing} could not be read whole: HTTP 502." in message
 
 
 def test_gate_handles_gh_failure(dw, monkeypatch) -> None:

@@ -287,8 +287,10 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
+    approvals,
     axis_labels,
     bootstrap_gate,
+    comment_log,
     instance_claims,
     issue_branch,
     merge_queue,
@@ -1899,7 +1901,14 @@ def _check_approval_gate(
     pr_number: int | None, pr: dict, bypass_reason: str | None, config: dict
 ) -> _GateResult:
     """Human-mode three-way OR: APPROVED review OR `Approved`-prefix
-    non-author comment OR --bypass."""
+    non-author comment OR --bypass.
+
+    Only a person's approval counts (DEC-079 point 3): the reviews and the
+    comments are read with each author's kind (`_lib.approvals`), so no
+    approval counts from a bot's account or one of a kind unknown, nor as an
+    approving review that carries a reviewer agent's verdict marker. Such an
+    approval is left out of the order of reviews, and a request for changes
+    stays in it whoever made it."""
     if bypass_reason:
         if not bypass_reason.strip():
             return _GateResult(
@@ -1914,9 +1923,9 @@ def _check_approval_gate(
             refusal_message="error: cannot resolve PR number.",
         )
 
-    # Fetch the PR's reviews + comments + author.
+    # The PR's author, as gh writes it.
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number), "--json", "author,reviews,comments"],
+        ["gh", "pr", "view", str(pr_number), "--json", "author"],
         config,
         check=False,
     )
@@ -1934,31 +1943,41 @@ def _check_approval_gate(
         )
     author_login = pr_author(data)
 
-    # Path 1: latest APPROVED review (latest non-COMMENTED state).
-    reviews = data.get("reviews") or []
-    latest_states = [
-        r.get("state")
-        for r in reviews
-        if isinstance(r, dict) and r.get("state") in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED")
-    ]
-    if latest_states and latest_states[-1] == "APPROVED":
+    def gh(argv: list[str]) -> subprocess.CompletedProcess[str]:
+        return gh_run(argv, config, check=False)
+
+    # The reviews and the comments, each author with its kind. Either read
+    # cut short could miss the request for changes or the approval that
+    # decides, so the gate refuses rather than judge a part.
+    reviews = approvals.read_reviews(pr_number, gh)
+    if not reviews.complete:
+        return _GateResult(
+            passed=False,
+            refusal_message=_approvals_unread(pr_number, "reviews", reviews.cause),
+        )
+    comments = comment_log.read_log(pr_number, gh)
+    if not comments.complete:
+        return _GateResult(
+            passed=False,
+            refusal_message=_approvals_unread(pr_number, "comments", comments.cause),
+        )
+
+    # Path 1: the latest review that approves, requests changes or was
+    # dismissed, an approval that counts as no person's left out.
+    deciding, reviews_left_out = approvals.deciding_review(reviews.reviews, author_login)
+    if deciding is not None and deciding.state == approvals.APPROVED:
         return _GateResult(passed=True, passed_via="APPROVED review")
 
-    # Path 2: last non-author comment starts with `Approved` (case-sensitive).
-    # With the PR's author unread, no commenter is known to be a non-author,
-    # so no such comment counts (#1485); GitHub keeps the author from
-    # approving a review itself, so path 1 stands without the read.
-    comments = (data.get("comments") or []) if author_login else []
-    for c in reversed(comments):
-        if not isinstance(c, dict):
-            continue
-        author = (c.get("author") or {}).get("login") or ""
-        body = (c.get("body") or "").strip()
-        if author and author != author_login and body.startswith("Approved"):
-            return _GateResult(
-                passed=True,
-                passed_via=f"`Approved` comment from @{author}",
-            )
+    # Path 2: the last `Approved`-prefix comment (case-sensitive) that counts
+    # as a person's. With the PR's author unread, no commenter is known to be
+    # a non-author, so no such comment counts (#1485); GitHub keeps the author
+    # from approving a review itself, so path 1 stands without the read.
+    approving, comments_left_out = approvals.approving_comment(comments.comments, author_login)
+    if approving is not None:
+        return _GateResult(
+            passed=True,
+            passed_via=f"`Approved` comment from @{approving.author}",
+        )
 
     # Refused.
     if author_login:
@@ -1975,19 +1994,50 @@ def _check_approval_gate(
         comment_remedy = (
             "            - Run `done-work` again once `gh pr view` returns the PR's author.\n"
         )
+    left_out = _left_out_lines("an APPROVED review", reviews_left_out)
+    if author_login:
+        # With the author unread, the line above already says why no comment
+        # counts.
+        left_out += _left_out_lines("an `Approved` comment", comments_left_out)
     return _GateResult(
         passed=False,
         refusal_message=(
             f"[refused] approval gate not satisfied for PR #{pr_number}.\n"
             "          → No APPROVED review present (latest state: "
-            f"{latest_states[-1] if latest_states else 'none'}).\n"
+            f"{deciding.state if deciding is not None else 'none'}).\n"
             f"{comment_line}"
+            f"{left_out}"
             "          → No --bypass supplied.\n"
             "          Remediations:\n"
             "            - Request a review and have it approved.\n"
             f"{comment_remedy}"
             '            - Re-run with `--bypass "<reason>"`.'
         ),
+    )
+
+
+def _left_out_lines(what: str, left_out: tuple[approvals.Approval, ...]) -> str:
+    """One refusal line for each approval left out as no person's (DEC-079
+    point 3), named by its author where one is read."""
+    lines = ""
+    for approval in left_out:
+        by = f"@{approval.author}" if approval.author else "a deleted account"
+        lines += (
+            f"          → Left out, as no person's approval: {what} by {by}: {approval.left_out}.\n"
+        )
+    return lines
+
+
+def _approvals_unread(pr_number: int, what: str, cause: str | None) -> str:
+    """The refusal where the PR's reviews or comments could not be read whole."""
+    return (
+        f"[refused] approval gate not satisfied for PR #{pr_number}.\n"
+        f"          → The PR's {what} could not be read whole: {cause or 'no cause given'}.\n"
+        "          → The gate does not judge a part of them, since the part left "
+        "unread could hold the request for changes or the approval that decides.\n"
+        "          Remediations:\n"
+        "            - Run `done-work` again once GitHub answers.\n"
+        '            - Re-run with `--bypass "<reason>"`.'
     )
 
 
