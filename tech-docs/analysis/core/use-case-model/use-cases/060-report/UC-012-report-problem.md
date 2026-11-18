@@ -16,6 +16,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/report.py
+        - src/project_kit/acting_account.py
         - src/project_kit/environment.py
         - src/project_kit/report_context.py
         - src/project_kit/cli.py
@@ -24,6 +25,7 @@ pkit:
         - PRJ-008
         - ADR-047#2
         - ADR-047#3
+        - ADR-094#2
         - ADR-094#6
         - ADR-050#1
         - ADR-050#2
@@ -87,7 +89,7 @@ pkit:
 - **4c.** The issue is posted, but the comment carrying the rest of a long attached note fails. The system moves no note, names the issue, and prints how to finish by hand. The use case ends.
 - **5a.** The adopter passes `--tree`. The system lists, under each report, its [tracked fixes](../../../glossary.md#term-tracked-fix--tracked-fix) with their states.
 - **5b.** `gh` is not signed in. The system prints a link to the adopter's issues on the [report target](../../../glossary.md#term-report-target--report-target) instead.
-- **5c.** The system cannot tell which account the `gh` credential acts as. It says it cannot tell whose reports to list, and lists nothing (ADR-094 point 6). The path goes on at step 6.
+- **5c.** The system cannot tell which account the `gh` credential acts as. It says it cannot tell whose reports to list, and lists nothing ([ADR-094 point 6](../../../../../architecture/decisions/ADR-094-acting-account-reading.md#6-pkit-report-posts-only-as-an-account-it-can-name)). The path goes on at step 6.
 
 **Postconditions:** The [report](../../../glossary.md#term-report--report) is an issue on project-kit's repository, with the adopter's [versions](../../../glossary.md#term-version--version) attached. The adopter sees the report's state, and each [tracked fix](../../../glossary.md#term-tracked-fix--tracked-fix), from their own [project](../../../glossary.md#term-project--project).
 

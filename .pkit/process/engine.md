@@ -37,7 +37,7 @@ The backbone exposes the engine as the `process` command group of `pkit`. Each c
 - **`--actor <name>`** names the actor whose gates are checked, in the binding's terms. That is the authority the move is made by, as the binding's records name it ([the process README, "Gate-checkability"](README.md#gate-checkability-the-load-bearing-rule)).
   - **From the caller alone.** The engine asks no service for the actor, and takes no default. No fixed value stands for an actor nobody named. An actor given blank names none.
   - **One actor on each call.** `status`, `can-move` and `move` each judge a gate for the actor named, or for none. So a wrapper names the same actor on each call, or a sign-off gate can give two verdicts.
-  - **By hand.** A person names the actor as the binding's reference says, such as an account as `pkit account read` prints it. The engine takes the person's word, so a misspelt actor is a false one.
+  - **By hand.** A person names the actor as the binding's reference says. The engine takes the person's word, so a misspelt actor is a false one.
 - **With no actor named,** a cross-authority gate whose authorisation exists and names its producer is not judged. Its predicate runs, and its reason gives what the predicate answered, the producer included.
   - **`move` and `can-move` refuse the move.** The refusal says that no actor was named. It asks the caller to name the authority the move is made by, in the binding's terms.
   - **`status` marks the move `?`,** with the reason that no actor was named. For a wait, the engine reads the gate as one that may be open. So the missing actor makes no wait.

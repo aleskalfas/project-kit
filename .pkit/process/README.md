@@ -40,6 +40,7 @@ pkit:
         - .pkit/cli/README.md#regenerating-a-capabilitys-depends-on-list
         - .pkit/cli/README.md#validate
         - .pkit/cli/README.md#configuration-file
+        - .pkit/cli/README.md#account-commands
 ---
 
 # Process
@@ -106,7 +107,7 @@ An actor's own assertion that a gate passed is never enough. A gate that rests o
   - **A binding of accounts** gives both in the one spelling that `pkit account read` prints ([the CLI reference, "Account commands"](../cli/README.md#account-commands)).
   - **A binding whose authorities are no accounts,** such as a sign-off by a name in a file, names them in its own terms.
   - **None is taken by default.** The engine asks no service for the actor, and no fixed value stands for one nobody named. With none named, a gate whose authorisation exists and names its producer is not judged. The gate then refuses the move ([the engine page, "The operations"](engine.md#the-operations)).
-  - **By hand,** a person names the actor as the binding's reference says, such as an account as `pkit account read` prints it. The engine takes the person's word, so a misspelt actor is a false one.
+  - **By hand,** a person names the actor as the binding's reference says, such as an account as `pkit account read` prints it ([the CLI reference, "Account commands"](../cli/README.md#account-commands)). The engine takes the person's word, so a misspelt actor is a false one.
 
 ## Layout
 
