@@ -1,12 +1,12 @@
 ---
 id: DEC-082
-title: The project-manager runs as many subagents at once as its pace allows, under a committed ceiling, and keeps them busy
+title: The project-manager keeps as many slots full at once as its pace allows, under a committed ceiling
 status: proposed
 date: 2026-11-17
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** the project-manager agent may run several agents of its own at once: a builder for each Task, the reviewers of each change, the fixers after a merge and a lead's helpers. One setting in the capability's committed configuration gives the **ceiling**: how many **slots** the agent's runs may hold at once in one clone, all its sessions together. A subagent holds a slot while it runs, a build keeps its slot through its checks, and a lead's helper hands its slot to the subagents it starts. `off` holds one at a time, a number at most that many, and `max` as many as the work calls for, bounded only by the machine and the account's usage limits. Where the setting is absent it is 4. Within its pace the agent keeps busy without being told. Whenever a slot frees, it first starts what its work in flight waits for, such as a review, then a Task its directing seat named, then a plan's reviewer, and then the next Task that nothing blocks, nearest the work just done. The seat that directs a worker may set the worker's pace below the ceiling, or back up to it, on the worker's state issue. A person may set any seat's pace, which replaces what a directing seat set before it, and which a directing seat then only lowers. The build and review commands hold the agent's calls to the pace, and a run a person starts themselves takes no slot. A lowered pace stops nothing that runs, and the agent tells the person once in each session at what pace it runs.
+**In plain terms:** the project-manager agent may run several agents of its own at once: a builder for each Task, the reviewers of each change, the fixers after a merge and a lead's helpers. One setting in the capability's committed configuration gives the **ceiling**: how many **slots** the agent's runs may hold at once in one clone, all its sessions together. A subagent holds a slot while it runs, a build keeps its slot through the build's checks, and a lead's helper hands its slot to the subagents it starts. `off` holds one at a time, a number at most that many, and `max` as many as the work calls for, bounded only by the machine and the account's usage limits. Where the setting is absent it is 4. Within its pace the agent keeps busy without being told. Whenever a slot frees, it first starts what its work in flight waits for, such as a review, then a Task its directing seat named, then a plan's reviewer, and then the next Task that nothing blocks, nearest the work just done. The seat that directs a worker may set the worker's pace below the ceiling, or back up to it, on the worker's state issue. A person may set any seat's pace, which replaces what a directing seat set before it, and which a directing seat then only lowers. The build and review commands hold the agent's calls to the pace, and a run a person starts themselves takes no slot. A lowered pace stops nothing that runs, and the agent tells the person once in each session at what pace it runs.
 
 ## Context
 
@@ -28,15 +28,16 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 - A directing seat sets the pace of a seat it directs, within the ceiling the committed configuration gives. It writes the value in that seat's state issue, where the worker reads it at each step of its loop. A message through the harness only points the worker to the change. A worker with no pace set takes the configured value.
 - The person keeps the ceiling. The committed value is the most any seat runs, and a lead may lower a worker's pace, or raise it back up to the ceiling, never past it.
 
-This record holds those decisions. It settles what they leave open: the value where the key is absent, what bounds `max`, which runs count and in which unit, whose calls the commands hold and how, how a lead's helpers share its slots, a clone that holds no seat, how a review and a named Task wait for a slot, whose setting outranks whose, what a lowered pace does to a run already going, and how the agent tells the person its pace.
+This record holds those decisions, with one departure, which the person accepts with it: it counts the pace in slots, not in subagents that run at once. A lead's helper hands its slot to its own subagents while they run, so at `off` a helper and its one subagent run together, and at a pace of N up to twice N subagents may run at once (point 2). At a share of one, a helper that kept its slot would wait for itself forever, as "Why a helper holds a share, and hands its slot on" says. It settles what the decisions leave open: the value where the key is absent, what bounds `max`, which runs count, whose calls the commands hold and how, how a lead's helpers share its slots, a clone that holds no seat, how a review and a named Task wait for a slot, whose setting outranks whose, what a lowered pace does to a run already going, and how the agent tells the person its pace.
 
 **Terms.**
 
 - **The agent** is the agent that runs the pm skill's procedures in a session: the project-manager agent, or another agent definition a seat names in its place ([project-management:DEC-059-topology-of-seats] point 8).
 - **A subagent** is an agent run that a session starts or resumes for the agent's work: through the harness's tools for starting agents or for messaging, or through a command of this capability, such as the build command's builder, each reviewer the review command starts and each fixer the drift command starts. A helper's own subagents are the agent's too. The session's own agent is none, and nor is a run a person starts themselves, not on the agent's call, which takes no slot (point 1).
-- **The pace** is the most slots held at once in one clone, all its sessions together. **A slot** is room for one of the agent's runs within the pace. What holds one, and for how long, is point 2's: a subagent while it runs, a builder's slot through its build's checks too, and a lead's helper's share whole while its entry stands, within which the helper's own subagents run. A slot is free while fewer are held than the pace allows, as the clone's register counts them, or the agent where no command can (point 7).
+- **The pace** is the most slots held at once in one clone, all its sessions together. **A slot** is room for one of the agent's runs within the pace. What holds one, and for how long, is point 2's: a subagent while it runs, a builder's slot through the build's checks too, and a lead's helper's share whole while its entry stands, within which the helper's own subagents run. A slot is free while fewer are held than the pace allows, as the clone's register counts them, or the agent where no command can (point 7).
 - **The ceiling** is the pace the configuration gives, the most slots any clone holds.
-- **Work in flight** is each Task the agent has started and not yet seen merged or closed: one it is building, or one waiting on its checks, its review, a fix round, a merge of the base or a question.
+- **The build's checks** are the project's checks a build runs in its builder's clone and sandbox once the builder's run has ended, with no agent (DEC-063 point 7). **The checks on a pushed head** are those the review of a Task's pushed branch waits on (DEC-063 point 8).
+- **Work in flight** is each Task the agent has started and not yet seen merged or closed: one it is building, or one waiting on the checks on its pushed head, its review, a fix round, a merge of the base or a question.
 
 ## Decision
 
@@ -47,7 +48,7 @@ This record holds those decisions. It settles what they leave open: the value wh
 - **Where it lives.** It is one key of the capability's configuration, beside its other settings, and not of the topology, since it binds a clone that holds no seat and a project with no topology too. The key's name is the build's.
 - **Read from the default branch,** at the commit the backbone resolves it to, as the topology is read (DEC-059 point 1). So a change to the ceiling binds once a merge lands it, and no branch the agent works on raises its own pace.
 - **Its values:**
-  - `off` holds one slot at a time, and `1` means the same: one subagent runs at a time, or a helper hands its slot to one of its own (point 2). A worker at `off` still takes a new Task while earlier ones wait on their checks, a person or a question, since a Task that waits holds no slot (point 2).
+  - `off` holds one slot at a time, and `1` means the same: one subagent runs at a time, or a helper hands its slot to one of its own (point 2). A worker at `off` still takes a new Task while earlier ones wait on the checks on their pushed heads, a person or a question, since a Task that waits holds no slot (point 2).
   - A whole number of at least one holds at most that many at once.
   - `max` runs as many as the work calls for: as many runs as there are ready Tasks that share no file, with each review's reviewers beside them, bounded only by the machine and the account's usage limits (point 3).
 - **Absent, it is 4.** A project that has not chosen holds at most four slots at once in a clone: a review the agent starts runs no more than four of its reviewers together, a coordinator no more than four builders, and a worker fills no more than four slots.
@@ -56,14 +57,14 @@ This record holds those decisions. It settles what they leave open: the value wh
 
 ### 2. Every subagent takes a slot, whatever starts it
 
-Each subagent takes one slot for as long as it runs:
+Each of these holds one slot for as long as its bullet says, a lead's helper and its subagents within the helper's share, which the register holds whole (below):
 
-- a builder, of a Task, of a fix round, of a merge of the base, or of a build resumed once its question is answered, whose build keeps the slot through its checks, after the builder's run has ended
-- each reviewer of a change, so a review takes one slot for each of its reviewers that runs at once
-- a reviewer of a plan, such as the critic that batch planning calls
-- each fixer the agent's run starts after a merge
-- a lead's helper while none of its own subagents runs, and each subagent the helper starts (below)
-- a subagent the agent resumes by messaging (DEC-081 point 2)
+- a builder, of a Task, of a fix round, of a merge of the base, or of a build resumed once its question is answered, while it runs, and then its build, through the build's checks, after the builder's run has ended
+- each reviewer of a change while it runs, so a review holds one slot for each of its reviewers that runs at once
+- a reviewer of a plan while it runs, such as the critic that batch planning calls
+- each fixer the agent's run starts after a merge, while it runs
+- a lead's helper while none of its own subagents runs, and each subagent the helper starts while it runs (below)
+- a subagent the agent resumes by messaging, while it runs (DEC-081 point 2)
 
 The pace is the clone's, all its sessions together, not each session's or each agent's. A clone holds at most one seat, and each session in it takes that seat up (DEC-059 point 4), so its sessions share the seat's slots.
 
@@ -73,7 +74,7 @@ A lead's helper acts as the lead's instance (DEC-059 point 6), so it and the sub
 - **The helper keeps to its share.** It passes what its share leaves free as each command's cap, and dispatches nothing past it.
 - **A helper hands its slot on.** A helper holds one slot of its share while it works, and hands that slot to its own subagents while they run, holding none of its own meanwhile. So a helper and its subagents run within its share, which the register holds whole, and a helper whose share is one, as at `off`, still has its Task reviewed, one reviewer at a time.
 
-A Task that waits on its checks, on its verdicts being posted, on a person or on a question runs no subagent, so it holds no slot. A Task a person directs to be built in the seat's own session, where no builder can start (DEC-063 point 1), runs no subagent either. It is built there alone, and the seat starts no other build until it ends.
+A Task that waits on the checks on its pushed head, on its verdicts being posted, on a person or on a question holds no slot, since nothing of the Task runs then that holds one. A Task a person directs to be built in the seat's own session, where no builder can start (DEC-063 point 1), runs no subagent either. It is built there alone, and the seat starts no other build until it ends.
 
 ### 3. The work bounds every pace, and only the machine and the account bound `max`
 
@@ -86,7 +87,7 @@ A Task that waits on its checks, on its verdicts being posted, on a person or on
 
 Whenever a slot frees, and at the start of each round of its loop, the agent fills its free slots in this order, without being told:
 
-1. **What its work in flight waits for:** a review whose checks have passed (DEC-063 point 8), a fix round on a verdict that asks for changes, a build that merges the base into a Task's branch, and a build resumed once its question is answered. After a merge, so too each fixer its run starts (DEC-069 point 1), which ends the merged Task's work. Each starts in the order it came to wait.
+1. **What its work in flight waits for:** a review whose Task's checks on its pushed head have passed (DEC-063 point 8), a fix round on a verdict that asks for changes, a build that merges the base into a Task's branch, and a build resumed once its question is answered. After a merge, so too each fixer its run starts (DEC-069 point 1), which ends the merged Task's work. Each starts in the order it came to wait.
 2. **Then a Task a directive named** (DEC-081 point 6), one for each slot still free, in the order the directives came.
 3. **Then a reviewer of a plan** the agent has drafted, such as the critic that batch planning calls, since the plan's Tasks wait on it.
 4. **Then new Tasks,** each the next that nothing blocks (point 5), one for each slot still free.
@@ -152,6 +153,7 @@ So no new build takes a slot that a waiting review could use. The first review t
 ### 10. The agent tells the person its pace once in each session
 
 - **Once, before its first subagent** in the session, the agent says in one line the pace it runs at, where the pace comes from and the ceiling. The pace comes from the ceiling, from a setting on the seat's state issue, with its setter, or from the person's word.
+- **Where the commands cannot tell its call.** Where the command the agent reads its pace with before its first subagent says that the commands cannot tell the agent's call in this session, though the sign point 7 names is declared for the project's harness, the agent says so in that line too, and holds itself to the pace by its own count for the rest of the session, as point 7's "Known gaps" says.
 - **A change it reads later** takes one line more: the new pace and where it comes from.
 - **Nothing at each start.** A session that starts no subagent says nothing of its pace, and no line counts the slots as each subagent starts.
 - **Where it says it:** in the session's own output, where a person reads it, as the session runs or afterwards.
@@ -162,13 +164,13 @@ So no new build takes a slot that a waiting review could use. The first review t
 
 **Why 4 where it is absent.** No harness counts the runs the commands start, so `max` by default would run, in a project that never chose, as many as its ready Tasks and their reviews call for, bounded only by its machine and its account's usage limits, with what follows for money and for the person's reviews, before anyone weighed it. `off` by default would turn every adopter's reviews serial, and stop a coordinator's builds at once. Four lets a review run several reviewers together, and a worker keep a few Tasks building, while what a project that never chose runs at once stays within what one person can follow. Any default is a judgement, and a project that weighs it otherwise sets its own number, or `max`, in one reviewed change. What changes for a project that sets nothing is named in the build's changeset: a review of more than four reviewers that the agent starts runs them four at a time, and a coordinator starts at most four builders at once. A person's own run of the review command keeps its whole set at once (point 1).
 
-**Why every subagent counts alike, whatever starts it.** A builder, a reviewer, a fixer and a helper each take a run of their own, with its cost, and so does a resumed one. Counting builders only would let the reviews of a few Tasks, each with several reviewers, run far past what the person set.
+**Why every subagent counts alike, whatever starts it.** A builder, a reviewer, a fixer and a helper each take a run of their own, with its cost, and so does a resumed one. Counting builders only would let the reviews of a few Tasks, each with several reviewers, run far past what the person set. A build keeps its slot through the build's checks, since they run on the machine, in the build's sandbox, and cost it as a run does, though no agent runs them. The checks on a pushed head run in the project's continuous integration (DEC-063 point 7), so a Task that waits on them holds none.
 
 **Why the clone's runs, all its sessions together.** A clone holds at most one seat, and each session in it takes that seat up (DEC-059 point 4). A pace for each session would multiply a seat's pace by the sessions open in its clone, and a second session would run the whole pace beside the first. The register the commands read is the clone's, so the pace they hold is the clone's too.
 
 **Why a helper holds a share, and hands its slot on.** A helper is started through the harness's tools, which pass no command of this capability, so without an entry no command a helper calls would count it, nor the other helpers, and three helpers at a pace of three would each see the whole pace. An entry with its share lets each command count the helpers, and the share in the brief tells each helper what it may start. A helper that kept its own slot while its subagents ran would wait, at a share of one, for a slot it holds itself, and its Task's review would never start. Handing the slot on bounds a helper and its subagents by its share.
 
-**Why the pace bounds subagents, and not Tasks in flight.** What costs money and capacity is a run, and a Task that waits on its checks, a person or a question runs nothing. A bound on Tasks in flight would leave slots idle while Tasks wait, and a bound of one would stop the loop on each waiting Task. What a worker may take at all is the work the person scheduled into its pools, and a person who wants fewer Tasks waiting on them lowers the pace, or schedules less.
+**Why the pace bounds subagents, and not Tasks in flight.** What costs money and capacity is a run, and a Task that waits on the checks on its pushed head, a person or a question runs nothing that holds a slot. A bound on Tasks in flight would leave slots idle while Tasks wait, and a bound of one would stop the loop on each waiting Task. What a worker may take at all is the work the person scheduled into its pools, and a person who wants fewer Tasks waiting on them lowers the pace, or schedules less.
 
 **Why nothing of the capability's own bounds `max`.** A project that sets `max` chooses, in a reviewed change, to run as many as the work calls for, with that cost stated (point 3). A number of the capability's own under it would be a second ceiling that no one set, wrong for some machine or account, and a project that wants a bound writes it as the ceiling. The default of 4 already bounds a project that never chose. A pace above the harness's own limit on the subagents it starts asks only for what the harness can give, so it is no error.
 
@@ -194,7 +196,7 @@ So no new build takes a slot that a waiting review could use. The first review t
 
 **Why a clone with no seat runs at the ceiling.** It has no state issue and no directing seat, so the committed value is all it has, and the person who directs a session is there to lower it for that session. Raising it past the ceiling in words would let one session's word outrank the reviewed value, which holds for every clone alike. Taking only the work it was given keeps a session off work that another person or session may hold.
 
-**Why tell the person once.** The person should know what runs on their behalf, and at what cost, without a line at each start. One line before the first subagent, and one at each change, says it where the person reads the session.
+**Why tell the person once.** The person should know what runs on their behalf, and at what cost, without a line at each start. One line before the first subagent, and one at each change, says it where the person reads the session. Where the commands cannot tell the agent's call, that line also tells the person that the pace rests on the agent's own count in that session.
 
 ### Alternatives considered
 
@@ -218,7 +220,7 @@ So no new build takes a slot that a waiting review could use. The first review t
 - **A state issue of its own for each seat's pace.** Rejected: a second issue to create, name and find for every seat, where the seat's own already holds its state.
 - **The pace carried in the message.** Rejected, as "Why the state issue carries the pace, and a message only points" says.
 - **The last setting counts, whoever wrote it.** Rejected, as "Why a person's setting outranks the directing seat's" says: a lead's later setting could raise the pace past the person's without a word.
-- **A person who clears only their own setting.** Rejected: a directing seat's lower setting would then hold, whatever the person said, until the seat cleared it or a reviewed merge named another.
+- **A person who clears only their own setting.** Rejected: a person who meant to end a directing seat's setting would need two writes for that one intent, a setting of their own, which voids it, and then the clear of that setting.
 - **A setting that counts only while its setter's clone holds the directing seat.** Rejected, as "Why a setting is the seat's" says.
 - **The pace held by the agent's own count alone.** Rejected, as "Why the commands hold the agent's calls" says.
 - **The commands hold every caller in the clone, a person past the pace only by the override flag with its reason.** Rejected, as "Why the commands hold the agent's calls" says: a person would need an override to run a review at a terminal as the command runs it today.
@@ -230,7 +232,7 @@ So no new build takes a slot that a waiting review could use. The first review t
 
 - **Edits to accepted records,** made in this change once a person accepts this record ([pkit:COR-066] point 5), sorted by kind and then by record:
   - **Overturned in part.** Each record stays accepted, and its overturned words stay as they stood.
-    - DEC-059's top line, which names DEC-061, names this record too, in one paragraph. Its clause that DEC-081 rewords, "as far as DEC-061 goes", serves this record too, so this record rewords none of the line's sentences. The line adds, after the sentences of DEC-061 and DEC-081, as sentences of this record's own: "Whenever a Task's work frees a slot of a seat, the seat's ready Tasks rank nearest that Task first: those of its Feature, then its EPIC, then its Milestone, then the rest, by priority within each. Overturned there by DEC-082: point 7's 'the highest in priority first', where a Task's work freed the slot. Priority alone orders the Tasks where no Task's work freed the slot."
+    - DEC-059's top line, which names DEC-061 and [project-management:DEC-076-app-credentials], names this record too, in one paragraph. Its clause "as far as DEC-061 goes", as DEC-076 worded it, serves this record too, so this record rewords none of the line's sentences. The line adds, after the sentences of DEC-061, DEC-076 and DEC-081, as sentences of this record's own: "Whenever a Task's work frees a slot of a seat, the seat's ready Tasks rank nearest that Task first: those of its Feature, then its EPIC, then its Milestone, then the rest, by priority within each. Overturned there by DEC-082: point 7's 'the highest in priority first', where a Task's work freed the slot. Priority alone orders the Tasks where no Task's work freed the slot."
     - DEC-061 gains a top line that reads: "Partially superseded by DEC-082. Whenever a Task's work frees a slot of a seat, the ready Tasks of its pools rank nearest that Task first: those of its Feature, then its EPIC, then its Milestone, then the rest, by priority within each. Overturned: point 5's 'the Tasks rank as there', where a Task's work freed the slot, so far as it ranks them by priority alone. Priority alone orders them where no Task's work freed the slot. The rest stands."
     - DEC-063 gains a top line that reads: "Partially superseded by DEC-082. A seat whose build waits on a question tells the person, and goes on with its other work within its pace. Overturned: point 6's 'The seat tells the person, and ends the loop'. The rest stands."
   - **Refined in place,** each with a forward refinement pointer to this record:
