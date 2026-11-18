@@ -42,11 +42,11 @@ This set takes no scope. Its rules bind on an artefact only through a set of the
 
 ## RS-COMM-001 — A page makes one point, and shows it
 
-On a piece whose `explains` field is true, where a page has a lead, its main visual shows the point the lead states, and where it has a title too, the lead answers the title. Where a page's lead slot is empty, its title states the page's point, and its main visual, where it draws one, shows the title's point.
+On a piece whose `explains` field is true, on each page but one whose job is not to make a point, where the page has a lead, its main visual shows the point the lead states, and where it has a title too, the lead answers the title. Where it has no lead, its title states the page's point, and its main visual, where it draws one, shows the title's point.
 
 - **Its title and its lead.** A page's title names what the page is about. Its lead is the sentence under the title that states the page's point, such as what fills a deck's `lead` slot. A figure's caption counts as its lead.
-- **Which pages.** A page whose content states no point, such as a cover, an agenda, a section's opening page or a page of questions, is not judged by this rule. Any other page whose lead slot is empty breaks it, unless its title states the page's point.
-- **From the text:** where a page has a title and a lead, whether the lead answers the title; where its lead slot is empty, whether its title states the page's point; and whether the main visual's content holds the point its lead or its title states.
+- **Which pages.** A page whose job is not to make a point is one whose job is to open, divide, list, close or stand outside the pages that make the piece's points, such as a cover, an agenda, a section's opening page, a page of references, a page of questions or thanks, or an appendix's divider. Its kind tells it, and it is not judged by this rule. Any other page is judged, whether or not a sentence on it states a point, such as a page that draws a chart, a table or a picture, and a backup page that shows evidence. Such a page breaks the rule where it has no lead, whether its lead slot is empty or its layout has none, unless its title states the page's point.
+- **From the text:** which pages the rule judges, by their kind; on each of them, where it has a title and a lead, whether the lead answers the title; where it has no lead, whether its title states the page's point; and whether the main visual's content holds the point its lead or its title states.
 - **On the drawn page:** whether the main visual shows that point.
 
 ## RS-COMM-002 — The big picture comes first
@@ -62,7 +62,7 @@ On a piece whose `explains` field is true and whose pages are read in order, as 
 
 - **Which pieces.** A piece of one page, such as a single figure or a poster, is not judged by this rule. Nor is a piece whose reader picks the pages, such as a site.
 - **Its groups.** A piece with no sections has one group, its pages. The sections' order is read through the titles of the pages that open them.
-- **A page whose content states no point** is judged by where its kind stands. A page that introduces others, such as a cover or an agenda, stands before them. A page that closes others, such as one of questions or thanks, stands after them.
+- **A page whose job is not to make a point,** as `RS-COMM-001` defines it, stands where its kind does. A page that introduces others, such as a cover or an agenda, stands before them. A section's opening page stands by its kind, before its section's pages, and its title carries the order of the sections, as "Its groups" says. A page that closes others, such as one of questions or thanks, stands after them.
 - **A page that sums up** the pages before it stands after them, and breaks nothing by repeating them.
 - **What following asks.** A statement follows from the one before where the order that runs through its group places it next. A statement that names something an earlier one named does not follow from it by that alone. A statement that gives an answer before the pages that bear it out, as `RS-COMM-002` asks, can be understood without them, and breaks nothing.
 - **From the text:** the whole rule.

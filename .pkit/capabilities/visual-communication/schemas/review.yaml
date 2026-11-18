@@ -12,9 +12,11 @@
 # The body below is the reference instance: a second round, one of whose grades differs
 # from the round before. Two faults hold one grade, and its evidence names each by the id
 # the report gives it, then the reading beyond them. One grade only the asker's words would
-# raise. It shows some grades of some pages, to show the form, and is no whole review: a
-# review grades each rule it reads on each page it reads, and once for the piece where the
-# rule takes a grade there, or lists it under `not-graded` with why.
+# raise. Each grade of `professional` names the strongest weakness it weighed, and a page a
+# rule does not judge quotes the rule's words that leave it out. It shows some grades of some
+# pages, to show the form, and is no whole review: a review grades each rule it reads on each
+# page it reads, and once for the piece where the rule takes a grade there, or lists it under
+# `not-graded` with why.
 #
 # Each value in words is written as a folded block scalar, `>-` after its key and its words
 # on the lines below, which parses words that hold `: `, quote marks, a ` #` or a
@@ -68,19 +70,24 @@ grades:
       page: layers
     grade: professional
     evidence: >-
-      The lead answers the title, and the stepped figure shows the answer.
+      The lead answers the title, and the stepped figure shows the answer. The strongest
+      weakness weighed is the lead's second clause, which the figure shows through its labels
+      alone, and a professional would hand the page over as it is.
   - rule: RS-GRAPHIC-001
     on:
       page: layers
     grade: competent
     evidence: >-
-      The eye enters at the footer's mark before it reaches the top level.
+      The head and the stepped figure stand above the rest but for the note on the levels, a
+      part of the rest, which ties with the figure's top level in size and weight, so the
+      figure does not stand above it.
     other-cause: >-
-      The page's frame, which the library draws, carries the mark.
+      The library whose component draws the note sets it in the type of the levels' names.
     since-last-round:
       was: below competent
       why: >-
-        The mark is smaller than in the round before, so it no longer outranks the figure.
+        The note is smaller than in the round before, so the head stands above it, though the
+        figure does not.
   - rule: RS-GRAPHIC-002
     on:
       page: layers
@@ -95,7 +102,8 @@ grades:
     grade: professional
     evidence: >-
       "Readable where it is shown": each text and part reads as drawn where the deck is
-      projected, and the page is taken in at a glance.
+      projected, and the page is taken in at a glance. The strongest weakness weighed is the
+      note's five lines, the most text the page holds, which a professional would polish.
   - rule: RS-COMM-001
     on:
       page: plan
@@ -111,13 +119,21 @@ grades:
       piece: true
     grade: professional
     evidence: >-
-      Each lead follows from the one before it.
+      The sections keep a deductive order, from what the layers are to the plan that builds
+      them, and the pages within each keep an order of structure, from the whole to its
+      parts. The strongest weakness weighed is the title of the second section's opening
+      page, which repeats a word of the first's, a tie the rule does not count, and a
+      professional would hand the deck over as it is.
 not-graded:
   - rule: RS-COMM-001
     on:
       page: cover
     why: >-
-      A page whose layout has no lead is not judged by this rule.
+      "Which pages": a page whose job is not to make a point is one whose job is to open,
+      divide, list, close or stand outside the pages that make the piece's points, such as a
+      cover, an agenda, a section's opening page, a page of references, a page of questions
+      or thanks, or an appendix's divider. Its kind tells it, and it is not judged by this
+      rule.
   - rule: RS-GRAPHIC-008
     on:
       page: cover

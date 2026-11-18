@@ -32,9 +32,11 @@ body: >
   are, and judges the frame as any part. `RS-GRAPHIC-007`, the form says what
   the content says: the strongest difference goes to what the point is about,
   or to the action the page asks. `RS-COMM-001`, a page makes one point, and
-  shows it: a page whose title states its point needs no lead.
+  shows it: it defines, by their kind, the pages whose job is not to make a
+  point, such as a cover, an agenda or a section's opening page, which it does
+  not judge, and a page whose title states its point needs no lead.
   `RS-COMM-003`, the pages tell the story in order: each page's lead, or its
-  title, keeps one of five named orders, and a page whose content states no
+  title, keeps one of five named orders, and a page whose job is not to make a
   point stands where its kind does. So `GRAPHIC` rises
   to 3.0.0 and `COMM` to 2.0.0, new majors. A project's set that inherits
   `visual-communication:GRAPHIC@1` or `GRAPHIC@2`, or
