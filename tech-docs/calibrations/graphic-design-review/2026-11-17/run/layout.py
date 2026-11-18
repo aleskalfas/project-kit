@@ -66,7 +66,7 @@ def versions(key: dict) -> dict[str, dict[int, str]]:
 
 def intent_of(path: Path) -> dict:
     text = path.read_text()
-    return json.loads(text[text.index("{"): text.rindex("}") + 1])["intent"]
+    return json.loads(text[text.index("{") : text.rindex("}") + 1])["intent"]
 
 
 def piece_fields(path: Path) -> dict[str, str]:
@@ -124,8 +124,14 @@ def main() -> None:
     if len(sys.argv) != 8:
         sys.exit(__doc__)
     judge, ladder, piece, intent_out, out, key_path, run = (
-        Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4]),
-        Path(sys.argv[5]), Path(sys.argv[6]), int(sys.argv[7]))
+        Path(sys.argv[1]),
+        Path(sys.argv[2]),
+        Path(sys.argv[3]),
+        Path(sys.argv[4]),
+        Path(sys.argv[5]),
+        Path(sys.argv[6]),
+        int(sys.argv[7]),
+    )
     key = json.loads((judge / "key.json").read_text())
     run_dir = out / f"run-{run}"
     if run_dir.exists():
@@ -144,7 +150,10 @@ def main() -> None:
     shared = judge / "blind" / "page-1" / "light" / f"{decks['rounds/round-5'][1]}.png"
     probe = resized(ladder / ORDER_VARIANT / "page-1.light.png")
     if not same_pixels(probe, shared):
-        sys.exit("error: the resize does not reproduce the judges' copy; the order variant's pages would differ in scale")
+        sys.exit(
+            "error: the resize does not reproduce the judges' copy; "
+            "the order variant's pages would differ in scale"
+        )
 
     rng = random.SystemRandom()
     used: set[str] = set()
@@ -170,7 +179,11 @@ def main() -> None:
                 if source == ORDER_VARIANT:
                     resized(ladder / source / f"page-{n}.{mode}.png").save(dst)
                 else:
-                    dst.write_bytes((judge / "blind" / f"page-{n}" / mode / f"{decks[source][n]}.png").read_bytes())
+                    dst.write_bytes(
+                        (
+                            judge / "blind" / f"page-{n}" / mode / f"{decks[source][n]}.png"
+                        ).read_bytes()
+                    )
                 if Image.open(dst).size != (W, H):
                     sys.exit(f"error: {dst} is not {W} x {H}")
                 digests[dst.name] = hashlib.sha256(dst.read_bytes()).hexdigest()
@@ -179,7 +192,10 @@ def main() -> None:
         if source == ORDER_VARIANT:
             # Not the judges' image: round 5's page, with only its footer's number changed.
             r5 = decks["rounds/round-5"]
-            pages = {str(n): {"id": ids[n - 1], "image": None, "as": r5[VARIANT_PAGES[n - 1]]} for n in range(1, 5)}
+            pages = {
+                str(n): {"id": ids[n - 1], "image": None, "as": r5[VARIANT_PAGES[n - 1]]}
+                for n in range(1, 5)
+            }
         else:
             pages = {str(n): {"id": ids[n - 1], "image": decks[source][n]} for n in range(1, 5)}
         run_key["folders"][code] = {"version": source, "pages": pages, "digests": digests}
