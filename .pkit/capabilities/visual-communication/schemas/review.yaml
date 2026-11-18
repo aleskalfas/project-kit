@@ -143,9 +143,10 @@ not-graded:
     why: >-
       "Which pages": a page whose job is not to make a point is one whose job is to open,
       divide, list, close or stand outside the pages that make the piece's points, such as a
-      cover, an agenda, a section's opening page, a page that sums up the pages before it in
-      their statements alone, a page of references, a page of questions or thanks, or an
-      appendix's divider. Its kind tells it, and it is not judged by this rule.
+      cover, an agenda, a section's opening page, a page that sums up the pages before it by
+      listing their statements, as text or in a table, a page of references, a page of
+      questions or thanks, or an appendix's divider. Its kind tells it, and it is not judged
+      by this rule.
   - rule: RS-GRAPHIC-008
     on:
       page: cover
