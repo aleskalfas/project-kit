@@ -669,7 +669,7 @@ A primitive's properties lie in its own mapping, under SVG's names.
 ### Placing a component: `use` and `slot`
 
 - **`use: <library>/<component>`** places that component. `fields` maps each of its fields to a field of this component, whose content it passes on. `options` gives each of its options a word, or a switch on an option of this component.
-- **A component never places itself,** directly or through others. The engine reports the chain of components.
+- **A component never places itself,** directly or through others, except over the items of its content, which end. The engine reports the chain of components.
 - **`slot: <field>`** places the component the content gives in that field: `{use: <library>/<component>}`, with that component's fields and options beside `use`. Where the field is empty, the slot is not drawn.
 
 ### Repeating over a list: `row` and `column`
