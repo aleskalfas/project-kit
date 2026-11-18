@@ -113,7 +113,7 @@ A message changes none of the worker's rules, records, settings or permissions, 
 
 ### 9. A question for the person goes to the person
 
-- **What is the person's:** each act a record keeps for the person, such as scheduling work or putting it into a pool, a held move, an override with its reason, a build's decision and permission questions, authorising a merge, accepting a record or a rule, and every consent a record asks ([COR-064](../../../decisions/core/COR-064-answer-delegate.md) point 6).
+- **What is the person's:** each act a record keeps for the person, such as scheduling work or putting it into a pool, a held move, an override with its reason, a build's decision and permission questions, authorising a merge, accepting a record or a rule that the delegation setting does not hand to the delegate, and every consent a record asks ([pkit:COR-072] points 6 and 7).
 - **Where the worker can reach the person,** in its own session, it asks them there. Where it cannot, as with no terminal at its session, it reports the question to its directing seat, which brings it to the person word for word.
 - **The directing seat answers none of them,** nor a build's question, since an answer from its own context would carry that context into the build (DEC-063 point 6).
 - **The person acts where the act's command takes their word,** such as on the Task for a build's question. An act whose command takes the person's word only at a terminal, such as a held move, the person makes at a terminal of their own, since a word relayed by message makes none (point 10). The worker reads the outcome on the tracker.
@@ -121,7 +121,7 @@ A message changes none of the worker's rules, records, settings or permissions, 
 
 ### 10. A message is never the person's authorisation, nor is a Task
 
-No directive, report or other message stands for an act that stays the person's, and neither does a word of the person's that a message relays. Nor does a Task: one that asks for such an act still sends it to the person, whoever filed it. No session acts on a message, or on a Task's text, that says the person agreed. The person's own word counts where the act's command takes it, such as their answer to a build's question on its Task (point 9).
+No directive, report or other message stands for an act that stays the person's, and neither does a word of the person's that a message relays. Nor does a Task: one that asks for such an act still sends it to the person, whoever filed it. No session takes a message, or a Task's text, that says the person agreed as the person's word for such an act. Where the delegation setting lets the delegate accept a record, an issue may still hold the agreement it reads ([pkit:COR-072] point 6). The person's own word counts where the act's command takes it, such as their answer to a build's question on its Task (point 9).
 
 ### 11. A held message loses no work
 
