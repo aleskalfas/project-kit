@@ -1,0 +1,30 @@
+component: backbone
+kind: major
+body: >
+  A delegation setting says how much agents decide in a person's place (#2801).
+  COR-072 decides one backbone configuration setting, read at the default
+  branch's tip, with a level for the project and for each area of its files:
+  ask, answer, land or accept. An absent setting reads ask. A level hands
+  nothing on until it is raised and the roles it rests on are declared, each
+  in a change held for the person: the delegate for answer and accept, the
+  merge reviewers and whether a merge publishes for land, and the record
+  reviewers and an acceptance reviewer for accept. Validation fails a raise
+  that lacks the roles of the raised level's own questions. A lower level's
+  roles may come later, and any later change to a role is held and shown as
+  a raise is. Answer rests on the reviewer the project chose for every
+  answer no change owes (COR-064 point 4), which the setting does not name.
+  Accept lets the delegate (COR-064) accept a record or rule that traces to
+  the person's agreement, checked at the merge.
+  Some changes stay a person's at every level. COR-064, COR-065 and COR-066
+  are partially superseded; COR-048, COR-050, COR-051, COR-064, COR-065,
+  COR-067, COR-069 and COR-070 are refined in place. The core loaded rules
+  move to 7.0.0: the acceptance gate (RS-OPS-002), RS-OPS-020 and RS-OPS-023.
+  Nothing reads the setting until its build ships, and until then a delegate
+  decides answers as COR-064 has it. The build's upgrade moves a delegate
+  named in the friction key into the setting at answer, so the setting
+  hands on the answers the person handed on before, and nothing more. A
+  person decides them in the upgrade's own change, on a branch still on the
+  old backbone once the move lands, at the delegate's one stop on each
+  machine to show the setting's words, and where nothing lasts between
+  runs. That holds once the delegate's definition reads COR-072, and
+  validation warns of one whose definition does not.
