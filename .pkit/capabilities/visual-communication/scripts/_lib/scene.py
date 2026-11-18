@@ -18,7 +18,9 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   that measured it (file name and sha256), how it was measured, and the source of each.
   Each line holds its text, its width, its baseline below its top, its paragraph, and
   its spans: each the part of one run of its paragraph that lies on it, with its width
-  (DEC-012 points 4 and 7).
+  (DEC-012 points 4 and 7). Where it stands each line in its width, by its anchor, and
+  whether it fills that width are read here alone (`stands`, `line_left`, `fills_width`),
+  which the checks read: a text's start lies at its left.
 - **A run's sign and ground** (DEC-036 point 3). A run whose text part chooses them holds
   `sign: true` and its `ground`, a role, each with its source. A span holds the sign
   before its text, `sign`: its run's concept's outline, `d` and `fill-rule`, mapped into a
@@ -136,6 +138,34 @@ DRAWN_AS = {"repeat": "group", "sign": "path"}
 def length(value: float) -> float:
     """A length as the scene holds it."""
     return fm.rounded(value, PLACES) + 0.0  # no negative zero
+
+
+#: Where a text stands each of its lines in its width, by its `text-anchor`: the share of
+#: the room a line leaves in that width that lies before the line. A text's start lies at
+#: its left, so it stands its lines at its left edge, its centre or its right edge.
+STANDS = {"start": 0.0, "middle": 0.5, "end": 1.0}
+
+
+def stands(text: Mapping[str, Any]) -> float:
+    """The share of `text`'s width at which it stands each of its lines (`STANDS`): 0 at its
+    left edge, 0.5 at its centre, 1 at its right edge. An anchor the scene does not hold is
+    the engine's default, the start."""
+    return STANDS.get(str(text.get("text-anchor", "start")), 0.0)
+
+
+def line_left(text: Mapping[str, Any], line: Mapping[str, Any]) -> float:
+    """How far right of `text`'s left edge its line `line` starts: the share of the room the
+    line leaves in the text's width at which the text stands it (`stands`). A line wider
+    than its text starts left of it where the text stands its lines past the start."""
+    return stands(text) * (float(text.get("width", 0)) - float(line.get("width", 0)))
+
+
+def fills_width(text: Mapping[str, Any]) -> bool:
+    """Whether `text` draws to both edges of its width: only a text of one line whose
+    component gave it no width, which the engine makes as wide as that line, its width's
+    source the engine's. A text given a width breaks its lines short of it, and the lines of
+    a text of more than one end where their words do ("Breaking lines", `components.md`)."""
+    return len(text.get("lines") or []) == 1 and (text.get("sources") or {}).get("width") == ENGINE
 
 
 @dataclass

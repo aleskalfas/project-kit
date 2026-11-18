@@ -688,7 +688,9 @@ def test_a_site_of_every_part_draws_under_both_brands_from_one_set_of_content_fi
     brand draws it at each of its sizes with no finding, from the same content files, and it
     passes the check with no finding but the brand's fact that it gives no logo, beside the
     reference pieces' calls for attention on their concepts' signs and on the places the
-    checks of boxes name, none of them in the site."""
+    checks of boxes name. Those in the site lie between groups alone (visual-communication
+    DEC-067), such as a narrow header's links beside a page's buttons: its siblings take
+    none."""
     placed = {
         str(element.get("component", "")).removeprefix("starter/")
         for (name, _, _), scene in scenes.items()
@@ -708,6 +710,10 @@ def test_a_site_of_every_part_draws_under_both_brands_from_one_set_of_content_fi
     assert [code for code, _ in found] == ["picture-role-unvalued"]
     assert starter.on_signs(report.judged) == starter.UNSIGNED
     assert starter.box_levels(report.judged) <= {"attention"}
-    boxed = {finding.file for finding, _ in report.judged if finding.code in starter.BOX_LABELS}
-    assert "visual/pieces/site/piece.yaml" not in boxed
+    in_the_site = {
+        finding.code
+        for finding, _ in report.judged
+        if finding.code in starter.BOX_LABELS and finding.file == "visual/pieces/site/piece.yaml"
+    }
+    assert in_the_site <= {"near-alignment-between-groups"}
     assert not report.failed()
