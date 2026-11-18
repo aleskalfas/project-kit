@@ -70,24 +70,18 @@ grades:
       page: layers
     grade: professional
     evidence: >-
-      The lead answers the title, and the stepped figure shows the answer. The strongest
-      weakness weighed is the lead's second clause, which the figure shows through its labels
-      alone, and a professional would hand the page over as it is.
+      The lead answers the title, and the stepped figure shows the point the lead states.
+      The strongest weakness weighed: the lead opens on the title's own words before it
+      states the point, which a professional would leave as it is.
   - rule: RS-GRAPHIC-001
     on:
       page: layers
-    grade: competent
+    grade: professional
     evidence: >-
-      The head and the stepped figure stand above the rest but for the note on the levels, a
-      part of the rest, which ties with the figure's top level in size and weight, so the
-      figure does not stand above it.
-    other-cause: >-
-      The library whose component draws the note sets it in the type of the levels' names.
-    since-last-round:
-      was: below competent
-      why: >-
-        The note is smaller than in the round before, so the head stands above it, though the
-        figure does not.
+      The head and the stepped figure, which bears the point out, each stand above every
+      part of the rest. The mark in the footer is the page's frame, which this rule does not
+      rank. The strongest weakness weighed: the note on the levels, the heaviest part of the
+      rest, which a professional would set back a little further.
   - rule: RS-GRAPHIC-002
     on:
       page: layers
@@ -96,6 +90,20 @@ grades:
       F1, alignment, at deck/slides[layers]/body/levels[middle]; F2, alignment, at
       deck/slides[layers]/body/levels[base]. Beyond them, the note on the levels stands
       nearer the footer than the figure it explains.
+  - rule: RS-GRAPHIC-003
+    on:
+      page: layers
+    grade: competent
+    evidence: >-
+      The mark in the footer, a part of the page's frame, still pulls the reader's eye from
+      the stepped figure, which a professional would quiet before handing the page over.
+    other-cause: >-
+      The mark comes with the frame the library draws around each slide, not from the piece.
+    since-last-round:
+      was: below competent
+      why: >-
+        In round 1 the mark was drawn larger and drew the eye before the figure did. Smaller
+        now, it competes with the figure less.
   - rule: RS-GRAPHIC-005
     on:
       page: layers
@@ -131,12 +139,13 @@ not-graded:
     why: >-
       "Which pages": a page whose job is not to make a point is one whose job is to open,
       divide, list, close or stand outside the pages that make the piece's points, such as a
-      cover, an agenda, a section's opening page, a page of references, a page of questions
-      or thanks, or an appendix's divider. Its kind tells it, and it is not judged by this
-      rule.
+      cover, an agenda, a section's opening page, a page that sums up the pages before it, a
+      page of references, a page of questions or thanks, or an appendix's divider. Its kind
+      tells it, and it is not judged by this rule.
   - rule: RS-GRAPHIC-008
     on:
       page: cover
     why: >-
-      The cover holds its title with the subtitle under it, and its author and its link as
-      labels, and the rule does not judge a heading, a title or a label.
+      "What it does not judge": a heading, a title, a label, a cell of a table and an item of
+      a list, however many lines each takes. The cover holds its title, its subtitle, which is
+      a heading under the title, and its author and its link, which are labels.
