@@ -89,9 +89,13 @@ the limit after which a claim lapses, the Task's state in the lifecycle and the
 seats' holders. So the ownership seam reads no other seam. A claim names its seat,
 the seat's number and the clone's key, counts only while that clone holds that seat,
 and on a Task In Progress lapses once its work has not renewed it within the limit.
-A claim the seam cannot judge, for a log or a seat it could not read, is never
-treated as free (point 7). The ownership-event comment is built by the audit-log
-facility's builder, which also builds every event of a state issue (point 3).
+The ownership-event comment is built by the audit-log facility's builder, which
+also builds every event of a state issue (point 3).
+
+**A claim the seam cannot judge is never treated as free,** in any project: one
+whose author cannot be told from the expected assignee (point 1), and, in a
+project with a topology, one for a log or a seat it could not read (point 7)
+(refinement per [ADR-094](ADR-094-acting-account-reading.md)).
 
 ## Context
 
@@ -252,7 +256,12 @@ listing reads each issue's mirror through the seam (point 4), so its cost stays 
 call (DEC-043 Implications). Whenever the seam folds a log, it reads the whole log,
 paged to its end. The fold itself is a function of that log, any lingering label
 and, in a project with a topology, the inputs point 7 names. It returns the resolved
-current owner, the substrate it came from, and the authenticated event history.
+current owner, the substrate it came from, the authenticated event history, and
+each claim it cannot judge, with its reason: one whose author the backbone's one
+function that compares accounts cannot tell from the expected assignee
+([ADR-094](ADR-094-acting-account-reading.md) point 3), in every project, and those
+that point 7 lists for a project with a topology (refinement per
+[ADR-094](ADR-094-acting-account-reading.md)).
 
 This is ADR-026's one-reader discipline applied to the ownership axis: the
 indirection — comment scan, `author.login` authenticity filter (DEC-043 point 3),
@@ -467,13 +476,15 @@ report a neutral outcome; **each caller imposes its own posture**:
   does not alarm; a **reconcile/durability report** may surface the `CLOBBERED`
   count as drift observed-and-healed. Same construction, different posture per
   caller.
-- **The fold, in a project with a topology,** reports each claim that does not
-  count, and each claim it cannot judge, with its reason (point 7). On a claim that
-  does not count, the **check before writing** parks its session's work (DEC-059
-  point 9), the **pool** offers the Task to a worker, and the **clash guard**
-  does not refuse (DEC-035 point 6). No consumer treats an unjudged claim as free:
-  the pool takes no such Task over, the check before writing does not write, and
-  the guard refuses as on a claim that counts. The fold takes no view on which.
+- **The fold** reports each claim it cannot judge, with its reason, in every
+  project (point 1), and in a project with a topology each claim that does not
+  count too (point 7). On a claim that does not count, the **check before writing**
+  parks its session's work (DEC-059 point 9), the **pool** offers the Task to a
+  worker, and the **clash guard** does not refuse (DEC-035 point 6). No consumer,
+  in any project, treats an unjudged claim as free: the pool takes no such Task
+  over, the check before writing does not write, and the guard refuses as on a
+  claim that counts. The fold takes no view on which (refinement per
+  [ADR-094](ADR-094-acting-account-reading.md)).
 
 This is what lets the claim / back-off / handoff / reconcile callers coexist behind
 one set of constructors without any inheriting another's posture — construction and

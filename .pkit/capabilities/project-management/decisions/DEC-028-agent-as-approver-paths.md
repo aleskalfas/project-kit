@@ -100,15 +100,19 @@ The project declares registered agents in `project/config.yaml`:
 ```yaml
 review:
   agents:
-    # Remote path — agents with their own GitHub identity (bot, App, service account)
+    # Remote path — agents with their own GitHub account (bot, App, service account),
+    # each in the one spelling that carries its kind: an App's as <name>[bot],
+    # a machine user's by its login
     remote_registered:
-      - github_login: claude-bot          # the agent's GitHub identity
+      - github_login: claude-bot[bot]     # the agent's account, here an App's
                                           # (additional fields may be added later)
     # Local path — kit-shipped or project-shipped agents under .claude/agents/
     local_registered:
       - name: pm-reviewer                 # matches `.claude/agents/pm-reviewer.md` (default, shipped by this capability)
       - name: code-review                 # matches `.claude/agents/code-review.md` (adopter-authored)
 ```
+
+A remote entry's `github_login` is the agent's account in the backbone's one spelling of accounts, which carries the account's kind ([pkit:ADR-094] point 3): an App's is written `<name>[bot]`, and a machine user's by its login. An entry in gh's form `app/<name>` names `<name>[bot]`, and one that holds a character no login holds, such as `@`, names no account and matches nothing (refinement per [pkit:ADR-094]).
 
 Both lists are optional; at least one path must have at least one entry for the agent gate to be satisfiable. At v1 **both paths may be populated** — a project that wants belt-and-suspenders (bot for autonomous flow + local agent for developer-at-keyboard) configures both. When both paths are populated, the gate is satisfied if **either path's component-of-the-gate is satisfied** (the natural OR composition).
 
@@ -131,8 +135,8 @@ When a remote-registered agent reviews, it posts the verdict comment using its o
 
 - Comment first line exactly `Reviewer agent: APPROVED`.
 - The comment carries the verdict marker (see "The verdict signal").
-- Comment author matches `review.agents.remote_registered[0].github_login`.
-- Comment author is **not** the PR author (author-exclusion enforced).
+- Comment author, read with its kind from a surface that gives it, and `review.agents.remote_registered[0].github_login` are one account, the case of ASCII letters and surrounding whitespace set aside ([pkit:ADR-094] point 3) (refinement per [pkit:ADR-094]).
+- Comment author and the PR author are **two** accounts, compared the same way (author-exclusion enforced) (refinement per [pkit:ADR-094]).
 - The verdict is fresh (see "Stale-verdict handling").
 
 The remote path's invocation is **adopter-managed** — the kit does not ship the bot; adopters wire their own via GitHub Action, webhook, or external service.
@@ -203,7 +207,7 @@ The pm capability's `done-work` runs the algorithm:
 
 1. Determine which paths are configured (either or both of `remote_registered:` and `local_registered:` non-empty).
 2. Find all PR comments that carry the verdict marker (see "The verdict signal") and whose first line matches the verdict shape of any configured path — `Reviewer agent: <VERDICT>` (remote) or `Reviewer agent (local, <name>): <VERDICT>` (local), per "Verdict-line grammar and the consumer scan contract".
-3. **Remote path filter**: author matches `review.agents.remote_registered[0].github_login` AND author is not the PR author.
+3. **Remote path filter**: the author, read with its kind, and `review.agents.remote_registered[0].github_login` are one account, AND the author and the PR author are two, the case of ASCII letters and surrounding whitespace set aside ([pkit:ADR-094] point 3) (refinement per [pkit:ADR-094]).
    **Local path filter**: `<name>` matches an entry in `review.agents.local_registered:`. No author-exclusion check.
 4. **Latest-per-agent**: among comments passing steps 2–3, take the latest by timestamp per agent identity (remote) or per `<name>` (local). An earlier verdict the latest superseded takes no further part.
 5. **Freshness of the latest**: if that latest verdict is an `APPROVED` and fresh (see "Stale-verdict handling"), the agent's path-component is satisfied; if it's `CHANGES_REQUESTED`, or stale, not satisfied.
@@ -308,10 +312,12 @@ Adopters who need cryptographic guarantees configure GitHub branch protection wi
 ```
 [refused] Agent approval required but no valid APPROVED verdict present
             → resolved mode: agent (source: <project default | label `review:agent`>)
-            → remote registered: <github_login or "(none)">
+            → remote registered: <account or "(none)">
+           [→ remote entry `<login>` names a user's account; write `<login>[bot]` to match the verdict author it agrees with]
+           [→ remote entry `<entry>` names no account: <why>]
             → local registered: <name(s) or "(none)">
             → most recent verdicts on this PR:
-                - remote (<github_login>): <APPROVED | CHANGES_REQUESTED | none>[ (stale <VERDICT> — <why>)]
+                - remote (<account>): <APPROVED | CHANGES_REQUESTED | none>[ (stale <VERDICT> — <why>)]
                 - local (<name>): <APPROVED | CHANGES_REQUESTED | none>[ (stale <VERDICT> — <why>)]
             → Remediation:
                 a) wait for the remote agent to post APPROVED (or trigger it manually)
@@ -321,6 +327,8 @@ Adopters who need cryptographic guarantees configure GitHub branch protection wi
                 c) merge with `done-work --bypass "<reason>"`
                 d) if no agent is configured, set `review.mode: human` or merge with --bypass
 ```
+
+The template's remote lines give each account in the one spelling of a remote entry, and name a bare entry whose login agrees with a bot's verdict author once `[bot]` is set aside, with the spelling that would match, and an entry with no spelling, with why (refinement per [pkit:ADR-094]).
 
 When the most recent verdict is `CHANGES_REQUESTED`, the refusal message surfaces that fact — the developer knows there are findings to address before re-review will produce `APPROVED`. When that `CHANGES_REQUESTED` is fresh, `review-pr` skips its reviewer, so the refusal names `review-pr <N> --force` as the way to a re-review of the PR as it stands. A stale verdict is named with why: the head it reviewed and what changed since (`reviewed <sha>; changed since: <paths>`), a base outside the base branch's history, why that could not be read, or — for a verdict naming no head — that it was posted before its head arrived, or why the arrival could not be read. The developer sees which change cost the approval. For `touches-ruled-artefact`, the reason also names the ruled artefacts altered or brought under a rule, which may lie outside the changed paths.
 
@@ -337,7 +345,7 @@ When the most recent verdict is `CHANGES_REQUESTED`, the refusal message surface
 | Consumer scan contract | A consumer extracting a verdict from an agent's raw output scans for the first grammar-matching line **anywhere** in the output (not line-1-only — reasoning agents emit preamble). First match wins; no match anywhere → fail closed (no verdict posted, gate unsatisfied, full output surfaced for debugging). |
 | Comments without the prefix | Implicitly informational. Do not affect the gate. |
 | Finding tags | Each finding begins with `[block]`, `[advisory]` or `[person]`, with any grade of the reviewer's own after it. `[block]` is an objective failure the change owns, and withholds the approval. `[advisory]` withholds and holds nothing. `[person]` cites an accepted rule that binds on what the change alters or brings under a rule, but does not settle it. It withholds no approval and is not a blocking finding. It is shown to the person who authorises the merge, and a landing run authorised in advance merges only if it found the finding's verdict when it started, and that verdict stands for the head it merges (DEC-055 point 3). The tags widen no reviewer's remit, and a consumer reads their form leniently. The verdict line alone decides the gate, and an untagged finding counts as `[advisory]`. |
-| Remote-path identity check | Author matches `review.agents.remote_registered[0].github_login` AND author is not the PR author. |
+| Remote-path identity check | The author, read with its kind, and the registered entry are one account, AND the author and the PR author are two, the case of ASCII letters and surrounding whitespace set aside. An App's entry is `<name>[bot]`, `app/<name>` names `<name>[bot]`, and an entry with no spelling matches nothing ([pkit:ADR-094] point 3) (refinement per [pkit:ADR-094]). |
 | Local-path identity check | Author-exclusion **relaxed** — the developer attests they ran the agent. The local agent name must be in `review.agents.local_registered:` AND a file must exist at `.claude/agents/<name>.md`. |
 | Freshness | Judged on each reviewer's latest verdict only. A superseded verdict never counts. A verdict naming its reviewed head stays fresh until the author's changes since reach what its reviewer is required for. For an `APPROVED` from a reviewer whose every rule is a floor, that is a change satisfying one of its floors. For every other `APPROVED` and for every `CHANGES_REQUESTED`, it is any change. A clean merge of the base is no change. A verdict naming its reviewed base goes stale once that base is outside the base branch's history. A verdict naming no head must post-date its head's arrival on the host, and is stale where that cannot be read. A missing commit is fetched first, and what the fetch does not settle makes the verdict stale, never fresh. Each floor reads the changes its own way, and the not-code list narrows `touches-code` alone. For `touches-ruled-artefact`, a shallow checkout or a backbone command that cannot answer makes it stale too. Both paths. |
 | Multi-local-agent composition | All-must-approve — every locally-registered agent must have a fresh APPROVED verdict for the gate's local path to satisfy. At v1 (singleton), trivially reduces to one agent. |

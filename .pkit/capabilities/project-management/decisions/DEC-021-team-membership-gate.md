@@ -37,7 +37,7 @@ members:
     added_by: bootstrap       # "bootstrap" for first member; GitHub login of adder otherwise
 ```
 
-`github_login` is the canonical identity, which for a user's account is the login as the hosting service spells it; `name` + `email` are present for multi-surface identity resolution and human readability. `role` is informational at v1 (DEC-008 already distinguishes the roles); enforcement of role-specific ops gating is out of v1 scope and follows COR-007 if the recurrence appears.
+`github_login` is the canonical identity, in the backbone's one spelling of accounts ([pkit:ADR-094] point 3): a user's account is written by its login, as the hosting service spells it, and an App's by the login the service's REST interface gives it, `<name>[bot]`. A value that stands for an account is read in the same spelling. A bare login names a user's account, gh's form `app/<name>` names `<name>[bot]`, and a string that holds a character no login holds, such as `@` or a space inside, names no account the gate can match (refinement per [pkit:ADR-094]). `name` + `email` are present for multi-surface identity resolution and human readability. `role` is informational at v1 (DEC-008 already distinguishes the roles); enforcement of role-specific ops gating is out of v1 scope and follows COR-007 if the recurrence appears.
 
 ### Two modes; the predicate
 
@@ -47,9 +47,13 @@ members:
   ```
   [refused] Membership required for `<verb> <subject>` operation
             → This repository is in closed mode (.pkit/capabilities/project-management/project/members.yaml has ≥1 entry).
-            → Your identity (<github-login>) is not in the member list.
+            → Your identity (<account>) is not in the member list.
+           [→ `<login>` names a user's account; write `<login>[bot]` to name the bot's account it agrees with]
+           [→ `<entry or value>` names no account: <why>]
             → Remediation: ask an existing member to add you via `add-member.py`.
   ```
+
+  The refusal gives the identity in the spelling of `github_login` above, and adds a line for each entry or value that explains the refusal: a bare one whose login agrees with a bot's once `[bot]` is set aside, with the spelling `<name>[bot]` that would name the bot, and one with no spelling, with why (refinement per [pkit:ADR-094]).
 
   In a run with no terminal, one whose standard input is not a terminal, such as a workflow's, the refusal also names ways through the gate for how the invoker was resolved, each as an act of the run's setup, never as a session taking up another account's. Where the hosting service answered that the credential acts as a user's account, it names, beside that account's being added to the member list, setting the run up under the credential of an account an entry names, a service identity's among them, and not `PM_INVOKER_LOGIN`, which does not change who the run is ("Identity resolution"). Elsewhere, it names the two ways CI passes, as its Implications' bullet on CI invocations gives them: setting the run up under the credential of an account an entry names, or setting `PM_INVOKER_LOGIN` from a CI secret (refinement per [project-management:DEC-077-workflow-gives-missing-card]).
 
@@ -74,7 +78,7 @@ The git history of `members.yaml` IS the audit trail; no extra audit machinery s
 
 The predicate resolves the invoker's identity from three surfaces, in order:
 
-1. **`gh api user --jq .login`** — primary; matches the methodology's GitHub-bound substrate from [project-management:DEC-003-github-bound-substrate]. Where the hosting service answers that the credential acts as a user's account, that account's login alone is the invoker's identity: neither surface below stands beside it or in its place.
+1. **The service's login, through the backbone's reading of the acting account** ([pkit:ADR-094] point 1) — primary; matches the methodology's GitHub-bound substrate from [project-management:DEC-003-github-bound-substrate]. The login is read once in a run, and kept from no earlier run, in the spelling of `github_login` above. Where the reading names a user's account, item 1 takes it, as the request for the signed-in user it replaces gave. What the gate takes where the reading names a bot's account or none, the line atop this record states. A value the gate compares with a member's entry, item 1's login or any value a capability's record lets the gate compare, matches the entry only where the two are one account, the case of ASCII letters and surrounding whitespace set aside ([pkit:ADR-094] point 3). A value or an entry with no spelling matches nothing, since the comparison cannot tell (refinement per [pkit:ADR-094]). Where the hosting service answers that the credential acts as a user's account, that account's login alone is the invoker's identity: neither surface below stands beside it or in its place.
 2. **`git config user.email`** — fallback when `gh` is unavailable.
 3. **Process-environment variable** — `PM_INVOKER_LOGIN` reserved for CI / agent contexts where the natural sources don't apply; sourced from a CI secret or workflow input, never from user-controllable env.
 
@@ -88,7 +92,7 @@ The detailed mechanics — canonical-from-main vs working-tree read, fail-open v
 
 Three verb-subject scripts ship under [project-management:DEC-020-methodology-as-executable-commands]'s convention:
 
-- `scripts/add-member.py` — stamp a new entry. Validates invoker is a current member (or that open mode applies). Writes the entry; commits to a working branch the user opens a PR from.
+- `scripts/add-member.py` — stamp a new entry. Validates invoker is a current member (or that open mode applies). Writes the entry in the spelling of `github_login` above, from the login and type the hosting service answers for it: given a bare login it looks up a user's account, and given `<name>[bot]` or `app/<name>` the account `<name>[bot]`, so it writes an App's account as `<name>[bot]`. Where the service answers an account of another kind, such as an organization's or a bot's whose login carries no `[bot]` suffix, or answers none, it writes no entry and says why (refinement per [pkit:ADR-094]). It commits to a working branch the user opens a PR from.
 - `scripts/remove-member.py` — stamp the removal. Same constraints.
 - `scripts/show-members.py` — read-only inspection; lists the current members + their roles.
 
