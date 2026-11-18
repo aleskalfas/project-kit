@@ -205,7 +205,11 @@ parsing the shell's grammar.
 save one fed to a shell that reads its script from standard input, which is
 read as that shell's script, and the substitutions in a body behind an unquoted
 delimiter, which are read as calls, as inside double quotes. For a grant a
-heredoc stays untrusted.
+heredoc stays untrusted. What this paragraph says of the core's ask before a
+command ADR-095 point 3 interlocks holds the same for the core's deny on a
+shell call that names a folder ([ADR-099](ADR-099-named-folders-under-copy.md)
+point 1), read by the same reading, erring away from a mention (refinement per
+ADR-099).
 
 ### 3. No shell parser
 
@@ -241,7 +245,10 @@ ordinary character. A `$'` quote, a substitution inside a substitution, and any
 other construct it cannot read are doubt, on which it gives no verdict of its
 own. Its faults and doubts so give no verdict, in the hook that fails open,
 while the native rule stands beside it (ADR-095's Rationale, "A mention is
-data").
+data"). What this paragraph says of the core's ask before a command ADR-095
+point 3 interlocks holds the same for the core's deny on a shell call that
+names a folder (ADR-099 point 1), read by the same reading, erring away from a
+mention (refinement per ADR-099).
 
 ### 4. Code home — the shared neutral core, not the adapter hook
 
@@ -351,7 +358,10 @@ only names the command. It matches a program by the base name the call gives,
 never by resolving a link. The two directions are deliberate, and neither
 reading takes the other's place: one for both would loosen a guardrail or
 refuse a commit message that names a command (ADR-095's Rationale, "A mention
-is data").
+is data"). What this paragraph says of the core's ask before a command ADR-095
+point 3 interlocks holds the same for the core's deny on a shell call that
+names a folder (ADR-099 point 1), read by the same reading, erring away from a
+mention (refinement per ADR-099).
 
 ### 6. The broader widening is deferred per COR-007
 
@@ -391,7 +401,9 @@ adapter meets an ask by abstaining, it treats the call as the core's abstain.
 Where the reading of the interlock's ask cannot read what a runner runs, the
 core gives this point's verdict, naming beside the guardrails the interlocked
 commands it cannot rule out, and the adapter asks on it as on any such verdict
-(refinement per ADR-095).
+(refinement per ADR-095). Where that reading cannot read what a runner runs,
+the verdict names the naming command beside the guardrails and the interlocked
+commands (refinement per ADR-099).
 
 ## Rationale
 
