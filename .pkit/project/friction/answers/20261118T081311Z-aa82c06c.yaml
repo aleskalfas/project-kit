@@ -1,0 +1,63 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/rule-sets/graphic.md#RS-GRAPHIC-004
+    read:
+      - 20261110T222245Z-de38af02.yaml
+      - 20261116T070049Z-7ae3a863.yaml
+      - 20261116T074044Z-8e03e0ad.yaml
+      - 20261117T151447Z-4fdb6bb7.yaml
+      - 20261117T220612Z-0fadabcc.yaml
+      - 20261117T230944Z-ea5534a7.yaml
+      - 20261118T000833Z-07083705.yaml
+      - 20261118T064951Z-406480e4.yaml
+    revalidated:
+      at: 2026-11-18T08:13:11Z
+      outcome: unchanged
+      unchanged-because: Judged against RS-GRAPHIC-007 as this change's fifth round leaves it. Its sentences on which parts of an item keep a concept's colour on a page whose point is an order, and on a concept's own mark, are as they were, so this rule's pointer beside an order lands where it did. The round weighs the strongest difference apart from the page's head, gives it and emphasis to the action the page asks of its reader beside what the point is about, names the frame as RS-GRAPHIC-003 defines it, and has the drawn page ask three questions, a heading against its text breaking nothing. None of these reaches one meaning keeping one look, a library's component for its job or a new message's own picture, which this rule states.
+  - artefact: tech-docs/analysis/visual-communication/use-case-model/use-cases/010-make/UC-111-have-piece-designed-and-judged.md
+    read:
+      - 20261108T215357Z-e935f32b.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201011Z-bd16eac8.yaml
+      - 20261109T224304Z-2474df1d.yaml
+      - 20261110T081413Z-78f2c9ae.yaml
+      - 20261110T083005Z-903ccdf6.yaml
+      - 20261110T083630Z-0f4529cb.yaml
+      - 20261110T085212Z-6049ed09.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261110T222245Z-de38af02.yaml
+      - 20261110T222753Z-50414ce4.yaml
+      - 20261111T115332Z-fe0ee923.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T114539Z-71c4820a.yaml
+      - 20261112T123303Z-7c4eb2ad.yaml
+      - 20261112T134250Z-edf13200.yaml
+      - 20261112T142928Z-8490055d.yaml
+      - 20261112T151136Z-ae8a8f97.yaml
+      - 20261112T162755Z-424e83da.yaml
+      - 20261112T171951Z-999d724e.yaml
+      - 20261113T002311Z-54dd7085.yaml
+      - 20261113T010204Z-6fb0c5ac.yaml
+      - 20261113T102848Z-cc763c19.yaml
+      - 20261113T153853Z-24a570f8.yaml
+      - 20261114T172525Z-31dbc2d4.yaml
+      - 20261114T175542Z-73a265fa.yaml
+      - 20261115T005333Z-e3922acb.yaml
+      - 20261115T092325Z-cc926eb5.yaml
+      - 20261115T163329Z-1e236137.yaml
+      - 20261115T220904Z-de06f2c8.yaml
+      - 20261116T070049Z-7ae3a863.yaml
+      - 20261116T074044Z-8e03e0ad.yaml
+      - 20261116T220618Z-c3087ba2.yaml
+      - 20261117T021721Z-fbab4499.yaml
+      - 20261117T140215Z-7620bbb2.yaml
+      - 20261117T151447Z-4fdb6bb7.yaml
+      - 20261117T214937Z-a2976475.yaml
+      - 20261117T220612Z-0fadabcc.yaml
+      - 20261117T230233Z-11a7d1aa.yaml
+      - 20261117T234437Z-30f3f1b2.yaml
+      - 20261118T000833Z-07083705.yaml
+      - 20261118T064951Z-406480e4.yaml
+    revalidated:
+      at: 2026-11-18T08:13:26Z
+      outcome: unchanged
+      unchanged-because: Judged as the use case stands merged with main's two latest answers on it, which found it true once the reviewer judges the findings of the check of edges between groups and of two lists, reads a text's room, and has a calibration's report show each count a record's trigger to revisit asks for, and once the reviewer writes each value in words of its document as a block scalar. This change's fifth round has the reviewer state once, in its passage on evidence of the level, when a weakness holds a grade below professional, read each page's title and lead for the pages' order, name a page's head, its focal point and the action it asks before it traces the eye, and name for a finding on the frame or on a component's look a place DEC-030 point 7 gives; the designer ranks the head, the focal point and the action above the rest, and gives the hierarchy a reason for them. The use case says that the designer designs a piece by the rules of visual communication and writes its brief, that a reviewer reports each break of a rule as a finding that names the rule and the page, that it stops where the harness reads no image and says what it looked at, and that its findings advise. Each holds of the change as it stands, and the reviewer's body and the covered rules' text are among what variant 5b says the calibration measured, so its condition stands as written and no step moves.

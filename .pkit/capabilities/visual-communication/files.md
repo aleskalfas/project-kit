@@ -272,14 +272,14 @@ The configuration may hold a *bar*, under the key `bar`, and the *bounds* of the
 
 ```yaml
 bar:
-  covers: [COMM@1, GRAPHIC@2]
+  covers: [COMM@2, GRAPHIC@4]
   at-least: professional
 bounds:
   to-the-bar: 5
   polish: 2
 ```
 
-- **`covers`** lists the rules the bar holds each page and the piece to. An item is a rule set's id, such as `COMM@1`, or one rule's id, such as `RS-COMM-003@1`, each with the major of its set. A set of the project's own covers only its own rules, never those it inherits.
+- **`covers`** lists the rules the bar holds each page and the piece to. An item is a rule set's id, such as `COMM@2`, or one rule's id, such as `RS-COMM-003@2`, each with the major of its set. A set of the project's own covers only its own rules, never those it inherits.
 - **`at-least`** is the grade each page and the piece must reach on them: `professional` or `excellent`. A grade below `professional` is refused, since a loop that met such a bar would end on a rule finding the designer could still mend.
 - **One bar.** A project keeps one bar. The capability ships none.
 - **`to-the-bar`** is the most rounds the loop runs to the bar, and **`polish`** the most rounds of polish once it meets it. Absent, the schema's default holds: 5 rounds to the bar and 2 of polish. Whoever dispatches the designer may lower either for one run, and never raise it.

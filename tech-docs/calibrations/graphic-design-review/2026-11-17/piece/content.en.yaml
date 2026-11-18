@@ -1,0 +1,83 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+# A scratch piece: the ladder's deck (project-kit#3245), drawn with the libraries as a first
+# build. Never committed.
+slides:
+  - id: made-of
+    layout: slide
+    title: What the platform is made of
+    lead: "Four layers, each resting on the one below: a brand, the web pages built on it, a 3D table drawn inside those pages, and the games played on that table."
+    visual:
+      use: starter/layers
+      levels:
+        - {id: games, head: "The games: cards, boards and figures on the table"}
+        - {id: table, head: "The 3D table: drawn with three.js inside a page"}
+        - {id: web, head: "The web pages: the lobby and the screens, for desktop, tablet and phone"}
+        - {id: brand, head: "The brand: colours and type, handed to you as code"}
+      notes:
+        - id: cafe
+          text: "In a games café: the game, the table, the room and the house style."
+    footer: "Source: the case note, Purpose; deliverables 1.6, 2.1, 2.9, 5.12"
+
+  - id: kinds
+    layout: slide
+    title: Two kinds of piece on the table
+    lead: "Everything on the table is one of two kinds: a flat piece, which is a plane that wears its drawn face as a texture, or a figure, which is a 3D model."
+    visual:
+      use: starter/table
+      rows:
+        - id: heads
+          cells:
+            - {id: kind, head: Kind}
+            - {id: real, head: On a real table}
+            - {id: three, head: In three.js}
+            - {id: from, head: Comes from}
+        - id: flat
+          cells:
+            - {id: kind, head: Flat piece}
+            - {id: real, text: "cards, boards, tiles, tokens"}
+            - {id: three, text: a textured plane}
+            - {id: from, text: "its face, drawn in the design and handed over as an image"}
+        - id: figure
+          cells:
+            - {id: kind, head: Figure}
+            - {id: real, text: "figures, dice, the box"}
+            - {id: three, text: a 3D model (glTF)}
+            - {id: from, text: a 3D tool}
+    footer: "Source: the case note, Purpose; deliverables 5.3 and 5.9"
+
+  - id: reaches
+    layout: slide
+    title: How a game reaches the table
+    lead: "Design work reaches your scene in one direction, through three hand-overs. Nothing is built on a brand or a piece before it is handed over."
+    visual:
+      use: starter/list
+      items:
+        - {id: art, head: "1  Art direction", text: "Hand-over: accepted"}
+        - {id: brand, head: "2  The platform's brand", text: "Hand-over: released, and written as code"}
+        - {id: game, head: "3  Each game", text: "Hand-over: pieces published, faces as textures and figures as models"}
+        - {id: table, head: "4  The 3D table", text: "Your scene, built on the three"}
+    footer: "Source: the case note, the process overview (phases 3 to 6)"
+
+  - id: read
+    layout: slide
+    title: "Read the brand, never copy it"
+    lead: "One command writes every colour and type value as CSS and JSON. Your pages and your three.js materials read those files, so a change to the brand reaches them all."
+    visual:
+      use: starter/panels
+      panels:
+        - use: starter/code
+          text: [
+            {text: "$ ", style: prompt}, {text: "pkit visual write-code platform\n", style: command},
+            "wrote brand/platform.css    custom properties, for the web pages\n",
+            "wrote brand/platform.json   every value, for three.js"]
+      under:
+        use: starter/code
+        text: [
+          "import brand from \"./brand/platform.json\";\n",
+          "\n",
+          "const felt = new MeshStandardMaterial({\n",
+          "  color: brand.color.felt,\n",
+          "});"]
+    footer: "An example: the file names, the key and the output's wording are illustrative. Source: the case note, deliverables 1.6 and 5.1"

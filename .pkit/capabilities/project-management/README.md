@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
         - .pkit/capabilities/project-management/package.yaml
         - .pkit/capabilities/project-management/rule-sets/pm.md
-      record: [COR-008, COR-017, ADR-076, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, COR-070, ADR-004, ADR-016, ADR-019, "ADR-025#5", ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066, ADR-096, ADR-097]
+      record: [COR-008, COR-017, ADR-076, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, COR-070, ADR-004, ADR-016, ADR-019, "ADR-025#5", ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066, ADR-096, ADR-097, ADR-098]
       artefact:
         - .pkit/decisions/README.md#checking-a-changes-numbering
 ---
@@ -2290,7 +2290,7 @@ Git's `user.email` is read in every case. At a closed gate it counts only where 
 - **The gate.** Every caller checks membership with it.
 - **Whose work it is.** `create-issue`'s default assignee, `assign-issue --me`, the Task assignees `start-work` compares with it and the assignee it writes, the Tasks `next-task` offers, which leave out one assigned to another account, and the author `review-work` leaves out of the reviewers it asks for by role. Where GitHub answered that login as a user's account, it is an assignee with no lookup of its own (see "An assignee names a person" below).
 - **Claims and seats.** The account a clone's claims are made and released under, in `create-issue`, `edit-issue`, `move-issue`, `promote-issue`, `start-work`, `review-work`, `close-issue` and `done-work`; the seat `next-task` takes work for, and the seat a comment is posted from; the holder `take-seat` and `release-seat` act for; and the seat `seats` lists as this clone's.
-- **The engine's actor.** The actor `move-issue` and `close-issue` hand the lifecycle's gates.
+- **The engine's actor.** The actor `move-issue` and `close-issue` hand the lifecycle's gates. Where the identity is unresolved, they hand none, and the engine takes none by default ([pkit:ADR-098]). So the engine refuses a move through a cross-authority gate whose authorisation names its producer, such as the gate on the move to Done. The issue still moves, but the move is left out of the journal, with a warning. Where labels carry the state, `pkit pm history <N> --check-drift` reports the gap.
 - **Audit comments: none.** No audit comment names an authoriser beside the account that posts it, or carries an email, so none reads the identity ([project-management:DEC-078-one-actor-per-act] point 2). The account that posts a bypass's, an override's or a forced step's comment is its act's actor, and GitHub shows it beside the comment.
 - **The member list.** `add-member --me`, an entry's `added_by` and a bootstrap's first member, and `remove-member --me`.
 
