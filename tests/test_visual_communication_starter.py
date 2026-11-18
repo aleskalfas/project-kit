@@ -490,10 +490,10 @@ UNSIGNED = [
 ]
 
 
-#: The labels of the checks of boxes (DEC-046 point 3). They ask the reviewer for attention
-#: on places of the reference pieces, such as a text whose insets at the top and the bottom
-#: of its card's box differ by 1.6 px, and fail nothing.
-BOX_LABELS = ("near-alignment", "box-overlap")
+#: The labels of the checks of boxes (DEC-046 point 3, DEC-067). They ask the reviewer for
+#: attention on places of the reference pieces, such as a text whose insets at the top and
+#: the bottom of its card's box differ by 1.6 px, and fail nothing.
+BOX_LABELS = ("near-alignment", "near-alignment-between-groups", "box-overlap")
 
 #: The labels the tests of the reference pieces' checks read apart from the rest.
 APART = ("component-experimental", *SIGN_LABELS, *BOX_LABELS)
