@@ -22,6 +22,7 @@ from typing import Any
 
 import pytest
 
+from tests import pm_assignee_lookup
 from tests import pm_issue_branch_support as support
 from tests.adopter_repo import sign_nothing
 
@@ -43,6 +44,13 @@ VERBS = (
 PR_BRANCH = "fix/42-do-the-thing"
 #: Left behind by an earlier attempt. It sorts first, as the stale one did on #1367.
 STALE = "fix/42-a-stopped-attempt"
+
+
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login `start-work` assigns here as a user's
+    account (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
 
 
 @pytest.fixture(scope="module")
