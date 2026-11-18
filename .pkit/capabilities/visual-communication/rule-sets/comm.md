@@ -19,7 +19,7 @@ rules:
     origin: {decision: "visual-communication:DEC-068"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#6", "visual-communication:DEC-068#7"], artefact: ["visual-communication:RS-COMM-002"]}
+        anchors: {record: ["visual-communication:DEC-001#3", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-028#6", "visual-communication:DEC-068#7"], artefact: ["visual-communication:RS-COMM-001", "visual-communication:RS-COMM-002"]}
   RS-COMM-004:
     status: accepted
     origin: {decision: "visual-communication:DEC-028"}
@@ -36,7 +36,7 @@ rules:
 
 # COMM — what a piece says
 
-The rules on whether a piece of visual work says the right thing, each taken from the canon of its field ([visual-communication:DEC-028-principles-of-visual-communication]). The reasons for `RS-COMM-003`'s words are [visual-communication:DEC-068-focal-point-in-the-content]'s, its origin. Each rule judges only a piece that explains, as its piece file's `explains` field says (DEC-028 point 3). Each names what can be judged from the content's text, and what only the drawn page shows (DEC-028 point 4).
+The rules on whether a piece of visual work says the right thing, each taken from the canon of its field ([visual-communication:DEC-028-principles-of-visual-communication]). Each rule judges only a piece that explains, as its piece file's `explains` field says (DEC-028 point 3). Each names what can be judged from the content's text, and what only the drawn page shows (DEC-028 point 4).
 
 This set takes no scope. Its rules bind on an artefact only through a set of the project's own that inherits it, pinned to its major, as in `inherits: [visual-communication:COMM@2]` (COR-051 point 7). Where they bind, and how they guide while they bind nothing, is DEC-028 point 5.
 
@@ -58,11 +58,12 @@ On a piece whose `explains` field is true, the piece, and each part of it, says 
 
 ## RS-COMM-003 — The pages tell the story in order
 
-On a piece whose `explains` field is true and whose pages are read in order, as a deck's are, its leads, read one after another with the titles of the pages that open its sections, tell its story. Through each group of them, through the sections and through the pages within each section, runs one reasoned order: a deductive order, one of time, of structure or of rank, or a story's movement between what is and what could be. Each lead follows from the one before in that order. A lead that cannot be understood without what a later page shows, a lead whose place that order does not explain, or a section whose place that order does not explain, breaks it. A page with no lead, other than one that opens a section, is not judged by its place, as a cover, an agenda or a closing page is not. A page outside that order, such as an appendix or a backup slide, says so in its content, such as in its title.
+On a piece whose `explains` field is true and whose pages are read in order, as a deck's are, its pages' statements, read one after another, tell its story. A page's statement is its lead, or its title where it has no lead, as `RS-COMM-001` says what each is. Through each group of pages, the sections and the pages within each section, runs one reasoned order: a deductive order, one of time, of structure or of rank, or a story's, which opens on what is, moves back and forth between what is and what could be, and ends on what the audience is asked to do and what could be. Each statement follows from the one before in that order. A statement that cannot be understood without a later page, a statement whose place that order does not explain, or a section whose place it does not explain, breaks it. A page outside that order, such as an appendix or a backup slide, says so in its content, such as in its title.
 
 - **Which pieces.** A piece of one page, such as a single figure or a poster, is not judged by this rule. Nor is a piece whose reader picks the pages, such as a site.
-- **Its groups.** A piece with no sections has one group, its pages.
-- **What following asks.** A lead follows from the one before where the order that runs through its group places it next. A lead that names something an earlier one named does not follow from it by that alone. A lead that gives an answer before the pages that bear it out, as `RS-COMM-002` asks, can be understood without them, and breaks nothing.
+- **Its groups.** A piece with no sections has one group, its pages. The sections' order is read through the titles of the pages that open them.
+- **A page whose statement states no point,** such as a cover, an agenda or a closing page, is judged by where its kind stands: a cover first, an agenda before what it lists, and a closing page, such as one of questions or thanks, last of the pages in order.
+- **What following asks.** A statement follows from the one before where the order that runs through its group places it next. A statement that names something an earlier one named does not follow from it by that alone. A statement that gives an answer before the pages that bear it out, as `RS-COMM-002` asks, can be understood without them, and breaks nothing.
 - **From the text:** the whole rule.
 - **On the drawn page:** nothing.
 

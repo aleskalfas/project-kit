@@ -16,7 +16,7 @@ A form is the kind of picture a content takes, such as a list, a chain, a tree, 
 - Which of Engelhardt's spatial structures says that relation, and which of Lohse's kinds of form is built on it?
 - For each difference the content has, which variable carries it, and can that variable carry that kind of difference, by Bertin's account?
 - Read the picture for the facts it shows, as Mackinlay's expressiveness asks. Are they all the content's facts, and only those?
-- Which difference does the eye read best, and does it go to the fact that matters most, as his effectiveness asks?
+- Do the facts that matter most take the variables a reader judges most accurately, as his effectiveness asks?
 
 ## Works
 

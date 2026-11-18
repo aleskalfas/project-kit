@@ -20,7 +20,7 @@ What a piece says comes before how it looks. This topic covers finding a piece's
 - What is the piece's message in one sentence, and what is each page's?
 - Does the piece explain, or does it let the reader search? The piece's file says which, in its `explains` field.
 - Which idea of Minto's pyramid does each page carry, and which group does it belong to?
-- Read the ideas of one group in their order. Which reasoned order runs through them, one of Minto's four or a story's, such as Duarte's, and does each take its place in it?
+- Read the ideas of one group in their order. Which reasoned order runs through them, one of Minto's four or Duarte's shape of a story, and does each take its place in it?
 - Which parts would Mayer's coherence principle leave out?
 
 ## Works
