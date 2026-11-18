@@ -26,6 +26,7 @@ body: >
   unit, as the record says. It overturns DEC-059, DEC-061 and
   DEC-063 in part, refines DEC-058, DEC-059, DEC-063 and ADR-071 in place,
   and has a new architecture record, proposed in this change, overturn
-  ADR-073 in part. The configuration, the state issues, the commands, the
-  agent and the work loop are unchanged until the Task that builds them,
+  ADR-073 in part and refine ADR-066 and ADR-073 in place. The
+  configuration, the state issues, the commands, the agent and the work
+  loop are unchanged until the Task that builds them,
   which declares its own changeset, so no surface moves here.
