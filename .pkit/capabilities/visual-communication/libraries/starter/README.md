@@ -229,7 +229,7 @@ Each web part fits every size the brand gives: a desktop, a tablet, a phone and 
 - **Options:** `fill`: `plain`, the default, lies on the page's background; `tint` lies on its colour family's fill, its title in the family's text.
 - **Its logo** is the picture the brand gives `picture.logo`, no wider than `starter.logo`. Under a brand that gives none, the header draws no logo, and its title starts at the inset.
 - **On a desktop** the title stands on one line, so a long title belongs in a [`title`](#title) or a section, not the header.
-- **The site's title is no page's.** It says whose site each page belongs to, the same on every page, so a page's own title stands in a [`title`](#title), which sets it apart from the heads of the page's parts (visual-communication DEC-068 point 4).
+- **The site's title is no page's.** It says whose site each page belongs to, the same on every page, so a page's own title stands in a [`title`](#title), which sets it apart from the heads of the page's parts where the brand gives `type.title` a value (visual-communication DEC-068 point 4).
 
 ### `navigation`
 
@@ -245,7 +245,7 @@ Each web part fits every size the brand gives: a desktop, a tablet, a phone and 
 - **Source:** the GOV.UK Design System's headings, the largest of which names a page, with the lead paragraph under it, and the U.S. Web Design System's intro text, under a page's heading.
 - **Fields:** `title`, required, the page's name, in a few words, and `lead`, optional, what the page says, in a sentence.
 - **Options:** `fill`: `plain`, the default, or `tint`, as a header's.
-- **Where it stands:** at the top of a page's main part. On a page of sections it is the first of the `sections`, named by `use`, and a page whose main part is a form or a table lays the title and the form, or the table, down in a `sections`.
+- **Where it stands:** where the page's content places its title (visual-communication DEC-068 point 3). On a page of sections it is the first of the `sections`, named by `use`, and a page whose main part is a form or a table lays the title and the form, or the table, down in a `sections`.
 - **Apart from every other head.** Its title takes the starter's type of a page's title, `starter.type.title`, which no other component reads. Its default is the shared type of a page's title, `type.title`, so a brand that gives that type a size above its heading's and draws the starter at its defaults, as the neutral brand does (the capability's `files.md`, under *The neutral brand*), draws the page's head larger than any head of the page's parts, a section's, a form's, a table's or a card's, on every size it gives and in every mode. The rule on one focal point asks this of a page of sections: the page's head is drawn apart from each section's, never by its place alone (visual-communication DEC-068 point 3). A brand that gives `type.title` no value sets the title in its heading, as a section's head, so the page's head is drawn as its sections' are. That brand gives `type.title` a value to set it apart.
 
 ### `section`
