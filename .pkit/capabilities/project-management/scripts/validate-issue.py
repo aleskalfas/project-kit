@@ -33,7 +33,8 @@ card, the drift DEC-019 names (`board_membership.missing`); and a board that did
 not answer (`board_membership.unverified`), reported in the seam's words at
 DEC-019's drift severity and never as an issue off the board. That severity
 lets the issue through, so the check exits as it does. A project with no board
-makes no call.
+makes no call, and nor does a state issue, which takes no card (DEC-058 point
+3).
 
 Membership predicate per DEC-021 runs at startup; closed mode refuses
 non-members (the gate applies to all mutating + read commands in the
@@ -94,6 +95,7 @@ from _lib.placeholder_detection import (
     PHASE_TRANSITION,
     detect_placeholder_residuals,
 )
+from _lib.state_issues import is_state_issue
 from _lib.structural_type import infer_structural_type
 
 SEVERITY_HARD_REJECT = "hard-reject"
@@ -652,8 +654,17 @@ def _validate_issue(
     # it through `axis_carriage` would silently drop DEC-019's requirement for any
     # board adopter who wrote a single label binding — see the carriage accessor's
     # own "What this module does NOT decide".
+    #
+    # A state issue holds no work and takes no card, so its place on the board is
+    # no rule of its ([project-management:DEC-058-state-issues] point 3): the check
+    # leaves it out, reading nothing.
     has_board = bool(config.get("has_projects_v2_board", False))
-    if has_board and state_fields.get("board_membership") and membership is not None:
+    if (
+        has_board
+        and state_fields.get("board_membership")
+        and membership is not None
+        and not is_state_issue(body)
+    ):
         board_field = state_fields["board_membership"]
         sev = _severity_from_token(board_field.get("drift_severity"))
         card = membership(config, issue)
