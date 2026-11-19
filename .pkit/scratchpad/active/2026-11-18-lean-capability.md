@@ -385,6 +385,9 @@ No accepted record is modified. Its findings, adopted into the plan:
     - **An experiment that had not started yet shifts** by the days suspended, since nothing had happened in the world yet.
     - This replaces decision 12's "the end of each experiment running in it shift".
 14. **The three records accepted** (the person, 2026-11-19): the capability (DEC-001), its data model (DEC-002) and its process (DEC-003), as drafted with decisions 1 to 13 applied, after `critic`, `architect` and two rounds of `methodology-reviewer`. The person saw the processes as diagrams before accepting.
+15. **`process-author` writes the predicates** (the person, 2026-11-19). It is granted the three process definitions, their predicate scripts and the module that works out each subject's position, file by file once phase 2 stamps them, and not the capability's whole folder, which the agents README's rules for a write-carrying category refuse. The grant holds while project-kit leaves lean-business unregistered.
+16. **References join an id's parts with a double hyphen, and the backbone resolves them** (the person, 2026-11-19). COR-019's grammar admits no full stop, so `[cycle:board-game--first]` replaces `[cycle:board-game.first]`. The backbone learns that a file holding one subject adds its own id to its namespace's pool, through an in-place refinement of COR-029, so the capability marks its references as DEC-002 point 7 says. Preferred over COR-019's three-part form, which would rest on the backbone ignoring three-part tokens and would make an assumption's id unique across the idea's variants.
+17. **A late suspension never reopens a window past an act recorded after the window ended** (the person, 2026-11-19, after a worked example): the goal set, or the review. The command refuses it and the check reports it. Coming back after a silence still works, since nothing was recorded after the window ended.
 
 ### Next
 
