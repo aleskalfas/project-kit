@@ -342,7 +342,7 @@ A clone is a working copy of a [project](../../core/glossary.md#term-project--pr
 **Always true:**
 
 - In a project with a topology, a clone that holds no seat marks no [issue](../glossary.md#term-issue--issue), and is guarded by nothing (DEC-059 point 6).
-- Under a credential that names no user's account, such as a GitHub App's, a clone claims no issue, whatever its number. The clash guard still reads the owner for such a clone ([DEC-076 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-076-app-credentials.md#4-start-work-keeps-its-refusal-against-the-person-the-agent-works-for)). In a project with a topology, such a clone takes no seat that builds, and starts no [Task](../glossary.md#term-task--task) ([DEC-076 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-076-app-credentials.md#6-in-a-project-with-a-topology-a-clone-under-such-a-credential-builds-nothing)).
+- Under a credential that names no user's account, such as a GitHub App's, a clone claims no issue, whatever its number. The clash guard still reads the [owner](../glossary.md#term-owner--owner) for such a clone ([DEC-076 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-076-app-credentials.md#4-start-work-keeps-its-refusal-against-the-person-the-agent-works-for)). In a project with a topology, such a clone takes no seat that builds, and starts no [Task](../glossary.md#term-task--task) ([DEC-076 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-076-app-credentials.md#6-in-a-project-with-a-topology-a-clone-under-such-a-credential-builds-nothing)).
 
 ## Clone key
 
