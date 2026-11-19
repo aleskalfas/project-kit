@@ -47,6 +47,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 def pytest_configure(config: pytest.Config) -> None:
     slices.configure(config)
+    # A capability reads the acting account through the backbone's account commands
+    # (ADR-094 point 1), which each test answers in its own process.
+    in_process.answer_accounts_everywhere()
 
 
 @pytest.fixture(autouse=True)
@@ -149,8 +152,8 @@ def outside_any_clone(
     monkeypatch.setattr(Path, "is_file", outside_the_session)
 
 
-#: The variable that names the invoker where GitHub names no user's account
-#: (project-management DEC-021, "Identity resolution").
+#: The variable that names the person the agent works for, where GitHub names no
+#: user's account (project-management DEC-076 point 3).
 INVOKER_VARIABLE = "PM_INVOKER_LOGIN"
 
 
@@ -194,9 +197,9 @@ def no_account_gh(tmp_path_factory: pytest.TempPathFactory) -> Path | None:
 @pytest.fixture(autouse=True)
 def no_account_from_github(monkeypatch: pytest.MonkeyPatch, no_account_gh: Path | None) -> None:
     """Every test runs where GitHub names no account for the credential, whatever the
-    developer's `gh` is signed in as: project-management asks `gh api user` for the
-    account acting before it reads `PM_INVOKER_LOGIN`, and a user's account it answers
-    is the invoker (DEC-021, "Identity resolution"). The `gh` first on PATH answers
+    developer's `gh` is signed in as: project-management reads the account acting from
+    the backbone's reading, which asks `gh api user`, and `PM_INVOKER_LOGIN` names only
+    the person the agent works for (ADR-094, DEC-076). The `gh` first on PATH answers
     every read of an account with none, and hands every other call to the real `gh`.
     Where there is no real `gh`, none is put there, and the read finds no `gh`, which
     is no answer too. No test reads the variable of the session that runs the suite,
@@ -205,11 +208,22 @@ def no_account_from_github(monkeypatch: pytest.MonkeyPatch, no_account_gh: Path 
     if no_account_gh is not None:
         monkeypatch.setenv("PATH", f"{no_account_gh}{os.pathsep}{os.environ.get('PATH', '')}")
     monkeypatch.delenv(INVOKER_VARIABLE, raising=False)
+    forget_every_answer()
+
+
+def forget_every_answer() -> None:
+    """Every module's answers from GitHub forgotten, as a new process holds none, and
+    every capability's `_lib.backbone` loaded so far made to answer the backbone's
+    account commands in this process (`in_process.answer_accounts_of`): a capability
+    reads the acting account through `pkit account read` (ADR-094 point 1), and that
+    reading asks the `gh` first on PATH."""
     for module in [*list(sys.modules.values()), *in_process.loaded_libs()]:
         if isinstance(module, ModuleType):
             forget = vars(module).get("forget_service_answers")
             if callable(forget):
                 forget()
+            if module.__name__ == "_lib.backbone":
+                in_process.answer_accounts_of(module)
 
 
 @pytest.fixture
@@ -227,6 +241,7 @@ def service_answers(
         folder = tmp_path_factory.mktemp("service-answers")
         write_gh(folder, (login, account_type), shutil.which("gh"))
         monkeypatch.setenv("PATH", f"{folder}{os.pathsep}{os.environ.get('PATH', '')}")
+        forget_every_answer()
 
     return answer
 

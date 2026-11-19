@@ -682,7 +682,7 @@ def clone(tmp_path_factory: pytest.TempPathFactory) -> _Clone:
 
 
 @pytest.fixture
-def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
+def world(land, clone, tmp_path, monkeypatch, service_answers) -> Callable[..., _Run]:
     def build(
         *,
         mode: str = "agent",
@@ -695,7 +695,9 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
         work = tmp_path / "clone" / "work"
         _stage_project(work, mode=mode, remote=remote, local=local, start_after=start_after)
         monkeypatch.chdir(work)
-        monkeypatch.setenv("PM_INVOKER_LOGIN", "octocat")
+        # GitHub answers that the credential acts as `octocat`, a user's account, as the
+        # backbone's reading of the acting account asks it (ADR-094 point 1).
+        service_answers("octocat")
         monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
 
         github = _FakeGitHub(mq=land.merge_queue, head=clone.head, base=clone.base)

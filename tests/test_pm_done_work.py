@@ -15,8 +15,8 @@ from typing import Any, cast
 
 import pytest
 
+from tests import in_process, pull_request_backbone
 from tests import pm_issue_branch_support as issue_branch_support
-from tests import pull_request_backbone
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "done-work.py"
@@ -87,7 +87,12 @@ def _stub_pr_view(reviews, comments, author_login: str | None = "author", *, fai
             )
 
         if args[1:3] == ["pr", "view"]:
-            author = None if author_login is None else {"login": author_login}
+            # As gh writes a user's account: its login, its node id and no bot flag.
+            author = (
+                None
+                if author_login is None
+                else {"login": author_login, "id": "U_kgDOAAAAAQ", "is_bot": False}
+            )
             return done(json.dumps({"author": author}))
         path = next(a for a in args if a.startswith("repos/"))
         if "/reviews" in path:
@@ -470,6 +475,101 @@ def test_an_earlier_persons_approved_comment_still_counts_past_a_bots(dw, monkey
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is True
     assert result.passed_via == "`Approved` comment from @carol"
+
+
+def _registering(*entries: str) -> dict:
+    """A configuration that registers each of `entries` as a reviewer agent's account."""
+    return {"review": {"agents": {"remote_registered": [{"github_login": e} for e in entries]}}}
+
+
+def test_gate_counts_no_approval_from_an_account_registered_as_a_reviewer_agents(
+    dw, monkeypatch
+) -> None:
+    """Registering the account says its approval is an agent's (DEC-079 point 3)."""
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(
+            [{"state": "APPROVED", "login": "Agent-Account"}],
+            [{"author": {"login": "agent-account"}, "body": "Approved, looks fine"}],
+        ),
+    )
+    result = dw._check_approval_gate(99, {}, None, _registering("agent-account"))
+    assert result.passed is False
+    lines = result.refusal_message.splitlines()
+    assert (
+        "          → Left out, as no person's approval: an APPROVED review by @Agent-Account: "
+        "it is an account the project registers as a reviewer agent's "
+        "(review.agents.remote_registered)."
+    ) in lines
+    assert any("an `Approved` comment by @agent-account: it is an account" in x for x in lines)
+
+
+def test_a_registered_entry_with_no_spelling_stops_every_approval_and_is_named(
+    dw, monkeypatch
+) -> None:
+    monkeypatch.setattr(dw, "gh_run", _stub_pr_view([{"state": "APPROVED", "login": "carol"}], []))
+    result = dw._check_approval_gate(99, {}, None, _registering("@bot"))
+    assert result.passed is False
+    message = result.refusal_message
+    assert "→ The entry `@bot` of review.agents.remote_registered names no account" in message
+    assert "no approval counts as a person's until it is mended" in message
+
+
+def test_an_approval_from_the_author_in_other_letters_is_the_authors_own(dw, monkeypatch) -> None:
+    """The backbone's comparison sets the case of ASCII letters aside (ADR-094 point 3)."""
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view([], [{"author": {"login": "Author"}, "body": "Approved"}], "author"),
+    )
+    assert dw._check_approval_gate(99, {}, None, {}).passed is False
+
+
+def test_a_persons_approval_beside_a_registered_agent_passes(dw, monkeypatch) -> None:
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view([{"state": "APPROVED", "login": "carol"}], []),
+    )
+    result = dw._check_approval_gate(99, {}, None, _registering("agent-account[bot]"))
+    assert result.passed is True
+
+
+# ---- who human mode asks for a review (DEC-079 point 3, "Who is asked") ----
+
+
+def test_human_mode_asks_no_bot_no_reviewer_agent_and_not_the_author(dw) -> None:
+    asked, passed = dw.approvals.askable_reviewers(
+        ["alice", "robot[bot]", "app/helper", "Agent-Account", "Author", "carol"],
+        dw.approvals.accounts.gh_author({"login": "author", "id": "U_1", "is_bot": False}),
+        ["agent-account"],
+    )
+    assert asked == ["alice", "carol"]
+    assert passed == [
+        "@robot[bot]: the entry names a bot's account, which reviews as no person",
+        "@app/helper: the entry names a bot's account, which reviews as no person",
+        "@Agent-Account: the entry names an account registered as a reviewer agent's "
+        "(review.agents.remote_registered)",
+        "@Author: it is the PR's author",
+    ]
+
+
+def test_human_mode_asks_no_member_while_a_registered_entry_has_no_spelling(dw) -> None:
+    asked, passed = dw.approvals.askable_reviewers(
+        ["alice"], dw.approvals.accounts.entry("author"), ["@bot"]
+    )
+    assert asked == []
+    assert passed == [
+        "@alice: the entry `@bot` of review.agents.remote_registered names no account, so no "
+        "member can be told from a reviewer agent's until it is mended"
+    ]
+
+
+def test_human_mode_asks_no_member_where_the_author_is_not_known(dw) -> None:
+    asked, passed = dw.approvals.askable_reviewers(["alice"], None, [])
+    assert asked == []
+    assert passed == ["@alice: the PR's author is not known, so the member cannot be told from it"]
 
 
 @pytest.mark.parametrize("failing", ["reviews", "comments"])
@@ -3172,10 +3272,13 @@ sys.exit(0)
 # The process engine as a project without it sees it: its position read is
 # unavailable (move-issue then reads the position itself, from the same `gh`),
 # and it accepts every move it is handed.
-_FAKE_PKIT = """\
+_FAKE_PKIT = (
+    in_process.ACCOUNT_COMMANDS_SCRIPT
+    + """\
 import sys
 sys.exit(1 if sys.argv[1:3] == ["process", "status"] else 0)
 """
+)
 
 
 @dataclass(frozen=True)

@@ -496,25 +496,72 @@ def test_human_review_leaves_the_author_out_of_its_reviewers(run_main, capsys) -
     assert "cannot tell" not in err
 
 
-def test_human_review_says_why_it_leaves_no_author_out_where_pkit_cannot_tell(
+def _unresolved(rw) -> object:
+    """The identity where `gh api user` refuses: GitHub gave no answer for the
+    credential, so the reading names no acting account."""
+    forbidden = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+    return sys.modules["_lib.membership"].Identity(
+        github_login=None, email=None, unresolved_cause=forbidden, cause="refused"
+    )
+
+
+def _issue_42() -> FakeGitHub:
+    """The in-memory GitHub the clash guard reads #42 from, which no instance owns."""
+    github = FakeGitHub()
+    github.add(42)
+    return github
+
+
+def test_human_review_asks_no_member_where_the_prs_author_is_not_known(
     run_main, rw, capsys
 ) -> None:
-    """The account acting stands for the author; where `gh api user` refuses,
-    no member is left out, and a warning says so, and why (#3162)."""
-    forbidden = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
-    unresolved = sys.modules["_lib.membership"].Identity(
-        github_login=None, email=None, unresolved_cause=forbidden
-    )
-    rc, _gh_calls, _moves = run_main(
-        _task(["state:in-progress"]), config=_HUMAN_REVIEW, members=_PMS, invoker=unresolved
+    """A PR this run opened is the acting account's; where the reading named no
+    account and the PR cannot be found again, no member can be told from its
+    author, so none is asked, and each is named with why (DEC-079 point 3)."""
+    rc, gh_calls, _moves = run_main(
+        _task(["state:in-progress"]),
+        config=_HUMAN_REVIEW,
+        members=_PMS,
+        invoker=_unresolved(rw),
+        github=_issue_42(),
     )
     assert rc == 0
     out, err = capsys.readouterr()
-    assert (
-        f"  [warn] pkit cannot tell which account is acting, since {forbidden}, so the "
-        "author is not left out of the reviewers of role='PM'.\n"
-    ) in err
-    assert "  human-mode reviewers (role=PM): @me, @alice\n" in out
+    assert "human-mode reviewers" not in out
+    why = "the PR's author is not known, so the member cannot be told from it"
+    assert f"  [note] not asked for a review: @me: {why}.\n" in err
+    assert f"  [note] not asked for a review: @alice: {why}.\n" in err
+    assert [c for c in gh_calls if c[:3] == ["gh", "pr", "list"]] == [
+        [
+            "gh",
+            "pr",
+            "list",
+            "--head",
+            BRANCH,
+            "--state",
+            "all",
+            "--json",
+            "number,state,isDraft,headRefName,author",
+        ],
+    ] * 2
+
+
+def test_human_review_tells_members_from_the_author_github_records(run_main, rw, capsys) -> None:
+    """A PR found is told by the author GitHub records for it, whatever the
+    reading named: the author is left out, and the other member asked."""
+    pr = {**_open_pr(draft=True), "author": {"login": "me", "id": "U_1", "is_bot": False}}
+    rc, _gh_calls, _moves = run_main(
+        _task(["state:in-progress"]),
+        pr=pr,
+        config=_HUMAN_REVIEW,
+        members=_PMS,
+        invoker=_unresolved(rw),
+        github=_issue_42(),
+    )
+    assert rc == 0
+    out, err = capsys.readouterr()
+    assert "  human-mode reviewers (role=PM): @alice\n" in out
+    assert "  [note] not asked for a review: @me: it is the PR's author.\n" in err
 
 
 def test_rerun_in_review_leaves_a_ready_pr_alone(run_main) -> None:

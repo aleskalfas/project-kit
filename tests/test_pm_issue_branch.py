@@ -310,11 +310,9 @@ def _pass_gates(monkeypatch: pytest.MonkeyPatch, mod: ModuleType, verb: str) -> 
     monkeypatch.setattr(mod.session_guard, "enforce", lambda **k: True)
     monkeypatch.setattr(mod, "load_adopter_config", lambda _root: {})
     monkeypatch.setattr(mod, "_read_members", lambda *a: [])
-    monkeypatch.setattr(
-        mod,
-        "resolve_invoker_identity",
-        lambda **k: SimpleNamespace(github_login="me", unresolved_cause=None),
-    )
+    # GitHub answers that the credential acts as `me`, a user's account.
+    me = sys.modules["_lib.membership"].Identity(github_login="me", email=None, kind="user")
+    monkeypatch.setattr(mod, "resolve_invoker_identity", lambda **k: me)
     monkeypatch.setattr(
         mod, "check_membership", lambda *a: SimpleNamespace(allowed=True, refusal_message="")
     )

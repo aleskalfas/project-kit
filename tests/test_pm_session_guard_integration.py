@@ -86,7 +86,7 @@ def _minimal_capability_tree(anchor: Path) -> Path:
 def acts_as_ci_bot(service_answers) -> None:
     """GitHub answers that the credential acts as `ci-bot`, a user's account, so
     `create-issue` makes it the assignee with no lookup of its own (DEC-079
-    point 1)."""
+    point 1), and `add-member` may change the list (DEC-076 point 2)."""
     service_answers("ci-bot")
 
 
@@ -95,9 +95,6 @@ def _run_create_issue(
 ) -> subprocess.CompletedProcess:
     env = dict(os.environ)
     env["CLAUDE_PROJECT_DIR"] = str(anchor)
-    # Mark autonomy so the guard refuses (rather than waiting on a prompt) and
-    # the subprocess never blocks on stdin.
-    env["PM_INVOKER_LOGIN"] = "ci-bot"
     env.pop("PKIT_ALLOW_FOREIGN_REPO", None)
     return subprocess.run(
         [
@@ -118,6 +115,8 @@ def _run_create_issue(
         ],
         cwd=str(cwd),
         env=env,
+        # No terminal, so the guard refuses rather than prompt (autonomy).
+        stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         timeout=60,
@@ -188,7 +187,6 @@ def test_unset_anchor_does_not_falsely_block(tmp_path):
 
     env = dict(os.environ)
     env.pop("CLAUDE_PROJECT_DIR", None)  # the unset case.
-    env["PM_INVOKER_LOGIN"] = "ci-bot"
     env.pop("PKIT_ALLOW_FOREIGN_REPO", None)
     proc = subprocess.run(
         [
@@ -208,6 +206,8 @@ def test_unset_anchor_does_not_falsely_block(tmp_path):
         ],
         cwd=str(repo_b),
         env=env,
+        # No terminal, so the guard refuses rather than prompt (autonomy).
+        stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         timeout=60,
@@ -241,7 +241,6 @@ def _run_add_member(
         env["CLAUDE_PROJECT_DIR"] = str(anchor)
     else:
         env.pop("CLAUDE_PROJECT_DIR", None)
-    env["PM_INVOKER_LOGIN"] = "ci-bot"  # autonomy → refuse, never prompt.
     env.pop("PKIT_ALLOW_FOREIGN_REPO", None)
     return subprocess.run(
         [
@@ -256,6 +255,8 @@ def _run_add_member(
         ],
         cwd=str(cwd),
         env=env,
+        # No terminal, so the guard refuses rather than prompt (autonomy).
+        stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         timeout=60,
@@ -283,7 +284,7 @@ def test_cross_repo_local_file_mutator_refuses_before_writing(tmp_path):
     assert not members_file.exists(), "members.yaml was written despite a DIVERGED refusal"
 
 
-def test_same_repo_local_file_mutator_writes(tmp_path):
+def test_same_repo_local_file_mutator_writes(tmp_path, acts_as_ci_bot):
     """cwd inside the anchor → the guard is silent and add-member proceeds to
     write members.yaml (no friction on the ordinary in-tree path)."""
     repo_a = tmp_path / "A"
@@ -299,7 +300,7 @@ def test_same_repo_local_file_mutator_writes(tmp_path):
     assert "someone" in members_file.read_text()
 
 
-def test_cross_repo_local_file_mutator_override_writes(tmp_path):
+def test_cross_repo_local_file_mutator_override_writes(tmp_path, acts_as_ci_bot):
     """--allow-foreign-repo confirms the cross-repo write: add-member proceeds
     and writes members.yaml into the (foreign) cwd-resolved tree."""
     repo_a = tmp_path / "A"
@@ -347,7 +348,6 @@ def test_wrapper_diverged_refuses_without_threading_override_to_leaf(tmp_path):
 
     env = dict(os.environ)
     env["CLAUDE_PROJECT_DIR"] = str(repo_a)
-    env["PM_INVOKER_LOGIN"] = "ci-bot"
     env.pop("PKIT_ALLOW_FOREIGN_REPO", None)
     proc = subprocess.run(
         [
@@ -362,6 +362,8 @@ def test_wrapper_diverged_refuses_without_threading_override_to_leaf(tmp_path):
         ],
         cwd=str(repo_b),  # cwd is B; anchor is A → DIVERGED.
         env=env,
+        # No terminal, so the guard refuses rather than prompt (autonomy).
+        stdin=subprocess.DEVNULL,
         capture_output=True,
         text=True,
         timeout=60,

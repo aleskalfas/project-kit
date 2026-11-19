@@ -163,7 +163,11 @@ def _dispatcher(create_url: str, *, pkit_rc: int = 0, pkit_stderr: str = ""):
 
 
 def _run_main(ci, root: Path, monkeypatch, *, extra_argv: list[str]) -> int:
-    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    from _lib.membership import Identity
+
+    # GitHub answers that the credential acts as the filer, a user's account.
+    filer = Identity(github_login="filer-login", email=None, kind="user")
+    monkeypatch.setattr(ci, "resolve_invoker_identity", lambda **_k: filer)
     monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
     monkeypatch.setattr(
         ci.sys,

@@ -19,11 +19,12 @@ from tests import pm_assignee_lookup
 assignees = pm_assignee_lookup.assignees
 membership = pm_assignee_lookup.membership
 
-FROM_SERVICE = membership.Identity(
-    github_login="alice", email=None, login_source=membership.FROM_SERVICE
-)
+# The backbone's reading named the user's account alice (ADR-094).
+FROM_SERVICE = membership.Identity(github_login="alice", email=None, kind=membership.KIND_USER)
+# GitHub answered a bot's account, and `PM_INVOKER_LOGIN` names alice, the
+# person the agent works for (DEC-076 point 3).
 FROM_VARIABLE = membership.Identity(
-    github_login="alice", email=None, login_source=membership.FROM_VARIABLE
+    github_login="robot[bot]", email=None, kind=membership.KIND_BOT, works_for="alice"
 )
 
 
@@ -61,7 +62,8 @@ def test_the_account_github_answered_the_credential_acts_as_needs_no_lookup(monk
 
 
 def test_a_login_the_variable_names_is_looked_up(monkeypatch) -> None:
-    """`PM_INVOKER_LOGIN` is no answer of GitHub's, so its login is confirmed."""
+    """`PM_INVOKER_LOGIN` names the person the agent works for, which is no
+    answer of GitHub's about the credential, so its login is confirmed."""
     refused, asked = _refusal(monkeypatch, "alice", invoker=FROM_VARIABLE)
     assert refused is None
     assert asked == ["alice"]

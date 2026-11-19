@@ -86,11 +86,9 @@ def _stub_gates(
     monkeypatch.setattr(mod, "load_adopter_config", _no_config)
     _backbone_answers(monkeypatch, mod.infer.default_branch)
     monkeypatch.setattr(mod, "_read_members", lambda *a: [])
-    monkeypatch.setattr(
-        mod,
-        "resolve_invoker_identity",
-        lambda **k: SimpleNamespace(github_login="me", unresolved_cause=None),
-    )
+    # GitHub answers that the credential acts as `me`, a user's account.
+    me = sys.modules["_lib.membership"].Identity(github_login="me", email=None, kind="user")
+    monkeypatch.setattr(mod, "resolve_invoker_identity", lambda **k: me)
     monkeypatch.setattr(mod, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(mod, "_gh_get_issue", lambda _n, _config: issue)
 

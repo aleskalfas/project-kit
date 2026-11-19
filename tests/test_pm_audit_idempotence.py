@@ -508,14 +508,15 @@ PLANTINGS = {
 
 
 def _allow_member(module, monkeypatch) -> None:
+    from _lib.membership import Identity
+
     monkeypatch.setattr(module, "load_adopter_config", lambda root: {})
     monkeypatch.setattr(module, "_read_members", lambda root, loader: [])
     monkeypatch.setattr(
         module,
         "resolve_invoker_identity",
-        lambda config=None: SimpleNamespace(
-            github_login="octocat", email="o@e.com", unresolved_cause=None
-        ),
+        # GitHub answers that the credential acts as octocat, a user's account.
+        lambda config=None: Identity(github_login="octocat", email="o@e.com", kind="user"),
     )
     monkeypatch.setattr(
         module,
