@@ -23,6 +23,10 @@ roles:
   # not to the edge's: an arrowhead is as long as five widths of its line, so an edge's
   # width would draw it too small to read.
   starter.connector: {type: dimension, default: '{stroke.thick}'}
+  # How wide a thin connector's line is, as a leader from a note is drawn: an edge's
+  # width, so a note's leader reads lighter than the links between the items it explains.
+  # An arrowhead is five widths of its line long, so a leader this thin is drawn with none.
+  starter.leader: {type: dimension, default: '{stroke.thin}'}
   # The radius a connector's turns are drawn round at: a small spacing, so a line with
   # corners reads as one smooth path, which the eye follows more easily than one that
   # bends sharply (Colin Ware, good continuation). A brand that wants sharp turns gives it

@@ -8,7 +8,7 @@ key:
   form: 1
   hash: sha256
   format: 1
-  value: 26e0dd155c0fb5e6e06487df39c3048f4346aa59037f06b39e4662f9152e13c7
+  value: 8898240751bcf89ec33d5cb282b430207be8d1fd580dddfc53f4520ff5f65144
   inputs:
     - file: content.cs.yaml
       sha256: 151dbbc838ad85baf0f8703cafe19def90ec17fc6641c7f79ebdffe2cf01cdf9
@@ -103,7 +103,7 @@ key:
     - library: starter
       version: 1.1.0
       path: README.md
-      sha256: 617a18adeed285318d34448749d5b266b1fc8f2ec02726a2b1d048b039a2e47d
+      sha256: d4d3dd9f95f7af8a39867252c9e3c6c3fa4d5a28c4c15175a6bf3788184ad163
     - library: starter
       version: 1.1.0
       path: components/aside.yaml
@@ -127,7 +127,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/connector.yaml
-      sha256: abdc1b7f912a7eff607ea48d0d3d7b89010fd91db07ad2192068e677cb4c9a5d
+      sha256: 5e801c88c9d85e0c3bcc7658f69670052f5256acad259e0bbf6568bf1af1eb5f
     - library: starter
       version: 1.1.0
       path: components/field.yaml
@@ -151,7 +151,7 @@ key:
     - library: starter
       version: 1.1.0
       path: components/layers.yaml
-      sha256: 4c6fb8dbfce7148faaecbe18ba69609682d4cb73d6ca802dfbcd9f8036d3edc3
+      sha256: 0aaff4cff00034209d5c414409e251ac0cf2726959459cbc8ac634368765414b
     - library: starter
       version: 1.1.0
       path: components/legend.yaml
@@ -207,7 +207,7 @@ key:
     - library: starter
       version: 1.1.0
       path: roles.yaml
-      sha256: 6f583607c22621ff8a30c63813d92968e3afc4890aa49021f02929ac751a5623
+      sha256: 9b29298c1fb10586117f1bab90e2d5e761b5d6005310bef0237263bd4b6ff2c2
 findings:
   - code: component-experimental
     level: fact
@@ -219,6 +219,27 @@ findings:
     message: 'the piece uses `starter/network`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: figure/body
+  - code: near-alignment-between-groups
+    level: attention
+    message: "at `figure/body/left` and `figure/body/right`, parts of different groups nearly line up down, by more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px: `figure/body/left[living-docs]/sign` and `figure/body/right[slots]/groups[project-management]/items[doc-check]/box`, their tops 1.6 px apart; `figure/body/left[living-docs]/tag/box` and `figure/body/right[slots]/groups[project-management]/items[doc-check]/box`, their middles 2.4 px apart; `figure/body/left[living-docs]/tag/label` and `figure/body/right[slots]/groups[project-management]/items[doc-check]/box`, their middles 2.4 px apart"
+    file: piece.yaml
+    where: figure/body/left
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
+  - code: near-alignment-between-groups
+    level: attention
+    message: "at `figure/body/left` and `figure/body/right`, parts of different groups nearly line up down, by more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px: `figure/body/left[living-docs]/text` and `figure/body/right[slots]/groups[project-management]/items[doc-check]/box`, their bottoms 3.2 px apart; `figure/body/left[software-analysis]/box` and `figure/body/right[slots]/groups[project-management]/items[fixers]/tag/box`, their tops 3.2 px apart; `figure/body/left[software-analysis]/sign` and `figure/body/right[slots]/groups[project-management]/items[fixers]/box`, their middles 3.2 px apart; `figure/body/left[software-analysis]/head` and `figure/body/right[slots]/groups[project-management]/items[fixers]/box`, their middles 3.2 px apart"
+    file: piece.yaml
+    where: figure/body/left
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
+  - code: near-alignment-between-groups
+    level: attention
+    message: "at `figure/body/left` and `figure/body/right`, parts of different groups nearly line up down, by more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px: `figure/body/left[software-analysis]/tag/box` and `figure/body/right[slots]/groups[project-management]/items[fixers]/box`, their bottoms 3.2 px apart"
+    file: piece.yaml
+    where: figure/body/left
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
   - code: component-experimental
     level: fact
     message: 'the piece uses `starter/card`, which is experimental: its library may still change it in any release'
@@ -239,6 +260,13 @@ findings:
     message: 'the piece uses `starter/group`, which is experimental: its library may still change it in any release'
     file: piece.yaml
     where: figure/body/right[slots]/groups[project-management]
+  - code: near-alignment-between-groups
+    level: attention
+    message: "at `figure/body/right[slots]/groups[project-management]/items[doc-check]` and `figure/body/right[slots]/groups[project-management]/items[use-cases]`, parts of different groups nearly line up across, by more than a pixel of rounding and less than the brand's smallest step of space, `space.1`, 4 px: `figure/body/right[slots]/groups[project-management]/items[doc-check]/tag/box` and `figure/body/right[slots]/groups[project-management]/items[use-cases]/tag/label`, their centres 1.82 px apart; `figure/body/right[slots]/groups[project-management]/items[doc-check]/tag/label` and `figure/body/right[slots]/groups[project-management]/items[use-cases]/tag/box`, their centres 1.82 px apart"
+    file: piece.yaml
+    where: figure/body/right[slots]/groups[project-management]/items[doc-check]
+    fix: where it is a fault, put the parts on one line, or a step of space apart, where its fix belongs; where it is meant, leave it
+    who: the reviewer, `graphic-design-reviewer`, who judges on the image whether the place is a fault or is meant
   - code: component-experimental
     level: fact
     message: 'the piece uses `starter/connector`, which is experimental: its library may still change it in any release'
