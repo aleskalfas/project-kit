@@ -1,3 +1,28 @@
+---
+reader: user
+kind: reference
+pkit:
+  friction:
+    anchors:
+      path:
+        - .pkit/capabilities/lean-business/package.yaml
+        - .pkit/capabilities/lean-business/scripts/check.py
+        - .pkit/capabilities/lean-business/scripts/_lib/*.py
+        - .pkit/capabilities/lean-business/schemas/*.schema.json
+      record:
+        - lean-business:DEC-001#1
+        - lean-business:DEC-001#5
+        - lean-business:DEC-001#6
+        - lean-business:DEC-001#8
+        - lean-business:DEC-002#1
+        - lean-business:DEC-002#2
+        - lean-business:DEC-002#7
+        - lean-business:DEC-002#13
+        - lean-business:DEC-002#14
+      artefact:
+        - .pkit/cli/README.md#validate
+---
+
 # lean-business capability
 
 lean-business guides a person through the lean method of validating a business model, as Ash Maurya's *Running Lean* (third edition, 2022) teaches it. An idea is sketched as canvases, one for each variant of its business model. The person judges each variant at the desk, for desirability, viability and feasibility, and shortlists the ones worth testing. Then they test the riskiest assumptions in short experiments, declared before they run, inside time-boxed cycles that end in a decision to persevere, pivot or pause. The capability keeps the record of all this as data, works out what follows from it, and leaves every judgement to the person. Install it in any repository where you want to decide what is worth building before building it: a product's own repository, or one kept only for exploring ideas.

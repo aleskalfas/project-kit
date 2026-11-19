@@ -77,6 +77,7 @@ friction:
     - {path: .pkit/capabilities/demo-recording/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/doc-examples/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/evidence/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/lean-business/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/living-docs/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/living-docs/pages.md, type: living-docs:page}
     - {path: .pkit/capabilities/living-docs/spaces.md, type: living-docs:page}

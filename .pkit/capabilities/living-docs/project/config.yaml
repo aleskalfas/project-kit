@@ -34,6 +34,7 @@ places:
   .pkit/capabilities/demo-recording/README.md: user
   .pkit/capabilities/doc-examples/README.md: user
   .pkit/capabilities/evidence/README.md: user
+  .pkit/capabilities/lean-business/README.md: user
   .pkit/capabilities/living-docs/README.md: user
   .pkit/capabilities/living-docs/pages.md: user
   .pkit/capabilities/living-docs/spaces.md: user
