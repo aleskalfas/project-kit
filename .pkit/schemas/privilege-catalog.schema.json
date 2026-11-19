@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "privilege-catalog.schema.json",
   "title": "Privilege catalog",
-  "description": "Formal shape of privilege-catalog.yaml — the named privileges an agent may be permitted to do (per COR-028). Each entry declares a recognizer (structured matcher over Bash commands and/or harness tool names, with a regex escape hatch) and an optional scope dimension. Namespace owner: permission-grants references entries via the typed token `[privilege-catalog:<id>]` (COR-019). Companion per COR-018 / the .pkit/schemas/ area conventions. An installed capability MAY ship a fragment of this same shape at `.pkit/capabilities/<cap>/permissions/privilege-catalog.yaml`, which the loader merges into the central catalog (the merge rule — additive, collision-rejecting, capability-scoped — is ADR-021's). Authoring constraints on a fragment: write keys as bare kebab-case ids (the loader applies the `<cap>:` scope), and `guardrail` is forbidden in a fragment.",
+  "description": "Formal shape of privilege-catalog.yaml — the named privileges an agent may be permitted to do (per COR-028). Each entry declares a recognizer (structured matcher over Bash commands and/or harness tool names, with a regex escape hatch) and an optional scope dimension. Namespace owner: permission-grants references entries via the typed token `[privilege-catalog:<id>]` (COR-019). Companion per COR-018 / the .pkit/schemas/ area conventions. An installed capability MAY ship a fragment of this same shape at `.pkit/capabilities/<cap>/permissions/privilege-catalog.yaml`, which the loader merges into the central catalog (the merge rule — additive, collision-rejecting, capability-scoped — is ADR-021's). Authoring constraints on a fragment: write keys as bare kebab-case ids (the loader applies the `<cap>:` scope), and `guardrail` and `locks` are forbidden in a fragment.",
   "x-pkit-id-collection": "/privileges",
   "type": "object",
   "required": ["schema_version", "privileges"],
@@ -17,9 +17,47 @@
       },
       "additionalProperties": false,
       "description": "Privilege definitions. Keys are kebab-case ids; values match $defs.entry."
+    },
+    "locks": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/lock" }
+      },
+      "additionalProperties": false,
+      "description": "The locked commands (ADR-095 point 3, ADR-099 point 1): the commands that change what judges every later call. The decision core gives a lock's verdict with no model, in every mode, on a shell call it reads as one of them; the adapter renders each as native rules beside it. Only the backbone's catalog declares a lock: the loader rejects a capability fragment's, as it rejects a guardrail."
     }
   },
   "$defs": {
+    "lock": {
+      "type": "object",
+      "required": ["description", "verdict", "recognize"],
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string", "minLength": 1, "description": "What the locked command does, in words a reason can quote after `before`." },
+        "verdict": { "enum": ["ask", "deny"], "description": "`ask`: the interlock's ask, in every mode. `deny`: denied outright, a person's gesture no agent's call makes." },
+        "line": { "type": "string", "minLength": 1, "description": "For a deny, the command line the person runs from a terminal of their own, which the reason gives." },
+        "recognize": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/lock_matcher" }
+        }
+      }
+    },
+    "lock_matcher": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "One form of a locked command: `methodology`, the methodology command's leading words, read under `pkit` and through uv's runners; or `installer`, uv's group and subcommand, met where a word after the subcommand is one `word_any` names or a word of the call holds a package name `text_any` names (with neither, every call of the subcommand meets it).",
+      "oneOf": [
+        { "required": ["methodology"], "not": { "anyOf": [{ "required": ["installer"] }, { "required": ["word_any"] }, { "required": ["text_any"] }] } },
+        { "required": ["installer"] }
+      ],
+      "properties": {
+        "methodology": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" } },
+        "installer": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" } },
+        "word_any": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "text_any": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
     "privilege_ref": {
       "type": "string",
       "pattern": "^\\[privilege-catalog:[a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?\\]$",

@@ -1,0 +1,21 @@
+component: backbone
+kind: minor
+custom:
+  category: Security
+body: >
+  The decision core judges, with no model, the commands that change what
+  judges every later call (ADR-095 point 3, ADR-099 point 1). The privilege
+  catalog gains `locks`, which name them: realizing the model, activating a
+  profile, turning the hook on or off, the setup of autonomy, turning the
+  sandbox on or off or adding an exclusion or an allowance to it, the
+  backbone's upgrade, and the installer's commands that write a guarded
+  folder, such as `uv tool upgrade`, `uv self update`, `uv python install`
+  and installing the methodology's tool. On a shell call it reads as one of
+  them, `own_verdict()` gives the interlock's ask, and on one it reads as
+  `pkit permissions folders name`, a deny. It reads the methodology's command
+  under `pkit` and through `uvx` and `uv tool run`, and errs away from a
+  mention, so a commit message or a pull request's body that names such a
+  command meets nothing. A capability fragment's `locks` are rejected, as
+  its guardrails are. `pkit permissions enable` and `apply` also ensure the
+  native locks the adapter's baseline carries. Nothing changes a verdict of
+  `decide()`. The permissions README and the CLI reference say so.
