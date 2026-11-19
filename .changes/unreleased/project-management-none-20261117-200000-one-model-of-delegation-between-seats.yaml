@@ -15,13 +15,16 @@ body: >
   repository's topology. The project-manager agent holds the tools for
   messaging and for listing sessions, allowed by a privilege the capability
   defines and grants only to its own agent, which the permissions overview
-  reports as a widening and which binds once a person realizes the model.
+  reports as a widening and which binds only through a model a person
+  realized, or a working run's model read from the default branch.
   It overturns DEC-035, DEC-059 and DEC-068 in part,
   refines DEC-059, DEC-061, DEC-063 and DEC-068 in place, with ADR-071,
   and corrects a fact in DEC-029. It rests on ADR-101, an architecture
   record proposed in this change, under which a capability's grant may
-  allow a privilege the capability defines itself, only to an agent it
-  ships, and which overturns ADR-016 and ADR-021 in part. The agent's
+  allow a privilege the capability defines itself, recognising named
+  harness tools alone that no other privilege recognises, only to an agent
+  it ships, and which overturns ADR-016 and ADR-021 in part and refines
+  them in place. The agent's
   definition, the grants, the overview, the topology, the state issues and
-  the work loop are unchanged until the Task that builds them, which
-  declares its own changeset, so no surface moves here.
+  the work loop are unchanged until the Tasks that build them, which
+  declare their own changesets, so no surface moves here.
