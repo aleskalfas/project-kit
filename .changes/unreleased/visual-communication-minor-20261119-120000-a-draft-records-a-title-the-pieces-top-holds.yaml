@@ -1,0 +1,9 @@
+component: visual-communication
+kind: minor
+body: >
+  `pkit visual draft --from-top` gives and checks the digest of a page's lead or
+  title that the piece's top holds, such as the heading of a hero in a one-page
+  site's shared header, which is that page's title (DEC-068 point 4). The key
+  path `--at` then starts at the content's top, and the entry lies in the
+  page's part, as one of the page's own content does. A key path from the top
+  that leads into the pages is refused, since it names a page's own content.

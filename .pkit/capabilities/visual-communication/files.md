@@ -199,6 +199,7 @@ pkit:
         - visual-communication:DEC-042#6
         - visual-communication:DEC-042#7
         - visual-communication:DEC-042#9
+        - visual-communication:DEC-068#4
         - ADR-057#2
       artefact:
         - .pkit/cli/README.md#validate
@@ -661,6 +662,7 @@ cover:
 | `digest` | yes | `sha256:` and the hex of the SHA-256 of the text, normalised as below. |
 
 - **A digest, never the text.** An entry has no field for a text, and the schema refuses one. The page is the part the entry lies in.
+- **A page's lead or title that the piece's top holds** is recorded as one the page's own content gives: its entry lies in that page's part, by its kind and its language. Such a text lies in what the piece gives once for every page, such as the heading of a hero that a one-page site's shared header holds, which is that page's title (DEC-068 point 4).
 - **The text normalised.** The digest is taken over the text put in Unicode normalisation form C, then each run of white space, a line break among them, made one space, then the ends trimmed. So a text reflowed or re-indented keeps its digest, and a changed word, letter case or mark changes it.
 - **Written by whoever designs the piece,** as it drafts the text, and cleared once the asker has seen it. `pkit visual draft` gives the entry, its digest included, and writes nothing in the brief ([`pkit visual draft`](README.md#pkit-visual-draft-piece)). It finds a page where the piece's top declares its pages, the top read under the piece's lock or, before the piece's first render, under the versions that render would lock ([The lock](#the-lock)). So a draft is recorded as it is written. Where that render's search for a lock refuses, such as for a pinned draft with no lock, the command refuses too.
 - **What follows.** A lead, title or takeaway whose text no longer matches the digest recorded for its page, kind and language, or that the record lists nothing for, is the asker's. A piece with no brief has no record, so its leads, titles and takeaways are the asker's. `pkit visual draft --check` says which: the text *matches* the entry, *differs* from it, or has *no entry*, and only a match leaves it the designer's.
