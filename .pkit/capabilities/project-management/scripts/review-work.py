@@ -73,9 +73,10 @@ Side-effects:
   - Flips an existing draft PR to ready via `gh pr ready` if present.
   - Reviewer assignment (v1 ships with simple --reviewer override path;
     full DEC-027 mode resolution lands in Phase D).
-  - Under `--force`, one audit comment on the PR names who gave the override
-    and each refusal it passed, a change check it could not run at the head
-    among them (DEC-046 point 2). Its first lines are the audit template's
+  - Under `--force`, one audit comment on the PR records who gave the
+    override through the account that posts it, and names each refusal it
+    passed, a change check it could not run at the head among them (DEC-046
+    point 2, DEC-078 point 2). Its first lines are the audit template's
     (`_lib.audit.render_audit_comment`), and it goes through `post_audit_once`,
     so a retry of the same override at the same head posts no second one. It
     lands before the PR is made ready, reviewers are requested or the issue
@@ -281,8 +282,8 @@ def main() -> int:
             "findings (empty required section / checkbox / missing Doc impact / an "
             "updated document with no sentence on what changed in it) or a change "
             "check that cannot be run at its head. It starts no program of the head. "
-            "One audit comment on the PR names who gave the override and each refusal "
-            "it passed. "
+            "One audit comment on the PR names each refusal it passed; the account "
+            "that posts it shows who gave the override. "
             "Drafts stay exempt; you normally fill a draft first (create-draft → "
             "edit-pr → review-work) or use open-pr --body-file."
         ),
