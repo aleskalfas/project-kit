@@ -366,7 +366,7 @@
     }
   },
   "type": {
-    "$description": "The types at a desktop: a body of 16 px, a head that differs from it by size and weight, a strong run the body's size in the semibold, and code a step under the body, since a monospace face sets wider. Few sizes, each clearly apart (Robert Bringhurst, a scale).",
+    "$description": "The types at a desktop: a body of 16 px, a head that differs from it by size and weight, a strong run the body's size in the semibold, code a step under the body, since a monospace face sets wider, and a page's title at 36, the next step over the head. Few sizes, each clearly apart (Robert Bringhurst, a scale).",
     "$type": "typography",
     "body": {
       "$value": {
@@ -428,6 +428,22 @@
           "unit": "px"
         },
         "lineHeight": 1.5
+      }
+    },
+    "title": {
+      "$description": "A page's title, which names the whole page: the head's semibold, half again its size, so a page's head stands apart from the heads of its parts.",
+      "$value": {
+        "fontFamily": "{font.heading}",
+        "fontSize": {
+          "value": 36,
+          "unit": "px"
+        },
+        "fontWeight": 600,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.2
       }
     }
   },

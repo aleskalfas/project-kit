@@ -51,6 +51,8 @@ pkit:
         - visual-communication:DEC-038#1
         - visual-communication:DEC-038#3
         - visual-communication:DEC-038#6
+        - visual-communication:DEC-068#3
+        - visual-communication:DEC-068#4
       artefact:
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#content-files
@@ -205,17 +207,18 @@ The web parts draw the pages of a site (visual-communication DEC-022 point 4). E
 
 | Part | Its job on a page | Take another part when |
 |---|---|---|
-| `header` | Says whose site the page belongs to, and leads to its other pages | the links stand alone, with no title: `navigation` |
+| `header` | Says whose site the page belongs to, and leads to its other pages | the links stand alone, with no title: `navigation`; the words name the page, not the site: `title` |
 | `navigation` | Leads to the site's other pages | the links head every page, beside the site's title: `header` |
-| `section` | Says one thing, beside a picture where it has one | the facts fall into rows and columns: `table` |
+| `title` | Names the page, and states its point under its name | the words name one part of the page: `section` |
+| `section` | Says one thing, beside a picture where it has one | the facts fall into rows and columns: `table`; the words name the whole page: `title` |
 | `sections` | Lays sections down a page, in their order | the page says one thing: `section` |
 | `form` | Takes a reader's answer | the reader answers nothing: `section` or `table` |
 | `table` | Shows facts in rows and columns, on a page or, with no inset of its own, on a slide | each fact needs a sentence of its own: `section`; on a slide, the items share no columns of facts: `list` |
 
 Each web part fits every size the brand gives: a desktop, a tablet, a phone and a projector. Its widths come from the width it gets, never from a number of its own. Where a size leaves it too little room, it changes its shape at that size. A row whose items ask for more than it gets is reported at that size (visual-communication DEC-022 point 5).
 
-- **Their inset.** A part placed in a page's header, main part or footer is as wide as the page. `header`, `section`, `form` and `table` each set their own inset, so a tinted part's fill reaches the page's edge. A table whose `inset` is `none` sets none, as on a slide ([`table`](#table)). The inset is `starter.margin` on a desktop and a tablet, and `starter.inset` on a phone. `navigation` keeps the same inset at either side alone, since a header places it. `sections` sets none, since each section sets its own.
-- **The length of a line.** The text of a section, the head and the fields of a form, and a table's head run no longer than `size.line`, which the capability's `files.md` describes under *The foundations*.
+- **Their inset.** A part placed in a page's header, main part or footer is as wide as the page. `header`, `title`, `section`, `form` and `table` each set their own inset, so a tinted part's fill reaches the page's edge. A table whose `inset` is `none` sets none, as on a slide ([`table`](#table)). The inset is `starter.margin` on a desktop and a tablet, and `starter.inset` on a phone. `navigation` keeps the same inset at either side alone, since a header places it. `sections` sets none, since each section sets its own.
+- **The length of a line.** A page's title and its lead, the text of a section, the head and the fields of a form, and a table's head run no longer than `size.line`, which the capability's `files.md` describes under *The foundations*.
 - **At rest.** A part is drawn as a page stands before anyone uses it. A form is never sent and a link never followed, and no part shows a hover, a focus or a press (visual-communication DEC-022 point 6).
 
 ### `header`
@@ -225,7 +228,8 @@ Each web part fits every size the brand gives: a desktop, a tablet, a phone and 
 - **Fields:** `title`, required, the site's name. `links`, optional, the links of its navigation, each with the fields of the `link`.
 - **Options:** `fill`: `plain`, the default, lies on the page's background; `tint` lies on its colour family's fill, its title in the family's text.
 - **Its logo** is the picture the brand gives `picture.logo`, no wider than `starter.logo`. Under a brand that gives none, the header draws no logo, and its title starts at the inset.
-- **On a desktop** the title stands on one line, so a long title belongs in a section, not the header.
+- **On a desktop** the title stands on one line, so a long title belongs in a [`title`](#title) or a section, not the header.
+- **The site's title is no page's.** It says whose site each page belongs to, the same on every page, so a page's own title stands in a [`title`](#title), which sets it apart from the heads of the page's parts (visual-communication DEC-068 point 4).
 
 ### `navigation`
 
@@ -234,6 +238,15 @@ Each web part fits every size the brand gives: a desktop, a tablet, a phone and 
 - **Options:** `align`, its words `start`, the default, and `end`, where the links of a row stand. A column on a phone always starts at the start.
 - **Lists:** `links`, each drawn by the `link`, unless the component field `link` names another.
 - **Too many links.** Links that ask for more than the row's width are reported at that size. Fewer links, or shorter labels, mend it.
+
+### `title`
+
+- **Form:** the page's title, and the lead under it, on the page's background or on its family's fill. The lead stands a small space under the title, closer than a section's text stands under its head, so the two read as one head.
+- **Source:** the GOV.UK Design System's headings, the largest of which names a page, with the lead paragraph under it, and the U.S. Web Design System's intro text, under a page's heading.
+- **Fields:** `title`, required, the page's name, in a few words, and `lead`, optional, what the page says, in a sentence.
+- **Options:** `fill`: `plain`, the default, or `tint`, as a header's.
+- **Where it stands:** at the top of a page's main part. On a page of sections it is the first of the `sections`, named by `use`, and a page whose main part is a form or a table lays the title and the form, or the table, down in a `sections`.
+- **Apart from every other head.** Its title takes the starter's type of a page's title, `starter.type.title`, which no other component reads. Its default is the shared type of a page's title, `type.title`, so a brand that gives that type a size above its heading's and draws the starter at its defaults, as the neutral brand does (the capability's `files.md`, under *The neutral brand*), draws the page's head larger than any head of the page's parts, a section's, a form's, a table's or a card's, on every size it gives and in every mode. The rule on one focal point asks this of a page of sections: the page's head is drawn apart from each section's, never by its place alone (visual-communication DEC-068 point 3). A brand that gives `type.title` no value sets the title in its heading, as a section's head, so the page's head is drawn as its sections' are. That brand gives `type.title` a value to set it apart.
 
 ### `section`
 
@@ -316,7 +329,7 @@ A web block draws one item of a web part's list.
 
 Each component's file declares its own colour family, or none. An item that names a concept takes the concept's family instead, and an item whose place in its list takes a family or a step of an order takes that before its component's. A state may then change it (visual-communication DEC-010 point 6).
 
-- **`neutral`:** the blocks `card`, `level`, `tag`, `group`, `code`, `aside` and `connector`, the web parts `header` and `section`, and the web block [`field`](#field). A field in `error` takes `red`.
+- **`neutral`:** the blocks `card`, `level`, `tag`, `group`, `code`, `aside` and `connector`, the web parts `header`, `title` and `section`, and the web block [`field`](#field). A field in `error` takes `red`.
 - **`blue`:** the web block [`button`](#button). A `disabled` button takes `neutral`.
 - **None:** the patterns, the web parts `navigation`, `sections`, `form` and `table`, and the web blocks `link`, `row` and `cell`. None of them takes a colour from a family.
 
@@ -324,7 +337,7 @@ A text in a family's text lies on that family's fill, whose contrast the capabil
 
 A level, a group, a code block and an aside always lie on their family's fill, so their heads read the family's text. So do a level's and an aside's text and a code block's plain runs. A code block's prompts and comments take `text-secondary`, and its commands `accent`, whatever its family.
 
-A header and a section lie on the page's `background`, or on their family's fill where tinted. A link takes `accent`, and a field's note `text-secondary`. A button and a field's box lie on their family's fill, and their text reads the family's text.
+A header, a title and a section lie on the page's `background`, or on their family's fill where tinted. A link takes `accent`, and a field's note `text-secondary`. A button and a field's box lie on their family's fill, and their text reads the family's text.
 
 A connector's line takes its family's text, not its line. Nothing beside the line shows the tie, so it needs a contrast of 3 to 1 against what it lies on (WCAG 2.1, success criterion 1.4.11). A family's line edges a fill, and may be faint: the neutral family's is the shared `line`. A family's text is the member a brand makes legible, since the foundations pair it with the family's fill.
 
@@ -336,7 +349,7 @@ A connector's line takes its family's text, not its line. Nothing beside the lin
 - **What may fail on one.** A step may lie far in lightness from every family's fill, so a part that keeps its contrast on every family may fall below it on a step, measured as drawn (the capability's `components.md`, under *Values, states and colour*). The starter's owner audited each component that paints from its family on the steps, for the two kinds of part that may fail:
   - **A part painted with a shared role over the step.** A code block's prompts and comments, in `text-secondary`, and its commands, in `accent`, and a tinted header's links, in `accent`. Under the neutral brand (the capability's `files.md`, under *The neutral brand*) each falls below its contrast, so a code block or a tinted header drawn as a level fails there.
   - **A part painted with the order's text over a fill outside its family,** such as a card's text on the surface. None of the starter's components draws one on a step: a plain card's texts take shared roles, and the parts that paint their family's text off its fill, a sign and a field's edge, are drawn on a step only within the step's own fill, or, for a sign, only for a concept, which a step never names.
-- **The default passes.** The `level`, which draws the levels, and a `card` with `fill: tint`, a `tag`, a `group`, an `aside`, a `button`, a `field` and a `section` with `fill: tint` paint each text and sign that lies on the step itself in the order's text, which the neutral brand (the capability's `files.md`, under *The neutral brand*) keeps legible on every step. The check finds what falls below its contrast where it is drawn, as for any family (the capability's `checks.md`, `contrast-drawn`).
+- **The default passes.** The `level`, which draws the levels, and a `card` with `fill: tint`, a `tag`, a `group`, an `aside`, a `button`, a `field`, and a `title` and a `section` with `fill: tint` paint each text and sign that lies on the step itself in the order's text, which the neutral brand (the capability's `files.md`, under *The neutral brand*) keeps legible on every step. The check finds what falls below its contrast where it is drawn, as for any family (the capability's `checks.md`, `contrast-drawn`).
 
 ## Signs
 
@@ -349,13 +362,13 @@ A concept that a piece shows by its colour shows a sign beside it too, so colour
 | `group` with no head | alone in the head's row, and the items start under it |
 | `tag`, `button` | before the label |
 | `field` | in the box, before the text |
-| `header` | before the title |
+| `header`, `title` | before the title |
 | `section` | before the head |
 | `connector` | on the line, halfway along it |
 
-- **Its size** is the starter's own role `starter.sign`, the side of a square the sign fills whole. A web part's or a web block's sign is no wider than the room it gets: a header's than the room inside its insets, a section's than its text, a field's than the field, and a button's than its label.
+- **Its size** is the starter's own role `starter.sign`, the side of a square the sign fills whole. A web part's or a web block's sign is no wider than the room it gets: a header's than the room inside its insets, a title's than its words, a section's than its text, a field's than the field, and a button's than its label.
 - **Its paint** is its family's text, the member a brand makes legible, since a sign, as a connector's line, needs a contrast of 3 to 1 against what it lies on (visual-communication DEC-036 point 8). A state changes its paint, never its sign.
-- **The gap** between a sign and the text after it, in a tag, a button, a field, a header and a section, is the shared role `space.sign-gap`, the gap a run's sign keeps. Between a block's sign and what stands before it, the gap is `space.2`.
+- **The gap** between a sign and the text after it, in a tag, a button, a field, a header, a title and a section, is the shared role `space.sign-gap`, the gap a run's sign keeps. Between a block's sign and what stands before it, the gap is `space.2`.
 - **A run's sign.** A run of a card's or a level's text, or a plain run of a code block's text, that names a concept with a sign starts with that sign, in the run's paint (visual-communication DEC-036 point 3). A code block's prompts, commands and comments take shared roles, not a family, and draw no sign.
 - **A legend** says in words what each sign and colour stands for ([`legend`](#legend-what-does-each-colour-and-sign-stand-for)).
 
@@ -365,7 +378,7 @@ A component reads a shared role where the starter means just that role, such as 
 
 - **Colours** are always shared: `surface`, `line`, `text-primary`, `text-secondary`, `accent`, and each family's `fill`, `line` and `text`. The starter declares no colour role, and so no contrast pair.
 - **Shared sizes and types:** `type.body` sets a card's and a level's plain text, a tag's label and an aside's text. `space.1` and `space.2` lie around a tag's label. `space.2` lies between a block's head, tag, command and text, and before the sign at the end of its first row. It is also the least a card keeps between a top bar and what it holds. So a brand's thick bar lowers every card's head alike.
-- **For the web parts:** `type.strong` sets a button's and a field's label. They also read `size.line` and `picture.logo`, which [*The length of a line*](#the-web-parts-by-their-job-on-a-page) and [`header`](#header) describe.
+- **For the web parts:** `type.strong` sets a button's and a field's label. They also read `size.line` and `picture.logo`, which [*The length of a line*](#the-web-parts-by-their-job-on-a-page) and [`header`](#header) describe. A title's lead is in `type.body`, and its title reads `type.title` through the starter's own `starter.type.title`, as [`title`](#title) says. `type.title` defaults to `type.heading`, so a brand released before it owes it no value (the capability's `files.md`, under *The foundations*).
 - **Three more shared roles:** `stroke.thick`, `type.strong` and `type.code`, roles of the foundations (the capability's `files.md`, under *The foundations*). None has a default, so every brand gives each a value (visual-communication DEC-008 point 2).
 - **The starter's own roles,** each with a default whose chain ends at a shared role:
 
@@ -382,6 +395,7 @@ A component reads a shared role where the starter means just that role, such as 
 | `starter.connector` | how wide a connector's line is | `stroke.thick` |
 | `starter.turn` | the radius a connector's turns are drawn round at | `space.2` |
 | `starter.type.head` | the type of a block's head and a list's head | `type.heading` |
+| `starter.type.title` | the type of a page's title, as [`title`](#title) says | `type.title` |
 | `starter.type.strong` | the type of a strong run in a card's or a level's text | `type.strong` |
 | `starter.type.code` | the type of a code block's text | `type.code` |
 | `starter.sign` | the side of the square a component draws its concept's sign in, as [*Signs*](#signs) says | `space.3` |
