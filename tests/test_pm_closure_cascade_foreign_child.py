@@ -35,6 +35,7 @@ import shutil
 import stat
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -100,7 +101,10 @@ def rest(repo, number, record, ref):
     return out
 
 path = args[-1] if args[:1] == ["api"] else ""
-if args[:2] == ["issue", "view"]:
+if args[:2] == ["api", "user"]:
+    # GitHub answers that the credential acts as `operator`, a user's account.
+    print("operator\tUser")
+elif args[:2] == ["issue", "view"]:
     number = args[2]
     if number in unreadable or number in tracker["unviewable"] or number not in issues:
         fail("GraphQL: Could not resolve to an issue with the number of " + number + ".")
@@ -175,7 +179,10 @@ def _pkit_in_process(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def project(
-    request: pytest.FixtureRequest, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    request: pytest.FixtureRequest,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    service_answers: Callable[..., None],
 ) -> Path:
     """A bootstrapped adopter project with the shipped capability and a fake `gh`.
     In a test marked `process`, its scripts are copies run by this interpreter and the
@@ -207,6 +214,9 @@ def project(
     defs.mkdir(parents=True)
     shutil.copy(REPO_ROOT / ".pkit" / "schemas" / "_defs" / "process.schema.json", defs)
 
+    # GitHub answers that the credential acts as `operator`, a user's account: the
+    # backbone's reading asks the `gh` on PATH, and a process asks the fake below.
+    service_answers("operator")
     gh = f"ROOT = {str(root)!r}\n" + _FAKE_GH
     if as_processes:
         bin_dir = tmp_path / "bin"
@@ -217,7 +227,6 @@ def project(
         fake_gh_in_process(monkeypatch, gh)
         _pkit_in_process(monkeypatch)
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(root))
-    monkeypatch.setenv("PM_INVOKER_LOGIN", "operator")
     return root
 
 

@@ -22,6 +22,7 @@ from typing import Any
 
 import pytest
 
+from tests import pm_assignee_lookup
 from tests.pm_ownership_support import (
     FakeGitHub,
     clone_with,
@@ -46,6 +47,13 @@ def _load(name: str, script: str) -> ModuleType:
     sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login these tests assign as a user's account;
+    a test of the lookup gives its own answers (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
 
 
 @pytest.fixture(scope="module")
@@ -168,11 +176,7 @@ def run(nt, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setattr(nt.session_guard, "enforce", lambda **k: True)
         monkeypatch.setattr(nt, "load_adopter_config", lambda _r: dict(config or {}))
         monkeypatch.setattr(nt, "_read_members", lambda *a: [])
-        resolved = (
-            SimpleNamespace(github_login="me", unresolved_cause=None)
-            if invoker is None
-            else invoker
-        )
+        resolved = _identity(github_login="me", kind="user") if invoker is None else invoker
         monkeypatch.setattr(nt, "resolve_invoker_identity", lambda **k: resolved)
         monkeypatch.setattr(nt, "check_membership", lambda *a: SimpleNamespace(allowed=True))
         substrate_map = None if axes is None else nt.axis_labels.SubstrateMap(axes=axes)
@@ -280,24 +284,53 @@ def test_a_task_assigned_to_another_account_is_skipped(run) -> None:
     assert (rc, starts) == (0, [(11, False)])
 
 
-def test_where_pkit_cannot_tell_the_account_it_says_why_assigned_tasks_are_left_out(
-    run, nt, capsys
-) -> None:
-    """Under an account `gh api user` refuses, every assignee counts as another
-    account, as `start-work` counts it: a note says so, and why (#3162)."""
+# ---- whose Tasks these are (DEC-076 point 3) ----------------------------------------
+
+
+def _identity(**fields: Any) -> Any:
+    """The identity the commands resolved, with no email unless one is given."""
     from _lib.membership import Identity
 
-    forbidden = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+    return Identity(**{"email": None, **fields})
+
+
+#: Why GitHub gave no answer for the credential, as `gh api user` failed.
+FORBIDDEN = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+
+
+@pytest.mark.parametrize(
+    "invoker",
+    [
+        {"github_login": None, "unresolved_cause": FORBIDDEN, "cause": "refused"},
+        {"github_login": None, "cause": "integration-refused"},
+        {"github_login": "robot[bot]", "kind": "bot"},
+    ],
+    ids=["unresolved", "unnamed", "a-bot"],
+)
+def test_where_no_person_is_named_it_takes_nothing_and_says_how_to_name_one(
+    run, nt, capsys, invoker: dict
+) -> None:
+    """Under a credential that names no user's account, or one GitHub gave no
+    answer for, with `PM_INVOKER_LOGIN` not set, no person is named whose Tasks
+    these are, and start-work would refuse each, so nothing is taken."""
     pool = Pool()
-    pool.add(10, priority="High", assignees=("me",))
-    pool.add(11, priority="Low")
-    unresolved = Identity(github_login=None, email=None, unresolved_cause=forbidden)
-    rc, starts = run(pool, invoker=unresolved)
+    pool.add(10)
+    rc, starts = run(pool, invoker=_identity(**invoker))
+    assert (rc, starts) == (2, [])
+    err = capsys.readouterr().err
+    assert err.startswith("[refused] next-task: ")
+    assert "PM_INVOKER_LOGIN is not set, so no person is named" in err
+
+
+def test_under_an_apps_credential_it_takes_the_person_s_tasks_and_no_other_s(run, nt) -> None:
+    """The person the agent works for stands where the account would: a Task
+    assigned to them is theirs, another person's is left out."""
+    pool = Pool()
+    pool.add(10, priority="High", assignees=("you",))
+    pool.add(11, priority="Low", assignees=("me",))
+    app = _identity(github_login=None, cause="integration-refused", works_for="me")
+    rc, starts = run(pool, invoker=app)
     assert (rc, starts) == (0, [(11, False)])
-    assert (
-        f"[note] next-task: pkit cannot tell which account is acting, since {forbidden}, so "
-        "every Task with an assignee is left out."
-    ) in capsys.readouterr().err
 
 
 def test_where_the_account_is_told_no_note_is_given(run, capsys) -> None:
@@ -686,7 +719,7 @@ class StartWorkInProcess:
         self.pool = pool
         self.moved: list[int] = []
         self.branches: list[str] = []
-        invoker = SimpleNamespace(github_login="me", unresolved_cause=None)
+        invoker = _identity(github_login="me", kind="user")
         monkeypatch.setattr(sw, "resolve_capability_root", lambda _e: CAP_ROOT)
         monkeypatch.setattr(sw.bootstrap_gate, "enforce", lambda *a, **k: True)
         monkeypatch.setattr(sw.session_guard, "enforce", lambda **k: True)

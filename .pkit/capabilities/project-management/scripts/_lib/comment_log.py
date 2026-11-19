@@ -8,8 +8,12 @@ holds, so no fold reads the comments a listing returns.
 
 :func:`read_log` pages the issue's comments through GitHub's REST endpoint, a
 hundred to a call, to their end. Each comment comes back with its id, its
-author's login, the time GitHub records for its creation and its body, in the
-order of its id, which is the order GitHub lists them in. A read that cannot
+author's login and the type GitHub records for that account, the time GitHub
+records for its creation and its body, in the order of its id, which is the
+order GitHub lists them in. The REST endpoint gives an app's account by its
+login with the ``[bot]`` suffix, so the log keeps each author's kind (ADR-094
+point 3), which a guard that reads one author's kind takes from it
+(project-management DEC-079). A read that cannot
 reach the end says so, with its cause: a failed call, an answer that is no list,
 an entry with no id, or a log longer than the reader goes.
 
@@ -39,12 +43,15 @@ Gh = Callable[[list[str]], Any]
 @dataclass(frozen=True)
 class LogComment:
     """One comment of the log. ``author`` is None for an account GitHub no
-    longer has."""
+    longer has. ``author_type`` is the type GitHub's REST interface records
+    for the author's account, such as ``User`` or ``Bot``, and None where the
+    entry gives none."""
 
     id: int
     author: str | None
     created_at: str
     body: str
+    author_type: str | None = None
 
 
 @dataclass(frozen=True)
@@ -103,11 +110,13 @@ def _comment(entry: Any) -> LogComment | None:
         return None
     user = entry.get("user")
     login = user.get("login") if isinstance(user, dict) else None
+    kind = user.get("type") if isinstance(user, dict) else None
     return LogComment(
         id=cid,
         author=login if isinstance(login, str) and login else None,
         created_at=str(entry.get("created_at") or ""),
         body=str(entry.get("body") or ""),
+        author_type=kind if isinstance(kind, str) and kind else None,
     )
 
 

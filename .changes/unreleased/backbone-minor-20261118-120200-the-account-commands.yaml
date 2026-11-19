@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit account read`, `spell` and `compare` (ADR-094). `read` asks GitHub,
+  through `gh`, which account the credential acts as, and names a user's
+  account by its login and a bot's as `name[bot]` only from GitHub's answer;
+  where it names none, it gives the cause, such as the integration's refusal an
+  App installation's token gets, or no answer. `spell` puts the accounts a JSON
+  request names into that one spelling, each in the form of the surface it was
+  read from, and `compare` answers whether accounts are one, two or cannot be
+  told apart, a pair at a time or one against many; neither asks GitHub
+  anything. Each prints a versioned document with `--json`, for a capability's
+  script to read in place of asking GitHub a way of its own. The CLI
+  reference's "Account commands" states the documents, their sets and the
+  forms.

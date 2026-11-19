@@ -23,7 +23,7 @@
           "github_login": {
             "type": "string",
             "minLength": 1,
-            "description": "Canonical identity. Matches the value `gh api user --jq .login` returns for the member."
+            "description": "Canonical identity: the login of the account the backbone's reading (`pkit account read`) names for the member's credential. A user's account is written by its login, and an App's account as `<name>[bot]`, the only spelling the closed gate matches it by (DEC-076 point 2)."
           },
           "name": {
             "type": "string",
@@ -32,7 +32,7 @@
           "email": {
             "type": "string",
             "format": "email",
-            "description": "Identity surface for matching invocations where `gh` is unavailable; falls back to `git config user.email`."
+            "description": "The member's email, for people. No gate matches it, `git config user.email` among the values it is not matched with: the acting account is matched by `github_login` alone (DEC-076 point 1)."
           },
           "role": {
             "type": "string",

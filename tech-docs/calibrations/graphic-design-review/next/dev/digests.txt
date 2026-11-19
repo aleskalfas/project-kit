@@ -1,0 +1,48 @@
+# The values the hold is compared on, for the development set's dry run, read by `run/digests.py dev/reference.json` at f3ee6caf7, this branch with origin/main 03957c162 merged (visual-communication DEC-042 point 9, DEC-065 points 1 and 2).
+# The bar is the development set's, at COMM@2 and GRAPHIC@4. The model is the one the reference pins, by its name; no effort is given, since the dispatcher sets none.
+{
+ "bar": {
+  "covers": [
+   "RS-COMM-003@2",
+   "RS-GRAPHIC-001@4",
+   "RS-GRAPHIC-002@4",
+   "RS-GRAPHIC-003@4",
+   "RS-GRAPHIC-006@4",
+   "RS-GRAPHIC-007@4"
+  ],
+  "at-least": "professional"
+ },
+ "rules": {
+  "RS-COMM-003": {
+   "major": 2,
+   "text": "sha256:d04a168c305b139d50d96a8b31f6982486c03084e97e658d84a4ec6dca4da8cc"
+  },
+  "RS-GRAPHIC-001": {
+   "major": 4,
+   "text": "sha256:7f18d4bf184c3f36ef26b446c588dc9f9bc29046f82e1e67a3a5c9bf05f40ed3"
+  },
+  "RS-GRAPHIC-002": {
+   "major": 4,
+   "text": "sha256:cd92b624f0764fa8e23659fbf4b221caf90854f5b7c60d89480f2af8e2c361b1"
+  },
+  "RS-GRAPHIC-003": {
+   "major": 4,
+   "text": "sha256:f0dc7acbec3462905f952a1f45e6e39e1892c30a97fda7105b50a65b6ad1d896"
+  },
+  "RS-GRAPHIC-006": {
+   "major": 4,
+   "text": "sha256:0ba29d0dd8caf93453e7d7a1b38711f074ec9522bd6c0a1e2b64523ff1cd619c"
+  },
+  "RS-GRAPHIC-007": {
+   "major": 4,
+   "text": "sha256:ba69ae402e05a963600cab1c41b82fa9fb843b6ccb5d4a4955ce5f332d3e9df3"
+  }
+ },
+ "reviewer": "sha256:2471b68619cc8b0520a38d5626c2aafe24cef652e7955d37230f8ff0fde021e6",
+ "design-knowledge": "sha256:aece7ad327b91f84f69957dc608fde323bdc08f6a57dc2648833592fba143f5d",
+ "code": "sha256:97a26a5e912fb7825a80a33a25d37cd08965049cf8a41742e62377f334c5e290",
+ "checks": "sha256:81cd3a506ab6e6327ba0075f34f508c5867991c241b8aad22ddd05444ef05959",
+ "model": {
+  "name": "claude-fable-5-2"
+ }
+}

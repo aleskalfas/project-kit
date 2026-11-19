@@ -287,12 +287,15 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
+    approvals,
     axis_labels,
     bootstrap_gate,
+    comment_log,
     instance_claims,
     issue_branch,
     merge_queue,
     pr_merge,
+    pr_review,
     session_guard,
     sync_switch,
 )
@@ -338,7 +341,6 @@ from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
-    Identity,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -748,6 +750,7 @@ def run(
             config,
             dry_run=args.dry_run,
             login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         return _ended(
@@ -761,7 +764,6 @@ def run(
             verb="done-work",
             flag="--bypass-owner",
             bypass=args.bypass_owner,
-            invoker=invoker,
             dry_run=args.dry_run,
         )
         if owner_guard.refused:
@@ -1237,7 +1239,6 @@ def run(
                 pr_number,
                 audit,
                 override_reason,
-                invoker,
                 config,
                 capability_root=capability_root,
                 comments=pr_comments,
@@ -1256,7 +1257,6 @@ def run(
         if not _post_ci_bypass_audit(
             pr_number,
             args.bypass_ci.strip(),
-            invoker,
             ci_gate.failing_checks,
             config,
             head=pr_head,
@@ -1899,7 +1899,14 @@ def _check_approval_gate(
     pr_number: int | None, pr: dict, bypass_reason: str | None, config: dict
 ) -> _GateResult:
     """Human-mode three-way OR: APPROVED review OR `Approved`-prefix
-    non-author comment OR --bypass."""
+    non-author comment OR --bypass.
+
+    Only a person's approval counts (DEC-079 point 3): the reviews and the
+    comments are read with each author's kind (`_lib.approvals`), so no
+    approval counts from a bot's account or one of a kind unknown, nor as an
+    approving review that carries a reviewer agent's verdict marker. Such an
+    approval is left out of the order of reviews, and a request for changes
+    stays in it whoever made it."""
     if bypass_reason:
         if not bypass_reason.strip():
             return _GateResult(
@@ -1914,9 +1921,9 @@ def _check_approval_gate(
             refusal_message="error: cannot resolve PR number.",
         )
 
-    # Fetch the PR's reviews + comments + author.
+    # The PR's author, as gh writes it.
     proc = gh_run(
-        ["gh", "pr", "view", str(pr_number), "--json", "author,reviews,comments"],
+        ["gh", "pr", "view", str(pr_number), "--json", "author"],
         config,
         check=False,
     )
@@ -1934,31 +1941,52 @@ def _check_approval_gate(
         )
     author_login = pr_author(data)
 
-    # Path 1: latest APPROVED review (latest non-COMMENTED state).
-    reviews = data.get("reviews") or []
-    latest_states = [
-        r.get("state")
-        for r in reviews
-        if isinstance(r, dict) and r.get("state") in ("APPROVED", "CHANGES_REQUESTED", "DISMISSED")
-    ]
-    if latest_states and latest_states[-1] == "APPROVED":
+    def gh(argv: list[str]) -> subprocess.CompletedProcess[str]:
+        return gh_run(argv, config, check=False)
+
+    # The reviews and the comments, each author with its kind. Either read
+    # cut short could miss the request for changes or the approval that
+    # decides, so the gate refuses rather than judge a part.
+    reviews = approvals.read_reviews(pr_number, gh)
+    if not reviews.complete:
+        return _GateResult(
+            passed=False,
+            refusal_message=_approvals_unread(pr_number, "reviews", reviews.cause),
+        )
+    comments = comment_log.read_log(pr_number, gh)
+    if not comments.complete:
+        return _GateResult(
+            passed=False,
+            refusal_message=_approvals_unread(pr_number, "comments", comments.cause),
+        )
+
+    # Each approver compared with the PR's author and with each account the
+    # project registers as a reviewer agent's, in one call of the backbone's
+    # comparison (DEC-079 point 3, ADR-094 point 3).
+    standing = approvals.compare_approvers(
+        approvals.approvers_of(reviews.reviews, comments.comments),
+        data.get("author") if author_login else None,
+        pr_review.remote_baseline(config),
+    )
+
+    # Path 1: the latest review that approves, requests changes or was
+    # dismissed, an approval that counts as no person's left out.
+    deciding, reviews_left_out = approvals.deciding_review(reviews.reviews, author_login, standing)
+    if deciding is not None and deciding.state == approvals.APPROVED:
         return _GateResult(passed=True, passed_via="APPROVED review")
 
-    # Path 2: last non-author comment starts with `Approved` (case-sensitive).
-    # With the PR's author unread, no commenter is known to be a non-author,
-    # so no such comment counts (#1485); GitHub keeps the author from
-    # approving a review itself, so path 1 stands without the read.
-    comments = (data.get("comments") or []) if author_login else []
-    for c in reversed(comments):
-        if not isinstance(c, dict):
-            continue
-        author = (c.get("author") or {}).get("login") or ""
-        body = (c.get("body") or "").strip()
-        if author and author != author_login and body.startswith("Approved"):
-            return _GateResult(
-                passed=True,
-                passed_via=f"`Approved` comment from @{author}",
-            )
+    # Path 2: the last `Approved`-prefix comment (case-sensitive) that counts
+    # as a person's. With the PR's author unread, no commenter is known to be
+    # a non-author, so no such comment counts (#1485); GitHub keeps the author
+    # from approving a review itself, so path 1 stands without the read.
+    approving, comments_left_out = approvals.approving_comment(
+        comments.comments, author_login, standing
+    )
+    if approving is not None:
+        return _GateResult(
+            passed=True,
+            passed_via=f"`Approved` comment from @{approving.author}",
+        )
 
     # Refused.
     if author_login:
@@ -1975,19 +2003,62 @@ def _check_approval_gate(
         comment_remedy = (
             "            - Run `done-work` again once `gh pr view` returns the PR's author.\n"
         )
+    left_out = _unspelled_lines(standing)
+    left_out += _left_out_lines("an APPROVED review", reviews_left_out)
+    if author_login:
+        # With the author unread, the line above already says why no comment
+        # counts.
+        left_out += _left_out_lines("an `Approved` comment", comments_left_out)
     return _GateResult(
         passed=False,
         refusal_message=(
             f"[refused] approval gate not satisfied for PR #{pr_number}.\n"
             "          → No APPROVED review present (latest state: "
-            f"{latest_states[-1] if latest_states else 'none'}).\n"
+            f"{deciding.state if deciding is not None else 'none'}).\n"
             f"{comment_line}"
+            f"{left_out}"
             "          → No --bypass supplied.\n"
             "          Remediations:\n"
             "            - Request a review and have it approved.\n"
             f"{comment_remedy}"
             '            - Re-run with `--bypass "<reason>"`.'
         ),
+    )
+
+
+def _unspelled_lines(standing: approvals.Standing) -> str:
+    """One refusal line for each entry of the registered reviewer agents with no
+    spelling, which stops every approval until a person mends it (DEC-079
+    point 3)."""
+    return "".join(
+        f"          → The entry `{entry}` of {approvals.REGISTERED_KEY} names no account "
+        f"({why}), so no approval counts as a person's until it is mended.\n"
+        for entry, why in standing.unspelled
+    )
+
+
+def _left_out_lines(what: str, left_out: tuple[approvals.Approval, ...]) -> str:
+    """One refusal line for each approval left out as no person's (DEC-079
+    point 3), named by its author where one is read."""
+    lines = ""
+    for approval in left_out:
+        by = f"@{approval.author}" if approval.author else "a deleted account"
+        lines += (
+            f"          → Left out, as no person's approval: {what} by {by}: {approval.left_out}.\n"
+        )
+    return lines
+
+
+def _approvals_unread(pr_number: int, what: str, cause: str | None) -> str:
+    """The refusal where the PR's reviews or comments could not be read whole."""
+    return (
+        f"[refused] approval gate not satisfied for PR #{pr_number}.\n"
+        f"          → The PR's {what} could not be read whole: {cause or 'no cause given'}.\n"
+        "          → The gate does not judge a part of them, since the part left "
+        "unread could hold the request for changes or the approval that decides.\n"
+        "          Remediations:\n"
+        "            - Run `done-work` again once GitHub answers.\n"
+        '            - Re-run with `--bypass "<reason>"`.'
     )
 
 
@@ -3317,7 +3388,6 @@ def _ci_unreadable_refusal(pr_number: int | None, problem: str) -> str:
 
 
 def _ci_bypass_audit_body(
-    invoker: Identity,
     reason: str,
     failing_checks: tuple[str, ...],
     key: str,
@@ -3327,7 +3397,6 @@ def _ci_bypass_audit_body(
     (`_lib.audit.render_ci_bypass_audit_body`) under this script's kind marker."""
     return render_ci_bypass_audit_body(
         CI_BYPASS_AUDIT_MARKER,
-        invoker,
         reason,
         failing_checks,
         head,
@@ -3338,7 +3407,6 @@ def _ci_bypass_audit_body(
 def _post_ci_bypass_audit(
     pr_number: int | None,
     reason: str,
-    invoker: Identity,
     failing_checks: tuple[str, ...],
     config: dict,
     *,
@@ -3350,7 +3418,7 @@ def _post_ci_bypass_audit(
         "pr",
         pr_number,
         key,
-        _ci_bypass_audit_body(invoker, reason, failing_checks, key, head),
+        _ci_bypass_audit_body(reason, failing_checks, key, head),
         config,
         run=gh_run,
         present_note="ci-bypass audit comment already present; idempotent skip",
@@ -3401,7 +3469,6 @@ def _override_scope_sentence(audit: _OverrideAudit) -> str:
 def _reviewer_override_audit_body(
     audit: _OverrideAudit,
     reason: str,
-    invoker: Identity,
     capability_root: Path | None = None,
 ) -> str:
     """Render one per-reviewer-override audit comment (DEC-050 Decision 4).
@@ -3412,8 +3479,9 @@ def _reviewer_override_audit_body(
     this writer does not fork the format. The per-reviewer detail DEC-050
     requires (which reviewer, its provenance, its state at override time, the
     block link, and what the override did to the rest of the gate) is additive
-    prose BELOW that line: the template carries actor + reason and has no fields
-    for the rest. The DEC-050 idempotency key closes the comment.
+    prose BELOW that line: the template carries the reason and has no fields
+    for the rest. It names nobody beside the account that posts it (DEC-078
+    point 2). The DEC-050 idempotency key closes the comment.
 
     PROSE and verdict-grammar-distinct by construction: the first line is the
     `<!-- pkit-audit -->` marker (an HTML comment), no line matches the DEC-028
@@ -3426,7 +3494,7 @@ def _reviewer_override_audit_body(
     )
     reason = reason.strip()
     lines = [
-        render_audit_comment(capability_root, invoker, reason),
+        render_audit_comment(capability_root, reason),
         "",
         f"Overridden reviewer `{audit.reviewer}` ({provenance}).",
         f"Reviewer state at override time: {audit.state}.",
@@ -3443,7 +3511,6 @@ def _post_reviewer_override_audit(
     pr_number: int | None,
     audit: _OverrideAudit,
     reason: str,
-    invoker: Identity,
     config: dict,
     *,
     capability_root: Path | None = None,
@@ -3471,7 +3538,7 @@ def _post_reviewer_override_audit(
         "pr",
         pr_number,
         _reviewer_override_key(audit.reviewer, reason, audit.head),
-        _reviewer_override_audit_body(audit, reason, invoker, capability_root),
+        _reviewer_override_audit_body(audit, reason, capability_root),
         config,
         run=gh_run,
         comments=comments,
