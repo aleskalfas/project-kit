@@ -28,7 +28,14 @@ Closes a GitHub issue via a path declared in workflow.yaml's
     umbrella) once every child is closed AND its own checkboxes are ticked
     (the DEC-007 gate is non-skippable here). Implements the
     `cascade-eligibility-close` trigger this script previously only reported.
-    Closes via `gh issue close --reason completed`.
+    Closes via `gh issue close --reason completed`. It starts only at In
+    Progress, as DEC-006's table starts that close: a container in Todo or
+    Backlog is refused, naming the moves of its own that bring it level, one at
+    Review or at Done while open is refused as a state set outside the
+    lifecycle, and, where the board holds the state, one whose card places it
+    nowhere is refused, nothing guessed (DEC-051 point 6). Where the project
+    keeps no position for the state, under a `derive` binding or a state the
+    map leaves out, nothing is checked (#3248).
   * `--mode=completed --result <where>` — closes a Task whose work was not a
     pull request, such as an audit, an investigation or a decision walked with
     the user, as completed (DEC-006, the `manual-completed` trigger; #2282).
@@ -150,7 +157,8 @@ Exit codes:
      `--pr` names a PR that is not merged or does not relate to the issue /
      pr-merge mode without `--pr` on an open issue / completed mode on a Task
      in Review, or on one whose card's Status places it nowhere where the
-     board carries the state
+     board carries the state / cascade-eligibility mode on a container that
+     is not at In Progress, or whose card's Status places it nowhere
   2  usage error (issue or PR not found; mode contradicts state; `--pr` outside
      pr-merge mode or on a non-leaf; `--result` outside completed mode, or
      missing in it; completed mode on anything but a Task)
@@ -173,6 +181,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import audit as _audit
 from _lib import (
+    axis_carriage,
     axis_labels,
     bootstrap_gate,
     composed_move,
@@ -229,6 +238,9 @@ DONE_STATE = "done"
 # The state a Task with a pull request open is in: a completed close refuses it,
 # since such a Task closes through its pull request's merge (DEC-006).
 REVIEW_STATE = "review"
+
+# The state DEC-006's table starts a container's cascade-eligibility close at.
+IN_PROGRESS_STATE = "in-progress"
 
 # The writer name in the idempotency key of the `--pr` close comment, so a
 # retry after a failed close does not post the reference twice (`_lib.audit`).
@@ -627,6 +639,19 @@ def main() -> int:
         if state == "closed":
             print("\n[noop] issue already closed.")
             return 0
+
+        # DEC-006's table starts this close at In Progress, so a container that
+        # stands anywhere else, or whose card places it nowhere, is refused
+        # before anything is written (#3248).
+        rc = _refuse_container_start(
+            args.issue_number,
+            close_move,
+            config=config,
+            substrate_map=substrate_map,
+            workflow=workflow,
+        )
+        if rc is not None:
+            return rc
 
         # Eligibility half 1 — own checkboxes ticked (DEC-007, NOT skippable here).
         unticked = _unticked_boxes(body)
@@ -1117,6 +1142,92 @@ def _bring_ancestors_level(args: argparse.Namespace) -> None:
             "level what is still behind.",
             file=sys.stderr,
         )
+
+
+# ---- where a container's close starts (#3248) ------------------------
+
+
+def _refuse_container_start(
+    issue_number: int,
+    close_move: _CloseMove,
+    *,
+    config: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+    workflow: dict,
+) -> int | None:
+    """Refuse a container's cascade-eligibility close from anywhere but In
+    Progress, where DEC-006's table starts it: the exit code to stop with, or
+    None where the close goes on. Reads nothing: ``close_move`` holds where the
+    container stood, read before anything is written.
+
+    - **Behind, in Todo or Backlog.** The closure cascade makes a container
+      eligible to close wherever it stands, and only a move of its own brings
+      it level before it is closed, under that move's gates
+      ([project-management:DEC-075-cascade-unread-ancestor]): the refusal names
+      that move, and the won't-do close for work that was dropped.
+    - **At Review, or at Done while open.** A container never enters Review, and
+      reaches Done only through its close (DEC-006), so its state was set
+      outside the lifecycle, and is set right by hand.
+    - **Placed nowhere,** where the board holds the state: nothing is guessed
+      (DEC-051 point 6), as a completed close refuses such a Task.
+
+    Where the project keeps no position for the state, under a `derive`
+    binding or a state the map leaves out or marks unsupported, open is the
+    only position the container has, so nothing is checked."""
+    if axis_carriage.carriage("state", config, substrate_map) not in _POSITION_KEPT:
+        return None
+    unplaced = close_move.unplaced()
+    if unplaced is not None:
+        print(
+            "\n"
+            + issue_position.unplaced_refusal(
+                "close-issue", issue_number, unplaced, untouched="the container is still open"
+            ),
+            file=sys.stderr,
+        )
+        return 3 if unplaced.outcome == "unreadable" else 1
+    start = close_move.from_state
+    if start is None or start == IN_PROGRESS_STATE:
+        return None
+    name = infer.state_display_name(workflow, start)
+    opening = (
+        f"\n[refused] close-issue #{issue_number}: the container stands in {name}, and "
+        "DEC-006's table starts a container's close at In Progress."
+    )
+    if start in _BEHIND:
+        level = f"a move of its own, then close it: move-issue {issue_number} --to in-progress"
+        if start == "todo":
+            level = (
+                f"moves of its own, then close it: promote-issue {issue_number}, the "
+                f"scheduling the person authorises, then move-issue {issue_number} --to "
+                "in-progress"
+            )
+        lines = [
+            f"{opening} It stands behind the work under it. Nothing was changed (the "
+            "container is still open).",
+            f"          → Bring it level by {level}.",
+            "          → If its work was dropped, close it as won't do: "
+            f'close-issue {issue_number} --reason "<R>".',
+        ]
+    else:
+        lines = [
+            f"{opening} A container never enters Review, and reaches Done only through "
+            "its close (DEC-006), so its state was set outside the lifecycle. Nothing was "
+            "changed (the container is still open).",
+            "          → Set its state to In Progress by hand, on its label or, where the "
+            "board holds the state, its card's Status, then close it.",
+        ]
+    print("\n".join(lines), file=sys.stderr)
+    return 1
+
+
+#: Where the state is carried so that an open issue has a position in the
+#: lifecycle: the kit's own labels, the project's own labels, or the board.
+_POSITION_KEPT = ("kit-label", "adopter-label", "board")
+
+#: The states that stand behind In Progress, from which a container is brought
+#: level by a move of its own.
+_BEHIND = ("todo", "backlog")
 
 
 # ---- recording the close (#1231) ------------------------------------

@@ -48,6 +48,12 @@ with a message of its own. Each refusal exits 2, before anything is written or
 asked and before any board is read, `--dry-run` included. One naming the
 configured board's own number goes on.
 
+Where the configuration declares a board and gives no number of 1 or more for
+the board, read as a number, such as a missing number, `null`, `0` or `""`, the
+filing has no board to add the issue to, so it is refused at the same point,
+exit 2, `--dry-run` included, naming `projects_v2_board_id` as the key to set
+(DEC-019).
+
 An issue owes its card from its filing, so before anything is written,
 `--dry-run` included, a filing in a project with a board reads the configured
 board ([pkit:ADR-096] point 4, "Before it"): the board's own read, with its
@@ -378,6 +384,15 @@ def main() -> int:
     )
     if board_refusal is not None:
         print(board_refusal, file=sys.stderr)
+        return 2
+
+    # A board declared with no number it can be read by, `0` and `""` among them,
+    # leaves the filing no board to add the issue to, which DEC-019 rejects: so it
+    # is refused at the same point, `--dry-run` too, rather than filed onto no
+    # board. A `--board` in that case met its own refusal above.
+    number_refusal = _board_number_refusal(config, board_configured=has_board)
+    if number_refusal is not None:
+        print(number_refusal, file=sys.stderr)
         return 2
 
     # Foreign-repo mutation guard (COR-039 / ADR-034). Compares the cwd-derived
@@ -869,10 +884,11 @@ def main() -> int:
     # The board the issue is added to, read before anything is written, so a
     # board that did not answer refuses the filing rather than leave an issue
     # with no card ([pkit:ADR-096] point 4, "Before it"). A project with no
-    # board makes no call (ADR-053 point 3).
+    # board makes no call (ADR-053 point 3); one with a board has its number,
+    # since a board with none was refused above.
     workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader)
     board_first: BoardFirst | None = None
-    if has_board and board_fields.board_number(config) is not None:
+    if has_board:
         board_first = _read_board_first(
             config,
             substrate_map,
@@ -1166,7 +1182,7 @@ def _board_option_refusal(
         return (
             f"error: --board {board} is refused: {reason}\n"
             "  project/config.yaml declares a board (`has_projects_v2_board: true`) but "
-            "gives no number for it (`projects_v2_board_id`), so the filing has no board "
+            f"{_no_board_number(config)}, so the filing has no board "
             "to file onto. That is the fault to mend: set the number there; `pkit pm "
             "pre-check` checks it."
         )
@@ -1201,14 +1217,46 @@ def _card_added_after(board: int) -> str:
 
 def _configured_board_number(config: dict[str, Any]) -> int | None:
     """The configured board's number, read as a number, so `7` and `'7'` are one
-    board; None where the configuration gives none, or one that is no number."""
+    board; None where the configuration gives none, or a value that is no board's
+    number, such as `0` or `""`, since a board's number is 1 or more."""
     number = board_fields.board_number(config)
     if number is None:
         return None
     try:
-        return int(number)
+        value = int(number)
     except ValueError:
         return None
+    return value if value >= 1 else None
+
+
+def _no_board_number(config: dict[str, Any]) -> str:
+    """What project/config.yaml gives for the number of the board it declares,
+    where that is no board's number, as the refusals say it."""
+    value = config.get("projects_v2_board_id")
+    if value is None:
+        return "gives no number for it (`projects_v2_board_id`)"
+    return (
+        f"gives it `projects_v2_board_id: {json.dumps(value, default=str)}`, which is "
+        "no board's number"
+    )
+
+
+def _board_number_refusal(config: dict[str, Any], *, board_configured: bool) -> str | None:
+    """Why a filing is refused where the configuration declares a board and gives
+    no number of 1 or more for the board, read as a number, or None where it gives one,
+    or declares no board. Every issue belongs on the configured board from its
+    filing ([project-management:DEC-019-mandatory-issue-state]), so a filing with
+    no board to add the issue to files nothing. No I/O."""
+    if not board_configured or _configured_board_number(config) is not None:
+        return None
+    return (
+        "error: project/config.yaml declares a board (`has_projects_v2_board: true`) but "
+        f"{_no_board_number(config)}, so the filing has no board to add the issue to, and "
+        "every issue belongs on the configured board from its filing "
+        "([project-management:DEC-019-mandatory-issue-state]). Nothing was filed.\n"
+        "  → Set `projects_v2_board_id: <N>` in project/config.yaml, where <N> is the "
+        "board's number from `gh project list`."
+    )
 
 
 def _link_from_report(report_n: int, new_issue_number: int | None) -> int:
