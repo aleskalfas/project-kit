@@ -2173,6 +2173,33 @@ def test_label_only_adopter_makes_no_membership_call(
     assert "board_membership.missing" not in labels
 
 
+def test_a_state_issue_with_no_card_is_left_out_of_the_membership_check(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    """A state issue holds no work and takes no card, so the check reports no
+    card missing on one, and reads none ([project-management:DEC-058-state-issues]
+    point 3)."""
+
+    def no_call(config, issue):
+        raise AssertionError("a state issue's card is not read")
+
+    issue = _membership_issue()
+    issue["body"] = "<!-- pkit:state-issue v=1 kind=seat key=builder-1 -->\n\nThe seat's holder."
+    labels = _labels(
+        vi._validate_issue(
+            issue=issue,
+            issue_types=issue_types,
+            titles=titles,
+            body_format=body_format,
+            config=board_config,
+            mandatory_state=_MANDATORY_STATE_BOARD,
+            membership=no_call,
+        )
+    )
+    assert "board_membership.missing" not in labels
+    assert "board_membership.unverified" not in labels
+
+
 def test_the_issues_read_asks_no_list_of_its_cards(vi, monkeypatch) -> None:
     """The issue's own list of cards names no board, so the membership check
     never reads it ([pkit:ADR-096] point 5): the issue's read asks its node id

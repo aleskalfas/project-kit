@@ -37,9 +37,9 @@ from _lib import bootstrap_gate
 from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
-    FROM_SERVICE,
-    FROM_VARIABLE,
     INVOKER_VARIABLE,
+    KIND_BOT,
+    KIND_USER,
     MEMBERS_RELATIVE,
     Identity,
     check_membership,
@@ -96,6 +96,9 @@ def main() -> int:
         print(f"  github_login: {invoker.github_login}{_whence(invoker)}")
     else:
         print(f"  github_login: none: {format_unresolved(invoker.unresolved_cause)}")
+    if not invoker.names_user:
+        works_for = invoker.works_for or f"none: {INVOKER_VARIABLE} is not set"
+        print(f"  works for:    {works_for} (the person the agent works for, DEC-076 point 3)")
     if invoker.email:
         print(f"  email:        {invoker.email}")
     print(f"allowed:      {'yes' if result.allowed else 'no'}")
@@ -126,16 +129,12 @@ def main() -> int:
 
 
 def _whence(invoker: Identity) -> str:
-    """Where the invoker's login came from, in brackets: GitHub's answer for
-    the credential, or `PM_INVOKER_LOGIN` and why GitHub named no user's
-    account (DEC-021)."""
-    source = getattr(invoker, "login_source", None)
-    if source == FROM_SERVICE:
-        return " (GitHub's answer for the credential)"
-    if source == FROM_VARIABLE:
-        cause = getattr(invoker, "service_cause", None)
-        since = f", since {cause}" if cause else ""
-        return f" (from {INVOKER_VARIABLE}{since})"
+    """What kind of account GitHub answered the credential acts as, in brackets
+    (DEC-076 point 1): a user's account, or a bot's."""
+    if invoker.kind == KIND_USER:
+        return " (GitHub's answer for the credential: a user's account)"
+    if invoker.kind == KIND_BOT:
+        return " (GitHub's answer for the credential: a bot's account)"
     return ""
 
 

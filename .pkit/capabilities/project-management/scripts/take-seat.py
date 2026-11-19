@@ -44,6 +44,15 @@ it to, and the command says which commit it read (point 1).
   line names an undeclared pool (DEC-061 point 10). Where the milestones cannot
   be read, it says so and still takes the seat (ADR-072 point 6).
 
+- **Under a credential that names no user's account** (DEC-076 point 6), such
+  as an App installation's token, the clone takes no seat that builds, a
+  worker's or a lead's, since none of its claims on a Task would count. It
+  takes a planner's seat, the organizer seat among them where it is a
+  planner's, only where the members the default branch holds close the gate
+  and its own account is a member, which it reads before it claims. Where the
+  gate is open, or where GitHub gives no answer for the credential, it takes
+  no seat.
+
 Who may write on a seat's state issue comes from the members the default branch
 holds (ADR-071 point 3). The membership gate (DEC-021), the bootstrap gate and
 the foreign-repo guard run first. Taking a seat is the agent's own step, with
@@ -55,7 +64,9 @@ Usage:
 Exit codes:
   0  this clone holds the seat, taken now or taken up, or a dry run printed its plan
   1  refused: membership, no topology, the default branch, no free seat that
-     matches, a seat another clone holds or took first
+     matches, a seat another clone holds or took first, a seat that builds or
+     an open gate under a credential that names no user's account (DEC-076
+     point 6)
   2  usage error: the capability is not found or not bootstrapped, or no agent
      definition was given / this code cannot read the topology in full
   3  GitHub failed
@@ -156,6 +167,7 @@ def main() -> int:
         login_cause=invoker.unresolved_cause,
         gh=state_issues.runner(config),
         dry_run=args.dry_run,
+        names_user=invoker.names_user,
     )
 
 
@@ -188,13 +200,17 @@ def take_seat(
     run: Callable[..., Any] = subprocess.run,
     git: topology.Git | None = None,
     versions: Any = None,
+    names_user: bool = True,
 ) -> int:
     """Take the seat ``name``, or the first free one of ``role``, for this clone.
 
     ``login`` is the account acting, and ``login_cause`` why it could not be
     resolved, where it could not (#3162). ``gh`` runs each call of the
     state-issue seam, ``run`` the backbone's reading of the default branch, and
-    ``git`` the reads at its commit. Returns the exit code."""
+    ``git`` the reads at its commit. ``names_user`` is whether GitHub answered
+    that the credential acts as a user's account: where it did not, only a
+    planner's seat is taken, behind a closed gate whose members name the
+    clone's own account (DEC-076 point 6). Returns the exit code."""
     if not login:
         return _refuse(f"{format_unresolved(login_cause)}, so no seat is taken.")
     key = instance_identity.read_clone_key(capability_root)
@@ -227,6 +243,11 @@ def take_seat(
         refusal = _named_refusal(name, named, role, agent)
         if refusal is not None:
             return _refuse(refusal)
+    if not names_user:
+        refusal = _no_user_refusal(snap, login, named, role)
+        if refusal is not None:
+            return _refuse(refusal)
+        role = topology.PLANNER
 
     held, code = _held_seats(snap, capability_root, dry_run=dry_run)
     if code is not None:
@@ -321,6 +342,40 @@ def _named_refusal(
         return (
             f"the seat {name} names the agent definition {seat.agent}, and this session "
             f"follows {agent} (DEC-059 point 4)."
+        )
+    return None
+
+
+def _no_user_refusal(
+    snap: topology.Snapshot, login: str, named: topology.Seat | None, role: str | None
+) -> str | None:
+    """Why a clone under a credential that names no user's account takes no
+    seat here, or None where it may take a planner's (DEC-076 point 6).
+
+    Its claim on the seat's state issue counts, for every reader alike, only as
+    a member's, so the gate the default branch's members close is read before
+    it claims, by the test the state-issue seam reads its claim by."""
+    builds = named.role if named is not None else role
+    if builds in topology.BUILDERS:
+        return (
+            f"GitHub answers that the credential acts as {login}, a bot's account, and a "
+            f"clone under a credential that names no user's account takes no {builds}'s seat, "
+            "since none of its claims on a Task would count (DEC-076 point 6)."
+        )
+    if snap.run.writers.gate_open:
+        return (
+            f"GitHub answers that the credential acts as {login}, a bot's account, and the "
+            "members the default branch holds leave the membership gate open, so this clone "
+            "takes no seat: a planner's seat is taken under such a credential only behind a "
+            "closed gate whose members name its own account (DEC-076 point 6)."
+        )
+    member, cause = snap.run.may_write(login)
+    if member is not True:
+        why = f": {cause}" if cause else ""
+        return (
+            f"GitHub answers that the credential acts as {login}, a bot's account, and no "
+            f"member the default branch holds names it{why}, so this clone takes no seat "
+            "(DEC-076 point 6)."
         )
     return None
 

@@ -1,0 +1,1579 @@
+{
+ "control": {
+  "method": "counting",
+  "clauses": [
+   {
+    "condition": 1,
+    "place": "1",
+    "text": "first draft below last failed",
+    "kind": "below",
+    "designs": [
+     "XGX",
+     "VNH"
+    ],
+    "agreement": [
+     {
+      "design": "XGX",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "contested"
+     },
+     {
+      "design": "VNH",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "contested"
+     }
+    ],
+    "judges": {
+     "judge-1": "does not hold",
+     "judge-2": "holds"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 1,
+    "place": "1",
+    "text": "last failed below first passed",
+    "kind": "below",
+    "designs": [
+     "VNH",
+     "GPM"
+    ],
+    "agreement": [
+     {
+      "design": "VNH",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "contested"
+     },
+     {
+      "design": "GPM",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "does not hold",
+     "judge-2": "does not hold"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 1,
+    "place": "1",
+    "text": "first passed about equal to last polished",
+    "kind": "equal",
+    "designs": [
+     "GPM",
+     "LTV"
+    ],
+    "agreement": [
+     {
+      "design": "GPM",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     },
+     {
+      "design": "LTV",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "fail"
+      },
+      "status": "contested"
+     }
+    ],
+    "judges": {
+     "judge-1": "holds",
+     "judge-2": "does not hold"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 2,
+    "place": "1",
+    "text": "last failed fails and first passed passes",
+    "kind": "line",
+    "designs": [
+     "VNH",
+     "GPM"
+    ],
+    "agreement": [
+     {
+      "design": "VNH",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "contested"
+     },
+     {
+      "design": "GPM",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "does not hold",
+     "judge-2": "does not hold"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 1,
+    "place": "2",
+    "text": "last failed below first passed",
+    "kind": "below",
+    "designs": [
+     "LMZ",
+     "BRS"
+    ],
+    "agreement": [
+     {
+      "design": "LMZ",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "fail",
+       "judge-2": "fail"
+      },
+      "status": "entered"
+     },
+     {
+      "design": "BRS",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "holds",
+     "judge-2": "holds"
+    },
+    "status": "entered"
+   },
+   {
+    "condition": 1,
+    "place": "2",
+    "text": "first passed about equal to last polished",
+    "kind": "equal",
+    "designs": [
+     "BRS",
+     "ZKD"
+    ],
+    "agreement": [
+     {
+      "design": "BRS",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     },
+     {
+      "design": "ZKD",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "holds",
+     "judge-2": "holds"
+    },
+    "status": "entered"
+   },
+   {
+    "condition": 2,
+    "place": "2",
+    "text": "last failed fails and first passed passes",
+    "kind": "line",
+    "designs": [
+     "LMZ",
+     "BRS"
+    ],
+    "agreement": [
+     {
+      "design": "LMZ",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "fail",
+       "judge-2": "fail"
+      },
+      "status": "entered"
+     },
+     {
+      "design": "BRS",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "holds",
+     "judge-2": "holds"
+    },
+    "status": "entered"
+   },
+   {
+    "condition": 1,
+    "place": "3",
+    "text": "first draft below last failed",
+    "kind": "below",
+    "designs": [
+     "HMC",
+     "FXK"
+    ],
+    "agreement": [
+     {
+      "design": "HMC",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "fail",
+       "judge-2": "fail"
+      },
+      "status": "entered"
+     },
+     {
+      "design": "FXK",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "fail"
+      },
+      "status": "contested"
+     }
+    ],
+    "judges": {
+     "judge-1": "holds",
+     "judge-2": "holds"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 1,
+    "place": "3",
+    "text": "last failed below first passed",
+    "kind": "below",
+    "designs": [
+     "FXK",
+     "ZCG"
+    ],
+    "agreement": [
+     {
+      "design": "FXK",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "fail"
+      },
+      "status": "contested"
+     },
+     {
+      "design": "ZCG",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "does not hold",
+     "judge-2": "holds"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 2,
+    "place": "3",
+    "text": "last failed fails and first passed passes",
+    "kind": "line",
+    "designs": [
+     "FXK",
+     "ZCG"
+    ],
+    "agreement": [
+     {
+      "design": "FXK",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "fail"
+      },
+      "status": "contested"
+     },
+     {
+      "design": "ZCG",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "does not hold",
+     "judge-2": "holds"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 1,
+    "place": "4",
+    "text": "first draft below last failed",
+    "kind": "below",
+    "designs": [
+     "NKR",
+     "MCM"
+    ],
+    "agreement": [
+     {
+      "design": "NKR",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "fail",
+       "judge-2": "fail"
+      },
+      "status": "entered"
+     },
+     {
+      "design": "MCM",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "contested"
+     }
+    ],
+    "judges": {
+     "judge-1": "holds",
+     "judge-2": "holds"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 1,
+    "place": "4",
+    "text": "last failed below first passed",
+    "kind": "below",
+    "designs": [
+     "MCM",
+     "WMG"
+    ],
+    "agreement": [
+     {
+      "design": "MCM",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "contested"
+     },
+     {
+      "design": "WMG",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "does not hold",
+     "judge-2": "does not hold"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 1,
+    "place": "4",
+    "text": "first passed about equal to last polished",
+    "kind": "equal",
+    "designs": [
+     "WMG",
+     "TLG"
+    ],
+    "agreement": [
+     {
+      "design": "WMG",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     },
+     {
+      "design": "TLG",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "holds",
+     "judge-2": "holds"
+    },
+    "status": "entered"
+   },
+   {
+    "condition": 2,
+    "place": "4",
+    "text": "last failed fails and first passed passes",
+    "kind": "line",
+    "designs": [
+     "MCM",
+     "WMG"
+    ],
+    "agreement": [
+     {
+      "design": "MCM",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "contested"
+     },
+     {
+      "design": "WMG",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "does not hold",
+     "judge-2": "does not hold"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 1,
+    "place": "deck",
+    "text": "first draft below last failed",
+    "kind": "below",
+    "designs": [
+     "rounds/round-1",
+     "rounds/round-4"
+    ],
+    "agreement": [
+     {
+      "design": "rounds/round-1",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "fail",
+       "judge-2": "fail"
+      },
+      "status": "entered"
+     },
+     {
+      "design": "rounds/round-4",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "fail"
+      },
+      "status": "contested"
+     }
+    ],
+    "judges": {
+     "judge-1": "holds",
+     "judge-2": "holds"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 1,
+    "place": "deck",
+    "text": "last failed below first passed",
+    "kind": "below",
+    "designs": [
+     "rounds/round-4",
+     "rounds/round-5"
+    ],
+    "agreement": [
+     {
+      "design": "rounds/round-4",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "fail"
+      },
+      "status": "contested"
+     },
+     {
+      "design": "rounds/round-5",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "fail"
+      },
+      "status": "contested"
+     }
+    ],
+    "judges": {
+     "judge-1": "does not hold",
+     "judge-2": "does not hold"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 2,
+    "place": "deck",
+    "text": "last failed fails and first passed passes",
+    "kind": "line",
+    "designs": [
+     "rounds/round-4",
+     "rounds/round-5"
+    ],
+    "agreement": [
+     {
+      "design": "rounds/round-4",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "fail"
+      },
+      "status": "contested"
+     },
+     {
+      "design": "rounds/round-5",
+      "maintainer": "pass",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "fail"
+      },
+      "status": "contested"
+     }
+    ],
+    "judges": {
+     "judge-1": "does not hold",
+     "judge-2": "does not hold"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 4,
+    "place": "1",
+    "text": "the weak deck's page fails",
+    "kind": "fails",
+    "designs": [
+     "MPS"
+    ],
+    "agreement": [
+     {
+      "design": "MPS",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "fail",
+       "judge-2": "fail"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "holds",
+     "judge-2": "holds"
+    },
+    "status": "entered"
+   },
+   {
+    "condition": 4,
+    "place": "2",
+    "text": "the weak deck's page fails",
+    "kind": "fails",
+    "designs": [
+     "HLW"
+    ],
+    "agreement": [
+     {
+      "design": "HLW",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "fail",
+       "judge-2": "pass"
+      },
+      "status": "contested"
+     }
+    ],
+    "judges": {
+     "judge-1": "holds",
+     "judge-2": "does not hold"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 4,
+    "place": "3",
+    "text": "the weak deck's page fails",
+    "kind": "fails",
+    "designs": [
+     "WBW"
+    ],
+    "agreement": [
+     {
+      "design": "WBW",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "fail",
+       "judge-2": "fail"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "holds",
+     "judge-2": "holds"
+    },
+    "status": "entered"
+   },
+   {
+    "condition": 4,
+    "place": "4",
+    "text": "the weak deck's page fails",
+    "kind": "fails",
+    "designs": [
+     "FTW"
+    ],
+    "agreement": [
+     {
+      "design": "FTW",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "pass",
+       "judge-2": "pass"
+      },
+      "status": "contested"
+     }
+    ],
+    "judges": {
+     "judge-1": "does not hold",
+     "judge-2": "does not hold"
+    },
+    "status": "contested"
+   },
+   {
+    "condition": 4,
+    "place": "deck",
+    "text": "the weak deck fails",
+    "kind": "fails",
+    "designs": [
+     "sets/capability-main"
+    ],
+    "agreement": [
+     {
+      "design": "sets/capability-main",
+      "maintainer": "fail",
+      "judges": {
+       "judge-1": "fail",
+       "judge-2": "fail"
+      },
+      "status": "entered"
+     }
+    ],
+    "judges": {
+     "judge-1": "holds",
+     "judge-2": "holds"
+    },
+    "status": "entered"
+   }
+  ],
+  "contested": [
+   {
+    "place": "1",
+    "design": "LTV",
+    "maintainer": "pass",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "fail"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "1",
+    "design": "VNH",
+    "maintainer": "fail",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "pass"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "1",
+    "design": "GZD",
+    "maintainer": "fail",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "pass"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "1",
+    "design": "XGX",
+    "maintainer": "fail",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "pass"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "2",
+    "design": "HLW",
+    "maintainer": "fail",
+    "judges": {
+     "judge-1": "fail",
+     "judge-2": "pass"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "3",
+    "design": "RTJ",
+    "maintainer": "pass",
+    "judges": {
+     "judge-1": "fail",
+     "judge-2": "pass"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "3",
+    "design": "FXK",
+    "maintainer": "fail",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "fail"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "3",
+    "design": "CKM",
+    "maintainer": "fail",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "pass"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "4",
+    "design": "MCM",
+    "maintainer": "fail",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "pass"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "4",
+    "design": "FTW",
+    "maintainer": "fail",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "pass"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "deck",
+    "design": "rounds/round-5",
+    "maintainer": "pass",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "fail"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "deck",
+    "design": "variants/RS-GRAPHIC-004",
+    "maintainer": "pass",
+    "judges": {
+     "judge-1": "fail",
+     "judge-2": "pass"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "deck",
+    "design": "rounds/round-2",
+    "maintainer": "fail",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "fail"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "deck",
+    "design": "rounds/round-3",
+    "maintainer": "fail",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "fail"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "deck",
+    "design": "rounds/round-4",
+    "maintainer": "fail",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "fail"
+    },
+    "status": "contested"
+   },
+   {
+    "place": "deck",
+    "design": "variants/RS-COMM-003",
+    "maintainer": "fail",
+    "judges": {
+     "judge-1": "pass",
+     "judge-2": "fail"
+    },
+    "status": "contested"
+   }
+  ],
+  "rules": {
+   "RS-COMM-003": {
+    "pairs": [
+     {
+      "on": "piece",
+      "base": "rounds/round-5",
+      "variant": "variants/RS-COMM-003",
+      "status": "contested",
+      "why": [
+       "judge-1 grades the variant variants/RS-COMM-003 professional",
+       "judge-2 grades the variant variants/RS-COMM-003 professional"
+      ]
+     }
+    ],
+    "passed": [
+     {
+      "place": "deck",
+      "design": "rounds/round-5",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "deck",
+      "design": "variants/RS-GRAPHIC-004",
+      "status": "entered",
+      "why": []
+     }
+    ],
+    "weak": [
+     {
+      "place": "deck",
+      "design": "sets/capability-main",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades sets/capability-main professional"
+      ]
+     }
+    ]
+   },
+   "RS-GRAPHIC-001": {
+    "pairs": [
+     {
+      "on": "4",
+      "base": "TLG",
+      "variant": "WDH",
+      "status": "contested",
+      "why": [
+       "judge-1 grades the variant WDH professional",
+       "judge-2 grades the variant WDH professional"
+      ]
+     }
+    ],
+    "passed": [
+     {
+      "place": "1",
+      "design": "LTV",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "1",
+      "design": "GPM",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "ZKD",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "MNH",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "BRS",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "3",
+      "design": "ZCG",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "3",
+      "design": "RTJ",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "4",
+      "design": "TLG",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "4",
+      "design": "WMG",
+      "status": "entered",
+      "why": []
+     }
+    ],
+    "weak": [
+     {
+      "place": "1",
+      "design": "MPS",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades MPS professional",
+       "judge-2 grades MPS professional"
+      ]
+     },
+     {
+      "place": "2",
+      "design": "HLW",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades HLW professional",
+       "judge-2 grades HLW professional"
+      ]
+     },
+     {
+      "place": "3",
+      "design": "WBW",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades WBW professional",
+       "judge-2 grades WBW professional"
+      ]
+     },
+     {
+      "place": "4",
+      "design": "FTW",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades FTW professional",
+       "judge-2 grades FTW professional"
+      ]
+     }
+    ]
+   },
+   "RS-GRAPHIC-002": {
+    "pairs": [
+     {
+      "on": "2",
+      "base": "ZKD",
+      "variant": "MLV",
+      "status": "entered",
+      "why": []
+     }
+    ],
+    "passed": [
+     {
+      "place": "1",
+      "design": "LTV",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "1",
+      "design": "GPM",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "ZKD",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "MNH",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "BRS",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "3",
+      "design": "ZCG",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "3",
+      "design": "RTJ",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "4",
+      "design": "TLG",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "4",
+      "design": "WMG",
+      "status": "entered",
+      "why": []
+     }
+    ],
+    "weak": [
+     {
+      "place": "1",
+      "design": "MPS",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "HLW",
+      "status": "not a reference",
+      "why": [
+       "judge-2 grades HLW professional"
+      ]
+     },
+     {
+      "place": "3",
+      "design": "WBW",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "4",
+      "design": "FTW",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades FTW professional",
+       "judge-2 grades FTW professional"
+      ]
+     }
+    ]
+   },
+   "RS-GRAPHIC-003": {
+    "pairs": [
+     {
+      "on": "1",
+      "base": "LTV",
+      "variant": "KST",
+      "status": "entered",
+      "why": []
+     }
+    ],
+    "passed": [
+     {
+      "place": "1",
+      "design": "LTV",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "1",
+      "design": "GPM",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "ZKD",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "MNH",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "BRS",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "3",
+      "design": "ZCG",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "3",
+      "design": "RTJ",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "4",
+      "design": "TLG",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "4",
+      "design": "WMG",
+      "status": "entered",
+      "why": []
+     }
+    ],
+    "weak": [
+     {
+      "place": "1",
+      "design": "MPS",
+      "status": "not a reference",
+      "why": [
+       "judge-2 grades MPS professional"
+      ]
+     },
+     {
+      "place": "2",
+      "design": "HLW",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades HLW professional",
+       "judge-2 grades HLW professional"
+      ]
+     },
+     {
+      "place": "3",
+      "design": "WBW",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades WBW professional",
+       "judge-2 grades WBW professional"
+      ]
+     },
+     {
+      "place": "4",
+      "design": "FTW",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades FTW professional",
+       "judge-2 grades FTW professional"
+      ]
+     }
+    ]
+   },
+   "RS-GRAPHIC-006": {
+    "pairs": [
+     {
+      "on": "2",
+      "base": "ZKD",
+      "variant": "PVD",
+      "status": "entered",
+      "why": []
+     }
+    ],
+    "passed": [
+     {
+      "place": "1",
+      "design": "LTV",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "1",
+      "design": "GPM",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "ZKD",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "MNH",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "BRS",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "3",
+      "design": "ZCG",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "3",
+      "design": "RTJ",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "4",
+      "design": "TLG",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "4",
+      "design": "WMG",
+      "status": "entered",
+      "why": []
+     }
+    ],
+    "weak": [
+     {
+      "place": "1",
+      "design": "MPS",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades MPS professional",
+       "judge-2 grades MPS professional"
+      ]
+     },
+     {
+      "place": "2",
+      "design": "HLW",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades HLW professional",
+       "judge-2 grades HLW professional"
+      ]
+     },
+     {
+      "place": "3",
+      "design": "WBW",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades WBW professional",
+       "judge-2 grades WBW professional"
+      ]
+     },
+     {
+      "place": "4",
+      "design": "FTW",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades FTW professional",
+       "judge-2 grades FTW professional"
+      ]
+     }
+    ]
+   },
+   "RS-GRAPHIC-007": {
+    "pairs": [
+     {
+      "on": "1",
+      "base": "LTV",
+      "variant": "PBV",
+      "status": "contested",
+      "why": [
+       "judge-2 grades the base LTV competent"
+      ]
+     }
+    ],
+    "passed": [
+     {
+      "place": "1",
+      "design": "LTV",
+      "status": "contested",
+      "why": [
+       "judge-2 grades LTV competent"
+      ]
+     },
+     {
+      "place": "1",
+      "design": "GPM",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "ZKD",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "MNH",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "2",
+      "design": "BRS",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "3",
+      "design": "ZCG",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "3",
+      "design": "RTJ",
+      "status": "contested",
+      "why": [
+       "judge-1 grades RTJ competent"
+      ]
+     },
+     {
+      "place": "4",
+      "design": "TLG",
+      "status": "entered",
+      "why": []
+     },
+     {
+      "place": "4",
+      "design": "WMG",
+      "status": "entered",
+      "why": []
+     }
+    ],
+    "weak": [
+     {
+      "place": "1",
+      "design": "MPS",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades MPS professional",
+       "judge-2 grades MPS professional"
+      ]
+     },
+     {
+      "place": "2",
+      "design": "HLW",
+      "status": "not a reference",
+      "why": [
+       "judge-2 grades HLW professional"
+      ]
+     },
+     {
+      "place": "3",
+      "design": "WBW",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades WBW professional",
+       "judge-2 grades WBW professional"
+      ]
+     },
+     {
+      "place": "4",
+      "design": "FTW",
+      "status": "not a reference",
+      "why": [
+       "judge-1 grades FTW professional",
+       "judge-2 grades FTW professional"
+      ]
+     }
+    ]
+   }
+  }
+ },
+ "head": {
+  "documents": {
+   "judge-1": {
+    "folders": 20,
+    "kept": 20,
+    "read": 20,
+    "not read": []
+   },
+   "judge-2": {
+    "folders": 20,
+    "kept": 20,
+    "read": 20,
+    "not read": []
+   }
+  },
+  "no reading": {
+   "judge-1": {
+    "pages": 0,
+    "pieces": 0,
+    "causes beside an unread document": {}
+   },
+   "judge-2": {
+    "pages": 0,
+    "pieces": 0,
+    "causes beside an unread document": {}
+   }
+  },
+  "reads": {
+   "judge-1": {
+    "documents": 20,
+    "files named": 200,
+    "flagged": []
+   },
+   "judge-2": {
+    "documents": 20,
+    "files named": 228,
+    "flagged": [
+     {
+      "code": "HVCG",
+      "version": "rounds/round-4",
+      "names outside the allowlist": {
+       ".agent-workspace/judge-2-HVCG-zoom/": ".agent-workspace/calibration-dev/folders/judge-2/HVCG/page-1.light.png to page-4.light.png and page-1.dark.png to page-4.dark.png; also enlarged crops and pixel measurements (contrast ratios, cap heights, line extents) of those same images, which I made in .agent-workspace/judge-2-HVCG-zoom/ and removed afterwards"
+      },
+      "lists before grading a brief file or earlier reports": [],
+      "from the head of a document that does not parse": false
+     }
+    ]
+   }
+  },
+  "folders": {
+   "judge-1": {
+    "holds exactly the files the key records, byte for byte": [
+     "TJHW",
+     "SPXH",
+     "HMVC",
+     "DZSW",
+     "PPJC",
+     "TXKS",
+     "HGXC",
+     "XCKH",
+     "VJNB",
+     "JSHC",
+     "DPZP",
+     "BBTP",
+     "KTRL",
+     "RGFJ",
+     "BSZS",
+     "HXRK",
+     "NCGD",
+     "CKCS",
+     "SXTX",
+     "KHRM"
+    ]
+   },
+   "judge-2": {
+    "holds exactly the files the key records, byte for byte": [
+     "DGVS",
+     "XCNF",
+     "RWBS",
+     "GVGL",
+     "LZCP",
+     "NJTL",
+     "GJHX",
+     "GCHW",
+     "CSWN",
+     "VJPT",
+     "ZCGV",
+     "HNJC",
+     "CVDP",
+     "PMDG",
+     "XGTX",
+     "WWZN",
+     "XSNF",
+     "HVCG",
+     "KXKN",
+     "CXSS"
+    ]
+   }
+  },
+  "judges' words": {
+   "judge-1": {
+    "grades below professional without words": 0
+   },
+   "judge-2": {
+    "grades below professional without words": 0
+   }
+  },
+  "model": {
+   "review names": {},
+   "judge names": {
+    "claude-fable-5-2": 20,
+    "Claude Opus 5.5 (claude-opus-5-5)": 15,
+    "claude-opus-5-5": 5
+   },
+   "pinned": "claude-fable-5-2",
+   "one name": false,
+   "the pinned name": null
+  },
+  "dispatch": {},
+  "handed alike": "every source was handed the same files for each version",
+  "laid out": {
+   "judge-1": "laid out at 2026-11-18T23:10:50+00:00 from tech-docs/calibrations/graphic-design-review/next/plan.md at 352d4cfb85a4 (2026-11-19T00:09:50+01:00); committed before it was laid out; unchanged since",
+   "judge-2": "laid out at 2026-11-18T23:10:50+00:00 from tech-docs/calibrations/graphic-design-review/next/plan.md at 352d4cfb85a4 (2026-11-19T00:09:50+01:00); committed before it was laid out; unchanged since"
+  }
+ }
+}

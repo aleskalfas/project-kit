@@ -36,8 +36,11 @@ could not be checked. Neither refuses the filing nor changes the exit code.
 For board-substrate adopters (per DEC-019 +
 `schemas/mandatory-issue-state.yaml`), the new issue is also added to
 the configured Projects v2 board as the final step of filing. The
-default assignee is the resolved invoker identity per DEC-019's
-default_at_filing: filer.
+default assignee is the filer per DEC-019's default_at_filing: the user's
+account GitHub answers the credential acts as, or, under a credential that
+names no user's account, the person the agent works for, `PM_INVOKER_LOGIN`
+(DEC-076 point 3). Where neither names a person, a filing that names no
+`--assignee` refuses, saying why and how the session names one.
 
 `--board` is refused unless it names the configured board's own number, the
 two read as numbers, in every project (DEC-070, DEC-071): every issue belongs
@@ -47,6 +50,12 @@ configured. One naming a number below 1, which no board has, is refused first,
 with a message of its own. Each refusal exits 2, before anything is written or
 asked and before any board is read, `--dry-run` included. One naming the
 configured board's own number goes on.
+
+Where the configuration declares a board and gives no number of 1 or more for
+the board, read as a number, such as a missing number, `null`, `0` or `""`, the
+filing has no board to add the issue to, so it is refused at the same point,
+exit 2, `--dry-run` included, naming `projects_v2_board_id` as the key to set
+(DEC-019).
 
 An issue owes its card from its filing, so before anything is written,
 `--dry-run` included, a filing in a project with a board reads the configured
@@ -110,7 +119,8 @@ Exit codes:
      Task filed into a pool off a terminal without --yes, or the board carries
      the state and answered with no single-select Status field, or no option
      for the state the issue is filed into (nothing filed)
-  2  usage error / validation refusal
+  2  usage error / validation refusal / an assignee refused, as a bot's account
+     or one GitHub did not confirm as a user's (DEC-079 point 1)
   3  gh failure (auth, network, repo not found, ...), or the board the filing
      adds the issue to did not answer (nothing filed)
   4  issue created, but --from-report link failed, and every write the filing
@@ -138,6 +148,7 @@ from ruamel.yaml.error import YAMLError
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
+    assignees,
     axis_carriage,
     axis_labels,
     board_answer,
@@ -166,7 +177,6 @@ from _lib.hooks import fire_hooks
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
-    format_unresolved,
     resolve_capability_root,
     resolve_invoker_identity,
 )
@@ -251,7 +261,11 @@ def main() -> int:
     parser.add_argument(
         "--assignee",
         default=None,
-        help="Assignee GitHub login. Defaults to the resolved invoker identity.",
+        help=(
+            "Assignee GitHub login. Defaults to the filer: the user's account the "
+            "credential acts as, or, under a credential that names no user's account, "
+            "the person PM_INVOKER_LOGIN names (DEC-076 point 3)."
+        ),
     )
     parser.add_argument(
         "--milestone",
@@ -378,6 +392,15 @@ def main() -> int:
     )
     if board_refusal is not None:
         print(board_refusal, file=sys.stderr)
+        return 2
+
+    # A board declared with no number it can be read by, `0` and `""` among them,
+    # leaves the filing no board to add the issue to, which DEC-019 rejects: so it
+    # is refused at the same point, `--dry-run` too, rather than filed onto no
+    # board. A `--board` in that case met its own refusal above.
+    number_refusal = _board_number_refusal(config, board_configured=has_board)
+    if number_refusal is not None:
+        print(number_refusal, file=sys.stderr)
         return 2
 
     # Foreign-repo mutation guard (COR-039 / ADR-034). Compares the cwd-derived
@@ -772,15 +795,23 @@ def main() -> int:
     # never refused. The backbone is asked only for a body that cites one.
     _warn_decision_ids(body, body_format)
 
-    # Resolve assignee: the account acting, by default. Where pkit cannot tell
-    # which that is, the refusal says why (#3162).
-    assignee = args.assignee or invoker.github_login
+    # Resolve assignee: the filer, by default, the person whose work this is
+    # (DEC-076 point 3). Where no person is named, the refusal says why, and
+    # how the session names one.
+    assignee = args.assignee or invoker.person
     if not assignee:
         print(
-            "error: could not resolve the default assignee: "
-            f"{format_unresolved(invoker.unresolved_cause)}. Pass --assignee explicitly.",
+            f"error: could not resolve the default assignee: {invoker.no_person()}. "
+            "Or pass --assignee.",
             file=sys.stderr,
         )
+        return 2
+    # An assignee names a person: a bot's account is never one, and a bare login
+    # is one only where GitHub answers that it names a user's account (DEC-079
+    # point 1). A precondition, never a finding, so `--force` does not reach it.
+    refused = assignees.refusal(assignee, invoker, config)
+    if refused:
+        print(f"error: {refused}", file=sys.stderr)
         return 2
 
     # Labels. Axis-labels are RESOLVED through the seam's write-path resolver
@@ -841,10 +872,11 @@ def main() -> int:
             config,
             dry_run=args.dry_run,
             login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("create-issue", None, exc)
-    if clone is not None:
+    if clone is not None and not clone.quiet:
         print(f"  ownership:  {instance_claims.claim_plan(clone, assignee, filing=True)}")
     if args.from_report is not None:
         print(
@@ -869,10 +901,11 @@ def main() -> int:
     # The board the issue is added to, read before anything is written, so a
     # board that did not answer refuses the filing rather than leave an issue
     # with no card ([pkit:ADR-096] point 4, "Before it"). A project with no
-    # board makes no call (ADR-053 point 3).
+    # board makes no call (ADR-053 point 3); one with a board has its number,
+    # since a board with none was refused above.
     workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader)
     board_first: BoardFirst | None = None
-    if has_board and board_fields.board_number(config) is not None:
+    if has_board:
         board_first = _read_board_first(
             config,
             substrate_map,
@@ -1166,7 +1199,7 @@ def _board_option_refusal(
         return (
             f"error: --board {board} is refused: {reason}\n"
             "  project/config.yaml declares a board (`has_projects_v2_board: true`) but "
-            "gives no number for it (`projects_v2_board_id`), so the filing has no board "
+            f"{_no_board_number(config)}, so the filing has no board "
             "to file onto. That is the fault to mend: set the number there; `pkit pm "
             "pre-check` checks it."
         )
@@ -1201,14 +1234,46 @@ def _card_added_after(board: int) -> str:
 
 def _configured_board_number(config: dict[str, Any]) -> int | None:
     """The configured board's number, read as a number, so `7` and `'7'` are one
-    board; None where the configuration gives none, or one that is no number."""
+    board; None where the configuration gives none, or a value that is no board's
+    number, such as `0` or `""`, since a board's number is 1 or more."""
     number = board_fields.board_number(config)
     if number is None:
         return None
     try:
-        return int(number)
+        value = int(number)
     except ValueError:
         return None
+    return value if value >= 1 else None
+
+
+def _no_board_number(config: dict[str, Any]) -> str:
+    """What project/config.yaml gives for the number of the board it declares,
+    where that is no board's number, as the refusals say it."""
+    value = config.get("projects_v2_board_id")
+    if value is None:
+        return "gives no number for it (`projects_v2_board_id`)"
+    return (
+        f"gives it `projects_v2_board_id: {json.dumps(value, default=str)}`, which is "
+        "no board's number"
+    )
+
+
+def _board_number_refusal(config: dict[str, Any], *, board_configured: bool) -> str | None:
+    """Why a filing is refused where the configuration declares a board and gives
+    no number of 1 or more for the board, read as a number, or None where it gives one,
+    or declares no board. Every issue belongs on the configured board from its
+    filing ([project-management:DEC-019-mandatory-issue-state]), so a filing with
+    no board to add the issue to files nothing. No I/O."""
+    if not board_configured or _configured_board_number(config) is not None:
+        return None
+    return (
+        "error: project/config.yaml declares a board (`has_projects_v2_board: true`) but "
+        f"{_no_board_number(config)}, so the filing has no board to add the issue to, and "
+        "every issue belongs on the configured board from its filing "
+        "([project-management:DEC-019-mandatory-issue-state]). Nothing was filed.\n"
+        "  → Set `projects_v2_board_id: <N>` in project/config.yaml, where <N> is the "
+        "board's number from `gh project list`."
+    )
 
 
 def _link_from_report(report_n: int, new_issue_number: int | None) -> int:
