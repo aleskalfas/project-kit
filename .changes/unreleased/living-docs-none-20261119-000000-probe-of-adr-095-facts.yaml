@@ -1,0 +1,6 @@
+component: living-docs
+kind: none
+body: >
+  Internal. project-kit captures one more source of its own, the results of
+  the probe of ADR-095's facts, which the Claude Code adapter's README
+  anchors. The capability works as before.

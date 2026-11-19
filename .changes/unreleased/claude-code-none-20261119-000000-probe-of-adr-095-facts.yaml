@@ -1,0 +1,7 @@
+component: claude-code
+kind: none
+body: >
+  Internal. The adapter's README records what a probe of ADR-095's facts
+  found on Claude Code 2.1.325 on macOS: how a native rule reads a shell
+  call, heredocs among it, and which marks reach a subagent's shell. Nothing
+  the adapter ships or runs changes.

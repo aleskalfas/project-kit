@@ -20,11 +20,11 @@ pkit:
         - .pkit/agents/tool_access.py
         - .pkit/agents/definition_source.py
         - .pkit/cli/install-pkit.sh
-      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
+      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", ADR-095, "ADR-099#1", "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
       artefact:
         - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
         - .pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift
-      source: [claude-code-hooks, working-run-probe]
+      source: [claude-code-hooks, working-run-probe, hook-out-of-reach-probe]
 ---
 
 # Claude Code adapter
@@ -449,6 +449,49 @@ Strips *only* the pkit hook registration (matched by its command path), preservi
 The hook **script** itself is a propagated adapter file — `pkit sync` owns its lifecycle, so `enable`/`disable` manage only its *registration*, never deploy or remove the file (there is no orphaned-script failure mode). The registration is written only to the live `.claude/settings.json`, never to a merge source, so it survives re-merge and is removable by strip (the `hooks` key lives outside any realizer-owned region per ADR-002).
 
 **`pkit permissions sandbox enable`** sets `failIfUnavailable: true` always (the ADR-004 / ADR-014 §6 fail-closed invariant), so Claude Code refuses to start an unconfined session rather than silently running without a box. It also runs the enforcement-runtime self-check (same as `enable`) AND verifies **actual confinement** — attempts a write outside the workspace that Seatbelt/bubblewrap must deny. If the write succeeds, it warns "sandbox configured ON but NOT actually confining" loudly (box may not have initialized, or the session hasn't been restarted). `pkit permissions sandbox status` and `pkit permissions overview` report the same actual-confinement probe result so the operator never believes confinement is active when it is not.
+
+#### The probe of ADR-095's facts (ADR-095 point 6)
+
+On 19 November a probe checked what one session could of the facts [ADR-095](../../../tech-docs/architecture/decisions/ADR-095-hook-out-of-reach.md) point 6 lists. It ran Claude Code 2.1.325 on macOS 26.6, arm64, on APFS, through a subagent's shell calls in a worktree of the checkout, with the permission hook registered from the checkout. The session's sandbox was off, as the project's committed settings keep it on macOS, and the probe started no other session. Its results are on #3429, and this section states only what they record.
+
+**The precondition is not probed yet.** No call ran inside the sandbox, so the probe could not check whether the harness keeps its settings files out of a sandboxed command's reach, a nested checkout's among them, or which switches void that. Until a probe in a session whose sandbox is on checks it, ADR-095 rests there on the harness's documentation, on this release as on every other.
+
+**How a native rule reads a shell call.** The probe used the project's native deny `Bash(git reset --hard:*)`, on which the hook abstains, so each refusal was the native rule's. No call let the command run.
+
+| Fact | How |
+|---|---|
+| The rule finds a subcommand at each place the documentation names | it refused the command after `&&`, `\|\|`, `\|` and `\|&`; after `;`, `&` and a newline inside a group; in a subshell, a group, `$(…)` with or without double quotes, and backticks; in an `if`, `while`, `until` or `for` body, a case arm, and after `!`; past `timeout`, `time`, `nice`, `nohup`, `stdbuf`, `command`, `builtin`, `noglob`, a bare `xargs` and a leading assignment; and with extra spaces between its words |
+| It finds one at places the documentation does not name | it refused the command in a process substitution, `<(…)` or `>(…)`, and in the body of a function defined and never called |
+| It reads no mention as a subcommand | it refused none of these: a line of a heredoc's body, under a quoted delimiter, an unquoted one or `<<-`, inside a substitution or not, or feeding a pipeline; the command inside single quotes, inside double quotes after `;` or `&&`, and after a literal newline inside either; an ANSI-C quote holding `\n`; a comment at a line's end, with `;` and `&&` in it |
+
+So on 2.1.325 on macOS the harness reads no line of a heredoc's body as a subcommand. [ADR-099](../../../tech-docs/architecture/decisions/ADR-099-named-folders-under-copy.md) point 1 calls for no refinement on that ground before its native deny ships there, and ADR-095 point 4's native asks do not fall on a commit message or a pull request's body written through a heredoc. ADR-095 point 3's reading names `$(…)` and backticks, and no process substitution, so a process substitution is a place for it to take in. A function's body is a group, which that reading already reads.
+
+Not run, since the command would have run, or the call would have asked the person: `;`, `&` and a newline at the top level, a program named by its path, a `-c` script, `eval`, a heredoc fed to a shell, a comment on a line of its own, `xargs` with options, and `env`.
+
+**Other facts it found:**
+
+| Fact | How |
+|---|---|
+| The hook judges a subagent's calls | it refused a subagent's `/bin/rm -r` of an absent path as `destructive-fs`, naming the subagent as `agent:software-engineer` |
+| A later folder at a path gets an identity of its own | on APFS, 200 folders made and removed at one path each got a new inode, and none was reused |
+| The installed release shares no file with the installer's cache | each of its 1,575 regular files has one link |
+| No allowance the backbone ships reaches a guarded folder | `~/.cache/uv`, `~/.npm` and `~/.cache/node` lie neither inside nor above a guarded folder at its place on the probed machine |
+| An interpreter started isolated, with an emptied environment, loads only its own library | the developer tools' interpreter, started with `-I` and no environment, had on its path only its installation's folders, which the person's account cannot write |
+
+On the probed machine, `/usr/bin/python3` is a launcher, which runs the developer tools' interpreter. The installer's interpreters and Homebrew's lie in folders the person's account writes, and the release runs on one of the installer's, named by its full version. The installer's own program lies outside its default place, under a version manager's folder, so a native deny at the default places would not reach it.
+
+**Narrower than recorded: the anchor in a subagent's shell.** There `CLAUDE_CODE_CHILD_SESSION` and `CLAUDECODE` were set, and `CLAUDE_PROJECT_DIR` was not, though ADR-095's Context has the commands an agent's shell tools start read the anchor. So in such a call the gestures' test of ADR-095 point 3 rests on the mark alone, and the guard of [ADR-034](../../../tech-docs/architecture/decisions/ADR-034-foreign-repo-mutation-guard.md), which compares a call's target with the anchor, finds none to compare with. The main session's shell was not probed. The finding calls for a refinement of ADR-095's Context, "The session anchor", and of ADR-034 point 1, whose guard rests on the anchor. The VS Code terminal the session was started from carried none of the three, with the harness's extension for it installed.
+
+**The PowerShell tool and the tool that monitors a command,** neither of which ran:
+
+- **`PowerShell(…)` rules.** `claude doctor`, which checks the settings files of the folder it runs in, accepted `PowerShell(…)` rules in the shape of their `Bash(…)` twins, and `Monitor(…)` rules, and rejected `Bash()`. No PowerShell is installed on the probed machine, so how such rules match is not probed.
+- **`Monitor`.** By the release's code, it takes a `description`, a `timeout_ms`, `persistent`, and exactly one of `command` or `ws`, a WebSocket's `url` and `protocols`, with no field that asks to run outside the sandbox. A rule that denies or asks on the shell tool as a whole reaches it, and the shell tool's own check judges its `command`, with the sandbox's auto-allow set aside. So by the code, a `Bash(…)` rule matches its calls.
+
+**Not probed yet:**
+
+- **Anything inside the sandbox:** the precondition; which of the harness's other files that carry code or approvals it keeps from sandboxed writes, a link's target and a skill's inline commands among them; a repository's hooks and configuration against a linked worktree's sandboxed commands; the folders a sandboxed command writes by default, and the per-user temp folder; that hooks run outside the sandbox; that a sandboxed command cannot remove its working folder and make it again; a native deny against a sandboxed write where a working folder or a write grant covers its folder; and a request to leave the sandbox reaching the hook, and the sealed escape.
+- **Anything that needs another session, a mode or a person:** where a session's settings and hooks come from below the root, in a worktree, after a move and after `/cd`; what a move into another tree takes and shows, and from which commit it makes the tree; what a subagent in a tree of its own, a teammate or a background session takes; whether the hook judges a teammate's calls and those of a workflow's subagents; which anchor a hook gets, and whether a setting changes it; which of a repository's programs the harness runs when it calls version control; a native ask, a hook's ask and a hook's deny in each mode, and where nobody answers; what can answer them in the person's place; an allow rule on a file tool's write outside the working folders, the write block and the paths the harness protects; a native rule on a file at any depth, and a file tool's write through a link or a shared file; which shell runs a hook's command, and what it reads first; the mark in a hook's processes, a terminal multiplexer's sessions and shell mode; and the PowerShell tool's calls, and whether it can ask to run outside the sandbox.
+- **The copy,** not built yet: the path it names for its interpreter, and whether the committed registration finds it.
 
 ### Prompt-free command shape under the sandbox
 
