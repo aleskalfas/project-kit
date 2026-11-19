@@ -17,8 +17,11 @@ body: >
   defines and grants only to its own agent, which the permissions overview
   reports as a widening and which binds once a person realizes the model.
   It overturns DEC-035, DEC-059 and DEC-068 in part,
-  refines DEC-059, DEC-061, DEC-063 and DEC-068 in place, with ADR-016,
-  ADR-021 and ADR-071, and corrects a fact in DEC-029. The agent's
+  refines DEC-059, DEC-061, DEC-063 and DEC-068 in place, with ADR-071,
+  and corrects a fact in DEC-029. It rests on ADR-101, an architecture
+  record proposed in this change, under which a capability's grant may
+  allow a privilege the capability defines itself, only to an agent it
+  ships, and which overturns ADR-016 and ADR-021 in part. The agent's
   definition, the grants, the overview, the topology, the state issues and
   the work loop are unchanged until the Task that builds them, which
   declares its own changeset, so no surface moves here.
