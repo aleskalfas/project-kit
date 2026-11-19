@@ -48,8 +48,11 @@ What it reads, as plan.md section 2 fixes it:
 - **The order,** by the method the reference names.
 - **The head,** where each claim the report makes about its inputs comes from: the documents
   read, the model by its name alone, every file a document lists against an allowlist, what
-  each folder held, and the plan's commit. A file named by its path in the main checkout, or
-  in the checkout at the root, is read as the allowlist's file of that path.
+  each folder held, and the plan's commit. The model's name is the model id the document's
+  name for it holds, as `reference.json` pins it, such as `claude-fable-5-2` in "Fable 5.2,
+  model ID claude-fable-5-2". A file named by its path in the main checkout, or in the
+  checkout at the root, is read as the allowlist's file of that path. A file a list names only
+  to say it was not handed, as in "No piece.yaml was handed", is no read.
 """
 
 from __future__ import annotations
@@ -1037,6 +1040,41 @@ def named_files(text: str) -> list[str]:
     return out
 
 
+#: A word of a thing a list may say was not handed: any but the clause's verb.
+_NOT_HANDED_WORD = r"(?!(?:was|were|handed)\b)[\w.\-/]+"
+#: One thing a list may say was not handed, such as `piece.yaml` or `source file`: up to three
+#: words.
+_NOT_HANDED_ITEM = rf"{_NOT_HANDED_WORD}(?:[ \t]+{_NOT_HANDED_WORD}){{0,2}}"
+#: A clause that names things only to say they were not handed, such as "No piece.yaml was
+#: handed", "No piece.yaml and no component was handed" or "No piece.yaml, brand or source
+#: file was handed".
+NOT_HANDED = re.compile(
+    rf"\b[Nn]o\s+{_NOT_HANDED_ITEM}"
+    rf"(?:(?:\s*,\s*(?:(?:and|or|nor)\s+)?|\s+(?:and|or|nor)\s+)(?:no\s+)?{_NOT_HANDED_ITEM})*"
+    r"\s+(?:was|were)\s+handed\b"
+)
+
+
+def said_read(text: str) -> tuple[list[str], list[str]]:
+    """The files `text` names as read, and those it names only to say they were not handed. A
+    file named in a clause that says it was not handed is no read; the same file named
+    anywhere else in `text` still is."""
+    not_handed = [token for found in NOT_HANDED.finditer(text) for token in named_files(found[0])]
+    return named_files(NOT_HANDED.sub(" ", text)), not_handed
+
+
+#: A model's id, as a harness names it: lower-case words and numbers joined by hyphens, such as
+#: `claude-fable-5-2`.
+MODEL_ID = re.compile(r"(?<![\w.-])[a-z][a-z0-9]*(?:[-.][a-z0-9]+)+(?![\w-])")
+
+
+def model_id(name: str) -> str | None:
+    """The model id the name a document gives its model holds, such as `claude-fable-5-2` in
+    "Fable 5.2, model ID claude-fable-5-2"; None where it holds none, or more than one."""
+    ids = {each for each in MODEL_ID.findall(name) if "-" in each and re.search(r"\d", each)}
+    return next(iter(ids)) if len(ids) == 1 else None
+
+
 def allowed_paths(root: Path, prefixes: list[str]) -> list[str]:
     """Every file the allowlist's entries name: a file, or each file under a folder."""
     out: list[str] = []
@@ -1110,7 +1148,9 @@ def head(
     out: dict[str, Any] = {"documents": {}, "no reading": {}, "reads": {}, "folders": {}}
     allowed = {kind: allowed_paths(root, ref.data["reads"][kind]) for kind in ("review", "judge")}
     starts = checkout_starts(root)
-    names: dict[str, Counter] = {"review": Counter(), "judge": Counter()}
+    #: The model ids the documents name, and their names for the model as they write them.
+    ids: dict[str, Counter] = {"review": Counter(), "judge": Counter()}
+    written: dict[str, Counter] = {"review": Counter(), "judge": Counter()}
     for name, src in sources.items():
         readings = list(src.readings.values())
         problems = [(r.code, r.version, r.problem) for r in readings if r.problem]
@@ -1142,9 +1182,13 @@ def head(
         }
         for r in readings:
             if r.front is None:
-                names[src.kind]["(its front does not parse)"] += 1
+                said = "(its front does not parse)"
+            elif r.front.model is None:
+                said = "(no name)"
             else:
-                names[src.kind][r.front.model or "(no name)"] += 1
+                written[src.kind][r.front.model] += 1
+                said = model_id(r.front.model) or f"{r.front.model} (no one model id)"
+            ids[src.kind][said] += 1
         reads, named = [], Counter()
         for r in readings:
             if r.front is None:
@@ -1154,7 +1198,9 @@ def head(
             own_files |= set(folder_files(folders.get(src.kind), src, r.code) or ())
             outside = {}
             for _, _, what in r.front.reads:
-                for token in named_files(what):
+                read, not_handed = said_read(what)
+                named["not handed"] += len(not_handed)
+                for token in read:
                     named["files"] += 1
                     own = f"{name}/{r.code}"
                     if not placed(token, own, own_files, allowed[src.kind], starts):
@@ -1177,6 +1223,7 @@ def head(
         out["reads"][name] = {
             "documents": len(readings),
             "files named": named["files"],
+            "files named as not handed": named["not handed"],
             "flagged": reads,
         }
         if src.kind == "judge":
@@ -1191,13 +1238,15 @@ def head(
                 "grades below professional without words": without
             }
     pinned = ref.data.get("model")
-    review_names = sorted(names["review"])  # a front that names none, or does not parse, counts
+    review_ids = sorted(ids["review"])  # a front that names none, or does not parse, counts
     out["model"] = {
-        "review names": dict(names["review"]),
-        "judge names": dict(names["judge"]),
+        "review ids": dict(ids["review"]),
+        "judge ids": dict(ids["judge"]),
+        "review names as written": dict(written["review"]),
+        "judge names as written": dict(written["judge"]),
         "pinned": pinned,
-        "one name": len(review_names) == 1,
-        "the pinned name": (review_names == [pinned]) if pinned and review_names else None,
+        "one id": len(review_ids) == 1,
+        "the pinned id": (review_ids == [pinned]) if pinned and review_ids else None,
     }
     out["dispatch"] = {}
     for name, path in reports.items():
@@ -1298,10 +1347,12 @@ def lines_of_head(found: dict) -> list[str]:
     model = found["model"]
     say += [
         "",
-        f"**The model, by its name alone:** the reviews name {model['review names'] or 'none'}; "
-        f"one name: {model['one name']}; the reference pins {model['pinned'] or 'none'}; "
-        f"the pinned name: {model['the pinned name']}. The judges name "
-        f"{model['judge names'] or 'none'}.",
+        "**The model, by its name alone,** the model id each document's name for it holds: "
+        f"the reviews name {model['review ids'] or 'none'}; one id: {model['one id']}; "
+        f"the reference pins {model['pinned'] or 'none'}; the pinned id: "
+        f"{model['the pinned id']}. The judges name {model['judge ids'] or 'none'}. "
+        f"As written, the reviews name {model['review names as written'] or 'none'}, and the "
+        f"judges {model['judge names as written'] or 'none'}.",
         "",
         "**The effort, from the dispatcher's record:**",
     ]
@@ -1310,7 +1361,8 @@ def lines_of_head(found: dict) -> list[str]:
     for name, d in found["reads"].items():
         flagged = d["flagged"]
         say.append(
-            f"- {name}: {d['files named']} files named over {d['documents']} documents; "
+            f"- {name}: {d['files named']} files named as read over {d['documents']} documents, "
+            f"and {d['files named as not handed']} named only as not handed; "
             f"{len(flagged)} documents flagged"
         )
         for each in flagged:
