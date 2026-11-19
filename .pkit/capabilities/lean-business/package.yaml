@@ -5,3 +5,13 @@ component:
   version: 0.1.0
 description: Guides a person through the lean method of validating a business model, from the canvas and its desk checks to experiments and 90-day cycles, keeping each judgement theirs.
 requires_backbone: ">=2.2.0,<3.0.0"
+aliases:
+  - lean
+commands:
+  check:
+    script: scripts/check.py
+    help: "Check the files of the location the capability's configuration records, or the default, `lean-business/`, until one is (DEC-002 point 14): each file's place in an idea's folder and its binding, each id against its path and the ids of its kind, each reference between the files (none may name nothing, or a subject of another idea), and each invariant DEC-002 and DEC-003 own that the files can show broken, as an error: the verdicts' order and a shortlisting without a yes on all three steps, a split not named by the variants it went into, a changed declaration or plan, a declaration, a decision or a review the gates would refuse, an experiment on a variant its cycle does not explore, two undecided or overlapping cycles of an idea, a suspension that breaks its rules, the goal set while a cycle was planned, running or suspended, and a fingerprint of a form the capability does not know. A guideline of the book, counted only on a box that holds entries, and a judgement gone stale, are warnings. Reads the files as they stand, never today's date. The `lean-business:check` member of `pkit validate`; --json prints the findings document validation reads. A query: read-only, offline; `pkit sync` provisions its dependencies. Exit 1 when a finding is an error."
+    query-contract: true
+validators:
+  check:
+    command: check
