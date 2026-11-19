@@ -1833,8 +1833,8 @@ def test_a_negative_number_is_refused_as_below_1(ci, tmp_path, monkeypatch, caps
 
 # --- a board declared with no number (#3244) -----------------------------------
 # DEC-019 rejects an issue with no card on the configured board at filing, so a
-# configuration that declares a board and gives no value its schema admits as
-# the board's number, which is 1 or more, leaves a filing no board to add the
+# configuration that declares a board and gives no number of 1 or more for
+# the board, read as a number, leaves a filing no board to add the
 # issue to. It is refused before anything is run or asked, as a `--board` that
 # does not name the configured board is, rather than filed onto no board.
 

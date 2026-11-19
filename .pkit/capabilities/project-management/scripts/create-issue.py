@@ -48,10 +48,11 @@ with a message of its own. Each refusal exits 2, before anything is written or
 asked and before any board is read, `--dry-run` included. One naming the
 configured board's own number goes on.
 
-Where the configuration declares a board and gives no value its schema admits as
-the board's number, missing, `null`, `0` or `""`, the filing has no board to add
-the issue to, so it is refused at the same point, exit 2, `--dry-run` included,
-naming `projects_v2_board_id` as the key to set (DEC-019).
+Where the configuration declares a board and gives no number of 1 or more for
+the board, read as a number, such as a missing number, `null`, `0` or `""`, the
+filing has no board to add the issue to, so it is refused at the same point,
+exit 2, `--dry-run` included, naming `projects_v2_board_id` as the key to set
+(DEC-019).
 
 An issue owes its card from its filing, so before anything is written,
 `--dry-run` included, a filing in a project with a board reads the configured
@@ -1242,7 +1243,7 @@ def _no_board_number(config: dict[str, Any]) -> str:
 
 def _board_number_refusal(config: dict[str, Any], *, board_configured: bool) -> str | None:
     """Why a filing is refused where the configuration declares a board and gives
-    no value its schema admits as the board's number, or None where it gives one,
+    no number of 1 or more for the board, read as a number, or None where it gives one,
     or declares no board. Every issue belongs on the configured board from its
     filing ([project-management:DEC-019-mandatory-issue-state]), so a filing with
     no board to add the issue to files nothing. No I/O."""
