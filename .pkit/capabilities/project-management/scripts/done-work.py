@@ -295,6 +295,7 @@ from _lib import (
     issue_branch,
     merge_queue,
     pr_merge,
+    pr_review,
     session_guard,
     sync_switch,
 )
@@ -749,6 +750,7 @@ def run(
             config,
             dry_run=args.dry_run,
             login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         return _ended(
@@ -1958,9 +1960,18 @@ def _check_approval_gate(
             refusal_message=_approvals_unread(pr_number, "comments", comments.cause),
         )
 
+    # Each approver compared with the PR's author and with each account the
+    # project registers as a reviewer agent's, in one call of the backbone's
+    # comparison (DEC-079 point 3, ADR-094 point 3).
+    standing = approvals.compare_approvers(
+        approvals.approvers_of(reviews.reviews, comments.comments),
+        data.get("author") if author_login else None,
+        pr_review.remote_baseline(config),
+    )
+
     # Path 1: the latest review that approves, requests changes or was
     # dismissed, an approval that counts as no person's left out.
-    deciding, reviews_left_out = approvals.deciding_review(reviews.reviews, author_login)
+    deciding, reviews_left_out = approvals.deciding_review(reviews.reviews, author_login, standing)
     if deciding is not None and deciding.state == approvals.APPROVED:
         return _GateResult(passed=True, passed_via="APPROVED review")
 
@@ -1968,7 +1979,9 @@ def _check_approval_gate(
     # as a person's. With the PR's author unread, no commenter is known to be
     # a non-author, so no such comment counts (#1485); GitHub keeps the author
     # from approving a review itself, so path 1 stands without the read.
-    approving, comments_left_out = approvals.approving_comment(comments.comments, author_login)
+    approving, comments_left_out = approvals.approving_comment(
+        comments.comments, author_login, standing
+    )
     if approving is not None:
         return _GateResult(
             passed=True,
@@ -1990,7 +2003,8 @@ def _check_approval_gate(
         comment_remedy = (
             "            - Run `done-work` again once `gh pr view` returns the PR's author.\n"
         )
-    left_out = _left_out_lines("an APPROVED review", reviews_left_out)
+    left_out = _unspelled_lines(standing)
+    left_out += _left_out_lines("an APPROVED review", reviews_left_out)
     if author_login:
         # With the author unread, the line above already says why no comment
         # counts.
@@ -2009,6 +2023,17 @@ def _check_approval_gate(
             f"{comment_remedy}"
             '            - Re-run with `--bypass "<reason>"`.'
         ),
+    )
+
+
+def _unspelled_lines(standing: approvals.Standing) -> str:
+    """One refusal line for each entry of the registered reviewer agents with no
+    spelling, which stops every approval until a person mends it (DEC-079
+    point 3)."""
+    return "".join(
+        f"          → The entry `{entry}` of {approvals.REGISTERED_KEY} names no account "
+        f"({why}), so no approval counts as a person's until it is mended.\n"
+        for entry, why in standing.unspelled
     )
 
 

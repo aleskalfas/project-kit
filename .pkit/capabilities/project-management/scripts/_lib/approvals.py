@@ -22,11 +22,23 @@ it whoever made it, a bot's and a reviewer agent's delivered as a native
 review among them, so no approving review passes until a person approves after
 it.
 
-**Not read here yet:** whether an approver is an account the project registers
-as a reviewer agent's, and the comparison of an approver with the author that
-sets case aside. Each compares two accounts, which waits on the backbone's
-comparison of accounts ([pkit:ADR-094] point 3). Until it comes, the author is
-told apart by the login each surface gives, exactly.
+**Who approves** (:func:`compare_approvers`). An approval counts only from an
+account that is another than the pull request's author, and that the project
+does not register as a reviewer agent's (``review.agents.remote_registered``).
+Each approver is compared with the author and with every registered entry as
+the backbone compares accounts ([pkit:ADR-094] point 3), in one call for the
+gate: the approver with the kind GitHub's REST interface records, the author as
+gh gives it, with its id and bot flag, and each entry as the project writes it.
+Only *two accounts* lets an approval count: *one account* is the author's own
+or a reviewer agent's, and *cannot tell* counts for nothing. A registered entry
+with no spelling, such as ``@bot``, leaves every approver untold from it, so no
+approval counts until a person mends it, and the refusal names the entry.
+
+**Who is asked** (:func:`askable_reviewers`). Human mode asks no member whose
+entry names a bot's account, or a reviewer agent's, for a review, nor the
+author, nor a member the comparison cannot tell from the author. A registered
+entry with no spelling leaves every member untold from a reviewer agent's, so
+no member is asked until a person mends it.
 
 The ``gh`` runner is the caller's (``gh(argv)``), as for the comment log, so a
 test fakes it and this module imports no ``gh`` helper.
@@ -35,11 +47,11 @@ test fakes it and this module imports no ``gh`` helper.
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from _lib import account_kind, comment_log
+from _lib import account_kind, accounts, comment_log
 from _lib.agent_verdicts import read_marker
 
 #: A ``gh`` runner: takes the argv, returns what ``subprocess.run`` returns.
@@ -55,6 +67,9 @@ DECIDING_STATES = (APPROVED, CHANGES_REQUESTED, DISMISSED)
 #: The prefix an approving comment opens with, case-sensitive.
 APPROVED_PREFIX = "Approved"
 
+#: Where the project registers its reviewer agents' accounts (DEC-028).
+REGISTERED_KEY = "review.agents.remote_registered"
+
 # One review per line, its reviewer's login and type with its state and body.
 _REVIEWS_JQ = ".[] | {login: .user.login, type: .user.type, state: .state, body: .body}"
 
@@ -67,6 +82,8 @@ class Review:
     kind: str | None
     state: str
     body: str
+    #: The type GitHub's REST interface records for the reviewer's account.
+    account_type: str | None = None
 
 
 @dataclass(frozen=True)
@@ -89,6 +106,127 @@ class Approval:
     author: str | None
     left_out: str = ""
     no_person: bool = False
+
+
+@dataclass(frozen=True)
+class Standing:
+    """What the backbone's comparison found of each approver: why its approval
+    counts for nothing, keyed by its login and type, where it counts for nothing
+    by the comparison (:func:`compare_approvers`). ``unspelled`` are the
+    registered entries with no spelling, each with why it names no account."""
+
+    left_out: dict[tuple[str | None, str | None], Approval]
+    unspelled: tuple[tuple[str, str], ...] = ()
+
+    def of(self, author: str | None, account_type: str | None) -> Approval | None:
+        """Why the approval of ``author`` counts for nothing, or None where it may."""
+        return self.left_out.get((author, account_type))
+
+
+#: A standing that leaves nothing out: no approver of a user's kind to compare.
+NO_STANDING = Standing({})
+
+
+def compare_approvers(
+    approvers: Iterable[tuple[str | None, str | None]],
+    author: Any,
+    registered: Iterable[str],
+    *,
+    run: accounts.Runner | None = None,
+) -> Standing:
+    """Compare each approver, a login with the type GitHub records for it, with
+    the PR's ``author``, gh's author object, where it was read, and with each
+    ``registered`` entry, in one call of the backbone's function (ADR-094 point
+    3). Approvers of a kind other than a user's are left to :func:`_judge_kind`."""
+    asked = sorted(
+        {
+            (login, kind)
+            for login, kind in approvers
+            if login and account_kind.of_record(login, kind) == account_kind.USER
+        }
+    )
+    entries = [entry for entry in registered if isinstance(entry, str) and entry]
+    if not asked:
+        return NO_STANDING
+    author_form = accounts.gh_author(author) if isinstance(author, dict) else None
+    pairs = (
+        [(accounts.typed(login, kind), author_form) for login, kind in asked]
+        if author_form is not None and author_form.get("login")
+        else []
+    )
+    folds = (
+        [
+            (accounts.typed(login, kind), [accounts.entry(e) for e in entries])
+            for login, kind in asked
+        ]
+        if entries
+        else []
+    )
+    compared = accounts.ask(pairs=pairs, folds=folds, run=run)
+    left_out: dict[tuple[str | None, str | None], Approval] = {}
+    unspelled: dict[str, str] = {}
+    for index, (login, kind) in enumerate(asked):
+        if folds:
+            judged = _registered(login, compared.folds[index], entries, compared.cause, unspelled)
+            if judged is not None:
+                left_out[(login, kind)] = judged
+                continue
+        if pairs:
+            answer = compared.pairs[index]
+            if answer == accounts.ONE:
+                left_out[(login, kind)] = Approval(login, "it is the PR's author's own")
+            elif answer != accounts.TWO:
+                why = compared.cause or "the backbone's comparison cannot tell the two apart"
+                left_out[(login, kind)] = Approval(
+                    login, f"it cannot be told from the PR's author's own: {why}", True
+                )
+    return Standing(left_out, tuple(sorted(unspelled.items())))
+
+
+def _registered(
+    login: str,
+    fold: accounts.Fold,
+    entries: list[str],
+    cause: str | None,
+    unspelled: dict[str, str],
+) -> Approval | None:
+    """Why ``login``'s approval counts for nothing against the registered
+    reviewer agents, by its ``fold``, or None where it is none of them."""
+    if fold.answer == accounts.TWO:
+        return None
+    if fold.answer == accounts.ONE:
+        return Approval(
+            login,
+            f"it is an account the project registers as a reviewer agent's ({REGISTERED_KEY})",
+            True,
+        )
+    for entry, (_answer, spelled) in zip(entries, fold.among, strict=False):
+        if spelled.account is None and cause is None:
+            unspelled[entry] = spelled.reason or "it names no account"
+    if unspelled:
+        named = ", ".join(f"`{entry}`" for entry in sorted(unspelled))
+        return Approval(
+            login,
+            f"the entry {named} of {REGISTERED_KEY} names no account, so no approval can be "
+            "told from a reviewer agent's until it is mended",
+            True,
+        )
+    why = cause or "the backbone's comparison cannot tell it from a registered entry"
+    return Approval(
+        login, f"it cannot be told from an account registered as a reviewer agent's: {why}", True
+    )
+
+
+def approvers_of(
+    reviews: Iterable[Review], comments: Iterable[comment_log.LogComment]
+) -> list[tuple[str | None, str | None]]:
+    """Each account that approves, by a review or an `Approved` comment, with
+    the type GitHub records for it, for :func:`compare_approvers`."""
+    out = [(r.author, r.account_type) for r in reviews if r.state == APPROVED]
+    out += [
+        (c.author, c.author_type) for c in comments if c.body.strip().startswith(APPROVED_PREFIX)
+    ]
+    return out
 
 
 def reviews_args(pr_number: int) -> list[str]:
@@ -123,33 +261,36 @@ def read_reviews(pr_number: int, gh: Gh) -> Reviews:
             return Reviews(False, cause=f"a review of PR #{pr_number} could not be read")
         login = entry.get("login")
         author = login if isinstance(login, str) and login else None
+        account_type = entry.get("type") if isinstance(entry.get("type"), str) else None
         read.append(
             Review(
                 author=author,
-                kind=account_kind.of_record(author, entry.get("type")),
+                kind=account_kind.of_record(author, account_type),
                 state=entry["state"],
                 body=str(entry.get("body") or ""),
+                account_type=account_type,
             )
         )
     return Reviews(True, tuple(read))
 
 
-def judge_review(review: Review, pr_author: str) -> Approval:
+def judge_review(review: Review, pr_author: str, standing: Standing) -> Approval:
     """Whether an approving review counts as a person's approval.
 
     GitHub keeps a PR's author from approving it, so a review needs no author
     read (#1485): an unread author leaves no review out, and only an author
-    read that names the reviewer does.
+    the comparison finds one account with the reviewer, or cannot tell from
+    it, does (``standing``, :func:`compare_approvers`).
     """
     if read_marker(review.body)[0]:
         return Approval(review.author, "it carries a reviewer agent's verdict marker", True)
     judged = _judge_kind(review.author, review.kind)
-    if not judged.left_out and pr_author and review.author == pr_author:
-        return Approval(review.author, "it is the PR's author's own")
-    return judged
+    if judged.left_out:
+        return judged
+    return standing.of(review.author, review.account_type) or judged
 
 
-def judge_comment(comment: comment_log.LogComment, pr_author: str) -> Approval:
+def judge_comment(comment: comment_log.LogComment, pr_author: str, standing: Standing) -> Approval:
     """Whether an `Approved` comment counts as a person's approval. With the
     PR's author unread, no commenter is known to be another account (#1485)."""
     judged = _judge_kind(
@@ -157,11 +298,12 @@ def judge_comment(comment: comment_log.LogComment, pr_author: str) -> Approval:
     )
     if judged.left_out:
         return judged
+    compared = standing.of(comment.author, comment.author_type)
+    if compared is not None and compared.no_person:
+        return compared
     if not pr_author:
         return Approval(comment.author, "the PR's author could not be read")
-    if comment.author == pr_author:
-        return Approval(comment.author, "it is the PR's author's own")
-    return judged
+    return compared or judged
 
 
 def _judge_kind(author: str | None, kind: str | None) -> Approval:
@@ -174,7 +316,7 @@ def _judge_kind(author: str | None, kind: str | None) -> Approval:
 
 
 def deciding_review(
-    reviews: Iterable[Review], pr_author: str
+    reviews: Iterable[Review], pr_author: str, standing: Standing
 ) -> tuple[Review | None, tuple[Approval, ...]]:
     """The review that decides, and the approvals left out of the order as no
     person's.
@@ -188,7 +330,7 @@ def deciding_review(
         if review.state not in DECIDING_STATES:
             continue
         if review.state == APPROVED:
-            judged = judge_review(review, pr_author)
+            judged = judge_review(review, pr_author, standing)
             if judged.left_out:
                 if judged.no_person:
                     left_out.append(judged)
@@ -198,7 +340,7 @@ def deciding_review(
 
 
 def approving_comment(
-    comments: Iterable[comment_log.LogComment], pr_author: str
+    comments: Iterable[comment_log.LogComment], pr_author: str, standing: Standing
 ) -> tuple[comment_log.LogComment | None, tuple[Approval, ...]]:
     """The latest `Approved` comment that counts as a person's approval, and
     the `Approved` comments after it left out as no person's."""
@@ -206,9 +348,90 @@ def approving_comment(
     for comment in reversed(list(comments)):
         if not comment.body.strip().startswith(APPROVED_PREFIX):
             continue
-        judged = judge_comment(comment, pr_author)
+        judged = judge_comment(comment, pr_author, standing)
         if not judged.left_out:
             return comment, tuple(left_out)
         if judged.no_person:
             left_out.append(judged)
     return None, tuple(left_out)
+
+
+def askable_reviewers(
+    candidates: Iterable[str],
+    author: Mapping[str, Any] | None,
+    registered: Iterable[str],
+    *,
+    run: accounts.Runner | None = None,
+) -> tuple[list[str], list[str]]:
+    """The members of ``candidates``, each a member's entry, that human mode
+    asks for a review, and a line for each it passes over, saying why (DEC-079
+    point 3, "Who is asked").
+
+    ``author`` is the PR's author in a form the backbone's function takes, such
+    as gh's (:func:`accounts.gh_author`), or None where it is not known, and
+    then no member can be told from it. Each member is compared with the author
+    and with each ``registered`` entry in one call of the backbone's function
+    (ADR-094 point 3)."""
+    members = [c for c in candidates if isinstance(c, str) and c]
+    entries = [e for e in registered if isinstance(e, str) and e]
+    passed: list[str] = []
+    asked: list[str] = []
+    for member in members:
+        if account_kind.of_form(member) == account_kind.BOT:
+            passed.append(f"@{member}: the entry names a bot's account, which reviews as no person")
+        else:
+            asked.append(member)
+    if not asked:
+        return [], passed
+    if author is None:
+        passed += [
+            f"@{member}: the PR's author is not known, so the member cannot be told from it"
+            for member in asked
+        ]
+        return [], passed
+    compared = accounts.ask(
+        pairs=[(accounts.entry(member), author) for member in asked],
+        folds=(
+            [(accounts.entry(member), [accounts.entry(e) for e in entries]) for member in asked]
+            if entries
+            else []
+        ),
+        run=run,
+    )
+    out: list[str] = []
+    for index, member in enumerate(asked):
+        why = _passed_over(index, compared, entries)
+        if why is None:
+            out.append(member)
+        else:
+            passed.append(f"@{member}: {why}")
+    return out, passed
+
+
+def _passed_over(index: int, compared: accounts.Compared, entries: list[str]) -> str | None:
+    """Why the member asked at ``index`` is passed over, or None where it is asked."""
+    if entries:
+        fold = compared.folds[index]
+        if fold.answer == accounts.ONE:
+            return f"the entry names an account registered as a reviewer agent's ({REGISTERED_KEY})"
+        if fold.answer != accounts.TWO:
+            unspelled = [
+                entry
+                for entry, (_answer, spelled) in zip(entries, fold.among, strict=False)
+                if spelled.account is None
+            ]
+            if unspelled and compared.cause is None:
+                named = ", ".join(f"`{entry}`" for entry in unspelled)
+                return (
+                    f"the entry {named} of {REGISTERED_KEY} names no account, so no member can "
+                    "be told from a reviewer agent's until it is mended"
+                )
+            cause = compared.cause or "the comparison cannot tell it from a registered entry"
+            return f"it cannot be told from an account registered as a reviewer agent's: {cause}"
+    answer = compared.pairs[index]
+    if answer == accounts.ONE:
+        return "it is the PR's author"
+    if answer != accounts.TWO:
+        cause = compared.cause or "the comparison cannot tell it from the author"
+        return f"it cannot be told from the PR's author: {cause}"
+    return None

@@ -122,6 +122,8 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
+    accounts,
+    approvals,
     axis_labels,
     bootstrap_gate,
     classification_rules,
@@ -133,6 +135,7 @@ from _lib import (
     issue_branch,
     issue_position,
     pr_head,
+    pr_review,
     pr_validation,
     session_guard,
 )
@@ -150,8 +153,8 @@ from _lib.escaped_output import escaping
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
+    Identity,
     check_membership,
-    format_unresolved,
     resolve_capability_root,
     resolve_invoker_identity,
 )
@@ -417,6 +420,7 @@ def main() -> int:
             config,
             dry_run=args.dry_run,
             login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("review-work", args.issue_number, exc)
@@ -539,19 +543,16 @@ def main() -> int:
         members = _read_members(capability_root, yaml_loader)
         role = reviewer_role_from_config(config)
         if role:
-            # The account acting stands for the author, whom no review is asked
-            # of; where pkit cannot tell it, no member is left out (#3162).
-            if not invoker.github_login:
-                print(
-                    f"  [warn] {format_unresolved(invoker.unresolved_cause)}, so the author "
-                    f"is not left out of the reviewers of role={role!r}.",
-                    file=sys.stderr,
-                )
-            candidates = role_based_reviewers(
-                members,
-                role,
-                exclude_login=invoker.github_login,
+            # Human mode asks no member whose entry names a bot's account or a
+            # reviewer agent's, nor one the comparison cannot tell from the
+            # PR's author (DEC-079 point 3).
+            candidates, passed_over = approvals.askable_reviewers(
+                role_based_reviewers(members, role),
+                _pr_author(existing_pr, invoker, branch, config),
+                pr_review.remote_baseline(config),
             )
+            for line in passed_over:
+                print(f"  [note] not asked for a review: {line}.", file=sys.stderr)
             if candidates:
                 reviewers_to_add = candidates
                 print(
@@ -699,6 +700,27 @@ def _success_line(issue_number: int, workflow: dict) -> str:
     return f"\n[ok] PR ready; #{issue_number} in {review}"
 
 
+def _pr_author(found: dict | None, invoker: Identity, branch: str, config: dict) -> dict | None:
+    """The PR's author, in a form the backbone's comparison takes, or None where
+    it is not known (DEC-079 point 3, "Who is asked").
+
+    A PR found before this run is told by the author GitHub records for it. A
+    PR this run opened is the acting account's, where the reading named one;
+    under a credential whose account it did not name, the PR is found once more
+    to read its author."""
+    if found is None and invoker.github_login:
+        return accounts.entry(invoker.github_login)
+    if found is None:
+        try:
+            found = _find_pr_for_branch(branch, config)
+        except head_programs.TwoOpen:
+            return None
+    author = (found or {}).get("author")
+    if not isinstance(author, dict) or not author.get("login"):
+        return None
+    return accounts.gh_author(author)
+
+
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     proc = gh_run(
         [
@@ -710,7 +732,7 @@ def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
             "--state",
             "all",
             "--json",
-            "number,state,isDraft,headRefName",
+            "number,state,isDraft,headRefName,author",
         ],
         config,
         check=False,
