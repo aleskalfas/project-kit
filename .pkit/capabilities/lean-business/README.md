@@ -38,7 +38,7 @@ lean-business guides a person through the lean method of validating a business m
 
 - `schemas/` — the shape of each file of an idea and of the capability's configuration, each with its reference instance ([lean-business:DEC-002-lean-business-data-model]; "An idea's folder" below). `shapes.schema.json` holds the shapes they share: the ids, the references, a day, a person and a fingerprint.
 - `scripts/check.py` — the capability's check, `pkit lean check`, and the `lean-business:check` member of `pkit validate` ("The check" below).
-- `scripts/_lib/` — what the check reads through, which the commands are to share: the canonical form and the fingerprints taken over it (`fingerprint`), where a window and a time box fall under a cycle's suspensions (`timeline`), the rules a suspension keeps (`suspensions`), and what follows from the files, such as pricing and an experiment's pass or fail (`readings`).
+- `scripts/_lib/` — what the check reads through, which the commands are to share: the files git sees (`listing`); the place of each file in an idea's folder, and the file of a subject's id (`layout`); an idea's subjects and the lookups between them, each lookup telling a subject found from a reference that names nothing or another idea's subject (`model`); the gates of the moves and the acts, each asked with the day of its act (`gates`); the canonical form, the fingerprints taken over it, and whether a kept one still matches (`fingerprint`); where a window and a time box fall under a cycle's suspensions, as they stand or as they stood on a day (`timeline`); the rules a suspension keeps (`suspensions`); the places each schema puts a day (`schemas`); and what follows from the files, such as pricing, an experiment's pass or fail, an assumption's outcome and an idea dropped (`readings`).
 
 The process definitions, the other commands and the skill these records decide are being built under project-kit#3426. This README lists them as they land.
 
@@ -78,31 +78,38 @@ The capability's configuration, `.pkit/capabilities/lean-business/project/config
 
 `pkit lean check` reads the files of the location as they stand, never today's date, and is the `lean-business:check` member of `pkit validate`. An invariant the capability's records own, broken by a command or by a hand edit, is an error, the one severity that fails validation. A guideline of the book, or a judgement gone stale, is a warning. A guideline's ranges count only a box that holds entries, so a first sketch with blanks draws none ([lean-business:DEC-002-lean-business-data-model] point 14).
 
+The shape of each file is not the check's: the `data` member of `pkit validate` holds each file to its schema, as `pkit data validate <location>` does alone. The check judges what the shapes leave open, and reads a value of the wrong shape as missing. It reads the files git sees, those it tracks and those it neither tracks nor ignores, as the `data` member does, so a file git ignores is neither's; outside a git repository it reads the files as they lie. Where a command's gate would refuse an act, the check asks the same gate with the day the act was recorded, and reads the cycle's suspensions as they stood that day, so a suspension recorded later never turns an act let through into one refused.
+
 Each finding carries a label:
 
 | Label | Severity | What it finds |
 |---|---|---|
-| `location` | error | The configuration cannot be read, or records a location that is refused, such as the repository's top, a folder under `.pkit/` or a hidden one, or one reached through a link. |
-| `layout` | error | A file of the capability's where an idea's folder has no place for it, a folder named by no id, or a variant's assumptions without its canvas. |
+| `location` | error | The configuration cannot be read, or records a location that is refused, such as the repository's top, a folder under `.pkit/` or a hidden one, or one reached through a link; or git cannot list the files. |
+| `layout` | error | A file of the capability's where an idea's folder has no place for it, a folder named by no id, or a variant's assumptions without its canvas; a file of the location ending in `.yml` that lies where the layout puts a `.yaml` file, or that names a schema of the capability's; or a file anywhere else that `pkit validate` reads and that names a schema of the capability's, save the configuration in its place. |
 | `unreadable` | error | A file of the layout that cannot be read as YAML. |
 | `binding` | error | A file at a place of the layout that names another schema, or none. |
+| `day` | error | A value written as a day, `YYYY-MM-DD`, at a place its schema puts a day, that names no day of the calendar, such as `2026-02-30`. |
 | `id` | error | An id that does not match the file's place, or is not qualified by what holds it. |
 | `duplicate-id` | error | An id given twice for one kind of subject. |
 | `reference` | error | A reference that names nothing, or a subject of another idea. |
-| `fingerprint` | error | A fingerprint of a canonical form the capability does not know. |
+| `fingerprint` | error | A fingerprint of a canonical form the capability does not know, or one over data that has no canonical text, such as a number that is not finite. |
 | `sides` | error | A direct model that names sides, a side named that the canvas does not name, or viability inputs given for no side or twice for one. |
-| `verdicts` | error | A verdict on a step without a yes on each step before it, or a shortlisting without a yes on all three. |
+| `verdicts` | error | A verdict on a step without a yes on each step before it; a verdict on viability or feasibility in an idea with no goal; a yes that still matches the canvas it judged, where that canvas misses what the yes needs; a shortlisting without a yes on all three steps; or a shortlisting that still matches, over a verdict gone stale. |
 | `split` | error | A variant split into one that does not name it as the variant it comes from. |
-| `declaration-changed` | error | A declared experiment whose declared fields changed since. |
-| `declaration-refused` | error | A declaration its gate refuses: a field its kind needs missing, no estimate, a time box over 14 days or ending before it starts, a start before the day it was declared, a declaration after its cycle's window ended, or one on a variant shelved or split before it, or resting on a shortlisting recorded after it. |
+| `comes-from` | error | A variant that comes from one neither split nor shelved, or from one split into other variants and not it. |
+| `declaration-changed` | error | A declared experiment whose declared fields, or whose record of its declaration, changed since. |
+| `declaration-refused` | error | A declaration its gate refuses: a field its kind needs missing, no estimate, a time box over 14 days or ending before it starts, a start before the day it was declared, an expected range whose low is above its high, a declaration after its cycle's window ended, one on a variant shelved or split before it, or one resting on a shortlisting recorded after it, or on another than the one the canvas keeps where that was recorded before the declaration. |
 | `undeclared` | error | A stopping rule reached, a result or a decision recorded on an experiment never declared. |
-| `decision-refused` | error | A decision without a result, a result recorded after its decision, or a decision before its time box ended, under its cycle's suspensions, without a generative experiment's stopping rule reached. |
+| `stop-refused` | error | A generative experiment's stopping rule reached before its time box started or after it ended. |
+| `result-refused` | error | A result recorded as spoiled, where no suspension of its cycle ran through its time box. |
+| `decision-refused` | error | A decision without a result, a result recorded after its decision, or a decision before its time box ended, without a generative experiment's stopping rule reached within its time box. |
 | `cycle-variants` | error | An experiment on an assumption of a variant its cycle does not explore, a key result that names a variant the cycle does not explore, or an explored variant without a key result. |
 | `plan-changed` | error | A cycle whose plan changed since its fingerprint was taken. |
+| `plan-refused` | error | A cycle first planned in an idea with no goal, or while another cycle of the idea was undecided, or a plan last changed after its window started. |
 | `one-cycle` | error | Two undecided cycles of one idea, or two whose windows overlap, as worked out. |
-| `suspension` | error | A suspension that breaks its rules: its first day outside the window, a day ahead of the day it was recorded, a resumption before its first day, a covered day that holds another act, or two suspensions that overlap. |
+| `suspension` | error | A suspension that breaks its rules: its first day outside the window, a day ahead of the day it was recorded, a resumption before its first day, a covered day that holds another act, two suspensions that overlap, or a suspension or its resumption recorded after the cycle was decided. |
 | `review-refused` | error | A review its gate refuses: a winning variant the cycle did not explore, a count of what was reached that differs from the key results, a persevere or a pivot for a variant shelved or split before it, a pivot on no decided experiment, or a review before the window ended. |
-| `goal-changed` | error | The goal set while one of the idea's cycles was planned, running or suspended. |
+| `goal-changed` | error | The goal set while one of the idea's cycles was planned, running or suspended: after the day it was first planned, and no later than its window's last day. |
 | `stale` | warning | A verdict on a variant with no outcome, or a shortlisting, whose content changed since. |
 | `guideline` | warning | More than three problems for a side, fewer than three or more than five key metrics, a headline over about 120 characters, or no revenue stream once desirability has a yes. |
 | `link` | warning | A problem with no existing alternative, a solution or a value proposition with no problem, an early adopter with no trigger, or a key metric with no step, or one that names an entry its box does not hold. |

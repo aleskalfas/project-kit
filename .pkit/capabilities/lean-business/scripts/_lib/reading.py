@@ -59,10 +59,16 @@ def read_yaml(path: Path) -> Any:
     return load_yaml(text, str(path))
 
 
+def written_as_day(value: object) -> bool:
+    """Whether `value` is written in the shape of a day, `YYYY-MM-DD`, whether or not the
+    calendar holds it."""
+    return isinstance(value, str) and _DAY.match(value) is not None
+
+
 def day(value: object) -> date | None:
     """The calendar day `value` writes as `YYYY-MM-DD`, or None for anything else, such
     as a day the calendar does not hold."""
-    if not isinstance(value, str) or _DAY.match(value) is None:
+    if not isinstance(value, str) or not written_as_day(value):
         return None
     try:
         return date.fromisoformat(value)

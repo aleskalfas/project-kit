@@ -14,15 +14,20 @@ or goal has changed since.
   - a verdict on `feasibility`: the traction target and the goal;
   - a shortlisting: every box, the estimate's inputs, the traction target and the goal;
   - a declaration: every field of the experiment but its binding (`pkit_schema`,
-    `schema_version`) and what is recorded after it is declared (`declared`, `stopped`,
-    `result`, `decision`);
+    `schema_version`) and what is recorded after it is declared (`stopped`, `result`,
+    `decision`). Its record, `declared`, counts too, but for the declaration's own
+    fingerprint: who declared it, the day and the shortlisting it rested on, which the
+    check holds the declaring gate to, are frozen with it;
   - a cycle's plan: its window as declared, its variants, its objective and its
     constraint, never its suspensions.
 
   The goal counts by its content alone, its `revenue` and `years`, never who set it or
-  when. So the covered data is what the person modelled, never the verdicts, outcomes
-  and fingerprints kept beside it, nor a file's binding. The covered data names what it
-  covers (`of`), so one kind's fingerprint never stands for another's.
+  when. The traction target counts its `multiplier` as ten where the canvas leaves it
+  out, as the canvas's schema gives its default, so a canvas that writes the default and
+  one that leaves it out keep one target. So the covered data is what the person
+  modelled, never the verdicts, outcomes and fingerprints kept beside it, nor a file's
+  binding. The covered data names what it covers (`of`), so one kind's fingerprint never
+  stands for another's.
 - **Its text**: JSON with no space between tokens, each mapping's keys in the order of
   their characters' code points, every character of a string as itself but those JSON
   must escape, a number that is whole as an integer and any other in its shortest form
@@ -34,6 +39,12 @@ So a change of layout, key order, quoting or comments makes nothing stale. A cha
 the form, or to the schemas that moves a covered field, is a new form: a release takes the
 fingerprints again through the capability's migration, which first checks each under the
 form it was taken with (`compare`). Every form the capability shipped stays here.
+
+Whether a kept fingerprint still matches what it covers is read here too (`check_verdict`,
+`check_shortlisting`, `check_declaration`, `check_plan`), so the check and the gates read
+one answer. A declaration names the shortlisting it rested on by its fingerprint and the
+day it was recorded (`Shortlisting`), since a shortlisting withdrawn and given again on an
+unchanged canvas keeps one fingerprint.
 
 Its limit: a fingerprint lies in the file it guards, so an edit that takes it again by
 hand passes. Version control shows such an edit; the check cannot.
@@ -49,6 +60,8 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
+
+from _lib.reading import day
 
 #: The canonical form this version takes fingerprints with.
 FORM = 1
@@ -92,9 +105,17 @@ STEP_BOXES: Mapping[str, tuple[str, ...]] = {
 #: An experiment's fields that bind it to its schema, which no fingerprint covers.
 BINDING = ("pkit_schema", "schema_version")
 
-#: What is recorded on an experiment once it is declared, which its declaration does not
+#: What is recorded on an experiment after it is declared, which its declaration does not
 #: cover.
-RECORDED_AFTER = ("declared", "stopped", "result", "decision")
+RECORDED_AFTER = ("stopped", "result", "decision")
+
+#: The declaration's record on an experiment: who declared it, the day, the shortlisting it
+#: rested on, and its own fingerprint, the one field of it the declaration does not cover.
+DECLARED = "declared"
+
+#: The traction target's yearly growth multiplier where a canvas leaves it out (DEC-002
+#: point 4), as the canvas's schema gives its default.
+MULTIPLIER = 10
 
 #: A cycle's plan (DEC-002 point 11).
 PLAN = ("window", "variants", "objective", "constraint")
@@ -197,7 +218,7 @@ def verdict_covers(step: str, canvas: object, goal: object, form: int = FORM) ->
     if step == "viability":
         covered["viability"] = _mapping(canvas).get("viability")
     if step == "feasibility":
-        covered["traction"] = _mapping(canvas).get("traction")
+        covered["traction"] = traction(canvas)
     if step != "desirability":
         covered["goal"] = goal_content(goal)
     return covered
@@ -210,16 +231,28 @@ def shortlisting_covers(canvas: object, goal: object, form: int = FORM) -> dict[
         "of": "shortlisting",
         "boxes": _boxes(canvas, BOXES),
         "viability": _mapping(canvas).get("viability"),
-        "traction": _mapping(canvas).get("traction"),
+        "traction": traction(canvas),
         "goal": goal_content(goal),
     }
 
 
+def traction(canvas: object) -> dict[str, Any]:
+    """A canvas's traction target as a fingerprint covers it: its first stage, and its
+    multiplier, ten where the canvas leaves it out."""
+    target = _mapping(_mapping(canvas).get("traction"))
+    multiplier = target.get("multiplier")
+    return {**target, "multiplier": MULTIPLIER if multiplier is None else multiplier}
+
+
 def declaration_covers(experiment: object, form: int = FORM) -> dict[str, Any]:
-    """What an experiment's declaration covers under `form`: its declared fields."""
+    """What an experiment's declaration covers under `form`: its declared fields, and its
+    record `declared` but for its own fingerprint."""
     _known(form)
     skipped = (*BINDING, *RECORDED_AFTER)
     fields = {key: value for key, value in _mapping(experiment).items() if key not in skipped}
+    record = fields.get(DECLARED)
+    if isinstance(record, Mapping):
+        fields[DECLARED] = {key: value for key, value in record.items() if key != "fingerprint"}
     return {"of": "declaration", "fields": fields}
 
 
@@ -287,3 +320,99 @@ def compare(stored: object, taken: Callable[[int], Fingerprint]) -> str:
     if kept.form not in FORMS:
         return UNKNOWN_FORM
     return MATCHES if taken(kept.form) == kept else DIFFERS
+
+
+#: What `check` finds where the covered data has no text, such as a number that is not
+#: finite.
+NO_TEXT = "no-text"
+
+
+@dataclass(frozen=True)
+class Checked:
+    """Whether a kept fingerprint still matches the data it covers: `outcome` is `MATCHES`,
+    `DIFFERS`, `UNKNOWN_FORM`, `UNREADABLE` where none is kept that reads as one, which the
+    shape reports, or `NO_TEXT`. `form` is the form the kept one names, and `why` says what
+    has no text, where something has none."""
+
+    outcome: str
+    form: object = None
+    why: str = ""
+
+    @property
+    def fresh(self) -> bool:
+        """Whether it matches: nothing it covers changed since it was taken."""
+        return self.outcome == MATCHES
+
+    @property
+    def stale(self) -> bool:
+        """Whether what it covers changed since it was taken."""
+        return self.outcome == DIFFERS
+
+
+def check(stored: object, taken: Callable[[int], Fingerprint]) -> Checked:
+    """`compare`, with covered data that has no text read as `NO_TEXT`."""
+    try:
+        outcome = compare(stored, taken)
+    except FingerprintError as exc:
+        return Checked(NO_TEXT, why=str(exc))
+    return Checked(outcome, form=_mapping(stored).get("form"))
+
+
+def check_verdict(step: str, canvas: Mapping[str, Any], goal: object) -> Checked:
+    """Whether the verdict on `step` a canvas keeps still matches what it judged."""
+    kept = _mapping(_mapping(canvas.get("verdicts")).get(step)).get("fingerprint")
+    return check(kept, lambda form: of_verdict(step, canvas, goal, form))
+
+
+def check_shortlisting(canvas: Mapping[str, Any], goal: object) -> Checked:
+    """Whether the shortlisting a canvas keeps still matches the canvas and the goal."""
+    kept = _mapping(canvas.get("outcome")).get("fingerprint")
+    return check(kept, lambda form: of_shortlisting(canvas, goal, form))
+
+
+def check_declaration(experiment: Mapping[str, Any]) -> Checked:
+    """Whether an experiment's declaration still matches what it declared."""
+    kept = _mapping(experiment.get(DECLARED)).get("fingerprint")
+    return check(kept, lambda form: of_declaration(experiment, form))
+
+
+def check_plan(cycle: Mapping[str, Any]) -> Checked:
+    """Whether a cycle's plan still matches its fingerprint."""
+    kept = _mapping(cycle.get("planned")).get("fingerprint")
+    return check(kept, lambda form: of_plan(cycle, form))
+
+
+# --- the shortlisting a declaration rests on ----------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Shortlisting:
+    """A shortlisting, as a declaration names the one it rested on: its fingerprint and the
+    day it was recorded. The two tell a shortlisting given again on an unchanged canvas
+    from the one withdrawn before it, which keep one fingerprint."""
+
+    fingerprint: Fingerprint
+    when: date
+
+    def as_data(self) -> dict[str, Any]:
+        """The shortlisting as a declaration's `rested-on` writes it."""
+        return {"fingerprint": self.fingerprint.as_data(), "when": self.when.isoformat()}
+
+
+def shortlisting(canvas: Mapping[str, Any]) -> Shortlisting | None:
+    """The shortlisting a canvas keeps, where its outcome is one that reads whole."""
+    outcome = _mapping(canvas.get("outcome"))
+    kept, when = read(outcome.get("fingerprint")), day(outcome.get("when"))
+    if outcome.get("kind") != "shortlisted" or kept is None or when is None:
+        return None
+    return Shortlisting(kept, when)
+
+
+def rested_on(stored: object) -> Shortlisting | None:
+    """The shortlisting a declaration's `rested-on` names, or None where it names none that
+    reads whole, which the shape reports."""
+    record = _mapping(stored)
+    kept, when = read(record.get("fingerprint")), day(record.get("when"))
+    if kept is None or when is None:
+        return None
+    return Shortlisting(kept, when)

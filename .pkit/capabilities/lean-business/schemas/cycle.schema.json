@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "cycle.schema.json",
   "title": "A cycle — lean-business capability",
-  "description": "Formal shape of `<location>/<idea>/cycles/<cycle>.yaml` (lean-business DEC-002 points 11 and 12): one cycle of an idea, exploring one or more of its shortlisted variants. Its plan is the variants it explores, its window as declared (its first day and the days it holds, 90 by default), its objective with key results, each taken from the traction target of a variant it explores and naming it, and its constraint, the one step of the customer factory it works on, with the evidence that it is the weakest. `planned` records who planned it and when, and the plan's fingerprint, which the command takes again with each change while the cycle is planned and never once its window has started. Its suspensions lie beside the plan, never under its fingerprint, and move where the window and each experiment not yet started fall, editing neither. Its review records what each key result reached, the winning variant and the person's decision for it. The cycle stores no list of its experiments, which name it. Where the window falls, whether a variant met the objective and the rules a plan, a suspension and a review keep are the capability's check's to hold. Document-shaped schema: the file IS the resource. Companion per COR-018.",
+  "description": "Formal shape of `<location>/<idea>/cycles/<cycle>.yaml` (lean-business DEC-002 points 11 and 12): one cycle of an idea, exploring one or more of its shortlisted variants. Its plan is the variants it explores, its window as declared (its first day and the days it holds, 90 by default), its objective with key results, each taken from the traction target of a variant it explores and naming it, and its constraint, the one step of the customer factory it works on, with the evidence that it is the weakest. `planned` records who first planned it and when, who last changed the plan and when, and the plan's fingerprint, which the command takes again with each change while the cycle is planned and never once its window has started. Its suspensions lie beside the plan, never under its fingerprint, and move where the window and each experiment not yet started fall, editing neither. Its review records what each key result reached, the winning variant and the person's decision for it. The cycle stores no list of its experiments, which name it. Where the window falls, whether a variant met the objective and the rules a plan, a suspension and a review keep are the capability's check's to hold. Document-shaped schema: the file IS the resource. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -113,15 +113,33 @@
       }
     },
     "planned": {
-      "description": "Who planned the cycle or last changed its plan, the day, and the plan's fingerprint over its window, variants, objective and constraint.",
+      "description": "Who first planned the cycle and the day, `first`; who last changed its plan and the day, which are the first planning's until the plan changes; and the plan's fingerprint over its window, variants, objective and constraint. Whether another cycle was undecided, or the goal changed, while the cycle was planned is read from the first planning, and whether the plan changed once its window started from the last change.",
       "type": "object",
       "required": [
+        "first",
         "by",
         "when",
         "fingerprint"
       ],
       "additionalProperties": false,
       "properties": {
+        "first": {
+          "description": "Who first planned the cycle, and the day.",
+          "type": "object",
+          "required": [
+            "by",
+            "when"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "by": {
+              "$ref": "shapes.schema.json#/$defs/person"
+            },
+            "when": {
+              "$ref": "shapes.schema.json#/$defs/day"
+            }
+          }
+        },
         "by": {
           "$ref": "shapes.schema.json#/$defs/person"
         },

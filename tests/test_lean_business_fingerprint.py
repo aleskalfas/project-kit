@@ -139,13 +139,39 @@ def test_a_declaration_covers_its_fields_but_its_binding_and_what_comes_after() 
         **declared,
         "pkit_schema": "lean-business:experiment",
         "schema_version": 1,
-        "declared": {"by": "A"},
         "stopped": {"by": "A"},
         "result": {"measured": 3},
         "decision": {"next": "stop"},
     }
     assert fingerprint.of_declaration(recorded) == taken
     assert fingerprint.of_declaration({**declared, "start": "2026-12-02"}) != taken
+
+
+def test_a_declaration_covers_its_record_but_its_own_fingerprint() -> None:
+    rested = {"fingerprint": {"form": 1, "sha256": "a" * 64}, "when": "2026-11-20"}
+    record = {"by": "A", "when": "2026-11-30", "rested-on": rested}
+    declared = {"id": "idea.one", "kind": "generative", "declared": record}
+    taken = fingerprint.of_declaration(declared)
+    kept = {**record, "fingerprint": taken.as_data()}
+    assert fingerprint.of_declaration({**declared, "declared": kept}) == taken
+    for changed in (
+        {**record, "when": "2026-11-29"},
+        {**record, "by": "B"},
+        {**record, "rested-on": {**rested, "when": "2026-11-21"}},
+    ):
+        assert fingerprint.of_declaration({**declared, "declared": changed}) != taken
+
+
+def test_a_traction_target_that_leaves_its_multiplier_out_counts_ten() -> None:
+    stage = {"first-stage": {"metric": "revenue", "target": 50}}
+    left_out = {**canvas(), "traction": stage}
+    written = {**canvas(), "traction": {**stage, "multiplier": 10}}
+    assert fingerprint.of_verdict("feasibility", left_out, GOAL) == fingerprint.of_verdict(
+        "feasibility", written, GOAL
+    )
+    assert fingerprint.of_shortlisting(left_out, GOAL) == fingerprint.of_shortlisting(written, GOAL)
+    other = {**canvas(), "traction": {**stage, "multiplier": 5}}
+    assert fingerprint.of_shortlisting(other, GOAL) != fingerprint.of_shortlisting(written, GOAL)
 
 
 def test_a_plan_never_covers_its_suspensions_or_its_review() -> None:
@@ -182,6 +208,70 @@ def test_compare_finds_a_match_a_difference_an_unknown_form_and_no_fingerprint()
         )
 
 
+def test_a_check_tells_fresh_from_stale_and_names_what_has_no_text() -> None:
+    plan = {"window": {"start": "2026-12-01", "days": 90}}
+    kept = {**plan, "planned": {"fingerprint": fingerprint.of_plan(plan).as_data()}}
+    assert fingerprint.check_plan(kept).fresh
+    changed = {**kept, "window": {"start": "2026-12-01", "days": 60}}
+    assert fingerprint.check_plan(changed).stale
+    later = {**kept, "planned": {"fingerprint": {"form": 2, "sha256": "a" * 64}}}
+    checked = fingerprint.check_plan(later)
+    assert (checked.outcome, checked.form, checked.fresh, checked.stale) == (
+        "unknown-form",
+        2,
+        False,
+        False,
+    )
+    endless = fingerprint.check_plan({**kept, "window": {"days": math.inf}})
+    assert endless.outcome == fingerprint.NO_TEXT and endless.why
+
+
+def test_each_kind_is_checked_against_what_it_covers() -> None:
+    base = canvas(**{"revenue-streams": "A subscription"})
+    judged = {
+        **base,
+        "verdicts": {
+            step: {"fingerprint": fingerprint.of_verdict(step, base, GOAL).as_data()}
+            for step in fingerprint.STEPS
+        },
+        "outcome": {"fingerprint": fingerprint.of_shortlisting(base, GOAL).as_data()},
+    }
+    assert all(fingerprint.check_verdict(s, judged, GOAL).fresh for s in fingerprint.STEPS)
+    assert fingerprint.check_shortlisting(judged, GOAL).fresh
+    assert fingerprint.check_shortlisting(judged, {**GOAL, "years": 4}).stale
+    record: dict[str, Any] = {"by": "A"}
+    declared: dict[str, Any] = {"id": "idea.one", "kind": "generative", "declared": record}
+    record["fingerprint"] = fingerprint.of_declaration(declared).as_data()
+    assert fingerprint.check_declaration(declared).fresh
+    assert fingerprint.check_declaration({**declared, "kind": "evaluative"}).stale
+
+
+def test_a_shortlisting_is_read_with_the_day_it_was_recorded() -> None:
+    taken = fingerprint.take({"a": 1})
+    outcome = {"kind": "shortlisted", "fingerprint": taken.as_data(), "when": "2026-10-08"}
+    standing = fingerprint.shortlisting({"outcome": outcome})
+    assert standing == fingerprint.Shortlisting(taken, date(2026, 10, 8))
+    assert standing.as_data() == {"fingerprint": taken.as_data(), "when": "2026-10-08"}
+    assert fingerprint.rested_on(standing.as_data()) == standing
+    # Given again on an unchanged canvas, it keeps its fingerprint and is another.
+    again = fingerprint.shortlisting({"outcome": {**outcome, "when": "2026-11-15"}})
+    assert again is not None and again.fingerprint == standing.fingerprint and again != standing
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        {"kind": "shelved", "when": "2026-10-08"},
+        {"kind": "shortlisted", "when": "2026-10-08"},
+        {"kind": "shortlisted", "fingerprint": {"form": 1, "sha256": "a" * 64}, "when": "soon"},
+    ],
+    ids=["not-shortlisted", "no-fingerprint", "no-day"],
+)
+def test_no_shortlisting_is_read_where_none_reads_whole(outcome: dict[str, Any]) -> None:
+    assert fingerprint.shortlisting({"outcome": outcome}) is None
+    assert fingerprint.rested_on(outcome) is None
+
+
 def test_the_reference_cycle_keeps_the_fingerprint_its_plan_takes() -> None:
     cycle = reading.read_yaml(SCHEMAS / "cycle.yaml")
     kept = cycle["planned"]["fingerprint"]
@@ -197,3 +287,9 @@ def test_the_fixture_keeps_the_fingerprints_its_judgements_take() -> None:
     assert fingerprint.read(direct["outcome"]["fingerprint"]) == fingerprint.of_shortlisting(
         direct, goal
     )
+    standing = fingerprint.shortlisting(direct)
+    for path in sorted(IDEA.glob("experiments/*.yaml")):
+        experiment = reading.read_yaml(path)
+        assert fingerprint.check_declaration(experiment).fresh
+        assert fingerprint.rested_on(experiment["declared"]["rested-on"]) == standing
+    assert fingerprint.check_plan(reading.read_yaml(IDEA / "cycles/first.yaml")).fresh

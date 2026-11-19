@@ -8,7 +8,8 @@
 #   words, with its `key-results`, each naming a variant it explores, the step of the
 #   customer factory, `metric`, and the number to reach there, `target`; `constraint`, the
 #   one step it works on, with the `evidence` that it is the weakest.
-# - `planned` — who planned it or last changed its plan, `by`, `when`, and the plan's
+# - `planned` — who first planned it and the day, `first`; who last changed its plan, `by`,
+#   and the day, `when`, the first planning's until the plan changes; and the plan's
 #   `fingerprint`, over its window, variants, objective and constraint. The command takes it
 #   again with each change while the cycle is planned, and never once its window started.
 # - `suspensions` — each stretch the person's life stopped the cycle: its `reason`, its
@@ -44,6 +45,9 @@ constraint:
   step: retention
   evidence: Of the first twenty households that tried a planned week, three asked for a second
 planned:
+  first:
+    by: A. Founder
+    when: 2026-11-19
   by: A. Founder
   when: 2026-11-19
   fingerprint:

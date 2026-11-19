@@ -27,7 +27,7 @@
       "$ref": "shapes.schema.json#/$defs/amount-per-period"
     },
     "years": {
-      "description": "The years to reach it in, counted from the day it was set.",
+      "description": "The years to reach it in: the span over which the viability estimate and the traction target reach the revenue.",
       "type": "number",
       "exclusiveMinimum": 0
     },

@@ -11,20 +11,35 @@
   and the declared expectation, never stored or asserted (DEC-002 point 10).
 - **Whether a variant met its cycle's objective** (`met_objective`), from the targets of the
   key results that name it and what its review says they reached (DEC-002 point 11).
+- **An assumption's outcome** (`assumption_outcome`), from the experiments that test it
+  (DEC-003 point 8).
+- **An idea dropped** (`dropped`), from its variants' outcomes (DEC-003 point 8).
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from datetime import date
 from typing import Any
 
 from _lib import ids
 from _lib.fingerprint import STEPS
+from _lib.reading import day
 
 #: What an experiment's result works out to.
 PASS = "pass"
 FAIL = "fail"
 NEITHER = "neither"
+
+#: An assumption's outcome (DEC-003 point 8).
+UNTESTED = "untested"
+BEING_TESTED = "being-tested"
+SUPPORTED = "supported"
+REFUTED = "refuted"
+INCONCLUSIVE = "inconclusive"
+
+#: The outcome each result works out to gives the assumption it tested.
+_FROM_RESULT = {PASS: SUPPORTED, FAIL: REFUTED, NEITHER: INCONCLUSIVE}
 
 
 def _mapping(value: object) -> Mapping[str, Any]:
@@ -153,3 +168,42 @@ def met_objective(cycle: Mapping[str, Any], variant: str) -> bool | None:
             return None
         met = met and value >= target
     return met
+
+
+def assumption_outcome(assumption: str, experiments: Iterable[Mapping[str, Any]]) -> str:
+    """The outcome of the assumption `assumption`, an assumption's id, from `experiments`,
+    the files of its idea's experiments (DEC-003 point 8):
+
+    - `UNTESTED` while no declared experiment names it, a draft being no test;
+    - `BEING_TESTED` while one that names it is declared and not decided, that is declared,
+      running or due;
+    - otherwise what the one decided last gives: `SUPPORTED` where it passed, `REFUTED`
+      where it failed, `INCONCLUSIVE` where it worked out to neither.
+
+    Days have no order within them, so of experiments decided on the same last day the one
+    whose id sorts last counts, which keeps the reading the same each time it is made. A
+    decision whose day cannot be read counts as the earliest."""
+    decided: list[tuple[date, str, Mapping[str, Any]]] = []
+    for experiment in experiments:
+        named = ids.parse_ref(experiment.get("assumption"), ids.ASSUMPTIONS)
+        if named is None or named.id != assumption:
+            continue
+        if not isinstance(experiment.get("declared"), Mapping):
+            continue
+        decision = experiment.get("decision")
+        if not isinstance(decision, Mapping):
+            return BEING_TESTED
+        when = day(decision.get("when")) or date.min
+        decided.append((when, str(experiment.get("id", "")), experiment))
+    if not decided:
+        return UNTESTED
+    *_, last = max(decided, key=lambda each: (each[0], each[1]))
+    return _FROM_RESULT[experiment_outcome(last) or NEITHER]
+
+
+def dropped(canvases: Iterable[Mapping[str, Any]]) -> bool:
+    """Whether an idea is dropped, from its variants' canvases: it has a variant, and every
+    variant that was not split is shelved (DEC-003 point 8). Dropping is no move of its own,
+    but what shelving its last variant leaves."""
+    kinds = [_mapping(canvas.get("outcome")).get("kind") for canvas in canvases]
+    return bool(kinds) and all(kind == "shelved" for kind in kinds if kind != "split")

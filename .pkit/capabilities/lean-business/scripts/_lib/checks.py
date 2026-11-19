@@ -10,44 +10,50 @@ data can show; the person's judgement of the content is never its question.
 - **A guideline of the book, or a judgement gone stale, is a warning.** A guideline's
   ranges apply only to a box that holds entries, so a first sketch with blanks draws none.
 
-Where a gate and the check judge the same fact, they read it through one predicate: pricing
-(`readings.priced`), where a window and a time box fall (`timeline`), and a suspension's
-rules (`suspensions`). Each finding's label is listed, with what it finds, in the
+Where a gate and the check judge the same fact, they read it through one predicate: the
+gates themselves (`gates`), each asked with the day its act was recorded; pricing
+(`readings.priced`); whether a fingerprint still matches (`fingerprint`); where a window
+and a time box fall (`timeline`); and a suspension's rules (`suspensions`). The model of an
+idea's files and its lookups are `model`'s, and this module turns what a lookup failed to
+find into a finding. Each finding's label is listed, with what it finds, in the
 capability's README, "The check".
 
-The references between files (DEC-002 point 7) are resolved here, as errors where one
-names nothing, or names another idea's subject, since an idea stands alone.
+The shape of each file is the backbone's data validation's, the `data` member of
+`pkit validate` (COR-023), and this check judges only what the shapes leave open: a value
+of the wrong shape it reads as missing.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import date
 from pathlib import Path
 from typing import Any
 
-from _lib import fingerprint, ids, layout, readings, suspensions, timeline
+from _lib import fingerprint, gates, ids, layout, listing, model, readings, schemas
 from _lib import location as locations
+from _lib import suspensions as rules
 from _lib.findings import ERROR, WARNING, Finding, at, ordered
+from _lib.model import Found, IdeaModel, Lookup, Subject
 from _lib.reading import day
 from _lib.root import CONFIG
-
-#: The most days a time box holds, counting its first and its last (DEC-002 point 9).
-TIME_BOX_DAYS = 14
+from _lib.timeline import Span, cycle_window, experiment_time_box, span_text
 
 #: The book's ranges, each a guideline (DEC-002 point 14).
 PROBLEMS = (1, 3)
 KEY_METRICS = (3, 5)
 HEADLINE_LENGTH = 120
 
-#: The fields a declaration needs, by its kind (DEC-002 point 9), besides those every
-#: experiment needs.
-NEEDS = {
-    "generative": ("learn", "stopping-rule", "fit"),
-    "evaluative": ("action", "metric", "expected", "source", "control"),
-}
-EVERY_DECLARATION_NEEDS = ("assumption", "cycle", "start", "end", "authors")
+#: Where the shape of each file is checked, which the summary names.
+SHAPE = (
+    "the shape of each file is checked by `pkit validate`'s `data` member, or by "
+    "`pkit data validate {}`; this check judges what the shapes leave open"
+)
+
+#: The goal the gates are given where the goal's file lies in its place but does not read,
+#: which is an error of its own: a goal set, whose content cannot be read, so no gate reads
+#: the idea as having none.
+UNREAD_GOAL: Mapping[str, Any] = {}
 
 
 @dataclass
@@ -81,14 +87,23 @@ def check(root: Path) -> Report:
         return Report(
             ["the location cannot be read"], [Finding(ERROR, CONFIG, str(exc), "location")]
         )
+    path = where.path if where is not None else locations.DEFAULT
+    try:
+        contents = layout.read(root, where.path) if where is not None else layout.Contents()
+        outside = layout.outside(root, path)
+    except listing.ListingFailed as exc:
+        return Report(
+            ["the files cannot be listed"],
+            [Finding(ERROR, path, f"git cannot list the files: {exc}", "location")],
+        )
+    found = [Finding(ERROR, s.rel, s.why, "layout") for s in (*contents.strays, *outside)]
     if where is None:
-        return Report([f"no ideas: nothing is recorded, and `{locations.DEFAULT}` is no folder"])
-    contents = layout.read(root, where.path)
-    found = [Finding(ERROR, stray.rel, stray.why, "layout") for stray in contents.strays]
-    pools = Pools.of(contents)
-    found.extend(pools.duplicates())
+        summary = f"no ideas: nothing is recorded, and `{locations.DEFAULT}` is no folder"
+        return Report([summary], ordered(found))
+    pools = model.Pools.of(contents)
+    found.extend(_duplicate(d) for d in pools.duplicates())
     for idea in contents.ideas.values():
-        found.extend(IdeaCheck(idea, pools).run())
+        found.extend(IdeaCheck(IdeaModel(idea, pools)).run())
     origin = "recorded" if where.recorded else "the default, not recorded yet"
     if not contents.ideas:
         return Report([f"no ideas in `{where.path}` ({origin})"], ordered(found))
@@ -98,114 +113,30 @@ def check(root: Path) -> Report:
         _plural(sum(len(i.experiments) for i in contents.ideas.values()), "experiment"),
         _plural(sum(len(i.cycles) for i in contents.ideas.values()), "cycle"),
     ]
-    return Report([f"{', '.join(counted)} in `{where.path}` ({origin})"], ordered(found))
+    summary = [f"{', '.join(counted)} in `{where.path}` ({origin})", SHAPE.format(where.path)]
+    return Report(summary, ordered(found))
 
 
-@dataclass(frozen=True)
-class Subject:
-    """A subject a reference may name: its idea, the file that holds it, and its data."""
-
-    idea: str
-    rel: str
-    data: Mapping[str, Any]
-
-
-@dataclass
-class Pools:
-    """The subjects of the location, by namespace and id, each id with every subject that
-    claims it."""
-
-    by: dict[str, dict[str, list[Subject]]] = field(default_factory=dict)
-
-    @staticmethod
-    def of(contents: layout.Contents) -> Pools:
-        pools = Pools({namespace: {} for namespace in ids.ID_PATTERN})
-        for idea in contents.ideas.values():
-            for variant in idea.variants.values():
-                canvas = variant.canvas.data if variant.canvas is not None else None
-                if variant.canvas is not None and canvas is not None:
-                    pools.add(
-                        ids.CANVAS, canvas.get("id"), Subject(idea.name, variant.canvas.rel, canvas)
-                    )
-                listed = variant.assumptions.data if variant.assumptions is not None else None
-                if variant.assumptions is not None and listed is not None:
-                    for entry in _list(listed.get("assumptions")):
-                        if isinstance(entry, Mapping):
-                            pools.add(
-                                ids.ASSUMPTIONS,
-                                entry.get("id"),
-                                Subject(idea.name, variant.assumptions.rel, entry),
-                            )
-            for namespace, files in ((ids.EXPERIMENT, idea.experiments), (ids.CYCLE, idea.cycles)):
-                for file in files.values():
-                    if file.data is not None:
-                        pools.add(
-                            namespace, file.data.get("id"), Subject(idea.name, file.rel, file.data)
-                        )
-        return pools
-
-    def add(self, namespace: str, qualified: object, subject: Subject) -> None:
-        if isinstance(qualified, str):
-            self.by[namespace].setdefault(qualified, []).append(subject)
-
-    def get(self, namespace: str, qualified: str) -> Subject | None:
-        found = self.by[namespace].get(qualified)
-        return found[0] if found else None
-
-    def duplicates(self) -> list[Finding]:
-        found: list[Finding] = []
-        for namespace, subjects in self.by.items():
-            for qualified, claims in subjects.items():
-                files = sorted({claim.rel for claim in claims})
-                if len(claims) > 1:
-                    found.append(
-                        Finding(
-                            ERROR,
-                            files[0],
-                            f"the id `{qualified}` is given {len(claims)} times, in "
-                            f"{', '.join(files)}: an id is unique across the location, and a "
-                            f"`[{namespace}:...]` reference to it would be ambiguous",
-                            "duplicate-id",
-                        )
-                    )
-        return found
+def _duplicate(duplicate: model.Duplicate) -> Finding:
+    return Finding(
+        ERROR,
+        duplicate.files[0],
+        f"the id `{duplicate.id}` is given {duplicate.times} times, in "
+        f"{', '.join(duplicate.files)}: an id is unique across the location, and a "
+        f"`[{duplicate.namespace}:...]` reference to it would be ambiguous",
+        "duplicate-id",
+    )
 
 
 # --- an idea --------------------------------------------------------------------------------------
 
 
-@dataclass
-class Experiment:
-    rel: str
-    own: str
-    data: Mapping[str, Any]
-
-
-@dataclass
-class Cycle:
-    rel: str
-    own: str
-    data: Mapping[str, Any]
-
-
 class IdeaCheck:
     """The findings of one idea's files."""
 
-    def __init__(self, idea: layout.Idea, pools: Pools) -> None:
-        self.idea = idea
-        self.pools = pools
+    def __init__(self, idea: IdeaModel) -> None:
+        self.model = idea
         self.found: list[Finding] = []
-        self.goal = idea.goal.data if idea.goal is not None else None
-        self.experiments = [
-            Experiment(file.rel, own, file.data)
-            for own, file in sorted(idea.experiments.items())
-            if file.data is not None
-        ]
-        self.cycles = [
-            Cycle(file.rel, own, file.data)
-            for own, file in sorted(idea.cycles.items())
-            if file.data is not None
-        ]
 
     def error(self, where: str, message: str, label: str) -> None:
         self.found.append(Finding(ERROR, where, message, label))
@@ -213,97 +144,99 @@ class IdeaCheck:
     def warn(self, where: str, message: str, label: str) -> None:
         self.found.append(Finding(WARNING, where, message, label))
 
+    def refused(self, rel: str, refusals: Sequence[gates.Refusal], label: str) -> None:
+        """Each refusal of a gate, as an error with `label` in the file `rel`."""
+        for refusal in refusals:
+            self.error(at(rel, refusal.pointer), refusal.message, label)
+
     def run(self) -> list[Finding]:
-        for file in self._files():
+        for kind, file in self._files():
             if file.problem is not None:
                 label = "unreadable" if file.unreadable else "binding"
                 self.error(file.rel, f"it {file.problem}", label)
-        for name, variant in sorted(self.idea.variants.items()):
+            elif file.data is not None:
+                for pointer, value in schemas.unreadable_days(kind, file.data):
+                    self.error(
+                        at(file.rel, pointer),
+                        f"`{value}` is written as a day, `YYYY-MM-DD`, but names no day of the "
+                        f"calendar, so no date it bears on can be compared",
+                        "day",
+                    )
+        for name, variant in sorted(self.model.idea.variants.items()):
             if variant.canvas is None and variant.assumptions is not None:
                 self.error(
                     variant.assumptions.rel,
                     f"the variant `{name}` has assumptions but no canvas, `{layout.CANVAS}`",
                     "layout",
                 )
-            if variant.canvas is not None and variant.canvas.data is not None:
-                CanvasCheck(self, name, variant.canvas.rel, variant.canvas.data).run()
             if variant.assumptions is not None and variant.assumptions.data is not None:
                 self._assumptions(name, variant)
-        for experiment in self.experiments:
+        for name, file, canvas in self.model.canvases():
+            CanvasCheck(self, name, file.rel, canvas).run()
+        for experiment in self.model.experiments:
             ExperimentCheck(self, experiment).run()
-        for cycle in self.cycles:
+        for cycle in self.model.cycles:
             CycleCheck(self, cycle).run()
         self._one_cycle_at_a_time()
         self._goal_held_still()
         return self.found
 
-    def _files(self) -> list[layout.File]:
-        files = [self.idea.goal] if self.idea.goal is not None else []
-        for variant in self.idea.variants.values():
-            files.extend(f for f in (variant.canvas, variant.assumptions) if f is not None)
-        files.extend(self.idea.experiments.values())
-        files.extend(self.idea.cycles.values())
+    def _files(self) -> list[tuple[str, layout.File]]:
+        idea = self.model.idea
+        files: list[tuple[str, layout.File]] = [("goal", idea.goal)] if idea.goal else []
+        for variant in idea.variants.values():
+            for kind, file in (("canvas", variant.canvas), ("assumptions", variant.assumptions)):
+                if file is not None:
+                    files.append((kind, file))
+        files.extend(("experiment", file) for file in idea.experiments.values())
+        files.extend(("cycle", file) for file in idea.cycles.values())
         return files
 
     # --- shared readings ---
 
-    def resolve(self, value: object, namespace: str, rel: str, pointer: str) -> Subject | None:
-        """The subject a reference names, or None, with an error where it names nothing in
-        the location or a subject of another idea. A value that is no reference is the
-        shape's to report."""
-        found = ids.parse_ref(value, namespace)
-        if found is None:
-            return None
-        if ids.idea_of(found.id) != self.idea.name:
+    def reference(self, lookup: Lookup, rel: str, pointer: str) -> Subject | None:
+        """The subject a lookup found, or None, with an error where the reference names
+        nothing in the location or a subject of another idea. A value that is no reference
+        is the shape's to report."""
+        if isinstance(lookup, Found):
+            return lookup.subject
+        if isinstance(lookup, model.Foreign):
             self.error(
                 at(rel, pointer),
-                f"it names `{found.id}`, a subject of another idea: an idea stands alone",
+                f"it names `{lookup.id}`, a subject of another idea: an idea stands alone",
                 "reference",
             )
-            return None
-        subject = self.pools.get(namespace, found.id)
-        if subject is None:
-            self.error(at(rel, pointer), f"it names `{found.id}`, which no file holds", "reference")
-        return subject
+        elif isinstance(lookup, model.Dangling):
+            self.error(
+                at(rel, pointer), f"it names `{lookup.id}`, which no file holds", "reference"
+            )
+        return None
 
-    def canvas_of(self, variant_id: str) -> Mapping[str, Any] | None:
-        subject = self.pools.get(ids.CANVAS, variant_id)
-        return subject.data if subject is not None and subject.idea == self.idea.name else None
+    def goal_for_gates(self) -> Mapping[str, Any] | None:
+        """The goal the gates read whether the idea has one: its goal, or `UNREAD_GOAL`
+        where its file does not read."""
+        return UNREAD_GOAL if self.model.goal_unread else self.model.goal
 
-    def cycle_of(self, experiment: Experiment) -> Mapping[str, Any] | None:
-        """The cycle an experiment names, where it resolves within the idea."""
-        found = ids.parse_ref(experiment.data.get("cycle"), ids.CYCLE)
-        if found is None or ids.idea_of(found.id) != self.idea.name:
-            return None
-        subject = self.pools.get(ids.CYCLE, found.id)
-        return subject.data if subject is not None else None
-
-    def experiments_of(self, cycle_id: str) -> list[Experiment]:
-        """The experiments that name the cycle `cycle_id`."""
-        named: list[Experiment] = []
-        for experiment in self.experiments:
-            found = ids.parse_ref(experiment.data.get("cycle"), ids.CYCLE)
-            if found is not None and found.id == cycle_id:
-                named.append(experiment)
-        return named
-
-    def declared_on(self, assumption_id: str) -> bool:
-        """Whether a declared experiment names the assumption `assumption_id`."""
-        for experiment in self.experiments:
-            found = ids.parse_ref(experiment.data.get("assumption"), ids.ASSUMPTIONS)
-            if found is not None and found.id == assumption_id and _declared(experiment.data):
-                return True
-        return False
-
-    def expected_id(self, own: str) -> str:
-        return f"{self.idea.name}.{own}"
+    def fingerprint_error(self, rel: str, pointer: str, checked: fingerprint.Checked) -> None:
+        """An error where a kept fingerprint cannot be checked at all."""
+        if checked.outcome == fingerprint.UNKNOWN_FORM:
+            self.error(
+                at(rel, pointer),
+                f"its fingerprint names the canonical form {checked.form}, which this version "
+                f"of the capability does not know, so it cannot be checked",
+                "fingerprint",
+            )
+        elif checked.outcome == fingerprint.NO_TEXT:
+            self.error(
+                at(rel, pointer), f"its fingerprint cannot be checked: {checked.why}", "fingerprint"
+            )
 
     # --- assumptions ---
 
     def _assumptions(self, name: str, variant: layout.Variant) -> None:
         assert variant.assumptions is not None and variant.assumptions.data is not None
         rel = variant.assumptions.rel
-        qualifier = self.expected_id(name)
+        qualifier = self.model.qualified(name)
         canvas = variant.canvas.data if variant.canvas is not None else None
         held = _entry_ids(canvas) if canvas is not None else set()
         for index, entry in enumerate(_list(variant.assumptions.data.get("assumptions"))):
@@ -323,7 +256,7 @@ class IdeaCheck:
                 and isinstance(source, str)
                 and source not in held
                 and isinstance(qualified, str)
-                and not self.declared_on(qualified)
+                and not self.model.declared_on(qualified)
             ):
                 self.warn(
                     at(rel, f"{pointer}/source/entry"),
@@ -335,7 +268,8 @@ class IdeaCheck:
     # --- one cycle at a time ---
 
     def _one_cycle_at_a_time(self) -> None:
-        undecided = [c for c in self.cycles if not isinstance(c.data.get("review"), Mapping)]
+        cycles = self.model.cycles
+        undecided = [c for c in cycles if not isinstance(c.data.get("review"), Mapping)]
         if len(undecided) > 1:
             named = ", ".join(f"`{c.data.get('id', c.own)}`" for c in undecided)
             for cycle in undecided:
@@ -345,34 +279,37 @@ class IdeaCheck:
                     f"cycle at a time, so the next is planned once the last is decided",
                     "one-cycle",
                 )
-        spans = [(c, timeline.cycle_window(c.data)) for c in self.cycles]
+        spans = [(c, cycle_window(c.data)) for c in cycles]
         for i, (one, first) in enumerate(spans):
             for other, second in spans[i + 1 :]:
                 if first is None or second is None or not _windows_meet(first, second):
                     continue
                 self.error(
                     other.rel,
-                    f"its window, {_span_text(second)}, overlaps the window of "
-                    f"`{one.data.get('id', one.own)}`, {_span_text(first)}, as worked out",
+                    f"its window, {span_text(second)}, overlaps the window of "
+                    f"`{one.data.get('id', one.own)}`, {span_text(first)}, as worked out",
                     "one-cycle",
                 )
 
     # --- the goal ---
 
     def _goal_held_still(self) -> None:
-        if self.idea.goal is None or self.goal is None:
+        goal_file = self.model.idea.goal
+        if goal_file is None or self.model.goal is None:
             return
-        set_on = day(self.goal.get("when"))
+        set_on = day(self.model.goal.get("when"))
         if set_on is None:
             return
-        for cycle in self.cycles:
-            planned = day(_m(cycle.data.get("planned")).get("when"))
-            span = timeline.cycle_window(cycle.data)
-            if planned is None or span is None or set_on < planned:
+        for cycle in self.model.cycles:
+            planned = model.first_planned(cycle.data)
+            span = cycle_window(cycle.data)
+            # The goal set on the day a cycle was first planned may have come first, at the
+            # last cycle's review: days have no order within them (DEC-003 point 1).
+            if planned is None or span is None or set_on <= planned:
                 continue
             if span.end is None or set_on <= span.end:
                 self.error(
-                    self.idea.goal.rel,
+                    goal_file.rel,
                     f"the goal was set on {set_on}, while the cycle "
                     f"`{cycle.data.get('id', cycle.own)}` was planned, running or suspended: "
                     f"it changes only while none of the idea's cycles is",
@@ -391,7 +328,8 @@ class CanvasCheck:
         self.name = name
         self.rel = rel
         self.data = data
-        self.id = idea.expected_id(name)
+        self.id = idea.model.qualified(name)
+        self.goal = idea.model.goal
 
     def run(self) -> None:
         stored = self.data.get("id")
@@ -408,13 +346,23 @@ class CanvasCheck:
         self._stale()
         self._guidelines()
         self._links()
-        comes = ids.parse_ref(self.data.get("comes-from"), ids.CANVAS)
-        if comes is not None and ids.idea_of(comes.id) != self.idea.idea.name:
-            self.idea.error(
-                at(self.rel, "/comes-from"),
-                f"it comes from `{comes.id}`, a variant of another idea: an idea stands alone",
-                "reference",
-            )
+        self._comes_from()
+
+    def _refused(self, refusals: Sequence[gates.Refusal]) -> None:
+        self.idea.refused(self.rel, refusals, "verdicts")
+
+    def _verdict(self, step: str) -> fingerprint.Checked | None:
+        """The verdict on `step` checked against the canvas and the goal as they stand, or
+        None where it covers the goal and the goal's file does not read, so nothing tells."""
+        if step != "desirability" and self.idea.model.goal_unread:
+            return None
+        return fingerprint.check_verdict(step, self.data, self.goal)
+
+    def _shortlisting(self) -> fingerprint.Checked | None:
+        """The shortlisting checked, or None where the goal's file does not read."""
+        if self.idea.model.goal_unread:
+            return None
+        return fingerprint.check_shortlisting(self.data, self.goal)
 
     def _entries(self) -> None:
         seen: dict[str, str] = {}
@@ -500,82 +448,74 @@ class CanvasCheck:
             seen.add(side)
 
     def _verdicts(self) -> None:
-        for position, step in enumerate(fingerprint.STEPS):
-            if readings.answer(self.data, step) is None:
+        """The desk gate's conditions the files can show: the verdicts' order, the goal a
+        verdict on viability or feasibility was judged against, and what a yes needed of
+        the canvas, where the yes still matches the canvas it judged."""
+        self._refused(gates.verdict_order(self.data))
+        for step in fingerprint.STEPS:
+            answer = readings.answer(self.data, step)
+            if answer is None:
                 continue
-            before = fingerprint.STEPS[:position]
-            missing = [s for s in before if readings.answer(self.data, s) != "yes"]
-            if missing:
-                self.idea.error(
-                    at(self.rel, f"/verdicts/{step}"),
-                    f"a verdict on {step} stands without a yes on {', '.join(missing)}: each "
-                    f"step is judged only once each step before it has a yes, and a no clears "
-                    f"the verdicts after it",
-                    "verdicts",
-                )
+            self._refused(gates.judging(step, self.idea.goal_for_gates()))
+            checked = self._verdict(step)
+            if answer == "yes" and checked is not None and checked.fresh:
+                self._refused(gates.yes_content(step, self.data))
 
     def _outcome(self) -> None:
         outcome = _m(self.data.get("outcome"))
         kind = outcome.get("kind")
         if kind == "shortlisted":
-            missing = [s for s in fingerprint.STEPS if readings.answer(self.data, s) != "yes"]
-            if missing:
-                self.idea.error(
-                    at(self.rel, "/outcome"),
-                    f"the variant is shortlisted without a yes on {', '.join(missing)}: a "
-                    f"shortlisting needs a yes on all three steps, and a no withdraws it",
-                    "verdicts",
-                )
+            self._refused(gates.shortlisting(self.data))
+            # A shortlisting that still matches was taken over the canvas and the goal as
+            # they stand, so a verdict stale now was stale when it was taken.
+            checked = self._shortlisting()
+            if checked is not None and checked.fresh:
+                self._refused(gates.stale_verdicts(self.data, self.goal))
         if kind == "split":
             for index, value in enumerate(_list(outcome.get("into"))):
-                subject = self.idea.resolve(value, ids.CANVAS, self.rel, f"/outcome/into/{index}")
+                pointer = f"/outcome/into/{index}"
+                subject = self.idea.reference(
+                    self.idea.model.resolve(value, ids.CANVAS), self.rel, pointer
+                )
                 if subject is None:
                     continue
                 comes = ids.parse_ref(subject.data.get("comes-from"), ids.CANVAS)
                 if comes is None or comes.id != self.id:
                     self.idea.error(
-                        at(self.rel, f"/outcome/into/{index}"),
+                        at(self.rel, pointer),
                         f"the variant is split into `{subject.data.get('id')}`, which does not "
                         f"name `{self.id}` as the variant it comes from",
                         "split",
                     )
 
     def _stale(self) -> None:
-        goal = self.idea.goal
         kind = _m(self.data.get("outcome")).get("kind")
-        if kind is None:
-            for step in fingerprint.STEPS:
-                verdict = _m(_m(self.data.get("verdicts")).get(step))
-                if not verdict:
-                    continue
-                self._compare(
-                    verdict.get("fingerprint"),
-                    lambda form, step=step: fingerprint.of_verdict(step, self.data, goal, form),
-                    f"/verdicts/{step}/fingerprint",
+        for step in fingerprint.STEPS:
+            if not _m(_m(self.data.get("verdicts")).get(step)):
+                continue
+            pointer = f"/verdicts/{step}/fingerprint"
+            checked = self._verdict(step)
+            if checked is None:
+                continue
+            self.idea.fingerprint_error(self.rel, pointer, checked)
+            if checked.stale and kind is None:
+                self.idea.warn(
+                    at(self.rel, pointer),
                     f"the verdict on {step} is stale: {_judged(step)} changed since, so judge "
                     f"the step again",
+                    "stale",
                 )
-        if kind == "shortlisted":
-            self._compare(
-                _m(self.data.get("outcome")).get("fingerprint"),
-                lambda form: fingerprint.of_shortlisting(self.data, goal, form),
-                "/outcome/fingerprint",
-                "the shortlisting is stale: the canvas or the goal changed since, so no new "
-                "experiment rests on it until the variant is judged and shortlisted again",
-            )
-
-    def _compare(
-        self,
-        stored: object,
-        taken: Callable[[int], fingerprint.Fingerprint],
-        pointer: str,
-        stale: str,
-    ) -> None:
-        outcome = _compared(stored, taken)
-        if outcome == fingerprint.DIFFERS:
-            self.idea.warn(at(self.rel, pointer), stale, "stale")
-        elif outcome is not None and outcome != fingerprint.MATCHES:
-            self.idea.error(at(self.rel, pointer), outcome, "fingerprint")
+        checked = self._shortlisting()
+        if kind == "shortlisted" and checked is not None:
+            pointer = "/outcome/fingerprint"
+            self.idea.fingerprint_error(self.rel, pointer, checked)
+            if checked.stale:
+                self.idea.warn(
+                    at(self.rel, pointer),
+                    "the shortlisting is stale: the canvas or the goal changed since, so no new "
+                    "experiment rests on it until the variant is judged and shortlisted again",
+                    "stale",
+                )
 
     def _guidelines(self) -> None:
         sides: list[object] = [s for s in _list(self.data.get("sides")) if isinstance(s, str)] or [
@@ -659,6 +599,31 @@ class CanvasCheck:
     def _link(self, pointer: str, message: str) -> None:
         self.idea.warn(at(self.rel, pointer), message, "link")
 
+    def _comes_from(self) -> None:
+        """The variant this one comes from (DEC-002 point 4): one it was split from, which
+        names it among the variants it went into, or a shelved one whose story it takes up."""
+        lookup = self.idea.model.resolve(self.data.get("comes-from"), ids.CANVAS)
+        origin = self.idea.reference(lookup, self.rel, "/comes-from")
+        if origin is None:
+            return
+        outcome = _m(origin.data.get("outcome"))
+        kind, named = outcome.get("kind"), origin.data.get("id")
+        if kind not in ("split", "shelved"):
+            self.idea.error(
+                at(self.rel, "/comes-from"),
+                f"it comes from `{named}`, which is neither split nor shelved: a variant comes "
+                f"from one it was split from, or a shelved one whose story it takes up",
+                "comes-from",
+            )
+        elif kind == "split":
+            into = [ids.parse_ref(v, ids.CANVAS) for v in _list(outcome.get("into"))]
+            if self.id not in {reference.id for reference in into if reference is not None}:
+                self.idea.error(
+                    at(self.rel, "/comes-from"),
+                    f"it comes from `{named}`, which was split into other variants, not this one",
+                    "comes-from",
+                )
+
 
 # --- an experiment --------------------------------------------------------------------------------
 
@@ -666,29 +631,29 @@ class CanvasCheck:
 class ExperimentCheck:
     """The findings of one experiment."""
 
-    def __init__(self, idea: IdeaCheck, experiment: Experiment) -> None:
+    def __init__(self, idea: IdeaCheck, experiment: model.Experiment) -> None:
         self.idea = idea
         self.e = experiment
         self.data = experiment.data
         self.rel = experiment.rel
-        self.cycle = idea.cycle_of(experiment)
+        self.cycle = model.found(idea.model.cycle_of(experiment))
 
     def run(self) -> None:
-        stored, expected = self.data.get("id"), self.idea.expected_id(self.e.own)
+        stored, expected = self.data.get("id"), self.idea.model.qualified(self.e.own)
         if ids.is_idea_qualified(stored) and stored != expected:
             self.idea.error(
                 at(self.rel, "/id"),
                 f"its id is `{stored}`, but the file lies where the layout puts `{expected}`",
                 "id",
             )
-        assumption = self.idea.resolve(
-            self.data.get("assumption"), ids.ASSUMPTIONS, self.rel, "/assumption"
-        )
-        self.idea.resolve(self.data.get("cycle"), ids.CYCLE, self.rel, "/cycle")
+        lookup = self.idea.model.resolve(self.data.get("assumption"), ids.ASSUMPTIONS)
+        assumption = self.idea.reference(lookup, self.rel, "/assumption")
+        self.idea.reference(self.idea.model.cycle_of(self.e), self.rel, "/cycle")
         if assumption is not None and self.cycle is not None:
-            self._explored(assumption)
-        if _declared(self.data):
+            self.idea.refused(self.rel, gates.unexplored(self.data, self.cycle), "cycle-variants")
+        if model.declared(self.data):
             self._declaration()
+            self._after()
         else:
             for key in ("stopped", "result", "decision"):
                 if isinstance(self.data.get(key), Mapping):
@@ -698,159 +663,54 @@ class ExperimentCheck:
                         f"but the experiment was never declared",
                         "undeclared",
                     )
-        self._decision()
         self._within_window()
-
-    def _explored(self, assumption: Subject) -> None:
-        assert self.cycle is not None
-        qualified = assumption.data.get("id")
-        if not isinstance(qualified, str):
-            return
-        variant = ids.qualifier(qualified)
-        explored = {
-            r.id
-            for r in (ids.parse_ref(v, ids.CANVAS) for v in _list(self.cycle.get("variants")))
-            if r is not None
-        }
-        if variant not in explored:
-            self.idea.error(
-                at(self.rel, "/assumption"),
-                f"it tests an assumption of `{variant}`, which its cycle, "
-                f"`{self.cycle.get('id')}`, does not explore",
-                "cycle-variants",
-            )
 
     def _declaration(self) -> None:
         declared = _m(self.data.get("declared"))
-        outcome = _compared(
-            declared.get("fingerprint"), lambda form: fingerprint.of_declaration(self.data, form)
-        )
-        if outcome == fingerprint.DIFFERS:
+        checked = fingerprint.check_declaration(self.data)
+        if checked.stale:
             self.idea.error(
                 at(self.rel, "/declared/fingerprint"),
-                "a declared field changed since it was declared: a declaration is frozen, so "
-                "a correction comes as a new experiment",
+                "a declared field, or the record of the declaration, changed since it was "
+                "declared: a declaration is frozen, so a correction comes as a new experiment",
                 "declaration-changed",
             )
-        elif outcome is not None and outcome != fingerprint.MATCHES:
-            self.idea.error(at(self.rel, "/declared/fingerprint"), outcome, "fingerprint")
-        refused = self._refusals(declared)
-        for message in refused:
-            self.idea.error(at(self.rel, "/declared"), message, "declaration-refused")
-
-    def _refusals(self, declared: Mapping[str, Any]) -> list[str]:
-        """Why the declaring gate would have refused the declaration, each in words."""
-        found: list[str] = []
-        kind = self.data.get("kind")
-        needs = (*EVERY_DECLARATION_NEEDS, *NEEDS.get(str(kind), ()))
-        missing = [f"`{key}`" for key in needs if self.data.get(key) in (None, [], {}, "")]
-        if missing:
-            found.append(
-                f"it was declared without {', '.join(missing)}, which a {kind} declaration needs"
-            )
-        if not [e for e in _list(self.data.get("estimates")) if isinstance(e, Mapping)]:
-            found.append("it was declared without an estimate, made alone before the declaration")
-        start, end, on = (
-            day(self.data.get("start")),
-            day(self.data.get("end")),
-            day(declared.get("when")),
+        self.idea.fingerprint_error(self.rel, "/declared/fingerprint", checked)
+        on = day(declared.get("when"))
+        if on is None:
+            return
+        variant = self.idea.model.variant_tested(self.e)
+        canvas = model.found(self.idea.model.canvas_of(variant)) if variant else None
+        written = declared.get("rested-on")
+        rests_on = fingerprint.rested_on(written)
+        if written is not None and rests_on is None:
+            # It names a shortlisting that does not read whole, which the shape, or the
+            # day, reports: what the declaration rested on cannot be told then.
+            canvas = None
+        refusals = gates.declaring(
+            self.data, on, cycle=self.cycle, canvas=canvas, rests_on=rests_on
         )
-        if start is not None and end is not None:
-            held = (end - start).days + 1
-            if held < 1:
-                found.append(f"its time box ends on {end}, before it starts, on {start}")
-            elif held > TIME_BOX_DAYS:
-                found.append(f"its time box holds {held} days, more than {TIME_BOX_DAYS}")
-        if start is not None and on is not None and start < on:
-            found.append(f"its time box starts on {start}, before the day it was declared, {on}")
-        # A cycle is open while planned or running (DEC-003 point 7). A day it was suspended
-        # is the suspension rules' to refuse, and a review lies after the window's end.
-        if on is not None and self.cycle is not None:
-            span = timeline.cycle_window(self.cycle)
-            if span is not None and span.end is not None and on > span.end:
-                found.append(
-                    f"it was declared on {on}, after its cycle's window ended on {span.end}: an "
-                    f"experiment is declared only in an open cycle"
-                )
-        if on is not None:
-            found.extend(self._rested_on(declared, on))
-        return found
+        self.idea.refused(self.rel, refusals, "declaration-refused")
 
-    def _rested_on(self, declared: Mapping[str, Any], on: date) -> list[str]:
-        """Where the files show that the variant's shortlisting did not stand on the day the
-        experiment was declared (DEC-003 point 7): the variant was shelved or split before,
-        or the shortlisting the declaration rests on was recorded after."""
-        assumption = ids.parse_ref(self.data.get("assumption"), ids.ASSUMPTIONS)
-        if assumption is None:
-            return []
-        variant = ids.qualifier(assumption.id)
-        canvas = self.idea.canvas_of(variant)
-        if canvas is None:
-            return []
-        outcome = _m(canvas.get("outcome"))
-        kind, settled = outcome.get("kind"), day(outcome.get("when"))
-        if settled is None:
-            return []
-        if kind in ("shelved", "split") and settled < on:
-            return [
-                f"it was declared on {on}, on an assumption of `{variant}`, which was {kind} on "
-                f"{settled}: an experiment is declared only on a shortlisted variant"
-            ]
-        rested = fingerprint.read(declared.get("rested-on"))
-        if kind == "shortlisted" and rested is not None and settled > on:
-            if rested == fingerprint.read(outcome.get("fingerprint")):
-                return [
-                    f"it rests on the shortlisting of `{variant}`, which was recorded on "
-                    f"{settled}, after the day it was declared, {on}"
-                ]
-        return []
-
-    def _decision(self) -> None:
-        decision = _m(self.data.get("decision"))
-        if not decision:
-            return
-        decided = day(decision.get("when"))
-        result = _m(self.data.get("result"))
-        if not result:
-            self.idea.error(
-                at(self.rel, "/decision"),
-                "it is decided without its result: deciding needs the result and a next action",
-                "decision-refused",
-            )
-        recorded = day(result.get("when"))
-        if decided is not None and recorded is not None and recorded > decided:
-            self.idea.error(
-                at(self.rel, "/result"),
-                f"its result was recorded on {recorded}, after its decision, on {decided}",
-                "decision-refused",
-            )
-        if decided is None or not _declared(self.data):
-            return
-        span = timeline.experiment_time_box(self.data, self.cycle)
-        if span is None:
-            return
-        ended = span.end is not None and decided > span.end
-        stopped = day(_m(self.data.get("stopped")).get("when"))
-        early = self.data.get("kind") == "generative" and stopped is not None and stopped <= decided
-        if not ended and not early:
-            box = "has not started" if span.start is None else f"ends on {span.end}"
-            self.idea.error(
-                at(self.rel, "/decision"),
-                f"it was decided on {decided}, but its time box {box}, as its cycle's "
-                f"suspensions work it out"
-                + (
-                    ""
-                    if self.data.get("kind") == "evaluative"
-                    else ", and no stopping rule was reached by then"
-                ),
-                "decision-refused",
-            )
+    def _after(self) -> None:
+        """What was recorded on the experiment after its declaration, each held to the gate
+        of its act on the day it was recorded."""
+        for key, gate, label in (
+            ("stopped", gates.stopping, "stop-refused"),
+            ("result", gates.result, "result-refused"),
+            ("decision", gates.deciding, "decision-refused"),
+        ):
+            recorded = self.data.get(key)
+            on = day(_m(recorded).get("when"))
+            if not isinstance(recorded, Mapping) or on is None:
+                continue
+            self.idea.refused(self.rel, gate(self.data, on, self.cycle), label)
 
     def _within_window(self) -> None:
         if self.cycle is None:
             return
-        box = timeline.experiment_time_box(self.data, self.cycle)
-        span = timeline.cycle_window(self.cycle)
+        box = experiment_time_box(self.data, self.cycle)
+        span = cycle_window(self.cycle)
         if box is None or span is None or box.start is None or span.start is None:
             return
         outside = box.start < span.start or (
@@ -859,8 +719,8 @@ class ExperimentCheck:
         if outside:
             self.idea.warn(
                 at(self.rel, "/start"),
-                f"its time box, {_span_text(box)}, does not lie within its cycle's window, "
-                f"{_span_text(span)}, as worked out",
+                f"its time box, {span_text(box)}, does not lie within its cycle's window, "
+                f"{span_text(span)}, as worked out",
                 "time-box",
             )
 
@@ -871,14 +731,14 @@ class ExperimentCheck:
 class CycleCheck:
     """The findings of one cycle."""
 
-    def __init__(self, idea: IdeaCheck, cycle: Cycle) -> None:
+    def __init__(self, idea: IdeaCheck, cycle: model.Cycle) -> None:
         self.idea = idea
         self.c = cycle
         self.data = cycle.data
         self.rel = cycle.rel
 
     def run(self) -> None:
-        stored, expected = self.data.get("id"), self.idea.expected_id(self.c.own)
+        stored, expected = self.data.get("id"), self.idea.model.qualified(self.c.own)
         if ids.is_idea_qualified(stored) and stored != expected:
             self.idea.error(
                 at(self.rel, "/id"),
@@ -887,11 +747,8 @@ class CycleCheck:
             )
         explored = self._variants()
         self._key_results(explored)
-        outcome = _compared(
-            _m(self.data.get("planned")).get("fingerprint"),
-            lambda form: fingerprint.of_plan(self.data, form),
-        )
-        if outcome == fingerprint.DIFFERS:
+        checked = fingerprint.check_plan(self.data)
+        if checked.stale:
             self.idea.error(
                 at(self.rel, "/planned/fingerprint"),
                 "its plan changed since its fingerprint was taken: a plan is changed only "
@@ -899,19 +756,16 @@ class CycleCheck:
                 "starts",
                 "plan-changed",
             )
-        elif outcome is not None and outcome != fingerprint.MATCHES:
-            self.idea.error(at(self.rel, "/planned/fingerprint"), outcome, "fingerprint")
+        self.idea.fingerprint_error(self.rel, "/planned/fingerprint", checked)
+        self._planning()
         self._suspensions()
-        self._review(explored)
+        self._review()
 
     def _variants(self) -> list[str]:
-        explored: list[str] = []
         for index, value in enumerate(_list(self.data.get("variants"))):
-            self.idea.resolve(value, ids.CANVAS, self.rel, f"/variants/{index}")
-            found = ids.parse_ref(value, ids.CANVAS)
-            if found is not None:
-                explored.append(found.id)
-        return explored
+            lookup = self.idea.model.resolve(value, ids.CANVAS)
+            self.idea.reference(lookup, self.rel, f"/variants/{index}")
+        return gates.explored(self.data)
 
     def _key_results(self, explored: list[str]) -> None:
         named: set[str] = set()
@@ -920,7 +774,8 @@ class CycleCheck:
             if not isinstance(result, Mapping):
                 continue
             pointer = f"/objective/key-results/{index}/variant"
-            self.idea.resolve(result.get("variant"), ids.CANVAS, self.rel, pointer)
+            lookup = self.idea.model.resolve(result.get("variant"), ids.CANVAS)
+            self.idea.reference(lookup, self.rel, pointer)
             found = ids.parse_ref(result.get("variant"), ids.CANVAS)
             if found is None:
                 continue
@@ -940,78 +795,60 @@ class CycleCheck:
                     "cycle-variants",
                 )
 
+    def _planning(self) -> None:
+        """The planning command's conditions, on the day the cycle was first planned, and a
+        plan frozen once its window started, on the day it last changed."""
+        planned = _m(self.data.get("planned"))
+        first = model.first_planned(self.data)
+        last = day(planned.get("when"))
+        if first is not None:
+            others = [c.data for c in self.idea.model.cycles if c is not self.c]
+            goal = self.idea.goal_for_gates()
+            refusals = gates.planning(self.data, first, goal=goal, others=others)
+            self.idea.refused(self.rel, refusals, "plan-refused")
+        if last is not None and first is not None and last != first:
+            self.idea.refused(self.rel, gates.changing(self.data, last), "plan-refused")
+
     def _suspensions(self) -> None:
         cycle_id = self.data.get("id")
         if not isinstance(cycle_id, str):
             return
-        experiments = [(e.rel, e.data) for e in self.idea.experiments_of(cycle_id)]
-        goal = (
-            (self.idea.idea.goal.rel, self.idea.goal)
-            if self.idea.idea.goal is not None and self.idea.goal is not None
-            else None
-        )
-        acts = suspensions.acts_on(self.data, experiments, goal, self.rel)
-        for found in suspensions.of_cycle(self.data, acts):
+        experiments = [(e.rel, e.data) for e in self.idea.model.experiments_of(cycle_id)]
+        goal_file, goal = self.idea.model.idea.goal, self.idea.model.goal
+        held = (goal_file.rel, goal) if goal_file is not None and goal is not None else None
+        acts = rules.acts_on(self.data, experiments, held, self.rel)
+        for found in rules.of_cycle(self.data, acts):
             self.idea.error(
                 at(self.rel, f"/suspensions/{found.index}"),
                 f"the suspension breaks its rules: {found.message}",
                 "suspension",
             )
 
-    def _review(self, explored: list[str]) -> None:
+    def _review(self) -> None:
         review = _m(self.data.get("review"))
         if not review:
             return
+        lookup = self.idea.model.resolve(review.get("winning"), ids.CANVAS)
+        winning = self.idea.reference(lookup, self.rel, "/review/winning")
+        evidence: list[Mapping[str, Any]] = []
+        for index, value in enumerate(_list(review.get("evidence"))):
+            lookup = self.idea.model.resolve(value, ids.EXPERIMENT)
+            subject = self.idea.reference(lookup, self.rel, f"/review/evidence/{index}")
+            if subject is not None:
+                evidence.append(subject.data)
         decided = day(review.get("when"))
-        winning = self.idea.resolve(review.get("winning"), ids.CANVAS, self.rel, "/review/winning")
+        if decided is not None:
+            refusals = gates.deciding_cycle(
+                self.data,
+                decided,
+                winning=winning.data if winning is not None else None,
+                evidence=evidence,
+            )
+            self.idea.refused(self.rel, refusals, "review-refused")
         found = ids.parse_ref(review.get("winning"), ids.CANVAS)
         winner = found.id if found is not None else None
-        decision = review.get("decision")
-        if winner is not None and winner not in explored:
-            self._refused(
-                "/review/winning", f"the winning variant, `{winner}`, is not one the cycle explored"
-            )
-        results = _list(_m(self.data.get("objective")).get("key-results"))
-        reached = _list(review.get("reached"))
-        if len(reached) != len(results):
-            self._refused(
-                "/review/reached",
-                f"it records what {_plural(len(reached), 'key result')} reached, and the objective "
-                f"has {len(results)}",
-            )
-        if winning is not None and decision in ("persevere", "pivot"):
-            outcome = _m(winning.data.get("outcome"))
-            settled = day(outcome.get("when"))
-            if (
-                outcome.get("kind") in ("shelved", "split")
-                and settled
-                and decided
-                and settled < decided
-            ):
-                self._refused(
-                    "/review/decision",
-                    f"it decides to {decision} for `{winner}`, which was {outcome.get('kind')} on "
-                    f"{settled}, before the decision: those outcomes are final, so only a pause "
-                    f"is open",
-                )
-        evidence = self._evidence(review)
-        if decision == "pivot" and not any(
-            on is not None and (decided is None or on <= decided) for on in evidence
-        ):
-            self._refused(
-                "/review/evidence",
-                "it pivots on no decided experiment: a pivot names at least one as its evidence",
-            )
-        span = timeline.cycle_window(self.data)
-        if decided is not None and span is not None and (span.end is None or decided <= span.end):
-            ended = "has no end yet" if span.end is None else f"ends on {span.end}"
-            self._refused(
-                "/review",
-                f"it was decided on {decided}, but its window {ended}, as its suspensions "
-                f"work it out",
-            )
         if (
-            decision == "persevere"
+            review.get("decision") == "persevere"
             and winner is not None
             and readings.met_objective(self.data, winner) is False
         ):
@@ -1022,21 +859,6 @@ class CycleCheck:
                 "persevere-missed",
             )
 
-    def _evidence(self, review: Mapping[str, Any]) -> list[date | None]:
-        """The day each experiment the review names as its evidence was decided, None for one
-        not decided, each reference resolved."""
-        decided: list[date | None] = []
-        for index, value in enumerate(_list(review.get("evidence"))):
-            subject = self.idea.resolve(
-                value, ids.EXPERIMENT, self.rel, f"/review/evidence/{index}"
-            )
-            if subject is not None:
-                decided.append(day(_m(subject.data.get("decision")).get("when")))
-        return decided
-
-    def _refused(self, pointer: str, message: str) -> None:
-        self.idea.error(at(self.rel, pointer), message, "review-refused")
-
 
 # --- shared ---------------------------------------------------------------------------------------
 
@@ -1044,29 +866,6 @@ class CycleCheck:
 def _judged(step: str) -> str:
     """What a verdict on `step` judged, in words."""
     return "the boxes it judged" if step == "desirability" else "the canvas or the goal it judged"
-
-
-def _declared(experiment: Mapping[str, Any]) -> bool:
-    return isinstance(experiment.get("declared"), Mapping)
-
-
-def _compared(stored: object, taken: Callable[[int], fingerprint.Fingerprint]) -> str | None:
-    """What a kept fingerprint compares to: `fingerprint.MATCHES` or `DIFFERS`; None where
-    none is kept that reads as one, which the shape reports; else why it cannot be checked,
-    in words."""
-    try:
-        outcome = fingerprint.compare(stored, taken)
-    except fingerprint.FingerprintError as exc:
-        return f"its fingerprint cannot be checked: {exc}"
-    if outcome == fingerprint.UNREADABLE:
-        return None
-    if outcome == fingerprint.UNKNOWN_FORM:
-        form = _m(stored).get("form")
-        return (
-            f"its fingerprint names the canonical form {form}, which this version of the "
-            f"capability does not know, so it cannot be checked"
-        )
-    return outcome
 
 
 def _entry_ids(canvas: Mapping[str, Any]) -> set[str]:
@@ -1080,17 +879,9 @@ def _ids_of(entries: Sequence[Mapping[str, Any]]) -> set[str]:
     return {e["id"] for e in entries if isinstance(e.get("id"), str)}
 
 
-def _windows_meet(one: timeline.Span, other: timeline.Span) -> bool:
+def _windows_meet(one: Span, other: Span) -> bool:
     if one.start is None or other.start is None:
         return False
     one_before_other_ends = other.end is None or one.start <= other.end
     other_before_one_ends = one.end is None or other.start <= one.end
     return one_before_other_ends and other_before_one_ends
-
-
-def _span_text(span: timeline.Span) -> str:
-    if span.start is None:
-        return "not started yet"
-    if span.end is None:
-        return f"from {span.start}, with no end yet"
-    return f"{span.start} through {span.end}"

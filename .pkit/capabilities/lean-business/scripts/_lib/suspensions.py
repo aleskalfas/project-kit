@@ -15,6 +15,8 @@ The rules, for each suspension of a cycle:
   experiments, or the idea's goal set (`acts_on`), so a suspension gives back no day on
   which the person recorded work the cycle rests on.
 - **One at a time.** The cycle's suspensions do not overlap, so at most one is ongoing.
+- **Before the decision.** It, and its resumption, are recorded no later than the cycle's
+  decision, since a decided cycle is terminal and takes no act (DEC-003 point 4).
 """
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ AHEAD_OF_CLOCK = "ahead-of-clock"
 IN_ORDER = "in-order"
 OVER_WORK = "over-work"
 OVERLAP = "overlap"
+AFTER_DECISION = "after-decision"
 
 
 #: A suspension as a cycle's file records it, read by `timeline.recorded`.
@@ -65,11 +68,17 @@ def acts_on(
     cycle_file: str = "",
 ) -> list[Act]:
     """The acts recorded on a cycle and on its experiments, and the idea's goal set, each
-    with its day: the cycle's plan and review, each experiment's declaration, stopping rule
-    reached, result and decision, and the goal. `experiments` are the cycle's experiments,
-    each with its file; `goal` the idea's goal with its file, or None. A suspension's own
-    recording is no act here: `breaks` reads the other suspensions itself."""
+    with its day: the cycle's first planning, the last change to its plan and its review,
+    each experiment's declaration, stopping rule reached, result and decision, and the goal.
+    `experiments` are the cycle's experiments, each with its file; `goal` the idea's goal
+    with its file, or None. A suspension's own recording is no act here: `breaks` reads the
+    other suspensions itself."""
     acts: list[Act] = []
+    planned = cycle.get("planned")
+    if isinstance(planned, Mapping):
+        _add(
+            acts, planned.get("first"), "the plan's first planning", f"{cycle_file}#/planned/first"
+        )
     for key, what in (("planned", "the plan"), ("review", "the review")):
         _add(acts, cycle.get(key), what, f"{cycle_file}#/{key}")
     for file, experiment in experiments:
@@ -95,11 +104,15 @@ def _add(acts: list[Act], block: object, what: str, where: str) -> None:
 
 
 def breaks(
-    start: date, days: int, suspensions: Sequence[Suspension], acts: Sequence[Act]
+    start: date,
+    days: int,
+    suspensions: Sequence[Suspension],
+    acts: Sequence[Act],
+    decided: date | None = None,
 ) -> list[Break]:
     """Each rule each of `suspensions` breaks, for a cycle whose window is declared from
-    `start` for `days` days, under the `acts` recorded on it (`acts_on`). In the order of the
-    suspensions, then the rules."""
+    `start` for `days` days, under the `acts` recorded on it (`acts_on`), and decided on
+    `decided` where it is. In the order of the suspensions, then the rules."""
     found: list[Break] = []
     readable = [s for s in suspensions if s.covered is not None]
     for current in suspensions:
@@ -126,6 +139,8 @@ def breaks(
             )
         if current.resumed_at_all:
             found.extend(_resumption(current, first))
+        if decided is not None:
+            found.extend(_after_decision(current, decided))
         for act in acts:
             if covered.covers(act.day):
                 found.append(
@@ -167,7 +182,27 @@ def of_cycle(cycle: Mapping[str, object], acts: Sequence[Act]) -> list[Break]:
     start, days = day(declared.get("start")), declared.get("days")
     if start is None or isinstance(days, bool) or not isinstance(days, int):
         return []
-    return breaks(start, days, timeline.recorded(cycle.get("suspensions")), acts)
+    review = cycle.get("review")
+    decided = day(review.get("when")) if isinstance(review, Mapping) else None
+    return breaks(start, days, timeline.recorded(cycle.get("suspensions")), acts, decided)
+
+
+def _after_decision(current: Suspension, decided: date) -> list[Break]:
+    found: list[Break] = []
+    for when, what in (
+        (current.recorded, "it was recorded"),
+        (current.resumption_recorded, "its resumption was recorded"),
+    ):
+        if when is not None and when > decided:
+            found.append(
+                Break(
+                    current.index,
+                    AFTER_DECISION,
+                    f"{what} on {when}, after the cycle was decided on {decided}: a decided "
+                    f"cycle takes no act",
+                )
+            )
+    return found
 
 
 def _resumption(current: Suspension, first: date) -> list[Break]:

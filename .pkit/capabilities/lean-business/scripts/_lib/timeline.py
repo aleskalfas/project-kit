@@ -18,12 +18,17 @@ the check and the status all read it here, so none of them disagrees with anothe
 
 Every day is a calendar day, and a window or a time box runs from its first day through its
 last (DEC-003 point 1).
+
+**As they stood on a day.** A gate judges an act on the day it was taken, so it reads the
+suspensions recorded by then (`as_of`): one recorded later counts for nothing, and one
+whose resumption was recorded later reads as ongoing. A command passes today, which every
+recorded day precedes, and the check the day the act was recorded.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
 
 from _lib.reading import day
@@ -51,6 +56,15 @@ class Span:
 
     start: date | None
     end: date | None
+
+
+def span_text(span: Span) -> str:
+    """Where a window or a time box falls, in words."""
+    if span.start is None:
+        return "not started yet"
+    if span.end is None:
+        return f"from {span.start}, with no end yet"
+    return f"{span.start} through {span.end}"
 
 
 @dataclass(frozen=True)
@@ -96,12 +110,30 @@ def recorded(suspensions: object) -> list[Suspension]:
     return found
 
 
-def covered_by(suspensions: object) -> list[Covered]:
+def known_by(suspensions: Sequence[Suspension], as_of: date) -> list[Suspension]:
+    """`suspensions` as they stood on `as_of`: each recorded by then, with its resumption
+    only where that was recorded by then too, so one resumed later reads as ongoing. A day
+    of recording that cannot be read counts as recorded."""
+    found: list[Suspension] = []
+    for current in suspensions:
+        if current.recorded is not None and current.recorded > as_of:
+            continue
+        noted = current.resumption_recorded
+        if current.resumed_at_all and noted is not None and noted > as_of:
+            current = replace(current, resumed=None, resumption_recorded=None, resumed_at_all=False)
+        found.append(current)
+    return found
+
+
+def covered_by(suspensions: object, as_of: date | None = None) -> list[Covered]:
     """The days each suspension of a cycle covers, from the cycle's `suspensions` as a file
-    writes them, in the order of their first days. A suspension with no readable first day
-    covers nothing."""
-    found = [s.covered for s in recorded(suspensions)]
-    return sorted((c for c in found if c is not None), key=lambda covered: covered.first)
+    writes them, in the order of their first days, as they stood on `as_of` where it is
+    given (`known_by`). A suspension with no readable first day covers nothing."""
+    found = recorded(suspensions)
+    if as_of is not None:
+        found = known_by(found, as_of)
+    covered = [s.covered for s in found]
+    return sorted((c for c in covered if c is not None), key=lambda each: each.first)
 
 
 def _merged(covered: Iterable[Covered]) -> list[Covered]:
@@ -169,25 +201,43 @@ def time_box(start: date, end: date, covered: Sequence[Covered]) -> Span:
 # --- read from the files --------------------------------------------------------------------------
 
 
-def cycle_window(cycle: Mapping[str, object]) -> Span | None:
-    """Where a cycle's window falls, from its file as it stands, or None where its declared
-    window cannot be read."""
+def cycle_window(cycle: Mapping[str, object], as_of: date | None = None) -> Span | None:
+    """Where a cycle's window falls, from its file as it stands, or as its suspensions stood
+    on `as_of` where it is given. None where its declared window cannot be read."""
     declared = cycle.get("window")
     if not isinstance(declared, Mapping):
         return None
     start, days = day(declared.get("start")), declared.get("days")
     if start is None or isinstance(days, bool) or not isinstance(days, int):
         return None
-    return window(start, days, covered_by(cycle.get("suspensions")))
+    return window(start, days, covered_by(cycle.get("suspensions"), as_of))
 
 
 def experiment_time_box(
-    experiment: Mapping[str, object], cycle: Mapping[str, object] | None
+    experiment: Mapping[str, object],
+    cycle: Mapping[str, object] | None,
+    as_of: date | None = None,
 ) -> Span | None:
     """Where an experiment's time box falls, from its file and its cycle's as they stand, or
-    None where its declared days cannot be read. Without its cycle, no suspension moves it."""
+    as the cycle's suspensions stood on `as_of` where it is given. None where its declared
+    days cannot be read. Without its cycle, no suspension moves it."""
     start, end = day(experiment.get("start")), day(experiment.get("end"))
     if start is None or end is None:
         return None
     suspensions = cycle.get("suspensions") if cycle is not None else None
-    return time_box(start, end, covered_by(suspensions))
+    return time_box(start, end, covered_by(suspensions, as_of))
+
+
+def ran_through(box: Span, cycle: Mapping[str, object], as_of: date | None = None) -> bool:
+    """Whether a suspension of `cycle` covers a day of the time box `box`, as the
+    suspensions stood on `as_of` where it is given: a time box the suspension ran through,
+    which one it moved past does not."""
+    if box.start is None:
+        return False
+    for covered in covered_by(cycle.get("suspensions"), as_of):
+        reaches = box.end is None or covered.first <= box.end
+        if covered.resumed is not None and covered.resumed <= covered.first:
+            continue
+        if reaches and (covered.resumed is None or box.start < covered.resumed):
+            return True
+    return False

@@ -118,6 +118,37 @@ def test_a_suspension_with_no_readable_first_day_is_left_to_the_schema() -> None
     assert suspensions.breaks(START, 30, [suspension(0, None, on(5))], []) == []
 
 
+def test_none_is_recorded_after_the_cycle_was_decided() -> None:
+    decided = on(20)
+    kept = suspension(0, on(5), on(5), on(10), on(20))
+    assert suspensions.breaks(START, 30, [kept], [], decided) == []
+    late = suspension(0, on(5), on(21), on(10), on(22))
+    [recorded, resumed] = suspensions.breaks(START, 30, [late], [], decided)
+    assert (recorded.rule, resumed.rule) == ("after-decision", "after-decision")
+    assert "it was recorded on 2026-12-21, after the cycle was decided on 2026-12-20" in (
+        recorded.message
+    )
+    assert "its resumption was recorded on 2026-12-22" in resumed.message
+
+
+def test_a_cycles_decision_is_read_from_its_review() -> None:
+    cycle = {
+        "window": {"start": "2026-12-01", "days": 10},
+        "suspensions": [{"first-day": "2026-12-03", "when": "2026-12-20"}],
+        "review": {"when": "2026-12-19"},
+    }
+    assert rules(*suspensions.of_cycle(cycle, [])) == [(0, "after-decision")]
+
+
+def test_the_cycles_first_planning_is_an_act_of_its_own() -> None:
+    cycle = {"planned": {"when": "2026-12-04", "first": {"when": "2026-12-02"}}}
+    acts = suspensions.acts_on(cycle, [], None, "c.yaml")
+    assert [(act.day, act.what, act.where) for act in acts] == [
+        (on(2), "the plan's first planning", "c.yaml#/planned/first"),
+        (on(4), "the plan", "c.yaml#/planned"),
+    ]
+
+
 def test_the_acts_are_read_from_the_cycle_its_experiments_and_the_goal() -> None:
     cycle = {"planned": {"when": "2026-11-20"}, "review": {"when": "2027-03-01"}}
     experiment = {

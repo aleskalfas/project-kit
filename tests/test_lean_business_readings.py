@@ -141,3 +141,80 @@ def test_whether_it_met_the_objective_is_unknown_without_a_review_or_a_reach() -
     assert readings.met_objective(cycle(40, 0), "idea.direct") is None
     assert readings.met_objective(cycle(40, 0, 10), "idea.other") is None
     assert [i for i, _ in readings.key_results_of(cycle(), "idea.direct")] == [0, 2]
+
+
+# --- an assumption's outcome, and an idea dropped -----------------------------------------------
+
+ASSUMPTION = "idea.direct.pays"
+
+
+def experiment_on(own: str, value: Any = None, *, decided: str | None = None) -> dict[str, Any]:
+    """An experiment on `ASSUMPTION`, declared, measured at `value` where it is given, and
+    decided on `decided` where it is given."""
+    experiment: dict[str, Any] = {
+        **evaluative("at-least", threshold=5),
+        "id": f"idea.{own}",
+        "assumption": f"[assumptions:{ASSUMPTION}]",
+        "declared": {"by": "A", "when": "2026-12-01"},
+    }
+    if value is not None:
+        experiment = measured(experiment, value)
+    if decided is not None:
+        experiment["decision"] = {"next": "stop", "when": decided}
+    return experiment
+
+
+def test_an_assumption_no_declared_experiment_names_is_untested() -> None:
+    draft = {k: v for k, v in experiment_on("draft").items() if k != "declared"}
+    other = {**experiment_on("other"), "assumption": "[assumptions:idea.direct.other]"}
+    assert readings.assumption_outcome(ASSUMPTION, [draft, other]) == readings.UNTESTED
+
+
+def test_an_assumption_is_being_tested_while_an_experiment_on_it_is_undecided() -> None:
+    passed = experiment_on("one", 6, decided="2026-12-20")
+    assert readings.assumption_outcome(ASSUMPTION, [passed, experiment_on("two", 3)]) == (
+        readings.BEING_TESTED
+    )
+
+
+@pytest.mark.parametrize(
+    ("value", "outcome"),
+    [(6, "supported"), (3, "refuted"), (None, "inconclusive")],
+)
+def test_an_assumption_takes_the_outcome_of_the_experiment_decided_last(
+    value: Any, outcome: str
+) -> None:
+    earlier = experiment_on("one", 3 if value != 3 else 6, decided="2026-12-20")
+    last = experiment_on("two", value, decided="2027-01-10")
+    if value is None:
+        last["result"] = {"evidence": "None came"}
+    assert readings.assumption_outcome(ASSUMPTION, [last, earlier]) == outcome
+
+
+def test_of_experiments_decided_on_one_day_the_id_sorting_last_counts() -> None:
+    one, two = (
+        experiment_on("a", 6, decided="2027-01-10"),
+        experiment_on("b", 3, decided="2027-01-10"),
+    )
+    assert readings.assumption_outcome(ASSUMPTION, [one, two]) == readings.REFUTED
+    assert readings.assumption_outcome(ASSUMPTION, [two, one]) == readings.REFUTED
+    unread = experiment_on("c", 6, decided="later")
+    assert readings.assumption_outcome(ASSUMPTION, [unread, two]) == readings.REFUTED
+
+
+@pytest.mark.parametrize(
+    ("kinds", "dropped"),
+    [
+        ((), False),
+        (("shelved",), True),
+        (("shelved", "split", "shelved"), True),
+        (("shelved", None), False),
+        (("shelved", "shortlisted"), False),
+    ],
+    ids=["no-variant", "its-one-shelved", "split-and-shelved", "one-open", "one-shortlisted"],
+)
+def test_an_idea_is_dropped_once_each_variant_not_split_is_shelved(
+    kinds: tuple[str | None, ...], dropped: bool
+) -> None:
+    canvases = [{"outcome": {"kind": kind}} if kind else {} for kind in kinds]
+    assert readings.dropped(canvases) is dropped

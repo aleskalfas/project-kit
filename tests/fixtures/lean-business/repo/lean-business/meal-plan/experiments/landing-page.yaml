@@ -29,11 +29,13 @@ declared:
   by: A. Founder
   when: 2026-12-10
   rested-on:
-    form: 1
-    sha256: b27eb894334315ef7bbea3aa3619221de87bfb2a7dc8067b01331d892b962896
+    fingerprint:
+      form: 1
+      sha256: b27eb894334315ef7bbea3aa3619221de87bfb2a7dc8067b01331d892b962896
+    when: 2026-10-08
   fingerprint:
     form: 1
-    sha256: c72ea06ae3385678b14308c207ed65326aff734de5f053eee0df497b463aeb7c
+    sha256: 22ce52ed35e6596c94ac4f833f6bfa42ae209221285604c93cc24396369dca73
 result:
   measured: 0.06
   evidence: The page's visits and sign-ups

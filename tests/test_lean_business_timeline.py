@@ -169,3 +169,56 @@ def test_the_suspensions_are_read_in_the_files_order_with_each_day_recorded() ->
     assert timeline.covered_by([{"first-day": "x"}, {"first-day": "2026-12-01"}]) == [
         Covered(on(1))
     ]
+
+
+# --- as they stood on a day ---------------------------------------------------------------------
+
+
+SUSPENDED = {
+    "window": {"start": "2026-12-01", "days": 10},
+    "suspensions": [
+        {
+            "first-day": "2026-12-05",
+            "when": "2026-12-06",
+            "resumed": {"day": "2026-12-08", "when": "2026-12-09"},
+        },
+    ],
+}
+
+
+def test_a_suspension_recorded_later_counts_for_nothing_on_a_day_before() -> None:
+    assert timeline.cycle_window(SUSPENDED, as_of=on(5)) == Span(START, on(10))
+    assert timeline.covered_by(SUSPENDED["suspensions"], as_of=on(5)) == []
+
+
+def test_a_resumption_recorded_later_reads_as_ongoing_on_a_day_before() -> None:
+    assert timeline.cycle_window(SUSPENDED, as_of=on(8)) == Span(START, None)
+    assert timeline.cycle_window(SUSPENDED, as_of=on(9)) == Span(START, on(13))
+    assert timeline.cycle_window(SUSPENDED) == Span(START, on(13))
+
+
+def test_a_day_of_recording_that_cannot_be_read_counts_as_recorded() -> None:
+    [unread] = timeline.recorded([{"first-day": "2026-12-05", "when": "later"}])
+    assert timeline.known_by([unread], on(1)) == [unread]
+
+
+def test_an_experiments_time_box_as_its_cycles_suspensions_stood() -> None:
+    experiment = {"start": "2026-12-05", "end": "2026-12-11"}
+    assert timeline.experiment_time_box(experiment, SUSPENDED, as_of=on(5)) == Span(on(5), on(11))
+    assert timeline.experiment_time_box(experiment, SUSPENDED) == Span(on(8), on(14))
+
+
+def test_a_suspension_runs_through_a_time_box_that_had_started_by_its_first_day() -> None:
+    started = Span(on(3), on(9))
+    assert timeline.ran_through(started, SUSPENDED)
+    assert not timeline.ran_through(started, SUSPENDED, as_of=on(5))
+    # One it moved past, and one that ended before it, it ran through not at all.
+    assert not timeline.ran_through(Span(on(8), on(14)), SUSPENDED)
+    assert not timeline.ran_through(Span(on(1), on(4)), SUSPENDED)
+    assert not timeline.ran_through(Span(None, None), SUSPENDED)
+
+
+def test_where_a_span_falls_in_words() -> None:
+    assert timeline.span_text(Span(on(1), on(9))) == "2026-12-01 through 2026-12-09"
+    assert timeline.span_text(Span(on(1), None)) == "from 2026-12-01, with no end yet"
+    assert timeline.span_text(Span(None, None)) == "not started yet"

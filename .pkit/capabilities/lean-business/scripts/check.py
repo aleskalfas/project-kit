@@ -11,8 +11,10 @@ of the project's validation (lean-business DEC-002 point 14; COR-055).
 It reads the location the configuration records, or the default until one is, and judges
 the files as they stand: each file's place and binding, the ids and the references between
 the files, and every invariant the files can show broken, as an error; a guideline of the
-book, or a judgement gone stale, as a warning. It never reads today's date. The capability's
-README, "The check", lists each finding by its label.
+book, or a judgement gone stale, as a warning. It never reads today's date. Each file's
+shape is the backbone's data validation's, the `data` member of `pkit validate`, and the
+check judges only what the shapes leave open. The capability's README, "The check", lists
+each finding by its label.
 
 The backbone runs it as this capability's validator, the `lean-business:check` member of
 `pkit validate` (COR-055 point 3): from the project root, with `--json` alone, offline. It

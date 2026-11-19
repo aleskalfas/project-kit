@@ -18,6 +18,9 @@ constraint:
   step: retention
   evidence: Of the first twenty households that tried a planned week, three asked for a second
 planned:
+  first:
+    by: A. Founder
+    when: 2026-10-20
   by: A. Founder
   when: 2026-10-20
   fingerprint:

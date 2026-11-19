@@ -14,9 +14,10 @@
 #   `control`, earlier `cohorts` or a `split` with the share `exposed`.
 # - Every experiment: `start` and `end`, the days of its time box, fourteen at most;
 #   `authors`; `estimates`, each person's guess, made alone, `by` and `value`.
-# - `declared` — once declared: `by`, `when`, `rested-on`, the fingerprint of the variant's
-#   shortlisting its gate read, and `fingerprint`, over every field above. None of them
-#   changes again; a correction comes as a new experiment.
+# - `declared` — once declared: `by`, `when`, `rested-on`, the variant's shortlisting its
+#   gate read, by its `fingerprint` and the day it was recorded, `when`, and `fingerprint`,
+#   over every field above and the rest of `declared`. None of them changes again; a
+#   correction comes as a new experiment.
 # - Recorded after: `stopped`, a generative experiment's stopping rule reached; `result`,
 #   what was `measured`, whether it was `spoiled`, its `evidence` and what was `learned`;
 #   `decision`, the person's `next` action. Each says who recorded it and when.

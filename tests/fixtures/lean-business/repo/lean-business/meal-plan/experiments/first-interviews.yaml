@@ -21,11 +21,13 @@ declared:
   by: A. Founder
   when: 2026-11-02
   rested-on:
-    form: 1
-    sha256: b27eb894334315ef7bbea3aa3619221de87bfb2a7dc8067b01331d892b962896
+    fingerprint:
+      form: 1
+      sha256: b27eb894334315ef7bbea3aa3619221de87bfb2a7dc8067b01331d892b962896
+    when: 2026-10-08
   fingerprint:
     form: 1
-    sha256: fb1738a7e3e7c13a92b8a9050d95151b6bcf0978ba91924dd5eceea7571c5bd6
+    sha256: ca383d6317a3636446648e3ffb7c98484b0ca67adf3493e2b37fb1e272c78d75
 result:
   measured: 9
   evidence: Notes of twelve interviews

@@ -17,7 +17,7 @@ from referencing import Registry, Resource
 from project_kit import data_validate as dv
 from tests.in_process import load
 
-(ids, reading) = load("lean-business", "ids", "reading")
+(ids, reading, schemas) = load("lean-business", "ids", "reading", "schemas")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCHEMAS = REPO_ROOT / ".pkit/capabilities/lean-business/schemas"
@@ -78,6 +78,44 @@ def test_the_shared_shapes_allow_the_ids_and_references_the_check_reads() -> Non
         ("cycle-ref", ids.CYCLE),
     ):
         assert shapes[name]["pattern"] == f"^{ids.REF_PATTERN[namespace]}$"
+
+
+def places(kind: str) -> set[str]:
+    """Where a file of `kind` writes a day, each path of keys joined by slashes."""
+    return {"/".join(place) for place in schemas.day_places(kind)}
+
+
+def test_the_days_the_check_reads_are_each_day_the_schemas_hold() -> None:
+    assert places("goal") == {"when"}
+    assert places("experiment") >= {
+        "start",
+        "end",
+        "declared/when",
+        "declared/rested-on/when",
+        "stopped/when",
+        "result/when",
+        "decision/when",
+    }
+    assert places("cycle") >= {
+        "window/start",
+        "planned/when",
+        "planned/first/when",
+        "suspensions/*/first-day",
+        "suspensions/*/resumed/day",
+        "review/when",
+    }
+    assert "outcome/when" in places("canvas")
+    assert places("assumptions") == set()
+
+
+def test_a_day_the_calendar_does_not_hold_is_found_where_the_shapes_put_a_day() -> None:
+    cycle = {
+        "window": {"start": "2026-12-01"},
+        "suspensions": [{"first-day": "2026-12-05"}, {"first-day": "2026-12-32"}],
+        "review": {"when": "not a day"},
+        "constraint": {"evidence": "2026-02-30"},
+    }
+    assert schemas.unreadable_days("cycle", cycle) == [("/suspensions/1/first-day", "2026-12-32")]
 
 
 def test_an_id_is_read_as_the_schemas_allow_it() -> None:
@@ -197,6 +235,24 @@ REFUSED: list[tuple[str, str, str, Callable[[Any], None]]] = [
         "goal",
         "goal.yaml",
         _set(("currency",), "EUR"),
+    ),
+    (
+        "a-rested-on-without-its-day",
+        "experiment",
+        "experiments/first-interviews.yaml",
+        _set(("declared", "rested-on", "when"), _DROP),
+    ),
+    (
+        "a-rested-on-that-is-a-bare-fingerprint",
+        "experiment",
+        "experiments/first-interviews.yaml",
+        _set(("declared", "rested-on"), {"form": 1, "sha256": "a" * 64}),
+    ),
+    (
+        "a-plan-without-its-first-planning",
+        "cycle",
+        "cycles/first.yaml",
+        _set(("planned", "first"), _DROP),
     ),
 ]
 

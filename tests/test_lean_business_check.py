@@ -1,14 +1,17 @@
 """`pkit lean check` (lean-business DEC-002 point 14): the capability's validator, under the
 query contract, and each finding it reports, with its severity. Each test starts from the
 fixture idea, which breaks nothing, and changes one thing; a change to what a fingerprint
-covers takes the fingerprints again, as a command would, unless the test is of the
-fingerprint itself."""
+covers takes the fingerprints again, as a command would (`model.retaken`), unless the test
+is of the fingerprint itself."""
 
 from __future__ import annotations
 
+import ast
 import json
 import shutil
+import subprocess
 import sys
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -19,10 +22,10 @@ from ruamel.yaml import YAML
 
 from project_kit.cli import main
 from tests.adopter_repo import MakeAdopterRepo
-from tests.in_process import load, run_main
+from tests.in_process import CAPABILITIES, load, run_main
 
-(check_script, checks, fingerprint, ids, reading) = load(
-    "lean-business", "check.py", "checks", "fingerprint", "ids", "reading"
+(check_script, checks, fingerprint, layout, model) = load(
+    "lean-business", "check.py", "checks", "fingerprint", "layout", "model"
 )
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures/lean-business/repo"
@@ -75,45 +78,22 @@ def edit(root: Path, rel: str, change: Change, *, retake: bool = True) -> None:
         take_again(root)
 
 
-def _keep(root: Path, rel: str, path: tuple[str, ...], taken: Any) -> None:
-    data = load_file(root, rel)
-    node = data
-    for key in path:
-        node = node[key]
-    node["form"], node["sha256"] = taken.form, taken.sha256
-    write(root, rel, data)
-
-
-def take_again(root: Path) -> None:
-    """Take every fingerprint of the fixture idea again, as the commands would."""
-    idea = root / IDEA
-    goal = reading.read_yaml(idea / "goal.yaml") if (idea / "goal.yaml").exists() else None
-    shortlisting: dict[str, Any] = {}
-    for path in sorted(idea.glob("variants/*/canvas.yaml")):
-        rel = path.relative_to(root).as_posix()
-        canvas = reading.read_yaml(path)
-        for step in canvas.get("verdicts") or {}:
-            _keep(
-                root,
-                rel,
-                ("verdicts", step, "fingerprint"),
-                fingerprint.of_verdict(step, canvas, goal),
-            )
-        shortlisting[canvas["id"]] = fingerprint.of_shortlisting(canvas, goal)
-        if (canvas.get("outcome") or {}).get("kind") == "shortlisted":
-            _keep(root, rel, ("outcome", "fingerprint"), shortlisting[canvas["id"]])
-    for path in sorted(idea.glob("experiments/*.yaml")):
-        rel = path.relative_to(root).as_posix()
-        experiment = reading.read_yaml(path)
-        if not isinstance(experiment.get("declared"), dict):
-            continue
-        _keep(root, rel, ("declared", "fingerprint"), fingerprint.of_declaration(experiment))
-        found = ids.parse_ref(experiment.get("assumption"), ids.ASSUMPTIONS)
-        if found is not None and ids.qualifier(found.id) in shortlisting:
-            _keep(root, rel, ("declared", "rested-on"), shortlisting[ids.qualifier(found.id)])
-    for path in sorted(idea.glob("cycles/*.yaml")):
-        rel = path.relative_to(root).as_posix()
-        _keep(root, rel, ("planned", "fingerprint"), fingerprint.of_plan(reading.read_yaml(path)))
+def take_again(root: Path, *, only: tuple[str, str] | None = None) -> None:
+    """Take every fingerprint of the location's ideas again, as the commands would, and keep
+    each where `model.retaken` says it is kept; where `only` is given, only the one the file
+    `only[0]` keeps at the keys `only[1]`, joined by slashes."""
+    contents = layout.read(root, "lean-business")
+    pools = model.Pools.of(contents)
+    for idea in contents.ideas.values():
+        for taken in model.retaken(model.IdeaModel(idea, pools)):
+            if only is not None and (taken.rel, "/".join(taken.path)) != only:
+                continue
+            data = load_file(root, taken.rel)
+            node = data
+            for key in taken.path[:-1]:
+                node = node[key]
+            node[taken.path[-1]] = dict(taken.value)
+            write(root, taken.rel, data)
 
 
 def put(*path_and_value: Any) -> Change:
@@ -175,7 +155,9 @@ def test_the_fixture_idea_breaks_nothing(tmp_path: Path) -> None:
     assert report.findings == []
     assert report.summary == [
         "1 idea, 2 variants, 2 experiments, 1 cycle in `lean-business` (the default, not "
-        "recorded yet)"
+        "recorded yet)",
+        "the shape of each file is checked by `pkit validate`'s `data` member, or by "
+        "`pkit data validate lean-business`; this check judges what the shapes leave open",
     ]
 
 
@@ -348,6 +330,86 @@ def test_a_variants_assumptions_without_its_canvas(tmp_path: Path) -> None:
     assert found(root) == [("error", "layout", ghost)]
 
 
+def test_a_file_of_the_layout_that_ends_in_yml(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    shutil.copy(root / LANDING, root / IDEA / "experiments/later.yml")
+    shutil.copy(root / GOAL, root / IDEA / "draft.yml")
+    (root / IDEA / "notes.yml").write_text("kept: true\n", encoding="utf-8")
+    assert found(root) == [
+        ("error", "layout", f"{IDEA}/draft.yml"),
+        ("error", "layout", f"{IDEA}/experiments/later.yml"),
+    ]
+    assert "rename it to `later.yaml`" in messages(root, "layout")[1]
+
+
+def test_a_file_of_the_capabilitys_outside_the_location(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    shutil.copy(root / GOAL, root / "goal.yaml")
+    (root / "docs").mkdir()
+    shutil.copy(root / LANDING, root / "docs/landing.yaml")
+    project_own = ".pkit/capabilities/lean-business/project/goal.yaml"
+    (root / project_own).parent.mkdir(parents=True)
+    shutil.copy(root / GOAL, root / project_own)
+    (root / "config.yaml").write_text("pkit_schema: lean-business:config\n", encoding="utf-8")
+    assert found(root) == [
+        ("error", "layout", project_own),
+        ("error", "layout", "config.yaml"),
+        ("error", "layout", "docs/landing.yaml"),
+        ("error", "layout", "goal.yaml"),
+    ]
+    assert f"outside `{CONFIG}`" in messages(root, "layout")[1]
+
+
+def test_what_the_backbones_data_validation_never_reads_is_passed_over(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    (root / CONFIG).parent.mkdir(parents=True)
+    (root / CONFIG).write_text(
+        "pkit_schema: lean-business:config\nlocation: lean-business\n", encoding="utf-8"
+    )
+    shipped = ".pkit/capabilities/lean-business/schemas/goal.yaml"
+    (root / shipped).parent.mkdir(parents=True)
+    shutil.copy(root / GOAL, root / shipped)
+    (root / ".notes").mkdir()
+    shutil.copy(root / GOAL, root / ".notes/goal.yaml")
+    assert found(root) == []
+
+
+def test_a_file_git_ignores_is_read_by_neither_validation(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    ignored = f"{IDEA}/experiments/ignored.yaml"
+    (root / ".gitignore").write_text(f"{ignored}\nstray.yaml\n", encoding="utf-8")
+    shutil.copy(root / LANDING, root / ignored)
+    shutil.copy(root / GOAL, root / "stray.yaml")
+    assert found(root) == []
+    # A file git does not track, and does not ignore, is one validation reads.
+    shutil.copy(root / LANDING, root / IDEA / "experiments/seen.yaml")
+    assert kinds(root) == {("error", "id"), ("error", "duplicate-id")}
+
+
+# --- days ---------------------------------------------------------------------------------------
+
+
+def test_a_day_the_calendar_does_not_hold(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    text = (root / GOAL).read_text(encoding="utf-8")
+    # Written plain or quoted, a day reads alike.
+    for value, written in (("2026-02-30", "2026-02-30"), ("2026-13-01", '"2026-13-01"')):
+        (root / GOAL).write_text(text.replace("2026-10-01", written), encoding="utf-8")
+        assert found(root) == [("error", "day", f"{GOAL}#/when")]
+        assert f"`{value}` is written as a day" in messages(root, "day")[0]
+
+
+def test_a_day_held_in_a_list_or_a_record_kept_beside_it(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    edit(root, CYCLE, put("suspensions", 0, "resumed", "when", "2027-01-32"))
+    edit(root, INTERVIEWS, put("declared", "rested-on", "when", "2026-10-00"), retake=False)
+    assert at(root, "day") == [
+        f"{CYCLE}#/suspensions/0/resumed/when",
+        f"{INTERVIEWS}#/declared/rested-on/when",
+    ]
+
+
 # --- ids and references -------------------------------------------------------------------------
 
 
@@ -448,8 +510,59 @@ def test_a_verdict_without_a_yes_on_each_step_before_it(tmp_path: Path) -> None:
         "by": "A",
         "when": "2026-10-06",
     }
-    edit(root, SIDED, put("verdicts", "viability", verdict))
+    edit(root, SIDED, put("verdicts", "viability", verdict), retake=False)
     assert found(root) == [("error", "verdicts", f"{SIDED}#/verdicts/viability")]
+    assert "without a yes on desirability" in messages(root, "verdicts")[0]
+
+
+def test_a_verdict_judged_against_the_goal_in_an_idea_with_none(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    (root / GOAL).unlink()
+    take_again(root)
+    assert found(root) == [
+        ("error", "plan-refused", f"{CYCLE}#/planned"),
+        ("error", "verdicts", f"{DIRECT}#/verdicts/feasibility"),
+        ("error", "verdicts", f"{DIRECT}#/verdicts/viability"),
+    ]
+
+
+def test_a_goal_whose_file_does_not_read_tells_nothing_the_goal_bears_on(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    (root / GOAL).write_text("revenue: [\n", encoding="utf-8")
+    assert found(root) == [("error", "unreadable", GOAL)]
+
+
+@pytest.mark.parametrize(
+    ("change", "step", "said"),
+    [
+        (drop("boxes", "early-adopters"), "desirability", "needs `early-adopters`"),
+        (drop("boxes", "revenue-streams"), "viability", "needs `revenue-streams`"),
+        (drop("viability"), "viability", "needs the estimate's inputs"),
+        (drop("traction", "first-stage", "target"), "feasibility", "the first stage's target"),
+    ],
+    ids=["no-early-adopter", "no-revenue-stream", "no-inputs", "no-traction-target"],
+)
+def test_a_yes_that_still_matches_a_canvas_missing_what_it_needs(
+    tmp_path: Path, change: Change, step: str, said: str
+) -> None:
+    root = project(tmp_path)
+    edit(root, DIRECT, change, retake=False)
+    assert at(root, "verdicts") == []
+    take_again(root)
+    assert at(root, "verdicts") == [f"{DIRECT}#/verdicts/{step}"]
+    assert said in messages(root, "verdicts")[0]
+
+
+def test_a_shortlisting_that_still_matches_over_a_stale_verdict(tmp_path: Path) -> None:
+    root = project(tmp_path)
+
+    def changed(data: Any) -> None:
+        data["boxes"]["problem"][0]["text"] = "Planning takes long"
+        data["outcome"]["when"] = "2027-02-20"
+
+    edit(root, DIRECT, changed, retake=False)
+    take_again(root, only=(DIRECT, "outcome/fingerprint"))
+    assert found(root) == [("error", "verdicts", f"{DIRECT}#/verdicts/desirability/fingerprint")]
 
 
 def test_a_shortlisting_without_a_yes_on_all_three_steps(tmp_path: Path) -> None:
@@ -470,6 +583,41 @@ def test_a_split_into_a_variant_that_does_not_come_from_it(tmp_path: Path) -> No
     assert found(root) == [("error", "split", f"{SIDED}#/outcome/into/0")]
     edit(root, DIRECT, put("comes-from", "[canvas:meal-plan.two-sided]"))
     assert found(root) == []
+
+
+SKETCH = f"{IDEA}/variants/sketch/canvas.yaml"
+
+
+def test_a_variant_comes_from_one_shelved_or_one_split_into_it(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    edit(root, DIRECT, put("comes-from", "[canvas:meal-plan.two-sided]"))
+    assert found(root) == []
+    sketch = {
+        "pkit_schema": "lean-business:canvas",
+        "schema_version": 1,
+        "id": "meal-plan.sketch",
+        "archetype": "direct",
+        "authors": ["A. Founder"],
+        "comes-from": "[canvas:meal-plan.two-sided]",
+        "boxes": {"customer-segments": [{"id": "meal-plan.sketch.cooks", "text": "Cooks"}]},
+    }
+    write(root, SKETCH, sketch)
+    split = {
+        "kind": "split",
+        "into": ["[canvas:meal-plan.sketch]"],
+        "by": "A",
+        "when": "2026-10-05",
+    }
+    edit(root, SIDED, put("outcome", split))
+    assert found(root) == [("error", "comes-from", f"{DIRECT}#/comes-from")]
+    assert "split into other variants, not this one" in messages(root, "comes-from")[0]
+
+
+def test_a_variant_comes_from_one_neither_split_nor_shelved(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    edit(root, SIDED, put("comes-from", "[canvas:meal-plan.direct]"))
+    assert found(root) == [("error", "comes-from", f"{SIDED}#/comes-from")]
+    assert "neither split nor shelved" in messages(root, "comes-from")[0]
 
 
 def test_a_shortlisting_whose_canvas_changed_is_stale(tmp_path: Path) -> None:
@@ -515,14 +663,49 @@ def test_a_fingerprint_of_a_form_the_capability_does_not_know(tmp_path: Path) ->
         ),
         lambda d: d["boxes"]["key-metrics"].pop(),
         put("boxes", "unique-value-proposition", 0, "text", "x" * 121),
-        drop("boxes", "revenue-streams"),
     ],
-    ids=["four-problems", "two-key-metrics", "a-long-headline", "no-pricing-after-a-yes"],
+    ids=["four-problems", "two-key-metrics", "a-long-headline"],
 )
 def test_a_guideline_of_the_book_warns(tmp_path: Path, change: Change) -> None:
     root = project(tmp_path)
     edit(root, DIRECT, change)
     assert kinds(root) == {("warning", "guideline")}
+
+
+def desirable_sketch(root: Path) -> str:
+    """A variant whose desirability has a yes, and which holds no revenue stream."""
+    direct = load_file(root, DIRECT)
+    boxes = {
+        box: [{**entry, "id": entry["id"].replace(".direct.", ".sketch.")} for entry in entries]
+        for box, entries in direct["boxes"].items()
+        if box in ("customer-segments", "early-adopters", "existing-alternatives")
+    }
+    boxes["problem"] = [{"id": "meal-plan.sketch.p", "text": "Too long"}]
+    boxes["unique-value-proposition"] = [{"id": "meal-plan.sketch.u", "text": "Quick"}]
+    rel = f"{IDEA}/variants/sketch/canvas.yaml"
+    verdict = {"answer": "yes", "fingerprint": {"form": 1, "sha256": "0" * 64}}
+    sketch = {
+        "pkit_schema": "lean-business:canvas",
+        "schema_version": 1,
+        "id": "meal-plan.sketch",
+        "archetype": "direct",
+        "authors": ["A. Founder"],
+        "boxes": boxes,
+        "verdicts": {"desirability": {**verdict, "by": "A. Founder", "when": "2026-10-05"}},
+    }
+    write(root, rel, sketch)
+    take_again(root)
+    return rel
+
+
+def test_no_pricing_once_desirability_has_a_yes_warns(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    rel = desirable_sketch(root)
+    assert found(root) == [
+        ("warning", "link", f"{rel}#/boxes/problem/0"),
+        ("warning", "guideline", f"{rel}#/boxes/revenue-streams"),
+        ("warning", "link", f"{rel}#/boxes/unique-value-proposition/0"),
+    ]
 
 
 def test_a_first_sketch_with_blanks_draws_no_guideline(tmp_path: Path) -> None:
@@ -593,10 +776,57 @@ def test_an_untested_assumption_whose_entry_has_gone(tmp_path: Path) -> None:
 # --- an experiment ------------------------------------------------------------------------------
 
 
-def test_a_declared_field_changed_since(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "change",
+    [
+        put("learn", "Something else"),
+        put("declared", "by", "B. Partner"),
+        put("declared", "when", "2026-11-01"),
+        put("declared", "rested-on", "when", "2026-10-07"),
+    ],
+    ids=["a-field", "who-declared-it", "the-day-it-was-declared", "what-it-rested-on"],
+)
+def test_a_declared_field_changed_since(tmp_path: Path, change: Change) -> None:
     root = project(tmp_path)
-    edit(root, INTERVIEWS, put("learn", "Something else"), retake=False)
-    assert found(root) == [("error", "declaration-changed", f"{INTERVIEWS}#/declared/fingerprint")]
+    edit(root, INTERVIEWS, change, retake=False)
+    assert at(root, "declaration-changed") == [f"{INTERVIEWS}#/declared/fingerprint"]
+
+
+def declare_again(root: Path, rel: str) -> None:
+    """Take the declaration's fingerprint again over the experiment as its file stands, as
+    a command that declared it so would have."""
+    data = load_file(root, rel)
+    data["declared"]["fingerprint"] = fingerprint.of_declaration(data).as_data()
+    write(root, rel, data)
+
+
+def test_a_shortlisting_given_again_after_a_declaration_leaves_it_standing(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    edit(root, DIRECT, put("outcome", "when", "2027-01-10"), retake=False)
+    assert found(root) == []
+
+
+def test_a_declaration_rests_on_the_shortlisting_that_stood_on_its_day(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    # Shortlisted again between the two declarations, so the later rests on it.
+    edit(root, DIRECT, put("outcome", "when", "2026-11-15"), retake=False)
+    assert found(root) == [("error", "declaration-refused", f"{LANDING}#/declared")]
+    said = messages(root, "declaration-refused")[0]
+    assert "the canvas keeps one recorded on 2026-11-15" in said
+    assert "the declaration names one recorded on 2026-10-08" in said
+    edit(root, LANDING, put("declared", "rested-on", "when", "2026-11-15"), retake=False)
+    declare_again(root, LANDING)
+    assert found(root) == []
+
+
+def test_a_declaration_resting_on_another_shortlisting_than_the_one_kept(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    other = {"form": 1, "sha256": "1" * 64}
+    edit(root, INTERVIEWS, put("declared", "rested-on", "fingerprint", other), retake=False)
+    declare_again(root, INTERVIEWS)
+    assert found(root) == [("error", "declaration-refused", f"{INTERVIEWS}#/declared")]
 
 
 @pytest.mark.parametrize(
@@ -610,6 +840,7 @@ def test_a_declared_field_changed_since(tmp_path: Path) -> None:
         ),
         (drop("estimates"), "without an estimate"),
         (drop("control"), "without `control`"),
+        (put("expected", "range", "low", 0.09), "runs from 0.09 to 0.08, its low above its high"),
     ],
     ids=[
         "a-box-over-14-days",
@@ -617,6 +848,7 @@ def test_a_declared_field_changed_since(tmp_path: Path) -> None:
         "a-start-before-declaring",
         "no-estimate",
         "no-control",
+        "a-range-low-above-high",
     ],
 )
 def test_a_declaration_its_gate_refuses(tmp_path: Path, change: Change, said: str) -> None:
@@ -687,6 +919,39 @@ def test_a_generative_experiment_is_decided_early_once_its_stopping_rule_is_reac
     edit(root, INTERVIEWS, recorded_on("2026-11-10"))
     assert found(root) == [("error", "decision-refused", f"{INTERVIEWS}#/decision")]
     edit(root, INTERVIEWS, put("stopped", {"by": "A. Founder", "when": "2026-11-09"}))
+    assert found(root) == []
+
+
+@pytest.mark.parametrize(
+    ("when", "said"),
+    [
+        ("2026-11-02", "reached on 2026-11-02, before its time box started"),
+        ("2026-11-17", "reached on 2026-11-17, after its time box ended on 2026-11-16"),
+    ],
+    ids=["before-the-box", "after-the-box"],
+)
+def test_a_stopping_rule_reached_outside_its_time_box(tmp_path: Path, when: str, said: str) -> None:
+    root = project(tmp_path)
+    edit(root, INTERVIEWS, put("stopped", {"by": "A. Founder", "when": when}))
+    assert found(root) == [("error", "stop-refused", f"{INTERVIEWS}#/stopped")]
+    assert said in messages(root, "stop-refused")[0]
+
+
+def test_an_early_decision_rests_on_a_stopping_rule_reached_within_the_box(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    edit(root, INTERVIEWS, recorded_on("2026-11-10"))
+    edit(root, INTERVIEWS, put("stopped", {"by": "A. Founder", "when": "2026-11-02"}))
+    assert kinds(root) == {("error", "stop-refused"), ("error", "decision-refused")}
+
+
+def test_a_result_spoiled_only_by_a_suspension_its_time_box_ran_through(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    edit(root, INTERVIEWS, put("result", "spoiled", True))
+    assert found(root) == [("error", "result-refused", f"{INTERVIEWS}#/result/spoiled")]
+    edit(root, INTERVIEWS, put("result", "spoiled", False))
+    edit(root, LANDING, put("result", "spoiled", True))
     assert found(root) == []
 
 
@@ -763,17 +1028,32 @@ def test_a_plan_changed_since_its_fingerprint(tmp_path: Path) -> None:
     assert found(root) == [("error", "plan-changed", f"{CYCLE}#/planned/fingerprint")]
 
 
-def second_cycle(root: Path, start: str, *, review: str | None) -> None:
+def test_a_plan_last_changed_after_its_window_started(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    edit(root, CYCLE, put("planned", "when", "2026-11-02"))
+    assert found(root) == [("error", "plan-refused", f"{CYCLE}#/planned")]
+    assert "after its window started on 2026-11-01" in messages(root, "plan-refused")[0]
+    # Changed on the window's first day, it may have come before the window started.
+    edit(root, CYCLE, put("planned", "when", "2026-11-01"))
+    assert found(root) == []
+
+
+SECOND = f"{IDEA}/cycles/second.yaml"
+
+
+def second_cycle(root: Path, start: str, *, review: str | None, planned: str | None = None) -> None:
+    """A second cycle of the idea, its window from `start`, planned on `planned` or on its
+    start, and decided on `review` where it is given."""
     second = load_file(root, CYCLE)
     second["id"] = "meal-plan.second"
     second["window"]["start"] = start
-    second["planned"]["when"] = start
+    second["planned"]["when"] = second["planned"]["first"]["when"] = planned or start
     del second["suspensions"]
     if review is None:
         second.pop("review", None)
     else:
         second["review"]["when"] = review
-    write(root, f"{IDEA}/cycles/second.yaml", second)
+    write(root, SECOND, second)
     take_again(root)
 
 
@@ -783,15 +1063,27 @@ def test_two_undecided_cycles_of_one_idea(tmp_path: Path) -> None:
     second_cycle(root, "2027-03-01", review=None)
     assert found(root) == [
         ("error", "one-cycle", CYCLE),
-        ("error", "one-cycle", f"{IDEA}/cycles/second.yaml"),
+        ("error", "one-cycle", SECOND),
+        ("error", "plan-refused", f"{SECOND}#/planned/first"),
     ]
 
 
 def test_two_cycles_whose_windows_overlap(tmp_path: Path) -> None:
     root = project(tmp_path)
-    second_cycle(root, "2027-02-01", review="2027-05-20")
-    assert found(root) == [("error", "one-cycle", f"{IDEA}/cycles/second.yaml")]
-    edit(root, f"{IDEA}/cycles/second.yaml", put("window", "start", "2027-02-13"))
+    second_cycle(root, "2027-02-10", planned="2027-02-15", review="2027-05-20")
+    assert found(root) == [("error", "one-cycle", SECOND)]
+    edit(root, SECOND, put("window", "start", "2027-02-16"))
+    assert found(root) == []
+
+
+def test_the_next_cycle_planned_before_the_last_was_decided(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    second_cycle(root, "2027-02-20", planned="2027-02-14", review="2027-05-25")
+    assert found(root) == [("error", "plan-refused", f"{SECOND}#/planned/first")]
+    assert "decided only on 2027-02-15" in messages(root, "plan-refused")[0]
+    # Planned at the last cycle's review, the same day, it may have come after it.
+    edit(root, SECOND, put("planned", "first", "when", "2027-02-15"))
+    edit(root, SECOND, put("planned", "when", "2027-02-15"))
     assert found(root) == []
 
 
@@ -815,6 +1107,32 @@ def test_a_suspension_that_breaks_its_rules(tmp_path: Path, change: Change) -> N
     root = project(tmp_path)
     edit(root, CYCLE, change)
     assert kinds(root) == {("error", "suspension")}
+
+
+def test_a_suspension_recorded_after_the_cycle_was_decided(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    edit(root, CYCLE, put("suspensions", 0, "when", "2027-02-16"))
+    assert found(root) == [("error", "suspension", f"{CYCLE}#/suspensions/0")]
+    assert "after the cycle was decided on 2027-02-15" in messages(root, "suspension")[0]
+
+
+def test_a_suspension_recorded_later_leaves_the_acts_before_it_standing(tmp_path: Path) -> None:
+    root = project(tmp_path)
+
+    def moved(data: Any) -> None:
+        data["declared"]["when"] = "2026-12-15"
+        data["start"], data["end"] = "2026-12-22", "2027-01-04"
+
+    edit(root, LANDING, moved)
+    assert found(root) == [("error", "decision-refused", f"{LANDING}#/decision")]
+    # Recorded once the landing page was decided, on 2027-01-05, the suspension moves its
+    # time box for what comes after, never for the decision before it.
+    edit(root, CYCLE, put("suspensions", 0, "when", "2027-01-06"))
+    edit(root, CYCLE, put("suspensions", 0, "resumed", "when", "2027-01-06"))
+    assert found(root) == []
+    # The review comes after it, so reads the window it moved, to 2027-02-12.
+    edit(root, CYCLE, put("review", "when", "2027-02-11"))
+    assert found(root) == [("error", "review-refused", f"{CYCLE}#/review")]
 
 
 @pytest.mark.parametrize(
@@ -875,6 +1193,76 @@ def test_the_goal_set_while_a_cycle_was_planned_running_or_suspended(tmp_path: P
     assert found(root) == [("error", "goal-changed", GOAL)]
     edit(root, GOAL, put("when", "2027-02-13"))
     assert found(root) == []
+
+
+def test_the_goal_set_on_the_day_a_cycle_was_first_planned(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    # Days have no order within them, so the goal may have been set before the planning.
+    edit(root, GOAL, put("when", "2026-10-20"))
+    assert found(root) == []
+    edit(root, GOAL, put("when", "2026-10-21"))
+    assert found(root) == [("error", "goal-changed", GOAL)]
+
+
+def test_the_goal_held_still_from_the_first_planning_though_the_plan_changed(
+    tmp_path: Path,
+) -> None:
+    root = project(tmp_path)
+    edit(root, CYCLE, put("planned", "when", "2026-10-25"))
+    edit(root, GOAL, put("when", "2026-10-22"))
+    assert found(root) == [("error", "goal-changed", GOAL)]
+
+
+# --- the clock ----------------------------------------------------------------------------------
+
+SCRIPTS = CAPABILITIES / "lean-business/scripts"
+
+#: What reads the clock or the environment: the clock's module, and the names that reach
+#: either, such as `date.today` or `os.environ`.
+CLOCK_MODULE = "time"
+CLOCK_NAMES = {"today", "now", "utcnow", "environ", "getenv", "localtime", "gmtime"}
+
+
+def test_the_check_reads_no_clock(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root = project(tmp_path)
+
+    def stopped() -> float:
+        raise AssertionError("the check read the clock")
+
+    monkeypatch.setattr(time, "time", stopped)
+    assert checks.check(root).findings == []
+
+
+def _clock_reads(path: Path) -> list[str]:
+    """Each place in the module at `path` that names the clock or the environment."""
+    found: list[str] = []
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        named: list[str] = []
+        if isinstance(node, ast.Attribute):
+            named = [node.attr]
+        elif isinstance(node, ast.Name):
+            named = [node.id]
+        elif isinstance(node, ast.Import):
+            named = [alias.name for alias in node.names if alias.name == CLOCK_MODULE]
+        elif isinstance(node, ast.ImportFrom):
+            named = [alias.name for alias in node.names]
+            if node.module == CLOCK_MODULE:
+                named.append(CLOCK_MODULE)
+        line = getattr(node, "lineno", 0)
+        found += [
+            f"{path.name}:{line} {name}"
+            for name in named
+            if name in CLOCK_NAMES or name == CLOCK_MODULE
+        ]
+    return found
+
+
+def test_no_module_of_the_check_names_the_clock_or_the_environment() -> None:
+    """COR-055 point 2: a gate and a reading take the day from their caller, and nothing
+    the check runs reads the clock or an environment variable."""
+    modules = [SCRIPTS / "check.py", *sorted((SCRIPTS / "_lib").glob("*.py"))]
+    assert len(modules) > 10
+    assert [read for path in modules for read in _clock_reads(path)] == []
 
 
 # --- through pkit validate ----------------------------------------------------------------------
