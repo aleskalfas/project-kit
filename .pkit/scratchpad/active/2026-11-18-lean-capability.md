@@ -1,0 +1,387 @@
+---
+authors:
+  - Aleš Kalfas <kalfas.ales@gmail.com>
+started: 2026-11-18
+---
+
+# A capability that carries the lean method
+
+Tracked by #3422, under [Milestone 10: Lean experimentation, first loop](https://github.com/aleskalfas/project-kit/milestone/12). It grew from the brainstorm in `2026-11-18-what-next.md`, and retires by producing the plan that files the capability's build, and the records that plan needs.
+
+## The question
+
+What does a capability need, in its data model, its process, its commands and its skill, to guide a person through one loop of the lean method? The loop runs from a lean canvas, through its assumptions ranked by risk, an experiment with an expectation it could fail and a point where it stops, to the result and the decision it leads to. And what does the first slice leave for later?
+
+## Source
+
+*Running Lean*, third edition (Ash Maurya, 2022). The method is distilled here in our own words and credited; no passage of the book is quoted, and the book's text stays out of the repository.
+
+## The method, distilled
+
+Read on 2026-11-18 by five readers, one per group of chapters. Their detailed notes stay in the agent workspace with the book.
+
+### The frame
+
+- **What it is:** repeated 90-day cycles of three activities, modelling the business, ranking what is riskiest, and testing it, across stages: design, then problem/solution fit (about three months), product/market fit, then scale.
+- **What counts as progress:** traction, meaning evidence that people outside the team care, not features built. Test the riskiest assumption first, not the easiest.
+- **The order:** demo, sell, then build. Nothing is built until customers have committed to an offer.
+- **Customer risk usually outweighs technical risk.** The question is whether to build it, not whether you can.
+
+### Design: desk work, about two weeks
+
+1. **The lean canvas.** One page, nine boxes and three sub-boxes:
+   - customer segments, with early adopters
+   - problem, with existing alternatives
+   - unique value proposition, with a high-level concept
+   - solution
+   - channels
+   - revenue streams
+   - cost structure
+   - key metrics
+   - unfair advantage
+
+   Rules on the boxes:
+   - **First sketch:** one sitting, under twenty minutes, in any order.
+   - **Blanks:** allowed, but pricing should not be deferred.
+   - **Limits:** one to three ranked problems; a value-proposition headline of about 120 characters at most; three to five key metrics.
+   - **Unfair advantage:** better blank than weak.
+   - **Several actors:** in a model with more than one actor, each entry is tagged with its actor.
+
+   A canvas is never finished. It is versioned and reviewed each cycle. A broad "big idea" canvas is split into variants that each tell one business-model story, of one of three archetypes: direct, multisided or marketplace. In a team, each member sketches alone first, then the sketches are merged.
+2. **Desirability.** The segments, problem and value-proposition boxes are reviewed again, in a fixed order:
+   1. the segments
+   2. early adopters, recognised by the event that made them switch, not by a persona
+   3. existing alternatives, beyond the product's own category
+   4. the problems, each framed as a failure of an existing alternative
+   5. the value proposition, anchored on those problems
+
+   The lenses it uses:
+   - a switching story: customer, job, existing alternative, trigger, problems, new solution
+   - the job to be done
+   - four forces: push and pull against inertia and friction
+
+   A switch happens when push and pull outweigh inertia and friction, and the new way should be several times better.
+3. **Viability.** The minimum success criteria set a three-year goal, usually as annual recurring revenue. A five-minute rough estimate runs it through the customer factory: acquisition, activation, retention, revenue, referral. It works out:
+   - the customers needed, from the goal and the revenue per customer
+   - churn, from a customer's lifetime
+   - the acquisition rate needed just to stand still
+   - the leads that requires
+
+   The inputs that break the estimate, and then fix it, are the first riskiest assumptions.
+4. **Feasibility.** A traction roadmap splits the goal into yearly milestones, by default tenfold growth a year. A now, next, later rollout plan names each stage's riskiest assumptions.
+5. **Pitch.** An elevator pitch and a ten-slide deck, shown to advisors.
+
+Steps 2 to 4 each end in a yes or no that loops back to the canvas. These are desk verdicts, cheap filters before any evidence, not results.
+
+### Validation: the 90-day cycle
+
+- **Time:** weeks one and two model and prioritise. Five two-week sprints test. Day 90 reviews.
+- **Focus:** one goal per cycle, as an objective with key results taken from the roadmap. One constraint: the weakest step of the customer factory, which is acquisition before anything runs.
+- **Converge, diverge, converge:**
+  1. A kickoff aligns everyone on the goal and the constraint, with no brainstorming of solutions.
+  2. Each member writes campaign proposals alone. A proposal states the causes of the constraint, the underlying problem with its evidence, the proposed solution, and the expected outcomes.
+  3. A planning meeting pitches the proposals and votes, choosing about one campaign for every two people on the team.
+- **Experiments:** stated as "this one action will drive this measurable outcome within this time box". Seven habits govern them:
+  - declare the outcome before running
+  - each person estimates alone before the group compares
+  - derive the expected number from the roadmap or the estimate, as a point or a 90% range
+  - measure what people do, not what they say
+  - keep it falsifiable, with one action
+  - two weeks at most, never extended
+  - compare with a control group: earlier cohorts, or a split
+
+  An experiment is either generative, to discover, or evaluative, to measure traction. **The book gives no experiment template:** our fields are a design choice built from these habits.
+- **Meetings:** six, each with set attendees: kickoff, planning, sprint planning, daily standup, sprint review, cycle review.
+- **The default first campaign is the "mafia offer":**
+  1. **Problem discovery,** up to two sprints, first broad, then narrowed to early adopters. It runs on a timed interview script of 30–45 minutes, about past facts only. Each interview gets its own customer forces canvas, and the canvases are grouped into segments by trigger, alternative chosen and desired outcome. Its gate is customer/problem fit:
+     - the top three to five customer stories have been found and repeat
+     - a problem is big enough to cause a switch
+     - enough is already spent on the alternatives
+  2. **Solution design,** one sprint.
+  3. **Offer delivery,** up to two sprints: one-on-one pitches to qualified early adopters, asking for commitments that cost them something. Its gate is problem/solution fit: enough customers commit, as the roadmap sets, with 60–80% of qualified leads converting.
+- **The cycle review:** a progress report compares the goal with what was reached, and the canvas and roadmap at the cycle's start with now. It ends in one of three decisions:
+  - **persevere:** the goal was met
+  - **pivot:** missed, but an insight with evidence could fix it in one more cycle
+  - **pause:** a dead end, or out of resources
+
+  There is no separate "stop".
+
+### The hypothesis and test loop, at three scales
+
+The second edition's repeated pattern, a hypothesis, an experiment and what was learned, is still here, but the third edition moves it. Its introduction calls the build, measure, learn loop a fast validator of an idea that only helps when a reasonably good idea goes in; with a bad one, all it teaches is that the idea is bad. So the third edition puts the canvas and its desk tests, and problem discovery, before the loop, and runs the loop inside a fixed cadence. The word "hypothesis" appears mostly in chapter 6.
+
+The chain:
+1. A canvas entry is an assumption, a "leap of faith", vague and not yet testable.
+2. The riskiest assumptions are ranked.
+3. Each is rewritten as a falsifiable hypothesis: one action, an outcome you can measure, a time box.
+4. An experiment tests it, inside a campaign that carries a strategy for the cycle's constraint.
+5. The result is held against the declared expectation, and is either learned from or acted on.
+
+It repeats at three scales:
+- **An experiment:** two weeks, ending in pass or fail and its next action: correct course, double down, or stop the experiment.
+- **A sprint:** two weeks, ending in a sprint review that sets the next sprint's focus, and at a stage's gates, customer/problem fit and problem/solution fit, a step back on a failed gate.
+- **A cycle:** 90 days, ending in the review's persevere, pivot or pause, which also updates the canvas and the roadmap for the next cycle.
+
+### Growth: after customers arrive
+
+The same cycle continues with new artefacts: a launch to a small paying group, a cohort dashboard, a map of the customer factory's events, and growth tests such as lifetime value above three times the cost to acquire a customer. None of it is needed before there are customers.
+
+### Where the method resists capture
+
+- **Most quality rules are judgements:** a problem framed against an alternative, a real advantage against a false one, one story to a canvas. Data can hold the links (a problem to its alternative, the value proposition to the first problem) and the tags. A person or an agent judges the content.
+- **Order is free in one place and fixed in another.** The first sketch has no order; the desirability review has a strict one.
+- **The book's numbers are loose,** and several figures contradict the text. The formulas follow the text. Its sprint allocations are guidelines, so a check of them warns and does not refuse.
+- **Two decisions need judgement:** whether interviews have stopped yielding anything new, and pivot against pause after a missed goal.
+- **The licence:** the canvas template is published under Creative Commons BY-SA 3.0, which binds how a shipped template is credited and licensed.
+
+## How a person uses it
+
+Raised by the person on 2026-11-18 as important: will there be a visual part? There are four surfaces:
+- **A conversation:** with an agent through the skill, which asks the method's questions in order and runs the commands. This is the main way in.
+- **The commands:** at a terminal, for a quick look or a change.
+- **The data files:** the canvas, the assumptions and the experiments, readable in the repository.
+- **A view:** a page built from the data.
+
+The method is visual by design: a one-page canvas, a roadmap with what was reached drawn over it, a progress report at each review. The person's work-plan page in `agent-effectivity-and-cost` is what gave them sight of their work there. It is a static page built from plan data by a command, with each task's next action worked out.
+
+The options for the view:
+1. **A static page built by a command from the capability's data,** opened in a browser. It holds the canvas on one page, the assumptions ranked, each experiment with its state and next action, and the cycle. It is read-only, with no dependency on another capability.
+2. **Drawn through the visual-communication capability:** branded, but bound to a capability whose first version is unfinished, and project-kit runs no design loop until its review is calibrated (project rule 5).
+3. **The terminal only:** a status command and the next action.
+
+The coordinator's first lean was the first option, kept thin, in the first slice. The second can come once visual communication's version 1 has shipped.
+
+The person's lean (2026-11-18): the terminal for now, until the visual-communication capability is ready.
+- **For it:** the first loop holds little data, one canvas, a ranked list and one experiment, which a terminal shows well in a conversation. A page earns its place once a cycle runs for weeks with many experiments. Building a page now builds ahead of need, which the method itself warns against.
+- **The risk:** visual communication's version 1 has 71 open issues and keeps growing, so "until it is ready" could mean no view for a long time.
+- **Proposed guard:**
+  - The commands also print their data in a structured form, so a later view reads it without changing the data model.
+  - The view is revisited after the first real loop on the board game, whatever Milestone 7's state is then.
+
+## Mapped onto the capability's layers
+
+A draft for review (2026-11-18). It is for `critic` and `architect` to review before the person sees it; nothing is decided. The capability's working name is `lean`; its name is a question below.
+
+### Data
+
+A project keeps its files in one folder it names, by default `lean/`. Each file is bound to a schema, which `pkit data validate` checks.
+
+1. **Canvas,** one file for each variant.
+   - **Its header:** product, variant, archetype (direct, multisided or marketplace), the canvas it was split from, the author, and the date of its version.
+   - **Its boxes:** the nine boxes and three sub-boxes as lists of entries. Each entry has an id, its text and, where several actors share the model, its actor.
+   - **The links data can hold:**
+     - problems ranked one to three
+     - each problem to the existing alternatives it is framed against
+     - each solution item to its problem
+     - the value proposition to the first problem, as a headline and a sub-headline
+     - channels marked early or scalable
+     - metrics marked by kind
+   - **Viability,** in the same file:
+     - the minimum success criteria: a recurring-revenue goal, its horizon and who set it
+     - the estimate's inputs: price, a customer's lifetime, conversions, the share from referrals
+     - a traction target: the growth multiplier, ten by default, and the first stage's target
+   - **What the data does not hold:** the estimate's outputs, which the command works out and never stores.
+2. **Assumptions,** one list for each canvas.
+   - **Each one:** an id, its statement as a leap of faith, where it comes from (a canvas entry or an input of the estimate), its kind (desirability, viability or feasibility), its rank by risk, and its state.
+3. **Experiment,** one file each. This is our design, since the book gives no template.
+   - **What it links to:** the assumption it tests, its kind (generative or evaluative), and the cycle it runs in.
+   - **The hypothesis:** one action, the metric as a step of the customer factory, and the expected outcome as a point or a 90% range, with where that number comes from and the effects known in advance.
+   - **How it runs:** a time box of two weeks at most, and the control, either earlier cohorts or a split with the share exposed.
+   - **Before it starts:** each person's estimate, recorded then.
+   - **Once it has run:** the result with where its evidence lies, pass or fail, the next action (correct course, double down, or stop the experiment), and what was learned.
+4. **Cycle,** one file each.
+   - **What it holds:** the goal as an objective with key results from the traction target; the constraint, as a step of the customer factory with its evidence; the experiments in it.
+   - **Its review:** the goal met or not, what was reached, the decision (persevere, pivot or pause), its reasons and the evidence a pivot rests on, and the canvas versions at the cycle's start and end.
+
+### Process
+
+A process definition of the capability's own.
+
+- **An experiment:** drafted, then declared, then running, then due, then decided.
+  - **The gate into declared:** an action, a metric, an expected outcome and a time box of at most fourteen days, and at least one estimate recorded.
+  - **Due:** an experiment becomes due when its time box ends, which is never extended.
+  - **The gate into decided:** a recorded result, pass or fail, and a next action.
+- **An assumption:** untested, then being tested while an experiment on it runs, then supported, refuted or inconclusive, from the outcome of its experiment.
+- **A cycle:** planned, then running, then in review, then decided.
+  - **The gate into decided:** one of the three decisions.
+  - **The checks on that decision:** a pivot cites evidence; persevering on a missed goal draws a warning.
+- **A canvas has no final state.** It has versions instead.
+
+### Commands
+
+The capability's commands run as `pkit lean <verb>`, each with tests.
+
+- **Making and changing records:**
+  - `new canvas`, and `new variant --from`
+  - `estimate`, which works out the viability numbers and names the inputs that break the goal as candidate assumptions
+  - `rank`
+  - `new experiment`, `start`, `record-result` and `decide`
+  - `new cycle` and `review-cycle`
+- **Looking:**
+  - `status`, which shows the canvas, the ranked assumptions, each experiment's state with its days left and its next action, and a line on what to do next, with `--json` for a later view
+  - `check`, which runs the rules data can check
+- **What `check` checks:**
+  - one to three ranked problems
+  - a value-proposition headline of 120 characters at most
+  - three to five metrics
+  - early adopters with at least one switching trigger
+  - existing alternatives not empty
+  - each problem linked to an alternative
+  - each solution item linked to a problem
+  - time boxes within fourteen days
+  - estimates recorded before a start
+  - a pivot that cites evidence
+- **Warnings rather than refusals:** the book's guidelines, such as how sprints are allotted.
+
+### Skill
+
+A composite skill paired with the commands. Its sub-procedures:
+1. sketch a canvas in any order, in one sitting
+2. review its desirability in the fixed order, with the guiding question for each box and the lenses of the switching story, the job and the four forces
+3. estimate viability
+4. rank the assumptions
+5. declare an experiment
+6. record its result and decide
+7. review a cycle
+
+The skill carries the judgements, and the commands enforce what data can.
+
+### Records the build needs
+
+- The capability itself: what it carries, what it leaves out, and how it credits the book and keeps its text out.
+- The data model.
+- The process, with the three decisions and no "stop".
+- The experiment's fields, as our design.
+- The view: the terminal and structured output.
+- Where a project keeps its files.
+
+### Revised after `critic` (2026-11-18)
+
+The draft above is kept as it was reviewed. This revision takes over from it.
+
+**1. Where the slice ends: the person's decision.** The accepted skeleton runs to a result and a decision. The accepted finish line stops at an experiment chosen. The draft built the states the finish line never reaches (running, due, decided, the cycle's review) and left no place for what it does reach: the desk verdicts, a variant shortlisted or shelved, the idea dropped.
+- **A.** The slice ends at the finish line: the desk stage and a declared experiment. The result, the decision, an assumption's outcome and the cycle come in the next slice, built once a real experiment is running, which is when their shape stops being a guess (COR-007).
+- **B.** The finish line moves out to the first experiment's result.
+
+The coordinator's lean is A. What follows assumes it.
+
+**2. Data:**
+- **The goal belongs to the project.** The minimum success criteria sit above the variants, set before the idea, and change only at a review. Kept in each variant, they would drift toward the idea.
+- **Each variant has a status:** active, shortlisted, or shelved with its reason. The three desk verdicts are desk notes, not results. When every variant is shelved, the idea is dropped.
+- **Several actors are supported.** The estimate's inputs and the value proposition are keyed by actor or side, since a board-game platform is likely multisided. Early-adopter entries carry their switching triggers.
+- **An assumption stores no state of its own.**
+- **An experiment's declaration depends on its kind,** and is frozen once declared:
+  - **generative:** a learning goal, a stopping rule such as an interview count or saturation, and what counts as fit, set in advance
+  - **evaluative:** one action, the metric, the expected point or range with where it comes from, and the control
+
+  The book's default first experiment is problem discovery, which is generative, so the draft's single gate didn't fit it.
+- **Estimates and authors are lists,** so one person or a team both fit.
+
+**3. Process:** two definitions, each over one subject.
+- **A variant's desk journey:** sketched, then desirability, viability and feasibility, then shortlisted or shelved.
+  - **Viability** needs pricing and the estimate's inputs.
+  - **Feasibility** needs the first stage's target.
+- **An experiment:** drafted, then declared. Running and due are read from its dates.
+- **Who may take each move:** each transition names it. The verdicts, shortlisting, ranking and declaring are the person's (COR-072).
+
+**4. Commands,** about nine:
+- **Making records:** `new canvas`, `new variant`, `estimate`, `target`, `add-assumption`, `rank` and `declare`.
+  - **`estimate`** shows its outputs. Where the early-adopter segment's size is given, it sets the customers needed against it. Which outputs are unrealistic is the skill's question, not the command's.
+- **Looking:** `status --json`, which reads positions from `pkit process status` and never works them out again, and `check`.
+- **What `check` does:**
+  - **Ranges:** it applies them only to boxes that hold entries, as warnings on a first sketch.
+  - **Pricing:** it requires revenue streams before the viability verdict.
+  - **Warnings:** it warns where an experiment tests an assumption while a higher-ranked one is untested, and on a value-proposition headline over 120 characters.
+
+**5. Skill:** sketch, desirability, viability, feasibility, rank, declare.
+
+**6. Records,** three:
+- **The capability:** its scope, the credit to the book, the licence and the name.
+- **The data model:** where a project keeps its files, the experiment's fields and the structured output.
+- **The process.**
+
+**7. The next slice,** once an experiment runs:
+- **The result,** with pass or fail worked out from the frozen expectation and the actual, never asserted.
+- **The next action,** and the assumption's outcome.
+- **The cycle,** and its review.
+- **Where versions live.** "Declared before it ran" rests on version control: the declaration's commit comes before the start, and its fields stay unchanged after.
+
+**8. Raised by `critic` for the plan:**
+- **The name blocks.** It keys the folder, the commands, the process addresses and the citations, and renaming it after a release needs a migration. Name the discipline, not the book; a candidate is `lean-experiments`.
+- **The licence blocks the landing.** The schema mirrors the template's boxes, and the Lean Canvas is itself adapted from the Business Model Canvas, both under CC BY-SA 3.0. Credit both, and decide whether the schema files carry the share-alike licence.
+- **Where the first use happens.** The board game lives in another repository, which gets the capability only after it lands and is released. That is a release the plan must name. A business idea's canvas in a public repository is a privacy question too.
+- **An alternative to name, not chosen:** build the capability in the board game's own repository, and move it into project-kit once its shape is proven (COR-031).
+
+### Reviewed by `architect` (2026-11-18)
+
+No accepted record is modified. Its findings, adopted into the plan:
+- **Versioning is needed in the first slice.** Each verdict and declaration stores a fingerprint of what it judged, so a frozen declaration, an estimate made before the start, and a verdict gone stale after its canvas or the goal changed can be checked in the working tree.
+- **Position has one source.** The first slice ends at declared, so the days left are shown as a fact, not a state. Running and due become states in the next slice.
+- **The person's moves:** each verdict move has `authorisation: user`, a deterministic completeness gate, and a wait for a human whose prompt is the verdict's question. The process record says the caller enforces the person's authority, not the engine. It places none of these questions at a delegation level (COR-072 point 13).
+- **The experiment's wait is declared now,** since adding one later needs `amend`, which pkit has not built. The plan names that dependency of the next slice.
+- **`check` joins validation as a member,** with a severity on each finding. The warning about the riskiest assumption stays a command. "Pricing before viability" is the process gate, through one predicate shared with the command.
+- **Ids are qualified by variant,** since a duplicate id across the validated folder is an error (COR-029). The variant's stored facts are its verdicts and shortlisted or shelved; "split into other variants" is an outcome of its own.
+- **The data's location** defaults under the internal documentation root, recorded through the backbone's location recorder, as software-analysis does (COR-049). It is laid out as `<location>/<idea>/`, with the goal inside each idea.
+- **Boundaries:**
+  - Use "side" or "segment", not "actor", and name nothing a "journey", since software-analysis owns those words.
+  - Link to project-management through the work-tracking role (COR-053), and cite the evidence capability's records in its own form.
+  - Make `--json` versioned.
+- **The name:** `business-model-validation`, with a short command alias. The first slice is mostly the canvas, so `lean-experiments` covers only what is still to come, and growth is plausibly a capability of its own later.
+- **Build it in project-kit.** Moving a capability built in a project into project-kit has no mechanism yet (COR-031). To try it on the board game before it ships, use a release candidate (PRJ-016), once it is checked that candidates can be cut today.
+- **Needs the person's authorisation (escalated):**
+  - **The licence.** Shipping any CC BY-SA file would be the first non-MIT file project-kit ships, and needs a record first. The recommendation is to ship none: name the fields in the capability's own words and keep the credit in the README.
+  - **The data's location,** only if a folder at the repository's root is kept.
+
+**The decisions for the person, in order:** where the slice ends, the name, the licence, the location, versioning.
+
+### Decisions taken
+
+1. **Where the slice ends: B** (the person, 2026-11-19). The finish line moves out to the first experiment's result: declared, run, its result recorded and its next action decided. This slice builds the result, pass or fail worked out from the declaration, the next action, the assumption's outcome, and the cycle with its review.
+   - **In the definitions from the start:** running and due are states of the experiment from the start, so the next slice needs no `amend`.
+   - **The cycle's review is tested on fixtures.** A real cycle ends only after 90 days, later than the merge.
+   - **Updated:** #3426's body says this. The milestone's description still says "first experiment is chosen", and no pkit command edits a milestone's description.
+2. **The name: `lean-business`,** with `lean` as the short command alias (the person, 2026-11-19). It is the home of the whole method, so growth will later extend this capability rather than become a capability of its own. Its README says it means validating a business model, not a business run lean.
+3. **The licence: nothing ships under CC BY-SA** (the person, 2026-11-19).
+   - **The fields:** the schema uses the boxes' names as its field names, with descriptions in the capability's own words. Nothing of the template's prompts or wording is copied.
+   - **The grid:** the terminal draws the canvas as a grid arranged as in the book:
+     - **Five columns:** problem over existing alternatives; solution over key metrics; unique value proposition over high-level concept; unfair advantage over channels; customer segments over early adopters.
+     - **Along the bottom:** cost structure and revenue streams.
+   - **The credit:** a credit and licence line under the grid, as the template carries one. The README credits the Lean Canvas and the Business Model Canvas it adapts.
+   - **pkit's own files stay MIT.**
+4. **The data's location: `lean-business/` at the repository's root** by default, with one folder per idea (the person, 2026-11-19).
+   - **Configurable:** it is recorded on first use through the backbone's location recorder, so a project can choose another folder.
+   - **The reason, for the data-model record:** this is the working state of a business idea, not documentation of a system, and a repository may exist only to explore ideas. The person's choice is the authorisation `architect` asked for, since it departs from COR-049's documentation roots.
+5. **Versioning: fingerprints** (the person, 2026-11-19). Each verdict and each declaration stores a fingerprint of what it judged.
+   - **What validation catches:** a declaration edited after it was declared is an error, and a verdict whose canvas or goal changed since is stale.
+   - **Git history** stays the audit trail, and the cycle review reads it to show what changed during the cycle.
+6. **The first use, before the merge: in this clone, on this branch** (the person, 2026-11-19). The board game's data lives in `.agent-workspace/lean-business/board-game-platform/`, which git ignores, so the idea stays private. After the merge and a release, the folder moves into the board game's own repository.
+
+### Next
+
+1. Stamp the capability through `capability-author`.
+2. Draft its three records through `decision-author`: the capability, the data model and the process. Each goes to `critic`, then `methodology-reviewer`, then the person.
+3. Build in the order of the Task, the evidence records staying local.
+
+## Deferred past the first slice
+
+- **Team features:** campaigns with individual proposals and a vote, sprints and the six meetings.
+- **Problem discovery:** interviews with their script, the customer forces canvas and jobs-based segments.
+- **The offer:** the offer and its gates.
+- **Planning and pitching:** the rollout plan beyond the first stage's target, and the pitch.
+- **Growth.**
+- **Tooling:** a coach agent, fixers and artefact anchors.
+- **A page view,** revisited after the first real loop.
+- **Results that cite evidence records,** joining the evidence capability.
+
+## Questions for the plan
+
+- **What may be published, and under which licence** (raised 2026-11-18, open). project-kit is MIT-licensed and public. Not legal advice, but the lines as the coordinator reads them:
+  - **The method itself is free to implement.** Copyright protects how something is expressed, not ideas, methods or systems, so a capability that carries the method in its own words needs no permission. Crediting the book is honest practice, not a legal requirement.
+  - **Verbatim excerpts rest on the quotation exception:** the Czech copyright act's provision on quotation, the EU's exception for quotation in criticism or review, and fair use in the US, where GitHub hosts. Each wants the source named, the extent limited to what the purpose needs, and no substitute for the work. A public file of many excerpts that walks the whole method is the weakest case.
+  - **The canvas template is CC BY-SA 3.0.** A template shipped from it must credit the author and stay under that licence, apart from the MIT code. A schema in the capability's own terms is less clearly an adaptation.
+  - **Names:** "Running Lean", "Lean Canvas" and LEANSTACK may be marks. Refer to them; don't name the capability after them. Their registration is not checked.
+- **The view** (decided 2026-11-18): the terminal only for the first slice. The commands also print their data in a structured form, and the view is revisited after the first real loop on the board game, whatever Milestone 7's state is then.
+- **The capability's name.**
+- **Where versions live:** git history, with the cycle naming the commits of its canvases, or copies kept in the cycle's file.
+- **One person or a team:** the per-person estimates and the merged canvases assume a team, while the first use is one person.
+- **Whether an experiment links to the tracker,** as a Task or beside one.
