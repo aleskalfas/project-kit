@@ -356,6 +356,36 @@ No accepted record is modified. Its findings, adopted into the plan:
    - **Git history** stays the audit trail, and the cycle review reads it to show what changed during the cycle.
 6. **The first use, before the merge: in this clone, on this branch** (the person, 2026-11-19). The board game's data lives in `.agent-workspace/lean-business/board-game-platform/`, which git ignores, so the idea stays private. After the merge and a release, the folder moves into the board game's own repository.
 
+7. **Where the location is recorded: in the capability's own configuration,** `.pkit/capabilities/lean-business/project/config.yaml`, as visual-communication records its working folder (the person, 2026-11-19). The backbone's recorder places locations only under a documentation root, which decision 4 rejected.
+
+8. **The first use, replacing decision 6: a private board-game repository on the person's machine** (the person, 2026-11-19).
+   - **How:** pkit is initialised there, and the capability is installed from this branch at a commit, through `pkit capabilities install lean-business --from <repository> --ref <commit>`. It is set up once the build is ready.
+   - **What it keeps:** git history, pkit's data validation and privacy, and it tests the real install.
+   - **What it costs:** each fix during the first use means reinstalling, since moving an installed capability's pin waits on #3229.
+   - **The ignored workspace folder** of decision 6 would have lost history and validation.
+   - **One repository for many ideas:** the private repository explores several ideas, one folder each under `lean-business/`, the board game first. A product repository with one idea uses the same layout, and an idea that graduates moves its folder across unchanged. The drafts already allow this: each idea has its own goal and cycles, and ids are qualified by idea.
+9. **How a judgement of the person's is checked: a gate of completeness, and the move held to the person by the command** (the person, 2026-11-19).
+   - **The gate** checks only that the data a judgement rests on is complete, such as the goal, the revenue streams and the estimate's inputs for viability.
+   - **The judgement** is a move marked as the person's: the command asks at a terminal, needs an explicit flag that the person decided when an agent runs it, and otherwise moves nothing and prints the question.
+   - **The record says plainly** that nothing in a file proves a person answered, and that signed commits and review are the audit trail. A trace from a second party, such as a GitHub approval, would come from the same account in a one-person setup.
+10. **Cycles: one at a time per idea, exploring one or more shortlisted variants** (the person, 2026-11-19). It replaces the drafts' one variant per cycle, with overlapping cycles across variants.
+    - **Why:** the idea has one goal, which may change at a cycle's review, so overlapping cycles would make each other's shortlistings stale mid-cycle (`architect`). The book has one cycle explore several variants, its review leading with the winning one (ch. 11, the cycle review).
+    - **The review** names the winning variant where the cycle explored several, and the person decides persevere, pivot or pause for it.
+    - **An experiment** belongs to a variant the open cycle explores.
+    - **Overlapping cycles** may be allowed later as an addition, while forbidding them later would turn valid data into errors.
+11. **How decision 10 was worked out: confirmed** (the person, 2026-11-19, after a worked example of the board game's first cycle). At most one undecided cycle per idea; each key result names its variant, and each explored variant has one; one constraint for the cycle; the review decides for the winning variant only, and the others keep their shortlisting; a pivot may rest on any explored variant's experiments; the goal changes only while no cycle is planned or running; planning a cycle is the person's act; a shelved winner allows only a pause.
+12. **Discontinuity: size the window up front, suspend when life interrupts, and brief the person on return** (the person, 2026-11-19). The method is meant for part-time founders too (the book's main character works nights and weekends), yet a time box that can be extended stops being one (ch. 6, habit 6).
+    - **The window** is sized at planning to the person's capacity, 90 days by default.
+    - **Suspending a running cycle** is the person's move, with a reason, and resuming ends it. The cycle's end, and the end of each experiment running in it, shift by the days suspended. A suspension may be recorded late, from an earlier date, and the review shows when it was recorded.
+    - **A running window is never extended.** Time that simply ran out goes to the review: persevere into another cycle on the same key results, or pause. Extension stays a later addition if use shows a need.
+    - **Being away costs nothing:** an experiment past its end, or a cycle past its window, waits for the person, and nothing expires.
+    - **The return briefing.** The capability orients a returning person from the files alone: when they last acted and what that was; the goal, the cycle's objective, constraint and key results with progress; each experiment's state, with the declared expectation beside one waiting for its result; what waits on them, in order, with each command; and, after a long silence, an offer to record the gap as a suspension from the last activity, with its effect on the cycle's end. Without an idea, the status gives one line per idea. In a session, the agent reads the same briefing. Its layout is the build's.
+13. **How decision 12 was worked out: confirmed, with one change** (the person, 2026-11-19, after a worked example). The twelve details the drafter settled stand, listed in the records' review log, except item 6:
+    - **An experiment already running when a suspension starts keeps its declared dates.** The world went on answering while the person was away, so shifting it would extend the bet, which the book warns against (ch. 6, habit 6). If the absence spoiled it, the person records it as inconclusive and declares it again.
+    - **An experiment that had not started yet shifts** by the days suspended, since nothing had happened in the world yet.
+    - This replaces decision 12's "the end of each experiment running in it shift".
+14. **The three records accepted** (the person, 2026-11-19): the capability (DEC-001), its data model (DEC-002) and its process (DEC-003), as drafted with decisions 1 to 13 applied, after `critic`, `architect` and two rounds of `methodology-reviewer`. The person saw the processes as diagrams before accepting.
+
 ### Next
 
 1. Stamp the capability through `capability-author`.
