@@ -68,7 +68,7 @@ Overturned, each a passage whose words this record makes untrue for a capability
 - ADR-016's Summary property "**Your settings win on what's *allowed***", which states the headline's guarantee to the operator, for the same call (point 2);
 - ADR-016's Summary property "**The privilege definition stays central** for now — only the *policy* (deny it to this agent) moves into the capability", since an allow of a privilege the capability defines itself moves into it too (point 1);
 - ADR-016 point 7, "Narrowing-but-reported honesty", whose footing is that what a capability grants is a deny, which narrows an agent's reach and so is "safe to auto-apply on capability install per ADR-008's narrowing class", since a capability's allow widens it and binds only once realized (point 2);
-- ADR-021's Summary bullet "**Never a guardrail**", where a capability "shapes only its own agents' reach, through its own deny grant (ADR-016's channel, unchanged)", since it shapes it through its allow too (point 1);
+- ADR-021's Summary bullet "Never a guardrail", where a capability "shapes only its own agents' reach, through its own deny grant (ADR-016's channel, unchanged)", since it shapes it through its allow too (point 1);
 - ADR-021 point 3, "A capability's reach is over its own agents via its own deny grant", for the same reach (point 1);
 - ADR-021 point 4's honest bound, "a capability can deny recognised commands **to the subjects its own grants name**", since it can also allow a privilege it defines itself to an agent it ships (point 1);
 - ADR-021's Rationale, "so the worst a capability can do is fence its own agents", since it can also widen their reach by a privilege of its own, reported as a widening (points 1 and 3).
