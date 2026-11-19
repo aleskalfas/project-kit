@@ -1605,15 +1605,15 @@ def _filing_onto_board(
     monkeypatch,
     *,
     axes: dict | None,
-    board: int,
+    board: int | None,
     board_config: str = CONFIGURED_BOARD,
     extra: tuple[str, ...] = (),
 ):
-    """Stage a filing with `--board board` at a terminal, without `--yes`, in a
-    project whose config declares ``board_config``. The board that answers is
-    board 7, the configured one, which a filing that goes on reads. Return the
-    board, every command run and every question asked, the foreign-repo guard's
-    among them."""
+    """Stage a filing with `--board board`, or with no `--board` where ``board``
+    is None, at a terminal, without `--yes`, in a project whose config declares
+    ``board_config``. The board that answers is board 7, the configured one,
+    which a filing that goes on reads. Return the board, every command run and
+    every question asked, the foreign-repo guard's among them."""
     board_world = _status_kept_filing(ci, tmp_path, monkeypatch, axes=axes)
     root = tmp_path / ".pkit" / "capabilities" / "project-management"
     config = root / "project" / "config.yaml"
@@ -1639,7 +1639,9 @@ def _filing_onto_board(
     monkeypatch.setattr("builtins.input", answer)
     monkeypatch.setattr(ci.sys, "stdin", SimpleNamespace(isatty=lambda: True))
     argv = ["create-issue.py", "--type", "task", "--title", "do a thing", "--parent", "1"]
-    argv += ["--workstream", "spyre", "--capability-root", str(root), "--board", str(board)]
+    argv += ["--workstream", "spyre", "--capability-root", str(root)]
+    if board is not None:
+        argv += ["--board", str(board)]
     monkeypatch.setattr(ci.sys, "argv", [*argv, *extra])
     return board_world, ran, asked
 
@@ -1827,6 +1829,159 @@ def test_a_negative_number_is_refused_as_below_1(ci, tmp_path, monkeypatch, caps
 
     assert "--board -1 is refused: no board has the number -1" in err
     assert ANOTHER_BOARD not in err
+
+
+# --- a board declared with no number (#3244) -----------------------------------
+# DEC-019 rejects an issue with no card on the configured board at filing, so a
+# configuration that declares a board and gives no value its schema admits as
+# the board's number, which is 1 or more, leaves a filing no board to add the
+# issue to. It is refused before anything is run or asked, as a `--board` that
+# does not name the configured board is, rather than filed onto no board.
+
+#: Each such configuration, and what the refusal says it gives for the number.
+NO_USABLE_BOARD_NUMBER = [
+    pytest.param(NO_BOARD_NUMBER, "gives no number for it", id="missing"),
+    pytest.param(f"{NO_BOARD_NUMBER}projects_v2_board_id: null\n", "gives no number", id="null"),
+    pytest.param(
+        f"{NO_BOARD_NUMBER}projects_v2_board_id: 0\n",
+        "gives it `projects_v2_board_id: 0`, which is no board's number",
+        id="zero",
+    ),
+    pytest.param(
+        f"{NO_BOARD_NUMBER}projects_v2_board_id: ''\n",
+        'gives it `projects_v2_board_id: ""`, which is no board\'s number',
+        id="empty",
+    ),
+]
+
+
+@pytest.mark.parametrize("extra", FILING_OR_DRY_RUN)
+@pytest.mark.parametrize(("board_config", "gives"), NO_USABLE_BOARD_NUMBER)
+def test_a_board_with_no_number_refuses_the_filing_before_anything(
+    ci, tmp_path, monkeypatch, capsys, board_config, gives, extra
+) -> None:
+    _, ran, asked = _filing_onto_board(
+        ci,
+        tmp_path,
+        monkeypatch,
+        axes=LABEL_STATE,
+        board=None,
+        board_config=board_config,
+        extra=extra,
+    )
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert (
+        "error: project/config.yaml declares a board (`has_projects_v2_board: true`) but "
+    ) in err
+    assert gives in err
+    assert "so the filing has no board to add the issue to" in err
+    assert "Nothing was filed." in err
+    assert "Set `projects_v2_board_id: <N>` in project/config.yaml" in err
+
+
+def test_a_board_option_where_the_configured_number_is_0_names_the_number_as_the_fault(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """A configured `0` is no board's number, so a `--board` meets the refusal of
+    a board configured with no number, and never one naming a board 0."""
+    _, ran, asked = _filing_onto_board(
+        ci,
+        tmp_path,
+        monkeypatch,
+        axes=LABEL_STATE,
+        board=7,
+        board_config=f"{NO_BOARD_NUMBER}projects_v2_board_id: 0\n",
+    )
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert "--board 7 is refused: with no number for the configured board" in err
+    assert "gives it `projects_v2_board_id: 0`, which is no board's number" in err
+    assert ANOTHER_BOARD not in err
+
+
+# --- the board a filing's hooks write to (#3240) --------------------------------
+# A filing that named another board once added its card there and handed the
+# `after_create_issue` hooks the configured board's node, cached in the
+# configuration, so the field a hook seeds was written against the wrong board.
+# Filing now refuses another board (DEC-071), so a filing's hooks only ever get
+# the configured board's card, beside that board's node from its own answer,
+# which the cached node addresses and must agree with.
+
+#: The cached node, which `_gh_command_dispatcher`'s board answers to.
+CACHED_NODE = "projects_v2_node_id: PVT_project\n"
+
+
+def _file_with_cached_node(ci, tmp_path, monkeypatch, board: tuple[str, ...]) -> SimpleNamespace:
+    """File a Task onto board 7, whose node the configuration caches, with
+    ``board`` as its board option; record every `gh` call, each context the
+    hooks are handed, and each field write the real `set-board-field` hook makes."""
+    root = _stage_capability_tree(tmp_path, has_board=True)
+    config = root / "project" / "config.yaml"
+    config.write_text(config.read_text(encoding="utf-8") + CACHED_NODE, encoding="utf-8")
+    calls: list[list[str]] = []
+    answer = _gh_command_dispatcher("https://github.com/acme/repo/issues/42")
+
+    def run(cmd, *args, **kwargs):
+        calls.append([str(c) for c in cmd])
+        return answer(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(ci.subprocess, "run", run)
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    argv = ["create-issue.py", "--type", "task", "--title", "do a thing", "--parent", "1"]
+    argv += ["--workstream", "spyre", "--capability-root", str(root), "--yes", *board]
+    monkeypatch.setattr(ci.sys, "argv", argv)
+
+    hooks_module = _hooks_module(ci)
+    contexts: list[dict] = []
+    writes: list[dict] = []
+    real_fire_hooks = ci.fire_hooks
+
+    def capturing_fire_hooks(event, context, config, **kwargs):
+        contexts.append(context)
+        return real_fire_hooks(event, context, config, **kwargs)
+
+    def fake_write(config, **kwargs):
+        writes.append(kwargs)
+        return SimpleNamespace(ok=True, detail="set field", error=None)
+
+    monkeypatch.setattr(ci, "fire_hooks", capturing_fire_hooks)
+    monkeypatch.setattr(hooks_module.substrate_writes, "write_field_value", fake_write)
+    rc = ci.main()
+    return SimpleNamespace(rc=rc, calls=calls, contexts=contexts, writes=writes)
+
+
+def test_a_filing_naming_another_board_writes_no_board_field_while_a_node_is_cached(
+    ci, tmp_path, monkeypatch
+) -> None:
+    run = _file_with_cached_node(ci, tmp_path, monkeypatch, ("--board", "9"))
+
+    assert run.rc == 2
+    assert not _filed(run.calls)
+    assert not [argv for argv in run.calls if argv[1:3] == ["project", "item-add"]]
+    assert run.contexts == [] and run.writes == []
+
+
+@pytest.mark.parametrize(
+    "board",
+    [pytest.param((), id="no-board-option"), pytest.param(("--board", "7"), id="its-own-number")],
+)
+def test_a_filings_hooks_write_to_the_board_its_card_was_added_to(
+    ci, tmp_path, monkeypatch, board
+) -> None:
+    run = _file_with_cached_node(ci, tmp_path, monkeypatch, board)
+
+    assert run.rc == 0
+    adds = [argv for argv in run.calls if argv[1:3] == ["project", "item-add"]]
+    assert [argv[3] for argv in adds] == ["7"]
+    (context,) = run.contexts
+    assert context["issue"]["board_item_id"] == "PVTI_newitem"
+    assert context["project_node_id"] == "PVT_project"
+    assert [(w["item_id"], w["project_id"]) for w in run.writes] == [
+        ("PVTI_newitem", "PVT_project")
+    ]
 
 
 def _hooks_module(ci):
