@@ -18,18 +18,18 @@ What does a capability need, in its data model, its process, its commands and it
 
 ## The method, distilled
 
-Read on 2026-11-18 by five readers, one per group of chapters. Their detailed notes stay in the agent workspace with the book.
+Read on 2026-11-18 by five readers, one per group of chapters. Their detailed notes stay in the agent workspace with the book. On 2026-11-19 each claim was checked against the book's text and given the chapter and section it rests on; the excerpts that ground them stay in the agent workspace too.
 
 ### The frame
 
-- **What it is:** repeated 90-day cycles of three activities, modelling the business, ranking what is riskiest, and testing it, across stages: design, then problem/solution fit (about three months), product/market fit, then scale.
-- **What counts as progress:** traction, meaning evidence that people outside the team care, not features built. Test the riskiest assumption first, not the easiest.
-- **The order:** demo, sell, then build. Nothing is built until customers have committed to an offer.
-- **Customer risk usually outweighs technical risk.** The question is whether to build it, not whether you can.
+- **What it is:** repeated 90-day cycles of three activities, modelling the business, ranking what is riskiest, and testing it (introduction, A Traction-First Approach; ch. 6, A Typical 90-Day Cycle), across stages: design, then problem/solution fit (three to six months, one or two cycles; corrected from about three months: ch. 7, When Are You Done with Problem/Solution Fit?; ch. 4, Stage 1), product/market fit, then scale (ch. 4, Formulating a Now-Next-Later Rollout Plan).
+- **What counts as progress:** traction, meaning evidence that people outside the team care (introduction, A Traction-First Approach), not features built (ch. 6, Time-Box Your Experiments). Test the riskiest assumption first, not the easiest (introduction, A Traction-First Approach).
+- **The order:** demo, sell, then build (introduction, Don't Start with an MVP). Nothing is built until customers have committed to an offer (ch. 7, The Mafia Offer Campaign, offer delivery).
+- **Customer risk usually outweighs technical risk.** The question is whether to build it, not whether you can (introduction, A Traction-First Approach).
 
 ### Design: desk work, about two weeks
 
-1. **The lean canvas.** One page, nine boxes and three sub-boxes:
+1. **The lean canvas.** One page, nine boxes and three sub-boxes (Part I, Don't Write a Business Plan, figure I-1):
    - customer segments, with early adopters
    - problem, with existing alternatives
    - unique value proposition, with a high-level concept
@@ -41,98 +41,98 @@ Read on 2026-11-18 by five readers, one per group of chapters. Their detailed no
    - unfair advantage
 
    Rules on the boxes:
-   - **First sketch:** one sitting, under twenty minutes, in any order.
-   - **Blanks:** allowed, but pricing should not be deferred.
-   - **Limits:** one to three ranked problems; a value-proposition headline of about 120 characters at most; three to five key metrics.
-   - **Unfair advantage:** better blank than weak.
-   - **Several actors:** in a model with more than one actor, each entry is tagged with its actor.
+   - **First sketch:** one sitting, under twenty minutes, in any order (ch. 1, Sketching Your First Lean Canvas).
+   - **Blanks:** allowed (ch. 1, Sketching Your First Lean Canvas), but pricing should not be deferred (ch. 1, Revenue Streams and Cost Structure).
+   - **Limits:** one to three ranked problems (ch. 1, Problem); a value-proposition headline of about 120 characters at most (ch. 1, Unique Value Proposition, Keep it short); three to five key metrics (ch. 1, Key Metrics).
+   - **Unfair advantage:** better blank than weak (ch. 1, Unfair Advantage).
+   - **Several actors:** in a model with more than one actor, each entry is tagged with its actor (ch. 1, Customer Segments, Model multiple perspectives).
 
-   A canvas is never finished. It is versioned and reviewed each cycle. A broad "big idea" canvas is split into variants that each tell one business-model story, of one of three archetypes: direct, multisided or marketplace. In a team, each member sketches alone first, then the sketches are merged.
-2. **Desirability.** The segments, problem and value-proposition boxes are reviewed again, in a fixed order:
+   A canvas is never finished. It is versioned and reviewed each cycle (ch. 6, Modeling; ch. 11, Preparing for the Meeting). A broad "big idea" canvas is split into variants that each tell one business-model story, of one of three archetypes: direct, multisided or marketplace (ch. 1, Refining Your Lean Canvas). In a team, each member sketches alone first, then the sketches are merged (ch. 1, Sketching Your First Lean Canvas).
+2. **Desirability.** The segments, problem and value-proposition boxes are reviewed again, in a fixed order (ch. 2, Using the Innovator's Gift to Stress Test Your Idea for Desirability):
    1. the segments
-   2. early adopters, recognised by the event that made them switch, not by a persona
-   3. existing alternatives, beyond the product's own category
-   4. the problems, each framed as a failure of an existing alternative
-   5. the value proposition, anchored on those problems
+   2. early adopters, recognised by the event that made them switch, not by a persona (ch. 2, Early Adopters: Forget Personas)
+   3. existing alternatives, beyond the product's own category (ch. 2, Existing Alternatives: Transcend Category)
+   4. the problems, each framed as a failure of an existing alternative (ch. 2, Problems: What's Broken with the Old Way?)
+   5. the value proposition, anchored on those problems (ch. 2, UVP: How Will You Cause a Switch?)
 
    The lenses it uses:
-   - a switching story: customer, job, existing alternative, trigger, problems, new solution
-   - the job to be done
-   - four forces: push and pull against inertia and friction
+   - a switching story: customer, job, existing alternative, trigger, problems, new solution (ch. 2, Meet the Innovator's Gift)
+   - the job to be done (ch. 2, Unpacking the Innovator's Gift)
+   - four forces: push and pull against inertia and friction (ch. 2, Unpacking the Innovator's Gift)
 
-   A switch happens when push and pull outweigh inertia and friction, and the new way should be several times better.
-3. **Viability.** The minimum success criteria set a three-year goal, usually as annual recurring revenue. A five-minute rough estimate runs it through the customer factory: acquisition, activation, retention, revenue, referral. It works out:
+   A switch happens when push and pull outweigh inertia and friction, and the new way should be several times better (ch. 2, Causing a switch starts with a promise of better).
+3. **Viability.** The minimum success criteria set a three-year goal, usually as annual recurring revenue (ch. 3, Define a Target Throughput Goal). A five-minute rough estimate runs it through the customer factory: acquisition, activation, retention, revenue, referral (ch. 3, Don't Create a Financial Forecast; Use a Fermi Estimate Instead). It works out (ch. 3, Test Whether Your Idea Can Deliver Your Target Throughput Goal):
    - the customers needed, from the goal and the revenue per customer
    - churn, from a customer's lifetime
    - the acquisition rate needed just to stand still
    - the leads that requires
 
-   The inputs that break the estimate, and then fix it, are the first riskiest assumptions.
-4. **Feasibility.** A traction roadmap splits the goal into yearly milestones, by default tenfold growth a year. A now, next, later rollout plan names each stage's riskiest assumptions.
-5. **Pitch.** An elevator pitch and a ten-slide deck, shown to advisors.
+   The inputs that break the estimate, and then fix it, are the first riskiest assumptions (ch. 3, Running a Fermi Estimate on Your Idea).
+4. **Feasibility.** A traction roadmap splits the goal into yearly milestones, by default tenfold growth a year (ch. 4, Charting a Traction Ramp). A now, next, later rollout plan names each stage's riskiest assumptions (ch. 4, Formulating a Now-Next-Later Rollout Plan).
+5. **Pitch.** An elevator pitch and a ten-slide deck, shown to advisors (ch. 5, What's Your Elevator Pitch?; ch. 5, Delivering Your Business Model Pitch).
 
-Steps 2 to 4 each end in a yes or no that loops back to the canvas. These are desk verdicts, cheap filters before any evidence, not results.
+Steps 2 to 4 each end in a yes or no that loops back to the canvas (Part I, The Business Model Design Playbook, figure I-2, whose time axis also gives the phase its two weeks; the text gives no duration). These are desk verdicts, cheap filters before any evidence, not results (ch. 1, What's Next?; ch. 6, Seven Habits for Highly Effective Experiments).
 
 ### Validation: the 90-day cycle
 
-- **Time:** weeks one and two model and prioritise. Five two-week sprints test. Day 90 reviews.
-- **Focus:** one goal per cycle, as an objective with key results taken from the roadmap. One constraint: the weakest step of the customer factory, which is acquisition before anything runs.
-- **Converge, diverge, converge:**
-  1. A kickoff aligns everyone on the goal and the constraint, with no brainstorming of solutions.
-  2. Each member writes campaign proposals alone. A proposal states the causes of the constraint, the underlying problem with its evidence, the proposed solution, and the expected outcomes.
-  3. A planning meeting pitches the proposals and votes, choosing about one campaign for every two people on the team.
-- **Experiments:** stated as "this one action will drive this measurable outcome within this time box". Seven habits govern them:
-  - declare the outcome before running
-  - each person estimates alone before the group compares
-  - derive the expected number from the roadmap or the estimate, as a point or a 90% range
-  - measure what people do, not what they say
-  - keep it falsifiable, with one action
-  - two weeks at most, never extended
-  - compare with a control group: earlier cohorts, or a split
+- **Time:** weeks one and two model and prioritise. Five two-week sprints test. Day 90 reviews (ch. 6, A Typical 90-Day Cycle).
+- **Focus:** one goal per cycle, as an objective with key results taken from the roadmap (ch. 6, The 90-Day Cycle). One constraint: the weakest step of the customer factory (ch. 6, the chapter's opening), which is acquisition before anything runs (ch. 7, Steve Calls a 90-Day Cycle Kickoff Meeting).
+- **Converge, diverge, converge** (Part II, Generate a Diverse Set of Possible Solutions):
+  1. A kickoff aligns everyone on the goal and the constraint, with no brainstorming of solutions (ch. 7, Steve Calls a 90-Day Cycle Kickoff Meeting).
+  2. Each member writes campaign proposals alone. A proposal states the causes of the constraint, the underlying problem with its evidence, the proposed solution, and the expected outcomes (ch. 6, Prioritizing).
+  3. A planning meeting pitches the proposals and votes, choosing about one campaign for every two people on the team (ch. 6, Prioritizing).
+- **Experiments:** stated as "this one action will drive this measurable outcome within this time box" (ch. 6, Seven Habits, habits 5 and 6). Seven habits govern them (ch. 6, Seven Habits):
+  - declare the outcome before running (habit 1)
+  - each person estimates alone before the group compares (habit 2)
+  - derive the expected number from the roadmap or the estimate, as a point or a 90% range (habit 3)
+  - measure what people do, not what they say (habit 4)
+  - keep it falsifiable, with one action (habit 5)
+  - two weeks at most, never extended (habit 6)
+  - compare with a control group: earlier cohorts, or a split (habit 7)
 
-  An experiment is either generative, to discover, or evaluative, to measure traction. **The book gives no experiment template:** our fields are a design choice built from these habits.
-- **Meetings:** six, each with set attendees: kickoff, planning, sprint planning, daily standup, sprint review, cycle review.
-- **The default first campaign is the "mafia offer":**
-  1. **Problem discovery,** up to two sprints, first broad, then narrowed to early adopters. It runs on a timed interview script of 30–45 minutes, about past facts only. Each interview gets its own customer forces canvas, and the canvases are grouped into segments by trigger, alternative chosen and desired outcome. Its gate is customer/problem fit:
+  An experiment is either generative, to discover, or evaluative, to measure traction (ch. 6, Testing). **The book gives no template of an experiment's fields,** only a one-sentence form for the hypothesis (corrected: ch. 6, Seven Habits, habit 5): our fields are a design choice built from these habits.
+- **Meetings:** six, each with set attendees: kickoff, planning, sprint planning, daily standup, sprint review, cycle review (ch. 6, Establish a Regular Reporting Cadence; the attendees from its figure 6-4).
+- **The default first campaign is the "mafia offer"** (ch. 7, When to Use a Mafia Offer Campaign):
+  1. **Problem discovery,** up to two sprints (ch. 7, Running a Mafia Offer Campaign), first broad, then narrowed to early adopters (ch. 8, Broad-Match Versus Narrow-Match Problem Discovery Sprints). It runs on a timed interview script of 30–45 minutes, about past facts only (ch. 8, Conducting Interviews). Each interview gets its own customer forces canvas, and the canvases are grouped into segments by trigger, alternative chosen and desired outcome (ch. 8, Capturing Insights). Its gate is customer/problem fit (ch. 8, When Are You Done with Problem Discovery?):
      - the top three to five customer stories have been found and repeat
      - a problem is big enough to cause a switch
      - enough is already spent on the alternatives
-  2. **Solution design,** one sprint.
-  3. **Offer delivery,** up to two sprints: one-on-one pitches to qualified early adopters, asking for commitments that cost them something. Its gate is problem/solution fit: enough customers commit, as the roadmap sets, with 60–80% of qualified leads converting.
-- **The cycle review:** a progress report compares the goal with what was reached, and the canvas and roadmap at the cycle's start with now. It ends in one of three decisions:
+  2. **Solution design,** one sprint (ch. 7, Running a Mafia Offer Campaign).
+  3. **Offer delivery,** up to two sprints (ch. 7, Running a Mafia Offer Campaign): one-on-one pitches to qualified early adopters (ch. 10, Running an Offer Delivery Sprint), asking for commitments that cost them something (ch. 10, Act 4: Call-to-action). Its gate is problem/solution fit: enough customers commit, as the roadmap sets, or the cycle runs out of time (ch. 10, When Are You Done with Offer Delivery?). The 60–80% of qualified leads converting is what the offer is optimised toward, not part of the gate (corrected: ch. 10, Running an Offer Delivery Sprint).
+- **The cycle review:** a progress report compares the goal with what was reached, and the canvas and roadmap at the cycle's start with now (ch. 11, Assemble a Progress Report Pitch Deck). It ends in one of three decisions (ch. 11, What's next):
   - **persevere:** the goal was met
   - **pivot:** missed, but an insight with evidence could fix it in one more cycle
   - **pause:** a dead end, or out of resources
 
-  There is no separate "stop".
+  There is no separate "stop" (ch. 11, the chapter's opening).
 
 ### The hypothesis and test loop, at three scales
 
-The second edition's repeated pattern, a hypothesis, an experiment and what was learned, is still here, but the third edition moves it. Its introduction calls the build, measure, learn loop a fast validator of an idea that only helps when a reasonably good idea goes in; with a bad one, all it teaches is that the idea is bad. So the third edition puts the canvas and its desk tests, and problem discovery, before the loop, and runs the loop inside a fixed cadence. The word "hypothesis" appears mostly in chapter 6.
+The second edition's repeated pattern, a hypothesis, an experiment and what was learned, is still here, but the third edition moves it (not grounded: the third edition's text does not describe the second). Its introduction calls the build, measure, learn loop a fast validator of an idea that only helps when a reasonably good idea goes in; with a bad one, all it teaches is that the idea is bad (introduction, Don't Start with an MVP). So the third edition puts the canvas and its desk tests, and problem discovery, before the loop, and runs the loop inside a fixed cadence (our inference, from the introduction, Don't Start with an MVP, and ch. 6, The 90-Day Cycle). The word "hypothesis" appears mostly in chapter 6 (8 of its 15 uses in the body text; ch. 6, Seven Habits, habit 5).
 
 The chain:
-1. A canvas entry is an assumption, a "leap of faith", vague and not yet testable.
-2. The riskiest assumptions are ranked.
-3. Each is rewritten as a falsifiable hypothesis: one action, an outcome you can measure, a time box.
-4. An experiment tests it, inside a campaign that carries a strategy for the cycle's constraint.
-5. The result is held against the declared expectation, and is either learned from or acted on.
+1. A canvas entry is an assumption, a "leap of faith", vague and not yet testable (ch. 6, Seven Habits, habit 5).
+2. The riskiest assumptions are ranked (introduction, A Traction-First Approach).
+3. Each is rewritten as a falsifiable hypothesis: one action, an outcome you can measure, a time box (ch. 6, Seven Habits, habits 5 and 6).
+4. An experiment tests it, inside a campaign that carries a strategy for the cycle's constraint (ch. 6, The 90-Day Cycle; Part II, Avoid the Curse of Specialization).
+5. The result is held against the declared expectation, and is either learned from or acted on (ch. 6, Seven Habits, habit 2).
 
 It repeats at three scales:
-- **An experiment:** two weeks, ending in pass or fail and its next action: correct course, double down, or stop the experiment.
-- **A sprint:** two weeks, ending in a sprint review that sets the next sprint's focus, and at a stage's gates, customer/problem fit and problem/solution fit, a step back on a failed gate.
-- **A cycle:** 90 days, ending in the review's persevere, pivot or pause, which also updates the canvas and the roadmap for the next cycle.
+- **An experiment:** two weeks, ending in pass or fail (ch. 6, Seven Habits, habits 5 and 6) and its next action: correct course (habit 6), double down (Part II, Decide on Next Actions), or stop the experiment (our wording: the book speaks only of invalidating initiatives early, habit 6).
+- **A sprint:** two weeks, ending in a sprint review that sets the next sprint's focus (ch. 6, Establish a Regular Reporting Cadence; ch. 8, Steve Reviews the Results of the Broad-Match Problem Discovery Sprint), and at a stage's gates, customer/problem fit and problem/solution fit, a step back on a failed gate (ch. 8, When Are You Done with Problem Discovery?; ch. 7, Running a Mafia Offer Campaign, figure 7-6).
+- **A cycle:** 90 days, ending in the review's persevere, pivot or pause, which also updates the canvas and the roadmap for the next cycle (ch. 11, Preparing for the Meeting; ch. 6, A Typical 90-Day Cycle).
 
 ### Growth: after customers arrive
 
-The same cycle continues with new artefacts: a launch to a small paying group, a cohort dashboard, a map of the customer factory's events, and growth tests such as lifetime value above three times the cost to acquire a customer. None of it is needed before there are customers.
+The same cycle continues (Part III, The Journey Ahead) with new artefacts: a launch to a small paying group (ch. 12, Roll Out Your MVP in Batches; introduction, A Traction-First Approach), a cohort dashboard, a map of the customer factory's events (ch. 12, Extend Your Customer Factory Metrics Dashboard), and growth tests such as lifetime value above three times the cost to acquire a customer (ch. 14, The Revenue Growth Loop). None of it is needed before there are customers, except that the dashboard and the map extend a weekly one begun before launch, in offer delivery (corrected: ch. 10, Measure Your Customer Factory Metrics Weekly).
 
 ### Where the method resists capture
 
-- **Most quality rules are judgements:** a problem framed against an alternative, a real advantage against a false one, one story to a canvas. Data can hold the links (a problem to its alternative, the value proposition to the first problem) and the tags. A person or an agent judges the content.
-- **Order is free in one place and fixed in another.** The first sketch has no order; the desirability review has a strict one.
-- **The book's numbers are loose,** and several figures contradict the text. The formulas follow the text. Its sprint allocations are guidelines, so a check of them warns and does not refuse.
-- **Two decisions need judgement:** whether interviews have stopped yielding anything new, and pivot against pause after a missed goal.
-- **The licence:** the canvas template is published under Creative Commons BY-SA 3.0, which binds how a shipped template is credited and licensed.
+- **Most quality rules are judgements:** a problem framed against an alternative (ch. 2, Problems: What's Broken with the Old Way?), a real advantage against a false one (ch. 1, Unfair Advantage), one story to a canvas (ch. 1, How Do You Know When to Split Your Lean Canvas?). Data can hold the links (a problem to its alternative, the value proposition to the first problem: ch. 1, Connect to your customer's number one problem) and the tags. A person or an agent judges the content.
+- **Order is free in one place and fixed in another.** The first sketch has no order (ch. 1, Sketching Your First Lean Canvas); the desirability review has a strict one (ch. 2, Using the Innovator's Gift to Stress Test Your Idea for Desirability).
+- **The book's numbers are loose** (for one, ch. 3, Steve estimates how many active customers he'll need), and several figures contradict the text (for one, ch. 4, Steve Charts His Traction Roadmap, figure 4-4). The formulas follow the text. Its sprint allocations are guidelines (ch. 7, Running a Mafia Offer Campaign), so a check of them warns and does not refuse.
+- **Two decisions need judgement:** whether interviews have stopped yielding anything new (ch. 8, Running a Problem Discovery Sprint), and pivot against pause after a missed goal (ch. 11, What's next).
+- **The licence:** the canvas template is published under Creative Commons BY-SA 3.0 (Part I, figure I-1, its footer), which binds how a shipped template is credited and licensed.
 
 ## How a person uses it
 
