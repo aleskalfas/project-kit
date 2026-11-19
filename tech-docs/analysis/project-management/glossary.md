@@ -321,6 +321,7 @@ TERM-instance:
           - project-management:DEC-045#1
           - project-management:DEC-058#5
           - project-management:DEC-059#6
+          - project-management:DEC-076#4
           - COR-001
           - COR-010
 TERM-issue:
@@ -1001,7 +1002,7 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#instance).
 **Distinctions:**
 
 - **Session:** one run of an AI agent in a clone. A session ends or dies, and the instance's number stays, held by a file in the clone ([DEC-035 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)).
-- **A clone with no number:** a clone that never set a number. Such a clone marks nothing and is guarded by nothing, as before instances existed, with one exception. It cannot move back from In Progress an [issue](#term-issue--issue) an instance owns, since it cannot release the [owner](#term-owner--owner) (DEC-035 point 1).
+- **A clone with no number:** a clone that never set a number. Such a clone marks nothing and is guarded by nothing, as before instances existed, with two exceptions. It cannot move back from In Progress an [issue](#term-issue--issue) an instance owns, since it cannot release the [owner](#term-owner--owner) (DEC-035 point 1). Under a credential that names no user's account, the clash guard reads the owner for every clone, this one among them ([DEC-076 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-076-app-credentials.md#4-start-work-keeps-its-refusal-against-the-person-the-agent-works-for)).
 - **A linked worktree:** a further working tree of a clone. Whether a linked worktree reads the clone's identity, or may set a separate identity, is not decided yet ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and #1140).
 - **Seat:** a place in a [topology](#term-topology--topology), taken by a clone. The clone's name and number are then the [seat](#term-seat--seat)'s, and never typed (DEC-059 point 6).
 

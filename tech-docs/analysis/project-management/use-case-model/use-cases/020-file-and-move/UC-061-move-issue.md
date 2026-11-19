@@ -83,6 +83,8 @@ pkit:
         - project-management:DEC-067#3
         - project-management:DEC-067#4
         - project-management:DEC-075
+        - project-management:DEC-076#4
+        - project-management:DEC-076#6
         - COR-004
         - COR-017
         - COR-021
@@ -200,6 +202,7 @@ pkit:
 - **6i.** The developer's clone cannot release the issue's owner: the clone is no [instance](../../../glossary.md#term-instance--instance), or a clone of another account made the ownership. The system refuses the move back, naming the owner, and writes nothing ([DEC-035 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#4-ownership-releases-when-the-work-ends-or-stops-and-transfers-on-reclaim)). The use case ends.
 - **6j.** The project's substrate map binds the state to the board. The system refuses the move back and writes nothing, releasing no ownership and journaling no move ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). The use case ends.
 - **6k.** The command runs as a user's account other than the developer's, such as one kept for a workflow. `start-work` assigns that account, not the developer. It refuses a Task assigned to the developer as one assigned to someone else, as in variant 6a ([DEC-021](../../../../../../.pkit/capabilities/project-management/decisions/DEC-021-team-membership-gate.md)).
+- **6l.** The command runs under a credential that names no user's account, such as a GitHub App's. `start-work` takes the developer as the person `PM_INVOKER_LOGIN` names, and refuses a Task assigned to someone else, as in variant 6a. It assigns the developer a Task with no assignee, and claims the issue for no [instance](../../../glossary.md#term-instance--instance), yet still refuses a Task that an instance owns. Where `PM_INVOKER_LOGIN` names nobody, or the project has a [topology](../../../glossary.md#term-topology--topology), `start-work` refuses, says why, and changes nothing ([DEC-076 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-076-app-credentials.md#4-start-work-keeps-its-refusal-against-the-person-the-agent-works-for) and [point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-076-app-credentials.md#6-in-a-project-with-a-topology-a-clone-under-such-a-credential-builds-nothing)).
 - **7a.** The developer moves the Task to Done directly: `pkit pm move-issue <N> --to done`. The system checks that each checkbox is ticked before it writes ([DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
 
 > [!WARNING]
