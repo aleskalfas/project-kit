@@ -14,6 +14,7 @@ from click.testing import CliRunner
 import project_kit.cli as cli_mod
 import project_kit.report as rep
 from project_kit import scratchpads
+from project_kit.acting_account import Reading
 from project_kit.cli import main
 
 
@@ -44,7 +45,9 @@ def _pinned_report_context(monkeypatch: pytest.MonkeyPatch) -> None:
     per-case; the context-stamp test overrides with concrete values."""
     monkeypatch.setattr(cli_mod, "_resolve_report_context", lambda *a, **k: (None, None))
     monkeypatch.setattr(rep, "gh_authenticated", lambda: False)
-    monkeypatch.setattr(rep, "current_login", lambda: "tester")
+    monkeypatch.setattr(
+        rep, "posting_account", lambda: Reading(account="tester", kind="user", login="tester")
+    )
     monkeypatch.setattr(rep, "ensure_kind_label", lambda *a, **k: True)
 
 

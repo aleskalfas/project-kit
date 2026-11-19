@@ -226,3 +226,91 @@ privileges:
         - cmd: git
           subcommand: [push]
           word_prefix_any: ["+"]
+
+# The locked commands (ADR-095 point 3, ADR-099 point 1): the commands that
+# change what judges every later call. The decision core judges a shell call it
+# reads as one of them with no model, by a reading of its own that errs away
+# from a mention, and the hook gives that verdict in every mode. An `ask` lock
+# is the interlock's ask; a `deny` lock is denied outright, and its `line` is
+# what the person runs from a terminal of their own. A matcher names either the
+# methodology's command form, read under `pkit` and through uv's runners, or
+# the installer's group and subcommand, met where a word after the subcommand
+# is one `word_any` names or a word of the call holds a name `text_any` names
+# (with neither, every call meets it). The adapter renders each as its native
+# locks. Only this catalog declares a lock: the loader rejects a capability
+# fragment's, as it rejects a guardrail (ADR-021 point 3).
+locks:
+  realize:
+    description: realizing the permission model into the harness's settings
+    verdict: ask
+    recognize:
+      - methodology: [permissions, apply]
+  profile-activate:
+    description: activating a permission profile, which realizes the model as a step
+    verdict: ask
+    recognize:
+      - methodology: [permissions, profile, activate]
+  hook-on:
+    description: turning the permission hook on
+    verdict: ask
+    recognize:
+      - methodology: [permissions, enable]
+  hook-off:
+    description: turning the permission hook off
+    verdict: ask
+    recognize:
+      - methodology: [permissions, disable]
+  setup-autonomy:
+    description: >-
+      the setup of autonomy, whose steps realize the model, turn the hook on and
+      widen the sandbox, and its `down`, which turns them off
+    verdict: ask
+    recognize:
+      - methodology: [permissions, setup, autonomy]
+  sandbox:
+    description: >-
+      turning the sandbox on or off, or adding an exclusion or an allowance to
+      it, which can leave it wider than it is
+    verdict: ask
+    recognize:
+      - methodology: [permissions, sandbox, enable]
+      - methodology: [permissions, sandbox, disable]
+      - methodology: [permissions, sandbox, exclude]
+      - methodology: [permissions, sandbox, accommodate]
+  upgrade:
+    description: the backbone's upgrade, which installs the release every copy is made from
+    verdict: ask
+    recognize:
+      - methodology: [upgrade]
+  installer:
+    description: >-
+      the installer's command that writes a guarded folder: installing or
+      removing the methodology's tool, installing any tool by force, upgrading
+      any tool, updating the installer, or installing, upgrading or removing an
+      interpreter
+    verdict: ask
+    recognize:
+      - installer: [tool, install]
+        text_any: [project-kit]
+        word_any: ["--force"]
+      - installer: [tool, uninstall]
+        text_any: [project-kit]
+        word_any: ["--all"]
+      - installer: [tool, upgrade]
+      - installer: [tool, update]
+      - installer: [self, update]
+      - installer: [python, install]
+      - installer: [python, upgrade]
+      - installer: [python, uninstall]
+      - installer: [pip, install]
+        text_any: [project-kit]
+      - installer: [pip, uninstall]
+        text_any: [project-kit]
+      - installer: [pip, sync]
+        text_any: [project-kit]
+  name-folder:
+    description: naming a folder where the permission hook puts no ask before a file tool's write
+    verdict: deny
+    line: "pkit permissions folders name <folder>"
+    recognize:
+      - methodology: [permissions, folders, name]
