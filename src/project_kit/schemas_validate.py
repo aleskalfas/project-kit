@@ -16,11 +16,14 @@ Two passes run by default:
 
 - **Reference resolution** — for every value or key that matches the
   token pattern `^\\[<namespace>:<id>\\]$`, locate `<namespace>.schema.json`
-  in the same directory, read its `x-pkit-id-collection` annotation
-  (a JSON Pointer to the id-bearing collection in `<namespace>.yaml`),
-  and confirm `<id>` is a key of that collection (or — for list-of-
-  objects collections — the `.id` field of some entry). Sibling-file
-  scope: cross-directory resolution is not supported in v1.
+  in the same directory, read the annotation that makes it the namespace's
+  owner (`namespace_ownership`), and confirm `<id>` is among the ids
+  `<namespace>.yaml` holds. Under `x-pkit-id-collection` (a JSON Pointer to
+  the id-bearing collection) those are the collection's keys, or — for
+  list-of-objects collections — each entry's `.id` field. Under a document
+  schema's `x-pkit-entry-id` (a JSON Pointer to the document's own id) the
+  YAML is its one document, and its id is the one (COR-029 point 6).
+  Sibling-file scope: cross-directory resolution is not supported in v1.
 
 Both passes contribute issues to the report. The resolver pass is
 controlled by the `resolve` parameter (default True) so an author
@@ -55,9 +58,9 @@ import datetime as _dt
 import json
 import re
 from collections.abc import Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 
 import click
 from jsonschema import Draft202012Validator
@@ -87,6 +90,17 @@ _SHAPE_TOKEN_NOMATCH_PATTERN = re.compile(r"^'\[[a-z][a-z0-9-]*:[a-z][a-z0-9-]*\
 # `"x-pkit-id-collection": "/types"` says ids are the keys (or .id fields)
 # of the top-level `types` mapping.
 _ID_COLLECTION_ANNOTATION = "x-pkit-id-collection"
+
+# JSON Schema annotation by which a *document schema* — one whose file is
+# itself one resource — owns a namespace, each document it describes being
+# one entry (COR-029 point 6). The value is a JSON Pointer to the field that
+# holds the document's own id, e.g. `"x-pkit-entry-id": "/id"`. A companion
+# declares it in place of `x-pkit-id-collection`, never beside it.
+_ENTRY_ID_ANNOTATION = "x-pkit-entry-id"
+
+# The two annotations named together, for a message saying a companion
+# declares neither and so owns no namespace.
+NAMESPACE_OWNER_ANNOTATIONS = f"{_ID_COLLECTION_ANNOTATION!r} or {_ENTRY_ID_ANNOTATION!r}"
 
 # JSON Schema annotation declaring that a mapping's keys reference ids in
 # another namespace, without expressing the reference in token form at
@@ -151,12 +165,127 @@ class ValidationReport:
         return not self.issues
 
 
+# --- namespace ownership (COR-019, COR-029 point 6) ----------------------
+#
+# A companion makes its schema a namespace's owner in one of two forms: a
+# collection of entries (`x-pkit-id-collection`), or a document that is
+# itself one entry (`x-pkit-entry-id`). `namespace_ownership` and
+# `namespace_entries` are the one reading of that, shared by every reader of
+# a namespace's ids — this module's resolver and listings, the runtime API in
+# `schemas.py`, the adopter-data pass in `data_validate.py` and the authoring
+# commands — so no reader sees one form and misses the other.
+
+NamespaceForm = Literal["collection", "document"]
+
+
+@dataclass(frozen=True)
+class NamespaceOwnership:
+    """How a companion makes its schema a namespace's owner.
+
+    `form` is `collection` under `x-pkit-id-collection`, whose pointer names
+    the collection holding the namespace's entries, and `document` under
+    `x-pkit-entry-id`, whose pointer names the field holding the document's
+    own id. `pointer` is the declared JSON Pointer.
+    """
+
+    form: NamespaceForm
+    pointer: str
+
+    @property
+    def annotation(self) -> str:
+        """The annotation's name, for messages."""
+        if self.form == "collection":
+            return _ID_COLLECTION_ANNOTATION
+        return _ENTRY_ID_ANNOTATION
+
+
+def _declared_forms(companion: Any) -> list[tuple[NamespaceForm, str]]:
+    """Each namespace annotation a parsed companion declares, as `(form, annotation)`."""
+    if not isinstance(companion, dict):
+        return []
+    annotations = cast("dict[str, Any]", companion)
+    forms: list[tuple[NamespaceForm, str]] = [
+        ("collection", _ID_COLLECTION_ANNOTATION),
+        ("document", _ENTRY_ID_ANNOTATION),
+    ]
+    return [(form, name) for form, name in forms if name in annotations]
+
+
+def _declares_both_annotations(companion: Any) -> bool:
+    """True when a parsed companion declares both annotations, which COR-029 point 6 forbids."""
+    return len(_declared_forms(companion)) > 1
+
+
+def namespace_ownership(companion: Any) -> NamespaceOwnership | str | None:
+    """Read the annotation by which a companion makes its schema a namespace's owner.
+
+    `companion` is the parsed companion JSON. Returns None when it declares
+    neither annotation, so the schema owns no namespace. Returns a message,
+    completing "the companion …", when it declares both, which COR-029 point
+    6 forbids, or a pointer that is no string. Returns the ownership
+    otherwise.
+    """
+    declared = _declared_forms(companion)
+    if not declared:
+        return None
+    if len(declared) > 1:
+        return (
+            f"declares both {_ID_COLLECTION_ANNOTATION!r} and {_ENTRY_ID_ANNOTATION!r}. "
+            f"A schema owns a namespace through a collection or through a document's "
+            f"own id, never both (COR-029 point 6)"
+        )
+    form, name = declared[0]
+    pointer = cast("dict[str, Any]", companion)[name]
+    if not isinstance(pointer, str):
+        return f"has non-string {name!r}: {pointer!r}"
+    return NamespaceOwnership(form=form, pointer=pointer)
+
+
+def namespace_entries(ownership: NamespaceOwnership, data: Any) -> list[tuple[str, Any]] | str:
+    """The `(id, entry)` pairs one parsed YAML holds for its namespace, or why it holds none.
+
+    A collection yields each mapping key with its value, or each list item's
+    `id` with the item. A document yields its own id with the whole document:
+    the id is read from the field the pointer names, never derived from the
+    file's path or name. A document in which the pointer reaches no string
+    is an error (COR-029 point 6). The message names the annotation and its
+    pointer, and the caller names the file.
+    """
+    try:
+        target = _resolve_json_pointer(data, ownership.pointer)
+    except (KeyError, ValueError) as exc:
+        if ownership.form == "document":
+            return f"{ownership.annotation} pointer {ownership.pointer!r} reaches no string: {exc}"
+        return f"{ownership.annotation} pointer {ownership.pointer!r} did not resolve: {exc}"
+    if ownership.form == "document":
+        if not isinstance(target, str):
+            return (
+                f"{ownership.annotation} pointer {ownership.pointer!r} reaches no string: "
+                f"it holds {type(target).__name__}"
+            )
+        return [(target, data)]
+    if isinstance(target, dict):
+        mapping = cast("dict[Any, Any]", target)
+        return [(str(key), value) for key, value in mapping.items()]
+    if isinstance(target, list):
+        entries: list[tuple[str, Any]] = []
+        for item in cast("list[Any]", target):
+            if isinstance(item, dict) and "id" in item:
+                entry = cast("dict[str, Any]", item)
+                entries.append((str(entry["id"]), entry))
+        return entries
+    return (
+        f"{ownership.annotation} pointer {ownership.pointer!r} resolved to "
+        f"{type(target).__name__}; expected mapping or list-of-objects-with-id"
+    )
+
+
 @dataclass(frozen=True)
 class _NamespaceTarget:
-    """Resolved target namespace: where ids live in the YAML + the set of valid ids."""
+    """Resolved target namespace: how its schema owns it + the set of valid ids."""
 
     namespace: str
-    id_collection_pointer: str
+    ownership: NamespaceOwnership
     valid_ids: frozenset[str]
 
 
@@ -169,8 +298,10 @@ class SchemaSummary:
     yaml_path: Path
     companion_path: Path
     has_companion: bool
-    is_namespace_owner: bool  # True iff the companion has x-pkit-id-collection
-    id_collection_pointer: str | None
+    # True iff the companion declares x-pkit-id-collection or x-pkit-entry-id,
+    # well-formed or not (a malformed one sets `load_error`).
+    is_namespace_owner: bool
+    ownership: NamespaceOwnership | None  # set when the declaration reads cleanly
     entry_ids: tuple[str, ...]  # populated only when is_namespace_owner
     load_error: str | None  # non-None if discovery hit a problem
 
@@ -183,7 +314,7 @@ class NamespaceDetail:
     owner: str  # a capability name, or `core` for the core schemas area
     yaml_path: Path
     companion_path: Path
-    id_collection_pointer: str
+    ownership: NamespaceOwnership
     entries: tuple[tuple[str, Any], ...]  # ordered (id, entry_data) tuples
 
 
@@ -556,17 +687,34 @@ def validate_pair(
         registry = shared_registry
     issues.extend(_shape_issues(schema, data, registry, yaml_rel))
 
-    # 5. Reference-resolution pass — walk every typed-token reference in
+    # 5. The companion's namespace annotations, read as every reader of a
+    # namespace's ids reads them. Declaring both is an error of this check
+    # (COR-029 point 6); a pointer that is no string is left to the readers,
+    # which report it where a reference or a listing reads the namespace.
+    ownership = namespace_ownership(schema)
+    if isinstance(ownership, str) and _declares_both_annotations(schema):
+        issues.append(ValidationIssue(location=companion_rel, message=f"companion {ownership}."))
+
+    # 6. Reference-resolution pass — walk every typed-token reference in
     # the YAML (value-position references), plus every mapping field
     # carrying an `x-pkit-keys-from-namespace` annotation (key-position
-    # references). Both verify against the named namespace's id
-    # collection.
+    # references). Both verify against the named namespace's ids. A
+    # document schema's own YAML is its one document, so the id it holds
+    # is read here as a resolver reads it.
     if resolve:
         if namespace_cache is None:
             namespace_cache = {}
+        if isinstance(ownership, NamespaceOwnership) and ownership.form == "document":
+            entries = namespace_entries(ownership, data)
+            if isinstance(entries, str):
+                issues.append(
+                    ValidationIssue(
+                        location=f"{yaml_rel}{ownership.pointer}", message=f"{entries}."
+                    )
+                )
         issues.extend(_resolve_references(pair, data, namespace_cache, yaml_rel))
         issues.extend(_resolve_key_references(pair, schema, data, namespace_cache, yaml_rel))
-    # 6. Suppress shape pattern-mismatch issues where the resolver has
+    # 7. Suppress shape pattern-mismatch issues where the resolver has
     # already explained the same data position with a more informative
     # message (e.g., a wrong-namespace token fires both checks; only the
     # resolver's "unresolved reference" message tells the user what's
@@ -1224,7 +1372,7 @@ def _walk_tokens(data: Any, path: tuple[str, ...] = ()) -> Iterator[tuple[str, s
 
 
 def _load_namespace_target(schemas_dir: Path, namespace: str) -> _NamespaceCacheEntry:
-    """Load a target namespace's id collection. Returns the resolved target or an error string."""
+    """Load a target namespace's ids. Returns the resolved target or an error string."""
     companion = schemas_dir / f"{namespace}.schema.json"
     yaml_file = schemas_dir / f"{namespace}.yaml"
     if not companion.is_file():
@@ -1236,17 +1384,15 @@ def _load_namespace_target(schemas_dir: Path, namespace: str) -> _NamespaceCache
         schema = json.loads(companion.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         return f"sibling companion {companion.name!r} not valid JSON: {exc.msg}"
-    pointer = schema.get(_ID_COLLECTION_ANNOTATION)
-    if pointer is None:
+    ownership = namespace_ownership(schema)
+    if ownership is None:
         return (
-            f"sibling companion {companion.name!r} missing {_ID_COLLECTION_ANNOTATION!r} "
-            f"annotation (required for cross-file resolution)"
+            f"sibling companion {companion.name!r} missing the annotation that makes "
+            f"it the namespace's owner, {NAMESPACE_OWNER_ANNOTATIONS} "
+            f"(required for cross-file resolution)"
         )
-    if not isinstance(pointer, str):
-        return (
-            f"sibling companion {companion.name!r} has non-string "
-            f"{_ID_COLLECTION_ANNOTATION!r}: {pointer!r}"
-        )
+    if isinstance(ownership, str):
+        return f"sibling companion {companion.name!r} {ownership}"
     if not yaml_file.is_file():
         return (
             f"sibling data file {yaml_file.name!r} not found at {schemas_dir.name}/{yaml_file.name}"
@@ -1255,43 +1401,14 @@ def _load_namespace_target(schemas_dir: Path, namespace: str) -> _NamespaceCache
         yaml_data = _yaml.load(yaml_file.read_text(encoding="utf-8"))
     except YAMLError as exc:
         return f"sibling data file {yaml_file.name!r} unparseable: {exc}"
-    yaml_data = _stringify_dates(yaml_data)
-    try:
-        collection = _resolve_json_pointer(yaml_data, pointer)
-    except (KeyError, ValueError) as exc:
-        return (
-            f"{_ID_COLLECTION_ANNOTATION} pointer {pointer!r} in "
-            f"{companion.name!r} did not resolve: {exc}"
-        )
-    valid_ids = _collect_ids(collection)
-    if valid_ids is None:
-        return (
-            f"{_ID_COLLECTION_ANNOTATION} pointer {pointer!r} in "
-            f"{companion.name!r} resolved to {type(collection).__name__}; "
-            f"expected mapping or list-of-objects-with-id"
-        )
+    entries = namespace_entries(ownership, _stringify_dates(yaml_data))
+    if isinstance(entries, str):
+        return f"{entries} (declared in {companion.name!r}, read in {yaml_file.name!r})"
     return _NamespaceTarget(
         namespace=namespace,
-        id_collection_pointer=pointer,
-        valid_ids=frozenset(valid_ids),
+        ownership=ownership,
+        valid_ids=frozenset(entry_id for entry_id, _entry in entries),
     )
-
-
-def _collect_ids(collection: Any) -> list[str] | None:
-    """Extract the set of ids from a resolved collection.
-
-    Mapping → its keys. List → each item's `id` field. Other → None
-    (caller treats as a failure).
-    """
-    if isinstance(collection, dict):
-        return [str(k) for k in collection]
-    if isinstance(collection, list):
-        ids: list[str] = []
-        for item in collection:
-            if isinstance(item, dict) and "id" in item:
-                ids.append(str(item["id"]))
-        return ids
-    return None
 
 
 def _walk_keys_from_namespace(
@@ -1421,10 +1538,10 @@ def summarize_schemas(target_root: Path) -> list[SchemaSummary]:
 
     For each `*.yaml` under a schemas home (see `iter_schema_homes`),
     derives whether the schema owns a namespace (its companion declares
-    `x-pkit-id-collection`) and, if so, the set of ids defined in its
-    collection. Schemas with load issues surface the error in
-    `load_error` instead of crashing the walk. The summary's `owner` is
-    the home's owner name — `core` for the core schemas area.
+    `x-pkit-id-collection`, or `x-pkit-entry-id` for a document schema) and,
+    if so, the set of ids its YAML holds. Schemas with load issues surface
+    the error in `load_error` instead of crashing the walk. The summary's
+    `owner` is the home's owner name — `core` for the core schemas area.
     """
     return [
         _summarize_one(owner, yaml_path)
@@ -1436,87 +1553,37 @@ def summarize_schemas(target_root: Path) -> list[SchemaSummary]:
 def _summarize_one(owner: str, yaml_path: Path) -> SchemaSummary:
     """Build a `SchemaSummary` for one YAML schema."""
     companion = yaml_path.with_suffix(".schema.json")
-    name = yaml_path.stem
-    if not companion.is_file():
-        return SchemaSummary(
-            owner=owner,
-            name=name,
-            yaml_path=yaml_path,
-            companion_path=companion,
-            has_companion=False,
-            is_namespace_owner=False,
-            id_collection_pointer=None,
-            entry_ids=(),
-            load_error="companion JSON Schema missing",
-        )
+    base = SchemaSummary(
+        owner=owner,
+        name=yaml_path.stem,
+        yaml_path=yaml_path,
+        companion_path=companion,
+        has_companion=companion.is_file(),
+        is_namespace_owner=False,
+        ownership=None,
+        entry_ids=(),
+        load_error=None,
+    )
+    if not base.has_companion:
+        return replace(base, load_error="companion JSON Schema missing")
     try:
         schema = json.loads(companion.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        return SchemaSummary(
-            owner=owner,
-            name=name,
-            yaml_path=yaml_path,
-            companion_path=companion,
-            has_companion=True,
-            is_namespace_owner=False,
-            id_collection_pointer=None,
-            entry_ids=(),
-            load_error=f"companion not valid JSON: {exc.msg}",
-        )
-    pointer = schema.get(_ID_COLLECTION_ANNOTATION)
-    if not isinstance(pointer, str):
-        return SchemaSummary(
-            owner=owner,
-            name=name,
-            yaml_path=yaml_path,
-            companion_path=companion,
-            has_companion=True,
-            is_namespace_owner=False,
-            id_collection_pointer=None,
-            entry_ids=(),
-            load_error=None,
-        )
+        return replace(base, load_error=f"companion not valid JSON: {exc.msg}")
+    ownership = namespace_ownership(schema)
+    if ownership is None:
+        return base
+    if isinstance(ownership, str):
+        return replace(base, is_namespace_owner=True, load_error=f"companion {ownership}")
+    owned = replace(base, is_namespace_owner=True, ownership=ownership)
     try:
         data = _yaml.load(yaml_path.read_text(encoding="utf-8"))
     except YAMLError as exc:
-        return SchemaSummary(
-            owner=owner,
-            name=name,
-            yaml_path=yaml_path,
-            companion_path=companion,
-            has_companion=True,
-            is_namespace_owner=True,
-            id_collection_pointer=pointer,
-            entry_ids=(),
-            load_error=f"YAML parse error: {exc}",
-        )
-    data = _stringify_dates(data)
-    try:
-        collection = _resolve_json_pointer(data, pointer)
-    except (KeyError, ValueError) as exc:
-        return SchemaSummary(
-            owner=owner,
-            name=name,
-            yaml_path=yaml_path,
-            companion_path=companion,
-            has_companion=True,
-            is_namespace_owner=True,
-            id_collection_pointer=pointer,
-            entry_ids=(),
-            load_error=f"x-pkit-id-collection {pointer!r} did not resolve: {exc}",
-        )
-    ids = _collect_ids(collection) or []
-    return SchemaSummary(
-        owner=owner,
-        name=name,
-        yaml_path=yaml_path,
-        companion_path=companion,
-        has_companion=True,
-        is_namespace_owner=True,
-        id_collection_pointer=pointer,
-        entry_ids=tuple(sorted(ids)),
-        load_error=None,
-    )
+        return replace(owned, load_error=f"YAML parse error: {exc}")
+    entries = namespace_entries(ownership, _stringify_dates(data))
+    if isinstance(entries, str):
+        return replace(owned, load_error=entries)
+    return replace(owned, entry_ids=tuple(sorted(entry_id for entry_id, _entry in entries)))
 
 
 def detail_namespace(target_root: Path, namespace: str) -> NamespaceDetail | str:
@@ -1533,23 +1600,17 @@ def detail_namespace(target_root: Path, namespace: str) -> NamespaceDetail | str
     summary = matches[0]
     if summary.load_error:
         return f"namespace {namespace!r}: {summary.load_error}"
-    assert summary.id_collection_pointer is not None
+    assert summary.ownership is not None
     data = _stringify_dates(_yaml.load(summary.yaml_path.read_text(encoding="utf-8")))
-    collection = _resolve_json_pointer(data, summary.id_collection_pointer)
-    entries: list[tuple[str, Any]] = []
-    if isinstance(collection, dict):
-        for key, value in collection.items():
-            entries.append((str(key), value))
-    elif isinstance(collection, list):
-        for item in collection:
-            if isinstance(item, dict) and "id" in item:
-                entries.append((str(item["id"]), item))
+    entries = namespace_entries(summary.ownership, data)
+    if isinstance(entries, str):
+        return f"namespace {namespace!r}: {entries}"
     return NamespaceDetail(
         namespace=summary.name,
         owner=summary.owner,
         yaml_path=summary.yaml_path,
         companion_path=summary.companion_path,
-        id_collection_pointer=summary.id_collection_pointer,
+        ownership=summary.ownership,
         entries=tuple(entries),
     )
 
@@ -1621,7 +1682,8 @@ def print_namespace_detail(detail: NamespaceDetail, target_root: Path | None = N
     click.echo(f"  Owner:      {owner}")
     click.echo(f"  YAML:       {_rel(detail.yaml_path, target_root)}")
     click.echo(f"  Companion:  {_rel(detail.companion_path, target_root)}")
-    click.echo(f"  Collection: {detail.id_collection_pointer}  ({len(detail.entries)} entry/ies)")
+    label = "Collection:" if detail.ownership.form == "collection" else "Entry id:"
+    click.echo(f"  {label:<11} {detail.ownership.pointer}  ({len(detail.entries)} entry/ies)")
     click.echo()
     click.echo("  " + cli_render.style("heading", "Entries:"))
     for entry_id, entry_data in detail.entries:

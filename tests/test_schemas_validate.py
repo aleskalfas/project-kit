@@ -1609,3 +1609,193 @@ def test_cli_clean_run_counts_instances(cli_target: Path) -> None:
     result = CliRunner().invoke(main, ["schemas", "validate"])
     assert result.exit_code == 0, result.output
     assert "1 instance(s)" in result.output
+
+
+# --- a document schema owns a namespace (COR-029 point 6) -------------------
+#
+# A document schema's companion declares `x-pkit-entry-id`, a pointer to the
+# document's own id, in place of `x-pkit-id-collection`. Its YAML is its one
+# document, so on the capability side the namespace holds that one id.
+
+_DOCUMENT_JSON_SCHEMA: dict = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "x-pkit-entry-id": "/id",
+    "required": ["schema_version"],
+    "additionalProperties": False,
+    "properties": {
+        "schema_version": {"type": "integer", "const": 1},
+        "id": {},
+        "title": {"type": "string"},
+    },
+}
+
+_DOCUMENT_YAML = "schema_version: 1\nid: first\ntitle: The first cycle\n"
+
+# A consumer citing the document namespace `cycle` by a value-position token.
+_DOCUMENT_CONSUMER_JSON_SCHEMA: dict = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": ["schema_version", "cycle"],
+    "additionalProperties": False,
+    "properties": {
+        "schema_version": {"type": "integer", "const": 1},
+        "cycle": {"type": "string", "pattern": r"^\[cycle:[a-z][a-z0-9-]*\]$"},
+    },
+}
+
+_DOCUMENT_COMPANION = ".pkit/capabilities/demo/schemas/cycle.schema.json"
+
+
+def _write_document_namespace(
+    schemas: Path, *, yaml_body: str = _DOCUMENT_YAML, json_schema: dict | None = None
+) -> None:
+    _write_schema_pair(
+        schemas, "cycle", yaml_body=yaml_body, json_schema=json_schema or _DOCUMENT_JSON_SCHEMA
+    )
+
+
+def _write_document_consumer(schemas: Path, token: str) -> None:
+    _write_schema_pair(
+        schemas,
+        "plan",
+        yaml_body=f'schema_version: 1\ncycle: "{token}"\n',
+        json_schema=_DOCUMENT_CONSUMER_JSON_SCHEMA,
+    )
+
+
+def test_a_token_resolves_to_the_document_s_own_id(tmp_path: Path) -> None:
+    schemas = _make_capability(tmp_path, "demo")
+    _write_document_namespace(schemas)
+    _write_document_consumer(schemas, "[cycle:first]")
+    report = validate_all(tmp_path)
+    assert report.is_clean, report.issues
+
+
+def test_a_token_naming_an_id_the_document_does_not_hold_is_unresolved(tmp_path: Path) -> None:
+    schemas = _make_capability(tmp_path, "demo")
+    _write_document_namespace(schemas)
+    _write_document_consumer(schemas, "[cycle:second]")
+    msgs = [i.message for i in validate_all(tmp_path).issues]
+    assert any("'second'" in m and "not found in namespace 'cycle'" in m for m in msgs), msgs
+
+
+def test_mapping_keys_from_a_document_namespace_resolve_against_its_id(tmp_path: Path) -> None:
+    schemas = _make_capability(tmp_path, "demo")
+    _write_document_namespace(schemas)
+    consumer: dict = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": ["schema_version", "by_cycle"],
+        "properties": {
+            "schema_version": {"type": "integer", "const": 1},
+            "by_cycle": {"type": "object", "x-pkit-keys-from-namespace": "cycle"},
+        },
+    }
+    _write_schema_pair(
+        schemas,
+        "plan",
+        yaml_body="schema_version: 1\nby_cycle:\n  first: {}\n  later: {}\n",
+        json_schema=consumer,
+    )
+    msgs = [i.message for i in validate_all(tmp_path).issues]
+    assert msgs == [
+        "key 'later' not found in namespace 'cycle' (declared via x-pkit-keys-from-namespace)."
+    ]
+
+
+def test_a_companion_declaring_both_annotations_is_an_error_of_the_schemas_check(
+    tmp_path: Path,
+) -> None:
+    schemas = _make_capability(tmp_path, "demo")
+    both = {**_DOCUMENT_JSON_SCHEMA, "x-pkit-id-collection": "/entries"}
+    _write_document_namespace(schemas, json_schema=both)
+    found = {i.location: i.message for i in validate_all(tmp_path).issues}
+    assert _DOCUMENT_COMPANION in found, found
+    assert (
+        "declares both 'x-pkit-id-collection' and 'x-pkit-entry-id'" in found[_DOCUMENT_COMPANION]
+    )
+
+
+def test_a_reference_into_a_namespace_declaring_both_annotations_says_why(
+    tmp_path: Path,
+) -> None:
+    schemas = _make_capability(tmp_path, "demo")
+    both = {**_DOCUMENT_JSON_SCHEMA, "x-pkit-id-collection": "/entries"}
+    _write_document_namespace(schemas, json_schema=both)
+    _write_document_consumer(schemas, "[cycle:first]")
+    msgs = [i.message for i in validate_all(tmp_path).issues]
+    assert any(
+        m.startswith("unresolved reference '[cycle:first]'") and "declares both" in m for m in msgs
+    ), msgs
+
+
+def test_a_pointer_that_is_no_string_is_left_to_the_namespace_s_readers(tmp_path: Path) -> None:
+    """Only a companion declaring both annotations is the schemas check's own error, so a
+    malformed pointer nothing references passes as before; a reference names it."""
+    schemas = _make_capability(tmp_path, "demo")
+    _write_document_namespace(schemas, json_schema={**_DOCUMENT_JSON_SCHEMA, "x-pkit-entry-id": 7})
+    report = validate_all(tmp_path)
+    assert report.is_clean, report.issues
+    _write_document_consumer(schemas, "[cycle:first]")
+    msgs = [i.message for i in validate_all(tmp_path).issues]
+    assert any("has non-string 'x-pkit-entry-id': 7" in m for m in msgs), msgs
+
+
+@pytest.mark.parametrize(
+    ("yaml_body", "why"),
+    [
+        ("schema_version: 1\ntitle: No id\n", "step 'id' not found"),
+        ("schema_version: 1\nid: 7\n", "it holds int"),
+    ],
+)
+def test_a_document_whose_entry_id_reaches_no_string_is_an_error(
+    tmp_path: Path, yaml_body: str, why: str
+) -> None:
+    schemas = _make_capability(tmp_path, "demo")
+    _write_document_namespace(schemas, yaml_body=yaml_body)
+    found = {i.location: i.message for i in validate_all(tmp_path).issues}
+    location = ".pkit/capabilities/demo/schemas/cycle.yaml/id"
+    assert location in found, found
+    assert "x-pkit-entry-id pointer '/id' reaches no string" in found[location]
+    assert why in found[location]
+
+
+def test_shape_only_leaves_the_document_s_id_unread(tmp_path: Path) -> None:
+    schemas = _make_capability(tmp_path, "demo")
+    _write_document_namespace(schemas, yaml_body="schema_version: 1\ntitle: No id\n")
+    report = validate_all(tmp_path, resolve=False)
+    assert report.is_clean, report.issues
+
+
+def test_summarize_schemas_lists_a_document_namespace_with_its_one_id(tmp_path: Path) -> None:
+    schemas = _make_capability(tmp_path, "demo")
+    _write_document_namespace(schemas)
+    (summary,) = summarize_schemas(tmp_path)
+    assert summary.is_namespace_owner is True
+    assert summary.ownership is not None
+    assert (summary.ownership.form, summary.ownership.pointer) == ("document", "/id")
+    assert summary.entry_ids == ("first",)
+    assert summary.load_error is None
+
+
+def test_detail_and_resolve_read_a_document_namespace_as_its_one_document(
+    tmp_path: Path,
+) -> None:
+    schemas = _make_capability(tmp_path, "demo")
+    _write_document_namespace(schemas)
+    detail = detail_namespace(tmp_path, "cycle")
+    assert isinstance(detail, NamespaceDetail)
+    assert [eid for eid, _ in detail.entries] == ["first"]
+    resolution = resolve_token_to_target(tmp_path, "[cycle:first]")
+    assert isinstance(resolution, TokenResolution)
+    assert resolution.entry == {"schema_version": 1, "id": "first", "title": "The first cycle"}
+
+
+def test_cli_schemas_show_names_a_document_namespace_s_entry_id(cli_target: Path) -> None:
+    schemas = _make_capability(cli_target, "demo")
+    _write_document_namespace(schemas)
+    result = CliRunner().invoke(main, ["schemas", "show", "cycle"])
+    assert result.exit_code == 0, result.output
+    assert "Entry id:   /id  (1 entry/ies)" in result.output
+    assert "Collection:" not in result.output

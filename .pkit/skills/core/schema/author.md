@@ -4,7 +4,7 @@
 This skill walks through adding a new schema under `.pkit/capabilities/<capability>/schemas/`. Each schema is a YAML data file + JSON Schema companion, paired one-to-one per COR-018. Two shapes are supported:
 
 - **Namespace-owning schema** (the dominant form). The file declares a top-level id collection (`x-pkit-id-collection`) and consumers reference its entries as typed tokens per COR-019.
-- **Document schema** (one resource per file). The file IS the resource — no top-level collection, no namespace. Pick when the capability's spec is "one X per file" rather than "a registry of Xs."
+- **Document schema** (one resource per file). The file IS the resource — no top-level collection. Pick when the capability's spec is "one X per file" rather than "a registry of Xs." It owns no namespace until its companion declares `x-pkit-entry-id`, which makes each document one entry ("Making each document an entry" below).
 
 For adding **one more entry** to an existing namespace, use `schema-extend` instead.
 
@@ -16,6 +16,7 @@ Verify each record in `gates:` is `accepted`:
 - **COR-017** — capability pattern. Used so the new schema lands inside an existing capability per the kit's layout.
 - **COR-018** — capabilities adopt the schemas mechanism. Used for the YAML + companion pairing convention.
 - **COR-019** — schema reference form. Used when the new schema's entries carry cross-schema references (typed tokens) or when it'll be referenced from elsewhere.
+- **COR-029** — adopter-data references. Used when a document schema's documents will be referenced from elsewhere (point 6).
 
 Halt if any is `proposed` or `superseded`.
 
@@ -72,7 +73,7 @@ Three shapes the schemas mechanism supports:
   title: Japan, autumn 2026
   status: planning
   ```
-  Pick when the capability's spec is "one X per file" (one trip, one report, one campaign) — the file IS the resource, not a registry of resources. Stamps via `--no-namespace`. Document schemas are not referenceable by typed token (`[<name>:<id>]`); references make sense only against namespace-owning schemas.
+  Pick when the capability's spec is "one X per file" (one trip, one report, one campaign) — the file IS the resource, not a registry of resources. Stamps via `--no-namespace`. A document schema is referenceable by typed token (`[<name>:<id>]`) only once its companion declares `x-pkit-entry-id` ("Making each document an entry" below).
 
 The default is `mapping` (namespace owner). Override with `--collection-form list`, or switch entirely to the document path with `--no-namespace`.
 
@@ -137,7 +138,7 @@ Open the stamped files and replace:
 
 ### 8. (Optional) Publish a narrowed reference pattern
 
-*(Namespace owners only — document schemas have no namespace, so nothing to reference by token.)*
+*(Namespace owners only — a document schema with `x-pkit-entry-id` among them; one without it has no namespace, so nothing to reference by token.)*
 
 If consumers will reference this namespace via typed tokens (`[<name>:<id>]`), add a `<name>_ref` entry to the companion's `$defs` so consumers can `$ref` it rather than redeclaring the pattern:
 
@@ -166,7 +167,7 @@ If issues surface, the messages name what's wrong + where. Fix and re-run.
 
 ### 10. Add initial entries
 
-*(Namespace owners only — document schemas have no collection to extend; fill the document body directly in step 7.)*
+*(Collection owners only — a document schema has no collection to extend, even one that owns a namespace, and `pkit schemas add` refuses it; fill the document body directly in step 7.)*
 
 If you have entries ready, add them via `pkit schemas add` (one at a time, each validated independently):
 
@@ -209,9 +210,34 @@ joins.
 
 ## Variations
 
-- **Stamping a CONSUMER or document schema** (one that doesn't own a namespace). Pass `--no-namespace` — the stamp omits `x-pkit-id-collection`, the `$defs.entry` placeholder, and the collection wrapper; you fill flat top-level `properties` in the companion and the resource's own fields in the YAML body.
+- **Stamping a CONSUMER or document schema** (one that doesn't own a namespace). Pass `--no-namespace` — the stamp omits `x-pkit-id-collection`, the `$defs.entry` placeholder, and the collection wrapper; you fill flat top-level `properties` in the companion and the resource's own fields in the YAML body. To make each document an entry of a namespace afterwards, see the next section.
 - **Stamping into a non-default capability layout** — if the capability ships its own `_defs/` for narrowed reference patterns, declare them there. For v1, narrowed patterns live alongside their namespace owner; see the schemas reference's page `shape-patterns.md`, "Reusable fragments via `$defs`".
 - **Stamping a schema before its capability exists** — refuses. Run `pkit new capability <name>` first.
+
+## Making each document an entry — `x-pkit-entry-id`
+
+A document schema owns a namespace once its companion declares `x-pkit-entry-id`: each document it describes is then one entry, named by the id the document holds (COR-029 point 6). Declare it when other files cite one document by id — one experiment, one cycle — and each such file carries its own id. The stamp has no option for it, so add it by hand after stamping with `--no-namespace`:
+
+1. **Add the annotation** at the companion's top level, a JSON Pointer to the field that holds the document's own id, in place of `x-pkit-id-collection` and never beside it — `pkit schemas validate` reports a companion that declares both:
+
+   ```json
+   {
+     "$schema": "https://json-schema.org/draft/2020-12/schema",
+     "$id": "<name>.schema.json",
+     "x-pkit-entry-id": "/id",
+     "type": "object",
+     ...
+   }
+   ```
+
+2. **Declare the id field** in the companion's `properties` and `required`, as a kebab-case string (`"pattern": "^[a-z][a-z0-9-]*$"`), so a typed token can name it. A document in which the pointer reaches no string is an error.
+3. **Give the schema's own YAML an id.** The YAML is the namespace's one document on the capability side, so the capability's other examples may cite it as `[<name>:<id>]`.
+4. **Publish the reference pattern** in the companion's `$defs`, as step 8 does for a collection. Where adopter data cites the documents, mark the definition with `x-pkit-reference-namespace: "<name>"` (the schemas reference's `data-binding.md`, "Cross-file references in adopter data").
+5. **Design ids that hold across the validation scope.** The id is read from the field, never from the file's path or name, and every bound document in scope joins one pool. A copy of a document in scope — a fixture, a template, an archived folder — repeats its id, a duplicate-id error, so a copy takes an id of its own or stays outside the scope.
+
+`pkit schemas add` refuses a document namespace, since it holds no collection. `pkit schemas rename <name> <old> <new>` renames the example document's id, and the tokens and keys that cite it.
+
+Declaring the annotation on a schema that adopters already bind tightens their validation: a surface change of the capability, declared by its changeset, and no migration.
 
 ## Adopter-data schemas — the `pkit_schema:` field + `binds_to:` fallback
 

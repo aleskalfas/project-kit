@@ -118,7 +118,7 @@ Adopter data files name each other's entries ([COR-029](../decisions/core/COR-02
 
 Two things make these references differ from the references `pkit schemas validate` resolves between a capability's schemas:
 
-- **A reference resolves through the binding, to the bound file.** A capability schema that describes adopter data keeps its own id collection empty by design, since the entries live in the adopter's tree. So the reference resolves into the files bound to its namespace. Each file's ids are read through the companion's `x-pkit-id-collection` pointer.
+- **A reference resolves through the binding, to the bound file.** A capability schema that describes adopter data holds none of the adopter's entries, which live in the adopter's tree. Its own YAML holds no more than examples. So the reference resolves into the files bound to its namespace. Each file's ids are read through the annotation that makes its schema the namespace's owner, `x-pkit-id-collection` or `x-pkit-entry-id`.
 - **A reference is read only where a field says so.** Adopter data carries bracketed text that is no reference, such as prose. So the resolver reads only the fields that the citing schema's companion marks with `x-pkit-reference-namespace: "<namespace>"`.
   - **What the mark says:** this field holds references in that namespace. The token still carries its namespace itself.
   - **Its counterpart:** the mark is for a value, as `x-pkit-keys-from-namespace` is for a mapping's keys.
@@ -133,6 +133,8 @@ Two things make these references differ from the references `pkit schemas valida
   }
   ```
 
+**A document is one entry.** A document schema may own a namespace through `x-pkit-entry-id`, a pointer to the id each document holds ([the schemas reference, "A document's own id"](README.md#a-documents-own-id-x-pkit-entry-id)). Each bound document then adds that one id to its namespace's pool, read from that field and never from the file's path or name.
+
 **The scope is what is validated.** A namespace's pool of ids is the union of every file in scope bound to that namespace. In scope means under the folder that `pkit data validate` was pointed at. In `pkit validate`'s `data` member, the scope is every bound file of the repository.
 
 - **Isolation comes from what is validated.** Validate one instance's folder, and only its data is in scope. Validate a parent folder, and a shared file under it serves every instance below.
@@ -143,9 +145,10 @@ Two things make these references differ from the references `pkit schemas valida
 - **A value at a marked field that is no `[<namespace>:<id>]` token** is an error.
 - **A token in another namespace than the field's mark declares** is an error.
 - **A dangling id** is an error: the namespace has a pool in scope, and the id is not in it.
-- **A duplicate id** across the files of one namespace in scope is an error, since the pool is ambiguous.
-- **A namespace whose companion declares no `x-pkit-id-collection`,** or cannot be read, is an error: the reference cannot be resolved.
-- **A namespace with no bound file in scope** gives a warning, and fails nothing. Data written step by step often names a sibling file that does not exist yet.
+- **A duplicate id** across the files of one namespace in scope is an error, since the pool is ambiguous. A copy of a document in scope, such as a fixture or an archived folder, repeats its id. Give the copy an id of its own, or keep it out of the scope.
+- **A namespace whose companion declares neither `x-pkit-id-collection` nor `x-pkit-entry-id`,** declares both, or cannot be read, is an error: the reference cannot be resolved.
+- **A bound document in which `x-pkit-entry-id` reaches no string** is an error, at that document's field.
+- **A namespace with no bound file in scope** gives a warning, and fails nothing. Data written step by step often names a sibling file that does not exist yet. Once a document of the namespace is in scope, a reference to one not yet written is a dangling id.
 
 **Not decided yet:** a shared root of references that serves several instances without joining them into one scope, and mapping keys that name another file's entries. Each waits for a later record, once a real consumer needs it (COR-029).
 
@@ -155,4 +158,5 @@ The `schema` skill covers schemas that describe adopter data, through its `autho
 
 - **The stamp.** `pkit new schema <owner> <name>` stamps a pair into its owner's home. `<owner>` is a capability's name, or `core`, which stamps into this area, `.pkit/schemas/`. The other schemas verbs, `schemas validate`, `list`, `show`, `add` and `rename`, treat `core` as an owner beside every capability.
 - **A schema of adopter data** adds the `binds_to:` field to its YAML, beside the namespace's content.
+- **A document schema whose documents others cite** declares `x-pkit-entry-id` in its companion by hand, since the stamp declares no annotation.
 - **The adopter's files** carry the `pkit_schema:` field and the editor's directive, as recommended above.

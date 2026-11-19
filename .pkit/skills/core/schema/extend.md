@@ -28,6 +28,8 @@ pkit schemas show <namespace>           # inspect the namespace's existing entri
 
 If the namespace doesn't exist in either home — the core area (`.pkit/schemas/`) or an installed capability's `schemas/` — the user is asking for a new schema, not an extension — switch to `schema-author`.
 
+If the namespace is a document namespace — its companion declares `x-pkit-entry-id` — it holds no collection to extend, and `pkit schemas add` refuses it. Each document is an entry: write a new document, with an id of its own, instead.
+
 ### 2. Pick an id
 
 Kebab-case, starts with a lowercase letter, unique within the namespace. The naming pattern usually mirrors the existing entries' style (semantic id, not number suffix). Examples:

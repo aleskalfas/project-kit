@@ -7379,8 +7379,11 @@ def schemas_validate(path: Path | None, shape_only: bool) -> None:
       resolve to a real id in the named namespace (per COR-019)?
 
     With `--shape-only`, only the shape pass runs. Targets must declare
-    where their ids live via an `x-pkit-id-collection` annotation in the
-    JSON Schema companion (a JSON Pointer into the data YAML).
+    where their ids live in the JSON Schema companion: an
+    `x-pkit-id-collection` annotation (a JSON Pointer to the collection in
+    the data YAML), or, for a document schema whose file is itself one
+    entry, `x-pkit-entry-id` (a JSON Pointer to the document's own id). A
+    companion that declares both is an error (COR-029 point 6).
     """
     from project_kit import schemas_validate as schemas_mod
 
@@ -7403,9 +7406,9 @@ def schemas_list() -> None:
     """List every schema in the core area and installed capabilities, grouped by owner.
 
     For each schema, shows whether it owns a namespace (companion declares
-    `x-pkit-id-collection`) and, if so, how many entries the namespace
-    holds plus a preview of the ids. Consumer schemas (no own namespace)
-    are marked.
+    `x-pkit-id-collection`, or `x-pkit-entry-id` for a document schema) and,
+    if so, how many entries the namespace holds plus a preview of the ids.
+    Consumer schemas (no own namespace) are marked.
     """
     from project_kit import schemas_validate as schemas_mod
 
@@ -7457,7 +7460,9 @@ def schemas_add(namespace: str, entry_id: str, from_path: Path | None) -> None:
     restores the prior file if validation fails.
 
     Refuses if the entry id is already in use (use a different id, or
-    edit the existing entry directly).
+    edit the existing entry directly). Refuses a document namespace
+    (`x-pkit-entry-id`), which holds no collection: each document is an
+    entry (COR-029 point 6).
     """
     from project_kit import schemas_authoring as authoring
 
@@ -7490,7 +7495,8 @@ def schemas_rename(namespace: str, old_id: str, new_id: str) -> None:
     Updates three reference classes in one atomic operation:
 
     \b
-    1. The namespace owner's collection (mapping key or list item id).
+    1. The namespace owner's collection (mapping key or list item id),
+       or a document namespace's example document's own id.
     2. Every value-position typed token `[<namespace>:<old_id>]` in
        any YAML under the core schemas area or installed capabilities.
     3. Every mapping-key reference in fields whose companion declares

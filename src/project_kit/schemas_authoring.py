@@ -9,7 +9,8 @@ changes.
   collection. Round-trips the YAML via `ruamel.yaml`'s rt mode so
   existing comments and formatting survive. Validates after the write;
   restores the prior file on validation failure so partial mutations
-  never linger.
+  never linger. A document namespace holds no collection, so it refuses
+  one (COR-029 point 6): each document it describes is an entry.
 
 - `stamp_new_schema` scaffolds a new YAML + JSON Schema companion pair
   under a capability's `schemas/` directory, or under the core schemas
@@ -20,11 +21,11 @@ changes.
   (`_refuse_synced_copy`): the next sync would overwrite the schema.
 
 - `rename_entry` renames an entry id across the schemas mechanism:
-  the namespace owner's collection key, every `[<namespace>:<old>]`
-  typed token in any YAML under any schemas home, and every mapping-key
-  reference in fields whose companion declares
-  `x-pkit-keys-from-namespace: <namespace>`. Validates everything;
-  rolls back all changes on any failure.
+  the namespace owner's collection key, or a document namespace's example
+  document's own id, every `[<namespace>:<old>]` typed token in any YAML
+  under any schemas home, and every mapping-key reference in fields whose
+  companion declares `x-pkit-keys-from-namespace: <namespace>`. Validates
+  everything; rolls back all changes on any failure.
 
 Every operation resolves a namespace through the same two schemas homes
 `schemas_validate.iter_schema_homes` enumerates — the core schemas area
@@ -38,17 +39,18 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from ruamel.yaml import YAML
 
 from project_kit import lifecycle_ownership
 from project_kit.schemas import find_namespace_owner
 from project_kit.schemas_validate import (
-    _ID_COLLECTION_ANNOTATION,
     CORE_SCHEMAS_OWNER,
+    NamespaceOwnership,
     _resolve_json_pointer,
     iter_schema_homes,
+    namespace_ownership,
     schemas_home,
     unknown_namespace_message,
     validate_path,
@@ -77,7 +79,7 @@ class RenameChange:
     """One change made by `rename_entry` — where and what kind."""
 
     yaml_path: Path
-    kind: str  # "owner-key" | "token" | "annotation-key"
+    kind: str  # "owner-key" | "owner-id" | "token" | "annotation-key"
     detail: str  # human-readable description of the specific change
 
 
@@ -115,8 +117,9 @@ def add_entry_to_namespace(
     Returns the YAML file path. Raises:
 
     - `SchemaAuthoringError` if the namespace doesn't exist in any schemas
-      home, the entry id collides with an existing one, or the resulting
-      file fails validation.
+      home, is a document namespace, which holds no collection (COR-029
+      point 6), the entry id collides with an existing one, or the
+      resulting file fails validation.
     """
     owner = find_namespace_owner(target_root, namespace)
     if owner is None:
@@ -126,8 +129,14 @@ def add_entry_to_namespace(
     yaml_path = schemas_dir / f"{namespace}.yaml"
     companion_path = schemas_dir / f"{namespace}.schema.json"
 
-    schema = json.loads(companion_path.read_text(encoding="utf-8"))
-    pointer = schema[_ID_COLLECTION_ANNOTATION]
+    ownership = _read_ownership(companion_path, namespace)
+    if ownership.form == "document":
+        raise SchemaAuthoringError(
+            f"namespace {namespace!r} is a document namespace: each document its schema "
+            f"describes is one entry, so it holds no collection to add one to. Write a "
+            f"new document with an id of its own instead (COR-029 point 6)."
+        )
+    pointer = ownership.pointer
 
     rt_yaml = YAML(typ="rt")
     rt_yaml.preserve_quotes = True
@@ -141,7 +150,7 @@ def add_entry_to_namespace(
         collection = _resolve_json_pointer(data, pointer)
     except (KeyError, ValueError) as exc:
         raise SchemaAuthoringError(
-            f"namespace {namespace!r}: {_ID_COLLECTION_ANNOTATION} pointer "
+            f"namespace {namespace!r}: {ownership.annotation} pointer "
             f"{pointer!r} did not resolve in the YAML: {exc}."
         ) from exc
 
@@ -185,6 +194,24 @@ def add_entry_to_namespace(
         )
 
     return yaml_path
+
+
+def _read_ownership(companion_path: Path, namespace: str) -> NamespaceOwnership:
+    """How the owner's companion owns `namespace`, read as every reader of its ids reads it.
+
+    `find_namespace_owner` found the companion declaring an annotation, so
+    one that declares none is not expected here. One that declares both, or
+    a pointer that is no string, is refused with what is wrong.
+    """
+    ownership = namespace_ownership(json.loads(companion_path.read_text(encoding="utf-8")))
+    if ownership is None:
+        raise SchemaAuthoringError(
+            f"namespace {namespace!r}: its companion declares no annotation that makes "
+            f"it the namespace's owner."
+        )
+    if isinstance(ownership, str):
+        raise SchemaAuthoringError(f"namespace {namespace!r}: the companion {ownership}.")
+    return ownership
 
 
 def load_entry_data(source: Path | None) -> dict[str, Any]:
@@ -517,11 +544,13 @@ def _build_companion(
 def _build_document_companion(name: str) -> dict[str, Any]:
     """Construct the JSON Schema companion dict for a document-shaped schema.
 
-    Document schemas describe one resource per file. The companion has
-    no `x-pkit-id-collection` (no namespace membership) and no narrowed
-    `<name>_ref` `$defs` entry by default — the document IS the resource,
-    not a member of a namespace. Top-level `properties` is left empty for
-    the author to fill in.
+    Document schemas describe one resource per file. The stamped companion
+    owns no namespace and has no narrowed `<name>_ref` `$defs` entry by
+    default — the document IS the resource. Its author may make each
+    document an entry of a namespace by declaring `x-pkit-entry-id` by hand
+    (COR-029 point 6); the stamp gains no option for it until a second
+    capability stamps one. Top-level `properties` is left empty for the
+    author to fill in.
     """
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -557,7 +586,9 @@ def rename_entry(
     Updates three classes of reference, in order:
 
     1. The namespace owner's collection — mapping form: rename the key;
-       list form: update the `id:` field of the matching item.
+       list form: update the `id:` field of the matching item. A document
+       namespace's schema YAML is its one example document, whose own id,
+       at its companion's `x-pkit-entry-id`, is renamed (COR-029 point 6).
     2. Every value-position typed token `[<namespace>:<old_id>]` in any
        YAML under any schemas home (the core area + installed capabilities).
     3. Every mapping-key reference in fields whose companion declares
@@ -682,19 +713,46 @@ def _rename_owner_entry(
     Returns the change description or None if `old_id` isn't present.
     Raises `SchemaAuthoringError` if `new_id` is already present.
     """
-    schema = json.loads(companion_path.read_text(encoding="utf-8"))
-    pointer = schema[_ID_COLLECTION_ANNOTATION]
+    ownership = _read_ownership(companion_path, namespace)
+    pointer = ownership.pointer
 
     rt_yaml = YAML(typ="rt")
     rt_yaml.preserve_quotes = True
     rt_yaml.indent(mapping=2, sequence=4, offset=2)
     with yaml_path.open("r", encoding="utf-8") as f:
         data = rt_yaml.load(f)
+
+    if ownership.form == "document":
+        renamed = _rename_document_id(data, pointer, old_id, new_id)
+        kind = "owner-id"
+        detail = f"renamed the example document's id {old_id!r} → {new_id!r} at {pointer}"
+    else:
+        renamed = _rename_collection_entry(data, pointer, namespace, old_id, new_id)
+        kind = "owner-key"
+        detail = f"renamed {old_id!r} → {new_id!r} in namespace owner"
+    if not renamed:
+        return None
+
+    with yaml_path.open("w", encoding="utf-8") as f:
+        rt_yaml.dump(data, f)
+
+    return RenameChange(yaml_path=yaml_path, kind=kind, detail=detail)
+
+
+def _rename_collection_entry(
+    data: Any, pointer: str, namespace: str, old_id: str, new_id: str
+) -> bool:
+    """Rename `old_id` to `new_id` in the collection at `pointer`.
+
+    Mapping form renames the key, keeping the order; list form sets the
+    matching item's `id:`. Returns False, changing nothing, when `old_id`
+    isn't present. Raises `SchemaAuthoringError` if `new_id` already is.
+    """
     collection = _resolve_json_pointer(data, pointer)
 
     if isinstance(collection, dict):
         if old_id not in collection:
-            return None
+            return False
         if new_id in collection:
             raise SchemaAuthoringError(
                 f"new id {new_id!r} already exists in namespace {namespace!r}."
@@ -714,22 +772,44 @@ def _rename_owner_entry(
                     f"new id {new_id!r} already exists in namespace {namespace!r}."
                 )
         if target_idx is None:
-            return None
+            return False
         collection[target_idx]["id"] = new_id
     else:
         raise SchemaAuthoringError(
             f"namespace {namespace!r}: collection at {pointer!r} is "
             f"{type(collection).__name__}; expected mapping or list-of-objects."
         )
+    return True
 
-    with yaml_path.open("w", encoding="utf-8") as f:
-        rt_yaml.dump(data, f)
 
-    return RenameChange(
-        yaml_path=yaml_path,
-        kind="owner-key",
-        detail=f"renamed {old_id!r} → {new_id!r} in namespace owner",
-    )
+def _rename_document_id(data: Any, pointer: str, old_id: str, new_id: str) -> bool:
+    """Set the document's own id, at `pointer`, from `old_id` to `new_id`.
+
+    Returns False, changing nothing, when the pointer does not reach
+    `old_id`: the document holds another id, or none.
+    """
+    if not pointer.startswith("/"):
+        return False
+    parent_pointer, _, last = pointer.rpartition("/")
+    key = last.replace("~1", "/").replace("~0", "~")
+    try:
+        parent = _resolve_json_pointer(data, parent_pointer)
+    except (KeyError, ValueError):
+        return False
+    if isinstance(parent, dict):
+        mapping = cast("dict[str, Any]", parent)
+        if mapping.get(key) != old_id:
+            return False
+        mapping[key] = new_id
+        return True
+    if isinstance(parent, list) and key.isdigit():
+        items = cast("list[Any]", parent)
+        index = int(key)
+        if index >= len(items) or items[index] != old_id:
+            return False
+        items[index] = new_id
+        return True
+    return False
 
 
 def _walk_keys_from_namespace_for_renames(

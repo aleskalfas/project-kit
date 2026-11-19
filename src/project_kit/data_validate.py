@@ -42,12 +42,13 @@ from ruamel.yaml.error import YAMLError
 from project_kit import answer_files, backbone_schemas, validators
 from project_kit.manifest import read_backbone_manifest
 from project_kit.schemas_validate import (
-    _ID_COLLECTION_ANNOTATION,
     _TOKEN_PATTERN,
+    NAMESPACE_OWNER_ANNOTATIONS,
     _build_registry_for_paths,
-    _collect_ids,
     _resolve_json_pointer,
     _stringify_dates,
+    namespace_entries,
+    namespace_ownership,
 )
 from project_kit.working_tree import working_tree
 
@@ -576,12 +577,15 @@ def _rel(path: Path, target_root: Path | None) -> str:
 # --- cross-file reference resolution (per COR-029) ----------------------
 #
 # Scope-subtree resolution: the id pool for a namespace is the *union* of
-# every in-scope file bound to that namespace, read through each schema's
-# `x-pkit-id-collection` (resolving "through the binding to the bound
-# instance", not into the namespace schema's own empty collection). A
-# reference resolves iff its id is in that pool. Isolation is by what you
-# validate — a narrower target is a stricter universe. Position-gated: only
-# fields the citing schema marks `x-pkit-reference-namespace` are inspected.
+# every in-scope file bound to that namespace, read through the annotation
+# that makes its schema the namespace's owner (resolving "through the binding
+# to the bound instance", not into the schema's own YAML, which holds no more
+# than examples). Under `x-pkit-id-collection` a bound file adds its
+# collection's ids; under a document schema's `x-pkit-entry-id` it is itself
+# one entry and adds its own id (COR-029 point 6). A reference resolves iff
+# its id is in that pool. Isolation is by what you validate — a narrower
+# target is a stricter universe. Position-gated: only fields the citing
+# schema marks `x-pkit-reference-namespace` are inspected.
 
 
 @dataclass(frozen=True)
@@ -590,7 +594,8 @@ class _NsPool:
 
     Either resolvable (`ids` is the union across bound instance files) or
     in error (`error` explains why the namespace can't supply a pool —
-    e.g. its companion declares no `x-pkit-id-collection`).
+    e.g. its companion declares neither `x-pkit-id-collection` nor
+    `x-pkit-entry-id`).
     """
 
     ids: frozenset[str] = frozenset()
@@ -719,14 +724,18 @@ def _build_namespace_pools(
     """Build the per-(capability, namespace) id pool across all in-scope instances.
 
     A file bound to `<cap>:<ns>` is an *instance* of namespace `ns`; its
-    ids (read via `ns`'s companion `x-pkit-id-collection`, applied to the
-    instance's data) join the pool for `(cap, ns)`. Returns the pools plus
-    any duplicate-id findings (the same id in two in-scope instances of one
-    namespace makes the pool ambiguous — a hard error per COR-029).
+    ids, read through `ns`'s companion as `namespace_ownership` reads it,
+    join the pool for `(cap, ns)`. A collection's file adds the ids of its
+    collection, and a document adds the one id it holds (COR-029 point 6).
+    Returns the pools plus the findings: a document whose companion's
+    pointer reaches no string, and a duplicate id (the same id in two
+    in-scope instances of one namespace makes the pool ambiguous). Both
+    are hard errors per COR-029.
     """
     # key -> id -> list of files defining it (for duplicate detection).
     raw: dict[tuple[str, str], dict[str, list[Path]]] = {}
     errors_by_key: dict[tuple[str, str], str] = {}
+    issues: list[DataValidationIssue] = []
     for binding, data in instances:
         key = (binding.capability, binding.schema_name)
         if key in errors_by_key:
@@ -737,32 +746,46 @@ def _build_namespace_pools(
                 f"companion {binding.companion.name!r} is unreadable or not valid JSON"
             )
             continue
-        pointer = companion.get(_ID_COLLECTION_ANNOTATION)
-        if not isinstance(pointer, str):
+        ownership = namespace_ownership(companion)
+        if ownership is None:
             errors_by_key[key] = (
                 f"namespace {binding.schema_name!r} declares no "
-                f"{_ID_COLLECTION_ANNOTATION!r} in its companion; references to it "
+                f"{NAMESPACE_OWNER_ANNOTATIONS} in its companion; references to it "
                 f"cannot resolve"
             )
             continue
-        try:
-            collection = _resolve_json_pointer(_stringify_dates(data), pointer)
-        except (KeyError, ValueError):
-            collection = None
-        ids = _collect_ids(collection) if collection is not None else []
+        if isinstance(ownership, str):
+            errors_by_key[key] = f"the companion of namespace {binding.schema_name!r} {ownership}"
+            continue
         bucket = raw.setdefault(key, {})
-        for id_value in ids or []:
+        entries = namespace_entries(ownership, _stringify_dates(data))
+        if isinstance(entries, str):
+            # A collection that does not resolve adds no ids, the shape pass
+            # judging its absence. A document's id is the one entry it is.
+            if ownership.form == "document":
+                issues.append(
+                    DataValidationIssue(
+                        location=f"{_rel(binding.data_path, target_root)}{ownership.pointer}",
+                        message=(
+                            f"the document's id cannot be read: {entries}. Each document "
+                            f"of namespace {binding.schema_name!r} holds its own id there "
+                            f"(per COR-029)."
+                        ),
+                        severity="error",
+                    )
+                )
+            continue
+        for id_value, _entry in entries:
             bucket.setdefault(id_value, []).append(binding.data_path)
 
     pools: dict[tuple[str, str], _NsPool] = {}
-    dup_issues: list[DataValidationIssue] = []
     for key, bucket in raw.items():
         pools[key] = _NsPool(ids=frozenset(bucket))
         cap, ns = key
         for id_value, files in bucket.items():
             if len(files) > 1:
                 rels = ", ".join(sorted(_rel(f, target_root) for f in files))
-                dup_issues.append(
+                issues.append(
                     DataValidationIssue(
                         location=f"{cap}:{ns}",
                         message=(
@@ -775,7 +798,7 @@ def _build_namespace_pools(
                 )
     for key, message in errors_by_key.items():
         pools[key] = _NsPool(error=message)
-    return pools, dup_issues
+    return pools, issues
 
 
 def _check_reference_value(
@@ -875,8 +898,8 @@ def _resolve_references_in_scope(
 ) -> list[DataValidationIssue]:
     """Run the scope-subtree cross-file reference pass over all bound instances."""
     cache: dict[Path, Any] = {}
-    pools, dup_issues = _build_namespace_pools(instances, target_root, cache)
-    issues: list[DataValidationIssue] = list(dup_issues)
+    pools, pool_issues = _build_namespace_pools(instances, target_root, cache)
+    issues: list[DataValidationIssue] = list(pool_issues)
     for binding, data in instances:
         companion = _companion_json(binding.companion, cache)
         if companion is None:

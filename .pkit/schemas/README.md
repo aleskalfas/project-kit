@@ -243,7 +243,7 @@ Where a field accepts one target namespace alone, narrow the pattern's namespace
 
 ### Declaring where ids live: `x-pkit-id-collection`
 
-To resolve a token such as `[issue-types:task]`, the resolver must know where in `issue-types.yaml` the ids live. Every schema that owns a namespace declares it, in an annotation at the companion's top level:
+To resolve a token such as `[issue-types:task]`, the resolver must know where in `issue-types.yaml` the ids live. A schema that owns a namespace through a collection of entries declares it, in an annotation at the companion's top level:
 
 ```json
 {
@@ -263,7 +263,28 @@ The resolver reads two shapes of collection:
 - **A mapping,** whose keys are the ids. In `types: { task: {...}, feature: {...} }`, the ids are `task` and `feature`. Most of the methodology's schemas use this shape.
 - **A list of objects with an `id` field,** whose values are the ids. In `items: [{ id: alpha, ... }, { id: beta, ... }]`, the ids are `alpha` and `beta`. Use this shape where the entries need a stable order, or where other data on each entry makes the mapping awkward.
 
-A schema that owns no namespace leaves the annotation out. Examples are an aggregator that names others' ids, and a schema of settings with no entries of its own. A token that names such a schema is a resolver error.
+A schema that owns no namespace leaves out this annotation and `x-pkit-entry-id` ("A document's own id" below). Examples are an aggregator that names others' ids, and a schema of settings with no entries of its own. A token that names such a schema is a resolver error.
+
+### A document's own id: `x-pkit-entry-id`
+
+A document schema, whose file is itself one resource, owns a namespace through the id each such file holds. Its companion declares `x-pkit-entry-id` at its top level, a JSON Pointer to the field that holds the document's own id:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "experiment.schema.json",
+  "x-pkit-entry-id": "/id",
+  "type": "object",
+  ...
+}
+```
+
+- **Each document is one entry.** A token such as `[experiment:<id>]` names the document whose field holds that id. The schema's own YAML is its one document, so among a capability's schemas the namespace holds the id of that example.
+- **In place of `x-pkit-id-collection`, never beside it.** A companion that declares both is an error of `pkit schemas validate`.
+- **The id is held, never derived.** It is read from the field the pointer names, never from the file's path or name. A document in which the pointer reaches no string is an error.
+- **No collection to add to.** `pkit schemas add` refuses a document namespace. `pkit schemas rename` renames the example document's id, and the tokens and keys that cite it.
+- **Declared by hand.** The stamp of a document schema, `pkit new schema <owner> <name> --no-namespace`, declares no annotation. Add `x-pkit-entry-id` to the companion it writes.
+- **Adopter data.** How bound documents join a namespace's pool is in [`data-binding.md`, "Cross-file references in adopter data"](data-binding.md#cross-file-references-in-adopter-data-x-pkit-reference-namespace-cor-029).
 
 ### What the resolver pass checks
 
@@ -271,7 +292,7 @@ A schema that owns no namespace leaves the annotation out. Examples are an aggre
 
 1. **Shape.** JSON Schema checks the YAML's structure.
 2. **References,** in two walks:
-   - **Tokens in values.** For each string in a value that matches `[<namespace>:<id>]`, the resolver finds the namespace's companion in the same folder. It follows the companion's `x-pkit-id-collection` pointer into the data YAML, and checks that the id is there. A scoped token, of three segments, is checked for its shape only.
+   - **Tokens in values.** For each string in a value that matches `[<namespace>:<id>]`, the resolver finds the namespace's companion in the same folder. It follows the companion's `x-pkit-id-collection` or `x-pkit-entry-id` pointer into the data YAML, and checks that the id is there. A scoped token, of three segments, is checked for its shape only.
    - **Keys under an annotation.** For each field of the companion that carries `x-pkit-keys-from-namespace: "<namespace>"`, the resolver walks to that field in the data. It checks that each key exists in the named namespace's collection.
 
 - **A resolver error fails the run,** which exits non-zero.

@@ -19,6 +19,7 @@ gates:
   - COR-019
   - COR-020
   - COR-023
+  - COR-029
 reads:
   paths:
     - .pkit/decisions/README.md
@@ -64,6 +65,7 @@ Verify the records in this skill's `gates:` frontmatter list are `accepted`:
 - **COR-019** — schema reference form. Settles typed tokens for cross-schema references.
 - **COR-020** — skill family folder form. The convention this composite skill itself follows.
 - **COR-023** — adopter data → schema binding. The `pkit_schema:` field convention + per-schema `binds_to:` fallback.
+- **COR-029** — adopter-data references resolve through the binding. Settles the namespaces a schema may own: a collection, or a document schema's own id (`x-pkit-entry-id`, point 6).
 
 Halt if any is `proposed` or `superseded`.
 
@@ -81,6 +83,7 @@ Three of the disciplines `.pkit/decisions/README.md` gives decision records ("Wr
 - **Typed cross-schema references.** Cross-schema data references use `[<namespace>:<id>]` per COR-019. Intra-schema references stay bare. Mapping keys obey the same rule via `x-pkit-keys-from-namespace` annotation when the keys belong to another namespace.
 - **Single source of truth for shared `$defs`.** Generic patterns live in `.pkit/schemas/_defs/refs.schema.json`; namespace-narrowed reference patterns live in the namespace owner's own companion (cross-file `$ref` from consumers).
 - **`x-pkit-id-collection` annotation.** Namespace owners declare where their ids live via a top-level JSON Pointer annotation in the companion.
+- **`x-pkit-entry-id` annotation.** A document schema owns a namespace, each document being one entry, by a top-level JSON Pointer to the document's own id, in place of `x-pkit-id-collection` and never beside it (COR-029 point 6).
 
 ### Validation after every change
 

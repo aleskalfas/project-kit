@@ -887,6 +887,196 @@ def test_reference_cli_shape_only_flag(kit_target: Path) -> None:
     assert ok.exit_code == 0, ok.output
 
 
+# --- a document namespace in adopter data (COR-029 point 6) -----------------
+#
+# A `lab` capability: `experiment`, a document schema whose companion points
+# `x-pkit-entry-id` at `/id`, so each bound experiment file is one entry of the
+# namespace; and `note`, whose `about` field cites experiments.
+
+
+def _stage_document_capability(target_root: Path, *, entry_annotations: dict | None = None) -> None:
+    cap = "lab"
+    cap_dir = target_root / ".pkit" / "capabilities" / cap
+    schemas_dir = cap_dir / "schemas"
+    schemas_dir.mkdir(parents=True, exist_ok=True)
+    (cap_dir / "package.yaml").write_text(
+        "schema_version: 1\n"
+        "component:\n  kind: capability\n  name: lab\n  version: 0.1.0\n"
+        'description: Test capability.\nrequires_backbone: ">=0.1.0,<99.0.0"\n',
+        encoding="utf-8",
+    )
+    (schemas_dir / "experiment.yaml").write_text(
+        'schema_version: 1\nbinds_to:\n  - "**/experiments/*.yaml"\nid: example\n',
+        encoding="utf-8",
+    )
+    (schemas_dir / "experiment.schema.json").write_text(
+        json.dumps(
+            {
+                "$schema": _DRAFT,
+                "$id": "experiment.schema.json",
+                **(
+                    entry_annotations
+                    if entry_annotations is not None
+                    else {"x-pkit-entry-id": "/id"}
+                ),
+                "type": "object",
+                "additionalProperties": True,
+                "required": ["schema_version"],
+                "properties": {
+                    "schema_version": {"type": "integer", "const": 1},
+                    "pkit_schema": {"type": "string"},
+                },
+                "$defs": {
+                    "experiment_ref": {
+                        "type": "string",
+                        "x-pkit-reference-namespace": "experiment",
+                    }
+                },
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    (schemas_dir / "note.yaml").write_text(
+        'schema_version: 1\nbinds_to:\n  - "**/notes/*.yaml"\n', encoding="utf-8"
+    )
+    (schemas_dir / "note.schema.json").write_text(
+        json.dumps(
+            {
+                "$schema": _DRAFT,
+                "$id": "note.schema.json",
+                "type": "object",
+                "additionalProperties": True,
+                "required": ["schema_version"],
+                "properties": {
+                    "schema_version": {"type": "integer", "const": 1},
+                    "about": {
+                        "type": "array",
+                        "items": {"$ref": "experiment.schema.json#/$defs/experiment_ref"},
+                    },
+                },
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    bb = read_backbone_manifest(target_root)
+    assert bb is not None
+    entry = ComponentRegistryEntry(
+        kind="capability", name=cap, manifest=f".pkit/capabilities/{cap}/package.yaml"
+    )
+    if entry not in bb.components:
+        bb.components.append(entry)
+    write_backbone_manifest(target_root, bb)
+
+
+def _write_experiment(folder: Path, file_name: str, id_line: str | None) -> Path:
+    path = folder / "experiments" / f"{file_name}.yaml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = ["schema_version: 1", "title: An experiment"]
+    if id_line is not None:
+        lines.append(id_line)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def _write_note(folder: Path, *tokens: str) -> Path:
+    path = folder / "notes" / "note.yaml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = ["schema_version: 1", "about:", *(f'  - "{t}"' for t in tokens)]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def test_each_document_adds_its_own_id_to_the_pool(kit_target: Path) -> None:
+    _stage_document_capability(kit_target)
+    idea = kit_target / "ideas" / "meals"
+    _write_experiment(idea, "interviews", "id: interviews")
+    _write_experiment(idea, "landing-page", "id: landing-page")
+    _write_note(idea, "[experiment:interviews]", "[experiment:landing-page]")
+    report = dv.validate_path(idea, kit_target)
+    assert report.is_clean, report.issues
+
+
+def test_a_document_s_id_is_held_never_derived_from_its_file_name(kit_target: Path) -> None:
+    _stage_document_capability(kit_target)
+    idea = kit_target / "ideas" / "meals"
+    _write_experiment(idea, "file-name", "id: held-id")
+    _write_note(idea, "[experiment:held-id]", "[experiment:file-name]")
+    report = dv.validate_path(idea, kit_target)
+    assert [i.message for i in report.errors] == [
+        "unresolved reference '[experiment:file-name]': id 'file-name' not found among "
+        "files bound to lab:experiment in the validation scope."
+    ]
+
+
+def test_a_copy_of_a_document_in_scope_repeats_its_id(kit_target: Path) -> None:
+    _stage_document_capability(kit_target)
+    ideas = kit_target / "ideas"
+    _write_experiment(ideas / "meals", "interviews", "id: interviews")
+    _write_experiment(ideas / "archive", "interviews", "id: interviews")
+    report = dv.validate_path(ideas, kit_target)
+    assert any(
+        "duplicate id 'interviews' for namespace 'experiment'" in i.message for i in report.errors
+    ), report.issues
+
+
+def test_no_document_in_scope_is_the_softer_outcome(kit_target: Path) -> None:
+    _stage_document_capability(kit_target)
+    idea = kit_target / "ideas" / "meals"
+    _write_note(idea, "[experiment:interviews]")
+    report = dv.validate_path(idea, kit_target)
+    assert not report.has_errors, report.issues
+    assert any("no file bound to namespace 'experiment'" in i.message for i in report.warnings)
+
+
+def test_once_a_document_exists_one_not_yet_written_is_a_dangling_id(kit_target: Path) -> None:
+    _stage_document_capability(kit_target)
+    idea = kit_target / "ideas" / "meals"
+    _write_experiment(idea, "interviews", "id: interviews")
+    _write_note(idea, "[experiment:interviews]", "[experiment:landing-page]")
+    report = dv.validate_path(idea, kit_target)
+    assert not report.warnings
+    assert any("'landing-page' not found" in i.message for i in report.errors), report.issues
+
+
+@pytest.mark.parametrize(("id_line", "why"), [(None, "step 'id' not found"), ("id: 7", "int")])
+def test_a_document_whose_entry_id_reaches_no_string_is_an_error(
+    kit_target: Path, id_line: str | None, why: str
+) -> None:
+    _stage_document_capability(kit_target)
+    idea = kit_target / "ideas" / "meals"
+    path = _write_experiment(idea, "interviews", id_line)
+    report = dv.validate_path(idea, kit_target)
+    found = {i.location: i.message for i in report.errors}
+    location = f"{path.relative_to(kit_target)}/id"
+    assert location in found, report.issues
+    assert "x-pkit-entry-id pointer '/id' reaches no string" in found[location]
+    assert why in found[location]
+
+
+def test_shape_only_reads_no_document_s_id(kit_target: Path) -> None:
+    _stage_document_capability(kit_target)
+    idea = kit_target / "ideas" / "meals"
+    _write_experiment(idea, "interviews", None)
+    report = dv.validate_path(idea, kit_target, resolve_references=False)
+    assert report.is_clean, report.issues
+
+
+def test_a_reference_into_a_companion_declaring_both_annotations_is_an_error(
+    kit_target: Path,
+) -> None:
+    _stage_document_capability(
+        kit_target,
+        entry_annotations={"x-pkit-entry-id": "/id", "x-pkit-id-collection": "/entries"},
+    )
+    idea = kit_target / "ideas" / "meals"
+    _write_experiment(idea, "interviews", "id: interviews")
+    _write_note(idea, "[experiment:interviews]")
+    report = dv.validate_path(idea, kit_target)
+    assert any("declares both" in i.message for i in report.errors), report.issues
+
+
 # --- real shipped project-management:workstreams binding (#585) --------
 #
 # Regression for the dogfooding gap where `pkit data validate` on the shipped

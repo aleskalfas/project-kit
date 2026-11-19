@@ -1040,3 +1040,113 @@ def test_cli_schemas_rename_core_namespace(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert "Renamed 'feature'" in result.output
     assert "[owner-key] .pkit/schemas/issue-types.yaml" in result.output
+
+
+# add / rename — a document namespace (COR-029 point 6) -----------------
+
+
+def _setup_document_namespace_with_consumers(tmp_path: Path) -> dict[str, Path]:
+    """A document schema `cycle` (`x-pkit-entry-id: /id`), cited by a token and by keys."""
+    schemas = tmp_path / ".pkit" / "capabilities" / "demo" / "schemas"
+    schemas.mkdir(parents=True)
+    (tmp_path / ".pkit" / "manifest.yaml").write_text("backbone_version: 0.0.0\n", encoding="utf-8")
+    (schemas / "cycle.yaml").write_text(
+        "# One cycle, the schema's example.\nschema_version: 1\nid: first\ntitle: The first\n",
+        encoding="utf-8",
+    )
+    (schemas / "cycle.schema.json").write_text(
+        json.dumps(
+            {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "x-pkit-entry-id": "/id",
+                "type": "object",
+                "required": ["schema_version", "id"],
+                "additionalProperties": False,
+                "properties": {
+                    "schema_version": {"type": "integer", "const": 1},
+                    "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+                    "title": {"type": "string"},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (schemas / "plan.yaml").write_text(
+        'schema_version: 1\ncycle: "[cycle:first]"\n', encoding="utf-8"
+    )
+    (schemas / "plan.schema.json").write_text(
+        json.dumps(
+            {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                    "schema_version": {"type": "integer", "const": 1},
+                    "cycle": {"type": "string"},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (schemas / "per-cycle.yaml").write_text(
+        "schema_version: 1\nby_cycle:\n  first:\n    note: f\n", encoding="utf-8"
+    )
+    (schemas / "per-cycle.schema.json").write_text(
+        json.dumps(
+            {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                    "schema_version": {"type": "integer", "const": 1},
+                    "by_cycle": {"type": "object", "x-pkit-keys-from-namespace": "cycle"},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return {
+        "owner": schemas / "cycle.yaml",
+        "plan": schemas / "plan.yaml",
+        "per_cycle": schemas / "per-cycle.yaml",
+    }
+
+
+def test_add_refuses_a_document_namespace_and_writes_nothing(tmp_path: Path) -> None:
+    paths = _setup_document_namespace_with_consumers(tmp_path)
+    before = paths["owner"].read_text(encoding="utf-8")
+    with pytest.raises(SchemaAuthoringError, match="'cycle' is a document namespace"):
+        add_entry_to_namespace(tmp_path, "cycle", "second", {"title": "The second"})
+    assert paths["owner"].read_text(encoding="utf-8") == before
+
+
+def test_cli_schemas_add_refuses_a_document_namespace(tmp_path: Path) -> None:
+    _setup_document_namespace_with_consumers(tmp_path)
+    runner = CliRunner()
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        import shutil
+
+        shutil.copytree(tmp_path / ".pkit", Path.cwd() / ".pkit", dirs_exist_ok=True)
+        result = runner.invoke(
+            main, ["schemas", "add", "cycle", "second", "--from", "-"], input="title: x\n"
+        )
+    assert result.exit_code != 0
+    assert "document namespace" in result.output
+
+
+def test_rename_renames_the_example_document_s_id_and_what_cites_it(tmp_path: Path) -> None:
+    paths = _setup_document_namespace_with_consumers(tmp_path)
+    result = rename_entry(tmp_path, "cycle", "first", "opening")
+    assert {c.kind for c in result.changes} == {"owner-id", "token", "annotation-key"}
+    owner = paths["owner"].read_text(encoding="utf-8")
+    assert owner.startswith("# One cycle, the schema's example.\n")
+    assert "id: opening\n" in owner
+    assert "id: first" not in owner
+    assert '"[cycle:opening]"' in paths["plan"].read_text(encoding="utf-8")
+    assert "  opening:\n" in paths["per_cycle"].read_text(encoding="utf-8")
+
+
+def test_rename_refuses_an_id_the_example_document_does_not_hold(tmp_path: Path) -> None:
+    paths = _setup_document_namespace_with_consumers(tmp_path)
+    before = {name: path.read_text(encoding="utf-8") for name, path in paths.items()}
+    with pytest.raises(SchemaAuthoringError, match="'second' not found in namespace 'cycle'"):
+        rename_entry(tmp_path, "cycle", "second", "later")
+    assert {name: path.read_text(encoding="utf-8") for name, path in paths.items()} == before

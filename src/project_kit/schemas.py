@@ -46,12 +46,13 @@ from pathlib import Path
 from typing import Any
 
 from project_kit.schemas_validate import (
-    _ID_COLLECTION_ANNOTATION,
     _TOKEN_PATTERN,
-    _resolve_json_pointer,
+    NAMESPACE_OWNER_ANNOTATIONS,
     _stringify_dates,
     _yaml,
     iter_schema_homes,
+    namespace_entries,
+    namespace_ownership,
     owner_label,
     schemas_home,
     unknown_namespace_message,
@@ -88,17 +89,19 @@ def load_schema(target_root: Path, capability: str, name: str) -> Any:
 
 
 def iter_entries(target_root: Path, capability: str, name: str) -> Iterator[tuple[str, Any]]:
-    """Iterate `(id, entry_data)` pairs for a namespace's id collection.
+    """Iterate `(id, entry_data)` pairs for a namespace's entries.
 
-    Requires the schema's companion to declare `x-pkit-id-collection`
-    (i.e., the schema must own a namespace). Resolves the pointer in the
-    YAML data and yields each entry's id alongside its data. Supports
-    both mapping-form collections (ids are keys) and list-of-objects
-    collections (ids are each item's `id` field).
+    Requires the schema to own a namespace: its companion declares
+    `x-pkit-id-collection`, or `x-pkit-entry-id` for a document schema.
+    A collection yields each entry's id alongside its data, for both
+    mapping-form collections (ids are keys) and list-of-objects
+    collections (ids are each item's `id` field). A document schema's YAML
+    is its one document, so it yields that document's own id with the
+    whole document (COR-029 point 6).
 
     Raises `SchemaLookupError` if the schema doesn't own a namespace
-    (no annotation), if the companion is missing/malformed, or if the
-    pointer doesn't resolve.
+    (no annotation), if the companion is missing/malformed or declares
+    both annotations, or if the pointer doesn't reach the ids.
     """
     companion_path = schemas_home(target_root, capability) / f"{name}.schema.json"
     if not companion_path.is_file():
@@ -112,35 +115,21 @@ def iter_entries(target_root: Path, capability: str, name: str) -> Iterator[tupl
             f"{owner_label(capability)} schema {name!r}: companion "
             f"{companion_path} is not valid JSON: {exc.msg}."
         ) from exc
-    pointer = schema.get(_ID_COLLECTION_ANNOTATION)
-    if not isinstance(pointer, str):
+    ownership = namespace_ownership(schema)
+    if ownership is None:
         raise SchemaLookupError(
-            f"{owner_label(capability)} schema {name!r}: companion lacks "
-            f"the {_ID_COLLECTION_ANNOTATION!r} annotation, so it doesn't "
-            f"own an id collection. Use load_schema() instead to read the "
-            f"YAML directly."
+            f"{owner_label(capability)} schema {name!r}: companion declares no "
+            f"{NAMESPACE_OWNER_ANNOTATIONS}, so it doesn't own a namespace. Use "
+            f"load_schema() instead to read the YAML directly."
         )
-    data = load_schema(target_root, capability, name)
-    try:
-        collection = _resolve_json_pointer(data, pointer)
-    except (KeyError, ValueError) as exc:
+    if isinstance(ownership, str):
         raise SchemaLookupError(
-            f"{owner_label(capability)} schema {name!r}: "
-            f"{_ID_COLLECTION_ANNOTATION} pointer {pointer!r} did not resolve: {exc}."
-        ) from exc
-    if isinstance(collection, dict):
-        for key, value in collection.items():
-            yield str(key), value
-    elif isinstance(collection, list):
-        for item in collection:
-            if isinstance(item, dict) and "id" in item:
-                yield str(item["id"]), item
-    else:
-        raise SchemaLookupError(
-            f"{owner_label(capability)} schema {name!r}: "
-            f"{_ID_COLLECTION_ANNOTATION} pointer {pointer!r} resolved to "
-            f"{type(collection).__name__}; expected mapping or list-of-objects-with-id."
+            f"{owner_label(capability)} schema {name!r}: companion {ownership}."
         )
+    entries = namespace_entries(ownership, load_schema(target_root, capability, name))
+    if isinstance(entries, str):
+        raise SchemaLookupError(f"{owner_label(capability)} schema {name!r}: {entries}.")
+    yield from entries
 
 
 def resolve_token(target_root: Path, token: str) -> Any:
@@ -148,8 +137,9 @@ def resolve_token(target_root: Path, token: str) -> Any:
 
     Walks every schemas home (the core schemas area, then every installed
     capability) to find the schema whose YAML stem matches `<namespace>`
-    and whose companion has the `x-pkit-id-collection` annotation. Returns
-    the entry's data (the mapping value or list item) for the matching id.
+    and whose companion declares the annotation that makes it the
+    namespace's owner. Returns the entry's data (the mapping value or list
+    item, or a document schema's whole document) for the matching id.
 
     Raises `SchemaLookupError` for malformed tokens, missing namespaces,
     or unknown ids.
@@ -222,7 +212,9 @@ def _find_owner_for_namespace(target_root: Path, namespace: str) -> str | None:
     """Walk every schemas home looking for the owner of `namespace`.
 
     A home owns the namespace if it contains `<namespace>.schema.json`
-    declaring `x-pkit-id-collection`. Homes are visited in
+    declaring `x-pkit-id-collection` or `x-pkit-entry-id`. A declaration
+    that does not read cleanly still claims the namespace, so the reader
+    that follows reports what is wrong with it. Homes are visited in
     `iter_schema_homes` order (the core area, then capabilities sorted), so
     the first match is deterministic; None if no home matches.
     """
@@ -234,6 +226,6 @@ def _find_owner_for_namespace(target_root: Path, namespace: str) -> str | None:
             schema = json.loads(companion.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             continue
-        if isinstance(schema.get(_ID_COLLECTION_ANNOTATION), str):
+        if namespace_ownership(schema) is not None:
             return owner
     return None

@@ -162,7 +162,7 @@ def test_iter_entries_raises_when_schema_has_no_namespace(tmp_path: Path) -> Non
         "properties": {"schema_version": {"type": "integer", "const": 1}},
     }
     (schemas / "consumer.schema.json").write_text(json.dumps(companion), encoding="utf-8")
-    with pytest.raises(SchemaLookupError, match="doesn't own an id collection"):
+    with pytest.raises(SchemaLookupError, match="doesn't own a namespace"):
         list(iter_entries(tmp_path, "demo", "consumer"))
 
 
@@ -239,3 +239,44 @@ def test_resolve_token_unknown_namespace_names_both_homes(tmp_path: Path) -> Non
     message = str(excinfo.value)
     assert ".pkit/schemas/" in message
     assert ".pkit/capabilities/*/schemas/" in message
+
+
+# a document schema owns a namespace (COR-029 point 6) ---------------------
+
+
+def _write_cycle_document(target_root: Path, companion_extra: dict | None = None) -> None:
+    """A document schema `cycle` whose companion points `x-pkit-entry-id` at `/id`."""
+    schemas = target_root / ".pkit" / "capabilities" / "demo" / "schemas"
+    schemas.mkdir(parents=True)
+    (schemas / "cycle.yaml").write_text(
+        "schema_version: 1\nid: first\ntitle: The first cycle\n", encoding="utf-8"
+    )
+    companion = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "x-pkit-entry-id": "/id",
+        "type": "object",
+        "properties": {"schema_version": {"type": "integer", "const": 1}},
+        **(companion_extra or {}),
+    }
+    (schemas / "cycle.schema.json").write_text(json.dumps(companion), encoding="utf-8")
+
+
+def test_iter_entries_yields_a_document_s_own_id_with_the_document(tmp_path: Path) -> None:
+    _write_cycle_document(tmp_path)
+    entries = list(iter_entries(tmp_path, "demo", "cycle"))
+    assert entries == [("first", {"schema_version": 1, "id": "first", "title": "The first cycle"})]
+
+
+def test_resolve_token_finds_a_document_namespace(tmp_path: Path) -> None:
+    _write_cycle_document(tmp_path)
+    assert find_namespace_owner(tmp_path, "cycle") == "demo"
+    assert resolve_token(tmp_path, "[cycle:first]")["title"] == "The first cycle"
+    with pytest.raises(SchemaLookupError, match="'second' not found in namespace 'cycle'"):
+        resolve_token(tmp_path, "[cycle:second]")
+
+
+def test_iter_entries_refuses_a_companion_declaring_both_annotations(tmp_path: Path) -> None:
+    _write_cycle_document(tmp_path, {"x-pkit-id-collection": "/entries"})
+    assert find_namespace_owner(tmp_path, "cycle") == "demo"
+    with pytest.raises(SchemaLookupError, match="declares both"):
+        list(iter_entries(tmp_path, "demo", "cycle"))
