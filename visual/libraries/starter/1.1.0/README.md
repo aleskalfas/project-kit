@@ -11,6 +11,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/design-knowledge/colour.md
+        - .pkit/capabilities/visual-communication/design-knowledge/working-in-layers.md
         - tests/test_visual_communication_neutral.py
       record:
         - visual-communication:DEC-003#6
@@ -39,6 +40,7 @@ pkit:
         - visual-communication:DEC-022#6
         - visual-communication:DEC-025#1
         - visual-communication:DEC-025#4
+        - visual-communication:DEC-025#7
         - visual-communication:DEC-032#1
         - visual-communication:DEC-032#2
         - visual-communication:DEC-032#3
@@ -53,6 +55,9 @@ pkit:
         - visual-communication:DEC-038#6
         - visual-communication:DEC-068#3
         - visual-communication:DEC-068#4
+        - visual-communication:DEC-069#3
+        - visual-communication:DEC-069#5
+        - visual-communication:DEC-069#6
       artefact:
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#content-files
@@ -60,6 +65,9 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#values-states-and-colour
         - .pkit/capabilities/visual-communication/files.md#the-neutral-brand
         - .pkit/capabilities/visual-communication/checks.md#scenes
+        - .pkit/capabilities/visual-communication/components.md#primitives
+        - .pkit/capabilities/visual-communication/components.md#ties-and-connectors
+        - .pkit/capabilities/visual-communication/outputs.md#produced-pictures
 ---
 
 # The starter
@@ -89,15 +97,20 @@ Each pattern answers one question a visual answers. Choose a pattern by its ques
 
 ### `layers`: what rests on what?
 
-- **Form:** levels stacked one on another, the top first, as a stack of one width or as steps that narrow to the top. Each level is shaded by its place, from the order's first end at the top to its last at the foot. Notes may stand to the right of the stack, sharing its height, for what holds across the levels. Ties join a note or a level to another, and end at a level's drawn edge.
+- **Form:** levels stacked one on another, the top first, as a stack of one width or as steps that narrow to the top. Each level is shaded by its place, from the order's first end at the top to its last at the foot. Notes may stand in a column to the right of the stack, to its left, or on both sides, each column sharing the stack's height, for what holds across the levels. Ties join a note or a level to another, and end at a level's drawn edge.
 - **Source:** Nancy Duarte's structure (*slide:ology*, chapter 3). Lohse, Biolsi, Walker and Rueter's structure diagrams, and Yuri Engelhardt's lining up in an order, check it. Its shades follow Cynthia Brewer's sequential schemes, which show an order by lightness ([*An order's steps*](#an-orders-steps)).
 - **Options:**
   - `shape`, its words `stack` and `steps`. With `stack`, the default, each level is as wide as the stack. With `steps`, each level is one step narrower than the one under it, centred on it: the last level is as wide as the stack, and a step is the stack's width over twice the number of levels, so the top stays wider than half the stack. Each level's frame is its step, so a tie into it ends at its edge (visual-communication DEC-038 points 1, 3 and 6). A level takes the width of its step and breaks its text to it (the capability's `components.md`, under *Breaking lines*), so a narrow level that holds more text stands taller than a wide one.
   - `shade`, its words `steps` and `plain`. With `steps`, the default, each level's place takes a step of the order, spread evenly between the two ends the brand gives over the levels drawn, the first end at the top (visual-communication DEC-032 points 3 and 4). With `plain`, a level takes no colour from its place, so each takes its own component's family. Either way, a level that names a concept takes its concept's family, so the levels of a page whose point is an order name none.
 - **Lists:**
   - `levels`, each drawn by the `level`, unless the component field `level` names another;
-  - `notes`, each drawn by the `card`, unless the component field `note` names another;
+  - `notes`, to the right of the stack, and `left-notes`, to its left, each drawn by the `card`, unless the component field `note` names another;
   - `ties`, a list of ties with the end fields `from` and `to`, each drawn by the `connector`, unless the component field `tie` names another.
+- **Its columns of notes:** each stands a third of the width, less the gap beside it, and the stack takes the rest, so with a column on each side the three stand about as wide.
+- **A note's ties:** a tie from a note to a level ties the note to what it explains, so it is a *leader* (visual-communication DEC-069 point 3), and takes no look by which the page draws its ties between levels (point 6). Draw it with the connector's `weight: thin` and `arrow: none`, through the component field `tie` where every tie on the page is a leader, or else on each leader, since the ties between levels keep the connector's default weight, `thick` ([`connector`](#connector)). Two notes whose leaders would cross in one column, such as one tied to the first and third levels and another tied to the second, stand on two sides, where they cross nowhere.
+- **What it keeps, and why:**
+  - **The side a note's tie leaves by.** A tie leaves each end by the side that faces the other ([`connector`](#connector)). So a note's tie to a level beside it leaves the note toward the stack. One to a level that lies farther above or below the note than the level stands from the column leaves by the note's top or its foot, toward the note beside it, and runs over that note. A note alone in its column spans the stack, so each of its ties leaves toward the stack. Tie each note to the levels beside it, or set it alone in its column.
+  - **Notes in equal shares.** The notes of a column share the stack's height in equal parts, whatever levels their ties reach. A column of notes beside the stack may stand lined up and in the order of their ends where their leaders are as easy to follow as with each note set by its level, or where the page is too crowded to set each by its level (visual-communication DEC-069 point 5), so list a column's notes in the order of the levels their ties reach. No layout operator sets a note by where its ties end: operators stack, align and size a list's items by their order and their place, and a layout none computes is work outside the engine (visual-communication DEC-005 point 2).
 - **Its boundaries:** a level rests on the one below it, where a list's items have no order. Layers say nothing of time, where steps follow one another. As steps, each level also stands narrower than the one it rests on, the few on the many; where the levels are of one breadth, a stack says so. Its shades never show the order alone: each level's place shows it too, and as steps its width.
 
 ### `list`: what are the items?
@@ -125,6 +138,9 @@ Each pattern answers one question a visual answers. Choose a pattern by its ques
   - `left`, `middle` and `right`, each drawn by the `card`, unless the component field `item` names another;
   - `ties`, a list of ties with the end fields `from` and `to`, each drawn by the `connector`, unless the component field `tie` names another.
 - **Ends:** an end names its item by its key path, such as `right[groups].groups[project-management].items[doc-check]` (visual-communication DEC-011 point 3). So a tie reaches an item that a pattern in a column draws, such as an item of a group.
+- **What it keeps, and why:**
+  - **The side a tie leaves by.** A tie leaves each end by the side that faces the other ([`connector`](#connector)). So a tie between items of two columns leaves across, unless they lie farther apart down than across, as a long column's first item and the next column's last may. Such a tie leaves by its item's top or its foot, and runs over the items under it or above it in its column. Tie items that stand across from each other.
+  - **Where a cornered tie turns.** Ties with corners that share a lane turn at its middle ([`connector`](#connector)), so where their turns overlap, they lie on each other. Draw ties that share a lane `straight`, the default.
 - **Its boundaries:** ties say what is connected, where groups say only what belongs together. The content sets each item's column and its place there, and no tie moves an item.
 
 ### `panels`: which views, side by side, show one point?
@@ -194,12 +210,16 @@ A block draws one item of a pattern, or stands alone where content places it.
 
 ### `connector`
 
-- **Form:** a line from where a tie starts to where it ends, in its colour family's text, with arrowheads where the content asks. Its turns are drawn round, so a route with corners reads as one smooth path. It routes around nothing, so a tie best joins items set apart, with nothing between them.
-- **Source:** Yuri Engelhardt's linking by a connector.
+- **Form:** a line from where a tie starts to where it ends, in its colour family's text, with arrowheads where the content asks. It is thick, for a link between two items, or thin, for a *leader*, the line that ties a note to what it explains (visual-communication DEC-069 point 3). Its turns are drawn round, so a route with corners reads as one smooth path. It routes around nothing, so a tie best joins items set apart, with nothing between them.
+- **Source:** Yuri Engelhardt's linking by a connector. Colin Ware: a line's weight tells the kind of relation it draws. Edward Tufte's layering: a page whose frame lies behind its content lets the content come forward.
 - **Ends:** it takes the two ends a pattern's list of ties gives it, so a pattern draws it as a tie.
 - **Options:**
   - `route`: `straight`, the default, or `corners`.
   - `arrow`, where its arrowheads stand: `end`, the default, `start`, `both` or `none`.
+  - `weight`: `thick`, the default, as wide as a line drawn on its own, or `thin`, as wide as an edge. Drawn `thin`, a leader reads lighter than the `thick` links between the items its note explains, so the page's notes stand behind what they explain. An arrowhead is as long as five widths of its line (the capability's `components.md`, under *Primitives*), so a `thin` line's would be too small to read.
+- **What it keeps, and why:** the connector tool, not the connector, sets where a tie meets its ends and where it turns (the capability's `components.md`, under *Ties and connectors*). No component chooses either, so the starter keeps both:
+  - **The side it leaves by.** A tie leaves each end's frame by the side that faces the other end: the left or the right where the two frames lie farther apart across than down, else the top or the bottom. So it may leave an item by its top or its foot toward another item that stands there, and run over it. Each pattern's entry says what follows for its ties.
+  - **Where it turns.** With corners, it turns twice, halfway between its ends. So ties with corners that share one gap turn at its middle, and where their turns overlap, they lie on each other and read as one line. Draw ties that share a gap `straight`, the default.
 
 ## The web parts, by their job on a page
 
@@ -393,6 +413,7 @@ A component reads a shared role where the starter means just that role, such as 
 | `starter.bar` | how thick a card's or an aside's bar is | `space.1` |
 | `starter.edge` | how wide a block's edge is | `stroke.thin` |
 | `starter.connector` | how wide a connector's line is | `stroke.thick` |
+| `starter.leader` | how wide a connector's line is with `weight: thin`, as a leader is drawn | `stroke.thin` |
 | `starter.turn` | the radius a connector's turns are drawn round at | `space.2` |
 | `starter.type.head` | the type of a block's head and a list's head | `type.heading` |
 | `starter.type.title` | the type of a page's title, as [`title`](#title) says | `type.title` |
@@ -402,11 +423,11 @@ A component reads a shared role where the starter means just that role, such as 
 
 A brand that does not name the starter draws it at these defaults, in the brand's own values for the shared roles. A brand that names the starter by its major, 1, may give any of these roles a value of its own (visual-communication DEC-008 point 4).
 
-At the defaults a connector's line is as wide as a line drawn on its own, not as an edge. A strong run keeps the body's size and line height, in a heavier weight, so it stands out without breaking its line. A code block's text is in a monospace type, so the columns of its lines stay in line.
+At the defaults a connector's line is as wide as a line drawn on its own, not as an edge, and a thin connector's as an edge. A strong run keeps the body's size and line height, in a heavier weight, so it stands out without breaking its line. A code block's text is in a monospace type, so the columns of its lines stay in line.
 
 ## What the starter leaves out, for now
 
-- **Notes to the left of the stack.** `layers` places them to the right only.
+- **A picture's points.** No component of the starter draws a picture with points, so a tie ends at a picture's box, never at a point in it. A picture file has no points (visual-communication DEC-025 point 7), and no producer ships yet, so no piece holds a produced picture whose points a block could expose (the capability's `outputs.md`, under *Produced pictures*).
 - **A colour family for each place** of a list (project-kit#3129). An order's levels take its steps instead ([*An order's steps*](#an-orders-steps)).
 - **A legend in a column,** or one the engine fills from the concepts a page names. A legend's entries stand in one row, and content lists each (visual-communication DEC-036 point 6).
 - **The other patterns and blocks** of the starter's second wave (project-kit#3129).
