@@ -47,6 +47,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, tool access, storyboard paths, the workspace sentence
 ├── run-agent.py                       # the agent runner: starts one agent in Claude Code for `pkit agents run`
 ├── probe-confined-run.py              # the probe of the runner's confined form; a person runs it, never a test
+├── probe-hook-out-of-reach.py         # the probe of ADR-095's facts; a person runs it, never a test
 ├── tool-access.json                   # Claude Code's keys for an agent's tool access, its names' forms, the built-in tools it knows, and the withheld entries it admits
 ├── harness-support.yaml               # how far Claude Code meets each harness requirement the core declares
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
@@ -492,6 +493,18 @@ On the probed machine, `/usr/bin/python3` is a launcher, which runs the develope
 - **Anything inside the sandbox:** the precondition; which of the harness's other files that carry code or approvals it keeps from sandboxed writes, a link's target and a skill's inline commands among them; a repository's hooks and configuration against a linked worktree's sandboxed commands; the folders a sandboxed command writes by default, and the per-user temp folder; that hooks run outside the sandbox; that a sandboxed command cannot remove its working folder and make it again; a native deny against a sandboxed write where a working folder or a write grant covers its folder; and a request to leave the sandbox reaching the hook, and the sealed escape.
 - **Anything that needs another session, a mode or a person:** where a session's settings and hooks come from below the root, in a worktree, after a move and after `/cd`; what a move into another tree takes and shows, and from which commit it makes the tree; what a subagent in a tree of its own, a teammate or a background session takes; whether the hook judges a teammate's calls and those of a workflow's subagents; which anchor a hook gets, and whether a setting changes it; which of a repository's programs the harness runs when it calls version control; a native ask, a hook's ask and a hook's deny in each mode, and where nobody answers; what can answer them in the person's place; an allow rule on a file tool's write outside the working folders, the write block and the paths the harness protects; a native rule on a file at any depth, and a file tool's write through a link or a shared file; which shell runs a hook's command, and what it reads first; the mark in a hook's processes, a terminal multiplexer's sessions and shell mode; and the PowerShell tool's calls, and whether it can ask to run outside the sandbox.
 - **The copy,** not built yet: the path it names for its interpreter, and whether the committed registration finds it.
+
+#### The probe a person runs for ADR-095's facts (`probe-hook-out-of-reach.py`)
+
+The facts above were found by hand. For the ones a session with the sandbox on can show, which the by-hand session (its sandbox off) could not, a person runs the probe script. It is a script, never a test, since it starts real sessions that sign in and spend, so it refuses to start unless given `--start-claude`:
+
+```
+python3 .pkit/adapters/claude-code/probe-hook-out-of-reach.py --start-claude
+```
+
+It makes a scratch git repository, with a nested checkout inside it, in a new folder under `~/.cache` (or `--root`), outside every working tree. Its precondition first (ADR-095 point 6): it starts one `claude -p` session with the sandbox on and failing closed, whose shell tries to write the harness's settings files, the nested checkout's among them, and a control file in the working folder and one outside it; it then reads, from outside the session, whether each file changed, so the verdict rests on the file system and not on the agent's word. It prints each fact under a header that gives the harness release and the platform, and exits non-zero where it disproves the precondition or a session was inconclusive. On macOS it also runs one session with filesystem isolation off, to confirm that switch voids the protection; `allowNestedUserNamespaces` (Linux/WSL2) it names from the documentation and does not exercise. It then shows whether a sandboxed command can remake its own working folder, and where the sandbox's temp folder lies. At a terminal it asks the person the facts no session shows — the marks a shell-mode command and a terminal multiplexer's session carry, and whether the hook and the native rules see a shell-mode command — and records each answer.
+
+What it leaves out is for the report on [#3429](https://github.com/aleskalfas/project-kit/issues/3429): the facts that need the permission hook on and the copy made (not built yet), another session's mode, a teammate or a workflow's subagents, an installed extension, or `/cd`, none of which a black-box session with the stock harness can show.
 
 ### Prompt-free command shape under the sandbox
 
