@@ -1,0 +1,229 @@
+---
+id: DEC-002
+title: An idea is a folder of data files that hold only what a person wrote or decided
+status: accepted
+date: 2026-11-19
+author: Aleš Kalfas <kalfas.ales@gmail.com>
+---
+
+**In plain terms:** each business idea is a folder of data files in the repository, under `lean-business/` at its root unless the project chose another folder. The idea holds its goal, a canvas for each variant with the person's desk verdicts, the assumptions drawn from each canvas, a file for each experiment and one for each cycle. An idea runs one cycle at a time, which explores one or more of its shortlisted variants. A cycle's window is sized when it is planned, and a suspension, recorded beside the frozen plan when life interrupts, moves where the window and each experiment not yet started fall, editing neither. A file holds only what a person wrote or decided. What can be worked out from it, such as an estimate's outputs, an experiment's pass or fail or an assumption's outcome, is worked out each time and never stored. A declaration, a cycle's plan, each desk verdict and each shortlisting keep a fingerprint of what they rested on, so validation finds a declaration edited after it was declared, and a verdict whose canvas or goal has changed since. The capability's check joins validation, and its status prints a structured form with a version, which a later view reads.
+
+## Context
+
+The capability guides one loop of the lean method (DEC-001 point 1). The loop leaves a trail of facts a person writes or decides: a goal, canvases, verdicts, ranked assumptions, declared experiments and their results, and cycles with their reviews. Three properties of the method shape how those facts are kept:
+- **A canvas is never finished.** It changes each cycle, so what a verdict judged must stay findable after the canvas moves on.
+- **An experiment counts only if its expectation was declared before it ran.** So a declaration must be shown unchanged after the fact.
+- **A pass, a fail, an outcome and an estimate's numbers follow from other facts.** A stored copy of one can disagree with what it follows from.
+
+The core layer supplies data files that name their schema and are checked against it (COR-023), and references between them, resolved across the folder validated, where a duplicate id is an error (COR-029). It supplies documentation roots, which place a project's documentation (COR-049), and one validation that a capability joins, with findings of a shared set of severities (COR-055). The book gives no template for an experiment, only a one-sentence form for its hypothesis (*Running Lean*, ch. 6, Seven Habits for Highly Effective Experiments, habit 5), so the experiment's fields here are the capability's own design, built from the book's habits for experiments.
+
+## Decision
+
+**An idea's facts are data files in one folder of the repository, apart from its documentation, each bound to a schema of the capability. A file stores what a person wrote or decided and nothing that follows from it. A declaration is frozen once declared, a cycle's suspensions lie beside its frozen plan and move only the dates worked out from it, each desk verdict and shortlisting fingerprints what it judged, and the capability's check and status read the files as they stand.**
+
+### 1. Where an idea's files live
+
+- **The default.** A project keeps its ideas in one folder at the repository's root, `lean-business/`, its *location*, with one folder for each idea.
+- **Recorded once, moved on purpose.** The first command that writes there records the location in the capability's own configuration, as a component records a location it derives, so a later change of the default moves no recorded location. Until then the location is read as the default, so the value recorded is the one already in use, and running that command is the consent to recording it (COR-049 point 5). The command records it without asking, at a terminal or off one, and says what it recorded and where to change it. Where the default folder already holds files of another kind, the command records nothing and asks for a path. A project that wants another folder records it before its first idea. Moving the ideas is an operation a person runs on purpose, and then edits the recorded value.
+- **A working folder, apart from the documentation.** These files are the working state of a business idea, not documentation of a system, and a repository may exist only to explore ideas. The documentation roots place documentation, so they do not place these files, and this record changes none of their rules (COR-049).
+- **Inside the repository,** outside the methodology's own folder and outside any hidden folder, where the core's data validation reads.
+- **The project's files.** They lie outside the capability's folder, so uninstalling the capability removes none (DEC-001 point 9).
+- **As public as the repository.** The capability writes an idea only into the repository it runs in. A project that keeps an idea private keeps it in a private repository, where its history stays whole.
+- **No anchored artefacts.** The files declare no anchors and lie in no place of friction (COR-050). They are working data that a person changes as they learn, and point 13's fingerprints say what each judgement saw.
+
+### 2. An idea's layout, and what a file holds
+
+- **One folder for each idea,** holding its goal, the canvas and the assumptions of each variant, and a file for each experiment and each cycle. A cycle's file belongs to the idea, not to a variant, since it may explore several (point 11). A kind with many files takes a folder of its own, and a folder appears only when something goes into it. The exact layout is the README's.
+- **Each file names its schema** (COR-023), and the core's data validation checks its shape and the references it holds (COR-029).
+- **An idea stands alone.** No file refers to another idea's.
+- **Stored or worked out.** A file stores what a person wrote or decided: an entry, a link, a rank, a verdict, a declaration, a result, a decision. What follows from stored facts is worked out each time it is read, never stored: an estimate's outputs, an experiment's pass or fail, whether a variant met its cycle's objective, an assumption's outcome, whether an idea is dropped, and where a cycle's window and each time box start and end once its suspensions are counted (point 12).
+- **Every judgement and act a command records says who made it and when:** the goal, a verdict, an outcome, a declaration, a result, a stopping rule reached, a next action, a cycle's plan, a suspension and its resumption, and a cycle's decision. So the data holds the order of judgements, which the readings rest on (DEC-003 point 8), and the day of the person's last act, which the status starts from (point 15).
+
+### 3. The goal belongs to the idea
+
+- **One goal for each idea.** The *minimum success criteria* give it: a recurring revenue to reach, the years to reach it in, and who set it and when. Every variant of the idea is judged against the same goal.
+- **Kept above the variants,** since a goal set inside a variant drifts toward that variant. It must be set before any variant's viability is judged, since viability judges a variant against it (DEC-003 point 2).
+- **Changed between cycles.** The person sets the goal before the idea's first cycle, and changes it only while none of its cycles is planned, running or suspended, which in the method's rhythm is at a cycle's review. A suspended cycle resumes on the plan it had, so its goal holds still too. The command that sets the goal refuses otherwise. A change makes stale each viability and feasibility verdict, and each shortlisting, that used it (point 13). An idea has at most one undecided cycle (point 11), so a goal changed at a review leaves stale no shortlisting that another cycle's experiments still need.
+
+### 4. A canvas for each variant
+
+- **One file for each variant,** naming its archetype, its authors as a list, so that one person or a team fits, and the variant it comes from, where it was split from one or takes up a shelved one's story.
+- **Its boxes** are the canvas's nine boxes and three sub-boxes, each a list of entries. An entry has an id and its text, and its side where the model has several (point 6).
+- **The links data can hold,** so a check can find one missing, while the person and the skill judge the content, such as the problem a solution answers, or the step of the customer factory a key metric measures. The schema lists them.
+- **The viability inputs** in the same file: what the estimate needs from the model, such as the price and a customer's lifetime, each given for its side where the model has several. The schema lists them.
+- **The traction target** in the same file: the yearly growth multiplier, ten by default, and the first stage's target.
+- **The estimate's outputs are never stored.** They are worked out from the goal and the inputs each time they are shown.
+- **Versioned, never finished.** A canvas has no final state (DEC-003 point 1). Version control holds its versions.
+
+### 5. Desk verdicts and a variant's outcome
+
+- **A verdict** records the step it judges, desirability, viability or feasibility, the person's yes or no, a note, and the fingerprint of what it judged (point 13). A later verdict on the same step replaces it, a no clears the verdicts on the steps after it (DEC-003 point 2), and version control keeps what was replaced.
+- **An outcome** is one of three, each the person's:
+  - **shortlisted,** with the fingerprint of the canvas and the goal it was shortlisted on
+  - **shelved,** with its reason
+  - **split** into the variants it names, each of which names this one as the variant it comes from
+- **Stored, and read.** The verdicts and the outcome are the variant's stored facts. Where the variant stands follows from them (DEC-003 point 2).
+
+### 6. Sides
+
+- **A model with more than one side names its sides** in its canvas, and tags each entry with its side. The viability inputs and the unique value proposition are each given for each side.
+- **A direct model names none.**
+- **Never an actor** (DEC-001 point 7).
+
+### 7. Ids
+
+- **Every variant, entry, assumption, experiment and cycle has an id.**
+- **Unique across the location.** An entry's and an assumption's id is qualified by its variant, and a variant's, an experiment's and a cycle's by its idea. A duplicate id across the folder validated is an error (COR-029 point 3), so ids that repeat across variants or ideas would fail whenever more than one is validated at once.
+- **Safe in a path.** An id is lower-case words joined by hyphens, and a qualified id joins its parts with full stops. So each is safe in a file's path, as a subject's id must be where the engine keeps its journal (COR-032).
+- **References that must resolve,** each marked as a reference in its schema (COR-029 point 1): an experiment's assumption and cycle, a cycle's variants, each key result's variant, a review's winning variant, a split's variants, and the experiments a pivot rests on. A reference that names nothing is an error (COR-029 point 4), so an id that one of them names is never removed or given again.
+- **One link that may dangle.** An assumption's link to the canvas entry it comes from is no reference, since the method removes an entry its experiment refuted. The check warns where an untested assumption names an entry its canvas no longer holds (point 14).
+
+### 8. Assumptions store no state
+
+- **One list for each variant.** Each assumption has an id, its statement as a leap of faith, where it comes from (an entry of the canvas or an input of the estimate), its kind (desirability, viability or feasibility), and its rank by risk.
+- **The person ranks them,** and changes a rank freely. A rank is no judgement an experiment rests on, so it takes no fingerprint.
+- **No state of its own.** An assumption stores no outcome and no position. Whether it is untested, being tested, supported, refuted or inconclusive follows from the experiments that test it (DEC-003 point 8).
+
+### 9. An experiment, declared by kind and frozen
+
+An experiment is one file, naming the assumption it tests and the cycle it runs in. It is either *generative*, run to discover, or *evaluative*, run to measure traction. Its declaration depends on its kind:
+- **Generative:** what it sets out to learn; its stopping rule, such as a number of interviews; and what counts as fit, set in advance as a number its result is held against, such as how many interviews must tell one story.
+- **Evaluative:** the one action it takes; its metric, a step of the customer factory; the expected outcome, as a threshold or a 90% range, with the direction that counts as success, at least or at most; where that number comes from, the estimate or the traction target; the effects known in advance, such as a season; and its control, either earlier cohorts or a split with the share exposed.
+- **Every experiment:** a time box of fourteen days at most, given by its declared start and end dates, which a suspension of its cycle never edits (point 12); its authors as a list; and its estimates as a list, one for each person who made one, each a guess at the number its result is held against, made alone before the declaration.
+- **What it rested on.** The declaration records the day it was declared, and the fingerprint of the variant's shortlisting its gate read (DEC-003 point 7), so the check can show later that it was declared on a shortlisted variant, before its start.
+- **Frozen once declared.** The declaration stores its fingerprint (point 13). A change to a declared field is an error, and a time box is never extended: a suspension of its cycle moves where a time box not yet started falls in the calendar, leaves one already started on its dates, and adds no day to either (point 12). A correction comes as a new experiment, never as an edit of a declared one.
+- **The schema holds the fields' names and shape,** and this point what each must say.
+- **Why these fields.** They are the capability's design, built from the book's habits for experiments (ch. 6, Seven Habits): declare the outcome first, estimate alone before comparing, derive the number from the model, measure what people do, keep one action, keep it short, and compare with a control. A generative experiment has no expected outcome of the evaluative kind, so a single declaration would not fit problem discovery, the method's usual first experiment.
+
+### 10. The result, worked out, and the next action
+
+- **The result** records what was measured, where its evidence lies and what was learned. A generative experiment that reached its stopping rule before its time box ended records that it did, and when.
+- **Pass or fail is worked out, never stored or asserted.** It compares the recorded result with the frozen expectation:
+  - **evaluative, a threshold:** it passes where the result reaches the threshold in the declared direction
+  - **evaluative, a range:** it passes where the result reaches the range's lower bound for *at least*, or stays within its upper bound for *at most*
+  - **generative:** it passes where the count reaches what counts as fit, and fails where the stopping rule was reached without it
+- **Neither, where the comparison cannot be made.** A metric not measured, a measurement the person records as spoiled by a suspension its time box ran through (point 12), or a generative experiment whose time box ended below its fit count and before its stopping rule, works out to neither pass nor fail. Its assumption then reads inconclusive (DEC-003 point 8).
+- **The next action** is the person's: correct course, double down, or stop the experiment. Correcting course means a new experiment (point 9).
+
+### 11. A cycle and its review
+
+- **A cycle explores one or more variants.** Its file names the shortlisted variants it explores; its window, sized when the cycle is planned to the time the person can give it, 90 days by default; its objective, with key results, each taken from the traction target of a variant it explores and naming that variant, and at least one for each variant it explores; and its constraint, the one step of the customer factory it works on, with the evidence that it is the weakest. A plan that leaves a variant it explores without a key result is an error. The command that plans it refuses a variant that is not shortlisted. A shortlisting withdrawn later leaves the plan as it is, and no new experiment is declared on that variant (DEC-003 point 7).
+- **Its plan is frozen once its window starts.** The command that plans the cycle fingerprints its window, its variants, its objective and its constraint, takes the fingerprint again each time it changes the plan while the cycle is planned, and changes it no more once the window has started. So a plan that no longer matches its fingerprint is an error whatever the date, as a declaration is: a change made through the command never leaves one, and validation reads no clock (COR-055 point 2). Its suspensions lie beside the plan, and leave it as planned (point 12).
+- **One cycle at a time for an idea.** At most one of an idea's cycles is undecided, and their windows, as worked out (point 12), do not overlap, so the next cycle is planned only once the last is decided. Two cycles of one idea undecided at once, or windows that overlap, are an error.
+- **Its experiments run within it.** An experiment's time box lies within its cycle's window, both as worked out (point 12), and the check warns where it does not.
+- **Its experiments name it,** and it stores no list of them, so the two never disagree. Each tests an assumption of a variant the cycle explores, and one that does not is an error, so a change to a planned cycle's plan keeps each variant its experiments test.
+- **Its review** records what each key result reached; the *winning variant*, one of those the cycle explored, or the one it explored where it explored one; and the person's decision for that variant, persevere, pivot or pause, with its reasons and, for a pivot, the decided experiments it rests on, whichever variant they tested. The review records no decision for the other variants it explored, which keep their outcomes (DEC-003 point 4). For persevere or pivot the winning variant was neither shelved nor split when the decision was recorded, since those outcomes are final.
+- **Worked out, not stored:** whether a variant met the objective, from the targets of the key results that name it and what they reached. The review's warning reads it for the winning variant (point 14).
+- **What changed during the cycle** is read from version control, from the window's start to the review. The review stores no copy of a canvas, and no fingerprint, since nothing later rests on what it saw.
+
+### 12. A cycle's suspensions, and the dates worked out from them
+
+When life interrupts a running cycle, the person suspends it, and resumes it on coming back (DEC-003 point 4).
+- **What a suspension records:** its reason; its first day, the first day the person was away; the day the cycle resumed, once it has; and who recorded it, and on which day (point 2). The first day and the day of resuming are the person's word, and either may be earlier than the day it is recorded.
+- **Beside the plan, never in it.** A cycle's suspensions are a list in its file, beside its plan and its review. The plan's fingerprint does not cover them (point 13), and no declaration holds them, so recording a suspension, or its resumption, edits nothing frozen.
+- **The days a suspension covers.** A suspension *covers* each day from its first day up to the day the cycle resumed, which counts again. One not yet resumed, an *ongoing* suspension, covers every day from its first day on. A covered day counts toward no window, and toward no time box that had not started by the suspension's first day.
+- **How a window falls.** It is counted from its declared start. It starts on the first day from then that no suspension covers, and ends once it has held as many uncovered days as were declared. So only the covered days from its declared start on move it. A window that an ongoing suspension reaches has no end yet.
+- **How a time box falls.** A suspension moves an experiment's time box only where the time box had not started by the suspension's first day: where its start, as declared or as an earlier suspension moved it, falls on or after that day. It moves the start and the end alike, by the days the suspension covers from that start on. So a suspension that ended before the start moves it not at all, and one still ongoing that reaches the start leaves it no start yet. A time box whose start falls before a suspension's first day keeps its dates: its days pass in the calendar while the cycle is suspended, since the world went on answering the experiment, and the experiment becomes due when its end passes (DEC-003 point 3). Put whole, a time box starts on the first day from its declared start that no suspension covers, and from then runs its declared days in the calendar. The fourteen days a time box may hold are counted on its declared dates (point 9), and a suspension adds none.
+- **Worked out, never stored** (point 2). The plan's window and each declared time box stay as declared. Where they fall is read through one predicate, which the process's detections, the commands, the check and the status share, so none of them disagrees with another on a day.
+- **Its rules.** A suspension's first day lies within the cycle's window, as the suspensions before it work the window out. Its first day and its resumption are no later than the day it is recorded, and it resumes no earlier than its first day. No day it covers holds another act recorded on the cycle or its experiments, or the idea's goal set, so a suspension gives back no day on which the person recorded work the cycle rests on. A cycle's suspensions do not overlap, so at most one is ongoing.
+- **One predicate holds the rules.** The command that records a suspension refuses one that breaks them, and the check finds each break an error (point 14). The check reads them from the files alone, never today's date (COR-055 point 2): an ongoing suspension is one with no day of resumption, whatever today is.
+- **Shown at the review.** The review shows each suspension with its reason, its days and the day it was recorded, so one recorded late stands apart from one recorded as it began.
+
+### 13. Fingerprints
+
+A *fingerprint* is a digest of the data a judgement judged or a declaration fixed, kept with it.
+- **What each covers:**
+  - a verdict: the boxes its step reviews, and for viability and feasibility, the goal
+  - a shortlisting: the canvas's boxes, inputs and target, and the goal
+  - a declaration: its own declared fields
+  - a cycle's plan: its window as declared, its variants, its objective and its constraint, and never its suspensions (point 12)
+- **Over the content alone.** A fingerprint covers what the person modelled, never the verdicts, outcomes and fingerprints kept beside it, nor the file's schema binding. It is taken over a canonical form of that data, so a change of layout, key order or comments makes nothing stale.
+- **The form carries a version.** A fingerprint names the version of the canonical form it was taken with. A change to the form, or a schema change that moves a covered field, takes the fingerprints again through the capability's migration, so no declaration turns into an error by a release alone.
+- **The migration checks before it takes again.** It first checks each fingerprint under the form it was taken with, and takes again only one that matches. One that does not match it leaves standing, so validation reports it as before, and a release never clears an edited declaration, or a verdict gone stale, without a word.
+- **What validation catches** (point 14):
+  - a declaration or a cycle's plan that no longer matches is an error, whatever the date, since each is frozen and the command keeps a planned cycle's fingerprint current (point 11)
+  - a verdict or a shortlisting that no longer matches is *stale*, a warning, where something can still rest on it: a verdict of a variant with no outcome yet, and the shortlisting of a shortlisted variant
+- **Its limit.** A fingerprint lies in the file it guards, so an edit that takes it again by hand passes validation. Version control shows such an edit, and the check cannot.
+- **Version control is the audit.** A fingerprint shows that something changed. Version control shows what changed, and when.
+
+### 14. The check joins validation
+
+The capability's check is a member of validation (COR-055 point 3), and each finding carries a severity from the shared set (COR-055 point 4). It reads the files of the recorded location (point 1). The README lists its checks.
+- **A broken invariant fails.** Each invariant this record or DEC-003 owns, where the files can show it broken, is an error, whether a command or a hand edit wrote them. Such are a declaration or a cycle's plan that changed (point 13), a declaration its gate would have refused, such as one starting before the day it was declared, a decision recorded before an evaluative experiment's time box or a cycle's window ended, as worked out with the cycle's suspensions, two cycles of one idea undecided at once, a suspension point 12 forbids, and a result on an experiment never declared. So what a gate keeps the check shows too.
+- **A guideline, or a judgement gone stale, warns.** A guideline of the book draws a warning and never a refusal, since its numbers are loose. Its ranges, such as one to three problems, apply only to a box that holds entries, so a first sketch with blanks draws none. A canvas with no revenue streams once its desirability has a yes draws one, since the book allows blanks but not deferred pricing (ch. 1, Sketching Your First Lean Canvas; ch. 1, Revenue Streams and Cost Structure). A missing link between entries (point 4), a stale verdict or shortlisting (point 13), and a decision the method advises against, such as persevering where the winning variant missed the objective (DEC-003 point 4), warn too.
+- **One predicate, two readers.** Where a process gate and the check judge the same fact, they read it through one predicate, so the two never disagree. The pricing the viability gate needs and the warning on a canvas without revenue streams are one such fact (DEC-003 point 2). The rules on a suspension, which the command that records one and the check both read, are another (point 12).
+- **Outside validation.** An experiment that tests an assumption while one ranked riskier is untested draws a warning from the command that declares it, since an order of work is advice, not an invariant. The days left in a time box, what is due and how long the person has been away are the status's, since they answer about subjects in motion and read today's date (COR-055 point 1).
+
+### 15. Status, and its structured form with a version
+
+- **The status of an idea is its return briefing** (DEC-001 point 10): where the idea and each of its subjects stand, worked out from the files alone, and what waits on the person, with a canvas drawn as the grid of DEC-001 point 6. Without an idea, it gives one line for each idea. The README gives its layout.
+- **Positions from the engine.** It reads each subject's position from the process engine's status (COR-033), and never works one out again (DEC-003 point 1).
+- **A structured form with a version.** The status's structured form carries a `schema_version`. A change that would break a reader raises it, and an added field leaves it. A later view reads this form (DEC-001 point 8).
+
+## Rationale
+
+**Why a folder at the repository's root, apart from the documentation.** The canvas, the assumptions and the experiments are a person's working state, edited as they learn, not documentation of a system for its maintainers. Under a documentation root they would sit among pages that describe the software, and a repository kept only to explore ideas has no documentation to hold them. Recording the location in the capability's configuration, as another capability with a working folder does ([visual-communication:DEC-002-files-and-validation] point 1), keeps a later change of the default from moving a project's ideas.
+
+**Why store only what a person wrote or decided.** A stored pass beside the result it follows from can disagree with it, and then a reader cannot tell which is true. Worked out each time, a pass is always the comparison of what was declared with what happened, which is what makes an experiment count. The same holds for an estimate's outputs and an assumption's outcome.
+
+**Why fingerprints, not copies and not commits alone.** A copy of the canvas in each verdict would be a second home for the canvas, and would drift from it. Commits alone show what changed only to someone who reads the history, while validation reads the working tree (COR-055 point 2). A fingerprint lets the working tree tell, at once, that a declaration was edited or a verdict outgrown, and leaves the history to say what changed.
+
+**Why a fingerprint of content, not an anchor.** The core already tracks what an artefact rests on through anchors, which mark each revalidation with a timestamp whose point git gives. Their record rejected a content hash as that marker, since a hash over a glob conflicts on every parallel change and nobody can read it (COR-050). An anchor asks a person to answer for a change, and the answer may let the artefact stand. A freeze allows no such answer: a declaration changed after it was declared counts for nothing, whoever accepts it. So the check must tell from the working tree alone whether the content is still the content declared (COR-055 point 2), and only the content's identity tells that. The objections to a hash do not reach a fingerprint. It changes only when its judgement is made again, never when what it covers changes, so it adds no conflict to a parallel edit, and nobody needs to read it, since version control says what changed. A verdict's staleness rides on the same fingerprint, so one mechanism serves both. The canonical form is the capability's own, its code kept in one place, and it moves to the backbone once a second capability needs one (COR-007).
+
+**Why a declaration is an error and a stale verdict a warning.** An experiment's worth rests on its expectation having been fixed before it ran, so an edited declaration breaks the invariant the experiment exists for. A cycle's plan that no longer matches is an error whatever the date, since validation reads no clock (COR-055 point 2), and the command takes a planned cycle's fingerprint again with each change it makes, so a mismatch is an edit made around the command. A canvas is meant to change, so a verdict that a newer canvas outgrew asks for a new verdict, not a refusal. A judgement on which nothing can rest any more, such as a shelved variant's verdict, warns of nothing, so the warnings that remain each ask for an act.
+
+**Why the declaration records what it rested on.** The engine reads a subject's position from its data, so a file written by hand can stand where no gate let it. Recording the day and the shortlisting a declaration rested on lets the check show, from the files alone, that the declaring gate's conditions held.
+
+**Why the goal sits above the variants.** It is what each variant is judged against, so it must not move with any one of them.
+
+**Why an idea runs one cycle at a time.** The idea has one goal, which the person may change at a cycle's review (point 3), and a goal changed makes stale each shortlisting that used it. Two cycles running at once would let one's review make the other's shortlistings stale mid-cycle, so that no new experiment could be declared in it until each of its variants was shortlisted again. The rule counts undecided cycles, not only overlapping windows, since a cycle still in review could change the goal while the next one already runs. The book has one cycle explore several variants, so one cycle at a time keeps the method's own shape. The rule can be loosened later: allowing cycles to overlap is an addition that leaves every valid file valid, while forbidding overlap later would turn valid data into errors.
+
+**Why a cycle may explore several variants, and its key results name theirs.** The book has one cycle explore several variants, its review leading with the one that did best (ch. 11, Assemble a Progress Report Pitch Deck, Set context). Each variant's traction target is its own, since it follows from that variant's model, so each key result names the variant it is taken from. Whether the objective was met is then read for each variant, and the review's decision is held against the winning variant's key results alone, so the variants that did worse never make a met objective read as missed. Each explored variant needs a key result of its own, or it would read as meeting the objective by default. The constraint stays one for the cycle, as the method has it: it is the cycle's single focus, a step of the customer factory that every variant has, and its evidence may come from any variant the cycle explores.
+
+**Why the window is sized when the cycle is planned.** The book picks 90 days as a cadence that leaves room for progress one can show, while keeping a deadline close (*Running Lean*, ch. 6, The 90-Day Cycle). A person who works on an idea in the hours a job leaves, as the book's own main character does (introduction, Catch-22), reaches that balance over a longer window. Sizing the window before it starts keeps it a time box: the person sets its length once, knowing the time they can give, and from then on it holds (DEC-003 point 4). An absence known at planning is sized into the window then.
+
+**Why a suspension lies beside the plan, and the dates are worked out.** The plan and each declaration are frozen, and their fingerprints show any edit (point 13). Moving their end dates when a cycle resumes would edit what is frozen, or have the command take a started plan's fingerprint again, which is the edit the freeze exists to catch. Kept beside them, a suspension changes nothing declared, and an end worked out from the declared dates and the recorded days is always what those facts give, as a pass is always what the declaration and the result give (point 10).
+
+**Why a suspension moves a time box only where it had not started.** An experiment's time box is the bet it declared on how long the world needs to answer, and the book never lengthens a time box once it is set (ch. 6, Seven Habits, habit 6). The world went on answering a running experiment while the person was away, so shifting it would lengthen its bet after it was made. An experiment not yet started has had nothing happen in the world, so moving it lengthens no bet, and keeps the days the person declared for it. The window moves still, since what it times is the person's work on the cycle, which the absence stopped, while a running experiment times the world's answer, which the absence did not stop.
+
+**Why a suspension covers no day on which something was recorded.** A suspension gives the cycle back the days it covers. Days on which the person recorded work on the cycle were not lost to it, so giving them back would lengthen the window under another name, which DEC-003 point 4 forbids. A suspension may still be recorded late, since a person often notes an absence only once back, and this bound keeps a late one to days on which the files show nothing done. Its first day and its resumption are the person's word, so a person who came back and worked a few days before noting the absence can still record it, up to the day they came back. The day it was recorded comes from the clock (DEC-003 point 1), so the review shows how late each was recorded. The goal is held to the same bound because a goal set during a review, followed by a late suspension that took the cycle back to running, would change the goal mid-cycle (point 3).
+
+**Why ids are qualified by variant and idea.** References resolve across the whole folder validated, and a duplicate there is an error. Short ids that repeat across variants, such as a first problem in each, would fail as soon as two variants were validated together.
+
+**Why the experiment's fields differ by kind.** A generative experiment discovers, so it has no expected outcome of the evaluative kind. It still needs a rule that ends it and a threshold set in advance, or its result could be read as a pass after the fact.
+
+**Why the check warns on the book's numbers.** The book's numbers are loose, and several of its figures disagree with its text (for one each, ch. 3, Steve estimates how many active customers he'll need; ch. 4, Steve Charts His Traction Roadmap, figure 4-4). A refusal on them would put a guideline above the person's judgement, while a warning keeps it in sight.
+
+**Why the structured form carries a version.** A later view, of this capability or another, reads it. A version lets a reader refuse a form it does not know, rather than draw it wrong.
+
+### Alternatives considered
+
+- **The files under the internal documentation root,** as software-analysis keeps its analysis. Not taken. They are not documentation, and a repository for ideas may have none.
+- **The location recorded through the backbone's recorder of documentation locations.** Rejected. That recorder places a location under a documentation root, and these files are no documentation.
+- **One file for each idea.** Rejected. Every experiment and review would change the same file, so two lines of work would conflict, and a declaration could not be frozen apart from the rest.
+- **The goal in each variant.** Rejected. It would drift toward the variant it judges.
+- **An assumption that stores its state.** Rejected. It would be a second copy of what its experiments say, and the two would disagree.
+- **An assumption's source as a reference that must resolve.** Rejected. Removing an entry an experiment refuted, the method's next step, would fail validation.
+- **Pass or fail recorded by the person.** Rejected. An expectation declared before a run counts only if the result is held against it, never asserted after it.
+- **One declaration for every experiment.** Rejected. It does not fit a generative experiment, such as problem discovery.
+- **One variant for each cycle, with cycles of different variants overlapping.** Rejected. The idea's one goal may change at any cycle's review, which would make the shortlistings of the cycles still running stale mid-cycle, and the book has one cycle explore several variants. Allowing overlap later is an addition, while forbidding it later would turn valid data into errors.
+- **Editing the window's end, and the dates of each time box a suspension moves, when a cycle resumes.** Rejected. It edits a frozen plan and frozen declarations, and validation could no longer tell such an edit from one made to escape a result.
+- **Suspensions under the plan's fingerprint.** Rejected. Each suspension comes after the window has started, when the plan is frozen.
+- **A suspension recorded in each experiment it moves.** Rejected. It would be a second copy of the cycle's suspensions, and the two could disagree.
+- **An end stored once the cycle resumes.** Rejected. A stored end beside the dates and the days it follows from could disagree with them (point 2).
+- **A suspension recorded only from the day it is recorded.** Rejected. A person often records an absence only once back, and would lose the days the window ran on without them.
+- **A resumption always dated the day it is recorded.** Rejected. A person who came back and worked a few days before noting the absence could then not record it at all, since the days of work would fall inside it. Dated by the person, it is still bounded by their first act after it.
+- **A first day on the day of the person's last act.** Rejected. It would give back a day on which they recorded work.
+- **A copy of each canvas, or a fingerprint, in the review.** Rejected. Version control already holds each version, and nothing rests on what a review saw.
+- **Fingerprints over a file's bytes.** Rejected. Reformatting a file would make every judgement stale.
+- **COR-050's anchors in place of fingerprints.** Rejected. An anchor's answer may let a changed artefact stand, which a freeze cannot allow, and it shows a change only through version control's history, which validation does not read (see the Rationale).
+- **The book's ranges as errors.** Rejected. The numbers are guidelines, and a first sketch may leave a box blank.
+
+## Implications
+
+- **The schemas** of the goal, a canvas, its assumptions, an experiment and a cycle are authored through the schema skill, with the references of point 7 marked as references (COR-029 point 1). The capability's `config` schema declares the location's key.
+- **The README** gives the exact layout of an idea's folder, and the status's structured form with its `schema_version`.
+- **The check** is registered as a validator in the capability's package, with the severities of point 14, and reads its recorded location's files.
+- **One predicate works out where** a window and a time box fall from the declared dates and the cycle's suspensions, and one holds a suspension to its rules. The process's detections, the commands, the check and the status read them (point 12).
+- **The capability's migrations** take the fingerprints again whenever a release changes the canonical form or a field a fingerprint covers, each only once it matched under the form it was taken with (point 13).
+- **No accepted record is edited.**
