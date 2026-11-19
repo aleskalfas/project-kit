@@ -21,7 +21,7 @@ This record settles which form is the convention going forward.
 
 ## Decision
 
-**Cross-schema data references use the namespace-bearing token form `[<namespace>:<id>]`.** The `<namespace>` is the source schema's stem (e.g., `issue-types`, `validation-severity`); the `<id>` is the entry id within that schema's collection. Intra-schema references — a value in one YAML file naming an id defined elsewhere *in the same file* — remain bare ids, because no namespace ambiguity exists.
+**Cross-schema data references use the namespace-bearing token form `[<namespace>:<id>]`.** The `<namespace>` is the source schema's stem (e.g., `issue-types`, `validation-severity`); the `<id>` is the entry id within that schema's collection (refinement per [COR-029](COR-029-adopter-data-references.md) point 6). Intra-schema references — a value in one YAML file naming an id defined elsewhere *in the same file* — remain bare ids, because no namespace ambiguity exists.
 
 The `<id>` half is a single segment by default, but **may carry one further colon-separated segment** — shaped `[<namespace>:<scope>:<id>]` — when a schema's collection admits entries contributed by more than one source and the reference must name the contributing source as well as the entry. This *widens* the id half; it does not narrow or replace the base single-segment form (an unscoped `[<namespace>:<id>]` remains valid). The use that surfaced the need is an installed component contributing entries into a shared collection it does not own, where the contributor's name scopes the entry to keep contributions collision-free.
 
