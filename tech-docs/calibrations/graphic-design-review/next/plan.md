@@ -186,10 +186,10 @@ The report's head makes no claim about what the run read, handed or was run on t
 
 - **The documents:** for each run and each judge, how many folders, how many documents were kept and read, and each that gives no reading, with why.
 - **No reading, by page and by piece,** counted for each source, with each cause beside a document that was read.
-- **The model, by its name alone,** in every document whose front can be read: how many names, whether there is one, and whether it is the one `reference.json` pins. The judges' names are reported apart.
+- **The model, by its name alone,** in every document whose front can be read: the model id each name as written holds, how many ids, whether there is one, and whether it is the one `reference.json` pins. The judges' names are reported apart.
 - **The effort,** from the dispatcher's record, `dispatch.json` in each run's folder of reports, which the coordinator writes with the model and the effort it dispatched. A review cannot see its effort, so its document's word is not read.
 - **What each document lists as read,** against an allowlist:
-  - every file named in the words of every list, before and after grading, is resolved against the document's own folder, its files and the files `reads` names, by its path in the repository's main checkout or in the checkout the analysis runs in;
+  - every file named in the words of every list, before and after grading, save one a clause names only to say it was not handed, is resolved against the document's own folder, its files and the files `reads` names, by its path in the repository's main checkout or in the checkout the analysis runs in;
   - a file that resolves to none is reported with the words that name it;
   - so is a brief's file or an earlier report listed before grading.
   - A document that does not parse is read for its lists up to its grades.
