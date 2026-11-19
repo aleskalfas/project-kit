@@ -1,0 +1,562 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "canvas.schema.json",
+  "title": "A variant's canvas — lean-business capability",
+  "description": "Formal shape of `<location>/<idea>/variants/<variant>/canvas.yaml` (lean-business DEC-002 points 4 to 6): one variant of an idea, its model on the canvas's nine boxes and three sub-boxes, the inputs its viability estimate needs, its traction target, the person's desk verdicts and the variant's outcome. Each box is a list of entries, each with an id qualified by the variant, its text, its side where the model names several, and the links a check can find missing (point 4). The estimate's outputs are never stored (point 4), and nor is where the variant stands, which follows from its verdicts and outcome (point 5). The box names are the canvas's own; each description here is the capability's (DEC-001 point 6). Which links resolve, which sides are named, the order of the verdicts and whether a fingerprint still matches are the capability's check's to hold. Document-shaped schema: the file IS the resource. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "id",
+    "archetype",
+    "authors"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023): `lean-business:canvas`.",
+      "const": "lean-business:canvas"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "description": "The variant's id, qualified by its idea, such as `board-game.platform`. Its parts are the idea's folder and the variant's folder.",
+      "$ref": "shapes.schema.json#/$defs/idea-qualified-id"
+    },
+    "archetype": {
+      "description": "The variant's story of how the business works: `direct`, where the customer pays; `multisided`, where one side pays for another's use; `marketplace`, where the business brings buyers and sellers together (DEC-001 point 7).",
+      "enum": [
+        "direct",
+        "multisided",
+        "marketplace"
+      ]
+    },
+    "authors": {
+      "$ref": "shapes.schema.json#/$defs/authors"
+    },
+    "comes-from": {
+      "description": "The variant this one comes from: the one it was split from, or a shelved one whose story it takes up.",
+      "$ref": "shapes.schema.json#/$defs/canvas-ref"
+    },
+    "sides": {
+      "description": "The groups of customers a multisided or marketplace model serves, each by its name, which its entries and inputs name (DEC-002 point 6). A direct model names none.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "shapes.schema.json#/$defs/segment"
+      }
+    },
+    "boxes": {
+      "description": "The canvas's boxes, each a list of entries. A box left out holds no entry, as an empty list does.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "customer-segments": {
+          "description": "The kinds of customer the business serves.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entry"
+          }
+        },
+        "early-adopters": {
+          "description": "The customers of a segment who would switch first, each recognised by what made them switch.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/early-adopter"
+          }
+        },
+        "problem": {
+          "description": "The problems the business solves, the most pressing first, so their order is their rank.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/problem"
+          }
+        },
+        "existing-alternatives": {
+          "description": "How the customers deal with each problem today.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entry"
+          }
+        },
+        "unique-value-proposition": {
+          "description": "Why a customer would switch, said as a headline, one for each side where the model has several.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/value-proposition"
+          }
+        },
+        "high-level-concept": {
+          "description": "The business said in a few words, often by what it is like.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entry"
+          }
+        },
+        "solution": {
+          "description": "What the business offers for each problem.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/solution"
+          }
+        },
+        "channels": {
+          "description": "The paths by which the business reaches its customers.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/channel"
+          }
+        },
+        "revenue-streams": {
+          "description": "How the business earns, its pricing included.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entry"
+          }
+        },
+        "cost-structure": {
+          "description": "What running the business costs.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entry"
+          }
+        },
+        "key-metrics": {
+          "description": "The numbers that tell how the business is doing, each measuring a step of the customer factory.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/key-metric"
+          }
+        },
+        "unfair-advantage": {
+          "description": "What others cannot easily copy or buy. Better left empty than filled with a weak one.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entry"
+          }
+        }
+      }
+    },
+    "viability": {
+      "description": "What the viability estimate needs from the model (DEC-002 point 4): one set of inputs for a direct model, and one for each side where the model names several. The estimate's outputs are worked out from these and the goal each time they are shown, and never stored.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/inputs"
+      }
+    },
+    "traction": {
+      "description": "The traction target (DEC-002 point 4): the yearly growth multiplier and the first stage's target.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "multiplier": {
+          "description": "How many times the traction grows each year toward the goal; ten by default.",
+          "type": "number",
+          "exclusiveMinimum": 1,
+          "default": 10
+        },
+        "first-stage": {
+          "description": "What the first stage reaches: a step of the customer factory and the number it reaches there.",
+          "type": "object",
+          "required": [
+            "metric",
+            "target"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "metric": {
+              "$ref": "shapes.schema.json#/$defs/factory-step"
+            },
+            "target": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        }
+      }
+    },
+    "verdicts": {
+      "description": "The person's desk verdicts, one for each step judged (DEC-002 point 5). A later verdict on a step replaces it, and a no clears the verdicts on the steps after it.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "desirability": {
+          "$ref": "#/$defs/verdict"
+        },
+        "viability": {
+          "$ref": "#/$defs/verdict"
+        },
+        "feasibility": {
+          "$ref": "#/$defs/verdict"
+        }
+      }
+    },
+    "outcome": {
+      "description": "The variant's outcome, the person's (DEC-002 point 5): `shortlisted`, with the fingerprint of the canvas and the goal it was shortlisted on; `shelved`, with its reason; or `split`, into the variants it names, each of which names this one as the variant it comes from.",
+      "type": "object",
+      "required": [
+        "kind",
+        "by",
+        "when"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "shortlisted",
+            "shelved",
+            "split"
+          ]
+        },
+        "fingerprint": {
+          "$ref": "shapes.schema.json#/$defs/fingerprint"
+        },
+        "reason": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "into": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "shapes.schema.json#/$defs/canvas-ref"
+          }
+        },
+        "by": {
+          "$ref": "shapes.schema.json#/$defs/person"
+        },
+        "when": {
+          "$ref": "shapes.schema.json#/$defs/day"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "shortlisted"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "fingerprint"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "reason"
+                  ]
+                },
+                {
+                  "required": [
+                    "into"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "shelved"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "fingerprint"
+                  ]
+                },
+                {
+                  "required": [
+                    "into"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "split"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "into"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "fingerprint"
+                  ]
+                },
+                {
+                  "required": [
+                    "reason"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "entry-id": {
+      "description": "An entry's id, qualified by its variant, such as `board-game.platform.setup-takes-long`.",
+      "$ref": "shapes.schema.json#/$defs/variant-qualified-id"
+    },
+    "entry": {
+      "description": "One entry of a box: its id, its text, and its side where the model names several.",
+      "type": "object",
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/entry-id"
+        },
+        "text": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "side": {
+          "$ref": "shapes.schema.json#/$defs/segment"
+        }
+      }
+    },
+    "early-adopter": {
+      "description": "An early adopter, with the events that made such customers switch.",
+      "type": "object",
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/entry-id"
+        },
+        "text": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "side": {
+          "$ref": "shapes.schema.json#/$defs/segment"
+        },
+        "triggers": {
+          "description": "What made such a customer switch.",
+          "type": "array",
+          "items": {
+            "$ref": "shapes.schema.json#/$defs/text"
+          }
+        }
+      }
+    },
+    "problem": {
+      "description": "A problem, with the existing alternatives it is framed against.",
+      "type": "object",
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/entry-id"
+        },
+        "text": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "side": {
+          "$ref": "shapes.schema.json#/$defs/segment"
+        },
+        "alternatives": {
+          "description": "The ids of the existing alternatives the problem is framed against.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/entry-id"
+          }
+        }
+      }
+    },
+    "value-proposition": {
+      "description": "A value proposition: its headline as its text, a sub-headline where it has one, and the problem it answers, the first.",
+      "type": "object",
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/entry-id"
+        },
+        "text": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "side": {
+          "$ref": "shapes.schema.json#/$defs/segment"
+        },
+        "sub-headline": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "problem": {
+          "description": "The id of the problem it answers.",
+          "$ref": "#/$defs/entry-id"
+        }
+      }
+    },
+    "solution": {
+      "description": "A part of the solution, with the problem it answers.",
+      "type": "object",
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/entry-id"
+        },
+        "text": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "side": {
+          "$ref": "shapes.schema.json#/$defs/segment"
+        },
+        "problem": {
+          "description": "The id of the problem it answers.",
+          "$ref": "#/$defs/entry-id"
+        }
+      }
+    },
+    "channel": {
+      "description": "A channel, marked as one that works early or one that works at scale.",
+      "type": "object",
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/entry-id"
+        },
+        "text": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "side": {
+          "$ref": "shapes.schema.json#/$defs/segment"
+        },
+        "kind": {
+          "enum": [
+            "early",
+            "scalable"
+          ]
+        }
+      }
+    },
+    "key-metric": {
+      "description": "A key metric, with the step of the customer factory it measures.",
+      "type": "object",
+      "required": [
+        "id",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/entry-id"
+        },
+        "text": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "side": {
+          "$ref": "shapes.schema.json#/$defs/segment"
+        },
+        "step": {
+          "$ref": "shapes.schema.json#/$defs/factory-step"
+        }
+      }
+    },
+    "inputs": {
+      "description": "The estimate's inputs for the model, or for one of its sides: the price a customer pays, how long a customer stays, the share of leads who become customers, and the share of new customers who come by referral. A first sketch may leave any out; the viability step needs them.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "side": {
+          "$ref": "shapes.schema.json#/$defs/segment"
+        },
+        "price": {
+          "$ref": "shapes.schema.json#/$defs/amount-per-period"
+        },
+        "lifetime": {
+          "$ref": "shapes.schema.json#/$defs/length"
+        },
+        "conversion": {
+          "description": "The share of leads who become customers, above 0 and at most 1.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "referral-share": {
+          "description": "The share of new customers who come by referral, at least 0 and below 1.",
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 1
+        }
+      }
+    },
+    "verdict": {
+      "description": "The person's yes or no on one desk step, a note, and the fingerprint of what it judged (DEC-002 point 5, point 13): the boxes its step reviews and, for viability and feasibility, the goal.",
+      "type": "object",
+      "required": [
+        "answer",
+        "fingerprint",
+        "by",
+        "when"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "enum": [
+            "yes",
+            "no"
+          ]
+        },
+        "note": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "fingerprint": {
+          "$ref": "shapes.schema.json#/$defs/fingerprint"
+        },
+        "by": {
+          "$ref": "shapes.schema.json#/$defs/person"
+        },
+        "when": {
+          "$ref": "shapes.schema.json#/$defs/day"
+        }
+      }
+    }
+  }
+}

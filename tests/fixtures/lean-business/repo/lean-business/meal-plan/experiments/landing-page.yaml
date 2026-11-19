@@ -1,0 +1,46 @@
+# An evaluative experiment whose time box the suspension does not move, since it had
+# started by the suspension's first day; decided once the cycle resumed.
+pkit_schema: lean-business:experiment
+schema_version: 1
+id: meal-plan.landing-page
+assumption: "[assumptions:meal-plan.direct.pays-monthly]"
+cycle: "[cycle:meal-plan.first]"
+kind: evaluative
+action: A page that offers the subscription at eight a month, with a sign-up
+metric: acquisition
+expected:
+  direction: at-least
+  range:
+    low: 0.03
+    high: 0.08
+source: estimate
+effects:
+- The holidays may lower the visits
+control:
+  kind: cohorts
+start: 2026-12-12
+end: 2026-12-25
+authors:
+- A. Founder
+estimates:
+- by: A. Founder
+  value: 0.05
+declared:
+  by: A. Founder
+  when: 2026-12-10
+  rested-on:
+    form: 1
+    sha256: b27eb894334315ef7bbea3aa3619221de87bfb2a7dc8067b01331d892b962896
+  fingerprint:
+    form: 1
+    sha256: c72ea06ae3385678b14308c207ed65326aff734de5f053eee0df497b463aeb7c
+result:
+  measured: 0.06
+  evidence: The page's visits and sign-ups
+  learned: One visit in sixteen signs up at eight a month
+  by: A. Founder
+  when: 2027-01-04
+decision:
+  next: double-down
+  by: A. Founder
+  when: 2027-01-05

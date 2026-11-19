@@ -1,0 +1,9 @@
+# A valid idea for the lean-business check's tests: the goal, set before the first cycle.
+pkit_schema: lean-business:goal
+schema_version: 1
+revenue:
+  amount: 1000000
+  per: year
+years: 3
+by: A. Founder
+when: 2026-10-01

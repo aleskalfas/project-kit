@@ -1,0 +1,400 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "experiment.schema.json",
+  "title": "An experiment — lean-business capability",
+  "description": "Formal shape of `<location>/<idea>/experiments/<experiment>.yaml` (lean-business DEC-002 points 9 and 10): one test of one assumption, naming the assumption it tests and the cycle it runs in. Its declared fields depend on its kind: a `generative` experiment, run to discover, says what it sets out to learn, its stopping rule and what counts as fit; an `evaluative` one, run to measure traction, says its one action, its metric, its expected outcome with the direction that counts as success, where that number comes from, the effects known in advance and its control. Every experiment has a time box given by its start and end days, its authors and the estimates made alone before it was declared. Once declared, `declared` records who declared it and when, the fingerprint of the shortlisting its gate read and the declaration's own fingerprint, and no declared field changes again. Recorded after: the stopping rule reached, for a generative experiment; the result; and the person's next action. Pass or fail is worked out from the result and the declared expectation, never stored. A draft may leave any declared field out, so which fields a declaration needs, its time box of fourteen days at most and whether its fingerprint still matches are the capability's check's to hold. Document-shaped schema: the file IS the resource. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "id",
+    "kind"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023): `lean-business:experiment`.",
+      "const": "lean-business:experiment"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "description": "The experiment's id, qualified by its idea, such as `board-game.first-interviews`; its parts are the idea's folder and the file's name.",
+      "$ref": "shapes.schema.json#/$defs/idea-qualified-id"
+    },
+    "assumption": {
+      "description": "The assumption it tests.",
+      "$ref": "shapes.schema.json#/$defs/assumption-ref"
+    },
+    "cycle": {
+      "description": "The cycle it runs in.",
+      "$ref": "shapes.schema.json#/$defs/cycle-ref"
+    },
+    "kind": {
+      "description": "`generative`, run to discover, or `evaluative`, run to measure traction.",
+      "enum": [
+        "generative",
+        "evaluative"
+      ]
+    },
+    "learn": {
+      "description": "Generative: what it sets out to learn.",
+      "$ref": "shapes.schema.json#/$defs/text"
+    },
+    "stopping-rule": {
+      "description": "Generative: what ends it before its time box does, such as a number of interviews.",
+      "$ref": "shapes.schema.json#/$defs/text"
+    },
+    "fit": {
+      "description": "Generative: what counts as fit, set in advance as a number its result is held against, and what that number counts.",
+      "type": "object",
+      "required": [
+        "count",
+        "of"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "of": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        }
+      }
+    },
+    "action": {
+      "description": "Evaluative: the one action it takes.",
+      "$ref": "shapes.schema.json#/$defs/text"
+    },
+    "metric": {
+      "description": "Evaluative: the step of the customer factory it measures.",
+      "$ref": "shapes.schema.json#/$defs/factory-step"
+    },
+    "expected": {
+      "description": "Evaluative: the expected outcome, as a `threshold` or a 90% `range`, with the `direction` that counts as success. A threshold passes where the result reaches it in that direction; a range passes where the result reaches its `low` for `at-least`, or stays within its `high` for `at-most`.",
+      "type": "object",
+      "required": [
+        "direction"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "enum": [
+            "at-least",
+            "at-most"
+          ]
+        },
+        "threshold": {
+          "type": "number"
+        },
+        "range": {
+          "type": "object",
+          "required": [
+            "low",
+            "high"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "low": {
+              "type": "number"
+            },
+            "high": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "threshold"
+          ],
+          "not": {
+            "required": [
+              "range"
+            ]
+          }
+        },
+        {
+          "required": [
+            "range"
+          ],
+          "not": {
+            "required": [
+              "threshold"
+            ]
+          }
+        }
+      ]
+    },
+    "source": {
+      "description": "Evaluative: where the expected number comes from, the viability `estimate` or the `traction-target`.",
+      "enum": [
+        "estimate",
+        "traction-target"
+      ]
+    },
+    "effects": {
+      "description": "Evaluative: the effects known in advance that may move the result, such as a season.",
+      "type": "array",
+      "items": {
+        "$ref": "shapes.schema.json#/$defs/text"
+      }
+    },
+    "control": {
+      "description": "Evaluative: what the result is compared with, earlier `cohorts` or a `split` with the share of people `exposed` to the action.",
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "cohorts",
+            "split"
+          ]
+        },
+        "exposed": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        }
+      },
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "split"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "exposed"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "exposed"
+          ]
+        }
+      }
+    },
+    "start": {
+      "description": "The first day of its time box, as declared. A suspension of its cycle never edits it.",
+      "$ref": "shapes.schema.json#/$defs/day"
+    },
+    "end": {
+      "description": "The last day of its time box, as declared: fourteen days at most from its start, counting both.",
+      "$ref": "shapes.schema.json#/$defs/day"
+    },
+    "authors": {
+      "$ref": "shapes.schema.json#/$defs/authors"
+    },
+    "estimates": {
+      "description": "Each person's guess at the number its result is held against, made alone before the declaration.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "by",
+          "value"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "by": {
+            "$ref": "shapes.schema.json#/$defs/person"
+          },
+          "value": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "declared": {
+      "description": "The declaration, once recorded: who declared it and the day, the fingerprint of the variant's shortlisting its gate read, and the declaration's own fingerprint, over its declared fields.",
+      "type": "object",
+      "required": [
+        "by",
+        "when",
+        "rested-on",
+        "fingerprint"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "$ref": "shapes.schema.json#/$defs/person"
+        },
+        "when": {
+          "$ref": "shapes.schema.json#/$defs/day"
+        },
+        "rested-on": {
+          "$ref": "shapes.schema.json#/$defs/fingerprint"
+        },
+        "fingerprint": {
+          "$ref": "shapes.schema.json#/$defs/fingerprint"
+        }
+      }
+    },
+    "stopped": {
+      "description": "Generative: the stopping rule reached, on the person's word, and the day it was.",
+      "type": "object",
+      "required": [
+        "by",
+        "when"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "$ref": "shapes.schema.json#/$defs/person"
+        },
+        "when": {
+          "$ref": "shapes.schema.json#/$defs/day"
+        }
+      }
+    },
+    "result": {
+      "description": "What was measured, held against the declared expectation or fit; whether a suspension its time box ran through spoiled it; where its evidence lies; what was learned; and who recorded it and when. A result with nothing measured, or spoiled, works out to neither pass nor fail.",
+      "type": "object",
+      "required": [
+        "evidence",
+        "learned",
+        "by",
+        "when"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "measured": {
+          "type": "number"
+        },
+        "spoiled": {
+          "type": "boolean",
+          "default": false
+        },
+        "evidence": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "learned": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "by": {
+          "$ref": "shapes.schema.json#/$defs/person"
+        },
+        "when": {
+          "$ref": "shapes.schema.json#/$defs/day"
+        }
+      }
+    },
+    "decision": {
+      "description": "The person's next action: `correct-course`, which means a new experiment, `double-down` or `stop`; and who decided it and when.",
+      "type": "object",
+      "required": [
+        "next",
+        "by",
+        "when"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "next": {
+          "enum": [
+            "correct-course",
+            "double-down",
+            "stop"
+          ]
+        },
+        "by": {
+          "$ref": "shapes.schema.json#/$defs/person"
+        },
+        "when": {
+          "$ref": "shapes.schema.json#/$defs/day"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "generative"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "action"
+              ]
+            },
+            {
+              "required": [
+                "metric"
+              ]
+            },
+            {
+              "required": [
+                "expected"
+              ]
+            },
+            {
+              "required": [
+                "source"
+              ]
+            },
+            {
+              "required": [
+                "effects"
+              ]
+            },
+            {
+              "required": [
+                "control"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "evaluative"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "learn"
+              ]
+            },
+            {
+              "required": [
+                "stopping-rule"
+              ]
+            },
+            {
+              "required": [
+                "fit"
+              ]
+            },
+            {
+              "required": [
+                "stopped"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

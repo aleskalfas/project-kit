@@ -1,0 +1,51 @@
+# A cycle (lean-business DEC-002 points 11 and 12): one stretch of work on an idea,
+# exploring one or more of its shortlisted variants, planned, run and reviewed.
+#
+# - `id` — `<idea>.<cycle>`, its parts the idea's folder and the file's name:
+#   `<location>/<idea>/cycles/<cycle>.yaml`.
+# - The plan: `variants`, the shortlisted variants it explores, `[canvas:<id>]`; `window`,
+#   its first day, `start`, and the days it holds, `days`, 90 by default; `objective`, in
+#   words, with its `key-results`, each naming a variant it explores, the step of the
+#   customer factory, `metric`, and the number to reach there, `target`; `constraint`, the
+#   one step it works on, with the `evidence` that it is the weakest.
+# - `planned` — who planned it or last changed its plan, `by`, `when`, and the plan's
+#   `fingerprint`, over its window, variants, objective and constraint. The command takes it
+#   again with each change while the cycle is planned, and never once its window started.
+# - `suspensions` — each stretch the person's life stopped the cycle: its `reason`, its
+#   `first-day`, who recorded it and when, and once it resumed, `resumed`, with the `day`,
+#   which counts again, and who recorded that and when. They lie beside the plan, never
+#   under its fingerprint.
+# - `review` — what each key result `reached`, in the objective's order; the `winning`
+#   variant; the person's `decision`, `persevere`, `pivot` or `pause`, with its `reasons`
+#   and, for a pivot, the decided experiments it rests on, `evidence`; who decided it, when.
+#
+# Where the window falls under the suspensions, and whether a variant met the objective, is
+# worked out, never stored. The cycle lists none of its experiments, which name it. The body
+# below is the reference instance, a cycle planned: valid, the schema's self-test.
+
+pkit_schema: lean-business:cycle
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+id: example.first
+variants:
+  - "[canvas:example.direct]"
+window:
+  start: 2026-12-01
+  days: 90
+objective:
+  statement: Show that households that cook every evening come back for a planned week
+  key-results:
+    - variant: "[canvas:example.direct]"
+      metric: retention
+      target: 40
+constraint:
+  step: retention
+  evidence: Of the first twenty households that tried a planned week, three asked for a second
+planned:
+  by: A. Founder
+  when: 2026-11-19
+  fingerprint:
+    form: 1
+    sha256: 23540103b8d87d50f9fc5d076f866959af5c98ff82d7c9145895a9dac10485bc

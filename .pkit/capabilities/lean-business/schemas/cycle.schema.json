@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cycle.schema.json",
+  "title": "A cycle — lean-business capability",
+  "description": "Formal shape of `<location>/<idea>/cycles/<cycle>.yaml` (lean-business DEC-002 points 11 and 12): one cycle of an idea, exploring one or more of its shortlisted variants. Its plan is the variants it explores, its window as declared (its first day and the days it holds, 90 by default), its objective with key results, each taken from the traction target of a variant it explores and naming it, and its constraint, the one step of the customer factory it works on, with the evidence that it is the weakest. `planned` records who planned it and when, and the plan's fingerprint, which the command takes again with each change while the cycle is planned and never once its window has started. Its suspensions lie beside the plan, never under its fingerprint, and move where the window and each experiment not yet started fall, editing neither. Its review records what each key result reached, the winning variant and the person's decision for it. The cycle stores no list of its experiments, which name it. Where the window falls, whether a variant met the objective and the rules a plan, a suspension and a review keep are the capability's check's to hold. Document-shaped schema: the file IS the resource. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "id",
+    "variants",
+    "window",
+    "objective",
+    "constraint",
+    "planned"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023): `lean-business:cycle`.",
+      "const": "lean-business:cycle"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "description": "The cycle's id, qualified by its idea, such as `board-game.first`; its parts are the idea's folder and the file's name.",
+      "$ref": "shapes.schema.json#/$defs/idea-qualified-id"
+    },
+    "variants": {
+      "description": "The shortlisted variants it explores.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "shapes.schema.json#/$defs/canvas-ref"
+      }
+    },
+    "window": {
+      "description": "Its window as declared: its first day, and the days it holds, sized when the cycle is planned to the time the person can give it. Days a suspension covers count toward no window, so where it falls is worked out, never stored.",
+      "type": "object",
+      "required": [
+        "start",
+        "days"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "$ref": "shapes.schema.json#/$defs/day"
+        },
+        "days": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 90
+        }
+      }
+    },
+    "objective": {
+      "description": "What the cycle sets out to reach, in words, and its key results.",
+      "type": "object",
+      "required": [
+        "statement",
+        "key-results"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "statement": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "key-results": {
+          "description": "Each taken from the traction target of a variant the cycle explores, naming that variant, with at least one for each variant it explores: the step of the customer factory and the number to reach there.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "variant",
+              "metric",
+              "target"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "variant": {
+                "$ref": "shapes.schema.json#/$defs/canvas-ref"
+              },
+              "metric": {
+                "$ref": "shapes.schema.json#/$defs/factory-step"
+              },
+              "target": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "constraint": {
+      "description": "The one step of the customer factory the cycle works on, with the evidence that it is the weakest.",
+      "type": "object",
+      "required": [
+        "step",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "step": {
+          "$ref": "shapes.schema.json#/$defs/factory-step"
+        },
+        "evidence": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        }
+      }
+    },
+    "planned": {
+      "description": "Who planned the cycle or last changed its plan, the day, and the plan's fingerprint over its window, variants, objective and constraint.",
+      "type": "object",
+      "required": [
+        "by",
+        "when",
+        "fingerprint"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "by": {
+          "$ref": "shapes.schema.json#/$defs/person"
+        },
+        "when": {
+          "$ref": "shapes.schema.json#/$defs/day"
+        },
+        "fingerprint": {
+          "$ref": "shapes.schema.json#/$defs/fingerprint"
+        }
+      }
+    },
+    "suspensions": {
+      "description": "The stretches in which the person's life stopped the running cycle (DEC-002 point 12), each with its reason; its first day, the first day the person was away; who recorded it and the day; and, once the cycle resumed, the day it resumed, which counts again, with who recorded that and the day. The first day and the day of resuming are the person's word.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "reason",
+          "first-day",
+          "by",
+          "when"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "$ref": "shapes.schema.json#/$defs/text"
+          },
+          "first-day": {
+            "$ref": "shapes.schema.json#/$defs/day"
+          },
+          "by": {
+            "$ref": "shapes.schema.json#/$defs/person"
+          },
+          "when": {
+            "$ref": "shapes.schema.json#/$defs/day"
+          },
+          "resumed": {
+            "type": "object",
+            "required": [
+              "day",
+              "by",
+              "when"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "day": {
+                "$ref": "shapes.schema.json#/$defs/day"
+              },
+              "by": {
+                "$ref": "shapes.schema.json#/$defs/person"
+              },
+              "when": {
+                "$ref": "shapes.schema.json#/$defs/day"
+              }
+            }
+          }
+        }
+      }
+    },
+    "review": {
+      "description": "The cycle's review: what each key result reached, in the order the objective lists them; the winning variant, one of those it explored; the person's decision for that variant, `persevere`, `pivot` or `pause`, with its reasons and, for a pivot, the decided experiments it rests on; and who decided it and when. Other variants it explored keep their outcomes.",
+      "type": "object",
+      "required": [
+        "reached",
+        "winning",
+        "decision",
+        "reasons",
+        "by",
+        "when"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reached": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "winning": {
+          "$ref": "shapes.schema.json#/$defs/canvas-ref"
+        },
+        "decision": {
+          "enum": [
+            "persevere",
+            "pivot",
+            "pause"
+          ]
+        },
+        "reasons": {
+          "$ref": "shapes.schema.json#/$defs/text"
+        },
+        "evidence": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "shapes.schema.json#/$defs/experiment-ref"
+          }
+        },
+        "by": {
+          "$ref": "shapes.schema.json#/$defs/person"
+        },
+        "when": {
+          "$ref": "shapes.schema.json#/$defs/day"
+        }
+      }
+    }
+  }
+}

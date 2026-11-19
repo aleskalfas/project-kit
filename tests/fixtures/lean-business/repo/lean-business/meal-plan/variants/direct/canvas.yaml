@@ -1,0 +1,106 @@
+# A direct model, judged yes on every step and shortlisted.
+pkit_schema: lean-business:canvas
+schema_version: 1
+id: meal-plan.direct
+archetype: direct
+authors:
+- A. Founder
+boxes:
+  customer-segments:
+  - id: meal-plan.direct.households
+    text: Households that cook every evening
+  early-adopters:
+  - id: meal-plan.direct.new-parents
+    text: Parents of a first child, back at work
+    triggers:
+    - The first week back at work after leave
+  problem:
+  - id: meal-plan.direct.planning-takes-long
+    text: Planning the week's meals takes too long
+    alternatives:
+    - meal-plan.direct.paper-lists
+  - id: meal-plan.direct.food-wasted
+    text: Food bought for the week goes to waste
+    alternatives:
+    - meal-plan.direct.paper-lists
+  existing-alternatives:
+  - id: meal-plan.direct.paper-lists
+    text: Lists on paper, written each weekend
+  unique-value-proposition:
+  - id: meal-plan.direct.plan-in-a-minute
+    text: The week's meals planned in a minute
+    sub-headline: A plan for the week, and the shopping list that goes with it
+    problem: meal-plan.direct.planning-takes-long
+  high-level-concept:
+  - id: meal-plan.direct.concept
+    text: A meal planner that writes the shopping list
+  solution:
+  - id: meal-plan.direct.weekly-plan
+    text: A plan for the week from what the household likes
+    problem: meal-plan.direct.planning-takes-long
+  channels:
+  - id: meal-plan.direct.parent-groups
+    text: Groups of new parents
+    kind: early
+  revenue-streams:
+  - id: meal-plan.direct.subscription
+    text: A monthly subscription
+  cost-structure:
+  - id: meal-plan.direct.hosting
+    text: Hosting and the recipes' licences
+  key-metrics:
+  - id: meal-plan.direct.sign-ups
+    text: Households that sign up
+    step: acquisition
+  - id: meal-plan.direct.first-plan
+    text: Households that plan a first week
+    step: activation
+  - id: meal-plan.direct.second-week
+    text: Households that plan a second week
+    step: retention
+  unfair-advantage:
+  - id: meal-plan.direct.community
+    text: A community of parents who share their plans
+viability:
+- price:
+    amount: 8
+    per: month
+  lifetime:
+    length: 2
+    unit: year
+  conversion: 0.05
+traction:
+  multiplier: 10
+  first-stage:
+    metric: retention
+    target: 40
+verdicts:
+  desirability:
+    answer: "yes"
+    fingerprint:
+      form: 1
+      sha256: 9e9a16d05a730cec156382664c7279c072dedfc9bc2af8d7bc9f6dea7ff093db
+    by: A. Founder
+    when: 2026-10-05
+  viability:
+    answer: "yes"
+    note: Two years at eight a month reaches the goal with fewer customers than the segment holds
+    fingerprint:
+      form: 1
+      sha256: 428abcfbaf9934b4c23c2e24a98ed4279e553c68ec939f5d94cf280227d7ad47
+    by: A. Founder
+    when: 2026-10-06
+  feasibility:
+    answer: "yes"
+    fingerprint:
+      form: 1
+      sha256: d59777defe478a7bf9b4acdff47553d3abf4abe9e37ea457c1ab5d7d915160ac
+    by: A. Founder
+    when: 2026-10-07
+outcome:
+  kind: shortlisted
+  fingerprint:
+    form: 1
+    sha256: b27eb894334315ef7bbea3aa3619221de87bfb2a7dc8067b01331d892b962896
+  by: A. Founder
+  when: 2026-10-08

@@ -1,0 +1,47 @@
+# An experiment (lean-business DEC-002 points 9 and 10): one test of one assumption,
+# declared before it runs, frozen once declared, and judged against what it declared.
+#
+# - `id` — `<idea>.<experiment>`, its parts the idea's folder and the file's name:
+#   `<location>/<idea>/experiments/<experiment>.yaml`.
+# - `assumption` and `cycle` — the assumption it tests, `[assumptions:<id>]`, and the cycle
+#   it runs in, `[cycle:<id>]`.
+# - `kind` — `generative`, run to discover, or `evaluative`, run to measure traction.
+# - Generative: `learn`, what it sets out to learn; `stopping-rule`, what ends it early;
+#   `fit`, the `count` its result is held against and what it counts, `of`.
+# - Evaluative: `action`, its one action; `metric`, a step of the customer factory;
+#   `expected`, a `threshold` or a 90% `range` with its `direction`, `at-least` or
+#   `at-most`; `source`, `estimate` or `traction-target`; `effects` known in advance;
+#   `control`, earlier `cohorts` or a `split` with the share `exposed`.
+# - Every experiment: `start` and `end`, the days of its time box, fourteen at most;
+#   `authors`; `estimates`, each person's guess, made alone, `by` and `value`.
+# - `declared` — once declared: `by`, `when`, `rested-on`, the fingerprint of the variant's
+#   shortlisting its gate read, and `fingerprint`, over every field above. None of them
+#   changes again; a correction comes as a new experiment.
+# - Recorded after: `stopped`, a generative experiment's stopping rule reached; `result`,
+#   what was `measured`, whether it was `spoiled`, its `evidence` and what was `learned`;
+#   `decision`, the person's `next` action. Each says who recorded it and when.
+#
+# Pass or fail is worked out from the result and the declared expectation, never stored.
+# The body below is the reference instance, a draft: valid, the schema's self-test.
+
+pkit_schema: lean-business:experiment
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+id: example.first-interviews
+assumption: "[assumptions:example.direct.planning-takes-long]"
+cycle: "[cycle:example.first]"
+kind: generative
+learn: Whether households that cook every evening find planning the week a real burden
+stopping-rule: Fifteen interviews, or three in a row that bring nothing new
+fit:
+  count: 8
+  of: interviews that tell the same story of a planning burden
+start: 2026-12-01
+end: 2026-12-14
+authors:
+  - A. Founder
+estimates:
+  - by: A. Founder
+    value: 6

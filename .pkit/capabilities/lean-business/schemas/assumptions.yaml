@@ -1,0 +1,22 @@
+# A variant's assumptions (lean-business DEC-002 point 8): what its model takes for granted
+# that no evidence supports yet, ranked by risk.
+#
+# Each assumption carries:
+# - `id` — `<idea>.<variant>.<assumption>`, qualified by the variant it belongs to.
+# - `statement` — what the model takes for granted, said as a leap of faith.
+# - `source` — where it comes from: `entry`, the id of a canvas entry, or `input`, an input
+#   of the estimate (`price`, `lifetime`, `conversion`, `referral-share`), with its `side`
+#   where the model names several. An entry's link may outlive the entry, since the method
+#   removes an entry its experiment refuted.
+# - `kind` — `desirability`, `viability` or `feasibility`.
+# - `rank` — its rank by risk, the person's: 1 is the riskiest.
+#
+# The file is `<location>/<idea>/variants/<variant>/assumptions.yaml`. An assumption stores no
+# state: its outcome follows from the experiments that test it. Experiments name an
+# assumption as `[assumptions:<id>]`. The schema's own collection stays empty: the entries
+# live in a project's files.
+
+pkit_schema: lean-business:assumptions
+schema_version: 1
+
+assumptions: []

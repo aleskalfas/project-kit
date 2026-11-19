@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config.schema.json",
+  "title": "Project configuration — lean-business capability",
+  "description": "Formal shape of the project's `.pkit/capabilities/lean-business/project/config.yaml` (lean-business DEC-002 point 1): the capability's own configuration. `location` is the folder that holds the project's ideas, one folder for each idea, relative to the repository's top. The first command that writes an idea records it (COR-049 point 5); until then the location is read as `lean-business/`. Which paths the location may take, inside the repository, outside `.pkit/` and outside any hidden folder, is the capability's check's to hold, not this schema's. Document-shaped schema: the file IS the resource. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023): `lean-business:config`.",
+      "const": "lean-business:config"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "location": {
+      "description": "The folder that holds the project's ideas, relative to the repository's top, written with `/`.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^/\\\\]"
+    }
+  }
+}

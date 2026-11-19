@@ -1,0 +1,21 @@
+# The lean-business capability's own configuration (lean-business DEC-002 point 1).
+#
+# - `location` — the folder that holds the project's ideas, one folder for each idea,
+#   relative to the repository's top. The first command that writes an idea records it,
+#   and says what it recorded and where to change it (COR-049 point 5); until then the
+#   location is read as `lean-business/`. A project that wants another folder records it
+#   here before its first idea. Moving the ideas is a person's act: move the folder, then
+#   change this line.
+#
+# The file lies in the capability's `project/` tier, so uninstalling the capability removes
+# it, and a project that recorded another folder records it again after installing the
+# capability anew (DEC-001 point 9). A file of the capability names its schema at its top
+# (COR-023); no path binds it. The body below is the reference instance: valid, the
+# schema's self-test.
+
+pkit_schema: lean-business:config
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+location: lean-business

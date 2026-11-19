@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "shapes.schema.json",
+  "title": "Shared shapes of the lean-business capability's files",
+  "description": "The shapes every schema of the capability shares, so each is written once: ids and the references between files (lean-business DEC-002 point 7), calendar days and the record of who acted and when (DEC-002 point 2), fingerprints (point 13), and the method's small vocabularies. The capability's Python reads the same id and reference patterns (`scripts/_lib/ids.py`), and a test holds the two equal.",
+  "$defs": {
+    "segment": {
+      "description": "One part of an id: lower-case words of letters and digits, joined by single hyphens, starting with a letter (DEC-002 point 7). An idea's id, which is its folder's name, is one segment.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "idea-qualified-id": {
+      "description": "The id of a variant, an experiment or a cycle: the idea's id and the subject's own, joined by a full stop, such as `board-game.platform` (DEC-002 point 7).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "variant-qualified-id": {
+      "description": "The id of a canvas entry or an assumption: its variant's id and its own, joined by a full stop, such as `board-game.platform.setup-takes-long` (DEC-002 point 7).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "canvas-ref": {
+      "description": "A reference to a variant, by its canvas: `[canvas:<variant id>]` (COR-019; DEC-002 point 7). It must name a variant of the same idea, which the capability's check holds.",
+      "type": "string",
+      "pattern": "^\\[canvas:[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\]$"
+    },
+    "assumption-ref": {
+      "description": "A reference to an assumption: `[assumptions:<assumption id>]` (COR-019; DEC-002 point 7).",
+      "type": "string",
+      "pattern": "^\\[assumptions:[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\]$"
+    },
+    "experiment-ref": {
+      "description": "A reference to an experiment: `[experiment:<experiment id>]` (COR-019; DEC-002 point 7).",
+      "type": "string",
+      "pattern": "^\\[experiment:[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\]$"
+    },
+    "cycle-ref": {
+      "description": "A reference to a cycle: `[cycle:<cycle id>]` (COR-019; DEC-002 point 7).",
+      "type": "string",
+      "pattern": "^\\[cycle:[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\]$"
+    },
+    "day": {
+      "description": "A calendar day, `YYYY-MM-DD` (lean-business DEC-003 point 1). Every date the capability reads is a day, never a time.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "person": {
+      "description": "Who made a judgement or took an act, in words: a name, with an address where the project uses one.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "text": {
+      "description": "Words a person wrote.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "authors": {
+      "description": "Who wrote it, one person or a team.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/person"
+      }
+    },
+    "fingerprint": {
+      "description": "A digest of what a judgement judged or a declaration fixed (DEC-002 point 13): the version of the canonical form it was taken with, and the SHA-256 of the covered data's canonical text, in lower-case hexadecimal.",
+      "type": "object",
+      "required": [
+        "form",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "form": {
+          "description": "The version of the canonical form the fingerprint was taken with.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "description": "The digest, 64 lower-case hexadecimal digits.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "factory-step": {
+      "description": "A step of the customer factory, the steps a customer passes through (DEC-001 point 7).",
+      "enum": [
+        "acquisition",
+        "activation",
+        "retention",
+        "revenue",
+        "referral"
+      ]
+    },
+    "period": {
+      "description": "A span of the calendar that an amount or a length is counted in.",
+      "enum": [
+        "month",
+        "year"
+      ]
+    },
+    "amount-per-period": {
+      "description": "An amount of money in each period, in the project's currency.",
+      "type": "object",
+      "required": [
+        "amount",
+        "per"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "type": "number",
+          "minimum": 0
+        },
+        "per": {
+          "$ref": "#/$defs/period"
+        }
+      }
+    },
+    "length": {
+      "description": "A length of time, counted in periods.",
+      "type": "object",
+      "required": [
+        "length",
+        "unit"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "length": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unit": {
+          "$ref": "#/$defs/period"
+        }
+      }
+    }
+  }
+}

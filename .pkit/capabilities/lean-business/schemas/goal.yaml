@@ -1,0 +1,25 @@
+# An idea's goal (lean-business DEC-002 point 3): its minimum success criteria, the one
+# goal every variant of the idea is judged against.
+#
+# - `revenue` — the recurring revenue to reach: an `amount`, in the project's currency, and
+#   the period it recurs in, `per: year` or `per: month`.
+# - `years` — the years to reach it in.
+# - `by`, `when` — who set the goal, and the day they set it.
+#
+# The file is `<location>/<idea>/goal.yaml`. The goal is set before any variant's viability
+# is judged, and changed only while none of the idea's cycles is planned, running or
+# suspended, which in the method's rhythm is at a cycle's review. A change makes stale each
+# viability and feasibility verdict, and each shortlisting, that used it. The body below is
+# the reference instance: valid, the schema's self-test.
+
+pkit_schema: lean-business:goal
+schema_version: 1
+
+# --- reference instance -------------------------------------------------
+
+revenue:
+  amount: 1000000
+  per: year
+years: 3
+by: A. Founder
+when: 2026-11-19

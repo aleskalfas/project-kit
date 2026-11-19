@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "goal.schema.json",
+  "title": "An idea's goal — lean-business capability",
+  "description": "Formal shape of `<location>/<idea>/goal.yaml` (lean-business DEC-002 point 3): the idea's one goal, its minimum success criteria, which every variant of the idea is judged against. It gives the recurring revenue to reach, the years to reach it in, and who set it and when. The goal lies above the variants, so it moves with none of them. Its revenue and years are what a viability or feasibility verdict and a shortlisting fingerprint; who set it and when are not (point 13). When the goal may change is the capability's check's to hold (point 3). Document-shaped schema: the file IS the resource. Companion per COR-018.",
+  "type": "object",
+  "required": [
+    "pkit_schema",
+    "schema_version",
+    "revenue",
+    "years",
+    "by",
+    "when"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "pkit_schema": {
+      "description": "The schema that binds this file (COR-023): `lean-business:goal`.",
+      "const": "lean-business:goal"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "revenue": {
+      "description": "The recurring revenue to reach, in the project's currency, such as an amount each year.",
+      "$ref": "shapes.schema.json#/$defs/amount-per-period"
+    },
+    "years": {
+      "description": "The years to reach it in, counted from the day it was set.",
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "by": {
+      "description": "Who set the goal.",
+      "$ref": "shapes.schema.json#/$defs/person"
+    },
+    "when": {
+      "description": "The day the goal was set.",
+      "$ref": "shapes.schema.json#/$defs/day"
+    }
+  }
+}

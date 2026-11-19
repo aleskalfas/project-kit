@@ -1,0 +1,38 @@
+# A generative experiment, declared, run and decided after its time box.
+pkit_schema: lean-business:experiment
+schema_version: 1
+id: meal-plan.first-interviews
+assumption: "[assumptions:meal-plan.direct.planning-takes-long]"
+cycle: "[cycle:meal-plan.first]"
+kind: generative
+learn: Whether households that cook every evening find planning the week a real burden
+stopping-rule: Fifteen interviews, or three in a row that bring nothing new
+fit:
+  count: 8
+  of: interviews that tell the same story of a planning burden
+start: 2026-11-03
+end: 2026-11-16
+authors:
+- A. Founder
+estimates:
+- by: A. Founder
+  value: 6
+declared:
+  by: A. Founder
+  when: 2026-11-02
+  rested-on:
+    form: 1
+    sha256: b27eb894334315ef7bbea3aa3619221de87bfb2a7dc8067b01331d892b962896
+  fingerprint:
+    form: 1
+    sha256: fb1738a7e3e7c13a92b8a9050d95151b6bcf0978ba91924dd5eceea7571c5bd6
+result:
+  measured: 9
+  evidence: Notes of twelve interviews
+  learned: Planning is the burden; shopping is not
+  by: A. Founder
+  when: 2026-11-17
+decision:
+  next: double-down
+  by: A. Founder
+  when: 2026-11-17
