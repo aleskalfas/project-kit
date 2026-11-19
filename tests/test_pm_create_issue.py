@@ -18,6 +18,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests import pm_assignee_lookup
 from tests.pm_board_graphql import FieldsBoard, flag_value, is_seam_read, query_of
 from tests.pm_board_world import LABEL_STATE
 from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with, use
@@ -26,6 +27,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "create-issue.py"
 )
+
+
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login these tests assign as a user's account;
+    a test of the lookup gives its own answers (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
 
 
 @pytest.fixture(scope="module")
@@ -404,10 +412,15 @@ def _linked(ci):
 
 
 def _file_task(
-    ci, tmp_path, monkeypatch, title: str, extra: tuple[str, ...] = ()
+    ci, tmp_path, monkeypatch, title: str, extra: tuple[str, ...] = (), invoker: object = None
 ) -> tuple[int, list[list[str]]]:
-    """Run create-issue main() for a Task titled ``title``, with ``extra`` options;
-    return (rc, every argv run)."""
+    """Run create-issue main() for a Task titled ``title``, with ``extra`` options,
+    as ``invoker``, by default the user's account `filer-login` GitHub answers the
+    credential acts as; return (rc, every argv run)."""
+    from _lib.membership import Identity
+
+    resolved = invoker or Identity(github_login="filer-login", email=None, kind="user")
+    monkeypatch.setattr(ci, "resolve_invoker_identity", lambda **_k: resolved)
     root = _stage_filing_tree(tmp_path)
     calls: list[list[str]] = []
 
@@ -422,7 +435,6 @@ def _file_task(
             _Proc.stdout = "https://github.com/acme/repo/issues/55\n"
         return _Proc()
 
-    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
     monkeypatch.setattr(ci.subprocess, "run", fake_run)
     monkeypatch.setattr(ci.session_guard, "enforce", lambda **k: True)
     monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _linked(ci))
@@ -460,15 +472,48 @@ _CLEAN_TITLE = "Evidence points are keyed so two providers can report one"
 
 
 def _file_with_instance(
-    ci, tmp_path, monkeypatch, *, instance: int | None, extra: tuple[str, ...] = ()
+    ci,
+    tmp_path,
+    monkeypatch,
+    *,
+    instance: int | None,
+    extra: tuple[str, ...] = (),
+    invoker: object = None,
 ) -> tuple[int, list[list[str]], FakeGitHub]:
     github = FakeGitHub(author="filer-login")
     assignee = extra[extra.index("--assignee") + 1] if "--assignee" in extra else "filer-login"
     github.add(55, assignees=(assignee,))
     clone_with(ci.instance_claims, monkeypatch, instance)
     use(ci.instance_claims, monkeypatch, github)
-    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, extra)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, extra, invoker)
     return rc, calls, github
+
+
+@pytest.mark.parametrize("assignee", ["robot[bot]", "app/robot", "@robot"])
+def test_filing_refuses_an_assignee_that_names_no_users_account_by_its_form(
+    ci, tmp_path, monkeypatch, capsys, assignee
+) -> None:
+    """Refused with no request and nothing filed (DEC-079 point 1)."""
+    asked = pm_assignee_lookup.answer(monkeypatch)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, ("--assignee", assignee))
+    assert rc == 2
+    assert not _issue_created(calls)
+    assert asked == []
+    assert f"error: `{assignee}` names " in capsys.readouterr().err
+
+
+def test_filing_refuses_a_bare_login_github_does_not_answer_as_a_users(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """The service lets its coding agent be assigned by a login with no suffix,
+    so a bare login is looked up."""
+    agent = pm_assignee_lookup.membership.LookedUp(login="Copilot", account_type="Bot")
+    asked = pm_assignee_lookup.answer(monkeypatch, {"Copilot": agent})
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, ("--assignee", "Copilot"))
+    assert rc == 2
+    assert not _issue_created(calls)
+    assert asked == ["Copilot"]
+    assert "`Copilot` names an account of type Bot" in capsys.readouterr().err
 
 
 def test_with_no_instance_id_filing_is_unchanged(ci, tmp_path, monkeypatch, capsys) -> None:
@@ -581,24 +626,108 @@ def test_filing_a_clean_title_raises_no_title_finding(ci, tmp_path, monkeypatch,
     assert "title." not in capsys.readouterr().err
 
 
-def test_no_default_assignee_says_why_pkit_cannot_tell_the_account(
-    ci, tmp_path, monkeypatch, capsys
-) -> None:
-    """Under an account `gh api user` refuses, the default assignee, the account
-    acting, cannot be told: the refusal says so, and why (#3162)."""
+# --- a credential that names no user's account (DEC-076) -------------------------
+#
+# Under a GitHub App installation's token GitHub refuses `gh api user`, and the
+# backbone's reading names a bot's account or none. The default assignee is the
+# person the agent works for, `PM_INVOKER_LOGIN`, and a filing with no person and
+# no `--assignee` refuses; a clone under such a credential claims nothing.
+
+FORBIDDEN = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+
+
+def _unresolved(works_for: str | None = None, cause: str = "refused"):
+    """The identity where the reading names no account: GitHub gave no answer
+    (`refused`, an unresolved identity), or refused an integration's token."""
     from _lib.membership import Identity
 
-    forbidden = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
-    unresolved = Identity(github_login=None, email=None, unresolved_cause=forbidden)
-    monkeypatch.setattr(ci, "resolve_invoker_identity", lambda **_k: unresolved)
-    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE)
+    return Identity(
+        github_login=None,
+        email=None,
+        unresolved_cause=FORBIDDEN,
+        cause=cause,
+        works_for=works_for,
+    )
 
+
+def _app(works_for: str | None = "filer-login"):
+    from _lib.membership import Identity
+
+    return Identity(github_login="robot[bot]", email=None, kind="bot", works_for=works_for)
+
+
+@pytest.mark.parametrize(
+    "invoker",
+    [_unresolved, lambda: _app(None), lambda: _unresolved(cause="integration-refused")],
+    ids=["none", "bot", "cannot-look-itself-up"],
+)
+def test_no_person_named_refuses_the_default_assignee_and_says_how_to_name_one(
+    ci, tmp_path, monkeypatch, capsys, invoker
+) -> None:
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, invoker=invoker())
     assert rc == 2
     assert not _issue_created(calls)
-    assert (
-        "error: could not resolve the default assignee: pkit cannot tell which account is "
-        f"acting, since {forbidden}. Pass --assignee explicitly."
-    ) in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "error: could not resolve the default assignee: " in err
+    assert "PM_INVOKER_LOGIN is not set, so no person is named" in err
+    assert err.rstrip().endswith("Or pass --assignee.")
+
+
+@pytest.mark.parametrize(
+    "invoker",
+    [_app, lambda: _unresolved("filer-login", cause="integration-refused")],
+    ids=["bot", "cannot-look-itself-up"],
+)
+def test_the_default_assignee_is_the_person_the_agent_works_for(
+    ci, tmp_path, monkeypatch, capsys, invoker
+) -> None:
+    asked = pm_assignee_lookup.answer(monkeypatch)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, invoker=invoker())
+    assert rc == 0
+    created = next(c for c in calls if "issue" in c and "create" in c)
+    assert created[created.index("--assignee") + 1] == "filer-login"
+    assert asked == ["filer-login"]  # no answer of GitHub's about the credential
+
+
+def test_an_assignee_named_files_where_no_person_is(ci, tmp_path, monkeypatch) -> None:
+    rc, calls = _file_task(
+        ci, tmp_path, monkeypatch, _CLEAN_TITLE, ("--assignee", "alice"), invoker=_unresolved()
+    )
+    assert rc == 0
+    assert _issue_created(calls)
+
+
+@pytest.mark.parametrize("instance", [None, 2])
+@pytest.mark.parametrize(
+    "invoker",
+    [_app, lambda: _unresolved("filer-login", cause="integration-refused")],
+    ids=["bot", "unnamed"],
+)
+def test_an_apps_credential_claims_nothing_it_files(
+    ci, tmp_path, monkeypatch, capsys, instance, invoker
+) -> None:
+    rc, calls, github = _file_with_instance(
+        ci, tmp_path, monkeypatch, instance=instance, invoker=invoker()
+    )
+    assert rc == 0
+    assert _issue_created(calls)
+    assert github.writes() == []
+    out = capsys.readouterr().out
+    if instance is None:
+        assert "ownership" not in out
+    else:
+        assert "  ownership:  not claimed: a clone under a credential that names no user's" in out
+
+
+def test_an_unresolved_identity_files_nothing_on_a_clone_with_an_instance_id(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    rc, calls, _github = _file_with_instance(
+        ci, tmp_path, monkeypatch, instance=2, invoker=_unresolved("filer-login")
+    )
+    assert rc != 0
+    assert not _issue_created(calls)
+    assert "this clone holds an instance id" in capsys.readouterr().err
 
 
 # --- parent-requiredness gate under hierarchy mode (DEC-036 D4, #272) -----

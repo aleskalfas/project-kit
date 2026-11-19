@@ -202,6 +202,7 @@ def taker(
     *,
     dry_run: bool = False,
     login_cause: str | None = None,
+    credential: instance_claims.Credential | None = None,
 ) -> Taker:
     """This clone as a taker from the pool, and the scope of its seat.
 
@@ -213,7 +214,32 @@ def taker(
     that holds none may not take, nor may a planner's seat, which builds none of
     the work (DEC-059 point 2). Code that cannot read the topology in full takes
     nothing (DEC-061 point 9). ``login_cause`` is why ``login`` could not be
-    resolved, where it could not (#3162)."""
+    resolved, where it could not (#3162).
+
+    Under a credential that names no user's account (``credential``), the clone
+    only reads (DEC-076 point 4): outside a topology it takes, claiming nothing,
+    a Task no instance owns, and in a project with a topology it takes nothing,
+    since it holds no seat that builds (point 6)."""
+    if credential is not None and not credential.names_user:
+        clone = instance_claims.no_user_clone(
+            capability_root,
+            login,
+            config,
+            credential,
+            dry_run=dry_run,
+            login_cause=login_cause,
+        )
+        if clone.refusal is not None:
+            return Taker(None, refusal=clone.refusal)
+        if clone.holders is not None:
+            return Taker(
+                clone,
+                refusal=(
+                    "a clone under a credential that names no user's account holds no seat "
+                    "that builds, so it takes no work from the shared pool (DEC-076 point 6)."
+                ),
+            )
+        return Taker(clone)
     reading = instance_claims.read_topology(
         capability_root, config, login=login, login_cause=login_cause, dry_run=dry_run
     )

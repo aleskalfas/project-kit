@@ -15,7 +15,7 @@ writer re-derives them (COR-007):
     default `audit`) decides how much of what pkit governs is projected as
     comments.
 
-Writers that need to say *more* than the template's actor/reason (e.g.
+Writers that need to say *more* than the template's reason (e.g.
 `done-work`'s per-reviewer override, which must also record which reviewer was
 waived and its state at override time) render the canonical line from
 `render_audit_comment` and append their own prose *below* it — the format stays
@@ -54,7 +54,10 @@ SEVERITY_BYPASSABLE = "bypassable-with-audit"
 AUDIT_MARKER = "<!-- pkit-audit -->"
 
 #: Fallback if the schema can't be read — must match the schema's canonical form.
-AUDIT_TEMPLATE_FALLBACK = f"{AUDIT_MARKER}\nBypassed by <name> <<email>>: <reason>"
+#: It names no authoriser beside the account that posts the comment, and no
+#: email: the poster is the act's actor, and GitHub shows it beside the comment
+#: (project-management DEC-078 point 2).
+AUDIT_TEMPLATE_FALLBACK = f"{AUDIT_MARKER}\nBypassed: <reason>"
 
 #: The opening of the trailing idempotency key that closes an audit comment.
 #: It is a key, not a kind marker: the comment's kind is its own first-line
@@ -83,20 +86,13 @@ def load_audit_template(capability_root) -> str:
         return AUDIT_TEMPLATE_FALLBACK
 
 
-def render_audit_comment(capability_root, invoker, reason: str) -> str:
+def render_audit_comment(capability_root, reason: str) -> str:
     """Render the one canonical audit comment (DEC-049) from the schema template:
-    marker + actor (`<name> <<email>>`) + reason. The transition itself is recorded
-    by the timeline (the comment carries the *why*, not the state). Renders cleanly
-    when the email is unresolved."""
-    template = load_audit_template(capability_root)
-    name = getattr(invoker, "github_login", None) or getattr(invoker, "email", None) or "unknown"
-    email = getattr(invoker, "email", None) or ""
-    body = template.replace("<name>", name).replace("<reason>", reason)
-    if email:
-        body = body.replace("<email>", email)
-    else:
-        body = body.replace(" <<email>>", "").replace("<<email>>", "")
-    return body
+    marker + reason. The transition itself is recorded by the timeline (the
+    comment carries the *why*, not the state). It names no authoriser and no
+    email: the account that posts it is its act's actor, which GitHub shows
+    beside it (DEC-078 point 2)."""
+    return load_audit_template(capability_root).replace("<reason>", reason)
 
 
 def audit_projection(config) -> str:
@@ -151,7 +147,6 @@ def short_sha(head: str) -> str:
 
 def render_ci_bypass_audit_body(
     marker: str,
-    invoker,
     reason: str,
     failing_checks,
     head: str,
@@ -160,21 +155,18 @@ def render_ci_bypass_audit_body(
     """Render a CI-bypass audit comment — the one shape `done-work` and
     `merge-pr` share, differing only in their first-line kind `marker`.
 
-    Follows the schema's `audit_comment_template`
-    (`Bypassed by <name> <<email>>: <reason>`), names the checks the bypass
-    overrode so the trail records *what* was skipped, names the short PR head
-    the bypass was made against (two bypasses with the same reason either side
-    of a force-push would otherwise read identically), and closes with the
-    idempotency `key`.
+    Follows the schema's `audit_comment_template` (`Bypassed: <reason>`),
+    names the checks the bypass overrode so the trail records *what* was
+    skipped, names the short PR head the bypass was made against (two bypasses
+    with the same reason either side of a force-push would otherwise read
+    identically), and closes with the idempotency `key`. Like every audit
+    comment it names no authoriser beside its poster, and no email (DEC-078
+    point 2).
     """
-    name = (
-        getattr(invoker, "github_login", None) or getattr(invoker, "email", None) or "<unresolved>"
-    )
-    email = getattr(invoker, "email", None) or "<unknown>"
     checks = ", ".join(failing_checks) or "(none named)"
     return (
         f"{marker}\n\n"
-        f"Bypassed by {name} <{email}>: {reason.strip()}\n\n"
+        f"Bypassed: {reason.strip()}\n\n"
         f"CI-status gate overridden at PR head {short_sha(head)}; "
         f"non-passing checks: {checks}.\n\n"
         f"{key}"
