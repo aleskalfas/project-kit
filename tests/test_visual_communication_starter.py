@@ -1698,7 +1698,9 @@ def columns_of_notes(location: Path, tmp_path_factory: pytest.TempPathFactory) -
     root = tmp_path_factory.mktemp("columns-of-notes") / "project"
     shutil.copytree(location, root)
     folder = root / "visual" / "pieces" / "columns"
-    shutil.copytree(root / "visual" / "pieces" / "layers", folder)
+    shutil.copytree(
+        root / "visual" / "pieces" / "layers", folder, ignore=shutil.ignore_patterns("__pycache__")
+    )
     for language in LANGUAGES:
         write(folder / f"content.{language}.yaml", yaml_text(COLUMNS))
     piece = pl.read_piece(root, "visual", "columns")
