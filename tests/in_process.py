@@ -298,9 +298,17 @@ _ANSWERS_ACCOUNTS = "_answers_accounts_in_process"
 def answer_accounts_of(backbone: ModuleType) -> None:
     """Answer the account commands a capability's `_lib.backbone` starts in this process
     (`answer_account`), every other call going on as before. Its `_run` is looked up when
-    called, so a route set later still takes every call but these. Idempotent."""
+    called, so a route set later still takes every call but these. Idempotent. A
+    `_run` whose first parameter is not the call's `argv`, as software-analysis's
+    `_run(root, argv, run)`, is left as it is: no such capability reads an account."""
     original = vars(backbone).get("_run")
     if original is None or getattr(original, _ANSWERS_ACCOUNTS, False):
+        return
+    try:
+        first = next(iter(inspect.signature(original).parameters), None)
+    except (TypeError, ValueError):
+        return
+    if first != "argv":
         return
 
     def run(argv: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
