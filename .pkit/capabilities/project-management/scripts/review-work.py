@@ -3,6 +3,7 @@
 # requires-python = ">=3.10"
 # dependencies = [
 #   "ruamel.yaml>=0.18",
+#   "pathspec>=0.12",
 # ]
 # ///
 """Project-management capability — review-work (DEC-026 workflow wrapper).
