@@ -445,6 +445,7 @@ def main() -> int:
             config,
             dry_run=args.dry_run,
             login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         print(
@@ -458,7 +459,7 @@ def main() -> int:
     print(f"  type:         {structural_type or '<unrecognised prefix>'}")
     print(f"  current state: {state}")
     print(f"  mode:         {args.mode}")
-    if clone is not None:
+    if clone is not None and not clone.quiet:
         print(f"  ownership:    {instance_claims.release_plan(clone)}")
 
     if args.mode == "wont-do":

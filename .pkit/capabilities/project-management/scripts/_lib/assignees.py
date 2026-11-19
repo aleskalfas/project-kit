@@ -14,10 +14,10 @@ command that makes an account an assignee confirms it here first:
   account by its form, but the service lets some bots be assigned by a login
   with no suffix, such as its own coding agent. So a bare login is made an
   assignee only where the service answers that it names a user's account.
-  Where it is the account the credential acts as, which the service answered
-  as a user's, that answer stands. Otherwise it is looked up, as ``add-member``
-  looks up an entry's login (``membership.look_up_account``), once for each
-  assignee a command names.
+  Where it is the account the credential acts as, which the backbone's reading
+  named as a user's, that reading is the answer (ADR-094). Otherwise it is
+  looked up, as ``add-member`` looks up an entry's login
+  (``membership.look_up_account``), once for each assignee a command names.
 - **Every lookup that confirms nothing refuses,** with the login and its cause:
   an account of another kind, no account with the login, or no answer. On a
   host other than the public one, a login mistyped and an account the host
@@ -35,7 +35,7 @@ from typing import Any
 
 from _lib import account_kind
 from _lib.gh import gh_env
-from _lib.membership import FROM_SERVICE, Identity, LookedUp, look_up_account
+from _lib.membership import Identity, LookedUp, look_up_account
 
 #: The service's public host. A host other than it may hide an account from
 #: the credential, and answer that it found none.
@@ -64,9 +64,11 @@ def refusal(
             f"`{value}` names no account: a login holds only letters, digits and "
             "dashes, with no `@` (DEC-079 point 1)."
         )
-    if getattr(invoker, "login_source", None) == FROM_SERVICE:
-        if value == getattr(invoker, "github_login", None):
-            return None
+    # The account the reading named as a user's is confirmed by that reading. A
+    # login of other letters is looked up, which confirms the same account: an
+    # inequality only asks once more.
+    if invoker is not None and invoker.names_user and value == invoker.github_login:
+        return None
     looked = (look_up or look_up_account)(value, config)
     if looked.cause:
         return (

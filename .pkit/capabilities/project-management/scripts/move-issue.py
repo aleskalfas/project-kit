@@ -538,6 +538,7 @@ def main() -> int:
             config,
             dry_run=args.dry_run,
             login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("move-issue", args.issue_number, exc)
@@ -723,7 +724,7 @@ def main() -> int:
     print(f"  severity:      {transition.severity}")
     if move_back:
         print(f"  reason:        {move_back_reason}")
-        if clone is not None:
+        if clone is not None and not clone.quiet:
             plan_line = instance_claims.release_plan(clone, when="on the move back")
             print(f"  ownership:     {plan_line}")
 

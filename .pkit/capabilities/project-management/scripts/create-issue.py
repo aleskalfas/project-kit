@@ -36,8 +36,11 @@ could not be checked. Neither refuses the filing nor changes the exit code.
 For board-substrate adopters (per DEC-019 +
 `schemas/mandatory-issue-state.yaml`), the new issue is also added to
 the configured Projects v2 board as the final step of filing. The
-default assignee is the resolved invoker identity per DEC-019's
-default_at_filing: filer.
+default assignee is the filer per DEC-019's default_at_filing: the user's
+account GitHub answers the credential acts as, or, under a credential that
+names no user's account, the person the agent works for, `PM_INVOKER_LOGIN`
+(DEC-076 point 3). Where neither names a person, a filing that names no
+`--assignee` refuses, saying why and how the session names one.
 
 `--board` is refused unless it names the configured board's own number, the
 two read as numbers, in every project (DEC-070, DEC-071): every issue belongs
@@ -168,7 +171,6 @@ from _lib.hooks import fire_hooks
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
-    format_unresolved,
     resolve_capability_root,
     resolve_invoker_identity,
 )
@@ -253,7 +255,11 @@ def main() -> int:
     parser.add_argument(
         "--assignee",
         default=None,
-        help="Assignee GitHub login. Defaults to the resolved invoker identity.",
+        help=(
+            "Assignee GitHub login. Defaults to the filer: the user's account the "
+            "credential acts as, or, under a credential that names no user's account, "
+            "the person PM_INVOKER_LOGIN names (DEC-076 point 3)."
+        ),
     )
     parser.add_argument(
         "--milestone",
@@ -774,13 +780,14 @@ def main() -> int:
     # never refused. The backbone is asked only for a body that cites one.
     _warn_decision_ids(body, body_format)
 
-    # Resolve assignee: the account acting, by default. Where pkit cannot tell
-    # which that is, the refusal says why (#3162).
-    assignee = args.assignee or invoker.github_login
+    # Resolve assignee: the filer, by default, the person whose work this is
+    # (DEC-076 point 3). Where no person is named, the refusal says why, and
+    # how the session names one.
+    assignee = args.assignee or invoker.person
     if not assignee:
         print(
-            "error: could not resolve the default assignee: "
-            f"{format_unresolved(invoker.unresolved_cause)}. Pass --assignee explicitly.",
+            f"error: could not resolve the default assignee: {invoker.no_person()}. "
+            "Or pass --assignee.",
             file=sys.stderr,
         )
         return 2
@@ -850,10 +857,11 @@ def main() -> int:
             config,
             dry_run=args.dry_run,
             login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("create-issue", None, exc)
-    if clone is not None:
+    if clone is not None and not clone.quiet:
         print(f"  ownership:  {instance_claims.claim_plan(clone, assignee, filing=True)}")
     if args.from_report is not None:
         print(

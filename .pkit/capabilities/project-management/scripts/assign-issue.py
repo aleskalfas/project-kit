@@ -10,7 +10,9 @@
 Reassigns an existing GitHub issue. Default semantics per
 DEC-019:
   * Membership-gated (DEC-021).
-  * `--me` shorthand assigns to the resolved invoker identity.
+  * `--me` shorthand assigns to the person whose work this is: the user's
+    account the credential acts as, or, under a credential that names no
+    user's account, the person `PM_INVOKER_LOGIN` names (DEC-076 point 3).
   * No account it adds is a bot's, and a bare login is added only where
     GitHub answers that it names a user's account (DEC-079 point 1).
   * `--assignee <login>` assigns to a specific user (or multiple via
@@ -51,7 +53,6 @@ from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
-    format_unresolved,
     resolve_capability_root,
     resolve_invoker_identity,
 )
@@ -72,7 +73,10 @@ def main() -> int:
     parser.add_argument(
         "--me",
         action="store_true",
-        help="Assign to the resolved invoker identity (sugar for --assignee=<my-login>).",
+        help=(
+            "Assign to the person whose work this is (sugar for --assignee=<login>): the "
+            "user's account the credential acts as, or the person PM_INVOKER_LOGIN names."
+        ),
     )
     parser.add_argument(
         "--assignee",
@@ -154,14 +158,12 @@ def main() -> int:
     # Resolve the assignee/unassign sets.
     add_set: list[str] = []
     if args.me:
-        if not invoker.github_login:
-            print(
-                "error: --me names the account acting, and "
-                f"{format_unresolved(invoker.unresolved_cause)}.",
-                file=sys.stderr,
-            )
+        # --me names the person whose work this is: the user's account GitHub
+        # answered, or the person the agent works for (DEC-076 point 3).
+        if not invoker.person:
+            print(f"error: --me names no person: {invoker.no_person()}.", file=sys.stderr)
             return 2
-        add_set.append(invoker.github_login)
+        add_set.append(invoker.person)
     if args.assignee:
         add_set.extend(s.strip() for s in args.assignee.split(",") if s.strip())
 

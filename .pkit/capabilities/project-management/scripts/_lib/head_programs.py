@@ -39,7 +39,15 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from _lib import audit_log, comment_log, default_branch, friction_answers, pr_head, topology
+from _lib import (
+    accounts,
+    audit_log,
+    comment_log,
+    default_branch,
+    friction_answers,
+    pr_head,
+    topology,
+)
 from _lib.audit import audit_key, render_audit_comment
 from _lib.comment import post_audit_once
 from _lib.gh import gh_run
@@ -205,9 +213,19 @@ def ask(
     print(f"{command}: PR #{number}'s head is from elsewhere: {standing.elsewhere}.")
     print(f"  commit:     {head}")
     print(f"  repository: {source_repository or 'one the host does not name'}")
+    # Whose account the programs start under: the person's own where the credential
+    # names a user's account, otherwise the credential's, which is no person's
+    # (DEC-067 point 4, as DEC-076 completes it).
+    reading = accounts.read(config)
+    if reading.names_user:
+        under = "under your account"
+    elif reading.unnamed:
+        under = "under the credential this session holds, which acts as no person's account"
+    else:
+        under = "under the credential this session holds, whose account GitHub did not name"
     print(
         f"The change check needs a program this head holds. Naming the head starts its "
-        f"programs under your account, for this run of {command} alone: the commit, its "
+        f"programs {under}, for this run of {command} alone: the commit, its "
         "merge with the base and the reviewers the run starts."
     )
     print(f"Reading its diff needs no checkout: `gh pr diff {number}`.")
