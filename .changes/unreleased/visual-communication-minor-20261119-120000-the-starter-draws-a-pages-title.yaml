@@ -1,0 +1,20 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The starter's version being built gains the web part `title`, which names
+  a page: its title, and the lead under it where the content gives one
+  (#3409). Its title takes a type of its own, the starter's new role
+  `starter.type.title`, which no other component reads, so a page's head no
+  longer has to be drawn as its sections' heads are, as the rule on one
+  focal point asks of a page of sections (`RS-GRAPHIC-001`, DEC-068 point
+  3). The role defaults to `type.title`, a shared role the foundations'
+  version being built adds, the type of a page's title, which defaults to
+  `type.heading`, so a brand released before it owes it no value. The
+  neutral brand's version being built gives it 36 px on a desktop and a
+  tablet, 32 on a phone and 48 on a projector, each larger than its 24 px
+  heading. A page places the title first in its `sections`, before its
+  sections, a form or a table. The starter being built now reads on the
+  foundations being built alone, and is released after them. Its earlier
+  release, 1.0.0, is as it was.
