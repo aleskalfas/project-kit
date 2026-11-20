@@ -15,6 +15,7 @@ body: >
   `project_kit.schemas` API read its id, and `pkit schemas validate` reports a
   companion that declares both annotations. `pkit schemas add` refuses a
   document namespace, and `pkit schemas rename` renames the example
-  document's id and what cites it. No schema declares the annotation yet, so
-  nothing that passed validation stops passing. The schemas reference and the
+  document's id and what cites it. No schema an installed project already
+  binds declares the annotation, so nothing that passed validation stops
+  passing. The schemas reference and the
   schema skill say how to declare it.
