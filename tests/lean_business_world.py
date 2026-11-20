@@ -7,9 +7,8 @@ that answers in this process.
   Every `pkit` call of the capability's goes to the in-process `pkit` (`route_pkit`).
 - **The engine** (`InProcessEngine`). The engine itself runs each predicate in a process of
   its own, which reads the real day. This one asks the same predicates in this process, on
-  the test's day: each state's detection through `positions`; a cycle's or an experiment's
-  gate through its script's `judge`; and a desk stage gate through the judgement its script
-  hands `positions.desk_gate`. It keeps each move it took (`moves`), as the engine's journal
+  the test's day: each state's detection through `positions`, and each gate through its
+  script's `judge`. It keeps each move it took (`moves`), as the engine's journal
   would, and each operation asked of it (`asked`). A test may make it refuse the move after
   the write (`refuse_move`), as the engine refuses one whose gate the write left closed.
 - **A run** (`World.run`): a command run through its parser, in a context on the world's
@@ -88,7 +87,6 @@ LIB: dict[str, ModuleType] = dict(zip(LIB_NAMES, _LOADED, strict=False))
 GATES: dict[str, ModuleType] = {
     name.removesuffix(".py").replace("_", "-"): module
     for name, module in zip(_GATE_SCRIPTS, _LOADED[len(LIB_NAMES) :], strict=False)
-    if not name.startswith("desk_")
 }
 SCRIPT: dict[str, ModuleType] = dict(
     zip(COMMANDS, _LOADED[len(LIB_NAMES) + len(_GATE_SCRIPTS) :], strict=True)
@@ -153,19 +151,6 @@ DETECT: dict[str, Callable[[Path, str, date], Any]] = {
 }
 
 
-def _desk_judge(trigger: str) -> Callable[[Any], Any]:
-    """The judgement a desk stage gate's script hands `positions.desk_gate`, by its trigger.
-    The desk stage's scripts name it each in their own way, so it is named here once."""
-    if trigger.startswith("pass-"):
-        step = trigger.removeprefix("pass-")
-        return lambda variant: positions.passing(variant, step)
-    return {
-        "shortlist": positions.shortlisting,
-        "shelve": positions.shelving,
-        "split": positions.splitting,
-    }[trigger]
-
-
 def _definition(process: str) -> dict[str, Any]:
     return YAML(typ="safe").load((CAPABILITY / f"schemas/{process}.yaml").read_text())["process"]
 
@@ -195,11 +180,7 @@ class InProcessEngine:
         if not gate:
             return True, "no gate"
         try:
-            if process == "desk-stage":
-                judge = _desk_judge(transition["trigger"])
-                answer = positions.desk_gate(judge)(self.root, subject)
-            else:
-                answer = GATES[gate["predicate"]["run"]].judge(self.root, subject, self.on)
+            answer = GATES[gate["predicate"]["run"]].judge(self.root, subject, self.on)
         except positions.Unreadable as exc:
             return False, f"indeterminate: {exc}"
         return bool(answer.result), str(answer.reason)
