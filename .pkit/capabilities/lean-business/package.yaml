@@ -71,7 +71,7 @@ commands:
     help: "Work out what the idea's goal asks of a variant through the customer factory: the active customers needed, those lost and won each year, the leads needed and the customers each year on the way, for each side that pays (DEC-002 point 4). Read-only; nothing is stored. The README gives the formulas."
   status:
     script: scripts/status.py
-    help: "Where the ideas stand and what waits on you (DEC-001 point 10): one line for each idea, or one idea in full, each subject's position from the process engine. --json prints the structured form, with its schema_version, whose keys the README lists. Read-only."
+    help: "Where the ideas stand and what waits on you (DEC-001 point 10): one line for each idea, or one idea's return briefing, each subject's position from the process engine: after 14 days with nothing recorded on an open cycle, an offer to record the gap as a suspension; the last act; the goal; each cycle, variant and experiment; and what waits, in order, each with its command. --json prints the structured form, with its schema_version, whose keys the README lists. Read-only."
   add-assumption:
     script: scripts/add_assumption.py
     help: "Add an assumption to a variant's list, <variant> <statement> --kind desirability|viability|feasibility (--entry <entry> | --input <input> [--side]) [--id], ranked one past the highest (DEC-002 points 7 and 8). Content: asks nothing. Refused for an entry the canvas does not hold. Prints the id it gives; the list is created where the variant has none."
@@ -114,6 +114,15 @@ commands:
   decide:
     script: scripts/decide.py
     help: "Record your next action on a due experiment, <experiment> correct-course|double-down|stop, with who and when (DEC-002 point 10; DEC-003 point 3). The person's move: asks at a terminal, needs --person-decided off one. Refused before it is due, without its result, and while its cycle is suspended."
+  suspend:
+    script: scripts/suspend.py
+    help: "Record that your life stopped a cycle, <cycle> --reason --since <day> [--resumed <day>], today or earlier, so it may be recorded late (DEC-002 point 12; DEC-003 point 4). Its days count toward no window, and toward no time box not started by its first day; says what it moves. The person's act: asks at a terminal, needs --person-decided off one, and records who and when; the move it makes, into suspended or back to running, is the script's. Refused on a cycle planned, suspended or decided, and for a suspension that breaks its rules, such as a covered day with recorded work, or one that contradicts an act already recorded."
+  resume:
+    script: scripts/resume.py
+    help: "Record the day a suspended cycle resumed, <cycle> [--on <day>], today where none is given (DEC-002 point 12; DEC-003 point 4). It goes back to running, or into review where its window, moved by the suspension, ended before today. The person's move: asks at a terminal, needs --person-decided off one, and records who and when. Refused on a cycle not suspended, and for a day the suspension's rules refuse."
+  review-cycle:
+    script: scripts/review_cycle.py
+    help: "Record a cycle's review, <cycle> --reached <number>... [--winning <variant>] --decision persevere|pivot|pause --reasons [--evidence <experiment>]..., with who and when, after its progress report (DEC-002 point 11; DEC-003 point 4). The person's move: asks at a terminal, needs --person-decided off one. Refused on a cycle not in review, a count reached that differs from the key results, a winner it did not explore or none where it explored several, a persevere or pivot for a shelved or split winner, and a pivot without a decided experiment as evidence. Warns when persevering on a missed objective."
   desk-stage-detect:
     script: scripts/desk_stage_detect.py
     help: "Process classifier (lean-business DEC-003 points 1 and 2): read-only; answers which state of the desk stage a variant is in, from its canvas's outcome and the run of standing yes verdicts. Invoked by the process engine."

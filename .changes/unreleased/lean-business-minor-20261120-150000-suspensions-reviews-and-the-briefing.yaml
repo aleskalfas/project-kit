@@ -1,0 +1,24 @@
+component: lean-business
+kind: minor
+custom:
+  category: Added
+body: >
+  Suspensions, reviews and the return briefing (#3426, DEC-001 point 10,
+  DEC-002 points 11, 12 and 15, DEC-003 points 4 and 5). `pkit lean suspend`
+  records that the person's life stopped a cycle, from a day they give, today
+  or earlier, with the day they came back where the absence is over; it says
+  what the suspension moves, and the cycle then goes where its dates place it.
+  `resume` records the day a suspended cycle resumed, which takes it back to
+  running, or into review where its window, so moved, ended before today.
+  `review-cycle` records what each key result reached, the winning variant
+  and the person's decision for it, after a progress report of the key
+  results, the suspensions and the experiments not yet decided; it warns when
+  persevering where the objective was missed. `pkit lean status <idea>` now
+  gives the full briefing: an offer to record a silence of 14 days on an open
+  cycle as a suspension, the last act, each cycle in full, each variant's
+  stale judgements, each experiment's expectation beside its result, and what
+  waits on the person in order, the next cycle to plan among it. Its
+  structured form adds `last_act` and `offer`, and keys on each variant,
+  cycle and experiment, at `schema_version` 1. Where the process engine places
+  a cycle in none of its states after a suspension's write, the suspension
+  stands and the command says the move waits.

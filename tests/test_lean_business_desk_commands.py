@@ -1004,9 +1004,10 @@ def test_status_gives_a_line_for_each_idea_and_an_idea_in_full(world: lb.World) 
     world.run("new_variant", "board-game--platform", "--archetype", "marketplace")
     run = world.run("status")
     assert run.code == 0, run.err
+    # meal-plan's cycle persevered for its shortlisted variant, so the next cycle waits.
     assert run.out.splitlines() == [
         "board-game: no goal, 1 variant (1 sketched); 2 waiting",
-        "meal-plan: a goal, 2 variants (1 shortlisted, 1 shelved)",
+        "meal-plan: a goal, 2 variants (1 shortlisted, 1 shelved); 1 waiting",
     ]
     run = world.run("status", "board-game")
     assert "    board-game--platform: sketched" in run.out
@@ -1020,11 +1021,21 @@ def test_status_json_is_its_documented_structured_form(world: lb.World) -> None:
     assert document["schema_version"] == 1
     assert set(document) == {"schema_version", "location", "ideas"}
     (idea,) = document["ideas"]
-    assert set(idea) == {"id", "goal", "variants", "cycles", "experiments", "waiting"}
+    assert set(idea) == {
+        "id",
+        "goal",
+        "last_act",
+        "offer",
+        "variants",
+        "cycles",
+        "experiments",
+        "waiting",
+    }
     assert idea["goal"] == {"revenue": 1000000, "per": "year", "currency": "EUR", "years": 3}
     assert idea["variants"] == [
-        {"id": "meal-plan--direct", "state": "shortlisted", "why": None},
-        {"id": "meal-plan--two-sided", "state": "shelved", "why": None},
+        {"id": "meal-plan--direct", "state": "shortlisted", "why": None, "stale": []},
+        {"id": "meal-plan--two-sided", "state": "shelved", "why": None, "stale": []},
     ]
-    assert idea["cycles"] == [{"id": "meal-plan--first", "state": "decided", "why": None}]
-    assert idea["waiting"] == []
+    (cycle,) = idea["cycles"]
+    assert (cycle["id"], cycle["state"], cycle["why"]) == ("meal-plan--first", "decided", None)
+    assert [waiting["subject"] for waiting in idea["waiting"]] == ["meal-plan"]

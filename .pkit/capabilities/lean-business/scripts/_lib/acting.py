@@ -20,6 +20,9 @@ ways a command meets the engine:
 - **An act followed by the script's move** (`act_then_moved`): the person's act is written,
   and the move the data then makes, such as a cycle into suspended, is taken from the
   origin read before, with no `can-move` first, since its gate is closed until the write.
+  Where the engine places the subject in none of its states after the write, the act
+  stands, since it is the person's whatever the engine reads, and the command says that the
+  move waits; a person's move undoes its write instead, since the move is the act.
 
 **The consent forms** (`consent`; DEC-003 point 5; COR-048 point 5). An act or a move of
 the person's is taken only on the person's word: given by `--person-decided`, which an
@@ -296,6 +299,7 @@ def act_then_moved(
     """Record an act of the person's whose effect the script's move then takes, such as a
     suspension: held, asked and written; then, where the engine places `subject` elsewhere
     than `before` did, the move there from the origin it read, with no `can-move` first.
+    Where it places `subject` in none of its states, the act stands and the move waits.
     `done` says what was recorded. Returns the state it moved to, or None where nothing
     moved."""
     origin = before.state
@@ -304,6 +308,14 @@ def act_then_moved(
     actor = ctx.who
     undo = writes.commit(ctx.root, files.written())
     after = _after(ctx, process, subject, undo)
+    if origin is not None and after.state is None:
+        waits = (
+            f"After the write the process engine places `{subject}` in none of its states, so "
+            f"its move from {origin} waits until the engine places it in one; `pkit lean "
+            f"check` names what the files hold."
+        )
+        report(ctx, files, prepared, [done, waits])
+        return None
     if origin is None or after.state is None or after.state == origin:
         report(ctx, files, prepared, [done])
         return None

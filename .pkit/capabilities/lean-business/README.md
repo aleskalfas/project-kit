@@ -41,8 +41,12 @@ pkit:
         - .pkit/capabilities/lean-business/scripts/reach_stopping_rule.py
         - .pkit/capabilities/lean-business/scripts/record_result.py
         - .pkit/capabilities/lean-business/scripts/decide.py
+        - .pkit/capabilities/lean-business/scripts/suspend.py
+        - .pkit/capabilities/lean-business/scripts/resume.py
+        - .pkit/capabilities/lean-business/scripts/review_cycle.py
         - .pkit/capabilities/lean-business/scripts/_lib/*.py
         - .pkit/capabilities/lean-business/schemas/*.schema.json
+        - .pkit/capabilities/lean-business/skills/lean-business/lean-business.md
       record:
         - lean-business:DEC-001#1
         - lean-business:DEC-001#3
@@ -92,9 +96,8 @@ lean-business guides a person through the lean method of validating a business m
 - `schemas/` — the shape of each file of an idea and of the capability's configuration, each with its reference instance ([lean-business:DEC-002-lean-business-data-model]; "An idea's folder" below). `shapes.schema.json` holds the shapes they share: the ids, the references, a day, a person and a fingerprint.
 - `scripts/check.py` — the capability's check, `pkit lean check`, and the `lean-business:check` member of `pkit validate` ("The check" below).
 - `scripts/*.py`, one for each of the other commands ("Commands" below).
-- `scripts/_lib/` — what the check and the commands share. What every write goes through: the context a command runs in, its consent forms, and its acts and moves (`acting`); the hold of a write against the check and the data validation, its commit and its undoing, and the location's record (`writes`); the round-trip edit of a file (`editing`); the ids a write gives (`naming`); the judgements a write leaves stale (`staling`); the process engine's status, can-move and move (`engine`), reached through `pkit` (`backbone`). What the desk commands read and draw: a variant's canvas and its boxes (`canvases`), the estimate (`estimates`), the grid (`grid`) and the status (`briefing`). What the experiment path's commands read and change: a variant's assumptions (`assumptions`), an experiment and the cycle it names (`experiments`), and a cycle's plan (`cycles`). And what the check reads through: the files git sees (`listing`); the place of each file in an idea's folder, and the file of a subject's id (`layout`); an idea's subjects and the lookups between them, each lookup telling a subject found from a reference that names nothing, one into a kind of which the location holds no file, or another idea's subject (`model`); the gates of the moves and the acts, each asked with the day of its act (`gates`); the acts recorded in an idea's files, each with the gate that judges it (`acts`); the canonical form, the fingerprints taken over it, and whether a kept one still matches (`fingerprint`); where a window and a time box fall under a cycle's suspensions, as they stand or as they stood on a day (`timeline`); the rules a suspension keeps, contradicting no act already recorded among them (`suspensions`); the places each schema puts a day (`schemas`); and what follows from the files, such as pricing, an experiment's pass or fail, an assumption's outcome and an idea dropped (`readings`).
-
-The commands that suspend, resume and review a cycle, and the skill these records decide, are being built under project-kit#3426. This README lists them as they land.
+- `scripts/_lib/` — what the check and the commands share. What every write goes through: the context a command runs in, its consent forms, and its acts and moves (`acting`); the hold of a write against the check and the data validation, its commit and its undoing, and the location's record (`writes`); the round-trip edit of a file (`editing`); the ids a write gives (`naming`); the judgements a write leaves stale (`staling`); the process engine's status, can-move and move (`engine`), reached through `pkit` (`backbone`). What the desk commands read and draw: a variant's canvas and its boxes (`canvases`), the estimate (`estimates`), the grid (`grid`) and the status, with the briefing that orients a person coming back to an idea (`briefing`). What the experiment path's commands read and change: a variant's assumptions (`assumptions`), an experiment and the cycle it names (`experiments`), and a cycle's plan, its suspensions and its review (`cycles`). And what the check reads through: the files git sees (`listing`); the place of each file in an idea's folder, and the file of a subject's id (`layout`); an idea's subjects and the lookups between them, each lookup telling a subject found from a reference that names nothing, one into a kind of which the location holds no file, or another idea's subject (`model`); the gates of the moves and the acts, each asked with the day of its act (`gates`); the acts recorded in an idea's files, each with the gate that judges it (`acts`); the canonical form, the fingerprints taken over it, and whether a kept one still matches (`fingerprint`); where a window and a time box fall under a cycle's suspensions, as they stand or as they stood on a day (`timeline`); the rules a suspension keeps, contradicting no act already recorded among them (`suspensions`); the places each schema puts a day (`schemas`); and what follows from the files, such as pricing, an experiment's pass or fail, an assumption's outcome and an idea dropped (`readings`).
+- `skills/lean-business/` — the skill that guides a person through the loop with these commands, one sub-procedure for each step, every judgement left to the person ([lean-business:DEC-001-lean-business-discipline]).
 
 ## Adopter setup
 
@@ -244,6 +247,9 @@ Checks the files of the location, as "The check" above says.
 | `reach-stopping-rule <experiment>` | Records a generative experiment's stopping rule reached, within its time box, which makes it due. Refused on an evaluative experiment, which runs its whole time box. | act |
 | `record-result <experiment> [--measured <number>] [--spoiled] --evidence <text> --learned <text>` | Records what a declared experiment found, and says what it works out to: a pass, a fail, or neither. Recorded again before the decision, it replaces the earlier one. Refused for a measurement spoiled where no suspension ran through its time box. | act |
 | `decide <experiment> correct-course\|double-down\|stop` | Records your next action on a due experiment whose result is recorded. | move |
+| `suspend <cycle> --reason <text> --since <day> [--resumed <day>]` | Records that your life stopped a running cycle, or one in review, from the first day you were away, today or earlier, so it may be recorded on your return. Where the absence is over, `--resumed` gives the day you came back, which counts again. Says where the window, and each time box it moves, fall before and after. The cycle then goes where its dates place it: into suspended, or from review back to running where the days it gives back reach today. Refused on a cycle planned, since an absence known before the window starts is sized into it, on one suspended or decided, and for a suspension that breaks its rules ("A suspension" below). | act |
+| `resume <cycle> [--on <day>]` | Records the day a suspended cycle resumed, today where `--on` gives none. It goes back to running, or into review where its window, moved by the suspension, ended before today. Refused on a cycle not suspended, and for a day the suspension's rules refuse. | move |
+| `review-cycle <cycle> --reached <number>... [--winning <variant>] --decision persevere\|pivot\|pause --reasons <text> [--evidence <experiment>]...` | Records a cycle's review once its window has ended: what each key result reached, in the plan's order; the variant that did best, which is the one it explored where it explored one; and your decision for it, with your reasons. Says the progress report first: each key result against its target, each suspension with the day it was recorded, and each experiment not yet decided, which the decision does not wait for. Refused on a cycle not in review, a count of numbers reached that differs from the key results, a winner the cycle did not explore or none named where it explored several, a persevere or a pivot for a shelved or split winner, and a pivot with no decided experiment as its evidence. Warns when you persevere where the winner missed the objective. | move |
 
 An assumption is named by its id, `<idea>--<variant>--<assumption>`, by the part after the idea, `<variant>--<assumption>`, or by its own part; a cycle by its id, `<idea>--<cycle>`, or by its own part. Every command that names one takes each form, save `plan-cycle`, which takes the id of the cycle it plans. A part is completed by the variant the command names, as `rank`'s, or by the idea, as the experiment's id gives `new-experiment` and `draft-experiment`. Where that leaves it short, it names the one of that idea, or else of the location, whose id ends with it, and is refused where none does, or more than one. `--entry` names an entry by its id or its own part. An assumption's id comes from `--id` or its statement, as an entry's does.
 
@@ -255,7 +261,9 @@ An assumption is named by its id, `<idea>--<variant>--<assumption>`, by the part
 
 Refused: a time box over fourteen days, or ending before it starts; a range whose low is above its high; a field the experiment's kind does not hold; and a change of kind while the draft holds the other kind's fields, unless `--clear` takes them out in the same run.
 
-**While a cycle is suspended,** `record-estimate`, `declare`, `reach-stopping-rule`, `record-result` and `decide` are refused on its experiments, naming `pkit lean resume <cycle>`. `new-experiment` and `draft-experiment` write the draft, and warn.
+**A suspension** covers each day from its first day up to the day the cycle resumed, which counts again. Its days count toward no window, and toward no time box of an experiment that had not started by its first day; an experiment already running keeps its dates ([lean-business:DEC-002-lean-business-data-model] point 12). Its first day lies within the window as earlier suspensions move it, and neither its first day nor the day it resumed is later than the day each was recorded. It overlaps no other suspension, covers no day that holds work recorded on the cycle, its experiments or the goal, and makes no act already recorded read as one its gate refuses. `suspend` writes it, then takes the move its dates make. Where the process engine then places the cycle in none of its states, the suspension stands, since it is your act, and the command says that the move waits.
+
+**While a cycle is suspended,** `record-estimate`, `declare`, `reach-stopping-rule`, `record-result` and `decide` are refused on its experiments, and `review-cycle` on the cycle, each naming `pkit lean resume <cycle>`. `new-experiment` and `draft-experiment` write the draft, and warn.
 
 ### The grid
 
@@ -290,7 +298,24 @@ A side that pays nothing counts at nothing. A model with several paying sides is
 
 ### The status
 
-`pkit lean status` gives one line for each idea: whether it has a goal, its variants counted by where they stand, and how many things wait on you. `pkit lean status <idea>` gives the idea in full: its goal, each variant, cycle and experiment with where it stands, and what waits on you, each with the command that takes it. Each position is the process engine's ([lean-business:DEC-002-lean-business-data-model] point 15). At the desk, what waits is a goal to set, the next step of a variant to judge, and a feasible variant that may be shortlisted.
+`pkit lean status` gives one line for each idea: whether it has a goal, its variants counted by where they stand, and how many things wait on you. `pkit lean status <idea>` gives the idea's briefing, from its files alone, to bring you back to it after a day or after months ([lean-business:DEC-001-lean-business-discipline] point 10). It comes in this order:
+
+1. **An offer, after a silence of 14 days.** Where nothing has been recorded on a running cycle, or on one in review, for 14 days or more of its window, the briefing first offers to record the gap as a suspension. The suspension would start on the day after the last work recorded on the cycle, or on the window's first day where that is later. The briefing says where the window's end falls now and where it would fall were you back today, with the `suspend` command that records it. Work recorded on the cycle is what a suspension may not cover: an act on the cycle, on its experiments or on the goal, and each suspension and resumption recorded. No offer is made where such a suspension would break its rules. It is an offer, never an act: only you know whether the silence was time away.
+2. **Your last act:** its day, and each act recorded that day.
+3. **The goal.**
+4. **The cycles.** The one not yet decided comes in full: where it stands; the days of its window gone by today, the suspended days not counted; where its window falls as its suspensions move it; its objective; each key result with its target and, once reviewed, what it reached; its constraint; and each suspension with its days, its reason and the day it was recorded. A decided one comes in a line, with its decision and its winning variant.
+5. **The variants,** each with where it stands, and each of its judgements gone stale: a verdict, by its step, or its shortlisting.
+6. **The experiments.** One not yet decided comes with where it stands, and its time box as its cycle's suspensions move it, or that the time box waits for its cycle to resume. Once declared, it comes with its declared expectation, and beside it the result, worked out to a pass, a fail or neither, or that it waits for one. A decided one comes in a line, with your next action and its result.
+7. **What waits on you,** each with the command that takes it, in this order:
+   - a suspended cycle to resume;
+   - a goal to set;
+   - a due experiment's result, then its next action;
+   - a cycle in review to review;
+   - a draft in a planned or running cycle to declare;
+   - at the desk, for each variant: a stale verdict to judge again, the next step to judge, a feasible variant to shortlist, and a stale shortlisting to take again;
+   - the next cycle to plan, where the idea has a goal and a shortlisted variant whose shortlisting is not stale, no cycle of the idea is undecided, and its last cycle did not pause.
+
+Each position is the process engine's ([lean-business:DEC-002-lean-business-data-model] point 15). Where a window or a time box falls is worked out as the check works it out, and the days are counted to today, read when the command runs.
 
 `--json` prints its structured form, whose keys a reader may depend on:
 
@@ -299,8 +324,15 @@ A side that pays nothing counts at nothing. A model with several paying sides is
 - `ideas`: one for each idea, or the one named, each with:
   - `id`;
   - `goal`: `revenue`, `per`, `currency` and `years`, or `null` where the idea has none;
-  - `variants`, `cycles` and `experiments`: each an `id`, its `state`, and `why`. Where the engine could not tell where the subject stands, `state` is `null` and `why` says what stopped it; otherwise `why` is `null`;
+  - `last_act`: the `day` of your last recorded act, and `what` was recorded that day, each in words; `null` where nothing is recorded;
+  - `offer`: the offer to record a silence, or `null` where none is made. It holds the `cycle`, the day of the `last_work` recorded on it, the `first_day` the suspension would cover, the `window_end` now, the `window_end_if_back_today`, and the `command` that records it;
+  - `variants`, `cycles` and `experiments`: each an `id`, its `state`, and `why`. Where the engine could not tell where the subject stands, `state` is `null` and `why` says what stopped it; otherwise `why` is `null`. Each also has:
+    - a variant: `stale`, its judgements gone stale, each a step or `shortlisting`;
+    - a cycle: `window`, its `start` and `end` as its suspensions move it, the `days` it holds and the days of it `counted` by today; its `objective`; its `key_results`, each a `variant`, a `metric`, a `target`, and what it `reached`, `null` before the review; its `constraint`, a `step` and its `evidence`; its `suspensions`, each a `reason`, its `first_day`, the day it `resumed`, `null` while it is ongoing, and the day it was `recorded`; and its `review`, the `decision`, the `winning` variant and `when`, or `null` before the review;
+    - an experiment: its `kind`; its `cycle`; its `time_box`, a `start` and an `end`, as its cycle's suspensions move it; what it `expected`, in words; and its `outcome` once its result is recorded, `pass`, `fail` or `neither`, else `null`;
   - `waiting`: each a `subject`, `what` waits and the `command` that takes it.
+
+A day is written `YYYY-MM-DD`. A window's or a time box's `start` or `end` is `null` where an ongoing suspension leaves it none, and any value the files do not give, or that does not read, is `null`.
 
 ## Credits and licence
 

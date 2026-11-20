@@ -1,5 +1,5 @@
-"""A cycle's plan, as the commands that plan it and change it write it (lean-business
-DEC-002 points 11 and 13; DEC-003 points 4 and 5).
+"""A cycle, as the commands that plan it, change its plan, suspend it, resume it and review
+it write it (lean-business DEC-002 points 11 to 13; DEC-003 points 4 and 5).
 
 - **The cycle** (`open_cycle`): its file read round trip from the write, refused where the
   id is no cycle's or the file does not exist.
@@ -15,22 +15,48 @@ DEC-002 points 11 and 13; DEC-003 points 4 and 5).
 - **Who planned it, and its fingerprint** (`stamp`): who first planned it and the day, who
   changed it last and the day, and the plan's fingerprint over all of it, taken again with
   each change while the cycle is planned (DEC-002 points 11 and 13).
-- **Each key in its place** (`ORDER`).
+- **A suspension's rules** (`suspension_breaks`): each rule the suspension a command records,
+  or resumes, breaks, through the predicate the check shares (`suspensions.of_cycle`), under
+  the acts the cycle's suspensions bear on as the files stand (`acts.bearing_on`), so the
+  command refuses the suspension it records where the check would find the break at it
+  (DEC-002 point 12).
+- **What a suspension moves** (`moved`): where the window, and the time box of each of the
+  cycle's experiments not yet decided, fall before a change of its suspensions and after
+  it, each worked out by the one predicate the check and the status share (`timeline`);
+  and each experiment that had started by a suspension's first day, which keeps its dates.
+- **A suspension in words** (`away`), as the review and the status show it: its days, its
+  reason and the day it was recorded, so one recorded late stands apart.
+- **Each key in its place** (`ORDER`, `SUSPENSION_ORDER`).
 """
 
 from __future__ import annotations
 
 import argparse
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
 from ruamel.yaml.comments import CommentedMap
 
-from _lib import acting, canvases, editing, fingerprint, gates, ids, positions, timeline
+from _lib import (
+    acting,
+    acts,
+    canvases,
+    editing,
+    experiments,
+    fingerprint,
+    gates,
+    ids,
+    model,
+    positions,
+    timeline,
+)
 from _lib import engine as engines
+from _lib import suspensions as rules
 from _lib.experiments import a_day
+from _lib.reading import day
+from _lib.timeline import Span, span_text
 from _lib.writes import Files, Refused
 
 #: A cycle's keys, in the order the schema's reference instance writes them.
@@ -46,6 +72,9 @@ ORDER = (
     "suspensions",
     "review",
 )
+
+#: A suspension's keys, in the order the schema writes them.
+SUSPENSION_ORDER = ("reason", "first-day", "by", "when", "resumed")
 
 #: The days a window holds where the plan gives none (DEC-002 point 11).
 DAYS = 90
@@ -314,3 +343,92 @@ def started(plan: Mapping[str, Any], on: date) -> str | None:
         f"warning: its window started on {window.start}, by today, {on}, so its plan is frozen "
         f"from now"
     )
+
+
+# --- a suspension -----------------------------------------------------------------------------
+
+
+def suspension_breaks(files: Files, cycle: Cycle, index: int) -> list[str]:
+    """Each rule the suspension at place `index` of `cycle`'s list, as the write leaves it
+    so far, breaks, in words: through the predicate the check shares
+    (`suspensions.of_cycle`), under the acts the cycle's suspensions bear on as the files
+    stand (`acts.bearing_on`). Where two suspensions together break a rule, the break is the
+    one recorded last, which a command appends, so a break found at another place is not
+    this command's to refuse."""
+    held = experiments.read_idea(files, cycle.idea)
+    own = ids.own(cycle.id)
+    on_file = next((c for c in held.cycles if c.own == own), None) if held is not None else None
+    bearing = acts.bearing_on(held, on_file) if held is not None and on_file is not None else []
+    found = rules.of_cycle(cycle.plain(), bearing)
+    return list(dict.fromkeys(each.message for each in found if each.index == index))
+
+
+def moved(
+    files: Files, cycle: Cycle, was: Mapping[str, Any], *, since: date | None = None
+) -> list[str]:
+    """What a change to `cycle`'s suspensions moves, in words (DEC-002 point 12): where its
+    window falls with the suspensions `was`, the cycle before the change, holds, and where it
+    falls as the write leaves it; the same of each time box that moves, of its experiments
+    declared and not decided; and, where `since` is the first day of a suspension it
+    records, each such experiment whose time box had started by then and not ended, which
+    keeps its dates."""
+    written = cycle.plain()
+    lines: list[str] = []
+    before, after = timeline.cycle_window(was), timeline.cycle_window(written)
+    if before is not None and after is not None and before != after:
+        lines.append(f"Its window: {span_text(before)} before this, {span_text(after)} after it.")
+    held = experiments.read_idea(files, cycle.idea)
+    for experiment in held.experiments_of(cycle.id) if held is not None else []:
+        data = experiment.data
+        if not model.declared(data) or isinstance(data.get("decision"), Mapping):
+            continue
+        box_before = timeline.experiment_time_box(data, was)
+        box_after = timeline.experiment_time_box(data, written)
+        if box_before is None or box_after is None:
+            continue
+        named = data.get("id", ids.qualify(cycle.idea, experiment.own))
+        if box_before != box_after:
+            lines.append(
+                f"`{named}`'s time box: {span_text(box_before)} before this, "
+                f"{span_text(box_after)} after it."
+            )
+        elif since is not None and _running_on(box_after, since):
+            lines.append(
+                f"`{named}` had started by {since}, so it keeps its time box, "
+                f"{span_text(box_after)}: the world went on answering it, and its result "
+                f"waits for you once it is due."
+            )
+    return lines
+
+
+def _running_on(box: Span, when: date) -> bool:
+    return box.start is not None and box.start < when and (box.end is None or when <= box.end)
+
+
+def away(entry: Mapping[str, Any]) -> str:
+    """A suspension of a cycle's list, in words, as the review and the status show it: its
+    days, its reason, and the day it was recorded, with how long after its first day, so one
+    recorded late stands apart from one recorded as it began (DEC-002 point 12)."""
+    first, recorded = day(entry.get("first-day")), day(entry.get("when"))
+    resumption = entry.get("resumed")
+    resumed = day(resumption.get("day")) if isinstance(resumption, Mapping) else None
+    if first is not None and resumed is not None:
+        span = f"from {first} until {resumed}, {_days((resumed - first).days)}"
+    elif isinstance(resumption, Mapping):
+        span = f"from {first}, resumed"
+    else:
+        span = f"from {first}, ongoing"
+    noted = f"recorded on {recorded}"
+    if first is not None and recorded is not None and recorded > first:
+        noted += f", {_days((recorded - first).days)} after its first day"
+    return f"{span}: {entry.get('reason')}; {noted}"
+
+
+def suspensions_of(cycle: Mapping[str, Any]) -> Sequence[Mapping[str, Any]]:
+    """The suspensions a cycle's file lists that read as suspensions, in its order."""
+    listed = cycle.get("suspensions")
+    return [s for s in listed if isinstance(s, Mapping)] if isinstance(listed, list) else []
+
+
+def _days(count: int) -> str:
+    return "1 day" if count == 1 else f"{count} days"

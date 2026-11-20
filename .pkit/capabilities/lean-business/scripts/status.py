@@ -9,10 +9,13 @@
 (lean-business DEC-001 point 10; DEC-002 point 15).
 
 Read-only, worked out from the files each time and kept nowhere. Each subject's position is
-the process engine's. Without an idea it gives one line for each idea; with one, its goal,
-each variant, cycle and experiment with where it stands, and what waits on the person,
-each with the command that takes it. `--json` prints the structured form, whose keys the
-capability's README lists, with its `schema_version`.
+the process engine's. Without an idea it gives one line for each idea; with one, the
+briefing that orients a person coming back to it (`briefing`): after a long silence on a
+cycle, an offer to record the gap as a suspension; the person's last act; the goal; each
+cycle, variant and experiment with where it stands, the cycle not yet decided in full; and
+what waits on the person, each with the command that takes it. The day the silence and the
+window's days are counted to is today, read at the command's entry. `--json` prints the
+structured form, whose keys the capability's README lists, with its `schema_version`.
 
 Usage:
   pkit lean status [<idea>] [--json]
@@ -36,6 +39,7 @@ sys.path.insert(0, str(_HERE))
 
 from _lib import acting, briefing, canvases, ids, layout, listing
 from _lib.acting import Context
+from _lib.model import IdeaModel, Pools
 from _lib.writes import Refused
 
 
@@ -63,7 +67,11 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
         raise Refused(f"the ideas cannot be read: {exc}") from exc
     if args.idea is not None and args.idea not in contents.ideas:
         raise Refused(f"there is no idea `{args.idea}` in `{location}/`")
-    ideas = [briefing.of_idea(ctx.engine, contents.ideas[name]) for name in sorted(contents.ideas)]
+    pools = Pools.of(contents)
+    ideas = [
+        briefing.of_idea(ctx.engine, IdeaModel(contents.ideas[name], pools), ctx.on)
+        for name in sorted(contents.ideas)
+    ]
     if args.json:
         ctx.say(json.dumps(briefing.document(location, ideas), indent=2, ensure_ascii=False))
         return

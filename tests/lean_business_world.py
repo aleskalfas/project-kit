@@ -88,6 +88,8 @@ COMMANDS = (
     "remove_entry",
     "remove_experiment",
     "remove_side",
+    "resume",
+    "review_cycle",
     "set_archetype",
     "set_authors",
     "set_goal",
@@ -98,6 +100,7 @@ COMMANDS = (
     "shortlist",
     "split",
     "status",
+    "suspend",
 )
 
 _GATE_SCRIPTS = sorted(path.name for path in SCRIPTS.glob("*_gate_*.py"))

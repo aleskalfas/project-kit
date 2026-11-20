@@ -528,7 +528,7 @@ class _PlacesElsewhere:
     """The in-process engine, except that after the write it places the subject in `state`,
     where the trigger asked does not lead, and that it would take any move asked of it."""
 
-    def __init__(self, inner: lb.InProcessEngine, state: str) -> None:
+    def __init__(self, inner: lb.InProcessEngine, state: str | None) -> None:
         self.inner = inner
         self.state = state
         self.statuses = 0
@@ -567,6 +567,36 @@ def test_where_the_write_leaves_the_subject_where_its_trigger_does_not_lead_it_i
     # The verdict and the location's record, written by this first write, are undone.
     assert lb.snapshot(world.root) == kept
     assert not (world.root / lb.CONFIG).parent.exists()
+
+
+def test_where_the_engine_places_the_subject_in_no_state_after_an_act_the_act_stands(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The suspension is the person's act whatever the engine reads, so it stands, and the
+    # script's move waits; a person's move would undo its write instead.
+    world = lb.world(tmp_path, monkeypatch, date(2026, 12, 21))
+    _cycle(world, lambda data: data.pop("suspensions"))
+    nowhere = _PlacesElsewhere(world.engine, None)
+    ctx = lb.context(world.root, world.engine.on, nowhere)
+    before = acting.position(ctx, "cycle-lifecycle", "meal-plan--first")
+    assert before.state == "running"
+    moved = acting.act_then_moved(
+        ctx,
+        "cycle-lifecycle",
+        "meal-plan--first",
+        before,
+        _suspension(world),
+        "Suspended.",
+        question="Suspend the cycle?",
+        decided=True,
+    )
+    assert moved is None
+    assert nowhere.moved == []
+    assert world.read(lb.CYCLE)["suspensions"][0]["reason"] == "A family matter"
+    assert (
+        "places `meal-plan--first` in none of its states, so its move from running waits"
+        in ctx.out.getvalue()
+    )
 
 
 def test_a_command_refuses_where_the_engine_cannot_tell_the_position(world: lb.World) -> None:
