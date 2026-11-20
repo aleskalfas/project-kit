@@ -126,4 +126,4 @@ process:
         kind: deterministic
         predicate:
           run: experiment-lifecycle-gate-due-decided-decide
-      prompt: What did the experiment find, and what comes next?
+      prompt: Decide the experiment on what it found, with the next action given? Once decided, neither its result nor its next action can change.
