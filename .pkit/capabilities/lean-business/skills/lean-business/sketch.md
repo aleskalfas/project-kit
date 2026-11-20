@@ -40,7 +40,7 @@ The boxes, and a question of the capability's own that fills each:
 | `existing-alternatives` | how they cope today | What do they do about it now, including nothing at all? |
 | `unique-value-proposition` | why a customer would switch, as a headline | In one line, why would they change what they do? |
 | `high-level-concept` | the business in a few words | How would you tell a friend what it is like? |
-| `solution` | what the business offers for each problem | What would the business give them, problem by problem? |
+| `solution` | what the business builds or does to answer each problem | What would the business give them, problem by problem? |
 | `channels` | how customers are reached | How would the first ten hear of it, and how would the next thousand? |
 | `revenue-streams` | how the business earns | What would a customer pay, for what, and how often? |
 | `cost-structure` | what running it costs | What would it cost to run, each month? |

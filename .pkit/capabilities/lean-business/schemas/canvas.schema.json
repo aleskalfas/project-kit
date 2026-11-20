@@ -76,7 +76,7 @@
           }
         },
         "existing-alternatives": {
-          "description": "How the customers deal with each problem today.",
+          "description": "What the customers do about each problem now, in whatever form, a product or not.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/entry"
@@ -97,14 +97,14 @@
           }
         },
         "solution": {
-          "description": "What the business offers for each problem.",
+          "description": "What the business builds or does to answer each problem.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/solution"
           }
         },
         "channels": {
-          "description": "The paths by which the business reaches its customers.",
+          "description": "How the business gets in front of its customers and wins them.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/channel"
@@ -125,14 +125,14 @@
           }
         },
         "key-metrics": {
-          "description": "The numbers that tell how the business is doing, each measuring a step of the customer factory.",
+          "description": "The few counts the business watches, each measuring a step of the customer factory.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/key-metric"
           }
         },
         "unfair-advantage": {
-          "description": "What others cannot easily copy or buy. Better left empty than filled with a weak one.",
+          "description": "An edge rivals could neither imitate nor acquire soon. Better left empty than filled with a weak one.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/entry"
