@@ -1,35 +1,71 @@
-#!/usr/bin/env python3
-"""Predicate stub: deterministic gate — may the subject move 'in-review' -> 'decided' on 'decide'? for lean-business:cycle-lifecycle.
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "ruamel.yaml==0.19.1",
+# ]
+# ///
+"""lean-business:cycle-lifecycle — the gate on `in-review` -> `decided`, on `decide`: may the
+person's decision close the cycle? (lean-business DEC-003 point 4).
 
-Scaffolded by `pkit process new` (COR-044). Implementing it is the
-process-author agent's territory — turn the owner's intent into a working
-predicate over reality. The contract it must follow (COR-033 engine contract,
-.pkit/process/README.md "The predicate runner"):
+Deciding is the person's move, from review. The engine asks the gate by `can-move` before
+the command writes the review, and by `move` after, so it holds on both sides of the write
+(`_lib.positions.deciding_cycle`):
 
-- READ-ONLY. `status` and `health` run predicates live; mutating here is a
-  side-effect bug.
-- argv: the subject slot first (the subject id), then `--json`;
-  cwd is the repo root.
-- print ONE JSON object to stdout: {"result": <bool>, "reason": "<why>"}
-- FAIL-CLOSED: an error / timeout / non-zero exit / unparseable payload is
-  INDETERMINATE, never a pass.
+- before, the cycle is in review: its window, as its suspensions work it out, ended before
+  today, no suspension is ongoing, and nothing is decided;
+- after, the review records one decision of persevere, pivot and pause, its reasons, its
+  winning variant, and who decided and when, and passes the review's gate as the check
+  asks it, on the day it was recorded with the suspensions as they stood then
+  (`gates.deciding_cycle`, through `acts.as_stood`; DEC-002 point 14): each key result's
+  reach recorded, a winning variant the cycle explored, neither shelved nor split for
+  persevere or pivot, at least one decided experiment as a pivot's evidence, and the window
+  ended before the decision.
 
-Until implemented this stub EXITS NON-ZERO (indeterminate, fail-closed) so an
-unwritten predicate can never read as green.
+Persevering where the winning variant missed the objective passes, and draws the command's
+and the check's warning. The review waits on no experiment.
 
-pkit:predicate-stub-unimplemented — DELETE this line once the predicate is
-implemented. `pkit process health --interpretation-only` reads it statically to
-tell "seam declared but never written" from "seam written and merely failing",
-so a seam no subject currently exercises still reports honestly.
+Today is the local date where it runs, read here and nowhere else (DEC-003 point 1). The
+test suite gives a fixed day by calling `judge` in its own process.
+
+READ-ONLY. The engine runs it from the repository's root as
+
+  cycle_lifecycle_gate_in_review_decided_decide.py <idea>--<cycle> --json
+
+and reads one JSON object on standard output, `{"result": <bool>, "reason": "..."}`.
+
+Exit codes:
+  0  answered
+  2  no answer: the subject is no cycle's id; its location, its idea's files, its file,
+     its review, its suspensions or its window cannot be read; or, where nothing is
+     refused, the winning variant's canvas, or an experiment a pivot names, lies in its
+     place but does not read. Why goes to standard error, and the engine refuses the move
+     as indeterminate.
 """
-import json
+
+from __future__ import annotations
+
 import sys
+from datetime import date
+from pathlib import Path
 
-subject = sys.argv[1] if len(sys.argv) > 1 else ""
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).parent))
 
-# TODO(process-author): implement this predicate over the owner's reality,
-# print the contract payload above, and exit 0.
-print(json.dumps({
-    "reason": "stub not implemented yet (deterministic gate — may the subject move 'in-review' -> 'decided' on 'decide'? for lean-business:cycle-lifecycle)",
-}))
-sys.exit(1)
+from _lib import positions
+
+PROG = "cycle-lifecycle-gate-in-review-decided-decide"
+WHAT = "May the person's decision move the cycle from review to decided?"
+
+
+def judge(root: Path, subject: str, on: date) -> positions.Answer:
+    """The gate on the cycle `subject` on the day `on`, read from the project at `root`."""
+    return positions.cycle_gate(positions.deciding_cycle)(root, subject, on)
+
+
+def main() -> int:
+    return positions.answer_gate(sys.argv[1:], PROG, WHAT, positions.as_of(judge, date.today()))
+
+
+if __name__ == "__main__":
+    sys.exit(main())

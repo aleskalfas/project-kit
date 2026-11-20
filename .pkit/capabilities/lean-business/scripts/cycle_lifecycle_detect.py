@@ -1,40 +1,71 @@
-#!/usr/bin/env python3
-"""Predicate stub: classified detection — which state is the subject in? for lean-business:cycle-lifecycle.
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "ruamel.yaml==0.19.1",
+# ]
+# ///
+"""lean-business:cycle-lifecycle — the classifier: which state of its process is a cycle in?
+(lean-business DEC-003 points 1 and 4).
 
-Scaffolded by `pkit process new` (COR-044) as one `inferred` stub per state,
-then made the definition's one classifier by hand, as the stamp's help says
-adopting `classified` is (DEC-003 point 1). Implementing it is the
-process-author agent's territory — turn the owner's intent into a working
-predicate over reality. The contract it must follow (COR-033 engine contract,
-.pkit/process/README.md "The predicate runner"; .pkit/process/shape.md,
-"Detection modes"):
+Every state of the definition names it under `mode: classified`, so the engine runs it once
+each time it reads a cycle's position (the process area's shape page, "Detection modes").
+It reads the cycle's file, at the place the layout gives it, and today's date, and answers
+from them in the order the data says first (`_lib.positions.cycle_lifecycle`):
 
-- READ-ONLY. `status` and `health` run predicates live; mutating here is a
-  side-effect bug.
-- argv: the subject slot first (the subject id), then `--json`;
-  cwd is the repo root.
-- print ONE JSON object to stdout: {"state": "<state id>" | null, "reason": "<why>"}
-  (the `classified` answer every state of the definition names; null only
-  with a reason that is not blank)
-- FAIL-CLOSED: an error / timeout / non-zero exit / unparseable payload is
-  INDETERMINATE, never a pass.
+- a review that records the person's decision places the cycle in `decided`, whatever its
+  suspensions and its dates say;
+- else an ongoing suspension, one with no day of resuming, places it in `suspended`,
+  whatever its dates say;
+- else its window, as its suspensions work it out (DEC-002 point 12), places it in
+  `planned` before the window's first day, `running` from its first day through its last,
+  and `in-review` after it.
 
-Until implemented this stub EXITS NON-ZERO (indeterminate, fail-closed) so an
-unwritten predicate can never read as green.
+Today is the local date where it runs, read here and nowhere else, and never taken from
+the arguments or the environment (DEC-003 point 1). The test suite gives a fixed day by
+calling `classify` in its own process.
 
-pkit:predicate-stub-unimplemented — DELETE this line once the predicate is
-implemented. `pkit process health --interpretation-only` reads it statically to
-tell "seam declared but never written" from "seam written and merely failing",
-so a seam no subject currently exercises still reports honestly.
+READ-ONLY. The engine runs it from the repository's root as
+
+  cycle_lifecycle_detect.py <idea>--<cycle> --json
+
+and reads one JSON object on standard output:
+
+  {"state": "<state>", "reason": "..."}   the cycle stands there
+  {"state": null, "reason": "..."}        it has no file, so it stands in no state
+
+Exit codes:
+  0  answered
+  2  no answer: the subject is no cycle's id, or its location, its idea's files, its file,
+     its review's decision, its suspensions or its window cannot be read. Why goes to
+     standard error, and the engine reads every state as indeterminate.
 """
-import json
+
+from __future__ import annotations
+
 import sys
+from datetime import date
+from pathlib import Path
 
-subject = sys.argv[1] if len(sys.argv) > 1 else ""
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).parent))
 
-# TODO(process-author): implement this predicate over the owner's reality,
-# print the contract payload above, and exit 0.
-print(json.dumps({
-    "reason": "stub not implemented yet (classified detection — which state is the subject in? for lean-business:cycle-lifecycle)",
-}))
-sys.exit(1)
+from _lib import positions
+
+PROG = "cycle-lifecycle-detect"
+WHAT = "Classify which state of its process a cycle is in, for the process engine."
+
+
+def classify(root: Path, subject: str, on: date) -> positions.Position:
+    """Where the cycle `subject` stands on the day `on`, read from the project at `root`."""
+    return positions.cycle_lifecycle_of(root, subject, on)
+
+
+def main() -> int:
+    return positions.answer_detection(
+        sys.argv[1:], PROG, WHAT, positions.as_of(classify, date.today())
+    )
+
+
+if __name__ == "__main__":
+    sys.exit(main())

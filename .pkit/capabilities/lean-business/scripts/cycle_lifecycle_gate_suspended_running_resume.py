@@ -1,35 +1,64 @@
-#!/usr/bin/env python3
-"""Predicate stub: deterministic gate — may the subject move 'suspended' -> 'running' on 'resume'? for lean-business:cycle-lifecycle.
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "ruamel.yaml==0.19.1",
+# ]
+# ///
+"""lean-business:cycle-lifecycle — the gate on `suspended` -> `running`, on `resume`: may the
+person's resumption move the cycle on? (lean-business DEC-003 point 4).
 
-Scaffolded by `pkit process new` (COR-044). Implementing it is the
-process-author agent's territory — turn the owner's intent into a working
-predicate over reality. The contract it must follow (COR-033 engine contract,
-.pkit/process/README.md "The predicate runner"):
+Resuming is the person's move. The person gives the day the cycle resumed, today unless
+they name an earlier one, and the move's gate checks that the suspension now has a day of
+resuming that DEC-002 point 12's rules allow (`_lib.positions.resuming_cycle`). The engine
+asks it by `can-move` before the command writes the resumption, and by `move` after, so it
+holds on both sides of the write:
 
-- READ-ONLY. `status` and `health` run predicates live; mutating here is a
-  side-effect bug.
-- argv: the subject slot first (the subject id), then `--json`;
-  cwd is the repo root.
-- print ONE JSON object to stdout: {"result": <bool>, "reason": "<why>"}
-- FAIL-CLOSED: an error / timeout / non-zero exit / unparseable payload is
-  INDETERMINATE, never a pass.
+- before, the cycle is suspended, with no decision recorded;
+- after, no suspension is ongoing, no break of the rules, through the predicate the check
+  shares, names the suspension the cycle resumed from, and the window, falling later by
+  the days that suspension covered, still holds today.
 
-Until implemented this stub EXITS NON-ZERO (indeterminate, fail-closed) so an
-unwritten predicate can never read as green.
+Today is the local date where it runs, read here and nowhere else (DEC-003 point 1). The
+test suite gives a fixed day by calling `judge` in its own process.
 
-pkit:predicate-stub-unimplemented — DELETE this line once the predicate is
-implemented. `pkit process health --interpretation-only` reads it statically to
-tell "seam declared but never written" from "seam written and merely failing",
-so a seam no subject currently exercises still reports honestly.
+READ-ONLY. The engine runs it from the repository's root as
+
+  cycle_lifecycle_gate_suspended_running_resume.py <idea>--<cycle> --json
+
+and reads one JSON object on standard output, `{"result": <bool>, "reason": "..."}`.
+
+Exit codes:
+  0  answered
+  2  no answer: the subject is no cycle's id; its location, its idea's files, its file,
+     its review's decision, its suspensions or its window cannot be read; or, where
+     nothing is refused, a file or a day the rules weigh cannot be read. Why goes to
+     standard error, and the engine refuses the move as indeterminate.
 """
-import json
+
+from __future__ import annotations
+
 import sys
+from datetime import date
+from pathlib import Path
 
-subject = sys.argv[1] if len(sys.argv) > 1 else ""
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).parent))
 
-# TODO(process-author): implement this predicate over the owner's reality,
-# print the contract payload above, and exit 0.
-print(json.dumps({
-    "reason": "stub not implemented yet (deterministic gate — may the subject move 'suspended' -> 'running' on 'resume'? for lean-business:cycle-lifecycle)",
-}))
-sys.exit(1)
+from _lib import positions
+
+PROG = "cycle-lifecycle-gate-suspended-running-resume"
+WHAT = "May the person's resumption move the cycle from suspended to running?"
+
+
+def judge(root: Path, subject: str, on: date) -> positions.Answer:
+    """The gate on the cycle `subject` on the day `on`, read from the project at `root`."""
+    return positions.cycle_gate(positions.resuming_cycle)(root, subject, on)
+
+
+def main() -> int:
+    return positions.answer_gate(sys.argv[1:], PROG, WHAT, positions.as_of(judge, date.today()))
+
+
+if __name__ == "__main__":
+    sys.exit(main())

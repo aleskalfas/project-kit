@@ -1,35 +1,69 @@
-#!/usr/bin/env python3
-"""Predicate stub: deterministic gate — may the subject move 'in-review' -> 'running' on 'shift-window'? for lean-business:cycle-lifecycle.
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "ruamel.yaml==0.19.1",
+# ]
+# ///
+"""lean-business:cycle-lifecycle — the gate on `in-review` -> `running`, on `shift-window`:
+did an absence already over, recorded late, give the cycle back days its window had left?
+(lean-business DEC-003 point 4).
 
-Scaffolded by `pkit process new` (COR-044). Implementing it is the
-process-author agent's territory — turn the owner's intent into a working
-predicate over reality. The contract it must follow (COR-033 engine contract,
-.pkit/process/README.md "The predicate runner"):
+A suspension recorded late with its first day and the day the cycle resumed at once moves
+the window's end later by the days it covers, and may so take a cycle from its review back
+to running. The move is the script's, and the command that records the suspension takes it
+after the write, naming the origin it read before (the process area's README, "Seam-ordering
+contract"). The gate reads the facts the detection reads, and the rules through the
+predicate the check shares (`_lib.positions.shifting_window`): the window, as the
+suspensions now work it out, holds today, no suspension is ongoing, no decision is
+recorded, and no break of DEC-002 point 12's rules names the suspension recorded last. So
+it takes the cycle back only where nothing recorded since needed the window ended, such as
+the goal set at the review.
 
-- READ-ONLY. `status` and `health` run predicates live; mutating here is a
-  side-effect bug.
-- argv: the subject slot first (the subject id), then `--json`;
-  cwd is the repo root.
-- print ONE JSON object to stdout: {"result": <bool>, "reason": "<why>"}
-- FAIL-CLOSED: an error / timeout / non-zero exit / unparseable payload is
-  INDETERMINATE, never a pass.
+The gate is closed before the command writes, and `can-move` refuses then: open there, it
+would be a way forward without the person, and a cycle in review would no longer wait on
+them (the process area's shape page, "How each wait clears").
 
-Until implemented this stub EXITS NON-ZERO (indeterminate, fail-closed) so an
-unwritten predicate can never read as green.
+Today is the local date where it runs, read here and nowhere else (DEC-003 point 1). The
+test suite gives a fixed day by calling `judge` in its own process.
 
-pkit:predicate-stub-unimplemented — DELETE this line once the predicate is
-implemented. `pkit process health --interpretation-only` reads it statically to
-tell "seam declared but never written" from "seam written and merely failing",
-so a seam no subject currently exercises still reports honestly.
+READ-ONLY. The engine runs it from the repository's root as
+
+  cycle_lifecycle_gate_in_review_running_shift_window.py <idea>--<cycle> --json
+
+and reads one JSON object on standard output, `{"result": <bool>, "reason": "..."}`.
+
+Exit codes:
+  0  answered
+  2  no answer: the subject is no cycle's id; its location, its idea's files, its file,
+     its review's decision, its suspensions or its window cannot be read; or, where
+     nothing is refused, a file or a day the rules weigh cannot be read. Why goes to
+     standard error, and the engine refuses the move as indeterminate.
 """
-import json
+
+from __future__ import annotations
+
 import sys
+from datetime import date
+from pathlib import Path
 
-subject = sys.argv[1] if len(sys.argv) > 1 else ""
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).parent))
 
-# TODO(process-author): implement this predicate over the owner's reality,
-# print the contract payload above, and exit 0.
-print(json.dumps({
-    "reason": "stub not implemented yet (deterministic gate — may the subject move 'in-review' -> 'running' on 'shift-window'? for lean-business:cycle-lifecycle)",
-}))
-sys.exit(1)
+from _lib import positions
+
+PROG = "cycle-lifecycle-gate-in-review-running-shift-window"
+WHAT = "Did an absence already over, recorded late, take the cycle from review back to running?"
+
+
+def judge(root: Path, subject: str, on: date) -> positions.Answer:
+    """The gate on the cycle `subject` on the day `on`, read from the project at `root`."""
+    return positions.cycle_gate(positions.shifting_window)(root, subject, on)
+
+
+def main() -> int:
+    return positions.answer_gate(sys.argv[1:], PROG, WHAT, positions.as_of(judge, date.today()))
+
+
+if __name__ == "__main__":
+    sys.exit(main())

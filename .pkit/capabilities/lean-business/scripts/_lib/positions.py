@@ -20,17 +20,38 @@ reads that position here too and never works it out again.
   gate twice: by `can-move` before the command writes, and by `move` after, against what
   it wrote (the process area's README, "Seam-ordering contract"). So each gate holds of
   the data on both sides of the write.
+- **A cycle** (`cycle`, `cycle_in`, `cycle_lifecycle`): a cycle's position, from its
+  review, its suspensions and its window as they work it out (DEC-003 points 1 and 4). A
+  decision outranks a suspension, and an ongoing suspension, one with no day of resuming,
+  outranks the dates. Else the window as worked out (`timeline`) places the cycle planned
+  before its first day, running through its last, and in review after it. An experiment's
+  predicates read its cycle here too (DEC-003 points 3 and 7): its position, whether it is
+  open (`OPEN`), and its suspensions (`suspensions_of`, `ongoing`).
+- **The cycle's gates** (`starting_cycle`, `ending_cycle`, `suspending_cycle`,
+  `shifting_window`, `resuming_cycle`, `deciding_cycle`). The moves that follow a date or a
+  suspension are the script's, gated on the facts the detection reads, so each is closed
+  until the data the command writes places the cycle at its target: open at its origin,
+  such a move would be a way forward without the person, and lift the wait on a cycle in
+  review (DEC-003 point 4; the process area's shape page, "How each wait clears"). A move
+  that follows a suspension also needs the suspension to keep its rules, through the
+  predicate the check shares (`suspensions.of_cycle`; DEC-002 points 12 and 14). The
+  person's moves, resuming and deciding, hold on both sides of the command's write, as the
+  desk stage's do: before it, on what the files show; after it, on what it recorded.
 - **Answering the engine** (`answer_detection`, `answer_gate`): the subject read from the
   arguments, and the answer printed as the runner reads it.
 
 **Fail closed.** Where the files cannot tell what a predicate is asked, it gives no answer
 (`Unreadable`). It says why on standard error and exits non-zero, and the engine reads the
 predicate as indeterminate. Such a case is a canvas that does not read, an outcome that is
-none of the three, a verdict with no answer, or a fingerprint a gate must compare and
-cannot. A plausible default would be a confident wrong answer. A refusal that the files do
-show stands, though, beside what cannot be told.
+none of the three, a verdict with no answer, a fingerprint a gate must compare and cannot,
+a review whose decision is none of the three, or a window or a suspension whose days do
+not read. A plausible default would be a confident wrong answer. A refusal that the files
+do show stands, though, beside what cannot be told.
 
-**No clock.** The desk stage reads no day, so nothing here reads one.
+**No clock.** Nothing here reads one. The desk stage reads no day, and the cycle's position
+and gates take the day they read, `on`, from their caller (DEC-003 point 1): each predicate
+script reads the local date at its entry and passes it in (`as_of`), and the test suite
+passes a fixed day.
 """
 
 from __future__ import annotations
@@ -40,16 +61,20 @@ import json
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
-from _lib import fingerprint, gates, ids, layout, listing, readings
+from _lib import acts, fingerprint, gates, ids, layout, listing, readings, timeline
 from _lib import location as locations
+from _lib import suspensions as rules
 from _lib.fingerprint import STEPS
 from _lib.gates import Refusal
+from _lib.model import Cycle as CycleFile
 from _lib.model import IdeaModel, Pools
 from _lib.reading import day
 from _lib.root import project_root
+from _lib.timeline import Span, Suspension
 
 # --- the desk stage's states ----------------------------------------------------------------------
 
@@ -79,11 +104,40 @@ JUDGED = {
     "feasibility": "the first stage's target is given",
 }
 
+# --- the cycle's states ---------------------------------------------------------------------------
+
+PLANNED = "planned"
+RUNNING = "running"
+SUSPENDED = "suspended"
+IN_REVIEW = "in-review"
+DECIDED = "decided"
+
+#: The states in which a cycle is open, so that an experiment may be declared in it
+#: (DEC-003 point 7).
+OPEN = (PLANNED, RUNNING)
+
+#: Each of the cycle's states, in words.
+CYCLE_STATE_WORDS = {
+    PLANNED: "planned",
+    RUNNING: "running",
+    SUSPENDED: "suspended",
+    IN_REVIEW: "in review",
+    DECIDED: "decided",
+}
+
+#: The decisions a cycle's review records for its winning variant (DEC-003 point 4).
+DECISIONS = ("persevere", "pivot", "pause")
+
+#: The decisions that need the winning variant neither shelved nor split (DEC-003 point 4).
+GOING_ON = ("persevere", "pivot")
+
 #: The exit status of a predicate that gives no answer.
 NO_ANSWER = 2
 
 #: The longest stretch of a person's words a reason quotes.
 QUOTED = 120
+
+_T = TypeVar("_T")
 
 
 class Unreadable(Exception):
@@ -227,16 +281,23 @@ def variant(root: Path, subject: str) -> Variant:
         if read.canvas is not None:
             return read
     folder = rel.rsplit("/", 1)[0]
-    astray = [s for s in contents.strays if s.rel.startswith(f"{folder}/")]
-    why = f"no canvas lies at `{rel}`"
+    return Variant(subject, model, rel, None, _absent(root, rel, contents, "canvas", f"{folder}/"))
+
+
+def _absent(root: Path, rel: str, contents: layout.Contents, what: str, astray_from: str) -> str:
+    """Why no `what` the capability reads lies at `rel`: something lies there that no reader
+    of an idea's files sees; or nothing does, where a file whose path starts `astray_from`
+    may lie astray instead."""
     if (root / rel).exists():
-        why = (
-            f"no canvas the capability reads lies at `{rel}`: something lies there, but it is "
+        return (
+            f"no {what} the capability reads lies at `{rel}`: something lies there, but it is "
             f"a link, or a file git ignores, which no reader of an idea's files sees"
         )
-    elif astray:
+    why = f"no {what} lies at `{rel}`"
+    astray = [s for s in contents.strays if s.rel.startswith(astray_from)]
+    if astray:
         why += f", and `{astray[0].rel}` lies astray in its folder: {astray[0].why}"
-    return Variant(subject, model, rel, None, why)
+    return why
 
 
 # --- the desk stage ---------------------------------------------------------------------------
@@ -477,6 +538,550 @@ def shelving(subject: Variant) -> Answer:
     )
 
 
+# --- a cycle ----------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Cycle:
+    """A cycle, the subject of the cycle's process: its id, the model of its idea where the
+    idea's folder holds a file, where the layout puts its file, and that file where it lies
+    there and reads. `absent` says why there is no file, where there is none."""
+
+    id: str
+    idea: IdeaModel | None
+    rel: str
+    held: CycleFile | None
+    absent: str = ""
+
+    @property
+    def data(self) -> Mapping[str, Any] | None:
+        """The cycle's data, or None where no file of it lies in its place."""
+        return self.held.data if self.held is not None else None
+
+
+def _cycle_id(subject: str) -> None:
+    if not ids.is_idea_qualified(subject):
+        raise Unreadable(
+            f"`{subject}` is no cycle's id: a cycle is named `<idea>--<cycle>`, each part "
+            f"words of lower-case letters and digits joined by single hyphens (DEC-002 point 7)"
+        )
+
+
+def cycle_in(model: IdeaModel, subject: str) -> Cycle:
+    """The cycle `subject`, a cycle's id, in the idea `model` already read, as an
+    experiment's predicates find the cycle it names. Raises Unreadable where `subject` is no
+    cycle's id of that idea, or where its file lies in its place but does not read."""
+    _cycle_id(subject)
+    if ids.idea_of(subject) != model.name:
+        raise Unreadable(f"`{subject}` is no cycle of the idea `{model.name}`")
+    own = ids.own(subject)
+    rel = f"{model.idea.rel}/{layout.CYCLES}/{own}{layout.SUFFIX}"
+    file = model.idea.cycles.get(own)
+    if file is None:
+        return Cycle(subject, model, rel, None, f"no cycle's file lies at `{rel}`")
+    if file.data is None:
+        raise Unreadable(f"the cycle's file at `{rel}` cannot be read: it {file.problem}")
+    held = next(each for each in model.cycles if each.own == own)
+    return Cycle(subject, model, rel, held)
+
+
+def cycle(root: Path, subject: str) -> Cycle:
+    """The cycle `subject`, a cycle's id, as the location holds it. Raises Unreadable where
+    `subject` is no cycle's id, or where the location, the idea's files or the cycle's file
+    cannot be read."""
+    _cycle_id(subject)
+    where = location(root)
+    if where is None:
+        return Cycle(
+            subject,
+            None,
+            "",
+            None,
+            f"no idea lies anywhere: nothing records the location, and `{locations.DEFAULT}` "
+            f"is no folder",
+        )
+    name = ids.idea_of(subject)
+    rel = layout.path_of(where, "cycle", subject)
+    contents = _contents(root, where, name)
+    found = contents.ideas.get(name)
+    model = IdeaModel(found, Pools.of(contents)) if found is not None else None
+    if model is not None:
+        read = cycle_in(model, subject)
+        if read.held is not None:
+            return read
+    stem = rel[: -len(layout.SUFFIX)]
+    return Cycle(
+        subject, model, rel, None, _absent(root, rel, contents, "cycle's file", f"{stem}.")
+    )
+
+
+def _decided(subject: Cycle) -> Position | None:
+    """The position the cycle's review places it in, whatever else it holds, or None where
+    it records none."""
+    assert subject.data is not None
+    review = subject.data.get("review")
+    if review is None:
+        return None
+    decision = review.get("decision") if isinstance(review, Mapping) else None
+    if not isinstance(decision, str) or decision not in DECISIONS:
+        raise Unreadable(
+            f"the cycle's file at `{subject.rel}` records a review whose decision is none of "
+            f"persevere, pivot and pause, so whether the cycle is decided cannot be told: a "
+            f"decision outranks its suspensions and its dates"
+        )
+    when = day(review.get("when"))
+    on = f" on {when}" if when is not None else ""
+    winner = ids.parse_ref(review.get("winning"), ids.CANVAS)
+    named = f" for `{winner.id}`" if winner is not None else ""
+    return Position(
+        DECIDED,
+        f"the person decided to {decision}{named}{on}, which outranks its suspensions and its "
+        f"dates",
+    )
+
+
+def _listed(subject: Cycle) -> list[Suspension]:
+    """The cycle's suspensions as its file records them (`timeline.recorded`), once each
+    reads as a suspension, and its resumption, where it records one, as a resumption: else
+    whether one is ongoing cannot be told."""
+    assert subject.data is not None
+    written = subject.data.get("suspensions")
+    if written is None:
+        return []
+    if not isinstance(written, list):
+        raise Unreadable(
+            f"the cycle's file at `{subject.rel}` keeps its suspensions as something other "
+            f"than a list of them, so whether one is ongoing cannot be told"
+        )
+    for index, entry in enumerate(written):
+        place = f"the suspension at place {index + 1} of `{subject.rel}`"
+        if not isinstance(entry, Mapping):
+            raise Unreadable(f"{place} is no suspension, so whether it is ongoing cannot be told")
+        resumed = entry.get("resumed")
+        if resumed is not None and not isinstance(resumed, Mapping):
+            raise Unreadable(
+                f"{place} records its resumption as something other than one, so whether it "
+                f"is ongoing cannot be told"
+            )
+    return timeline.recorded(written)
+
+
+def ongoing(subject: Cycle) -> list[Suspension]:
+    """The cycle's ongoing suspensions: those that record no resumption, whatever the day
+    (DEC-002 point 12). At most one, where the files keep the rules. Raises Unreadable where
+    a suspension cannot be read as one."""
+    return [each for each in _listed(subject) if not each.resumed_at_all]
+
+
+def suspensions_of(subject: Cycle) -> list[Suspension]:
+    """The cycle's suspensions, where each day the dates are worked out from reads as a day:
+    its first, and its day of resuming where it records one. Raises Unreadable where one does
+    not, since `timeline` counts a suspension with no first day as covering nothing, and one
+    with no day of resuming as ongoing, and either would place a date the files do not
+    give."""
+    listed = _listed(subject)
+    for each in listed:
+        place = f"the suspension at place {each.index + 1} of `{subject.rel}`"
+        if each.first_day is None:
+            raise Unreadable(
+                f"{place} has no first day that reads as a day, so which days it covers "
+                f"cannot be told"
+            )
+        if each.resumed_at_all and each.resumed is None:
+            raise Unreadable(
+                f"{place} has no day of resuming that reads as a day, so which days it covers "
+                f"cannot be told"
+            )
+    return listed
+
+
+def window(subject: Cycle) -> Span:
+    """Where the cycle's window falls under its suspensions (`timeline.cycle_window`;
+    DEC-002 point 12). Its start is None where an ongoing suspension reached it before it
+    started, and its end None where one reached it before it ended. Raises Unreadable where
+    its declared window, or a day of a suspension, cannot be read."""
+    assert subject.data is not None
+    suspensions_of(subject)
+    span = timeline.cycle_window(subject.data)
+    days = _m(subject.data.get("window")).get("days")
+    if span is None or not isinstance(days, int) or days < 1:
+        raise Unreadable(
+            f"the cycle's file at `{subject.rel}` declares no window that reads as one, a first "
+            f"day and the days it holds, at least one, so where it falls cannot be told"
+        )
+    return span
+
+
+def cycle_lifecycle(subject: Cycle, on: date) -> Position:
+    """Where the cycle `subject` stands on the day `on`, today where a predicate asks
+    (DEC-003 points 1 and 4): decided where its review records a decision, whatever else it
+    holds; else suspended where a suspension is ongoing, whatever its dates; else, by its
+    window as its suspensions work it out, planned before the window's first day, running
+    through its last, and in review after it. None where it has no file. Raises Unreadable
+    where its review, its suspensions or its window cannot be read."""
+    if subject.data is None:
+        return Position(
+            None,
+            f"`{subject.id}` stands in none of the cycle's states, which start with its plan: "
+            f"{subject.absent}",
+        )
+    decided = _decided(subject)
+    if decided is not None:
+        return decided
+    current = ongoing(subject)
+    if current:
+        return Position(SUSPENDED, _why_suspended(current))
+    span = window(subject)
+    if span.start is None or span.end is None:
+        raise Unreadable(
+            f"the window of `{subject.id}` has no end as its suspensions work it out, though "
+            f"none is ongoing, so where it stands cannot be told"
+        )
+    moved = ", as its suspensions work it out" if _listed(subject) else ""
+    if on < span.start:
+        return Position(
+            PLANNED,
+            f"its plan is recorded, and its window starts on {span.start}{moved}, after today, "
+            f"{on}",
+        )
+    if on <= span.end:
+        return Position(
+            RUNNING,
+            f"its window runs from {span.start} through {span.end}{moved}, and holds today, "
+            f"{on}, with no suspension ongoing",
+        )
+    return Position(
+        IN_REVIEW,
+        f"its window ended on {span.end}{moved}, before today, {on}, and no decision is recorded",
+    )
+
+
+def _why_suspended(current: Sequence[Suspension]) -> str:
+    first = current[0]
+    since = f" from {first.first_day}" if first.first_day is not None else ""
+    more = f", with {len(current) - 1} more at once" if len(current) > 1 else ""
+    return (
+        f"a suspension{since} is ongoing{more}, with no day of resuming, which outranks the "
+        f"cycle's dates: none of its days count toward the window"
+    )
+
+
+def _not(position: Position, target: str) -> str:
+    """Why a cycle at `position` is not at `target`, in words."""
+    stands = (
+        f"stands {CYCLE_STATE_WORDS[position.state]}"
+        if position.state is not None
+        else "stands in none of its states"
+    )
+    return f"the cycle {stands}, not {CYCLE_STATE_WORDS[target]}: {position.reason}"
+
+
+def _span_words(suspension: Suspension) -> str:
+    if suspension.resumed_at_all:
+        return f"from {suspension.first_day} until {suspension.resumed}"
+    return f"from {suspension.first_day}, ongoing"
+
+
+# --- the cycle's gates ------------------------------------------------------------------------
+
+
+def _by_dates(subject: Cycle, on: date, target: str, passed: str) -> Answer:
+    """Whether the cycle stands at `target` on the day `on`, as its detection reads it: the
+    gate of a move the dates make, on the facts the detection reads (DEC-003 point 4)."""
+    position = cycle_lifecycle(subject, on)
+    if position.state == target:
+        return Answer(True, f"{passed}: {position.reason}")
+    return Answer(False, _not(position, target))
+
+
+def starting_cycle(subject: Cycle, on: date) -> Answer:
+    """Whether the dates move the cycle from planned to running on `on`: its window, as its
+    suspensions work it out, has started and not ended, no suspension is ongoing, and no
+    decision is recorded. So the gate is closed while the cycle is planned, and no command
+    takes the move."""
+    return _by_dates(subject, on, RUNNING, "the cycle's window has started")
+
+
+def ending_cycle(subject: Cycle, on: date) -> Answer:
+    """Whether the dates move the cycle from running into review on `on`: its window, as its
+    suspensions work it out, ended before `on`, no suspension is ongoing, and no decision is
+    recorded. So the gate is closed while the cycle runs, and no command takes the move."""
+    return _by_dates(subject, on, IN_REVIEW, "the cycle's window has ended")
+
+
+def suspending_cycle(subject: Cycle, on: date) -> Answer:
+    """Whether the person's recorded suspension moves the cycle into suspended, from running
+    or from review (DEC-003 point 4): a suspension is ongoing, no decision is recorded, and
+    the ongoing suspension keeps its rules (`suspensions.of_cycle`). Before the command
+    records the suspension the gate is closed, so that a cycle in review still waits on the
+    person. The command validates the suspension through the rules' predicate before it
+    writes, and asks the engine to move after."""
+    position = cycle_lifecycle(subject, on)
+    if position.state != SUSPENDED:
+        return Answer(False, _not(position, SUSPENDED))
+    return _kept(
+        subject,
+        ongoing(subject),
+        f"the person recorded a suspension that keeps its rules: {position.reason}",
+    )
+
+
+def shifting_window(subject: Cycle, on: date) -> Answer:
+    """Whether a suspension already over, recorded late, takes the cycle from review back to
+    running (DEC-003 point 4): its window, as its suspensions now work it out, holds `on`,
+    no suspension is ongoing, no decision is recorded, and the suspension recorded last
+    keeps its rules, contradicting no act already recorded, such as the goal set at the
+    review. Before the command records the suspension the gate is closed, as the cycle is in
+    review then."""
+    position = cycle_lifecycle(subject, on)
+    if position.state != RUNNING:
+        return Answer(False, _not(position, RUNNING))
+    listed = _listed(subject)
+    if not listed:
+        return Answer(
+            False,
+            f"no suspension is recorded, and only an absence already over moves a cycle's "
+            f"window on, back from its review: {position.reason}",
+        )
+    last = max(listed, key=rules.recorded_order)
+    return _kept(
+        subject,
+        [last],
+        f"the suspension recorded last, {_span_words(last)}, moved the window on, and keeps its "
+        f"rules: {position.reason}",
+    )
+
+
+def resuming_cycle(subject: Cycle, on: date) -> Answer:
+    """Whether the person's resumption may move the cycle from suspended to running
+    (DEC-003 point 4). Before the command records it, the cycle is suspended, with no
+    decision recorded. After, no suspension is ongoing, the suspension last by its first
+    day, the one the cycle was suspended by, has a day of resuming that keeps its rules
+    (`suspensions.of_cycle`), and the window, falling later by the days the suspension
+    covered, still holds `on`."""
+    position = cycle_lifecycle(subject, on)
+    if position.state == SUSPENDED:
+        return Answer(
+            True,
+            f"the cycle may resume: {position.reason}; resuming records the day it resumed, "
+            f"which its rules hold no earlier than the suspension's first day and no later "
+            f"than the day it is recorded",
+        )
+    if position.state in (None, DECIDED):
+        return Answer(False, _not(position, RUNNING))
+    resumed = [each for each in _listed(subject) if each.resumed_at_all]
+    if not resumed:
+        return Answer(
+            False, f"the cycle was never suspended, so it resumes from nothing: {position.reason}"
+        )
+    last = max(resumed, key=lambda each: (each.first_day or date.min, each.index))
+    refused: list[Refusal] = []
+    if position.state != RUNNING:
+        refused.append(
+            Refusal(
+                f"/suspensions/{last.index}/resumed",
+                f"it resumed on {last.resumed}, and {_not(position, RUNNING)}; the definition "
+                f"declares no move from `{SUSPENDED}` to `{position.state}`",
+            )
+        )
+    return _kept(
+        subject,
+        [last],
+        f"the cycle resumed on {last.resumed}, a day its rules allow: {position.reason}",
+        refused,
+    )
+
+
+def deciding_cycle(subject: Cycle, on: date) -> Answer:
+    """Whether the person's decision may move the cycle from review to decided (DEC-003
+    point 4). Before the command records the review, the cycle is in review: its window
+    ended before `on`, no suspension is ongoing, and nothing is decided. After, the review
+    records a decision of the three, with its reasons, who decided and when, and passes the
+    review's gate as the check asks it, on the day it was recorded, with the suspensions as
+    they stood then (`gates.deciding_cycle`, through `acts.as_stood`): each key result's
+    reach recorded, a winning variant the cycle explored, neither shelved nor split for
+    persevere or pivot, a decided experiment as a pivot's evidence, and the window ended."""
+    assert subject.data is not None and subject.idea is not None and subject.held is not None
+    review = subject.data.get("review")
+    if review is None:
+        position = cycle_lifecycle(subject, on)
+        if position.state != IN_REVIEW:
+            return Answer(False, f"{_not(position, IN_REVIEW)}; so no decision is open")
+        return Answer(
+            True,
+            f"the cycle may be decided: {position.reason}; the review records what each key "
+            f"result reached, the winning variant among those the cycle explored, and the "
+            f"person's decision for it, with its reasons",
+        )
+    if not isinstance(review, Mapping):
+        raise Unreadable(
+            f"the cycle's file at `{subject.rel}` keeps its review as something other than "
+            f"one, so whether the cycle may be decided cannot be told"
+        )
+    refusals = _review_recorded(review)
+    judged = [act for act in acts.of_cycle(subject.idea, subject.held) if act.pointer == "/review"]
+    for act in judged:
+        refusals.extend(acts.as_stood(act))
+    untold = _untold_window(subject)
+    unread_evidence = _unread_evidence(subject, review)
+    if unread_evidence and any(r.pointer == "/review/evidence" for r in refusals):
+        refusals = [r for r in refusals if r.pointer != "/review/evidence"]
+        untold.extend(unread_evidence)
+    untold.extend(_unread_winner(subject, review))
+    winner = ids.parse_ref(review.get("winning"), ids.CANVAS)
+    return _answer(
+        refusals,
+        untold,
+        f"the review records the person's decision on {day(review.get('when'))} to "
+        f"{review.get('decision')} for `{winner.id if winner is not None else ''}`, with its "
+        f"reasons, and its gate lets it through: each key result's reach is recorded, the "
+        f"winning variant is one the cycle explored, and the window ended before the decision",
+    )
+
+
+def _said(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _review_recorded(review: Mapping[str, Any]) -> list[Refusal]:
+    """What a review needs recorded beside what its gate judges (DEC-003 point 4): one
+    decision of the three, its reasons, the winning variant, and who decided and when."""
+    found: list[Refusal] = []
+    decision = review.get("decision")
+    if not isinstance(decision, str) or decision not in DECISIONS:
+        found.append(
+            Refusal(
+                "/review/decision", "the review records no decision of persevere, pivot and pause"
+            )
+        )
+    if not _said(review.get("reasons")):
+        found.append(Refusal("/review/reasons", "the review records no reasons for its decision"))
+    if ids.parse_ref(review.get("winning"), ids.CANVAS) is None:
+        found.append(Refusal("/review/winning", "the review names no winning variant"))
+    if not _said(review.get("by")):
+        found.append(Refusal("/review/by", "the review does not say who decided"))
+    if day(review.get("when")) is None:
+        found.append(
+            Refusal(
+                "/review/when",
+                "the review records no day it was decided, so its gate cannot be asked of it",
+            )
+        )
+    return found
+
+
+def _unread_file(model: IdeaModel, namespace: str, qualified: str) -> layout.File | None:
+    """The file of the idea's subject `qualified`, a variant's canvas or an experiment, where
+    it lies in its place but does not read."""
+    if ids.idea_of(qualified) != model.name:
+        return None
+    own = ids.own(qualified)
+    if namespace == ids.CANVAS:
+        held = model.idea.variants.get(own)
+        file = held.canvas if held is not None else None
+    else:
+        file = model.idea.experiments.get(own)
+    return file if file is not None and file.data is None else None
+
+
+def _unread_winner(subject: Cycle, review: Mapping[str, Any]) -> list[str]:
+    """Where a decision to persevere or pivot needs the winning variant neither shelved nor
+    split, and its canvas lies in its place but does not read."""
+    assert subject.idea is not None
+    winner = ids.parse_ref(review.get("winning"), ids.CANVAS)
+    if review.get("decision") not in GOING_ON or winner is None:
+        return []
+    file = _unread_file(subject.idea, ids.CANVAS, winner.id)
+    if file is None:
+        return []
+    return [
+        f"the winning variant's canvas at `{file.rel}` cannot be read, and a decision to "
+        f"{review.get('decision')} needs the variant neither shelved nor split"
+    ]
+
+
+def _unread_evidence(subject: Cycle, review: Mapping[str, Any]) -> list[str]:
+    """Each experiment a pivot names as its evidence whose file lies in its place but does
+    not read, so whether it was decided cannot be told."""
+    assert subject.idea is not None
+    if review.get("decision") != "pivot":
+        return []
+    found: list[str] = []
+    for value in _list(review.get("evidence")):
+        reference = ids.parse_ref(value, ids.EXPERIMENT)
+        file = _unread_file(subject.idea, ids.EXPERIMENT, reference.id) if reference else None
+        if file is not None:
+            found.append(
+                f"the experiment at `{file.rel}`, which the pivot names as its evidence, cannot "
+                f"be read, so whether it was decided cannot be told"
+            )
+    return found
+
+
+def _untold_window(subject: Cycle) -> list[str]:
+    """Why where the cycle's window falls cannot be told, where it cannot: its gates hold
+    an act against the window's end."""
+    try:
+        window(subject)
+    except Unreadable as exc:
+        return [str(exc)]
+    return []
+
+
+def _kept(
+    subject: Cycle,
+    judged: Sequence[Suspension],
+    passed: str,
+    refused: Sequence[Refusal] = (),
+) -> Answer:
+    """Whether each of `judged`, suspensions of the cycle, keeps its rules, beside what
+    `refused` already refuses: each break the predicate the check shares finds at its place
+    (`suspensions.of_cycle`), under the acts its suspensions bear on (`acts.bearing_on`),
+    as the command that records a suspension refuses one that a break names. Where what the
+    rules weigh cannot be read, and nothing is refused, there is no answer."""
+    assert subject.data is not None and subject.idea is not None and subject.held is not None
+    places = {each.index for each in judged}
+    bearing = acts.bearing_on(subject.idea, subject.held)
+    refusals = [
+        *refused,
+        *(
+            Refusal(
+                f"/suspensions/{found.index}",
+                f"the suspension at place {found.index + 1} breaks its rules: {found.message}",
+            )
+            for found in rules.of_cycle(subject.data, bearing)
+            if found.index in places
+        ),
+    ]
+    return _answer(refusals, _untold_rules(subject), passed)
+
+
+def _untold_rules(subject: Cycle) -> list[str]:
+    """What a suspension's rules weigh and the files cannot tell: the cycle's declared
+    window, a day of one of its suspensions, and each file of the idea that records acts,
+    the goal, an experiment or a cycle, that lies in its place but does not read."""
+    assert subject.data is not None and subject.idea is not None
+    found: list[str] = []
+    if timeline.cycle_window(subject.data) is None:
+        found.append(f"the declared window of `{subject.id}` does not read as one")
+    for each in _listed(subject):
+        place = f"the suspension at place {each.index + 1}"
+        if each.first_day is None:
+            found.append(f"{place} has no first day that reads as a day")
+        if each.recorded is None:
+            found.append(f"{place} has no day it was recorded that reads as a day")
+        if each.resumed_at_all and (each.resumed is None or each.resumption_recorded is None):
+            found.append(f"{place} records its resumption without days that read as days")
+    model = subject.idea
+    if model.goal_unread and model.idea.goal is not None:
+        found.append(f"the idea's goal at `{model.idea.goal.rel}` cannot be read")
+    for files in (model.idea.experiments, model.idea.cycles):
+        found.extend(f"`{file.rel}` cannot be read" for file in files.values() if file.data is None)
+    if not found:
+        return []
+    return [f"{'; '.join(found)}, and a suspension's rules weigh them"]
+
+
 # --- answering the engine ---------------------------------------------------------------------
 
 
@@ -548,3 +1153,35 @@ def desk_gate(judge: Callable[[Variant], Answer]) -> Callable[[Path, str], Answe
         return judge(read)
 
     return asked
+
+
+def cycle_lifecycle_of(root: Path, subject: str, on: date) -> Position:
+    """Where the cycle `subject` stands on the day `on`, read from the project at `root`."""
+    return cycle_lifecycle(cycle(root, subject), on)
+
+
+def cycle_gate(judge: Callable[[Cycle, date], Answer]) -> Callable[[Path, str, date], Answer]:
+    """A cycle's gate, `judge`, asked on a day of the cycle a subject's id names. A cycle
+    with no file stands in no state of its process, so no move of it is open."""
+
+    def asked(root: Path, subject: str, on: date) -> Answer:
+        read = cycle(root, subject)
+        if read.held is None:
+            return Answer(
+                False,
+                f"no move of the cycle is open to `{subject}`, which stands in none of its "
+                f"states without its file: {read.absent}",
+            )
+        return judge(read, on)
+
+    return asked
+
+
+def as_of(asked: Callable[[Path, str, date], _T], on: date) -> Callable[[Path, str], _T]:
+    """`asked`, reading the day `on`: today, the local date a predicate script reads where
+    it starts, or a fixed day the test suite gives (DEC-003 point 1)."""
+
+    def read(root: Path, subject: str) -> _T:
+        return asked(root, subject, on)
+
+    return read
