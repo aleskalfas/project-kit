@@ -32,12 +32,52 @@ project-conventions:
   - tech-docs/coding-conventions.md
 
 # Process-authoring targets (per ADR-051) — the `process-author` agent's write
-# authority. Empty is the correct value *here*: project-kit ships the process
-# substrate and its definitions rather than authoring definitions as an adopter,
-# so every definition in this tree is sync-managed content the category may not
-# name. The explicit `[]` (rather than a bare or absent key) is what makes the
-# agent deploy inert instead of being skipped.
-process-authoring-targets: []
+# authority, file by file (the agents README, "Write-carrying categories").
+# project-kit ships the process substrate and its definitions, so the
+# definitions of the capabilities it ships are not named here. The one grant is
+# lean-business's (#3426, the person's decision 15 in its design note): its three
+# process definitions, their predicate scripts and the module that works out
+# each subject's position. The capability incubates here unregistered, so its
+# folder is the project's, and the grant holds only while it stays so. Its
+# `package.yaml` is never named: registering a predicate is the process
+# commands' stamp.
+process-authoring-targets:
+  - .pkit/capabilities/lean-business/schemas/desk-stage.yaml
+  - .pkit/capabilities/lean-business/schemas/experiment-lifecycle.yaml
+  - .pkit/capabilities/lean-business/schemas/cycle-lifecycle.yaml
+  - .pkit/capabilities/lean-business/scripts/_lib/positions.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_detect.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_in_review_decided_decide.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_in_review_running_shift_window.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_in_review_suspended_suspend.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_planned_running_start.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_running_in_review_end.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_running_suspended_suspend.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_suspended_running_resume.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_detect.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_desirable_shelved_shelve.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_desirable_split_split.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_desirable_viable_pass_viability.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_feasible_shelved_shelve.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_feasible_shortlisted_shortlist.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_feasible_split_split.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_shortlisted_shelved_shelve.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_shortlisted_shortlisted_shortlist.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_sketched_desirable_pass_desirability.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_sketched_shelved_shelve.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_sketched_split_split.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_viable_feasible_pass_feasibility.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_viable_shelved_shelve.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_viable_split_split.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_detect.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_declared_running_start.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_drafted_declared_declare.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_drafted_running_declare.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_due_decided_decide.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_due_declared_shift_time_box.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_due_running_shift_time_box.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_running_declared_shift_time_box.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_running_due_come_due.py
 
 # Written as a capability's default for the category below. While it stays as written, `pkit agents reconcile` may move it; edit it and it is the project's.
 visual-communication.work: ["visual/"]  # pkit-written: ["visual/"]

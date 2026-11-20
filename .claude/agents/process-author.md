@@ -29,8 +29,80 @@ reads:
     - .pkit/process/connections.md
     - .pkit/cli/README.md
     - .pkit/agents/project/overlay.yaml
-  patterns: []
-owns: []
+  patterns:
+    - .pkit/capabilities/lean-business/schemas/desk-stage.yaml
+    - .pkit/capabilities/lean-business/schemas/experiment-lifecycle.yaml
+    - .pkit/capabilities/lean-business/schemas/cycle-lifecycle.yaml
+    - .pkit/capabilities/lean-business/scripts/_lib/positions.py
+    - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_detect.py
+    - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_in_review_decided_decide.py
+    - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_in_review_running_shift_window.py
+    - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_in_review_suspended_suspend.py
+    - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_planned_running_start.py
+    - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_running_in_review_end.py
+    - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_running_suspended_suspend.py
+    - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_suspended_running_resume.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_detect.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_desirable_shelved_shelve.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_desirable_split_split.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_desirable_viable_pass_viability.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_feasible_shelved_shelve.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_feasible_shortlisted_shortlist.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_feasible_split_split.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_shortlisted_shelved_shelve.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_shortlisted_shortlisted_shortlist.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_sketched_desirable_pass_desirability.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_sketched_shelved_shelve.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_sketched_split_split.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_viable_feasible_pass_feasibility.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_viable_shelved_shelve.py
+    - .pkit/capabilities/lean-business/scripts/desk_stage_gate_viable_split_split.py
+    - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_detect.py
+    - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_declared_running_start.py
+    - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_drafted_declared_declare.py
+    - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_drafted_running_declare.py
+    - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_due_decided_decide.py
+    - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_due_declared_shift_time_box.py
+    - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_due_running_shift_time_box.py
+    - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_running_declared_shift_time_box.py
+    - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_running_due_come_due.py
+owns:
+  - .pkit/capabilities/lean-business/schemas/desk-stage.yaml
+  - .pkit/capabilities/lean-business/schemas/experiment-lifecycle.yaml
+  - .pkit/capabilities/lean-business/schemas/cycle-lifecycle.yaml
+  - .pkit/capabilities/lean-business/scripts/_lib/positions.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_detect.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_in_review_decided_decide.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_in_review_running_shift_window.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_in_review_suspended_suspend.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_planned_running_start.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_running_in_review_end.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_running_suspended_suspend.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_suspended_running_resume.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_detect.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_desirable_shelved_shelve.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_desirable_split_split.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_desirable_viable_pass_viability.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_feasible_shelved_shelve.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_feasible_shortlisted_shortlist.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_feasible_split_split.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_shortlisted_shelved_shelve.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_shortlisted_shortlisted_shortlist.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_sketched_desirable_pass_desirability.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_sketched_shelved_shelve.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_sketched_split_split.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_viable_feasible_pass_feasibility.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_viable_shelved_shelve.py
+  - .pkit/capabilities/lean-business/scripts/desk_stage_gate_viable_split_split.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_detect.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_declared_running_start.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_drafted_declared_declare.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_drafted_running_declare.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_due_decided_decide.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_due_declared_shift_time_box.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_due_running_shift_time_box.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_running_declared_shift_time_box.py
+  - .pkit/capabilities/lean-business/scripts/experiment_lifecycle_gate_running_due_come_due.py
 ---
 
 # Process author
