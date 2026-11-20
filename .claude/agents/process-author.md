@@ -41,6 +41,7 @@ reads:
     - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_planned_running_start.py
     - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_running_in_review_end.py
     - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_running_suspended_suspend.py
+    - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_suspended_in_review_resume.py
     - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_suspended_running_resume.py
     - .pkit/capabilities/lean-business/scripts/desk_stage_detect.py
     - .pkit/capabilities/lean-business/scripts/desk_stage_gate_desirable_shelved_shelve.py
@@ -78,6 +79,7 @@ owns:
   - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_planned_running_start.py
   - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_running_in_review_end.py
   - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_running_suspended_suspend.py
+  - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_suspended_in_review_resume.py
   - .pkit/capabilities/lean-business/scripts/cycle_lifecycle_gate_suspended_running_resume.py
   - .pkit/capabilities/lean-business/scripts/desk_stage_detect.py
   - .pkit/capabilities/lean-business/scripts/desk_stage_gate_desirable_shelved_shelve.py
