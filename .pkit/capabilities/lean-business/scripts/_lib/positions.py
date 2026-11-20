@@ -1,6 +1,6 @@
 """Where each subject of the capability's processes stands, read from its files whenever a
 process predicate asks, and what those predicates answer the engine (lean-business DEC-003
-points 1 and 2; the process area's README, "The predicate runner").
+points 1 to 4 and 7; the process area's README, "The predicate runner").
 
 The engine asks a predicate about one subject, named by its id, and reads one JSON object
 from it (COR-033). This module is the one place a subject's position is worked out. The
@@ -37,6 +37,26 @@ reads that position here too and never works it out again.
   predicate the check shares (`suspensions.of_cycle`; DEC-002 points 12 and 14). The
   person's moves, resuming and deciding, hold on both sides of the command's write, as the
   desk stage's do: before it, on what the files show; after it, on what it recorded.
+- **An experiment** (`experiment`, `experiment_in`, `experiment_lifecycle`): an
+  experiment's position, from its decision, its declaration, a generative experiment's
+  stopping rule and its time box as its cycle's suspensions move it (DEC-003 points 1 and
+  3). A decision outranks the rest, and a stopping rule recorded as reached outranks the
+  dates. Else the time box as worked out (`timeline.experiment_time_box`, the predicate
+  that also works out where the cycle's window falls) places the experiment declared before
+  its first day, or while an ongoing suspension has left it no start, running through its
+  last, and due after it. Its cycle is the one it names (`cycle_named`), read as the
+  cycle's own predicates read it.
+- **The experiment's gates** (`declaring_experiment`, `starting_experiment`, `coming_due`,
+  `shifting_time_box`, `deciding_experiment`). The moves the dates and a late suspension
+  make are the script's, so each is closed until the detection places the experiment at
+  its target, as the cycle's are. A move that follows the person's recorded act, a stopping
+  rule or a suspension, also needs the act to keep its rules, through the predicates the
+  check shares (`acts.as_stood`, `suspensions.of_cycle`). The person's moves, declaring and
+  deciding, hold on both sides of the command's write. Declaring reads its variant's
+  shortlisting through the desk stage's detection and its cycle through the cycle's
+  (DEC-003 point 7). Its two moves are one predicate, which opens the one whose target the
+  declaration gives: straight into running where the time box starts on the day it is
+  declared, else into declared.
 - **Answering the engine** (`answer_detection`, `answer_gate`): the subject read from the
   arguments, and the answer printed as the runner reads it.
 
@@ -44,14 +64,16 @@ reads that position here too and never works it out again.
 (`Unreadable`). It says why on standard error and exits non-zero, and the engine reads the
 predicate as indeterminate. Such a case is a canvas that does not read, an outcome that is
 none of the three, a verdict with no answer, a fingerprint a gate must compare and cannot,
-a review whose decision is none of the three, or a window or a suspension whose days do
-not read. A plausible default would be a confident wrong answer. A refusal that the files
-do show stands, though, beside what cannot be told.
+a review whose decision is none of the three, an experiment's decision whose next action is
+none of the three, a window, a time box or a suspension whose days do not read, or an
+experiment that names something other than a cycle of its idea. A plausible default would
+be a confident wrong answer. A refusal that the files do show stands, though, beside what
+cannot be told.
 
-**No clock.** Nothing here reads one. The desk stage reads no day, and the cycle's position
-and gates take the day they read, `on`, from their caller (DEC-003 point 1): each predicate
-script reads the local date at its entry and passes it in (`as_of`), and the test suite
-passes a fixed day.
+**No clock.** Nothing here reads one. The desk stage reads no day, and the positions and
+gates of the cycle and the experiment take the day they read, `on`, from their caller
+(DEC-003 point 1): each predicate script reads the local date at its entry and passes it in
+(`as_of`), and the test suite passes a fixed day.
 """
 
 from __future__ import annotations
@@ -60,17 +82,19 @@ import argparse
 import json
 import sys
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from typing import Any, TypeVar
 
 from _lib import acts, fingerprint, gates, ids, layout, listing, readings, timeline
 from _lib import location as locations
+from _lib import model as models
 from _lib import suspensions as rules
 from _lib.fingerprint import STEPS
 from _lib.gates import Refusal
 from _lib.model import Cycle as CycleFile
+from _lib.model import Experiment as ExperimentFile
 from _lib.model import IdeaModel, Pools
 from _lib.reading import day
 from _lib.root import project_root
@@ -130,6 +154,39 @@ DECISIONS = ("persevere", "pivot", "pause")
 
 #: The decisions that need the winning variant neither shelved nor split (DEC-003 point 4).
 GOING_ON = ("persevere", "pivot")
+
+# --- the experiment's states ----------------------------------------------------------------------
+
+DRAFTED = "drafted"
+DECLARED = "declared"
+DUE = "due"
+
+#: Each of the experiment's states, in words. It shares `running` and `decided` with the
+#: cycle's states.
+EXPERIMENT_STATE_WORDS = {
+    DRAFTED: "drafted",
+    DECLARED: "declared",
+    RUNNING: "running",
+    DUE: "due",
+    DECIDED: "decided",
+}
+
+#: The kinds of experiment, each declared by what it needs (DEC-002 point 9).
+KINDS = ("generative", "evaluative")
+
+#: The next actions an experiment's decision records, each in words (DEC-002 point 10).
+NEXT_ACTIONS = {
+    "correct-course": "correct course",
+    "double-down": "double down",
+    "stop": "stop the experiment",
+}
+
+#: What an experiment's result works out to, in words (`readings.experiment_outcome`).
+OUTCOME_WORDS = {
+    readings.PASS: "a pass",
+    readings.FAIL: "a fail",
+    readings.NEITHER: "neither pass nor fail",
+}
 
 #: The exit status of a predicate that gives no answer.
 NO_ANSWER = 2
@@ -1082,6 +1139,870 @@ def _untold_rules(subject: Cycle) -> list[str]:
     return [f"{'; '.join(found)}, and a suspension's rules weigh them"]
 
 
+# --- an experiment ----------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Experiment:
+    """An experiment, the subject of the experiment's process: its id, the model of its idea
+    where the idea's folder holds a file, where the layout puts its file, and that file where
+    it lies there and reads. `absent` says why there is no file, where there is none."""
+
+    id: str
+    idea: IdeaModel | None
+    rel: str
+    held: ExperimentFile | None
+    absent: str = ""
+
+    @property
+    def data(self) -> Mapping[str, Any] | None:
+        """The experiment's data, or None where no file of it lies in its place."""
+        return self.held.data if self.held is not None else None
+
+
+def _experiment_id(subject: str) -> None:
+    if not ids.is_idea_qualified(subject):
+        raise Unreadable(
+            f"`{subject}` is no experiment's id: an experiment is named "
+            f"`<idea>--<experiment>`, each part words of lower-case letters and digits joined "
+            f"by single hyphens (DEC-002 point 7)"
+        )
+
+
+def experiment_in(model: IdeaModel, subject: str) -> Experiment:
+    """The experiment `subject`, an experiment's id, in the idea `model` already read.
+    Raises Unreadable where `subject` is no experiment's id of that idea, or where its file
+    lies in its place but does not read."""
+    _experiment_id(subject)
+    if ids.idea_of(subject) != model.name:
+        raise Unreadable(f"`{subject}` is no experiment of the idea `{model.name}`")
+    own = ids.own(subject)
+    rel = f"{model.idea.rel}/{layout.EXPERIMENTS}/{own}{layout.SUFFIX}"
+    file = model.idea.experiments.get(own)
+    if file is None:
+        return Experiment(subject, model, rel, None, f"no experiment's file lies at `{rel}`")
+    if file.data is None:
+        raise Unreadable(f"the experiment's file at `{rel}` cannot be read: it {file.problem}")
+    held = next(each for each in model.experiments if each.own == own)
+    return Experiment(subject, model, rel, held)
+
+
+def experiment(root: Path, subject: str) -> Experiment:
+    """The experiment `subject`, an experiment's id, as the location holds it. Raises
+    Unreadable where `subject` is no experiment's id, or where the location, the idea's files
+    or the experiment's file cannot be read."""
+    _experiment_id(subject)
+    where = location(root)
+    if where is None:
+        return Experiment(
+            subject,
+            None,
+            "",
+            None,
+            f"no idea lies anywhere: nothing records the location, and `{locations.DEFAULT}` "
+            f"is no folder",
+        )
+    name = ids.idea_of(subject)
+    rel = layout.path_of(where, "experiment", subject)
+    contents = _contents(root, where, name)
+    found = contents.ideas.get(name)
+    model = IdeaModel(found, Pools.of(contents)) if found is not None else None
+    if model is not None:
+        read = experiment_in(model, subject)
+        if read.held is not None:
+            return read
+    stem = rel[: -len(layout.SUFFIX)]
+    return Experiment(
+        subject, model, rel, None, _absent(root, rel, contents, "experiment's file", f"{stem}.")
+    )
+
+
+def cycle_named(subject: Experiment) -> Cycle | str:
+    """The cycle the experiment names, as `cycle_in` reads it, where its `cycle` is a
+    reference to a cycle of its idea, whether a file of it lies in its place or not; else
+    why it names none, in words. Raises Unreadable where the cycle's file lies in its place
+    but does not read."""
+    assert subject.data is not None and subject.idea is not None
+    written = subject.data.get("cycle")
+    if written is None:
+        return "it names no cycle"
+    reference = ids.parse_ref(written, ids.CYCLE)
+    if reference is None:
+        return "its `cycle` is no reference to a cycle, `[cycle:<idea>--<cycle>]`"
+    if ids.idea_of(reference.id) != subject.idea.name:
+        return f"it names `{reference.id}`, a cycle of another idea, which an idea never names"
+    return cycle_in(subject.idea, reference.id)
+
+
+def _moving(subject: Experiment) -> Cycle | None:
+    """The cycle whose suspensions move the experiment's time box (DEC-002 point 12): the
+    one it names, where its file lies in its place and each of its suspensions reads; None
+    where it names none, or one of its idea of which no file lies in its place, so that no
+    suspension moves it. Raises Unreadable where its `cycle` holds something other than a
+    reference to a cycle of its idea, so whose suspensions move it cannot be told, or where
+    the cycle's file, or a day of one of its suspensions, cannot be read."""
+    assert subject.data is not None
+    named = cycle_named(subject)
+    if isinstance(named, str):
+        if subject.data.get("cycle") is None:
+            return None
+        raise Unreadable(f"{named}, so whose suspensions move its time box cannot be told")
+    if named.held is None:
+        return None
+    suspensions_of(named)
+    return named
+
+
+def time_box(subject: Experiment, cycle: Cycle | None) -> Span:
+    """Where the experiment's time box falls under the suspensions of `cycle`, or as
+    declared where `cycle` is None (`timeline.experiment_time_box`; DEC-002 point 12). Its
+    start is None where an ongoing suspension reached it before it started. Raises
+    Unreadable where its declared days cannot be read."""
+    assert subject.data is not None
+    span = timeline.experiment_time_box(subject.data, cycle.data if cycle is not None else None)
+    if span is None:
+        raise Unreadable(
+            f"the experiment's file at `{subject.rel}` declares no time box that reads as one, "
+            f"its first day and its last, so where its time box falls cannot be told"
+        )
+    return span
+
+
+def _declaration(subject: Experiment) -> Mapping[str, Any] | None:
+    """The experiment's declaration, or None where it records none. Raises Unreadable where
+    it records one as something other than one."""
+    assert subject.data is not None
+    declared = subject.data.get("declared")
+    if declared is None or isinstance(declared, Mapping):
+        return declared
+    raise Unreadable(
+        f"the experiment's file at `{subject.rel}` records its declaration as something other "
+        f"than one, so whether it is declared cannot be told"
+    )
+
+
+def experiment_lifecycle(subject: Experiment, on: date) -> Position:
+    """Where the experiment `subject` stands on the day `on`, today where a predicate asks
+    (DEC-003 points 1 and 3): decided where its decision records a next action, whatever else
+    it holds; else drafted where its declaration is not recorded; else due where it is
+    generative and its stopping rule is recorded as reached, whatever its dates say; else, by
+    its time box as its cycle's suspensions move it, declared before the time box's first day
+    or while an ongoing suspension leaves it no start, running through its last, and due
+    after it. None where it has no file. Raises Unreadable where its decision, its
+    declaration, its stopping rule, its time box, its cycle or a day of the cycle's
+    suspensions cannot be read."""
+    if subject.data is None:
+        return Position(
+            None,
+            f"`{subject.id}` stands in none of the experiment's states, which start with its "
+            f"file: {subject.absent}",
+        )
+    decided = _experiment_decided(subject)
+    if decided is not None:
+        return decided
+    if _declaration(subject) is None:
+        return Position(DRAFTED, "a file exists, and its declaration is not recorded")
+    stopped = _stopped(subject)
+    if stopped is not None:
+        return stopped
+    cycle = _moving(subject)
+    box = time_box(subject, cycle)
+    moved = _moved_words(subject, cycle, box)
+    stray = _stray_stop(subject)
+    if box.start is None:
+        return Position(
+            DECLARED,
+            f"its declaration is recorded, and an ongoing suspension of its cycle reached its "
+            f"time box before it started, so it has no start until the cycle resumes{stray}",
+        )
+    if on < box.start:
+        return Position(
+            DECLARED,
+            f"its declaration is recorded, and its time box starts on {box.start}{moved}, "
+            f"after today, {on}{stray}",
+        )
+    assert box.end is not None
+    if on <= box.end:
+        return Position(
+            RUNNING,
+            f"its time box runs from {box.start} through {box.end}{moved}, and holds today, "
+            f"{on}{stray}",
+        )
+    return Position(
+        DUE,
+        f"its time box ended on {box.end}{moved}, before today, {on}, and no decision is "
+        f"recorded{stray}",
+    )
+
+
+def _experiment_decided(subject: Experiment) -> Position | None:
+    """The position the experiment's decision places it in, whatever else it holds, or None
+    where it records none."""
+    assert subject.data is not None
+    decision = subject.data.get("decision")
+    if decision is None:
+        return None
+    following = decision.get("next") if isinstance(decision, Mapping) else None
+    if not isinstance(following, str) or following not in NEXT_ACTIONS:
+        raise Unreadable(
+            f"the experiment's file at `{subject.rel}` records a decision whose next action is "
+            f"none of correct-course, double-down and stop, so whether the experiment is "
+            f"decided cannot be told: a decision outranks its dates"
+        )
+    when = day(_m(decision).get("when"))
+    on = f" on {when}" if when is not None else ""
+    return Position(
+        DECIDED,
+        f"the person decided its next action{on}, to {NEXT_ACTIONS[following]}, which outranks "
+        f"its dates",
+    )
+
+
+def _stopped(subject: Experiment) -> Position | None:
+    """The position a generative experiment's stopping rule recorded as reached places it
+    in, whatever its dates say, or None where none is (DEC-003 point 3). An evaluative
+    experiment runs its whole time box, so a stopping rule recorded on one, which its schema
+    forbids, ends nothing."""
+    assert subject.data is not None
+    stopped = subject.data.get("stopped")
+    kind = subject.data.get("kind")
+    if stopped is None or kind == "evaluative":
+        return None
+    if kind != "generative":
+        raise Unreadable(
+            f"the experiment's file at `{subject.rel}` records its stopping rule reached, and "
+            f"its kind is neither generative nor evaluative, so whether that makes it due "
+            f"cannot be told"
+        )
+    if not isinstance(stopped, Mapping):
+        raise Unreadable(
+            f"the experiment's file at `{subject.rel}` records its stopping rule reached as "
+            f"something other than one, so whether it is due cannot be told"
+        )
+    when = day(stopped.get("when"))
+    on = f" on {when}" if when is not None else ""
+    return Position(
+        DUE,
+        f"the person recorded its stopping rule reached{on}, which makes a generative "
+        f"experiment due whatever its dates say, and no decision is recorded",
+    )
+
+
+def _stray_stop(subject: Experiment) -> str:
+    """What a stopping rule recorded on an evaluative experiment does, in words, where one
+    is: nothing."""
+    assert subject.data is not None
+    if subject.data.get("stopped") is None:
+        return ""
+    return (
+        "; the stopping rule it records ends nothing, since an evaluative experiment runs its "
+        "whole time box"
+    )
+
+
+def _moved_words(subject: Experiment, cycle: Cycle | None, box: Span) -> str:
+    """Whether the time box falls where declared, in words: as its cycle's suspensions move
+    it, or as declared where no file of a cycle it names lies in its place."""
+    assert subject.data is not None
+    if cycle is None:
+        if subject.data.get("cycle") is None:
+            return ", as declared, since it names no cycle whose suspensions could move it"
+        return (
+            ", as declared, since no file of the cycle it names lies in its place, so no "
+            "suspension moves it"
+        )
+    return ", as its cycle's suspensions move it" if box != time_box(subject, None) else ""
+
+
+def _not_at(position: Position, target: str) -> str:
+    """Why an experiment at `position` is not at `target`, in words."""
+    stands = (
+        f"stands {EXPERIMENT_STATE_WORDS[position.state]}"
+        if position.state is not None
+        else "stands in none of its states"
+    )
+    return f"the experiment {stands}, not {EXPERIMENT_STATE_WORDS[target]}: {position.reason}"
+
+
+# --- the experiment's gates -------------------------------------------------------------------
+
+
+@dataclass
+class _Grounds:
+    """What a gate found: the refusals the files show, and what it needs that they cannot
+    tell."""
+
+    refusals: list[Refusal] = field(default_factory=list)
+    untold: list[str] = field(default_factory=list)
+
+    def answer(self, passed: str) -> Answer:
+        return _answer(self.refusals, self.untold, passed)
+
+
+def _by_experiment_dates(subject: Experiment, on: date, target: str, passed: str) -> Answer:
+    """Whether the experiment stands at `target` on the day `on`, as its detection reads it:
+    the gate of a move the dates make, on the facts the detection reads (DEC-003 point 3)."""
+    position = experiment_lifecycle(subject, on)
+    if position.state == target:
+        return Answer(True, f"{passed}: {position.reason}")
+    return Answer(False, _not_at(position, target))
+
+
+def starting_experiment(subject: Experiment, on: date) -> Answer:
+    """Whether the dates move the experiment from declared to running on `on`: its time
+    box, as its cycle's suspensions move it, has started and not ended, no stopping rule
+    makes it due, and no decision is recorded. So the gate is closed while the experiment is
+    declared, and no command takes the move."""
+    return _by_experiment_dates(subject, on, RUNNING, "the experiment's time box has started")
+
+
+def coming_due(subject: Experiment, on: date) -> Answer:
+    """Whether the experiment comes due from running on `on` (DEC-003 point 3): its time box,
+    as its cycle's suspensions move it, ended before `on`; or it is generative, and the
+    person recorded its stopping rule reached, which keeps its rules: its gate lets it
+    through as the check asks it (`gates.stopping`, through `acts.as_stood`), within the
+    time box, and no suspension of its cycle covers the day it was recorded, since nothing
+    is recorded on a suspended cycle's experiments (DEC-002 point 12). So the gate is
+    closed while the experiment runs."""
+    position = experiment_lifecycle(subject, on)
+    if position.state != DUE:
+        return Answer(False, _not_at(position, DUE))
+    assert subject.data is not None and subject.idea is not None and subject.held is not None
+    cycle = _moving(subject)
+    box = time_box(subject, cycle)
+    if box.end is not None and on > box.end:
+        return Answer(True, f"the experiment's time box has ended: {position.reason}")
+    found = _Grounds()
+    for act in acts.of_experiment(subject.idea, subject.held):
+        if act.pointer == "/stopped":
+            found.refusals.extend(acts.as_stood(act))
+    when = day(_m(subject.data.get("stopped")).get("when"))
+    if when is None:
+        found.refusals.append(
+            Refusal(
+                "/stopped/when",
+                "its stopping rule records no day it was reached, so its rules cannot be asked "
+                "of it",
+            )
+        )
+    elif cycle is not None:
+        for each in suspensions_of(cycle):
+            covered = each.covered
+            if covered is not None and covered.covers(when):
+                found.refusals.append(
+                    Refusal(
+                        "/stopped",
+                        f"its stopping rule was recorded on {when}, a day the suspension of "
+                        f"its cycle {_span_words(each)} covers: nothing is recorded on a "
+                        f"suspended cycle's experiments until the person resumes it",
+                    )
+                )
+    return found.answer(
+        f"the person recorded its stopping rule reached, within its time box, "
+        f"{timeline.span_text(box)}, which ends a generative experiment early: {position.reason}"
+    )
+
+
+def shifting_time_box(subject: Experiment, on: date, target: str) -> Answer:
+    """Whether a suspension recorded late takes the experiment back from running or due to
+    `target`, declared or running, on `on` (DEC-003 point 3): its detection places it at
+    `target`, and the suspension of its cycle recorded last moves its time box, which had
+    not started by the suspension's first day, and keeps its rules (`suspensions.of_cycle`;
+    DEC-002 point 12). A suspension that began after the time box started leaves its dates
+    as they were, and brings no move back. So the gate is closed at the move's origin."""
+    position = experiment_lifecycle(subject, on)
+    if position.state != target:
+        return Answer(False, _not_at(position, target))
+    only = (
+        "only a suspension recorded late, covering the start of its time box, moves an "
+        "experiment back"
+    )
+    named = cycle_named(subject)
+    if isinstance(named, str) or named.held is None:
+        why = named if isinstance(named, str) else f"{named.absent}"
+        return Answer(False, f"no suspension moves its time box, since {why}: {only}")
+    listed = suspensions_of(named)
+    if not listed:
+        return Answer(
+            False,
+            f"no suspension of its cycle, `{named.id}`, is recorded: {only}: {position.reason}",
+        )
+    last = max(listed, key=rules.recorded_order)
+    box = time_box(subject, named)
+    before = _box_without(subject, named, last)
+    if box == before:
+        return Answer(
+            False,
+            f"the suspension of its cycle recorded last, {_span_words(last)}, leaves its time "
+            f"box where it fell, {timeline.span_text(box)}: {only}: {position.reason}",
+        )
+    return _kept(
+        named,
+        [last],
+        f"the suspension of its cycle recorded last, {_span_words(last)}, moved its time box "
+        f"from {timeline.span_text(before)} to {timeline.span_text(box)}, and keeps its rules: "
+        f"{position.reason}",
+    )
+
+
+def _box_without(subject: Experiment, cycle: Cycle, left_out: Suspension) -> Span:
+    """Where the experiment's time box falls under the cycle's suspensions but `left_out`."""
+    assert subject.data is not None and cycle.data is not None
+    written = _list(cycle.data.get("suspensions"))
+    kept = [entry for index, entry in enumerate(written) if index != left_out.index]
+    span = timeline.experiment_time_box(subject.data, {"suspensions": kept})
+    assert span is not None
+    return span
+
+
+def declaring_experiment(subject: Experiment, on: date, target: str) -> Answer:
+    """Whether the person's declaration may move the experiment from drafted to `target`,
+    declared or running (DEC-003 points 3 and 7; DEC-002 point 9). Both moves are this one
+    predicate, and each is open where the declaration gives its target: before the command
+    writes, running where the time box starts on `on`, the day it is declared, and declared
+    where it starts later; after, wherever the detection places the experiment.
+
+    On both sides of the write, it tests an assumption the variant's list holds, of a
+    variant whose shortlisting stands, as the desk stage's detection places it, and is not
+    stale; and the cycle it names is open, planned or running, as the cycle's detection
+    places it, and explores that variant (`gates.unexplored`). Before the write, the
+    experiment is drafted, and the declaring gate lets it through on `on`, resting on the
+    shortlisting the canvas keeps (`gates.declaring`): every field its kind needs, at least
+    one estimate, and a time box of fourteen days at most, starting no earlier than `on`.
+    After, the declaration records who declared it, the day, the shortlisting it rested on
+    and its fingerprint, which matches what it declared, and the declaring gate lets it
+    through as the check asks it, on that day, resting on that shortlisting
+    (`acts.as_stood`)."""
+    assert subject.data is not None and subject.idea is not None and subject.held is not None
+    data = subject.data
+    declared = _declaration(subject)
+    found = _Grounds()
+    position = experiment_lifecycle(subject, on)
+    stands = DRAFTED if declared is None else target
+    if position.state != stands:
+        found.refusals.append(Refusal("/declared", _not_at(position, stands)))
+    variant = _shortlisted(subject, found)
+    cycle = _open_cycle(subject, on, found)
+    found.refusals.extend(_kind_and_days(data))
+    if declared is None:
+        rests_on = None
+        if variant is not None and variant.canvas is not None:
+            rests_on = fingerprint.shortlisting(variant.canvas)
+            if day(_m(variant.canvas.get("outcome")).get("when")) is None:
+                found.untold.append(
+                    f"the shortlisting of `{variant.id}` records no day that reads as one, which "
+                    f"a declaration records as the day of the shortlisting it rested on"
+                )
+        found.refusals.extend(
+            gates.declaring(
+                data,
+                on,
+                cycle=cycle.data if cycle is not None else None,
+                canvas=variant.canvas if variant is not None and rests_on is not None else None,
+                rests_on=rests_on,
+            )
+        )
+        found.refusals.extend(_into(subject, on, target, cycle))
+        return found.answer(_may_declare(subject, on, target, variant, cycle))
+    _declaration_recorded(subject, declared, found)
+    for act in acts.of_experiment(subject.idea, subject.held):
+        if act.pointer == "/declared":
+            found.refusals.extend(acts.as_stood(act))
+    rested = fingerprint.rested_on(declared.get("rested-on"))
+    return found.answer(
+        f"the declaration recorded on {day(declared.get('when'))} passes its gate as the check "
+        f"asks it, resting on the shortlisting of "
+        f"`{variant.id if variant is not None else ''}` recorded on "
+        f"{rested.when if rested is not None else ''}, which still stands, not stale, in the "
+        f"open cycle `{cycle.id if cycle is not None else ''}`, which explores it: "
+        f"{position.reason}"
+    )
+
+
+def _shortlisted(subject: Experiment, found: _Grounds) -> Variant | None:
+    """The variant whose assumption the experiment tests, where its shortlisting stands, as
+    the desk stage's detection places it (DEC-003 point 7), with what refuses it, or cannot
+    be told, among `found`: an assumption the variant's list does not hold, or a shortlisting
+    that is stale (`gates.stale_shortlisting`). None where the experiment names no
+    assumption, which the declaring gate refuses, or the variant is not shortlisted."""
+    assert subject.data is not None and subject.idea is not None
+    model = subject.idea
+    written = subject.data.get("assumption")
+    if written is None:
+        return None
+    lookup = model.resolve(written, ids.ASSUMPTIONS)
+    reference = ids.parse_ref(written, ids.ASSUMPTIONS)
+    if isinstance(lookup, models.NoReference) or reference is None:
+        found.refusals.append(
+            Refusal(
+                "/assumption",
+                "its `assumption` is no reference to an assumption, "
+                "`[assumptions:<idea>--<variant>--<assumption>]`",
+            )
+        )
+        return None
+    if isinstance(lookup, models.Foreign):
+        found.refusals.append(
+            Refusal(
+                "/assumption",
+                f"it tests `{reference.id}`, an assumption of another idea, which an idea "
+                f"never names",
+            )
+        )
+        return None
+    tested = ids.qualifier(reference.id)
+    read = variant_in(model, tested)
+    if not isinstance(lookup, models.Found):
+        held = model.idea.variants.get(ids.own(tested))
+        listed = held.assumptions if held is not None else None
+        if listed is not None and listed.data is None:
+            found.untold.append(
+                f"the assumptions at `{listed.rel}` cannot be read, so whether they hold the "
+                f"one it tests, `{reference.id}`, cannot be told"
+            )
+        else:
+            found.refusals.append(
+                Refusal(
+                    "/assumption",
+                    f"it tests `{reference.id}`, which no list of the variant's assumptions holds",
+                )
+            )
+    position = desk_stage(read)
+    if position.state != SHORTLISTED:
+        stands = f"stands {position.state}" if position.state is not None else "stands nowhere"
+        found.refusals.append(
+            Refusal(
+                "/assumption",
+                f"it tests an assumption of `{tested}`, which {stands}, not shortlisted: an "
+                f"experiment is declared only on a shortlisted variant ({position.reason})",
+            )
+        )
+        return None
+    assert read.canvas is not None
+    if model.goal_unread:
+        assert model.idea.goal is not None
+        found.untold.append(
+            f"the idea's goal at `{model.idea.goal.rel}` cannot be read, and the shortlisting "
+            f"of `{tested}` covers it, so whether it is stale cannot be told"
+        )
+        return read
+    checked = fingerprint.check_shortlisting(read.canvas, model.goal)
+    if checked.outcome == fingerprint.DIFFERS:
+        found.refusals.extend(gates.stale_shortlisting(read.canvas, model.goal))
+    elif checked.outcome == fingerprint.UNREADABLE:
+        found.untold.append(
+            f"the shortlisting of `{tested}` keeps no fingerprint that reads as one, so "
+            f"whether it is stale cannot be told"
+        )
+    elif checked.outcome == fingerprint.UNKNOWN_FORM:
+        found.untold.append(
+            f"the shortlisting of `{tested}` keeps a fingerprint of the canonical form "
+            f"{checked.form}, which this version of the capability does not know"
+        )
+    elif checked.outcome == fingerprint.NO_TEXT:
+        found.untold.append(
+            f"the fingerprint of the shortlisting of `{tested}` cannot be taken: {checked.why}"
+        )
+    return read
+
+
+def _open_cycle(subject: Experiment, on: date, found: _Grounds) -> Cycle | None:
+    """The cycle the experiment names, where it is open on `on`, planned or running, as the
+    cycle's own detection places it (DEC-003 point 7), with what refuses it among `found`: a
+    cycle not open, or one that does not explore the variant the experiment tests
+    (`gates.unexplored`). None where the experiment names no cycle, which the declaring gate
+    refuses, or the cycle is not open."""
+    assert subject.data is not None
+    if subject.data.get("cycle") is None:
+        return None
+    named = cycle_named(subject)
+    if isinstance(named, str):
+        found.refusals.append(
+            Refusal("/cycle", f"{named}: an experiment is declared only in an open cycle")
+        )
+        return None
+    if named.held is None:
+        found.refusals.append(
+            Refusal(
+                "/cycle",
+                f"it names the cycle `{named.id}`, and {named.absent}: an experiment is "
+                f"declared only in an open cycle",
+            )
+        )
+        return None
+    assert named.data is not None
+    found.refusals.extend(gates.unexplored(subject.data, named.data))
+    position = cycle_lifecycle(named, on)
+    if position.state in OPEN:
+        return named
+    assert position.state is not None
+    found.refusals.append(
+        Refusal(
+            "/cycle",
+            f"its cycle, `{named.id}`, stands {CYCLE_STATE_WORDS[position.state]}: an experiment "
+            f"is declared only in an open cycle, planned or running ({position.reason})",
+        )
+    )
+    return None
+
+
+def _kind_and_days(data: Mapping[str, Any]) -> list[Refusal]:
+    """What a declaration needs beside what the declaring gate reads: a kind of the two,
+    which says what else it needs, and a time box whose days read as days (DEC-002 point
+    9)."""
+    found: list[Refusal] = []
+    if data.get("kind") not in KINDS:
+        found.append(
+            Refusal(
+                "/kind",
+                "a declaration needs its kind, generative or evaluative, which says what else it "
+                "needs",
+            )
+        )
+    for key in ("start", "end"):
+        if data.get(key) is not None and day(data.get(key)) is None:
+            found.append(
+                Refusal(
+                    f"/{key}",
+                    f"its `{key}` does not read as a day, `YYYY-MM-DD`, and a time box is given "
+                    f"by its first day and its last",
+                )
+            )
+    return found
+
+
+def _into(subject: Experiment, on: date, target: str, cycle: Cycle | None) -> list[Refusal]:
+    """Where the declaration, made on `on`, does not take the experiment to `target`: its
+    time box, as its cycle's suspensions move it, starts on `on` for running, and later for
+    declared. A start before `on` is the declaring gate's to refuse."""
+    assert subject.data is not None
+    box = timeline.experiment_time_box(subject.data, cycle.data if cycle is not None else None)
+    if box is None or box.start is None or box.start < on:
+        return []
+    if target == RUNNING and box.start > on:
+        return [
+            Refusal(
+                "/start",
+                f"its time box starts on {box.start}, after today, {on}, so declaring it moves "
+                f"it into declared, not straight into running",
+            )
+        ]
+    if target == DECLARED and box.start == on:
+        return [
+            Refusal(
+                "/start",
+                f"its time box starts today, {on}, so declaring it moves it straight into "
+                f"running, not into declared",
+            )
+        ]
+    return []
+
+
+def _may_declare(
+    subject: Experiment, on: date, target: str, variant: Variant | None, cycle: Cycle | None
+) -> str:
+    """Why the experiment may be declared, in words, where nothing refuses it."""
+    assert subject.data is not None
+    data = subject.data
+    start, end = day(data.get("start")), day(data.get("end"))
+    held = (end - start).days + 1 if start is not None and end is not None else 0
+    into = "its time box starting today" if target == RUNNING else "into declared"
+    position = cycle_lifecycle(cycle, on) if cycle is not None else None
+    stands = CYCLE_STATE_WORDS[position.state] if position and position.state else ""
+    return (
+        f"the experiment may be declared, {into}: it records every field its kind, "
+        f"{data.get('kind')}, needs, at least one estimate, and a time box of {held} days, {start} "
+        f"through {end}; it tests an assumption of `{variant.id if variant else ''}`, whose "
+        f"shortlisting stands and is not stale; and its cycle, "
+        f"`{cycle.id if cycle else ''}`, stands {stands}, and explores the variant"
+    )
+
+
+def _declaration_recorded(
+    subject: Experiment, declared: Mapping[str, Any], found: _Grounds
+) -> None:
+    """What a declaration needs recorded beside what its gate judges (DEC-002 point 9), with
+    what refuses it, or cannot be told, among `found`: who declared it and the day, the
+    shortlisting it rested on, read whole, and its fingerprint, which matches what it
+    declared."""
+    assert subject.data is not None
+    if not _said(declared.get("by")):
+        found.refusals.append(
+            Refusal("/declared/by", "the declaration does not say who declared it")
+        )
+    if day(declared.get("when")) is None:
+        found.refusals.append(
+            Refusal(
+                "/declared/when",
+                "the declaration records no day it was declared, so its gate cannot be asked of it",
+            )
+        )
+    if fingerprint.rested_on(declared.get("rested-on")) is None:
+        found.refusals.append(
+            Refusal(
+                "/declared/rested-on",
+                "the declaration records no shortlisting it rested on that reads whole, its "
+                "fingerprint and its day",
+            )
+        )
+    checked = fingerprint.check_declaration(subject.data)
+    if checked.outcome == fingerprint.UNREADABLE:
+        found.refusals.append(
+            Refusal(
+                "/declared/fingerprint",
+                "the declaration keeps no fingerprint that reads as one, which freezes what it "
+                "declared",
+            )
+        )
+    elif checked.outcome == fingerprint.DIFFERS:
+        found.refusals.append(
+            Refusal(
+                "/declared/fingerprint",
+                "a declared field, or the record of the declaration, changed since it was "
+                "declared: a declaration is frozen, so a correction comes as a new experiment",
+            )
+        )
+    elif checked.outcome == fingerprint.UNKNOWN_FORM:
+        found.untold.append(
+            f"the declaration keeps a fingerprint of the canonical form {checked.form}, which "
+            f"this version of the capability does not know"
+        )
+    elif checked.outcome == fingerprint.NO_TEXT:
+        found.untold.append(f"the declaration's fingerprint cannot be taken: {checked.why}")
+
+
+def deciding_experiment(subject: Experiment, on: date) -> Answer:
+    """Whether the person's decision may move the experiment from due to decided (DEC-003
+    point 3), its cycle not suspended on `on` on both sides of the command's write. Before
+    the command records the decision, the experiment is due: its time box, as its cycle's
+    suspensions move it, ended before `on`, or it is generative and its stopping rule is
+    recorded as reached, and nothing is decided. After, the decision records its next action,
+    one of the three, who decided and when; the result is recorded, with who recorded it and
+    when; and each passes its gate as the check asks it, on the day it was recorded, with the
+    suspensions as they stood then (`gates.result`, `gates.deciding`, through
+    `acts.as_stood`): the experiment was declared, its result recorded no later than the
+    decision, a measurement spoiled only by a suspension its time box ran through, and its
+    time box ended before the decision, or a generative experiment's stopping rule reached
+    within it. Pass or fail is worked out, never chosen (`readings.experiment_outcome`;
+    DEC-002 point 10)."""
+    assert subject.data is not None and subject.idea is not None and subject.held is not None
+    data = subject.data
+    decision = data.get("decision")
+    if decision is None:
+        position = experiment_lifecycle(subject, on)
+        if position.state != DUE:
+            return Answer(False, f"{_not_at(position, DUE)}; so no decision is open")
+        found = _Grounds()
+        cycle = _unsuspended(subject, on, found)
+        return found.answer(
+            f"the experiment may be decided: {position.reason}; its cycle, "
+            f"`{cycle.id if cycle else ''}`, is not suspended; deciding records its result, "
+            f"where none is recorded yet, and its next action, with who decided and when"
+        )
+    if not isinstance(decision, Mapping):
+        raise Unreadable(
+            f"the experiment's file at `{subject.rel}` keeps its decision as something other "
+            f"than one, so whether it may be decided cannot be told"
+        )
+    found = _Grounds()
+    cycle = _unsuspended(subject, on, found)
+    _decision_recorded(data, decision, found)
+    for act in acts.of_experiment(subject.idea, subject.held):
+        if act.pointer in ("/result", "/decision"):
+            found.refusals.extend(acts.as_stood(act))
+    following = decision.get("next")
+    outcome = readings.experiment_outcome(data)
+    works_out = f", which works out to {OUTCOME_WORDS[outcome]}" if outcome is not None else ""
+    generative = data.get("kind") == "generative"
+    early = ", or its stopping rule was reached within it" if generative else ""
+    return found.answer(
+        f"the person decided on {day(decision.get('when'))} to "
+        f"{NEXT_ACTIONS.get(str(following), following)}, with its result recorded on "
+        f"{day(_m(data.get('result')).get('when'))}{works_out}, and its gate lets it through: "
+        f"the experiment was declared, its time box ended before the decision{early}, and its "
+        f"cycle, `{cycle.id if cycle else ''}`, is not suspended"
+    )
+
+
+def _unsuspended(subject: Experiment, on: date, found: _Grounds) -> Cycle | None:
+    """The cycle the experiment names, with what refuses a decision on it among `found`: a
+    cycle it does not name, of which no file lies in its place, or that is suspended on
+    `on`, since nothing is recorded on a suspended cycle's experiments until the person
+    resumes it (DEC-003 point 3)."""
+    named = cycle_named(subject)
+    if isinstance(named, str):
+        found.refusals.append(
+            Refusal("/cycle", f"{named}, and deciding needs its cycle, not suspended")
+        )
+        return None
+    if named.held is None:
+        found.refusals.append(
+            Refusal(
+                "/cycle",
+                f"it names the cycle `{named.id}`, and {named.absent}: deciding needs its "
+                f"cycle, not suspended",
+            )
+        )
+        return None
+    position = cycle_lifecycle(named, on)
+    if position.state == SUSPENDED:
+        found.refusals.append(
+            Refusal(
+                "/cycle",
+                f"its cycle, `{named.id}`, is suspended: {position.reason}; nothing is recorded "
+                f"on its experiments until the person resumes it, by the cycle's move `resume`",
+            )
+        )
+    return named
+
+
+def _decision_recorded(
+    data: Mapping[str, Any], decision: Mapping[str, Any], found: _Grounds
+) -> None:
+    """What a decision needs recorded beside what its gate judges (DEC-003 point 3; DEC-002
+    point 10), with what refuses it among `found`: the experiment declared, a next action of
+    the three, who decided and when, and a result that says who recorded it and when. A
+    decision with no result is the deciding gate's to refuse."""
+    if not models.declared(data):
+        found.refusals.append(Refusal("/decision", "it is decided, but it was never declared"))
+    following = decision.get("next")
+    if not isinstance(following, str) or following not in NEXT_ACTIONS:
+        found.refusals.append(
+            Refusal(
+                "/decision/next",
+                "the decision records no next action of correct-course, double-down and stop",
+            )
+        )
+    if not _said(decision.get("by")):
+        found.refusals.append(Refusal("/decision/by", "the decision does not say who decided"))
+    if day(decision.get("when")) is None:
+        found.refusals.append(
+            Refusal(
+                "/decision/when",
+                "the decision records no day it was decided, so its gate cannot be asked of it",
+            )
+        )
+    result = data.get("result")
+    if not isinstance(result, Mapping):
+        found.refusals.append(
+            Refusal(
+                "/decision",
+                "it is decided without its result: deciding needs the result and a next action",
+            )
+        )
+        return
+    if not _said(result.get("by")):
+        found.refusals.append(Refusal("/result/by", "the result does not say who recorded it"))
+    if day(result.get("when")) is None:
+        found.refusals.append(
+            Refusal(
+                "/result/when",
+                "the result records no day it was recorded, so whether it came before the "
+                "decision cannot be told",
+            )
+        )
+
+
 # --- answering the engine ---------------------------------------------------------------------
 
 
@@ -1170,6 +2091,32 @@ def cycle_gate(judge: Callable[[Cycle, date], Answer]) -> Callable[[Path, str, d
             return Answer(
                 False,
                 f"no move of the cycle is open to `{subject}`, which stands in none of its "
+                f"states without its file: {read.absent}",
+            )
+        return judge(read, on)
+
+    return asked
+
+
+def experiment_lifecycle_of(root: Path, subject: str, on: date) -> Position:
+    """Where the experiment `subject` stands on the day `on`, read from the project at
+    `root`."""
+    return experiment_lifecycle(experiment(root, subject), on)
+
+
+def experiment_gate(
+    judge: Callable[[Experiment, date], Answer],
+) -> Callable[[Path, str, date], Answer]:
+    """An experiment's gate, `judge`, asked on a day of the experiment a subject's id names.
+    An experiment with no file stands in no state of its process, so no move of it is
+    open."""
+
+    def asked(root: Path, subject: str, on: date) -> Answer:
+        read = experiment(root, subject)
+        if read.held is None:
+            return Answer(
+                False,
+                f"no move of the experiment is open to `{subject}`, which stands in none of its "
                 f"states without its file: {read.absent}",
             )
         return judge(read, on)
