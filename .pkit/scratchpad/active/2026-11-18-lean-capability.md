@@ -536,6 +536,9 @@ The plan the builders follow (2026-11-20). It carries out DEC-001 point 3 as ref
 2. **The experiment path:** `add-assumption`, `edit-assumption`, `remove-assumption`, `rank`, `plan-cycle`, `change-plan`, `new-experiment`, `draft-experiment`, `remove-experiment`, `record-estimate`, `declare`, `reach-stopping-rule`, `record-result`, `decide`.
 3. **The rest of the desk:** `remove-side`, `set-archetype`, `move-entry`, `set-authors`, `shelve`, `split`.
 4. **Suspensions and reviews:** `suspend`, `resume`, `review-cycle`, and the full briefing.
+   - Where the engine places the cycle in no state after a suspension's write, the write stands and the command says the move waits, as `acting.act_then_moved` does; a person's move undoes its write instead.
+   - The README's "The status" states the silence after which the briefing offers to record a suspension (14 days); the skill's `return.md` points there.
+   - The skill (`skills/lean-business/`) is written to this plan's flags for `suspend`, `resume` and `review-cycle`; keep them, and name any flag that must differ in the hand-back rather than editing the skill.
 
 The skill (phase 4) starts after builder 2, beside builders 3 and 4, since the surface is then fixed. Builders 3 and 4 go in turn, since both edit the `commands:` map and the README's commands.
 
