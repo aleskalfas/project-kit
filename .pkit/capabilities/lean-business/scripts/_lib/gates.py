@@ -539,15 +539,17 @@ def planning(
 
 def changing(cycle: Mapping[str, Any], on: date) -> list[Refusal]:
     """Why changing `cycle`'s plan on `on` is refused: a plan is frozen once its window
-    starts, under the suspensions `cycle` holds (DEC-002 point 11)."""
+    starts, under the suspensions `cycle` holds (DEC-002 point 11). A window has started on
+    its first day, since the day is the unit (DEC-003 points 1 and 4), so a plan changes
+    only on a day before it."""
     window = timeline.cycle_window(cycle)
-    if window is None or window.start is None or on <= window.start:
+    if window is None or window.start is None or on < window.start:
         return []
     return [
         Refusal(
             "/planned",
-            f"its plan was last changed on {on}, after its window started on {window.start}: a "
-            f"plan is frozen once its window starts",
+            f"its plan was last changed on {on}, and its window started on {window.start}: a "
+            f"plan changes only before its window's first day, and is frozen from it",
         )
     ]
 

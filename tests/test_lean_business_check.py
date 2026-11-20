@@ -1110,13 +1110,21 @@ def test_a_plan_changed_since_its_fingerprint(tmp_path: Path, change: Change) ->
     assert found(root) == [("error", "plan-changed", f"{CYCLE}#/planned/fingerprint")]
 
 
-def test_a_plan_last_changed_after_its_window_started(tmp_path: Path) -> None:
+@pytest.mark.parametrize("changed", ["2026-11-01", "2026-11-02"], ids=["its-first-day", "later"])
+def test_a_plan_last_changed_once_its_window_started(tmp_path: Path, changed: str) -> None:
+    """The window has started on its first day, so a change that day comes too late."""
     root = project(tmp_path)
-    edit(root, CYCLE, put("planned", "when", "2026-11-02"))
+    edit(root, CYCLE, put("planned", "when", changed))
     assert found(root) == [("error", "plan-refused", f"{CYCLE}#/planned")]
-    assert "after its window started on 2026-11-01" in messages(root, "plan-refused")[0]
-    # Changed on the window's first day, it may have come before the window started.
-    edit(root, CYCLE, put("planned", "when", "2026-11-01"))
+    assert messages(root, "plan-refused") == [
+        f"its plan was last changed on {changed}, and its window started on 2026-11-01: a plan "
+        f"changes only before its window's first day, and is frozen from it"
+    ]
+
+
+def test_a_plan_last_changed_the_day_before_its_window_starts(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    edit(root, CYCLE, put("planned", "when", "2026-10-31"))
     assert found(root) == []
 
 
