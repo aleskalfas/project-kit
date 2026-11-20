@@ -1,0 +1,111 @@
+# yaml-language-server: $schema=../../../schemas/_defs/process.schema.json
+#
+# Process definition for lean-business:cycle-lifecycle — conforms to the substrate shape contract
+# (COR-033; `.pkit/process/README.md` is the authoritative spec). Scaffolded by
+# `pkit process new` (COR-044). Every predicate below is a registered STUB in
+# ../package.yaml that FAILS CLOSED until implemented — implementing the teeth
+# is the process-author agent's territory; evolving states/transitions is the
+# deferred `amend` operation (which bumps `version`; couple/hand-off edits do
+# not).
+
+process:
+  id: cycle-lifecycle
+  version: 1
+  subject:
+    cardinality: keyed
+    key: cycle-id
+    domain_ref: "lean-business/<idea>/cycles/<cycle>.yaml: the cycle's plan, suspensions, review and decision"
+    blocked:
+      blocked_on: awaiting-human
+  states:
+    - id: planned
+      meaning: Its plan is recorded, and its window has not started; the plan may still change.
+      detection:
+        mode: classified
+        predicate:
+          run: cycle-lifecycle-detect
+      entry: true
+    - id: running
+      meaning: Its window has started, its end as worked out has not passed, and no suspension is ongoing. Its plan is frozen.
+      detection:
+        mode: classified
+        predicate:
+          run: cycle-lifecycle-detect
+    - id: suspended
+      meaning: 'A suspension is ongoing: none of its days count toward the window. Its plan stays frozen.'
+      detection:
+        mode: classified
+        predicate:
+          run: cycle-lifecycle-detect
+    - id: in-review
+      meaning: Its window as worked out has ended, and no decision is recorded.
+      detection:
+        mode: classified
+        predicate:
+          run: cycle-lifecycle-detect
+    - id: decided
+      meaning: The person's decision is recorded, with who decided and when.
+      detection:
+        mode: classified
+        predicate:
+          run: cycle-lifecycle-detect
+      terminal: true
+  transitions:
+    - from: planned
+      to: running
+      trigger: start
+      authorisation: script
+      gate:
+        kind: deterministic
+        predicate:
+          run: cycle-lifecycle-gate-planned-running-start
+    - from: running
+      to: in-review
+      trigger: end
+      authorisation: script
+      gate:
+        kind: deterministic
+        predicate:
+          run: cycle-lifecycle-gate-running-in-review-end
+    - from: running
+      to: suspended
+      trigger: suspend
+      authorisation: script
+      gate:
+        kind: deterministic
+        predicate:
+          run: cycle-lifecycle-gate-running-suspended-suspend
+    - from: in-review
+      to: suspended
+      trigger: suspend
+      authorisation: script
+      gate:
+        kind: deterministic
+        predicate:
+          run: cycle-lifecycle-gate-in-review-suspended-suspend
+    - from: in-review
+      to: running
+      trigger: shift-window
+      authorisation: script
+      gate:
+        kind: deterministic
+        predicate:
+          run: cycle-lifecycle-gate-in-review-running-shift-window
+    - from: suspended
+      to: running
+      trigger: resume
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: cycle-lifecycle-gate-suspended-running-resume
+      prompt: Are you back to resume the cycle, and on which day did you resume?
+    - from: in-review
+      to: decided
+      trigger: decide
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: cycle-lifecycle-gate-in-review-decided-decide
+      prompt: Which variant did best, and do you persevere, pivot or pause for it?

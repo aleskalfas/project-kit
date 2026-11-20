@@ -1,0 +1,129 @@
+# yaml-language-server: $schema=../../../schemas/_defs/process.schema.json
+#
+# Process definition for lean-business:experiment-lifecycle — conforms to the substrate shape contract
+# (COR-033; `.pkit/process/README.md` is the authoritative spec). Scaffolded by
+# `pkit process new` (COR-044). Every predicate below is a registered STUB in
+# ../package.yaml that FAILS CLOSED until implemented — implementing the teeth
+# is the process-author agent's territory; evolving states/transitions is the
+# deferred `amend` operation (which bumps `version`; couple/hand-off edits do
+# not).
+
+process:
+  id: experiment-lifecycle
+  version: 1
+  subject:
+    cardinality: keyed
+    key: experiment-id
+    domain_ref: "lean-business/<idea>/experiments/<experiment>.yaml: the experiment's declaration, result and decision; its cycle's suspensions in lean-business/<idea>/cycles/<cycle>.yaml"
+    blocked:
+      blocked_on: awaiting-human
+  states:
+    - id: drafted
+      meaning: A file exists, and its declaration is not recorded.
+      detection:
+        mode: classified
+        predicate:
+          run: experiment-lifecycle-detect
+      entry: true
+      depends_on:
+        - upstream: lean-business:desk-stage
+          relation: gates-on-readiness
+          mode: pull
+          why: Declaring needs a variant whose shortlisting stands and is not stale; the declaring gate reads it through the desk stage's own detection (DEC-003 point 7).
+        - upstream: lean-business:cycle-lifecycle
+          relation: gates-on-readiness
+          mode: pull
+          why: Declaring needs an open cycle that explores the variant, and the experiment's detection reads its cycle's suspensions, which move a time box not yet started (DEC-003 points 3 and 7).
+    - id: declared
+      meaning: Its declaration is recorded, and its time box has not started.
+      detection:
+        mode: classified
+        predicate:
+          run: experiment-lifecycle-detect
+    - id: running
+      meaning: Its time box has started and not ended.
+      detection:
+        mode: classified
+        predicate:
+          run: experiment-lifecycle-detect
+    - id: due
+      meaning: Its time box has ended, or a generative experiment's stopping rule is recorded as reached, and no decision is recorded.
+      detection:
+        mode: classified
+        predicate:
+          run: experiment-lifecycle-detect
+    - id: decided
+      meaning: Its result and its next action are recorded.
+      detection:
+        mode: classified
+        predicate:
+          run: experiment-lifecycle-detect
+      terminal: true
+  transitions:
+    - from: drafted
+      to: declared
+      trigger: declare
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: experiment-lifecycle-gate-drafted-declared-declare
+      prompt: Declare the experiment? Once declared it cannot change, and a correction is a new experiment.
+    - from: drafted
+      to: running
+      trigger: declare
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: experiment-lifecycle-gate-drafted-running-declare
+      prompt: Declare the experiment, its time box starting today? Once declared it cannot change, and a correction is a new experiment.
+    - from: declared
+      to: running
+      trigger: start
+      authorisation: script
+      gate:
+        kind: deterministic
+        predicate:
+          run: experiment-lifecycle-gate-declared-running-start
+    - from: running
+      to: due
+      trigger: come-due
+      authorisation: script
+      gate:
+        kind: deterministic
+        predicate:
+          run: experiment-lifecycle-gate-running-due-come-due
+    - from: due
+      to: running
+      trigger: shift-time-box
+      authorisation: script
+      gate:
+        kind: deterministic
+        predicate:
+          run: experiment-lifecycle-gate-due-running-shift-time-box
+    - from: running
+      to: declared
+      trigger: shift-time-box
+      authorisation: script
+      gate:
+        kind: deterministic
+        predicate:
+          run: experiment-lifecycle-gate-running-declared-shift-time-box
+    - from: due
+      to: declared
+      trigger: shift-time-box
+      authorisation: script
+      gate:
+        kind: deterministic
+        predicate:
+          run: experiment-lifecycle-gate-due-declared-shift-time-box
+    - from: due
+      to: decided
+      trigger: decide
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: experiment-lifecycle-gate-due-decided-decide
+      prompt: What did the experiment find, and what comes next?

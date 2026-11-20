@@ -1,0 +1,238 @@
+# yaml-language-server: $schema=../../../schemas/_defs/process.schema.json
+#
+# Process definition for lean-business:desk-stage — conforms to the substrate shape contract
+# (COR-033; `.pkit/process/README.md` is the authoritative spec). Scaffolded by
+# `pkit process new` (COR-044). Every predicate below is a registered STUB in
+# ../package.yaml that FAILS CLOSED until implemented — implementing the teeth
+# is the process-author agent's territory; evolving states/transitions is the
+# deferred `amend` operation (which bumps `version`; couple/hand-off edits do
+# not).
+
+process:
+  id: desk-stage
+  version: 1
+  subject:
+    cardinality: keyed
+    key: variant-id
+    domain_ref: "lean-business/<idea>/variants/<variant>/canvas.yaml: the variant's canvas, its verdicts and its outcome"
+    blocked:
+      blocked_on: awaiting-human
+  states:
+    - id: sketched
+      meaning: A canvas exists, and desirability has no standing yes.
+      detection:
+        mode: classified
+        predicate:
+          run: desk-stage-detect
+      entry: true
+    - id: desirable
+      meaning: The person's yes on desirability stands.
+      detection:
+        mode: classified
+        predicate:
+          run: desk-stage-detect
+    - id: viable
+      meaning: The person's yes stands on desirability and viability.
+      detection:
+        mode: classified
+        predicate:
+          run: desk-stage-detect
+    - id: feasible
+      meaning: The person's yes stands on desirability, viability and feasibility.
+      detection:
+        mode: classified
+        predicate:
+          run: desk-stage-detect
+    - id: shortlisted
+      meaning: The person chose the variant to test; its shortlisting may still be withdrawn by a no on a step.
+      detection:
+        mode: classified
+        predicate:
+          run: desk-stage-detect
+      terminal: true
+    - id: shelved
+      meaning: The person shelved the variant, with its reason. Final.
+      detection:
+        mode: classified
+        predicate:
+          run: desk-stage-detect
+      terminal: true
+    - id: split
+      meaning: The person split the variant into the variants it names. Final.
+      detection:
+        mode: classified
+        predicate:
+          run: desk-stage-detect
+      terminal: true
+  transitions:
+    - from: sketched
+      to: desirable
+      trigger: pass-desirability
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-sketched-desirable-pass-desirability
+      prompt: 'Is the variant desirable: do its problems, existing alternatives and unique value proposition hold for its customer segments and early adopters?'
+    - from: desirable
+      to: viable
+      trigger: pass-viability
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-desirable-viable-pass-viability
+      prompt: "Is the variant viable: can its revenue streams reach the idea's goal, as the estimate works it out?"
+    - from: viable
+      to: feasible
+      trigger: pass-feasibility
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-viable-feasible-pass-feasibility
+      prompt: "Is the variant feasible: can the first stage's traction target be reached?"
+    - from: desirable
+      to: sketched
+      trigger: fail-desirability
+      authorisation: user
+      prompt: Is the variant no longer desirable? A no takes it back to sketched.
+    - from: viable
+      to: sketched
+      trigger: fail-desirability
+      authorisation: user
+      prompt: Is the variant no longer desirable? A no takes it back to sketched and clears the verdicts after desirability.
+    - from: feasible
+      to: sketched
+      trigger: fail-desirability
+      authorisation: user
+      prompt: Is the variant no longer desirable? A no takes it back to sketched and clears the verdicts after desirability.
+    - from: shortlisted
+      to: sketched
+      trigger: fail-desirability
+      authorisation: user
+      prompt: Is the variant no longer desirable? A no takes it back to sketched, clears the verdicts after desirability and withdraws its shortlisting.
+    - from: viable
+      to: desirable
+      trigger: fail-viability
+      authorisation: user
+      prompt: Is the variant no longer viable? A no takes it back to desirable.
+    - from: feasible
+      to: desirable
+      trigger: fail-viability
+      authorisation: user
+      prompt: Is the variant no longer viable? A no takes it back to desirable and clears the feasibility verdict.
+    - from: shortlisted
+      to: desirable
+      trigger: fail-viability
+      authorisation: user
+      prompt: Is the variant no longer viable? A no takes it back to desirable, clears the feasibility verdict and withdraws its shortlisting.
+    - from: feasible
+      to: viable
+      trigger: fail-feasibility
+      authorisation: user
+      prompt: Is the variant no longer feasible? A no takes it back to viable.
+    - from: shortlisted
+      to: viable
+      trigger: fail-feasibility
+      authorisation: user
+      prompt: Is the variant no longer feasible? A no takes it back to viable and withdraws its shortlisting.
+    - from: feasible
+      to: shortlisted
+      trigger: shortlist
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-feasible-shortlisted-shortlist
+      prompt: Shortlist the variant, to test it in a cycle?
+    - from: shortlisted
+      to: shortlisted
+      trigger: shortlist
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-shortlisted-shortlisted-shortlist
+      prompt: Shortlist the variant again, on its canvas and the goal as they stand now?
+    - from: sketched
+      to: shelved
+      trigger: shelve
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-sketched-shelved-shelve
+      prompt: Shelve the variant, and why? A shelved variant is final.
+    - from: desirable
+      to: shelved
+      trigger: shelve
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-desirable-shelved-shelve
+      prompt: Shelve the variant, and why? A shelved variant is final.
+    - from: viable
+      to: shelved
+      trigger: shelve
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-viable-shelved-shelve
+      prompt: Shelve the variant, and why? A shelved variant is final.
+    - from: feasible
+      to: shelved
+      trigger: shelve
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-feasible-shelved-shelve
+      prompt: Shelve the variant, and why? A shelved variant is final.
+    - from: shortlisted
+      to: shelved
+      trigger: shelve
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-shortlisted-shelved-shelve
+      prompt: Shelve the variant, and why? A shelved variant is final.
+    - from: sketched
+      to: split
+      trigger: split
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-sketched-split-split
+      prompt: Split the variant into the variants named? A split variant is final.
+    - from: desirable
+      to: split
+      trigger: split
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-desirable-split-split
+      prompt: Split the variant into the variants named? A split variant is final.
+    - from: viable
+      to: split
+      trigger: split
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-viable-split-split
+      prompt: Split the variant into the variants named? A split variant is final.
+    - from: feasible
+      to: split
+      trigger: split
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-feasible-split-split
+      prompt: Split the variant into the variants named? A split variant is final.
