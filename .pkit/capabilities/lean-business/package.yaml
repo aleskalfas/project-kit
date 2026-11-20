@@ -54,6 +54,48 @@ commands:
   status:
     script: scripts/status.py
     help: "Where the ideas stand and what waits on you (DEC-001 point 10): one line for each idea, or one idea in full, each subject's position from the process engine. --json prints the structured form, with its schema_version, whose keys the README lists. Read-only."
+  add-assumption:
+    script: scripts/add_assumption.py
+    help: "Add an assumption to a variant's list, <variant> <statement> --kind desirability|viability|feasibility (--entry <entry> | --input <input> [--side]) [--id], ranked one past the highest (DEC-002 points 7 and 8). Content: asks nothing. Refused for an entry the canvas does not hold. Prints the id it gives; the list is created where the variant has none."
+  edit-assumption:
+    script: scripts/edit_assumption.py
+    help: "Change an assumption's words, kind or source: --statement, --kind, --entry or --input, --side. Its id never changes. Content: asks nothing. Warns, never refuses, where a declared experiment tests it."
+  remove-assumption:
+    script: scripts/remove_assumption.py
+    help: "Take an assumption out of its variant's list (DEC-002 point 7). Content: asks nothing. Refused while an experiment tests it, declared or a draft; the others keep their ranks."
+  rank:
+    script: scripts/rank.py
+    help: "Rank a variant's assumptions by risk, <variant> <assumption>..., the riskiest first; those left out follow as they were ranked (DEC-002 point 8). The person's act: asks at a terminal, needs --person-decided off one; records no who or when."
+  plan-cycle:
+    script: scripts/plan_cycle.py
+    help: "Plan an idea's next cycle, <idea>--<cycle> --variant... --start [--days, 90 where none] --objective --key-result <variant>:<step>:<target>... --constraint-step --constraint-evidence, with who planned it, when and the plan's fingerprint (DEC-002 point 11). The person's act: asks at a terminal, needs --person-decided off one. Refused: a variant not shortlisted, an idea with no goal, a cycle still undecided, and what the check refuses, such as overlapping windows or a variant with no key result."
+  change-plan:
+    script: scripts/change_plan.py
+    help: "Change a planned cycle's plan, with plan-cycle's flags, each given part replacing that part whole; keeps who first planned it, records who changed it and when, and takes the fingerprint again (DEC-002 point 11). The person's act: asks at a terminal, needs --person-decided off one. Refused once its window starts, and for a change the check refuses, such as dropping a variant an experiment tests."
+  new-experiment:
+    script: scripts/new_experiment.py
+    help: "Start a draft experiment, <idea>--<experiment> --kind generative|evaluative [--assumption] [--cycle] [--author]... (DEC-002 point 9). Content: asks nothing. Authors default to git's user.name. Warns where its cycle is suspended."
+  draft-experiment:
+    script: scripts/draft_experiment.py
+    help: "Write what a draft experiment will declare, a flag for each field: --kind, --assumption, --cycle; --learn, --stopping-rule, --fit <count>/<of>; --action, --metric, --direction with --threshold or --range <low> <high>, --source, --effect..., --control cohorts|split [--exposed]; --start, --end; --clear <field> (DEC-002 point 9). Content: asks nothing. Refused once declared, for a time box over fourteen days or ending before it starts, a range whose low is above its high, and a field of the other kind. Warns where its cycle is suspended."
+  remove-experiment:
+    script: scripts/remove_experiment.py
+    help: "Remove a draft experiment never declared (DEC-003 point 3). Content: asks nothing. Refused once declared."
+  record-estimate:
+    script: scripts/record_estimate.py
+    help: "Record your own guess at the number an experiment's result is held against, <experiment> <value>, made alone before it is declared; a second by the same person replaces the first (DEC-002 point 9). The person's act: asks at a terminal, needs --person-decided off one. Refused once declared, and while its cycle is suspended."
+  declare:
+    script: scripts/declare.py
+    help: "Declare an experiment, freezing it: records who and when, the shortlisting it rests on and the declaration's fingerprint (DEC-002 point 9; DEC-003 points 3 and 7). Its time box starting today takes it into running, later into declared. The person's move: asks at a terminal, needs --person-decided off one. Refused where the declaring gates refuse it; warns where a riskier assumption is untested."
+  reach-stopping-rule:
+    script: scripts/reach_stopping_rule.py
+    help: "Record a generative experiment's stopping rule reached, which makes it due; the move there is the script's, which no command takes (DEC-002 point 10; DEC-003 point 3). The person's act: asks at a terminal, needs --person-decided off one. Refused on an evaluative experiment, one not declared or decided, outside its time box, and while its cycle is suspended."
+  record-result:
+    script: scripts/record_result.py
+    help: "Record what a declared experiment found, <experiment> [--measured] [--spoiled] --evidence --learned, and say what it works out to; recorded again, it replaces the earlier one (DEC-002 point 10). The person's act: asks at a terminal, needs --person-decided off one. Refused on one not declared or decided, a spoiled measurement no suspension ran through, and while its cycle is suspended."
+  decide:
+    script: scripts/decide.py
+    help: "Record your next action on a due experiment, <experiment> correct-course|double-down|stop, with who and when (DEC-002 point 10; DEC-003 point 3). The person's move: asks at a terminal, needs --person-decided off one. Refused before it is due, without its result, and while its cycle is suspended."
   desk-stage-detect:
     script: scripts/desk_stage_detect.py
     help: "Process classifier (lean-business DEC-003 points 1 and 2): read-only; answers which state of the desk stage a variant is in, from its canvas's outcome and the run of standing yes verdicts. Invoked by the process engine."

@@ -21,6 +21,20 @@ pkit:
         - .pkit/capabilities/lean-business/scripts/canvas.py
         - .pkit/capabilities/lean-business/scripts/estimate.py
         - .pkit/capabilities/lean-business/scripts/status.py
+        - .pkit/capabilities/lean-business/scripts/add_assumption.py
+        - .pkit/capabilities/lean-business/scripts/edit_assumption.py
+        - .pkit/capabilities/lean-business/scripts/remove_assumption.py
+        - .pkit/capabilities/lean-business/scripts/rank.py
+        - .pkit/capabilities/lean-business/scripts/plan_cycle.py
+        - .pkit/capabilities/lean-business/scripts/change_plan.py
+        - .pkit/capabilities/lean-business/scripts/new_experiment.py
+        - .pkit/capabilities/lean-business/scripts/draft_experiment.py
+        - .pkit/capabilities/lean-business/scripts/remove_experiment.py
+        - .pkit/capabilities/lean-business/scripts/record_estimate.py
+        - .pkit/capabilities/lean-business/scripts/declare.py
+        - .pkit/capabilities/lean-business/scripts/reach_stopping_rule.py
+        - .pkit/capabilities/lean-business/scripts/record_result.py
+        - .pkit/capabilities/lean-business/scripts/decide.py
         - .pkit/capabilities/lean-business/scripts/_lib/*.py
         - .pkit/capabilities/lean-business/schemas/*.schema.json
       record:
@@ -36,11 +50,17 @@ pkit:
         - lean-business:DEC-002#4
         - lean-business:DEC-002#6
         - lean-business:DEC-002#7
+        - lean-business:DEC-002#8
+        - lean-business:DEC-002#9
+        - lean-business:DEC-002#10
+        - lean-business:DEC-002#11
         - lean-business:DEC-002#12
         - lean-business:DEC-002#13
         - lean-business:DEC-002#14
         - lean-business:DEC-002#15
         - lean-business:DEC-003#2
+        - lean-business:DEC-003#3
+        - lean-business:DEC-003#4
         - lean-business:DEC-003#5
         - lean-business:DEC-003#7
       artefact:
@@ -64,9 +84,9 @@ lean-business guides a person through the lean method of validating a business m
 - `schemas/` — the shape of each file of an idea and of the capability's configuration, each with its reference instance ([lean-business:DEC-002-lean-business-data-model]; "An idea's folder" below). `shapes.schema.json` holds the shapes they share: the ids, the references, a day, a person and a fingerprint.
 - `scripts/check.py` — the capability's check, `pkit lean check`, and the `lean-business:check` member of `pkit validate` ("The check" below).
 - `scripts/*.py`, one for each of the other commands ("Commands" below).
-- `scripts/_lib/` — what the check and the commands share. What every write goes through: the context a command runs in, its consent forms, and its acts and moves (`acting`); the hold of a write against the check and the data validation, its commit and its undoing, and the location's record (`writes`); the round-trip edit of a file (`editing`); the ids a write gives (`naming`); the judgements a write leaves stale (`staling`); the process engine's status, can-move and move (`engine`), reached through `pkit` (`backbone`). What the desk commands read and draw: a variant's canvas and its boxes (`canvases`), the estimate (`estimates`), the grid (`grid`) and the status (`briefing`). And what the check reads through: the files git sees (`listing`); the place of each file in an idea's folder, and the file of a subject's id (`layout`); an idea's subjects and the lookups between them, each lookup telling a subject found from a reference that names nothing, one into a kind of which the location holds no file, or another idea's subject (`model`); the gates of the moves and the acts, each asked with the day of its act (`gates`); the acts recorded in an idea's files, each with the gate that judges it (`acts`); the canonical form, the fingerprints taken over it, and whether a kept one still matches (`fingerprint`); where a window and a time box fall under a cycle's suspensions, as they stand or as they stood on a day (`timeline`); the rules a suspension keeps, contradicting no act already recorded among them (`suspensions`); the places each schema puts a day (`schemas`); and what follows from the files, such as pricing, an experiment's pass or fail, an assumption's outcome and an idea dropped (`readings`).
+- `scripts/_lib/` — what the check and the commands share. What every write goes through: the context a command runs in, its consent forms, and its acts and moves (`acting`); the hold of a write against the check and the data validation, its commit and its undoing, and the location's record (`writes`); the round-trip edit of a file (`editing`); the ids a write gives (`naming`); the judgements a write leaves stale (`staling`); the process engine's status, can-move and move (`engine`), reached through `pkit` (`backbone`). What the desk commands read and draw: a variant's canvas and its boxes (`canvases`), the estimate (`estimates`), the grid (`grid`) and the status (`briefing`). What the experiment path's commands read and change: a variant's assumptions (`assumptions`), an experiment and the cycle it names (`experiments`), and a cycle's plan (`cycles`). And what the check reads through: the files git sees (`listing`); the place of each file in an idea's folder, and the file of a subject's id (`layout`); an idea's subjects and the lookups between them, each lookup telling a subject found from a reference that names nothing, one into a kind of which the location holds no file, or another idea's subject (`model`); the gates of the moves and the acts, each asked with the day of its act (`gates`); the acts recorded in an idea's files, each with the gate that judges it (`acts`); the canonical form, the fingerprints taken over it, and whether a kept one still matches (`fingerprint`); where a window and a time box fall under a cycle's suspensions, as they stand or as they stood on a day (`timeline`); the rules a suspension keeps, contradicting no act already recorded among them (`suspensions`); the places each schema puts a day (`schemas`); and what follows from the files, such as pricing, an experiment's pass or fail, an assumption's outcome and an idea dropped (`readings`).
 
-The commands of the experiments and the cycles, and the skill these records decide, are being built under project-kit#3426. This README lists them as they land.
+The rest of the desk's commands, those that suspend, resume and review a cycle, and the skill these records decide, are being built under project-kit#3426. This README lists them as they land.
 
 ## Adopter setup
 
@@ -189,6 +209,37 @@ Checks the files of the location, as "The check" above says.
 - **A move** asks the engine first whether its gate lets it go, writes, then moves the subject to where the engine places it after the write. Where the engine refuses the move after the write, the command undoes everything it wrote, the location's record included, and says so.
 
 **Exit codes.** 0, done or shown; 1, refused, with the reason; 2, a usage error; 3, a question printed for the person, nothing done.
+
+### The commands of assumptions, cycles and experiments
+
+| Command | What it does | Kind |
+|---|---|---|
+| `add-assumption <variant> <statement> --kind desirability\|viability\|feasibility (--entry <entry> \| --input <input> [--side <side>]) [--id <id>]` | Adds an assumption to the variant's list, from an entry of its canvas or an input of the estimate, and prints the id it gives. It goes one past the highest rank; ranking it is `rank`'s. Refused for an entry the canvas does not hold. | content |
+| `edit-assumption <assumption> [--statement <text>] [--kind <step>] [--entry <entry> \| --input <input>] [--side <side>]` | Changes an assumption's words, kind or source. Its id never changes. Warns where a declared experiment tests it. | content |
+| `remove-assumption <assumption>` | Takes an assumption out of its list; the others keep their ranks. Refused while an experiment tests it, declared or a draft. | content |
+| `rank <variant> <assumption>...` | Ranks the assumptions by risk, the riskiest first: those named take the first ranks, in the order given, and the rest follow as they were ranked. Records no who or when. | act |
+| `plan-cycle <idea>--<cycle> --variant <variant>... --start <day> [--days <n>] --objective <text> --key-result <variant>:<step>:<target>... --constraint-step <step> --constraint-evidence <text>` | Plans the idea's next cycle, with who planned it, the day and the plan's fingerprint. Its window holds 90 days where `--days` gives none. Refused for a variant not shortlisted, in an idea with no goal, and while another cycle of the idea is undecided. Warns where the window has started by today. | act |
+| `change-plan <cycle> [plan-cycle's flags]` | Changes a planned cycle's plan, each part given replacing that part whole, and takes its fingerprint again; who first planned it stays. Refused once the cycle is not planned, and for a start moved to today or before. | act |
+| `new-experiment <idea>--<experiment> --kind generative\|evaluative [--assumption <assumption>] [--cycle <cycle>] [--author <name>]...` | Starts a draft. The assumption and the cycle may wait for `draft-experiment`. The authors are git's `user.name` where none is given. | content |
+| `draft-experiment <experiment> [field flags] [--clear <field>]...` | Writes what the draft will declare ("Drafting an experiment" below). Refused once declared. | content |
+| `remove-experiment <experiment>` | Removes a draft. Refused once declared. | content |
+| `record-estimate <experiment> <value>` | Records your own guess at the number its result is held against, made alone; a second of yours replaces the first. Refused once declared. | act |
+| `declare <experiment>` | Declares the experiment, which freezes it: it records who declared it, the day, the shortlisting it rests on and the declaration's fingerprint. A time box starting today takes it into running, and a later one into declared. Refused where the declaring gate refuses it, as for the check's `declaration-refused` label, on a stale shortlisting, and in a cycle that is neither planned nor running. Warns where an assumption ranked riskier is untested. | move |
+| `reach-stopping-rule <experiment>` | Records a generative experiment's stopping rule reached, within its time box, which makes it due. Refused on an evaluative experiment, which runs its whole time box. | act |
+| `record-result <experiment> [--measured <number>] [--spoiled] --evidence <text> --learned <text>` | Records what a declared experiment found, and says what it works out to: a pass, a fail, or neither. Recorded again before the decision, it replaces the earlier one. Refused for a measurement spoiled where no suspension ran through its time box. | act |
+| `decide <experiment> correct-course\|double-down\|stop` | Records your next action on a due experiment whose result is recorded. | move |
+
+An assumption is named by its id, `<idea>--<variant>--<assumption>`, or by the part after the idea; `rank` and `add-assumption --entry` take its own part too. A cycle is named by its id or its own part. An assumption's id comes from `--id` or its statement, as an entry's does.
+
+**Drafting an experiment.** `draft-experiment` sets a field with each flag, and `--clear <field>` takes one out:
+
+- **Every experiment:** `--kind`, `--assumption`, `--cycle`, and its time box, `--start` and `--end`, fourteen days at most.
+- **Generative:** `--learn`, `--stopping-rule`, and `--fit <count>/<what it counts>`.
+- **Evaluative:** `--action`; `--metric <step>`; `--direction at-least|at-most` with `--threshold <number>` or `--range <low> <high>`; `--source estimate|traction-target`; `--effect <text>`, each adding one; and `--control cohorts|split`, a split with `--exposed <share>`.
+
+Refused: a time box over fourteen days, or ending before it starts; a range whose low is above its high; a field the experiment's kind does not hold; and a change of kind while the draft holds the other kind's fields, unless `--clear` takes them out in the same run.
+
+**While a cycle is suspended,** `record-estimate`, `declare`, `reach-stopping-rule`, `record-result` and `decide` are refused on its experiments, naming `pkit lean resume <cycle>`. `new-experiment` and `draft-experiment` write the draft, and warn.
 
 ### The grid
 

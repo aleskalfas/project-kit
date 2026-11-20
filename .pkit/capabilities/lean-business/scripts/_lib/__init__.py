@@ -42,6 +42,9 @@ What the commands write and read through (DEC-001 point 3; DEC-003 point 5):
 - `engine` and `backbone`: the process engine's status, can-move and move, reached through
   `pkit`;
 - `canvases`: a variant's canvas and its boxes, as the desk commands read and change them;
+- `assumptions`, `experiments` and `cycles`: a variant's assumptions, an experiment and the
+  cycle it names, and a cycle's plan, as the experiment path's commands read and change
+  them;
 - `estimates`: the viability estimate, worked out from the goal and the inputs (DEC-002
   point 4);
 - `grid`: a canvas drawn as the book's grid, with its credit line (DEC-001 point 6);

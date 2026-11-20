@@ -16,6 +16,7 @@ and a key given twice is refused. So a command judges the file as the check will
   written as an alias of the other.
 - **An answer**, `yes` or `no`, is written quoted (`quoted`), so no reader of an older
   YAML takes it for a truth value.
+- **A number** is written whole where it is whole (`number`), `8` rather than `8.0`.
 """
 
 from __future__ import annotations
@@ -147,3 +148,8 @@ def seq(items: Iterable[Any] = ()) -> CommentedSeq:
 def quoted(text: str) -> DoubleQuotedScalarString:
     """`text` written quoted, as an answer is."""
     return DoubleQuotedScalarString(text)
+
+
+def number(value: float) -> int | float:
+    """`value` as a file writes it: whole where it is whole."""
+    return int(value) if value == int(value) else value

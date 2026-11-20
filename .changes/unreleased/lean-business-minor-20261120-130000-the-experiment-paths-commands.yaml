@@ -1,0 +1,22 @@
+component: lean-business
+kind: minor
+custom:
+  category: Added
+body: >
+  The experiment path's commands (#3426, DEC-002 points 7 to 11, DEC-003
+  points 3 to 5 and 7). `pkit lean add-assumption`, `edit-assumption` and
+  `remove-assumption` write a variant's assumptions, and `rank` ranks them by
+  risk. `plan-cycle` plans an idea's next cycle, its window 90 days by
+  default, and `change-plan` changes it until its window starts, each
+  recording who planned it, when, and the plan's fingerprint. `new-experiment`,
+  `draft-experiment` and `remove-experiment` write a draft experiment, a flag
+  for each field it declares, and `record-estimate` records the person's own
+  estimate. `declare` freezes an experiment, recording the shortlisting it
+  rests on and its fingerprint, and warns where a riskier assumption is
+  untested; `reach-stopping-rule` ends a generative experiment early;
+  `record-result` records what it found and says whether it works out to a
+  pass, a fail or neither; and `decide` records the next action. Each act and
+  move takes the person's word as the desk's do, and each act on an
+  experiment of a suspended cycle is refused, naming `resume`. A day a
+  command writes twice in one file is written as itself each time, never as
+  an anchor and its alias.
