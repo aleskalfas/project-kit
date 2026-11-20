@@ -454,21 +454,14 @@ class CanvasCheck:
             if checked is not None and checked.fresh:
                 self._refused(gates.stale_verdicts(self.data, self.goal))
         if kind == "split":
+            named: list[tuple[int, Mapping[str, Any]]] = []
             for index, value in enumerate(_list(outcome.get("into"))):
-                pointer = f"/outcome/into/{index}"
                 subject = self.idea.reference(
-                    self.idea.model.resolve(value, ids.CANVAS), self.rel, pointer
+                    self.idea.model.resolve(value, ids.CANVAS), self.rel, f"/outcome/into/{index}"
                 )
-                if subject is None:
-                    continue
-                comes = ids.parse_ref(subject.data.get("comes-from"), ids.CANVAS)
-                if comes is None or comes.id != self.id:
-                    self.idea.error(
-                        at(self.rel, pointer),
-                        f"the variant is split into `{subject.data.get('id')}`, which does not "
-                        f"name `{self.id}` as the variant it comes from",
-                        "split",
-                    )
+                if subject is not None:
+                    named.append((index, subject.data))
+            self.idea.refused(self.rel, gates.split(self.id, named), "split")
 
     def _stale(self) -> None:
         kind = _m(self.data.get("outcome")).get("kind")

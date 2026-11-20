@@ -623,6 +623,22 @@ def test_a_split_into_a_variant_that_does_not_come_from_it(tmp_path: Path) -> No
     assert found(root) == []
 
 
+def test_a_variant_split_into_itself(tmp_path: Path) -> None:
+    """A split variant is final, so naming itself among the variants it went into is an
+    error, though it names itself as the variant it comes from."""
+    root = project(tmp_path)
+    split = {
+        "kind": "split",
+        "into": ["[canvas:meal-plan--two-sided]"],
+        "by": "A",
+        "when": "2026-10-05",
+    }
+    edit(root, SIDED, put("outcome", split))
+    edit(root, SIDED, put("comes-from", "[canvas:meal-plan--two-sided]"))
+    assert found(root) == [("error", "split", f"{SIDED}#/outcome/into/0")]
+    assert "split into itself" in messages(root, "split")[0]
+
+
 SKETCH = f"{IDEA}/variants/sketch/canvas.yaml"
 
 

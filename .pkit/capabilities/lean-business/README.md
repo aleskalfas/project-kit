@@ -99,7 +99,7 @@ Each finding carries a label:
 | `fingerprint` | error | A fingerprint of a canonical form the capability does not know, or one over data that has no canonical text, such as a number that is not finite. |
 | `sides` | error | A direct model that names sides, a side named that the canvas does not name, or viability inputs given for no side or twice for one. |
 | `verdicts` | error | A verdict on a step without a yes on each step before it; a verdict on viability or feasibility in an idea with no goal; a yes that still matches the canvas it judged, where that canvas misses what the yes needs; a shortlisting without a yes on all three steps; or a shortlisting that still matches, over a verdict gone stale. |
-| `split` | error | A variant split into one that does not name it as the variant it comes from. |
+| `split` | error | A variant split into itself, or into one that does not name it as the variant it comes from. |
 | `comes-from` | error | A variant that comes from one neither split nor shelved, or from one split into other variants and not it. |
 | `declaration-changed` | error | A declared experiment whose declared fields, or whose record of its declaration, changed since. |
 | `declaration-refused` | error | A declaration its gate refuses: a field its kind needs missing, no estimate, a time box over 14 days or ending before it starts, a start before the day it was declared, an expected range whose low is above its high, a declaration after its cycle's window ended, one on a variant shelved or split before it, or one resting on a shortlisting recorded after it, or on another than the one the canvas keeps where that was recorded before the declaration. |

@@ -25,7 +25,7 @@ asks only where it can tell.
 The gates, each named for the act it gates:
 
 - the desk stage (DEC-003 point 2): `verdict_order`, `judging`, `yes_content`,
-  `stale_before`, `shortlisting` and `stale_verdicts`;
+  `stale_before`, `shortlisting`, `stale_verdicts` and `split`;
 - an experiment (DEC-003 point 3; DEC-002 points 9 and 10): `declaring`,
   `stale_shortlisting`, `unexplored`, `stopping`, `result` and `deciding`;
 - a cycle (DEC-003 point 4; DEC-002 point 11): `planning`, `changing` and `deciding_cycle`;
@@ -187,6 +187,37 @@ def stale_verdicts(canvas: Mapping[str, Any], goal: object) -> list[Refusal]:
         if readings.answer(canvas, step) == "yes"
         and fingerprint.check_verdict(step, canvas, goal).stale
     ]
+
+
+def split(variant: str, named: Sequence[tuple[int, Mapping[str, Any]]]) -> list[Refusal]:
+    """What a split of the variant whose id is `variant` needs of the variants it names
+    (DEC-002 point 5; DEC-003 point 2): each is another variant, which names this one as
+    the variant it comes from. `named` holds each canvas the split names that exists, with
+    the place of its name among the variants the outcome lists. A name that finds no canvas
+    is not judged here: its lookup reports it."""
+    found: list[Refusal] = []
+    for index, canvas in named:
+        pointer = f"/outcome/into/{index}"
+        into = canvas.get("id")
+        if into == variant:
+            found.append(
+                Refusal(
+                    pointer,
+                    f"the variant is split into itself, `{variant}`: a split variant is final, "
+                    f"and goes on only in the other variants it is split into",
+                )
+            )
+            continue
+        comes = ids.parse_ref(canvas.get("comes-from"), ids.CANVAS)
+        if comes is None or comes.id != variant:
+            found.append(
+                Refusal(
+                    pointer,
+                    f"the variant is split into `{into}`, which does not name `{variant}` as "
+                    f"the variant it comes from",
+                )
+            )
+    return found
 
 
 def _stale_verdict(step: str) -> Refusal:
