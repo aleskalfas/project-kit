@@ -497,6 +497,51 @@ def test_where_the_move_is_refused_after_the_write_everything_written_is_undone(
     assert not (world.root / lb.CONFIG).parent.exists()
 
 
+class _PlacesElsewhere:
+    """The in-process engine, except that after the write it places the subject in `state`,
+    where the trigger asked does not lead, and that it would take any move asked of it."""
+
+    def __init__(self, inner: lb.InProcessEngine, state: str) -> None:
+        self.inner = inner
+        self.state = state
+        self.statuses = 0
+        self.moved: list[tuple[str, str]] = []
+
+    def status(self, process: str, subject: str) -> Any:
+        self.statuses += 1
+        if self.statuses == 1:
+            return self.inner.status(process, subject)
+        return lb.engine.Status(self.state)
+
+    def can_move(self, process: str, subject: str, to: str, actor: str) -> Any:
+        return self.inner.can_move(process, subject, to, actor)
+
+    def move(self, process: str, subject: str, to: str, origin: str, actor: str) -> Any:
+        self.moved.append((origin, to))
+        return lb.engine.Verdict(True, "moved")
+
+
+def test_where_the_write_leaves_the_subject_where_its_trigger_does_not_lead_it_is_undone(
+    world: lb.World,
+) -> None:
+    sketched(world)
+    kept = lb.snapshot(world.root)
+    elsewhere = _PlacesElsewhere(world.engine, "shelved")
+    ctx = lb.context(world.root, DAY, elsewhere)
+    judge = lb.SCRIPT["judge"]
+    argv = ["meal-plan--direct", "desirability", "yes", "--person-decided"]
+    assert acting.invoke(judge.parser(), judge.run, argv, ctx) == acting.REFUSED
+    assert (
+        "after the write `meal-plan--direct` stands in shelved, where `pass-desirability` "
+        "does not lead from sketched, so the write was undone"
+    ) in ctx.err.getvalue()
+    assert ctx.out.getvalue() == ""
+    assert elsewhere.moved == []
+    # The verdict and the location's record, written by this first write, are undone.
+    assert lb.snapshot(world.root) == kept
+    assert not (world.root / lb.CONFIG).parent.exists()
+
+
 def test_a_command_refuses_where_the_engine_cannot_tell_the_position(world: lb.World) -> None:
     (world.root / lb.DIRECT).write_text("id: [unclosed\n", encoding="utf-8")
     run = world.run("judge", "meal-plan--direct", "desirability", "no", "--person-decided")

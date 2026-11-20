@@ -272,7 +272,7 @@ def person_move(
     undo = writes.commit(ctx.root, files.written())
     after = _after(ctx, process, subject, undo)
     if after.state not in [move.to for move in declared]:
-        _undone(
+        raise _undone(
             undo,
             f"after the write `{subject}` stands {_where(after.state)}, where `{trigger}` "
             f"does not lead from {origin}",
