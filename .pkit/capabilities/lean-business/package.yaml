@@ -21,9 +21,18 @@ commands:
   new-variant:
     script: scripts/new_variant.py
     help: "Start a variant, <idea>--<variant> --archetype direct|multisided|marketplace [--author]... [--comes-from <variant>]: its canvas and an empty list of assumptions, the idea's folder created where none is (DEC-002 point 4). Content: asks nothing. Authors default to git's user.name."
+  set-archetype:
+    script: scripts/set_archetype.py
+    help: "Change a variant's archetype, <variant> direct|multisided|marketplace (DEC-001 point 7; DEC-002 point 6). Content: asks nothing. Refused on the way to direct while the canvas names a side; warns of each judgement the change leaves stale."
+  set-authors:
+    script: scripts/set_authors.py
+    help: "Name who writes a variant's canvas or a draft experiment, <variant|experiment> <name>..., the names replacing the authors whole (DEC-002 points 4 and 9). Content: asks nothing. Refused on an experiment once it is declared."
   add-side:
     script: scripts/add_side.py
     help: "Name a side, a group of customers a multisided or marketplace variant serves (DEC-002 point 6). Content: asks nothing."
+  remove-side:
+    script: scripts/remove_side.py
+    help: "Take a side out of a multisided or marketplace variant (DEC-002 point 6). Content: asks nothing. Refused while an entry, the estimate's inputs or an assumption still names it; warns of each judgement the change leaves stale."
   add-entry:
     script: scripts/add_entry.py
     help: "Add an entry to a box of a variant's canvas, <variant> <box> <text> [--id] [--side], its links as flags: --alternative on a problem, --problem on a value proposition or a solution, --sub-headline on a value proposition, --trigger on an early adopter, --kind on a channel, --step on a key metric (DEC-002 points 4 and 7). Content: asks nothing. Prints the id it gives; warns of each judgement the change leaves stale."
@@ -33,6 +42,9 @@ commands:
   remove-entry:
     script: scripts/remove_entry.py
     help: "Take an entry out of its canvas. Content: asks nothing. Warns, never refuses, where another entry or an assumption still names it (DEC-002 point 7); its id is never given again."
+  move-entry:
+    script: scripts/move_entry.py
+    help: "Move an entry to another position in its box, <entry> --to <position>, 1 the first; a problem's position is its rank (DEC-002 point 4). Content: asks nothing. Its id, words and links stay; warns of each judgement the change leaves stale."
   set-inputs:
     script: scripts/set_inputs.py
     help: "Give the viability estimate its inputs, merged into the set for --side: --price <amount> <month|year>, --lifetime <length> <month|year>, --conversion, --referral-share, --clear <input> (DEC-002 point 4). Content: asks nothing; warns of each judgement the change leaves stale."
@@ -45,6 +57,12 @@ commands:
   shortlist:
     script: scripts/shortlist.py
     help: "Shortlist a feasible variant, or take a shortlisting again, with the fingerprint of its canvas and the goal (DEC-003 point 2). Its gate: a yes on all three steps, none stale. The person's move: asks at a terminal, needs --person-decided off one."
+  shelve:
+    script: scripts/shelve.py
+    help: "Shelve a variant for good, <variant> --reason <text>, from any state but shelved and split, a shortlisting replaced (DEC-002 point 5; DEC-003 point 2). The person's move: asks at a terminal, needs --person-decided off one, and records who and when. Says when the idea is dropped (DEC-003 point 8)."
+  split:
+    script: scripts/split.py
+    help: "Split a variant into variants that each tell one story, <variant> --into <variant>..., from sketched or a verdict's state (DEC-002 point 5; DEC-003 point 2). Each is created as a copy of its canvas and its assumptions, ids and links re-qualified, its comes-from naming the variant split, with no verdict or outcome. The person's move: asks at a terminal, needs --person-decided off one, and records who and when."
   canvas:
     script: scripts/canvas.py
     help: "Draw a variant's canvas as a grid arranged as in the book, with its credit and licence line (DEC-001 point 6); --ids shows each entry's own part of its id. Read-only."

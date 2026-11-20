@@ -10,14 +10,20 @@ pkit:
         - .pkit/capabilities/lean-business/scripts/set_location.py
         - .pkit/capabilities/lean-business/scripts/set_goal.py
         - .pkit/capabilities/lean-business/scripts/new_variant.py
+        - .pkit/capabilities/lean-business/scripts/set_archetype.py
+        - .pkit/capabilities/lean-business/scripts/set_authors.py
         - .pkit/capabilities/lean-business/scripts/add_side.py
+        - .pkit/capabilities/lean-business/scripts/remove_side.py
         - .pkit/capabilities/lean-business/scripts/add_entry.py
         - .pkit/capabilities/lean-business/scripts/edit_entry.py
         - .pkit/capabilities/lean-business/scripts/remove_entry.py
+        - .pkit/capabilities/lean-business/scripts/move_entry.py
         - .pkit/capabilities/lean-business/scripts/set_inputs.py
         - .pkit/capabilities/lean-business/scripts/set_traction.py
         - .pkit/capabilities/lean-business/scripts/judge.py
         - .pkit/capabilities/lean-business/scripts/shortlist.py
+        - .pkit/capabilities/lean-business/scripts/shelve.py
+        - .pkit/capabilities/lean-business/scripts/split.py
         - .pkit/capabilities/lean-business/scripts/canvas.py
         - .pkit/capabilities/lean-business/scripts/estimate.py
         - .pkit/capabilities/lean-business/scripts/status.py
@@ -48,6 +54,7 @@ pkit:
         - lean-business:DEC-002#2
         - lean-business:DEC-002#3
         - lean-business:DEC-002#4
+        - lean-business:DEC-002#5
         - lean-business:DEC-002#6
         - lean-business:DEC-002#7
         - lean-business:DEC-002#8
@@ -63,6 +70,7 @@ pkit:
         - lean-business:DEC-003#4
         - lean-business:DEC-003#5
         - lean-business:DEC-003#7
+        - lean-business:DEC-003#8
       artefact:
         - .pkit/cli/README.md#validate
         - .pkit/cli/README.md#data-validate-path
@@ -86,7 +94,7 @@ lean-business guides a person through the lean method of validating a business m
 - `scripts/*.py`, one for each of the other commands ("Commands" below).
 - `scripts/_lib/` — what the check and the commands share. What every write goes through: the context a command runs in, its consent forms, and its acts and moves (`acting`); the hold of a write against the check and the data validation, its commit and its undoing, and the location's record (`writes`); the round-trip edit of a file (`editing`); the ids a write gives (`naming`); the judgements a write leaves stale (`staling`); the process engine's status, can-move and move (`engine`), reached through `pkit` (`backbone`). What the desk commands read and draw: a variant's canvas and its boxes (`canvases`), the estimate (`estimates`), the grid (`grid`) and the status (`briefing`). What the experiment path's commands read and change: a variant's assumptions (`assumptions`), an experiment and the cycle it names (`experiments`), and a cycle's plan (`cycles`). And what the check reads through: the files git sees (`listing`); the place of each file in an idea's folder, and the file of a subject's id (`layout`); an idea's subjects and the lookups between them, each lookup telling a subject found from a reference that names nothing, one into a kind of which the location holds no file, or another idea's subject (`model`); the gates of the moves and the acts, each asked with the day of its act (`gates`); the acts recorded in an idea's files, each with the gate that judges it (`acts`); the canonical form, the fingerprints taken over it, and whether a kept one still matches (`fingerprint`); where a window and a time box fall under a cycle's suspensions, as they stand or as they stood on a day (`timeline`); the rules a suspension keeps, contradicting no act already recorded among them (`suspensions`); the places each schema puts a day (`schemas`); and what follows from the files, such as pricing, an experiment's pass or fail, an assumption's outcome and an idea dropped (`readings`).
 
-The rest of the desk's commands, those that suspend, resume and review a cycle, and the skill these records decide, are being built under project-kit#3426. This README lists them as they land.
+The commands that suspend, resume and review a cycle, and the skill these records decide, are being built under project-kit#3426. This README lists them as they land.
 
 ## Adopter setup
 
@@ -186,21 +194,29 @@ Checks the files of the location, as "The check" above says.
 | `set-location <path>` | Records the folder that holds the ideas, relative to the repository's top. Refused for a folder the location's rules refuse, as for the check's `location` label, and while the location in use holds an idea: move its folder first. | content |
 | `set-goal <idea> [--revenue <amount>] [--per month\|year] [--currency <code>] [--years <n>]` | Sets the idea's goal, or changes what it is given; a first goal needs every flag, and creates the idea's folder. Refused while a cycle of the idea is planned, running or suspended, and a change of currency while a declared experiment is undecided. | act |
 | `new-variant <idea>--<variant> --archetype direct\|multisided\|marketplace [--author <name>]... [--comes-from <variant>]` | Starts a variant: its canvas and an empty list of assumptions, with the idea's folder where none is. The authors are git's `user.name` where none is given. | content |
+| `set-archetype <variant> direct\|multisided\|marketplace` | Changes the variant's archetype. Refused on the way to direct while the canvas names a side: `remove-side` takes each out first. | content |
+| `set-authors <variant>\|<experiment> <name>...` | Replaces the authors of a variant, or of a draft experiment, with those named, in order. Refused once the experiment is declared. | content |
 | `add-side <variant> <side>` | Names a side, a group of customers a model with several serves. | content |
+| `remove-side <variant> <side>` | Takes a side out. Refused while an entry, the estimate's inputs or an assumption still names it. | content |
 | `add-entry <variant> <box> <text> [--id <id>] [--side <side>] [links]` | Adds an entry to a box, and prints the id it gives. Its links are flags: `--alternative` on a problem, `--problem` on a value proposition or a solution, `--sub-headline` on a value proposition, `--trigger` on an early adopter, `--kind` on a channel and `--step` on a key metric. A link names an entry by its own part of its id, or by the whole. | content |
 | `edit-entry <entry> [--text] [--side] [links] [--clear <field>]... [--drop-alternative <entry>]... [--drop-trigger <text>]...` | Changes an entry's words, side or links. Its id never changes. | content |
 | `remove-entry <entry>` | Takes an entry out of its canvas. Where another entry or an assumption still names it, warns and keeps them as they are. | content |
+| `move-entry <entry> --to <position>` | Moves an entry to another position in its box, 1 the first; a problem's position is its rank. | content |
 | `set-inputs <variant> [--side <side>] [--price <amount> month\|year] [--lifetime <length> month\|year] [--conversion <share>] [--referral-share <share>] [--clear <input>]...` | Gives the estimate its inputs, merged into the set for the side. | content |
 | `set-traction <variant> [--multiplier <n>] [--first-stage-metric <metric> --first-stage-target <n>] [--clear]` | Gives the variant its traction target; `--clear` removes it. | content |
 | `judge <variant> desirability\|viability\|feasibility yes\|no [--note <text>]` | Records the person's verdict on a step, with the fingerprint of what it judged. A yes on the next step moves the variant on, and a no on a step it passed takes it back to the state before that step, clearing the verdicts after it and its shortlisting. A no on the next step, and a yes on a step it passed, judged again, move nothing. Refused on a shelved or split variant, and on a step after the next. | act, or move |
 | `shortlist <variant>` | Shortlists a feasible variant, or takes its shortlisting again, with the fingerprint of its canvas and the goal. | move |
+| `shelve <variant> --reason <text>` | Shelves the variant for good, with the reason, from any state but shelved and split: a shortlisting is replaced, and the verdicts stay. Where every variant of the idea not split is then shelved, the idea is dropped, and the command says so. | move |
+| `split <variant> --into <variant>...` | Splits a variant with no outcome yet into the variants named, each created as a copy of it ("Splitting a variant" below). | move |
 | `canvas <variant> [--ids]` | Draws the canvas as a grid ("The grid" below). | read-only |
 | `estimate <variant>` | Works out what the goal asks of the variant ("The estimate" below). | read-only |
 | `status [<idea>] [--json]` | Where the ideas stand and what waits on you ("The status" below). | read-only |
 
-**What every write does.** A command builds its write, holds it, then writes it. It holds the files as they would stand to the check and to the `data` member of `pkit validate`, and refuses the write, writing nothing, where it would add an error. An error already in the files refuses nothing: the command names each, and leaves them as they were. Beyond the check, it refuses an id typed with `--id` that is taken, or that a reference still names. It warns of each warning the write adds, and of each verdict and shortlisting the write leaves stale, each with the command that judges it again. A shortlisting gone stale on a variant that a cycle not yet reviewed explores is said louder, since no experiment is declared on the variant until it is judged and shortlisted again ([lean-business:DEC-003-lean-business-process] point 7). The first write records the location (Adopter setup, above). A file written keeps its comments, its quoting and its order; a key a write adds lands where the schema writes it.
+**What every write does.** A command builds its write, holds it, then writes it. It holds the files as they would stand to the check and to the `data` member of `pkit validate`, and refuses the write, writing nothing, where it would add an error. An error already in the files refuses nothing: the command names each, and leaves them as they were. Beyond the check, it refuses an id typed with `--id` that is taken, or that a reference still names. It warns of each warning the write adds, and of each verdict and shortlisting the write leaves stale, each with the command that judges it again. A shelved or split variant's content stays editable, and a change to it names none of its verdicts stale, since nothing rests on them any more. A shortlisting gone stale on a variant that a cycle not yet reviewed explores is said louder, since no experiment is declared on the variant until it is judged and shortlisted again ([lean-business:DEC-003-lean-business-process] point 7). The first write records the location (Adopter setup, above). A file written keeps its comments, its quoting and its order; a key a write adds lands where the schema writes it.
 
 **Ids.** An entry's id comes from `--id`, or else from the first words of its text: accents stripped, kebab-cased, a leading digit given a letter, and the box's name where no word is left. The command qualifies it by the variant and prints it. It numbers one taken, `-2`, `-3`, and never gives again an id that a file still names, so a removed entry's id is not reused while an assumption names it. An id never changes when the text does ([lean-business:DEC-002-lean-business-data-model] point 7).
+
+**Splitting a variant.** `split` names each variant it creates by its own part or by its id within the idea, and creates each as a copy of the variant split: its archetype, authors, sides, boxes, inputs and traction target, and its assumptions with their ranks. Each entry and each assumption keeps its own part of its id under the new variant's id, as do the links between entries and the entry each assumption comes from. Each copy names the variant split as the one it comes from, and carries none of its verdicts and no outcome, so it is judged at the desk afresh. A name is refused where its variant exists, or where a file still names its id or an id its copy would give.
 
 **Content, acts and moves.** Content, a canvas's words and links, its inputs, its target and where the ideas live, is written without asking and records nobody. A judgement is the person's ([lean-business:DEC-001-lean-business-discipline] point 3): an act records it, and a move takes the process engine with it ([lean-business:DEC-003-lean-business-process] point 5).
 

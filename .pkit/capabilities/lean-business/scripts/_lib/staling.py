@@ -9,7 +9,9 @@ explores its variant: no experiment is declared on that variant until the person
 and shortlists it again (DEC-003 point 7).
 
 A judgement already stale before the write, or one the write itself takes again or
-clears, is not named: the write did not make it stale.
+clears, is not named: the write did not make it stale. Nor is a verdict of a variant
+shelved or split, whose content stays editable: those outcomes are final, so nothing rests
+on its verdicts any more, and no verdict of it is judged again (DEC-002 point 13).
 """
 
 from __future__ import annotations
@@ -31,6 +33,9 @@ class Stale:
     line: str
     loud: bool = False
 
+
+#: The outcomes that are final, on whose variant's verdicts nothing rests any more.
+FINAL = ("shelved", "split")
 
 #: The label of the check's findings on a judgement that is stale, which a command names in
 #: its own words rather than again as the check's.
@@ -68,6 +73,8 @@ def _idea(files: Files, idea: str) -> list[Stale]:
     for rel in _canvases(files, folder):
         stood, becomes = _before(files, rel), _after(files, rel)
         if not isinstance(stood, Mapping) or not isinstance(becomes, Mapping):
+            continue
+        if _kind(becomes) in FINAL:
             continue
         variant = becomes.get("id")
         for step in fingerprint.STEPS:
@@ -121,6 +128,11 @@ def _verdict(canvas: Mapping[str, Any], step: str) -> object:
 def _outcome(canvas: Mapping[str, Any]) -> Mapping[str, Any] | None:
     outcome = canvas.get("outcome")
     return outcome if isinstance(outcome, Mapping) else None
+
+
+def _kind(canvas: Mapping[str, Any]) -> object:
+    outcome = _outcome(canvas)
+    return outcome.get("kind") if outcome is not None else None
 
 
 def _canvases(files: Files, folder: str) -> list[str]:

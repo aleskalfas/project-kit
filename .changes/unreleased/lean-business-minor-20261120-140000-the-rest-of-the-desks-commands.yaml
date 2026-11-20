@@ -1,0 +1,18 @@
+component: lean-business
+kind: minor
+custom:
+  category: Added
+body: >
+  The rest of the desk's commands (#3426, DEC-002 points 4 to 6, DEC-003
+  points 2, 5 and 8). `pkit lean set-archetype` changes a variant's archetype,
+  refused on the way to direct while the canvas names a side, and
+  `remove-side` takes a side out, refused while an entry, the estimate's
+  inputs or an assumption still names it. `move-entry` moves an entry within
+  its box, a problem's position being its rank, and `set-authors` replaces
+  the authors of a variant or of a draft experiment. `shelve` shelves a
+  variant for good with its reason, and says when the idea is then dropped;
+  `split` splits a variant not yet shortlisted into the variants it names,
+  each created as a copy of its canvas and its assumptions, ids and links
+  re-qualified, with no verdict. Each move takes the person's word as the
+  desk's others do. A change to a shelved or split variant's content names
+  none of its verdicts stale, since nothing rests on them any more.

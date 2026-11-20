@@ -1,6 +1,7 @@
 """lean-business's desk commands (lean-business DEC-001 points 3, 6 and 10; DEC-002 points 1
-to 7, 13 and 15; DEC-003 points 2 and 5): the goal, a variant's canvas and its content, its
-verdicts and its shortlisting, and what reads them, the grid, the estimate and the status.
+to 7, 13 and 15; DEC-003 points 2, 5 and 8): the goal, a variant's canvas and its content,
+its verdicts, its shortlisting, its shelving and its split, and what reads them, the grid,
+the estimate and the status.
 
 Each runs in this process on a copy of the fixture idea, on a day the test names, against
 an engine that asks the same predicates as the engine itself (`tests/lean_business_world.py`).
@@ -171,7 +172,131 @@ def test_add_side_names_a_side_once(world: lb.World) -> None:
     assert "names the side `couriers` already" in run.err
 
 
-# --- add-entry, edit-entry, remove-entry ------------------------------------------------------
+# --- remove-side, set-archetype, set-authors --------------------------------------------------
+
+
+def test_remove_side_takes_out_a_side_nothing_names(world: lb.World) -> None:
+    assert world.run("add_side", "meal-plan--two-sided", "couriers").code == 0
+    run = world.run("remove_side", "meal-plan--two-sided", "couriers")
+    assert run.code == 0, run.err
+    assert "`meal-plan--two-sided` no longer serves the side `couriers`." in run.out
+    assert world.read(lb.TWO_SIDED)["sides"] == ["cooks", "shops"]
+    run = world.run("remove_side", "meal-plan--two-sided", "couriers")
+    assert run.code == 1
+    assert "names no side `couriers` (it names `cooks`, `shops`)" in run.err
+
+
+def test_remove_side_takes_the_sides_out_with_the_last(world: lb.World) -> None:
+    assert world.run("new_variant", "board-game--platform", "--archetype", "marketplace").code == 0
+    assert world.run("add_side", "board-game--platform", "players").code == 0
+    run = world.run("remove_side", "board-game--platform", "players")
+    assert run.code == 0, run.err
+    assert "sides" not in world.read("lean-business/board-game/variants/platform/canvas.yaml")
+
+
+def test_remove_side_refuses_while_an_entry_its_inputs_or_an_assumption_name_it(
+    world: lb.World,
+) -> None:
+    run = world.run(
+        "add_assumption",
+        "meal-plan--two-sided",
+        "Households pay nothing and stay",
+        "--kind",
+        "viability",
+        "--input",
+        "price",
+        "--side",
+        "cooks",
+    )
+    assert run.code == 0, run.err
+    kept = lb.snapshot(world.root)
+    run = world.run("remove_side", "meal-plan--two-sided", "cooks")
+    assert run.code == 1
+    assert (
+        "the side `cooks` is still named by the entry `meal-plan--two-sided--households`, the "
+        "estimate's inputs for it and the assumption "
+        "`meal-plan--two-sided--households-pay-nothing-and-stay`: change or remove each first"
+    ) in run.err
+    assert lb.snapshot(world.root) == kept
+
+
+def test_a_shelved_variants_verdicts_are_never_named_stale(world: lb.World) -> None:
+    # The shelved variant's verdict covers its sides, and nothing rests on it any more.
+    run = world.run("add_side", "meal-plan--two-sided", "couriers")
+    assert run.code == 0, run.err
+    assert "stale" not in run.out
+
+
+def test_set_archetype_changes_the_model_and_names_each_judgement_it_stales(
+    world: lb.World,
+) -> None:
+    run = world.run("set_archetype", "meal-plan--direct", "multisided")
+    assert run.code == 0, run.err
+    assert world.read(lb.DIRECT)["archetype"] == "multisided"
+    assert run.out.startswith("`meal-plan--direct` is a multisided model now.")
+    for step in ("desirability", "viability", "feasibility"):
+        assert f"the verdict on {step} of `meal-plan--direct` is stale" in run.out
+    assert "the shortlisting of `meal-plan--direct` is stale" in run.out
+    assert "a multisided model serves more than one side, and this one names 0" in run.out
+    run = world.run("set_archetype", "meal-plan--direct", "multisided")
+    assert run.code == 0, run.err
+    assert run.out == "`meal-plan--direct` is a multisided model already; nothing changed.\n"
+
+
+def test_set_archetype_refuses_the_way_to_direct_while_a_side_is_named(world: lb.World) -> None:
+    run = world.run("set_archetype", "meal-plan--two-sided", "direct")
+    assert run.code == 1
+    assert (
+        "a direct model names no sides, and `meal-plan--two-sided` names `cooks`, `shops`: "
+        "remove each first, `pkit lean remove-side meal-plan--two-sided <side>`"
+    ) in run.err
+    assert world.read(lb.TWO_SIDED)["archetype"] == "multisided"
+
+
+def test_set_authors_replaces_a_variants_authors_and_stales_nothing(world: lb.World) -> None:
+    run = world.run("set_authors", "meal-plan--direct", "A. Founder", "B. Partner")
+    assert run.code == 0, run.err
+    assert world.read(lb.DIRECT)["authors"] == ["A. Founder", "B. Partner"]
+    assert run.out.startswith("The authors of `meal-plan--direct` are now `A. Founder`, `B. ")
+    assert "stale" not in run.out
+    run = world.run("set_authors", "meal-plan--direct", "A. Founder", "B. Partner")
+    assert run.out == "The authors of `meal-plan--direct` are those already; nothing changed.\n"
+
+
+def test_set_authors_replaces_a_drafts_authors_and_refuses_a_declared_experiments(
+    world: lb.World,
+) -> None:
+    run = world.run("new_experiment", "meal-plan--calls", "--kind", "generative")
+    assert run.code == 0, run.err
+    run = world.run("set_authors", "meal-plan--calls", "B. Partner")
+    assert run.code == 0, run.err
+    assert world.read(f"{lb.IDEA}/experiments/calls.yaml")["authors"] == ["B. Partner"]
+    run = world.run("set_authors", "meal-plan--landing-page", "B. Partner")
+    assert run.code == 1
+    assert (
+        "`meal-plan--landing-page` was declared on 2026-12-10, and a declaration is frozen, so "
+        "its authors stay as they were declared"
+    ) in run.err
+
+
+@pytest.mark.parametrize(
+    ("argv", "refused"),
+    [
+        (("meal-plan--boxes", "A. Founder"), "there is no variant or experiment `meal-plan--box"),
+        (("meal-plan", "A. Founder"), "`meal-plan` is no variant's or experiment's id"),
+        (("meal-plan--direct", "A. Founder", "A. Founder"), "`A. Founder` is named twice"),
+        (("meal-plan--direct", " "), "an author has a name"),
+    ],
+)
+def test_set_authors_refuses_what_names_nothing_or_no_one(
+    world: lb.World, argv: tuple[str, ...], refused: str
+) -> None:
+    run = world.run("set_authors", *argv)
+    assert run.code == 1
+    assert refused in run.err
+
+
+# --- add-entry, edit-entry, remove-entry, move-entry ------------------------------------------
 
 
 def test_add_entry_gives_an_id_from_its_text_and_qualifies_its_links(world: lb.World) -> None:
@@ -284,6 +409,33 @@ def test_remove_entry_warns_of_what_still_names_it_and_removes_it(world: lb.Worl
     run = world.run("remove_entry", entry)
     assert run.code == 1
     assert f"holds no entry `{entry}`" in run.err
+
+
+def test_move_entry_reranks_a_problem_and_names_each_judgement_it_stales(
+    world: lb.World,
+) -> None:
+    run = world.run("move_entry", "meal-plan--direct--food-wasted", "--to", "1")
+    assert run.code == 0, run.err
+    assert run.out.startswith(
+        "Moved `meal-plan--direct--food-wasted` to position 1 of problem, its rank among the "
+        "problems."
+    )
+    assert [e["id"] for e in entries(world, "problem")] == [
+        "meal-plan--direct--food-wasted",
+        "meal-plan--direct--planning-takes-long",
+    ]
+    assert "the verdict on desirability of `meal-plan--direct` is stale" in run.out
+    assert "the shortlisting of `meal-plan--direct` is stale" in run.out
+    run = world.run("move_entry", "meal-plan--direct--food-wasted", "--to", "1")
+    assert run.code == 0, run.err
+    assert "is at position 1 of problem, its rank among the problems already" in run.out
+
+
+@pytest.mark.parametrize("to", ["0", "3"])
+def test_move_entry_refuses_a_position_its_box_does_not_hold(world: lb.World, to: str) -> None:
+    run = world.run("move_entry", "meal-plan--direct--food-wasted", "--to", to)
+    assert run.code == 1
+    assert f"problem holds 2 entries, so a position there is 1 to 2, and {to} is none" in run.err
 
 
 # --- set-inputs, set-traction -----------------------------------------------------------------
@@ -464,6 +616,272 @@ def test_shortlist_refuses_a_variant_that_is_not_feasible(world: lb.World) -> No
     run = world.run("shortlist", "meal-plan--two-sided", "--person-decided")
     assert run.code == 1
     assert "no move on `shortlist` leaves there" in run.err
+
+
+# --- shelve, split ----------------------------------------------------------------------------
+
+PLATFORM = "board-game--platform"
+PLATFORM_FILE = "lean-business/board-game/variants/platform/canvas.yaml"
+ONLINE = "board-game--online"
+ONLINE_FOLDER = "lean-business/board-game/variants/online"
+
+
+def platform(world: lb.World) -> None:
+    """A sketched marketplace variant of a second idea, judged no on desirability: a problem
+    framed against an existing alternative, a value proposition that answers it, one side's
+    inputs, and an assumption that comes from the problem."""
+    for argv in (
+        ("new_variant", PLATFORM, "--archetype", "marketplace"),
+        ("add_side", PLATFORM, "players"),
+        ("add_side", PLATFORM, "publishers"),
+        ("add_entry", PLATFORM, "existing-alternatives", "Forums", "--side", "players"),
+        (
+            "add_entry",
+            PLATFORM,
+            "problem",
+            "Finding a table takes weeks",
+            "--side",
+            "players",
+            "--alternative",
+            "forums",
+        ),
+        (
+            "add_entry",
+            PLATFORM,
+            "unique-value-proposition",
+            "A table tonight",
+            "--side",
+            "players",
+            "--problem",
+            "finding-a-table-takes-weeks",
+        ),
+        ("set_inputs", PLATFORM, "--side", "players", "--price", "5", "month"),
+        (
+            "add_assumption",
+            PLATFORM,
+            "Players wait weeks for a table",
+            "--kind",
+            "desirability",
+            "--entry",
+            "finding-a-table-takes-weeks",
+        ),
+        ("judge", PLATFORM, "desirability", "no", "--person-decided"),
+    ):
+        run = world.run(*argv)
+        assert run.code == 0, run.err
+
+
+def test_shelve_moves_a_variant_into_shelved_and_says_when_the_idea_is_dropped(
+    world: lb.World,
+) -> None:
+    assert world.run("new_variant", PLATFORM, "--archetype", "marketplace").code == 0
+    assert world.run("new_variant", "board-game--cafes", "--archetype", "direct").code == 0
+    run = world.run(
+        "shelve", PLATFORM, "--reason", "Publishers sell direct", terminal=True, answers=[True]
+    )
+    assert run.code == 0, run.err
+    assert run.asked == ["Shelve the variant, and why? A shelved variant is final."]
+    assert world.engine.moves == [("desk-stage", PLATFORM, "sketched", "shelved", lb.PERSON)]
+    assert world.read(PLATFORM_FILE)["outcome"] == {
+        "kind": "shelved",
+        "reason": "Publishers sell direct",
+        "by": lb.PERSON,
+        "when": DAY,
+    }
+    assert "dropped" not in run.out
+    run = world.run("shelve", "board-game--cafes", "--reason", "No cafe pays", "--person-decided")
+    assert run.code == 0, run.err
+    assert "Every variant of `board-game` not split is shelved now, so the idea is dropped." in (
+        run.out
+    )
+
+
+def test_shelve_replaces_a_shortlisting_and_keeps_the_verdicts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    world = later(tmp_path, monkeypatch)
+    run = world.run(
+        "shelve", "meal-plan--direct", "--reason", "Too few households pay", "--person-decided"
+    )
+    assert run.code == 0, run.err
+    assert world.engine.moves == [
+        ("desk-stage", "meal-plan--direct", "shortlisted", "shelved", lb.PERSON)
+    ]
+    canvas = world.read(lb.DIRECT)
+    assert canvas["outcome"]["kind"] == "shelved"
+    assert sorted(canvas["verdicts"]) == ["desirability", "feasibility", "viability"]
+
+
+@pytest.mark.parametrize(
+    ("variant", "reason", "refused"),
+    [
+        ("meal-plan--two-sided", "Again", "`meal-plan--two-sided` is shelved, which is final"),
+        ("meal-plan--direct", " ", "a shelving says why"),
+    ],
+)
+def test_shelve_refuses_a_final_variant_and_a_blank_reason(
+    world: lb.World, variant: str, reason: str, refused: str
+) -> None:
+    run = world.run("shelve", variant, "--reason", reason, "--person-decided")
+    assert run.code == 1
+    assert refused in run.err
+
+
+def test_shelve_off_a_terminal_without_the_persons_word_asks_and_writes_nothing(
+    world: lb.World,
+) -> None:
+    assert world.run("new_variant", PLATFORM, "--archetype", "marketplace").code == 0
+    kept = lb.snapshot(world.root)
+    run = world.run("shelve", PLATFORM, "--reason", "Publishers sell direct")
+    assert run.code == lb.acting.ASKED
+    assert run.out.startswith("Shelve the variant, and why?")
+    assert lb.snapshot(world.root) == kept
+    assert world.engine.moves == []
+
+
+def test_split_creates_each_variant_as_a_copy_and_moves_the_variant_into_split(
+    world: lb.World,
+) -> None:
+    platform(world)
+    run = world.run(
+        "split",
+        PLATFORM,
+        "--into",
+        "online",
+        "--into",
+        "board-game--cafes",
+        terminal=True,
+        answers=[True],
+    )
+    assert run.code == 0, run.err
+    assert run.asked == ["Split the variant into the variants named? A split variant is final."]
+    assert world.engine.moves == [("desk-stage", PLATFORM, "sketched", "split", lb.PERSON)]
+    assert run.out.startswith(
+        "Split `board-game--platform` into `board-game--online` and `board-game--cafes`"
+    )
+    assert world.read(PLATFORM_FILE)["outcome"] == {
+        "kind": "split",
+        "into": ["[canvas:board-game--online]", "[canvas:board-game--cafes]"],
+        "by": lb.PERSON,
+        "when": DAY,
+    }
+    problem = f"{ONLINE}--finding-a-table-takes-weeks"
+    assert world.read(f"{ONLINE_FOLDER}/canvas.yaml") == {
+        "pkit_schema": "lean-business:canvas",
+        "schema_version": 1,
+        "id": ONLINE,
+        "archetype": "marketplace",
+        "authors": [lb.PERSON],
+        "comes-from": "[canvas:board-game--platform]",
+        "sides": ["players", "publishers"],
+        "boxes": {
+            "problem": [
+                {
+                    "id": problem,
+                    "text": "Finding a table takes weeks",
+                    "side": "players",
+                    "alternatives": [f"{ONLINE}--forums"],
+                }
+            ],
+            "existing-alternatives": [
+                {"id": f"{ONLINE}--forums", "text": "Forums", "side": "players"}
+            ],
+            "unique-value-proposition": [
+                {
+                    "id": f"{ONLINE}--a-table-tonight",
+                    "text": "A table tonight",
+                    "side": "players",
+                    "problem": problem,
+                }
+            ],
+        },
+        "viability": [{"side": "players", "price": {"amount": 5, "per": "month"}}],
+    }
+    assert world.read(f"{ONLINE_FOLDER}/assumptions.yaml")["assumptions"] == [
+        {
+            "id": f"{ONLINE}--players-wait-weeks-for-a",
+            "statement": "Players wait weeks for a table",
+            "source": {"entry": problem},
+            "kind": "desirability",
+            "rank": 1,
+        }
+    ]
+    cafes = world.read("lean-business/board-game/variants/cafes/canvas.yaml")
+    assert cafes["comes-from"] == "[canvas:board-game--platform]"
+    assert cafes["boxes"]["problem"][0]["id"] == "board-game--cafes--finding-a-table-takes-weeks"
+
+
+@pytest.mark.parametrize(
+    ("into", "refused"),
+    [
+        (("platform",), "a variant is not split into itself, `board-game--platform`"),
+        (("online", ONLINE), "`board-game--online` is named twice"),
+        (("meal-plan--solo",), "`meal-plan--solo` is a variant of another idea"),
+        (("Online",), "`Online` names no variant"),
+    ],
+)
+def test_split_refuses_a_name_it_cannot_give(
+    world: lb.World, into: tuple[str, ...], refused: str
+) -> None:
+    platform(world)
+    run = world.run("split", PLATFORM, *(f"--into={name}" for name in into), "--person-decided")
+    assert run.code == 1
+    assert refused in run.err
+
+
+def test_split_refuses_a_variant_that_exists(world: lb.World) -> None:
+    platform(world)
+    assert world.run("new_variant", ONLINE, "--archetype", "direct").code == 0
+    run = world.run("split", PLATFORM, "--into", "online", "--person-decided")
+    assert run.code == 1
+    assert f"the variant `{ONLINE}` cannot be created: `{ONLINE_FOLDER}/canvas.yaml` exists" in (
+        run.err
+    )
+
+
+def test_split_never_gives_again_an_id_a_reference_still_names(world: lb.World) -> None:
+    platform(world)
+    named = f"{ONLINE}--players-wait-weeks-for-a"
+    experiment = world.root / "lean-business/board-game/experiments/calls.yaml"
+    experiment.parent.mkdir()
+    experiment.write_text(
+        "pkit_schema: lean-business:experiment\nschema_version: 1\nid: board-game--calls\n"
+        f"assumption: '[assumptions:{named}]'\nkind: generative\nauthors:\n- {lb.PERSON}\n",
+        encoding="utf-8",
+    )
+    run = world.run("split", PLATFORM, "--into", "online", "--person-decided")
+    assert run.code == 1
+    assert f"the copy into `{ONLINE}` would give `{named}`, which a reference still names" in (
+        run.err
+    )
+
+
+@pytest.mark.parametrize(
+    ("variant", "refused"),
+    [
+        ("meal-plan--direct", "is shortlisted, and a variant is split only before it is"),
+        ("meal-plan--two-sided", "`meal-plan--two-sided` is shelved, which is final"),
+    ],
+)
+def test_split_refuses_a_shortlisted_or_final_variant(
+    world: lb.World, variant: str, refused: str
+) -> None:
+    run = world.run("split", variant, "--into", "solo", "--person-decided")
+    assert run.code == 1
+    assert refused in run.err
+
+
+def test_split_undoes_every_copy_where_the_move_is_refused_after_the_write(
+    world: lb.World,
+) -> None:
+    platform(world)
+    kept = lb.snapshot(world.root)
+    world.engine.refuse_move = "its gate refuses what the write recorded"
+    run = world.run("split", PLATFORM, "--into", "online", "--person-decided")
+    assert run.code == 1
+    assert "so the write was undone" in run.err
+    assert lb.snapshot(world.root) == kept
+    assert not (world.root / ONLINE_FOLDER).exists()
 
 
 # --- canvas, estimate, status -----------------------------------------------------------------
