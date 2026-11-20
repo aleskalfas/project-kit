@@ -446,6 +446,15 @@ def test_change_plan_refuses_a_start_moved_to_a_day_its_plan_is_frozen(world: lb
     assert "a plan changes only before its window's first day" in run.err
 
 
+def test_change_plan_on_the_day_of_the_first_planning_may_move_the_start_to_that_day(
+    world: lb.World,
+) -> None:
+    planned(world)
+    run = world.run("change_plan", SECOND, "--start", DAY.isoformat(), "--person-decided")
+    assert run.code == 0, run.err
+    assert world.read(SECOND_FILE)["window"] == {"start": DAY, "days": 60}
+
+
 def test_change_plan_is_held_to_the_check(world: lb.World) -> None:
     drafted(world)
     kept = lb.snapshot(world.root)

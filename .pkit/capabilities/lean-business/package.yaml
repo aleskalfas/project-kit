@@ -89,7 +89,7 @@ commands:
     help: "Plan an idea's next cycle, <idea>--<cycle> --variant... --start [--days, 90 where none] --objective --key-result <variant>:<step>:<target>... --constraint-step --constraint-evidence, with who planned it, when and the plan's fingerprint (DEC-002 point 11). The person's act: asks at a terminal, needs --person-decided off one. Refused: a variant not shortlisted, an idea with no goal, a cycle still undecided, and what the check refuses, such as overlapping windows or a variant with no key result."
   change-plan:
     script: scripts/change_plan.py
-    help: "Change a planned cycle's plan, with plan-cycle's flags, each given part replacing that part whole; keeps who first planned it, records who changed it and when, and takes the fingerprint again (DEC-002 point 11). The person's act: asks at a terminal, needs --person-decided off one. Refused once its window starts, and for a change the check refuses, such as dropping a variant an experiment tests."
+    help: "Change a planned cycle's plan, with plan-cycle's flags, each given part replacing that part whole; keeps who first planned it, records who changed it and when, and takes the fingerprint again (DEC-002 point 11). The person's act: asks at a terminal, needs --person-decided off one. Refused once the cycle is not planned; after the day it was first planned, for a start moved to today or before; and for a change the check refuses, such as dropping a variant an experiment tests."
   new-experiment:
     script: scripts/new_experiment.py
     help: "Start a draft experiment, <idea>--<experiment> --kind generative|evaluative [--assumption] [--cycle] [--author]... (DEC-002 point 9). Content: asks nothing. Authors default to git's user.name. Warns where its cycle is suspended."
