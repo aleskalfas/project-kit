@@ -14,103 +14,103 @@ commands:
     query-contract: true
   desk-stage-detect:
     script: scripts/desk_stage_detect.py
-    help: Predicate (classified detection — which state is the subject in?). Stub — implement before relying on it.
+    help: "Process classifier (lean-business DEC-003 points 1 and 2): read-only; answers which state of the desk stage a variant is in, from its canvas's outcome and the run of standing yes verdicts. Invoked by the process engine."
   desk-stage-gate-sketched-desirable-pass-desirability:
     script: scripts/desk_stage_gate_sketched_desirable_pass_desirability.py
-    help: Predicate (deterministic gate — may the subject move 'sketched' -> 'desirable' on 'pass-desirability'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from sketched to desirable on pass-desirability? Invoked by the process engine."
   desk-stage-gate-desirable-viable-pass-viability:
     script: scripts/desk_stage_gate_desirable_viable_pass_viability.py
-    help: Predicate (deterministic gate — may the subject move 'desirable' -> 'viable' on 'pass-viability'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from desirable to viable on pass-viability? Invoked by the process engine."
   desk-stage-gate-viable-feasible-pass-feasibility:
     script: scripts/desk_stage_gate_viable_feasible_pass_feasibility.py
-    help: Predicate (deterministic gate — may the subject move 'viable' -> 'feasible' on 'pass-feasibility'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from viable to feasible on pass-feasibility? Invoked by the process engine."
   desk-stage-gate-feasible-shortlisted-shortlist:
     script: scripts/desk_stage_gate_feasible_shortlisted_shortlist.py
-    help: Predicate (deterministic gate — may the subject move 'feasible' -> 'shortlisted' on 'shortlist'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from feasible to shortlisted on shortlist? Invoked by the process engine."
   desk-stage-gate-shortlisted-shortlisted-shortlist:
     script: scripts/desk_stage_gate_shortlisted_shortlisted_shortlist.py
-    help: Predicate (deterministic gate — may the subject move 'shortlisted' -> 'shortlisted' on 'shortlist'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from shortlisted to shortlisted on shortlist? Invoked by the process engine."
   desk-stage-gate-sketched-shelved-shelve:
     script: scripts/desk_stage_gate_sketched_shelved_shelve.py
-    help: Predicate (deterministic gate — may the subject move 'sketched' -> 'shelved' on 'shelve'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from sketched to shelved on shelve? Invoked by the process engine."
   desk-stage-gate-desirable-shelved-shelve:
     script: scripts/desk_stage_gate_desirable_shelved_shelve.py
-    help: Predicate (deterministic gate — may the subject move 'desirable' -> 'shelved' on 'shelve'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from desirable to shelved on shelve? Invoked by the process engine."
   desk-stage-gate-viable-shelved-shelve:
     script: scripts/desk_stage_gate_viable_shelved_shelve.py
-    help: Predicate (deterministic gate — may the subject move 'viable' -> 'shelved' on 'shelve'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from viable to shelved on shelve? Invoked by the process engine."
   desk-stage-gate-feasible-shelved-shelve:
     script: scripts/desk_stage_gate_feasible_shelved_shelve.py
-    help: Predicate (deterministic gate — may the subject move 'feasible' -> 'shelved' on 'shelve'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from feasible to shelved on shelve? Invoked by the process engine."
   desk-stage-gate-shortlisted-shelved-shelve:
     script: scripts/desk_stage_gate_shortlisted_shelved_shelve.py
-    help: Predicate (deterministic gate — may the subject move 'shortlisted' -> 'shelved' on 'shelve'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from shortlisted to shelved on shelve? Invoked by the process engine."
   desk-stage-gate-sketched-split-split:
     script: scripts/desk_stage_gate_sketched_split_split.py
-    help: Predicate (deterministic gate — may the subject move 'sketched' -> 'split' on 'split'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from sketched to split on split? Invoked by the process engine."
   desk-stage-gate-desirable-split-split:
     script: scripts/desk_stage_gate_desirable_split_split.py
-    help: Predicate (deterministic gate — may the subject move 'desirable' -> 'split' on 'split'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from desirable to split on split? Invoked by the process engine."
   desk-stage-gate-viable-split-split:
     script: scripts/desk_stage_gate_viable_split_split.py
-    help: Predicate (deterministic gate — may the subject move 'viable' -> 'split' on 'split'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from viable to split on split? Invoked by the process engine."
   desk-stage-gate-feasible-split-split:
     script: scripts/desk_stage_gate_feasible_split_split.py
-    help: Predicate (deterministic gate — may the subject move 'feasible' -> 'split' on 'split'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 2): read-only; may a variant move from feasible to split on split? Invoked by the process engine."
   experiment-lifecycle-detect:
     script: scripts/experiment_lifecycle_detect.py
-    help: Predicate (classified detection — which state is the subject in?). Stub — implement before relying on it.
+    help: "Process classifier (lean-business DEC-003 points 1 and 3): read-only; answers which state of the experiment's lifecycle an experiment is in, from its decision, its declaration and stopping rule, and its time box as its cycle's suspensions move it. Invoked by the process engine."
   experiment-lifecycle-gate-drafted-declared-declare:
     script: scripts/experiment_lifecycle_gate_drafted_declared_declare.py
-    help: Predicate (deterministic gate — may the subject move 'drafted' -> 'declared' on 'declare'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 3): read-only; may an experiment move from drafted to declared on declare? Invoked by the process engine."
   experiment-lifecycle-gate-drafted-running-declare:
     script: scripts/experiment_lifecycle_gate_drafted_running_declare.py
-    help: Predicate (deterministic gate — may the subject move 'drafted' -> 'running' on 'declare'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 3): read-only; may an experiment move from drafted to running on declare? Invoked by the process engine."
   experiment-lifecycle-gate-declared-running-start:
     script: scripts/experiment_lifecycle_gate_declared_running_start.py
-    help: Predicate (deterministic gate — may the subject move 'declared' -> 'running' on 'start'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 3): read-only; may an experiment move from declared to running on start? Invoked by the process engine."
   experiment-lifecycle-gate-running-due-come-due:
     script: scripts/experiment_lifecycle_gate_running_due_come_due.py
-    help: Predicate (deterministic gate — may the subject move 'running' -> 'due' on 'come-due'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 3): read-only; may an experiment move from running to due on come-due? Invoked by the process engine."
   experiment-lifecycle-gate-due-running-shift-time-box:
     script: scripts/experiment_lifecycle_gate_due_running_shift_time_box.py
-    help: Predicate (deterministic gate — may the subject move 'due' -> 'running' on 'shift-time-box'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 3): read-only; may an experiment move from due to running on shift-time-box? Invoked by the process engine."
   experiment-lifecycle-gate-running-declared-shift-time-box:
     script: scripts/experiment_lifecycle_gate_running_declared_shift_time_box.py
-    help: Predicate (deterministic gate — may the subject move 'running' -> 'declared' on 'shift-time-box'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 3): read-only; may an experiment move from running to declared on shift-time-box? Invoked by the process engine."
   experiment-lifecycle-gate-due-declared-shift-time-box:
     script: scripts/experiment_lifecycle_gate_due_declared_shift_time_box.py
-    help: Predicate (deterministic gate — may the subject move 'due' -> 'declared' on 'shift-time-box'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 3): read-only; may an experiment move from due to declared on shift-time-box? Invoked by the process engine."
   experiment-lifecycle-gate-due-decided-decide:
     script: scripts/experiment_lifecycle_gate_due_decided_decide.py
-    help: Predicate (deterministic gate — may the subject move 'due' -> 'decided' on 'decide'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 3): read-only; may an experiment move from due to decided on decide? Invoked by the process engine."
   cycle-lifecycle-detect:
     script: scripts/cycle_lifecycle_detect.py
-    help: Predicate (classified detection — which state is the subject in?). Stub — implement before relying on it.
+    help: "Process classifier (lean-business DEC-003 points 1 and 4): read-only; answers which state of the cycle's lifecycle a cycle is in, from its decision, an ongoing suspension, and its window as its suspensions work it out. Invoked by the process engine."
   cycle-lifecycle-gate-planned-running-start:
     script: scripts/cycle_lifecycle_gate_planned_running_start.py
-    help: Predicate (deterministic gate — may the subject move 'planned' -> 'running' on 'start'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 4): read-only; may a cycle move from planned to running on start? Invoked by the process engine."
   cycle-lifecycle-gate-running-in-review-end:
     script: scripts/cycle_lifecycle_gate_running_in_review_end.py
-    help: Predicate (deterministic gate — may the subject move 'running' -> 'in-review' on 'end'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 4): read-only; may a cycle move from running to in-review on end? Invoked by the process engine."
   cycle-lifecycle-gate-running-suspended-suspend:
     script: scripts/cycle_lifecycle_gate_running_suspended_suspend.py
-    help: Predicate (deterministic gate — may the subject move 'running' -> 'suspended' on 'suspend'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 4): read-only; may a cycle move from running to suspended on suspend? Invoked by the process engine."
   cycle-lifecycle-gate-in-review-suspended-suspend:
     script: scripts/cycle_lifecycle_gate_in_review_suspended_suspend.py
-    help: Predicate (deterministic gate — may the subject move 'in-review' -> 'suspended' on 'suspend'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 4): read-only; may a cycle move from in-review to suspended on suspend? Invoked by the process engine."
   cycle-lifecycle-gate-in-review-running-shift-window:
     script: scripts/cycle_lifecycle_gate_in_review_running_shift_window.py
-    help: Predicate (deterministic gate — may the subject move 'in-review' -> 'running' on 'shift-window'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 4): read-only; may a cycle move from in-review to running on shift-window? Invoked by the process engine."
   cycle-lifecycle-gate-suspended-running-resume:
     script: scripts/cycle_lifecycle_gate_suspended_running_resume.py
-    help: Predicate (deterministic gate — may the subject move 'suspended' -> 'running' on 'resume'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 4): read-only; may a cycle move from suspended to running on resume? Invoked by the process engine."
   cycle-lifecycle-gate-suspended-in-review-resume:
     script: scripts/cycle_lifecycle_gate_suspended_in_review_resume.py
-    help: Predicate (deterministic gate — may the subject move 'suspended' -> 'in-review' on 'resume'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 4): read-only; may a cycle move from suspended to in-review on resume? Invoked by the process engine."
   cycle-lifecycle-gate-in-review-decided-decide:
     script: scripts/cycle_lifecycle_gate_in_review_decided_decide.py
-    help: Predicate (deterministic gate — may the subject move 'in-review' -> 'decided' on 'decide'?). Stub — implement before relying on it.
+    help: "Process gate (lean-business DEC-003 points 1 and 4): read-only; may a cycle move from in-review to decided on decide? Invoked by the process engine."
 validators:
   check:
     command: check
