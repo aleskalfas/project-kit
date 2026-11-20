@@ -20,6 +20,11 @@ The engine asks it by `can-move` before the command writes the new shortlisting,
 `move` after. The write replaces the outcome and leaves the verdicts as they were, so both
 read one answer (the process area's README, "Seam-ordering contract").
 
+The desk stage reads no day. `judge` takes one all the same, as every predicate of the
+capability does, so that each is asked alike: today, read in `main` and nowhere else
+(DEC-003 point 1), or the fixed day the test suite gives by calling `judge` in its own
+process. The gate leaves it unread.
+
 READ-ONLY. The engine runs it from the repository's root as
 
   desk_stage_gate_shortlisted_shortlisted_shortlist.py <idea>--<variant> --json
@@ -37,6 +42,7 @@ Exit codes:
 from __future__ import annotations
 
 import sys
+from datetime import date
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -47,7 +53,16 @@ from _lib import positions
 PROG = "desk-stage-gate-shortlisted-shortlisted-shortlist"
 WHAT = "May the person shortlist the variant again, on its canvas and the goal as they stand?"
 
+
+def judge(root: Path, subject: str, on: date) -> positions.Answer:
+    """The gate on the variant `subject`, read from the project at `root`. The desk stage
+    reads no day, so `on` goes unread."""
+    return positions.desk_gate(positions.shortlisting)(root, subject)
+
+
+def main() -> int:
+    return positions.answer_gate(sys.argv[1:], PROG, WHAT, positions.as_of(judge, date.today()))
+
+
 if __name__ == "__main__":
-    sys.exit(
-        positions.answer_gate(sys.argv[1:], PROG, WHAT, positions.desk_gate(positions.shortlisting))
-    )
+    sys.exit(main())

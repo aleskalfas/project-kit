@@ -18,6 +18,11 @@ The engine asks it by `can-move` before the command writes the yes, and by `move
 The write adds the verdict and nothing the gate reads, so both read one answer (the process
 area's README, "Seam-ordering contract").
 
+The desk stage reads no day. `judge` takes one all the same, as every predicate of the
+capability does, so that each is asked alike: today, read in `main` and nowhere else
+(DEC-003 point 1), or the fixed day the test suite gives by calling `judge` in its own
+process. The gate leaves it unread.
+
 READ-ONLY. The engine runs it from the repository's root as
 
   desk_stage_gate_sketched_desirable_pass_desirability.py <idea>--<variant> --json
@@ -34,6 +39,7 @@ Exit codes:
 from __future__ import annotations
 
 import sys
+from datetime import date
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -45,9 +51,19 @@ PROG = "desk-stage-gate-sketched-desirable-pass-desirability"
 WHAT = "May the person's yes on desirability move the variant from sketched to desirable?"
 
 
-def judge(variant: positions.Variant) -> positions.Answer:
-    return positions.passing(variant, "desirability")
+def _passing(subject: positions.Variant) -> positions.Answer:
+    return positions.passing(subject, "desirability")
+
+
+def judge(root: Path, subject: str, on: date) -> positions.Answer:
+    """The gate on the variant `subject`, read from the project at `root`. The desk stage
+    reads no day, so `on` goes unread."""
+    return positions.desk_gate(_passing)(root, subject)
+
+
+def main() -> int:
+    return positions.answer_gate(sys.argv[1:], PROG, WHAT, positions.as_of(judge, date.today()))
 
 
 if __name__ == "__main__":
-    sys.exit(positions.answer_gate(sys.argv[1:], PROG, WHAT, positions.desk_gate(judge)))
+    sys.exit(main())

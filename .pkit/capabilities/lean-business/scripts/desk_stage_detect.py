@@ -18,6 +18,11 @@ its outcome and its verdicts alone (`_lib.positions.desk_stage`):
 - else the longest run of the person's yes verdicts from desirability places it in
   `sketched`, `desirable`, `viable` or `feasible`. A stale verdict holds the position.
 
+The desk stage reads no day. `classify` takes one all the same, as every predicate of the
+capability does, so that each is asked alike: today, read in `main` and nowhere else
+(DEC-003 point 1), or the fixed day the test suite gives by calling `classify` in its own
+process. The classifier leaves it unread.
+
 READ-ONLY. The engine runs it from the repository's root as
 
   desk_stage_detect.py <idea>--<variant> --json
@@ -37,6 +42,7 @@ Exit codes:
 from __future__ import annotations
 
 import sys
+from datetime import date
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -47,5 +53,18 @@ from _lib import positions
 PROG = "desk-stage-detect"
 WHAT = "Classify which state of its desk stage a variant is in, for the process engine."
 
+
+def classify(root: Path, subject: str, on: date) -> positions.Position:
+    """Where the variant `subject` stands, read from the project at `root`. The desk stage
+    reads no day, so `on` goes unread."""
+    return positions.desk_stage_of(root, subject)
+
+
+def main() -> int:
+    return positions.answer_detection(
+        sys.argv[1:], PROG, WHAT, positions.as_of(classify, date.today())
+    )
+
+
 if __name__ == "__main__":
-    sys.exit(positions.answer_detection(sys.argv[1:], PROG, WHAT, positions.desk_stage_of))
+    sys.exit(main())

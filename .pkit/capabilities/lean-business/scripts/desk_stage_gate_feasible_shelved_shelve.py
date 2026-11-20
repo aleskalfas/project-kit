@@ -14,6 +14,11 @@ A shelving records its reason (`_lib.positions.shelving`). The engine asks the g
 (the process area's README, "Seam-ordering contract"). Every shelve move of the desk stage
 reads this one predicate.
 
+The desk stage reads no day. `judge` takes one all the same, as every predicate of the
+capability does, so that each is asked alike: today, read in `main` and nowhere else
+(DEC-003 point 1), or the fixed day the test suite gives by calling `judge` in its own
+process. The gate leaves it unread.
+
 READ-ONLY. The engine runs it from the repository's root as
 
   desk_stage_gate_feasible_shelved_shelve.py <idea>--<variant> --json
@@ -30,6 +35,7 @@ Exit codes:
 from __future__ import annotations
 
 import sys
+from datetime import date
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -40,7 +46,16 @@ from _lib import positions
 PROG = "desk-stage-gate-feasible-shelved-shelve"
 WHAT = "May the person shelve the variant, moving it from feasible to shelved?"
 
+
+def judge(root: Path, subject: str, on: date) -> positions.Answer:
+    """The gate on the variant `subject`, read from the project at `root`. The desk stage
+    reads no day, so `on` goes unread."""
+    return positions.desk_gate(positions.shelving)(root, subject)
+
+
+def main() -> int:
+    return positions.answer_gate(sys.argv[1:], PROG, WHAT, positions.as_of(judge, date.today()))
+
+
 if __name__ == "__main__":
-    sys.exit(
-        positions.answer_gate(sys.argv[1:], PROG, WHAT, positions.desk_gate(positions.shelving))
-    )
+    sys.exit(main())

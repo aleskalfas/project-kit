@@ -19,6 +19,11 @@ the canvas records the variant split into at least one variant, each a reference
 canvas of its idea, and each another variant that names this one as the one it comes from.
 Every split move of the desk stage reads this one predicate.
 
+The desk stage reads no day. `judge` takes one all the same, as every predicate of the
+capability does, so that each is asked alike: today, read in `main` and nowhere else
+(DEC-003 point 1), or the fixed day the test suite gives by calling `judge` in its own
+process. The gate leaves it unread.
+
 READ-ONLY. The engine runs it from the repository's root as
 
   desk_stage_gate_desirable_split_split.py <idea>--<variant> --json
@@ -37,6 +42,7 @@ Exit codes:
 from __future__ import annotations
 
 import sys
+from datetime import date
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -48,13 +54,14 @@ PROG = "desk-stage-gate-desirable-split-split"
 WHAT = "May the person split the variant into those named, moving it from desirable to split?"
 
 
-def judge(root: Path, subject: str) -> positions.Answer:
-    """The gate on the variant `subject`, read from the project at `root`."""
+def judge(root: Path, subject: str, on: date) -> positions.Answer:
+    """The gate on the variant `subject`, read from the project at `root`. The desk stage
+    reads no day, so `on` goes unread."""
     return positions.desk_gate(positions.splitting)(root, subject)
 
 
 def main() -> int:
-    return positions.answer_gate(sys.argv[1:], PROG, WHAT, judge)
+    return positions.answer_gate(sys.argv[1:], PROG, WHAT, positions.as_of(judge, date.today()))
 
 
 if __name__ == "__main__":
