@@ -100,6 +100,15 @@ process:
         predicate:
           run: cycle-lifecycle-gate-suspended-running-resume
       prompt: Are you back to resume the cycle, and on which day did you resume?
+    - from: suspended
+      to: in-review
+      trigger: resume
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: cycle-lifecycle-gate-suspended-in-review-resume
+      prompt: Are you back to resume the cycle, and on which day did you resume?
     - from: in-review
       to: decided
       trigger: decide

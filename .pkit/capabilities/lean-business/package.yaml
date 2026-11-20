@@ -105,6 +105,9 @@ commands:
   cycle-lifecycle-gate-suspended-running-resume:
     script: scripts/cycle_lifecycle_gate_suspended_running_resume.py
     help: Predicate (deterministic gate — may the subject move 'suspended' -> 'running' on 'resume'?). Stub — implement before relying on it.
+  cycle-lifecycle-gate-suspended-in-review-resume:
+    script: scripts/cycle_lifecycle_gate_suspended_in_review_resume.py
+    help: Predicate (deterministic gate — may the subject move 'suspended' -> 'in-review' on 'resume'?). Stub — implement before relying on it.
   cycle-lifecycle-gate-in-review-decided-decide:
     script: scripts/cycle_lifecycle_gate_in_review_decided_decide.py
     help: Predicate (deterministic gate — may the subject move 'in-review' -> 'decided' on 'decide'?). Stub — implement before relying on it.
