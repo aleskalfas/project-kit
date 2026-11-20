@@ -55,11 +55,11 @@ Until then a person runs these outside the capability, and records what they fou
 
 - **The person decides** each question the method leaves to judgement: each desk verdict, which variants go on and which a cycle explores, how the assumptions rank, each experiment's declaration and next action, whether and since when life stopped a cycle and when it resumes, and each cycle's decision. The record of its process says which of these are moves of a process, and how the commands hold each to the person (DEC-003).
 - **The skill carries the judgements.** A composite skill, paired with the commands, asks the method's questions in the method's order where it fixes one, such as the desirability review's, and leaves the order free where it is free, such as the first sketch. It explains, proposes and drafts.
-- **The commands hold what data can.** They make and change the records, refuse what the data shows is wrong, and warn where the method gives only a guideline (DEC-002 point 14).
+- **The commands hold what data can.** They make and change the records, the content around each judgement as well as the judgement: each entry of a canvas and its links, each input of the estimate and the traction target, each assumption, and each field of a draft experiment has a command that writes it, gives it the ids it needs, and refuses at once what the data shows is wrong. They warn where the method gives only a guideline (DEC-002 point 14).
 - **Four ways in:**
-  - a conversation with an agent through the skill, the main way in
+  - a conversation with an agent through the skill, the main way in, the skill drafting through the commands
   - the commands, at a terminal
-  - the data files, readable in the repository
+  - the data files, readable in the repository, where an edit by hand is held by the check as a command's write is (DEC-002 point 14)
   - a view built from the data, later (point 8)
 
 ### 4. The name
@@ -138,6 +138,8 @@ A person may leave an idea for days or months, and the capability is built for i
 **Why one capability for the whole method.** Growth runs the same cycle over new artefacts, on the same canvas and goal. A capability of its own would split one model across two and make it depend on this one.
 
 **Why the person judges.** The method's own rules are mostly judgements about the person's business. A wrong verdict there costs the person months, and no check of files can tell a sound one from a hopeful one. So the agent explains and proposes, and the person decides (DEC-003 point 5).
+
+**Why a command for every write.** The methodology the capability ships in writes its own records through commands, and the capability follows it. A person at a terminal and an agent through the skill then take one path, ids are given rather than typed, and a broken link or a wrong id shows when it is written, not at the next check. The files stay plain data, so an edit by hand stays possible, and the check holds it as it holds a command's write.
 
 **Why its own words, and the book's text kept out.** On the reading this record rests on, the method is free to carry and its expression is the author's. Quotation would rest on an exception that keeps the extent to what a purpose needs, and a public repository of passages that walks the whole method is the weakest case for it. Words of its own also let the capability's text follow the capability as it changes.
 
