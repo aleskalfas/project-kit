@@ -76,7 +76,7 @@
           }
         },
         "existing-alternatives": {
-          "description": "What the customers do about each problem now, in whatever form, a product or not.",
+          "description": "Whatever the customers rely on now in place of this business: a product, a workaround, or nothing.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/entry"
@@ -132,7 +132,7 @@
           }
         },
         "unfair-advantage": {
-          "description": "An edge rivals could neither imitate nor acquire soon. Better left empty than filled with a weak one.",
+          "description": "Why the business would stay ahead once others see it working. It may stay empty until a real one exists.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/entry"
