@@ -26,7 +26,7 @@ module, so the check, the process's detections, the commands and the status neve
 - `checks`: the capability's check, a member of validation (point 14);
 - `positions`: where each subject of the capability's processes stands, read from its files
   whenever a process predicate asks, and what the predicates answer the engine (DEC-003
-  points 1 and 2).
+  points 1 to 4 and 7).
 
 None reads the clock: a gate, and a reading that depends on a day, takes the day from its
 caller (DEC-003 point 1; COR-055 point 2).
