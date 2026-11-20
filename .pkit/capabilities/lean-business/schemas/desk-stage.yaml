@@ -114,47 +114,47 @@ process:
       to: sketched
       trigger: fail-desirability
       authorisation: user
-      prompt: Is the variant no longer desirable? A no takes it back to sketched.
+      prompt: Do you now judge the variant not desirable? Answering yes records that, takes the variant back to sketched and clears any verdict after desirability.
     - from: viable
       to: sketched
       trigger: fail-desirability
       authorisation: user
-      prompt: Is the variant no longer desirable? A no takes it back to sketched and clears the verdicts after desirability.
+      prompt: Do you now judge the variant not desirable? Answering yes records that, takes the variant back to sketched and clears the verdicts after desirability.
     - from: feasible
       to: sketched
       trigger: fail-desirability
       authorisation: user
-      prompt: Is the variant no longer desirable? A no takes it back to sketched and clears the verdicts after desirability.
+      prompt: Do you now judge the variant not desirable? Answering yes records that, takes the variant back to sketched and clears the verdicts after desirability.
     - from: shortlisted
       to: sketched
       trigger: fail-desirability
       authorisation: user
-      prompt: Is the variant no longer desirable? A no takes it back to sketched, clears the verdicts after desirability and withdraws its shortlisting.
+      prompt: Do you now judge the variant not desirable? Answering yes records that, takes the variant back to sketched, clears the verdicts after desirability and withdraws its shortlisting.
     - from: viable
       to: desirable
       trigger: fail-viability
       authorisation: user
-      prompt: Is the variant no longer viable? A no takes it back to desirable.
+      prompt: Do you now judge the variant not viable? Answering yes records that, takes the variant back to desirable and clears any feasibility verdict.
     - from: feasible
       to: desirable
       trigger: fail-viability
       authorisation: user
-      prompt: Is the variant no longer viable? A no takes it back to desirable and clears the feasibility verdict.
+      prompt: Do you now judge the variant not viable? Answering yes records that, takes the variant back to desirable and clears the feasibility verdict.
     - from: shortlisted
       to: desirable
       trigger: fail-viability
       authorisation: user
-      prompt: Is the variant no longer viable? A no takes it back to desirable, clears the feasibility verdict and withdraws its shortlisting.
+      prompt: Do you now judge the variant not viable? Answering yes records that, takes the variant back to desirable, clears the feasibility verdict and withdraws its shortlisting.
     - from: feasible
       to: viable
       trigger: fail-feasibility
       authorisation: user
-      prompt: Is the variant no longer feasible? A no takes it back to viable.
+      prompt: Do you now judge the variant not feasible? Answering yes records that and takes the variant back to viable.
     - from: shortlisted
       to: viable
       trigger: fail-feasibility
       authorisation: user
-      prompt: Is the variant no longer feasible? A no takes it back to viable and withdraws its shortlisting.
+      prompt: Do you now judge the variant not feasible? Answering yes records that, takes the variant back to viable and withdraws its shortlisting.
     - from: sketched
       to: shelved
       trigger: shelve
@@ -163,7 +163,7 @@ process:
         kind: deterministic
         predicate:
           run: desk-stage-gate-sketched-shelved-shelve
-      prompt: Shelve the variant, and why? A shelved variant is final.
+      prompt: Shelve the variant, for the reason given? A shelved variant is final.
     - from: desirable
       to: shelved
       trigger: shelve
@@ -172,7 +172,7 @@ process:
         kind: deterministic
         predicate:
           run: desk-stage-gate-desirable-shelved-shelve
-      prompt: Shelve the variant, and why? A shelved variant is final.
+      prompt: Shelve the variant, for the reason given? A shelved variant is final.
     - from: viable
       to: shelved
       trigger: shelve
@@ -181,7 +181,7 @@ process:
         kind: deterministic
         predicate:
           run: desk-stage-gate-viable-shelved-shelve
-      prompt: Shelve the variant, and why? A shelved variant is final.
+      prompt: Shelve the variant, for the reason given? A shelved variant is final.
     - from: feasible
       to: shelved
       trigger: shelve
@@ -190,7 +190,7 @@ process:
         kind: deterministic
         predicate:
           run: desk-stage-gate-feasible-shelved-shelve
-      prompt: Shelve the variant, and why? A shelved variant is final.
+      prompt: Shelve the variant, for the reason given? A shelved variant is final.
     - from: shortlisted
       to: shelved
       trigger: shelve
@@ -199,7 +199,7 @@ process:
         kind: deterministic
         predicate:
           run: desk-stage-gate-shortlisted-shelved-shelve
-      prompt: Shelve the variant, and why? A shelved variant is final.
+      prompt: Shelve the variant, for the reason given? A shelved variant is final.
     - from: sketched
       to: split
       trigger: split
