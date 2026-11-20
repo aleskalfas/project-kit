@@ -45,6 +45,7 @@ pkit:
         - lean-business:DEC-003#7
       artefact:
         - .pkit/cli/README.md#validate
+        - .pkit/cli/README.md#data-validate-path
 ---
 
 # lean-business capability
