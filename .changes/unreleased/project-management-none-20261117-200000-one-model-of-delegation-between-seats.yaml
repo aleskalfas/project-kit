@@ -21,10 +21,10 @@ body: >
   refines DEC-059, DEC-061, DEC-063 and DEC-068 in place, with ADR-071,
   and corrects a fact in DEC-029. It rests on ADR-101, an architecture
   record proposed in this change, under which a capability's grant may
-  allow a privilege the capability defines itself, recognising named
-  harness tools alone that no other privilege recognises, only to an agent
-  it ships, and which overturns ADR-016 and ADR-021 in part and refines
-  them in place. The agent's
+  allow a privilege the capability defines itself, recognising by name
+  alone tools that run no command and that no other privilege recognises,
+  only to an agent it ships, and which overturns ADR-016 and ADR-021 in
+  part and refines ADR-016 and ADR-087 in place. The agent's
   definition, the grants, the overview, the topology, the state issues and
   the work loop are unchanged until the Tasks that build them, which
   declare their own changesets, so no surface moves here.
