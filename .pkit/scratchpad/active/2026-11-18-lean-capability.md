@@ -406,6 +406,140 @@ No accepted record is modified. Its findings, adopted into the plan:
 2. Draft its three records through `decision-author`: the capability, the data model and the process. Each goes to `critic`, then `methodology-reviewer`, then the person.
 3. Build in the order of the Task, the evidence records staying local.
 
+### The commands (phase 3)
+
+The plan the builders follow (2026-11-20). It carries out DEC-001 point 3 as refined by decision 24, DEC-002 and DEC-003, and was reviewed twice by `critic`. Phases 1 and 2 built the check (`scripts/check.py`, `scripts/_lib/`), the three process definitions and their 33 predicates. Every command runs as `pkit lean <verb>`, a flat leaf of the capability's `commands:`, with its tests and its row in the README.
+
+**Every write, alike.**
+- **Built, held, then written.** Every command, an act's as well as content's, builds each file as it would stand and holds it to the schema, to the core's reference and duplicate-id pass, and to the check. It refuses where the write adds an error, comparing the findings before and after, and names an error already in the files without refusing, so a file broken by hand never freezes the commands on it. On a refusal it writes nothing, and names the finding as the check would.
+- **Refused beyond the check:**
+  - a typed id that exists, or that a reference or an assumption's source still names, since an id named is never given again (DEC-002 point 7);
+  - on `draft-experiment`, a time box over fourteen days, an end before its start, and a range whose low is above its high, which the declaring gate refuses on any day (DEC-002 point 9);
+  - `add-assumption --entry` naming no entry of its canvas, which can only be a typo.
+- **Warned of, never refused:**
+  - what the check warns of;
+  - a change to content a standing verdict fingerprinted, naming each verdict it leaves stale, and louder where it stales the shortlisting of a variant an undecided cycle explores, since no declaration rests on that variant until the person judges again;
+  - removing an entry an assumption or another entry still names, since the method removes an entry its experiment refuted (DEC-002 point 7, "One link that may dangle");
+  - editing an assumption a declared experiment tests;
+  - drafting an experiment of a suspended cycle, naming `resume`.
+
+  A shelved or split variant's content stays editable, since no record freezes it.
+- **Ids.** A command gives each id from `--id`, or from the text: accents stripped, ASCII letters and digits kept, the first words in kebab case, a leading digit given a letter before it, and a fallback where nothing is left. It qualifies the id by its variant or idea. The id is unique across the canvas or the location, and never one a reference or an assumption's source still names. It never changes when the text does. The command prints each id it gave. This holds for assumptions too.
+- **Round-trip YAML,** keeping comments and order.
+- **Content is no judgement.** A content command takes no consent form and records no who or when.
+- **Undone where the move refuses.** Where `move` refuses after the write, every file the command wrote or created is put back or removed, the location's record included.
+
+**Every act, in addition.**
+- **Today** is read at the command's entry, never from argv or the environment (DEC-003 point 1).
+- **The engine connection is injectable.** The engine runs each predicate in a process of its own, which reads the real date. So tests swap in an engine that asks the same predicates in-process through `positions` on the test's day. A few tests run the real engine, with fixture days relative to the real today.
+- **The target of a move is never chosen before the write.** Before it, the command refuses where no target its trigger declares opens (`can-move`). After it, the command reads where the subject stands from the engine's status and moves there, `move --to <that> --from <origin>` (DEC-002 point 15).
+  - Both of resuming's gates open before the write in decision 23's example: a window of days 1 to 90, suspended on day 50, recorded on day 120. Resuming on day 80 or later lands in running, and earlier in review.
+  - Builder 4's tests hold that example by name.
+- **The order of a person's move:**
+  - check the input against the shared predicate, and ask `can-move`;
+  - write;
+  - move.
+- **The script's moves.** The suspension command validates through `suspensions.of_cycle` and writes. It then takes the cycle's move with `move --from`, never asking `can-move` first. No command takes the experiment's moves on dates (DEC-003 point 3).
+- **The consent forms** (DEC-003 point 5):
+  - at a terminal, ask the question and act only on a yes;
+  - off a terminal, act only with `--person-decided`;
+  - with neither, act on nothing and print the question.
+
+  A move's question is its definition's prompt. An act with no move asks in the capability's own words (DEC-001 point 7): a no on the next step, a yes on a passed step, a rank, a plan, an estimate, a result, a stopping rule, a suspension, the goal.
+- **Who and when** on each act whose record keeps them; a rank keeps none (DEC-002 point 8). Who is git's `user.name`, never the email.
+- **Act details come as flags,** a repeated piece repeating its flag: `--key-result <variant>:<step>:<target>`, `--evidence <experiment>`, `--reached <number>` in key-result order. Nothing of an act is drafted into a subject's file before the act, since the classifiers read a decision's or a window's presence as a position.
+- **The location** (DEC-002 point 1):
+  - The first write records it without asking, and says what it recorded and where to change it.
+  - Where the default folder holds files of another kind, it records nothing and names `set-location`.
+  - Any first write may create the idea's folder, since the first sketch's order is free.
+- **Ownership.** `_lib/positions.py`, the process definitions and the predicate scripts are `process-author`'s (the overlay's grant). Builders read them, never edit them, and report any change they need.
+- **Refusals and warnings the records name:**
+  - `set-goal` refuses a change of currency while a declared experiment is undecided, and any change while a cycle is planned, running or suspended (`gates.setting_goal`).
+  - Every act on an experiment of a suspended cycle is refused, naming `resume` (DEC-003 point 3): the estimate, the stopping rule, the result. The stopping rule is refused on an evaluative experiment too.
+  - `plan-cycle` refuses:
+    - no goal;
+    - a variant not shortlisted;
+    - a second undecided cycle;
+    - a variant without a key result;
+    - a key result naming a variant the cycle does not explore;
+    - a window overlapping another cycle's as worked out;
+    - a change that drops a variant one of its experiments tests (DEC-002 point 11, `gates.planning`).
+  - `review-cycle` refuses on a suspended cycle, and warns when persevering on a missed objective.
+  - `declare` warns when a riskier assumption is untested.
+
+**The surface.** (c) marks content.
+- **The location and the idea:** `set-location <path>`, run before the first idea, where running it is the consent (COR-048 point 5); `set-goal <idea> --revenue --per <month|year> --currency --years`.
+- **A variant's canvas (c):**
+  - `new-variant <idea>--<variant> --archetype [--author <name>]... [--comes-from <shelved variant>]`. It creates the idea's folder where none is, the canvas and its empty assumptions list.
+  - `set-archetype <variant> <archetype>`, refused on the way to direct while a side is named.
+  - `set-authors <variant|experiment> <name>...`.
+  - `add-side <variant> <name>` and `remove-side`, the latter refused while an entry or input names the side.
+  - `add-entry <variant> <box> <text> [--id] [--side]`, with the box's links as flags:
+    - `--alternative <entry>`... on a problem;
+    - `--problem <entry>` on a value proposition or a solution;
+    - `--sub-headline` on a value proposition;
+    - `--trigger <text>`... on an early adopter;
+    - `--kind early|scalable` on a channel;
+    - `--step <factory-step>` on a key metric.
+  - `edit-entry <entry> [--text] [--side] [link flags] [--clear <field>] [--drop-alternative <entry>] [--drop-trigger <text>]`.
+  - `remove-entry <entry>`.
+  - `move-entry <entry> --to <position>`, where a problem's position is its rank.
+  - `set-inputs <variant> [--side] [--price] [--lifetime] [--conversion] [--referral-share] [--clear <input>]`, merging into the set for its side.
+  - `set-traction <variant> [--multiplier] [--first-stage-metric --first-stage-target] [--clear]`.
+- **The desk stage:**
+  - `judge <variant> <step> <yes|no> [--note]`;
+  - `shortlist`;
+  - `shelve --reason`;
+  - `split <variant> --into <name>...`. It creates each named variant as a copy of the canvas, its ids and links re-qualified and its `comes-from` set. It copies neither verdicts nor outcome. It copies the assumptions, their ids and sources re-qualified.
+  - `canvas <variant>`, read-only: the grid and its credit line (DEC-001 point 6).
+  - `estimate <variant>`, read-only: the numbers worked out and never stored, the formulas in the README. Which numbers are unrealistic is the skill's question.
+- **Assumptions:**
+  - `add-assumption <variant> <statement> --kind (--entry <entry> | --input <name> [--side]) [--id]` (c). It is placed one past the highest rank, a placement that judges nothing, and the skill asks the person to `rank` before a declaration.
+  - `edit-assumption <assumption> [--statement] [--kind] [--entry|--input]` (c).
+  - `remove-assumption` (c), refused while an experiment tests it.
+  - `rank <variant> <assumption>...`, an act.
+- **Experiments:**
+  - `new-experiment <idea>--<experiment> --kind [--assumption] [--cycle] [--author]...` (c), so a draft may come before a cycle is planned.
+  - `draft-experiment <experiment>` (c), refused once declared. It has a flag for each field:
+    - `--kind`, `--assumption`, `--cycle`;
+    - `--learn`, `--stopping-rule`, `--fit <count>/<of>`;
+    - `--action`, `--metric`, `--direction` with `--threshold` or `--range <low> <high>`, `--source`, `--effect`...;
+    - `--control cohorts|split [--exposed]`;
+    - `--start`, `--end`;
+    - and `--clear <field>`.
+  - `remove-experiment` (c), refused once declared (DEC-003 point 3: a draft never declared is removed).
+  - `record-estimate <experiment> <value>`: the person's own guess, an act, since an estimate an agent drafts in the person's name is not made alone. A second estimate by the same person replaces their first. It is refused once declared.
+  - `declare`;
+  - `reach-stopping-rule`;
+  - `record-result <experiment> [--measured] [--spoiled] --evidence --learned`;
+  - `decide <experiment> <correct-course|double-down|stop>`.
+- **Cycles:**
+  - `plan-cycle <idea>--<cycle> --variant <v>... --start [--days, 90 by default] --objective --key-result <variant>:<step>:<target>... --constraint-step --constraint-evidence`;
+  - `change-plan <cycle>` with the same flags, while the cycle is planned;
+  - `suspend <cycle> --reason --since <day> [--resumed <day>]`;
+  - `resume <cycle> [--on <day>]`;
+  - `review-cycle <cycle> --reached <number>... [--winning <variant>] --decision --reasons [--evidence <experiment>]...`, where the winner may be left out when the cycle explored one variant.
+- **Looking:**
+  - `status [<idea>] [--json]`: the return briefing (DEC-001 point 10, DEC-002 point 15), its structured form carrying `schema_version: 1`. It offers to record a suspension after a silence of 14 days, as the README states.
+  - `check`, already built.
+
+**The build,** by the first use's path. Each builder works as `software-engineer` in a worktree of its own, and the coordinator brings each builder's commits onto the Task's branch.
+1. **The plumbing and the desk path:**
+   - every write's rules above, the consent forms and the injectable engine, tested on each of the five ways a command meets the engine:
+     - a move with one target;
+     - a move with two targets;
+     - an act with no move;
+     - an act followed by the script's move;
+     - a move whose gate the write satisfies;
+   - then `set-location`, `set-goal`, `new-variant`, `add-side`, `add-entry`, `edit-entry`, `remove-entry`, `set-inputs`, `set-traction`, `judge`, `shortlist`, `estimate`, `canvas`, and a first `status`.
+2. **The experiment path:** `add-assumption`, `edit-assumption`, `remove-assumption`, `rank`, `plan-cycle`, `change-plan`, `new-experiment`, `draft-experiment`, `remove-experiment`, `record-estimate`, `declare`, `reach-stopping-rule`, `record-result`, `decide`.
+3. **The rest of the desk:** `remove-side`, `set-archetype`, `move-entry`, `set-authors`, `shelve`, `split`.
+4. **Suspensions and reviews:** `suspend`, `resume`, `review-cycle`, and the full briefing.
+
+The skill (phase 4) starts after builder 2, beside builders 3 and 4, since the surface is then fixed. Builders 3 and 4 go in turn, since both edit the `commands:` map and the README's commands.
+
+**The first use** follows the skill. Before the candidate is cut, a dry run in a scratch repository: `pkit upgrade --pre` to a local build, `pkit capabilities install lean-business`, and one command. It confirms that a candidate ships a capability project-kit incubates unregistered. Whether to cut the candidate after builder 2 and the skill, before builders 3 and 4, is the person's to weigh against decision 22's cost of a second candidate. It is put to them when builder 2 lands.
+
 ## Deferred past the first slice
 
 - **Team features:** campaigns with individual proposals and a vote, sprints and the six meetings.
