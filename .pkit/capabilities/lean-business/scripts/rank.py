@@ -11,7 +11,8 @@
 The rank is the person's act, so it takes their word (DEC-003 point 5). It records no who
 or when, since nothing rests on a rank (DEC-002 point 8). The assumptions named take the
 first ranks, in the order given; the others follow them in the order their ranks held. An
-assumption is named by its id or its own part. Each keeps its place in the file.
+assumption is named as every command names one, read within the variant (`naming.named`).
+Each keeps its place in the file.
 
 Usage:
   pkit lean rank <variant> <assumption>... [--person-decided]
@@ -34,7 +35,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import acting, assumptions, canvases, writes
+from _lib import acting, assumptions, canvases, naming, writes
 from _lib.acting import Context
 from _lib.writes import Refused
 
@@ -49,8 +50,8 @@ def parser() -> argparse.ArgumentParser:
         "assumptions",
         nargs="+",
         metavar="assumption",
-        help="The assumptions, the riskiest first, each by its id or its own part; those left "
-        "out follow them as they were ranked.",
+        help="The assumptions, the riskiest first, each by its id, the part after the idea, or "
+        "its own part; those left out follow them as they were ranked.",
     )
     acting.person_decided(made)
     return made
@@ -58,11 +59,13 @@ def parser() -> argparse.ArgumentParser:
 
 def run(args: argparse.Namespace, ctx: Context) -> None:
     variant = canvases.variant_id(str(args.variant))
-    named = [assumptions.own_or_whole(variant, str(given)) for given in args.assumptions]
+    files = writes.Files(ctx.root, writes.for_writing(ctx.root))
+    named = [
+        naming.named(files, naming.ASSUMPTION, str(given), variant) for given in args.assumptions
+    ]
     twice = sorted({a for a in named if named.count(a) > 1})
     if twice:
         raise Refused(f"{', '.join(f'`{a}`' for a in twice)} is named twice")
-    files = writes.Files(ctx.root, writes.for_writing(ctx.root))
     listed = assumptions.open_list(files, variant)
     for assumption in named:
         listed.find(assumption)

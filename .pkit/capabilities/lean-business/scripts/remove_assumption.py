@@ -10,7 +10,8 @@
 
 Content, so it asks nothing and records no who or when. Refused while an experiment tests
 it, declared or a draft: a declared experiment names what it tested for good, and a draft
-is removed, or drafted on another assumption, first. The others keep their ranks.
+is removed, or drafted on another assumption, first. The others keep their ranks. The
+assumption is named as every command names one, read within the location (`naming.named`).
 
 Usage:
   pkit lean remove-assumption <assumption>
@@ -31,7 +32,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import acting, assumptions, experiments, ids, model, writes
+from _lib import acting, assumptions, experiments, ids, model, naming, writes
 from _lib.acting import Context
 from _lib.writes import Refused
 
@@ -41,14 +42,18 @@ def parser() -> argparse.ArgumentParser:
         prog="pkit lean remove-assumption",
         description="Take an assumption out of its variant's list.",
     )
-    made.add_argument("assumption", help="The assumption's id, `<idea>--<variant>--<assumption>`.")
+    made.add_argument(
+        "assumption",
+        help="The assumption, by its id, `<idea>--<variant>--<assumption>`, the part after the "
+        "idea, or its own part.",
+    )
     return made
 
 
 def run(args: argparse.Namespace, ctx: Context) -> None:
-    assumption_id = assumptions.assumption_id(str(args.assumption))
-    variant = ids.qualifier(assumption_id)
     files = writes.Files(ctx.root, writes.for_writing(ctx.root))
+    assumption_id = naming.named(files, naming.ASSUMPTION, str(args.assumption))
+    variant = ids.qualifier(assumption_id)
     listed = assumptions.open_list(files, variant)
     index, _ = listed.find(assumption_id)
     held = experiments.read_idea(files, ids.idea_of(variant))

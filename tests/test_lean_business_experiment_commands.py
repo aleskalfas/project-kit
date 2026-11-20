@@ -10,6 +10,7 @@ on `direct`'s assumptions, are decided."""
 
 from __future__ import annotations
 
+import shutil
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -914,3 +915,132 @@ def test_record_result_refuses_while_the_cycle_is_suspended(world: lb.World) -> 
     )
     assert run.code == 1
     assert f"`pkit lean resume {SECOND}`" in run.err
+
+
+# --- naming an assumption or a cycle ----------------------------------------------------------
+
+#: An untested assumption the tests add, and each name of it: its id, the part after the
+#: idea, and its own part.
+ADDED = "meal-plan--direct--households-cook-alone"
+NAMES_OF_ADDED = (ADDED, "direct--households-cook-alone", "households-cook-alone")
+
+#: A second draft, for the command that drafts what a draft names.
+OTHER_DRAFT = "meal-plan--daily-calls"
+OTHER_DRAFT_FILE = f"{lb.IDEA}/experiments/daily-calls.yaml"
+
+
+def added(world: lb.World) -> None:
+    run = world.run(
+        "add_assumption",
+        DIRECT,
+        "Households cook alone",
+        "--kind",
+        "desirability",
+        "--input",
+        "price",
+    )
+    assert run.code == 0, run.err
+
+
+def both_drafts_name(world: lb.World, flag: str, name: str) -> list[Any]:
+    """What each draft names under `flag`: one drafted with `name` from the start, and one
+    given it afterwards."""
+    run = world.run("new_experiment", DRAFT, "--kind", "generative", flag, name)
+    assert run.code == 0, run.err
+    run = world.run("new_experiment", OTHER_DRAFT, "--kind", "generative")
+    assert run.code == 0, run.err
+    run = world.run("draft_experiment", OTHER_DRAFT, flag, name)
+    assert run.code == 0, run.err
+    key = flag.removeprefix("--")
+    return [world.read(rel)[key] for rel in (DRAFT_FILE, OTHER_DRAFT_FILE)]
+
+
+@pytest.mark.parametrize("name", NAMES_OF_ADDED)
+def test_each_command_that_names_an_assumption_takes_each_name_of_it(
+    world: lb.World, name: str
+) -> None:
+    added(world)
+    run = world.run("edit_assumption", name, "--statement", "Households cook on their own")
+    assert run.code == 0, run.err
+    assert listed(world)[-1]["statement"] == "Households cook on their own"
+    run = world.run("rank", DIRECT, name, "--person-decided")
+    assert run.code == 0, run.err
+    assert ranks(world) == {ADDED: 1, UNTESTED: 2, TESTED: 3}
+    assert both_drafts_name(world, "--assumption", name) == [f"[assumptions:{ADDED}]"] * 2
+    for draft in (DRAFT, OTHER_DRAFT):
+        assert world.run("remove_experiment", draft).code == 0
+    run = world.run("remove_assumption", name)
+    assert run.code == 0, run.err
+    assert ADDED not in ranks(world)
+
+
+@pytest.mark.parametrize("name", [SECOND, "second"])
+def test_each_command_that_names_a_cycle_takes_each_name_of_it(world: lb.World, name: str) -> None:
+    planned(world)
+    run = world.run("change_plan", name, "--days", "45", "--person-decided")
+    assert run.code == 0, run.err
+    assert world.read(SECOND_FILE)["window"]["days"] == 45
+    assert both_drafts_name(world, "--cycle", name) == [f"[cycle:{SECOND}]"] * 2
+
+
+@pytest.mark.parametrize(
+    ("argv", "refused"),
+    [
+        (
+            ("edit_assumption", "Households", "--statement", "Words"),
+            "`Households` names no assumption: give its id, `<idea>--<variant>--<assumption>`",
+        ),
+        (
+            ("edit_assumption", "no-such", "--statement", "Words"),
+            "`no-such` names no assumption in the location",
+        ),
+        (
+            ("remove_assumption", "two-sided--pays-monthly"),
+            "`two-sided--pays-monthly` names no assumption in the location",
+        ),
+        (
+            ("new_experiment", DRAFT, "--kind", "generative", "--assumption", "no-such"),
+            "`no-such` names no assumption of `meal-plan`",
+        ),
+        (("change_plan", "no-such", "--days", "45"), "`no-such` names no cycle in the location"),
+        (("change_plan", "a--b--c", "--days", "45"), "`a--b--c` names no cycle"),
+    ],
+)
+def test_a_name_that_reads_as_no_assumption_or_cycle_is_refused(
+    world: lb.World, argv: tuple[str, ...], refused: str
+) -> None:
+    kept = lb.snapshot(world.root)
+    run = world.run(*argv)
+    assert run.code == 1
+    assert refused in run.err
+    assert lb.snapshot(world.root) == kept
+
+
+def test_a_part_that_more_than_one_id_ends_with_is_refused_naming_each(world: lb.World) -> None:
+    run = world.run(
+        "add_assumption",
+        "meal-plan--two-sided",
+        "Cooks pay monthly",
+        "--kind",
+        "viability",
+        "--input",
+        "price",
+        "--id",
+        "pays-monthly",
+    )
+    assert run.code == 0, run.err
+    shutil.copytree(world.root / lb.IDEA / "cycles", world.root / "lean-business/other/cycles")
+    kept = lb.snapshot(world.root)
+    two = "`meal-plan--direct--pays-monthly`, `meal-plan--two-sided--pays-monthly`"
+    run = world.run("new_experiment", DRAFT, "--kind", "generative", "--assumption", "pays-monthly")
+    assert run.code == 1
+    assert f"`pays-monthly` names 2 assumptions of `meal-plan`, {two}" in run.err
+    run = world.run("edit_assumption", "pays-monthly", "--statement", "Words")
+    assert run.code == 1
+    assert f"`pays-monthly` names 2 assumptions in the location, {two}" in run.err
+    run = world.run("change_plan", "first", "--days", "45", "--person-decided")
+    assert run.code == 1
+    assert "`first` names 2 cycles in the location, `meal-plan--first`, `other--first`" in run.err
+    assert lb.snapshot(world.root) == kept
+    run = world.run("edit_assumption", "direct--pays-monthly", "--statement", "Words")
+    assert run.code == 0, run.err

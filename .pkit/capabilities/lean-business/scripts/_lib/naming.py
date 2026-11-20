@@ -1,4 +1,5 @@
-"""The ids a command gives (lean-business DEC-002 point 7; DEC-001 point 3).
+"""The ids a command gives, and the ids the names a person gives read as (lean-business
+DEC-002 point 7; DEC-001 point 3).
 
 A command gives each id it writes, from the person's `--id` or from the text of what it
 names:
@@ -14,6 +15,16 @@ names:
   entry was removed, would then name the new subject. An id taken from the text is told
   apart by a number after it; one the person typed is refused instead.
 - **Kept.** An id never changes when the text it was taken from does.
+
+Every command that names an assumption or a cycle reads the name one way (`named`):
+
+- **Whole, or a part.** A name is the id whole, or its last parts: an assumption's the part
+  after its idea, `<variant>--<assumption>`, or its own part, and a cycle's its own part.
+- **A part completed.** Where the variant or the idea the command names holds the parts a
+  name lacks, they complete it, as a rank's variant completes an assumption's own part.
+- **A part looked for.** Otherwise the name reads as the one id of its kind that ends with
+  it, among the idea's, or the location's where the command names no idea, as the files
+  stand. It is refused where none ends so, or more than one.
 """
 
 from __future__ import annotations
@@ -118,3 +129,71 @@ def given(qualifier: str, *, typed: str | None, text: str, fallback: str, taken:
         qualified = ids.qualify(qualifier, f"{base}-{number}")
         number += 1
     return qualified
+
+
+# --- the id a name reads as -------------------------------------------------------------------
+
+ASSUMPTION = "assumption"
+CYCLE = "cycle"
+
+#: The kinds a name reads as, each with the parts of its id and the form a refusal gives it.
+_NAMED = {
+    ASSUMPTION: (3, "`<idea>--<variant>--<assumption>`"),
+    CYCLE: (2, "`<idea>--<cycle>`"),
+}
+
+
+def named(files: Files, kind: str, given: str, within: str | None = None) -> str:
+    """The id of the `kind`, `ASSUMPTION` or `CYCLE`, that the name `given` reads as: the id
+    whole; or its last parts, completed by `within`, the variant or the idea the command
+    names, where that holds the parts they lack; or else the one id of the kind that ends
+    with them, among those of `within`'s idea, or of the location where `within` is None.
+    Raises Refused for a name that is no id's last parts, or that no id or more than one
+    ends with."""
+    parts, written = _NAMED[kind]
+    words = given.split(ids.JOIN)
+    if len(words) > parts or not all(ids.is_segment(word) for word in words):
+        raise Refused(
+            f"`{given}` names no {kind}: give its id, {written}, or the last parts of its id"
+        )
+    lacking = parts - len(words)
+    if lacking == 0:
+        return given
+    scope = within.split(ids.JOIN) if within is not None else []
+    if len(scope) >= lacking:
+        return ids.qualify(*scope[:lacking], given)
+    idea = scope[0] if scope else None
+    where = f"of `{idea}`" if idea is not None else "in the location"
+    ending = sorted({held for held in _held(files, kind, idea) if held.endswith(ids.JOIN + given)})
+    if len(ending) == 1:
+        return ending[0]
+    if not ending:
+        raise Refused(f"`{given}` names no {kind} {where}: no {kind}'s id there ends with it")
+    raise Refused(
+        f"`{given}` names {len(ending)} {kind}s {where}, {', '.join(f'`{e}`' for e in ending)}: "
+        f"give the id of the one you mean"
+    )
+
+
+def _held(files: Files, kind: str, idea: str | None) -> list[str]:
+    """The ids of the `kind` that the idea `idea` holds, or the location where it is None,
+    as the files stand."""
+    try:
+        contents = layout.read(files.root, files.location, idea)
+    except (listing.ListingFailed, layout.IdRefused) as exc:
+        raise Refused(f"the ideas' files cannot be read: {exc}") from exc
+    found: list[str] = []
+    for name, held in contents.ideas.items():
+        if kind == CYCLE:
+            found.extend(ids.qualify(name, own) for own in held.cycles)
+            continue
+        for variant in held.variants.values():
+            data = variant.assumptions.data if variant.assumptions is not None else None
+            listed = data.get("assumptions") if data is not None else None
+            if isinstance(listed, list):
+                found.extend(
+                    str(item["id"])
+                    for item in listed
+                    if isinstance(item, Mapping) and isinstance(item.get("id"), str)
+                )
+    return found

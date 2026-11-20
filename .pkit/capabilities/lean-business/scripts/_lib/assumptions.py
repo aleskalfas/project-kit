@@ -3,8 +3,8 @@
 
 - **The list** (`open_list`): the variant's one list, read round trip from the write; a
   list the variant lacks is created where an assumption is added to it.
-- **An assumption** (`Assumptions.find`): found by its id, given whole or by its own part,
-  which the variant qualifies (`assumption_id`, `own_or_whole`).
+- **An assumption** (`Assumptions.find`): found by its id, which a command reads from the
+  name the person gives, as every command reads one (`naming.named`).
 - **Where it comes from** (`source`): an entry the canvas holds, or an input of the
   estimate with its side where the model names several. An entry that the canvas does not
   hold is refused when the source is written, since it can only be a typo; the link may
@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
-from _lib import canvases, editing, ids, layout
+from _lib import canvases, editing, layout
 from _lib.fingerprint import STEPS
 from _lib.writes import Files, Refused
 
@@ -80,29 +80,6 @@ class Assumptions:
             and not isinstance(item.get("rank"), bool)
         ]
         return max(ranks, default=0) + 1
-
-
-def assumption_id(given: str) -> str:
-    """`given`, refused where it is no assumption's id, `<idea>--<variant>--<assumption>`."""
-    if not ids.is_variant_qualified(given):
-        raise Refused(
-            f"`{given}` is no assumption's id: an assumption is named "
-            f"`<idea>--<variant>--<assumption>`, as `pkit lean add-assumption` printed it"
-        )
-    return given
-
-
-def own_or_whole(variant: str, given: str) -> str:
-    """The id of an assumption of `variant`: `given` whole, or its own part, which the
-    variant qualifies. Raises Refused where it is neither."""
-    if ids.is_variant_qualified(given):
-        return given
-    if ids.is_segment(given):
-        return ids.qualify(variant, given)
-    raise Refused(
-        f"`{given}` names no assumption: give its id, `<idea>--<variant>--<assumption>`, or its "
-        f"own part"
-    )
 
 
 def open_list(files: Files, variant: str, *, create: bool = False) -> Assumptions:

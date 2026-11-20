@@ -10,10 +10,10 @@ assumption (lean-business DEC-002 point 9).
 
 Content, so it asks nothing and records no who or when. The draft may come before its
 cycle is planned, so the assumption it tests and the cycle it runs in may each wait for
-`draft-experiment`; each named is given whole or without the idea, and refused where
-nothing holds it. Its authors are those `--author` gives, or git's user.name. A draft in a
-suspended cycle is warned of, since nothing is declared or recorded on it until the cycle
-resumes.
+`draft-experiment`. Each is named as every command names one, read within the
+experiment's idea (`naming.named`), and is refused where nothing holds it. Its authors are
+those `--author` gives, or git's user.name. A draft in a suspended cycle is warned of,
+since nothing is declared or recorded on it until the cycle resumes.
 
 Usage:
   pkit lean new-experiment <idea>--<experiment> --kind generative|evaluative
@@ -54,8 +54,8 @@ def parser() -> argparse.ArgumentParser:
     )
     made.add_argument(
         "--assumption",
-        help="The assumption it tests, by its id or the part after the idea, "
-        "`<variant>--<assumption>`.",
+        help="The assumption it tests, by its id, the part after the idea, "
+        "`<variant>--<assumption>`, or its own part.",
     )
     made.add_argument("--cycle", help="The cycle it runs in, by its id or its own part.")
     made.add_argument(
@@ -83,11 +83,11 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
     )
     assumption = None
     if args.assumption is not None:
-        assumption = experiments.assumption_ref(idea, str(args.assumption))
+        assumption = experiments.assumption_ref(files, idea, str(args.assumption))
         experiments.assumption_held(files, assumption)
     cycle = None
     if args.cycle is not None:
-        cycle = experiments.cycle_ref(idea, str(args.cycle))
+        cycle = experiments.cycle_ref(files, idea, str(args.cycle))
         experiments.cycle_held(files, cycle)
     authors = [a.strip() for a in args.authors or [] if a.strip()] or [ctx.who]
     body = editing.mapping(

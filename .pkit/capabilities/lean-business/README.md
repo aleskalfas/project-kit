@@ -245,7 +245,7 @@ Checks the files of the location, as "The check" above says.
 | `record-result <experiment> [--measured <number>] [--spoiled] --evidence <text> --learned <text>` | Records what a declared experiment found, and says what it works out to: a pass, a fail, or neither. Recorded again before the decision, it replaces the earlier one. Refused for a measurement spoiled where no suspension ran through its time box. | act |
 | `decide <experiment> correct-course\|double-down\|stop` | Records your next action on a due experiment whose result is recorded. | move |
 
-An assumption is named by its id, `<idea>--<variant>--<assumption>`, or by the part after the idea; `rank` and `add-assumption --entry` take its own part too. A cycle is named by its id or its own part. An assumption's id comes from `--id` or its statement, as an entry's does.
+An assumption is named by its id, `<idea>--<variant>--<assumption>`, by the part after the idea, `<variant>--<assumption>`, or by its own part; a cycle by its id, `<idea>--<cycle>`, or by its own part. Every command that names one takes each form, save `plan-cycle`, which takes the id of the cycle it plans. A part is completed by the variant the command names, as `rank`'s, or by the idea, as the experiment's id gives `new-experiment` and `draft-experiment`. Where that leaves it short, it names the one of that idea, or else of the location, whose id ends with it, and is refused where none does, or more than one. `--entry` names an entry by its id or its own part. An assumption's id comes from `--id` or its statement, as an entry's does.
 
 **Drafting an experiment.** `draft-experiment` sets a field with each flag, and `--clear <field>` takes one out:
 

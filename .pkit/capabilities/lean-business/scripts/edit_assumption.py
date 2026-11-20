@@ -10,8 +10,9 @@ where it comes from (lean-business DEC-002 points 7 and 8).
 
 Content, so it asks nothing and records no who or when. `--entry` or `--input` replaces
 where it comes from whole, `--side` alone changes the side of an input it comes from. Its
-id never changes, and its rank is `rank`'s. An assumption a declared experiment tests is
-warned of, never refused: the declaration stays as it was declared, so the change reads
+id never changes, and its rank is `rank`'s. The assumption is named as every command names
+one, read within the location (`naming.named`). An assumption a declared experiment tests
+is warned of, never refused: the declaration stays as it was declared, so the change reads
 only for later experiments.
 
 Usage:
@@ -37,7 +38,7 @@ from ruamel.yaml.comments import CommentedMap
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import acting, assumptions, canvases, editing, experiments, ids, model, writes
+from _lib import acting, assumptions, canvases, editing, experiments, ids, model, naming, writes
 from _lib.acting import Context
 from _lib.writes import Refused
 
@@ -47,7 +48,11 @@ def parser() -> argparse.ArgumentParser:
         prog="pkit lean edit-assumption",
         description="Change an assumption's statement, its kind or where it comes from.",
     )
-    made.add_argument("assumption", help="The assumption's id, `<idea>--<variant>--<assumption>`.")
+    made.add_argument(
+        "assumption",
+        help="The assumption, by its id, `<idea>--<variant>--<assumption>`, the part after the "
+        "idea, or its own part.",
+    )
     made.add_argument("--statement", help="Its new words. Its id stays as it is.")
     made.add_argument("--kind", choices=assumptions.KINDS)
     source = made.add_mutually_exclusive_group()
@@ -71,8 +76,6 @@ def parser() -> argparse.ArgumentParser:
 
 
 def run(args: argparse.Namespace, ctx: Context) -> None:
-    assumption_id = assumptions.assumption_id(str(args.assumption))
-    variant = ids.qualifier(assumption_id)
     if all(
         value is None
         for value in (args.statement, args.kind, args.entry, args.input_name, args.side)
@@ -81,6 +84,8 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
             "give what the assumption changes: --statement, --kind, --entry, --input or --side"
         )
     files = writes.Files(ctx.root, writes.for_writing(ctx.root))
+    assumption_id = naming.named(files, naming.ASSUMPTION, str(args.assumption))
+    variant = ids.qualifier(assumption_id)
     canvas = canvases.open_variant(files, variant)
     listed = assumptions.open_list(files, variant)
     _, assumption = listed.find(assumption_id)

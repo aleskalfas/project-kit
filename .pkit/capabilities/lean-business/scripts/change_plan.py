@@ -12,7 +12,8 @@ The change is the person's act, so it takes their word, and records who changed 
 last and when, keeping who first planned it, with the plan's fingerprint taken again
 (DEC-003 point 5). It is no move: the cycle stays planned. Each part of the plan a flag
 gives replaces that part whole, so `--variant` and `--key-result` give every variant and
-key result the plan then holds.
+key result the plan then holds. The cycle is named as every command names one, read within
+the location (`naming.named`).
 
 Refused: a cycle that is not planned, as the process engine places it; through the
 predicate the check shares (`gates.changing`), a change that moves the window's start to
@@ -44,7 +45,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import acting, cycles, engine, gates, model, positions, writes
+from _lib import acting, cycles, engine, gates, model, naming, positions, writes
 from _lib.acting import Context
 from _lib.writes import Refused
 
@@ -54,7 +55,7 @@ def parser() -> argparse.ArgumentParser:
         prog="pkit lean change-plan",
         description="Change a planned cycle's plan, before its window starts.",
     )
-    made.add_argument("cycle", help="The cycle's id, `<idea>--<cycle>`.")
+    made.add_argument("cycle", help="The cycle, by its id, `<idea>--<cycle>`, or its own part.")
     cycles.plan_flags(made, first=False)
     acting.person_decided(made)
     return made
@@ -66,8 +67,8 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
             "give what the plan changes: --variant, --start, --days, --objective, --key-result, "
             "--constraint-step or --constraint-evidence"
         )
-    cycle_id = cycles.cycle_id(str(args.cycle))
     files = writes.Files(ctx.root, writes.for_writing(ctx.root))
+    cycle_id = naming.named(files, naming.CYCLE, str(args.cycle))
     cycle = cycles.open_cycle(files, cycle_id)
     state = acting.position(ctx, engine.CYCLE, cycle_id).state
     if state != positions.PLANNED:

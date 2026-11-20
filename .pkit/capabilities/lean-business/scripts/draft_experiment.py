@@ -93,7 +93,7 @@ def parser() -> argparse.ArgumentParser:
     made.add_argument("--kind", choices=positions.KINDS)
     made.add_argument(
         "--assumption",
-        help="The assumption it tests, by its id or the part after the idea.",
+        help="The assumption it tests, by its id, the part after the idea, or its own part.",
     )
     made.add_argument("--cycle", help="The cycle it runs in, by its id or its own part.")
     generative = made.add_argument_group("a generative experiment")
@@ -225,11 +225,11 @@ def _set(files: writes.Files, experiment: experiments.Experiment, args: argparse
     """Set each field a flag gives."""
     data, idea = experiment.data, experiment.idea
     if args.assumption is not None:
-        reference = experiments.assumption_ref(idea, str(args.assumption))
+        reference = experiments.assumption_ref(files, idea, str(args.assumption))
         experiments.assumption_held(files, reference)
         editing.place(data, "assumption", reference, ORDER)
     if args.cycle is not None:
-        reference = experiments.cycle_ref(idea, str(args.cycle))
+        reference = experiments.cycle_ref(files, idea, str(args.cycle))
         experiments.cycle_held(files, reference)
         editing.place(data, "cycle", reference, ORDER)
     for dest, field in (

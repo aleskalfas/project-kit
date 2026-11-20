@@ -37,7 +37,8 @@ What the commands write and read through (DEC-001 point 3; DEC-003 point 5):
 - `writes`: a write built, held to the check and the data validation as the files would
   stand, then written, or undone where a move after it is refused; the location's record;
 - `editing`: a file edited round trip, its comments, quoting and order kept;
-- `naming`: the ids a write gives, from `--id` or the text, and those taken or named;
+- `naming`: the ids a write gives, from `--id` or the text, and those taken or named; and
+  the id that a person's name of an assumption or a cycle reads as;
 - `staling`: each verdict and shortlisting a write leaves stale;
 - `engine` and `backbone`: the process engine's status, can-move and move, reached through
   `pkit`;

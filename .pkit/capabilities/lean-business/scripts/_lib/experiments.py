@@ -7,8 +7,9 @@ points 9 and 10; DEC-003 points 3 and 5; DEC-001 point 3).
   change only before its declaration, since a declaration is frozen and a correction comes
   as a new experiment (DEC-002 point 9).
 - **What it names** (`assumption_ref`, `cycle_ref`, `assumption_held`, `cycle_held`): the
-  assumption it tests and the cycle it runs in, each given whole or without the idea, which
-  the experiment's idea qualifies, and each refused where nothing holds it.
+  assumption it tests and the cycle it runs in, each read within the experiment's idea as
+  every command reads a name (`naming.named`), and each refused where it is another idea's
+  or nothing holds it.
 - **Its cycle, suspended** (`refuse_if_suspended`, `suspended_warning`). Nothing is recorded
   on an experiment of a suspended cycle until the person resumes it (DEC-003 point 3): an
   act on it is refused, naming `resume`, and a draft's change is warned of. Where the cycle
@@ -29,7 +30,7 @@ from typing import Any
 
 from ruamel.yaml.comments import CommentedMap
 
-from _lib import acting, editing, ids, layout, listing, positions
+from _lib import acting, editing, ids, layout, listing, naming, positions
 from _lib import engine as engines
 from _lib.engine import EngineFailed
 from _lib.model import IdeaModel, Pools
@@ -132,31 +133,19 @@ def unfrozen(experiment: Experiment, what: str) -> None:
 # --- what an experiment names -----------------------------------------------------------------
 
 
-def assumption_ref(idea: str, given: str) -> str:
-    """The reference to the assumption `given` names: its id whole, or its id without the
-    idea, `<variant>--<assumption>`, which `idea` qualifies. Raises Refused where it is
-    neither, or names an assumption of another idea."""
-    whole = given if ids.is_variant_qualified(given) else None
-    if whole is None and ids.is_idea_qualified(given):
-        whole = ids.qualify(idea, given)
-    if whole is None:
-        raise Refused(
-            f"`{given}` names no assumption: give its id, `<idea>--<variant>--<assumption>`, "
-            f"or the part after the idea"
-        )
+def assumption_ref(files: Files, idea: str, given: str) -> str:
+    """The reference to the assumption that `given` names within `idea` (`naming.named`).
+    Raises Refused where the name reads as no assumption, or as one of another idea."""
+    whole = naming.named(files, naming.ASSUMPTION, given, idea)
     if ids.idea_of(whole) != idea:
         raise Refused(f"`{given}` is an assumption of another idea, which `{idea}` never names")
     return ids.ref(ids.ASSUMPTIONS, whole)
 
 
-def cycle_ref(idea: str, given: str) -> str:
-    """The reference to the cycle `given` names: its id whole, or its own part, which `idea`
-    qualifies. Raises Refused where it is neither, or names a cycle of another idea."""
-    whole = given if ids.is_idea_qualified(given) else None
-    if whole is None and ids.is_segment(given):
-        whole = ids.qualify(idea, given)
-    if whole is None:
-        raise Refused(f"`{given}` names no cycle: give its id, `<idea>--<cycle>`, or its own part")
+def cycle_ref(files: Files, idea: str, given: str) -> str:
+    """The reference to the cycle that `given` names within `idea` (`naming.named`). Raises
+    Refused where the name reads as no cycle, or as one of another idea."""
+    whole = naming.named(files, naming.CYCLE, given, idea)
     if ids.idea_of(whole) != idea:
         raise Refused(f"`{given}` is a cycle of another idea, which `{idea}` never names")
     return ids.ref(ids.CYCLE, whole)
