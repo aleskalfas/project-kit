@@ -13,12 +13,12 @@ Look for the beliefs the model stands on. Most live in a few places:
 - **Reaching customers:** the early channels, and the first stage's target.
 - **What turns a pricing into the price,** such as how often a customer buys, or the share kept of a sale (DEC-002 point 4).
 
-## 2. Write each as a belief that could turn out false
+## 2. Write each as the leap of faith it is
 
-A good statement names who does what, in a way an experiment could later show wrong. It holds one belief, and speaks of what people do rather than what they say.
+An assumption states one belief the model rests on, plainly, as the person holds it (DEC-002 point 8). It names who does what, specifically enough that a test of it can be designed. It is not yet the test. The form that could be shown false, one action, a number expected and a time box, is the experiment's declaration (`experiment.md`).
 
-- **Too vague:** "People like board games."
-- **Testable:** "Hosts of regular game nights lose at least an hour a month settling dates."
+- **Too vague to test:** "People like planning their meals."
+- **A leap of faith a test can be built on:** "Parents back at work lose an evening a week to planning meals."
 
 Give its kind, the desk step whose risk it carries: `desirability`, `viability` or `feasibility`. Then write it, from the entry or the input it comes from:
 
@@ -27,27 +27,27 @@ pkit lean add-assumption <variant> "<statement>" --kind desirability|viability|f
 pkit lean add-assumption <variant> "<statement>" --kind viability --input price|lifetime|conversion|referral-share [--side <side>]
 ```
 
-Each is content. The command gives its id, and places it one past the highest rank, which judges nothing. Show the person the list as it stands.
+Each is content, and its statement is in words the person agrees to. The command gives its id, and places it one past the highest rank, which judges nothing. Show the person the list as it stands.
 
 - **To change one:** `edit-assumption <assumption>`, which keeps its id, and warns where a declared experiment tests it.
-- **To remove one:** `remove-assumption <assumption>`, refused while an experiment tests it.
+- **To remove one:** `remove-assumption <assumption>`.
 
 ## 3. Rank them, with the person
 
-Propose an order, the riskiest first, with a sentence for each place. Weigh two things together:
+The order is the person's. Ask for it first: which would hurt the model most if it turned out wrong? Help them weigh two things together:
 
 - **How likely it is wrong,** given what the person knows today.
 - **How much of the model falls with it.** A belief the whole canvas rests on, such as the top problem, outranks one that a change of price could mend.
 
 Customer risks usually come before technical ones: whether people want it before whether it can be built. An assumption that cannot be tested until later still takes its place by risk.
 
-The order is the person's. Ask whether it stands, or how they would change it. On their answer, run the ranking as they gave it:
+Once they have given their order, or when they ask, give yours, with a sentence for each place where it differs. Take the ranking as the dispatcher's "Asking a judgement" says, and run it as they gave it:
 
 ```
 pkit lean rank <variant> <assumption> <assumption> ... --person-decided
 ```
 
-The assumptions named take the first ranks, in the order given. Those left out follow as they were ranked. A rank keeps no fingerprint, so the person may change it whenever they learn something.
+The assumptions named take the first ranks, in the order given. Those left out follow as they were ranked. A rank records no who or when, and keeps no fingerprint, so the person may change it whenever they learn something (DEC-002 point 8).
 
 ## 4. Read where each stands
 
@@ -55,17 +55,17 @@ An assumption stores no state of its own. Whether it is untested, being tested, 
 
 ## Example
 
-For `board-game--hosts`, you propose four assumptions, and write them as the person agrees each statement:
+For `meal-plan--households`, you draft four statements from the canvas and the estimate, and write each once the person agrees its words:
 
 ```
-pkit lean add-assumption board-game--hosts "Hosts of regular game nights lose at least an hour a month settling dates" --kind desirability --entry dates-take-messages --id dates-cost-hours
-pkit lean add-assumption board-game--hosts "Four in a hundred hosts reached will pay 4 EUR a month" --kind viability --input conversion --id four-percent-pay
-pkit lean add-assumption board-game--hosts "Board-game forums reach hosts who would pay" --kind feasibility --entry forums --id forums-reach-hosts
-pkit lean add-assumption board-game--hosts "A paying host stays for two years" --kind viability --input lifetime --id two-year-hosts
+pkit lean add-assumption meal-plan--households "Parents back at work lose an evening a week to planning meals" --kind desirability --entry planning-takes-long --id planning-burden
+pkit lean add-assumption meal-plan--households "A paying household stays two years" --kind viability --input lifetime --id two-year-stay
+pkit lean add-assumption meal-plan--households "Five in a hundred households reached pay 8 EUR a month" --kind viability --input conversion --id five-percent-pay
+pkit lean add-assumption meal-plan--households "Groups of new parents reach households who would pay" --kind feasibility --entry parent-groups --id groups-reach-parents
 ```
 
-You propose the order as written. Without the pain of settling dates nothing else matters, and the conversion breaks the goal soonest. The person agrees, but moves the forums last: they post there already, and trust them more than a two-year lifetime. You run:
+You ask the person for their order. They put the planning burden first, then the two-year stay, which they trust least of the inputs, then the conversion, and the parents' groups last, since they are in two of them already. Asked for your view, you say you would have put the conversion before the stay, since no fourteen-day test can show a two-year lifetime. They keep their order: when a belief can be tested does not change how much rests on it. You run the ranking without the flag, show them its question, and on their confirmation run:
 
 ```
-pkit lean rank board-game--hosts dates-cost-hours four-percent-pay two-year-hosts forums-reach-hosts --person-decided
+pkit lean rank meal-plan--households planning-burden two-year-stay five-percent-pay groups-reach-parents --person-decided
 ```

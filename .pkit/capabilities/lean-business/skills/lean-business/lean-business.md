@@ -101,12 +101,23 @@ pkit lean status <idea>
 
 The first gives one line for each idea, and the second one idea in full. Follow `return.md` with what they show, whether the person has been away for a day or for months. Positions come from the process engine, worked out from the files each time (COR-033). Never carry one over from memory or an earlier session.
 
+## A new idea: three things before the first write
+
+When the person brings an idea the status does not list, settle these with them before any command writes, whether they start from a sketch or from the goal. The first write creates the idea's folder, whichever command makes it.
+
+- **Where the ideas live.** Before the project's first idea, ask whether `lean-business/` at the repository's root suits the person (DEC-002 point 1). For another folder, run `pkit lean set-location <path>` on their answer: running it is the consent to recording it. For the default, do nothing, since the first command that writes records it and says so. Where `lean-business/` already holds files of another kind, that first write is refused, and the person names another folder.
+- **Who may read it.** An idea's files are as public as the repository that holds them (DEC-002 point 1). Ask whether that suits this idea. One the person wants private belongs in a private repository, chosen now, since version control keeps whatever was once written.
+- **The idea's id.** Agree a short id with the person: words of lower-case letters and digits, the first beginning with a letter, joined by single hyphens. It names the idea's folder and qualifies the id of everything in it (DEC-002 point 7), so choose one that will last.
+
+Then open `goal.md` or `sketch.md`, whichever the person starts with.
+
 ## Pick the operation
 
 | You want to | Sub-procedure | Commands |
 |---|---|---|
 | Come back to an idea, or open any session on one | `return.md` | `status`, then what waits |
-| Set or change the idea's goal | `goal.md` | `set-location`, `set-goal` |
+| Start a new idea | "A new idea" above | `set-location` |
+| Set or change the idea's goal | `goal.md` | `set-goal` |
 | Sketch a variant's canvas, or revise one | `sketch.md` | `new-variant`, `add-entry` and the canvas's other content commands, `canvas` |
 | Review whether a variant is desirable | `desirability.md` | `judge` |
 | Judge whether it can reach the goal | `viability.md` | `set-inputs`, `estimate`, `judge` |
@@ -132,7 +143,7 @@ One idea runs through these steps, and comes back round them each cycle:
 5. **The experiments.** Each tests one assumption in at most fourteen days, declared before it runs and frozen once declared (DEC-002 point 9).
 6. **The review.** At the window's end, the person names the variant that did best and perseveres, pivots or pauses for it (DEC-003 point 4).
 
-The first sketch has no fixed order, and the person may set the goal before or after it. The desk steps and the desirability review have a fixed order, and the commands hold it.
+The first sketch has no fixed order, and the person may set the goal before or after it. The desk steps have a fixed order, which the commands hold. The desirability review takes its five boxes in a fixed order too, which only this skill holds (`desirability.md`).
 
 ## Shared framing
 
@@ -140,25 +151,36 @@ The first sketch has no fixed order, and the person may set the goal before or a
 
 Two kinds of command write an idea's files, and you treat them differently (DEC-003 point 5).
 
-- **Content,** which you may write as you draft: a variant, its entries, sides, archetype and authors, the estimate's inputs, the traction target, assumptions, and a draft experiment's fields. Run the command, then show the person what it wrote, such as the grid `pkit lean canvas` draws. The person's words win over yours, so ask before you rephrase what they said.
-- **The person's judgements,** which you never take on your own. Each command for them records who decided and when, and takes `--person-decided`:
-  - **at the desk:** the goal, a verdict, a shortlisting, shelving and splitting
-  - **before a test:** the ranking, a cycle's plan, an estimate and a declaration
+- **Content,** which the commands write without asking: a variant, its entries, sides, archetype and authors, the estimate's inputs, the traction target, assumptions, and a draft experiment's fields. You may run them as you draft with the person, then show the person what each wrote, such as the grid `pkit lean canvas` draws. Two parts of it are the person's to give, never yours to fill in:
+  - **their words,** in every entry (see "The person's words" below)
+  - **the estimate's inputs,** which are the person's guesses: ask for each, and write the number they give
+- **The person's judgements,** which you never take on your own. Each command for one takes `--person-decided` (DEC-003 point 5). Each records who decided and when, save the ranking, which records neither, and an estimate, which records its maker alone (DEC-002 points 2 and 9):
+  - **at the desk:** the goal (DEC-002 points 2 and 3), a verdict, a shortlisting, shelving and splitting
+  - **before a test:** the ranking, a cycle's plan, an estimate (DEC-002 point 9) and a declaration
   - **after it:** a stopping rule reached, a result, a next action and a cycle's decision
   - **when life intervenes:** a suspension and a resumption
+
+### The person's words
+
+Write what the person says in their own words: an entry, a verdict's note, a reason, what an experiment taught them, and every answer a command records. Where you would shorten or rephrase it, propose the new words, and write them only once the person agrees to them. The examples in these sub-procedures show it.
 
 ### Asking a judgement
 
 Take each of the person's judgements in these steps:
 
-1. **Get its question.** Run the command without `--person-decided`. Off a terminal, it prints its question, does nothing and exits 3. A move's question is its process's own prompt.
-2. **Set out what bears on it.** Show what the files hold, the numbers worked out and what the method asks. You may say which way you lean and why.
-3. **Ask the one question,** and wait. Ask one judgement at a time.
-4. **Run it on the answer.** Once the person has answered that question in the conversation, run the command with `--person-decided`, with exactly what they answered. Where they answer no, or not yet, run nothing.
+1. **Set out what bears on it.** Show what the files hold, the numbers worked out and what the method asks. Keep your own lean back for now.
+2. **Ask the one question in the conversation,** and wait. Ask one judgement at a time. The person speaks first: give your own lean, and why, only once they have answered, or when they ask for it. Where it differs from their answer, say so plainly and let them weigh it. Their answer is what they say after that, not your lean.
+3. **Confirm it through the command.** Run the command without `--person-decided`, carrying exactly the person's answer. Off a terminal, it prints its question, does nothing and exits 3. A move's question is its process's own prompt. Show the person that question, on a no as on a yes, and ask them to confirm it. If the run waits for input instead of exiting, your harness gave it a terminal: answer nothing, stop the run, and show the person the question it printed.
+4. **Record it.** Once the person confirms, run the same command again with `--person-decided`. A no is recorded as a yes is wherever a command records one, such as a verdict's no. Run nothing where the person says not yet, or chooses not to take the act at all, such as leaving a variant unshortlisted.
+
+Two judgements take these steps with a difference:
+
+- **An estimate** is a guess made alone, before anyone compares (DEC-002 point 9). So step 1 shows nothing, and step 2 has no lean of yours. Ask for the person's guess before you show any number, the bar included, and offer no value, range or hint, even when asked, until their guess is recorded. Run `record-estimate` only with the number they gave, without the flag and then with it (`experiment.md`).
+- **A result** is asked before its bar is shown: ask what was measured, and only then set the declaration beside it (`result.md`).
 
 Hold to these, whatever the request:
 
-- **Never on your own judgement.** You pass `--person-decided` only after the person's answer to that question, about that subject, as the files now stand. An answer given before a change to the canvas is asked again.
+- **Never on your own judgement.** You pass `--person-decided` only after the person's answer to that question, about that subject, as the files now stand, and their confirmation of the command's own question. An answer given before a change to the canvas is asked again.
 - **Never in the person's place.** A request to "decide as you see fit" hands you a judgement. Decline it, and ask each question. No delegation level hands one of these to an agent (DEC-003 point 5; COR-072 point 13).
 - **Never around the commands.** Write no judgement into a file by hand. Nothing in a file proves a person answered, so the command's consent form is the claim (DEC-003 point 5; COR-048 point 5).
 
@@ -171,11 +193,13 @@ Hold to these, whatever the request:
 - **A warning** never stops a command. Relay each one. A warning that a verdict or a shortlisting went stale names the command that judges it again: offer it to the person.
 - **Every finding at once:** `pkit lean check` lists each error and warning the idea's files hold, such as a guideline a sketch misses, and writes nothing.
 
-Where a command's `--help` differs from what this skill shows, the help is right, since the commands are built to their records.
+What each command refuses is in the README's command tables and in the command's own `--help`, and these sub-procedures do not list it. Where a command's `--help` differs from what this skill shows, the help is right, since the commands are built to their records.
 
 ### The words
 
-Use the capability's words (DEC-001 point 7): an *idea*, a *variant*, a *canvas*, a *side* or a *segment*, a *verdict*, the *estimate*, an *assumption*, an *experiment*, a *cycle*, a *suspension* and the *customer factory*. For a group of customers, say *side* or *segment*. The words of software analysis for its roles and their paths name no part of a business model.
+Use the capability's words (DEC-001 point 7): an *idea*, a *variant*, a *canvas*, a *side* or a *segment*, a *verdict*, the *estimate*, an *assumption*, an *experiment*, a *cycle*, a *suspension* and the *customer factory*. For a group of customers, say *side* or *segment*.
+
+Never say *actor* or *journey*. They are the software-analysis capability's words, for the roles that use a system and their paths through it, and a canvas models a business, not a system.
 
 ### Every word your own
 
@@ -194,13 +218,17 @@ The capability tells the method in its own words (DEC-001 points 5 and 6). So do
 
 Nothing expires, and nothing is decided while the person is away (DEC-001 point 10). Never press the person with a date. An experiment past its end, or a cycle past its window, waits for them.
 
-## The example: a board-game idea
+### Ending a session
 
-Each sub-procedure carries the same idea further. A person wants to build a platform for people who play board games together. Its id is `board-game`.
+The commands write the idea's files and commit nothing. Before the session ends, suggest that the person commit them. Version control is what shows who committed each judgement (DEC-003 point 5), and what changed in a canvas during a cycle, which its review reads (DEC-002 point 11). Commit only on the person's word.
 
-- **The goal:** 120,000 EUR a year, within three years.
-- **The variants:** a first broad sketch, `board-game--platform`, is split into two stories. In `board-game--hosts`, direct, the hosts of regular game nights pay a subscription. In `board-game--venues`, multisided, players use it free and game cafés pay to fill their tables.
-- **The cycle:** `board-game--first`, 120 days from 1 December 2026, explores both.
-- **The experiments:** interviews with hosts, a price page for hosts, an offer to cafés, and a page for clubs.
+## The example: a weekly meal-plan service
+
+Each sub-procedure carries the same idea further. A person wants to offer households a plan of the week's evening meals, with the shopping list that goes with it. Its id is `meal-plan`.
+
+- **The goal:** 240,000 EUR a year, within three years.
+- **The variants:** a first broad sketch, `meal-plan--service`, is split into two stories. In `meal-plan--households`, direct, households pay a monthly subscription. In `meal-plan--grocers`, multisided, cooks use it free and grocers that deliver pay to have their offers in the plans.
+- **The cycle:** `meal-plan--first`, 120 days from 1 December 2026, explores both.
+- **The experiments:** interviews with parents, a price page for households, an offer to grocers, and a page for employers.
 
 The numbers and the people in it are made up.

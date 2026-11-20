@@ -11,7 +11,7 @@ The step comes after desirability has a yes, and judges the idea's goal, the rev
 
 ## 1. Give the estimate its inputs
 
-Ask the person for each input, one side at a time in a model with several. Each is a guess, and is marked as one.
+The inputs are the person's guesses, so ask for each, one side at a time in a model with several, and write the number they give, never one of yours. The file holds each as a plain number, and nothing in it marks it as a guess: the inputs the estimate rests on most become the variant's assumptions (step 3), where their risk is ranked and tested.
 
 - **The price:** what the business keeps from one active customer, on average, each month or year, in the idea's currency.
   - A one-off sale counts what a customer pays over their lifetime, spread over that lifetime.
@@ -43,44 +43,47 @@ Read each number to the person in plain words, for each side that pays:
 - **The leads needed each year** to win the rest.
 - **The active customers on the way,** year by year, growing by the traction multiplier.
 
-Where an input is missing, the estimate names it, and works out the numbers that rest on none. Give it, and run the estimate again.
+Where an input is missing, the estimate names it, and works out the numbers that rest on none. Ask the person for it, and run the estimate again.
 
 ## 3. Find what breaks it
 
-Ask which input, if it were a little worse, would put the goal out of reach. Work a what-if out in the conversation, from the formulas in the README. Change an input only when the person's belief about it changed, since a change makes the verdicts that judged it stale.
+Ask the person which input, if it were a little worse, would put the goal out of reach. Work a what-if out in the conversation, from the formulas in the README. Change an input only when the person's belief about it changed, since a change makes the verdicts that judged it stale.
 
 The inputs that break the estimate, and the ones that would mend it, are the variant's first risky assumptions. Offer to write them now with `add-assumption --input` (`assumptions.md`).
 
 ## 4. The verdict
 
-Whether each number is within reach is the person's judgement, not the command's. Ask it against the channels on the canvas and the time the person has. For example: can those channels bring that many leads in a year? Is that lifetime what they see among such customers?
+Whether each number is within reach is the person's judgement, not the command's. Help them ask it against the channels on the canvas and the time they have. For example: can those channels bring that many leads in a year? Is that lifetime what they see among such customers?
 
-1. Run `pkit lean judge <variant> viability yes` without the flag, which prints the process's question.
-2. Set out the numbers and what breaks them, and say which way you lean.
-3. Ask, and wait for the person's yes or no, with a sentence of why.
-4. Record their answer:
+Take it as the dispatcher's "Asking a judgement" says:
+
+1. Set out the numbers and what breaks them.
+2. Ask the person's verdict, yes or no, with a sentence of why in their words. Give your own lean once they have answered, or when they ask.
+3. Run the command with their answer and their note, first without the flag, showing them its question, and on their confirmation with it:
 
    ```
-   pkit lean judge <variant> viability yes|no --note "<their reason>" --person-decided
+   pkit lean judge <variant> viability yes|no --note "<their words>" --person-decided
    ```
 
-A yes moves the variant to viable, and you go on to `feasibility.md`. A no moves nothing, and the canvas or the inputs are revised. A goal changed later makes the verdict stale (DEC-002 point 13).
+A yes moves the variant to viable, and you go on to `feasibility.md`. A no is recorded, moves nothing, and the canvas or the inputs are revised. A goal changed later makes the verdict stale (DEC-002 point 13).
 
 ## Example
 
-For `board-game--hosts`, the person gives a price of 4 EUR a month, a lifetime of two years, a conversion of 4% and a referral share of 20%:
+For `meal-plan--households`, you ask for each input. The person gives a price of 8 EUR a month, a lifetime of two years, a conversion of 5% and a referral share of 20%:
 
 ```
-pkit lean set-inputs board-game--hosts --price 4 month --lifetime 2 year --conversion 0.04 --referral-share 0.2
-pkit lean estimate board-game--hosts
+pkit lean set-inputs meal-plan--households --price 8 month --lifetime 2 year --conversion 0.05 --referral-share 0.2
+pkit lean estimate meal-plan--households
 ```
 
-You read it to them. A host brings 48 EUR a year, so the goal of 120,000 EUR needs 2,500 active hosts. With a lifetime of two years, 1,250 leave each year, and as many must be won. Referrals bring 250 of them, and the channels the other 1,000. At a conversion of 4%, that is 25,000 hosts reached each year, about seventy a day. On the way, the variant needs 25 hosts in its first year and 250 in its second.
+You read it to them. A household brings 96 EUR a year, so the goal of 240,000 EUR needs 2,500 active households. With a lifetime of two years, 1,250 leave each year, and as many must be won. Referrals bring 250 of them, and the channels the other 1,000. At a conversion of 5%, that is 20,000 households reached each year, about 55 a day. On the way, the variant needs 25 households in its first year and 250 in its second.
 
-You ask what would break it. At 2% conversion, the leads double to 50,000 a year. The person thinks the forums could bring 25,000, not 50,000, so the conversion is the leap of faith. You add it as an assumption, and the lifetime with it. The person answers yes, and you record:
+You ask which input they trust least. The person names the lifetime: families they know drop such plans after a few months. You work it out with them: at a lifetime of one year, 2,500 leave each year, the channels must win 2,000, and 40,000 households must be reached. The person thinks the parents' groups and their workplaces could reach 20,000, not 40,000, so the lifetime is the leap of faith. You offer to write it as an assumption, and the conversion with it, and they agree.
+
+You ask for their verdict. They answer yes, in their words "reachable if families stay two years, and that is what we test first". You confirm it through the command's question, and run:
 
 ```
-pkit lean judge board-game--hosts viability yes --note "Forums could bring 25,000 hosts a year, if 4% pay" --person-decided
+pkit lean judge meal-plan--households viability yes --note "Reachable if families stay two years, and that is what we test first" --person-decided
 ```
 
-For `board-game--venues`, the players' side pays nothing and the cafés' side 60 EUR a month. The goal needs 167 cafés. The person judges that within reach across the country, and answers yes.
+For `meal-plan--grocers`, the cooks' side pays nothing and the shops' side 200 EUR a month. The goal needs 100 grocers. The person judges that within reach across their region, and answers yes.

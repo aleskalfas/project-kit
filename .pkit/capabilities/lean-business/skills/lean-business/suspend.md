@@ -9,6 +9,8 @@ A *suspension* is a stretch in which the person's life, not the work, stopped a 
 - **From today or earlier.** An absence still to come is recorded when it begins, or on return. One known when planning was sized into the window.
 - **The whole cycle.** No experiment is suspended alone.
 
+A silence in the files is not an absence by itself. While an experiment runs, nothing is due, so nothing is recorded. Only the person says whether they were away.
+
 ## 1. Ask, and say what it would do
 
 Ask the person whether life stopped the work, since which day they were away, and whether they are back, and since which day. The days are their word. Then say what recording it would do (DEC-002 point 12):
@@ -20,21 +22,21 @@ Ask the person whether life stopped the work, since which day they were away, an
 
 ## 2. Record it
 
-Run the command without the flag to get its question, ask it, and on their yes run one of these.
+Take it as the dispatcher's "Asking a judgement" says: run the command with their days and their reason, in their words, without the flag, show them its question, and on their confirmation run one of these.
 
 - **The absence is over,** the usual case on return. Record it whole, its first day and the day the cycle resumed, which counts again:
 
   ```
-  pkit lean suspend <cycle> --reason "<their reason>" --since <first day away> --resumed <day back> --person-decided
+  pkit lean suspend <cycle> --reason "<their words>" --since <first day away> --resumed <day back> --person-decided
   ```
 
 - **The person is leaving now,** and the absence goes on:
 
   ```
-  pkit lean suspend <cycle> --reason "<their reason>" --since <day> --person-decided
+  pkit lean suspend <cycle> --reason "<their words>" --since <day> --person-decided
   ```
 
-The command refuses a suspension that breaks its rules, and says which. Such are a first day outside the window or ahead of today, a covered day with recorded work, or one that would make an act already recorded read as refused. Read the reason to the person, and ask for other days. Never record around it.
+Where the command refuses it, it says which rule of DEC-002 point 12 the days break. Read the reason to the person, and ask for other days. Never record around it.
 
 ## 3. While the cycle is suspended
 
@@ -44,7 +46,7 @@ The command refuses a suspension that breaks its rules, and says which. Such are
 
 ## 4. Resume it
 
-When the person is back, ask on which day they resumed, today unless they name an earlier one. On their answer:
+When the person is back, ask on which day they resumed, today unless they name an earlier one. Confirm it through the command's question, and on their confirmation run:
 
 ```
 pkit lean resume <cycle> [--on <day>] --person-decided
@@ -54,10 +56,10 @@ It goes back to running, or into review where the window, moved by the suspensio
 
 ## Example
 
-The person was away from 8 January 2027 and came back on 22 January, as `return.md` found. You tell them what it would do. The window's end moves from 30 March to 13 April. The clubs page, declared to start on 11 January, has not started, so it moves to start on 22 January. The cafés offer, running since 4 January, keeps its dates, and came due when it ended on the 17th. They answer yes:
+The person was away from 8 January 2027 and came back on 22 January, as `return.md` found. You tell them what it would do. The window's end moves from 30 March to 13 April. The employers page, declared to start on 11 January, has not started, so it moves to start on 22 January. The grocers offer, running since 4 January, keeps its dates, and came due when it ended on the 17th. They answer yes, and confirm the command's question:
 
 ```
-pkit lean suspend board-game--first --reason "Family matters" --since 2027-01-08 --resumed 2027-01-22 --person-decided
+pkit lean suspend meal-plan--first --reason "Family matters" --since 2027-01-08 --resumed 2027-01-22 --person-decided
 ```
 
-The cycle is running again, and the cafés offer waits for its result.
+The cycle is running again, and the grocers offer waits for its result.
