@@ -45,7 +45,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import acting, cycles, editing, engine, positions, writes
+from _lib import acting, cycles, editing, engine, naming, positions, writes
 from _lib.acting import Context
 from _lib.experiments import a_day
 from _lib.writes import Refused
@@ -58,7 +58,7 @@ def parser() -> argparse.ArgumentParser:
         prog="pkit lean resume",
         description="Record the day a suspended cycle resumed, which counts again.",
     )
-    made.add_argument("cycle", help="The cycle's id, `<idea>--<cycle>`.")
+    made.add_argument("cycle", help="The cycle, by its id, `<idea>--<cycle>`, or its own part.")
     made.add_argument(
         "--on",
         help="The day you came back, YYYY-MM-DD, which counts again; today where none is given.",
@@ -69,7 +69,7 @@ def parser() -> argparse.ArgumentParser:
 
 def run(args: argparse.Namespace, ctx: Context) -> None:
     files = writes.Files(ctx.root, writes.for_writing(ctx.root))
-    cycle = cycles.open_cycle(files, str(args.cycle))
+    cycle = cycles.open_cycle(files, naming.named(files, naming.CYCLE, str(args.cycle)))
     subject = cycle.id
     before = acting.position(ctx, engine.CYCLE, subject)
     if before.state != positions.SUSPENDED:

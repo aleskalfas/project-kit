@@ -64,6 +64,7 @@ from _lib import (
     experiments,
     gates,
     ids,
+    naming,
     positions,
     readings,
     timeline,
@@ -82,7 +83,7 @@ def parser() -> argparse.ArgumentParser:
         prog="pkit lean review-cycle",
         description="Record a cycle's review, and your decision for the variant that did best.",
     )
-    made.add_argument("cycle", help="The cycle's id, `<idea>--<cycle>`.")
+    made.add_argument("cycle", help="The cycle, by its id, `<idea>--<cycle>`, or its own part.")
     made.add_argument(
         "--reached",
         action="append",
@@ -118,7 +119,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
     if not reasons:
         raise Refused("a review says why: give --reasons the person's words")
     files = writes.Files(ctx.root, writes.for_writing(ctx.root))
-    cycle = cycles.open_cycle(files, str(args.cycle))
+    cycle = cycles.open_cycle(files, naming.named(files, naming.CYCLE, str(args.cycle)))
     subject, idea = cycle.id, cycle.idea
     before = acting.position(ctx, engine.CYCLE, subject)
     plan = cycle.plain()

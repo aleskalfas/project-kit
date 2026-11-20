@@ -52,7 +52,7 @@ from typing import Any
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import acting, cycles, editing, engine, positions, timeline, writes
+from _lib import acting, cycles, editing, engine, naming, positions, timeline, writes
 from _lib.acting import Context
 from _lib.experiments import a_day
 from _lib.writes import Refused
@@ -63,7 +63,7 @@ def parser() -> argparse.ArgumentParser:
         prog="pkit lean suspend",
         description="Record that your life stopped a cycle, from the day you were first away.",
     )
-    made.add_argument("cycle", help="The cycle's id, `<idea>--<cycle>`.")
+    made.add_argument("cycle", help="The cycle, by its id, `<idea>--<cycle>`, or its own part.")
     made.add_argument("--reason", required=True, help="What stopped the work, in a sentence.")
     made.add_argument(
         "--since",
@@ -86,7 +86,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
     since = a_day(str(args.since), "--since")
     resumed = a_day(str(args.resumed), "--resumed") if args.resumed is not None else None
     files = writes.Files(ctx.root, writes.for_writing(ctx.root))
-    cycle = cycles.open_cycle(files, str(args.cycle))
+    cycle = cycles.open_cycle(files, naming.named(files, naming.CYCLE, str(args.cycle)))
     subject = cycle.id
     before = acting.position(ctx, engine.CYCLE, subject)
     _open_to_it(subject, before.state, cycle.plain())

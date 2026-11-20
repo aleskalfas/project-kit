@@ -243,6 +243,23 @@ def test_suspend_refuses_a_cycle_planned_suspended_or_decided(world: lb.World) -
     )
 
 
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ("suspend", "first", "--reason", "Ill", "--since", "2027-03-01"),
+        ("resume", "first"),
+        ("review_cycle", "first", "--reached", "1", "--decision", "persevere", "--reasons", "-"),
+    ],
+)
+def test_the_cycle_commands_read_a_cycle_by_its_own_part(
+    world: lb.World, argv: tuple[str, ...]
+) -> None:
+    run = world.run(*argv)
+    assert run.code == 1
+    assert "no cycle's id" not in run.err
+    assert f"`{FIRST}`" in run.err
+
+
 def test_suspend_refuses_a_suspension_that_breaks_its_rules(world: lb.World) -> None:
     declared(world)
     on(world, date(2027, 3, 15))
