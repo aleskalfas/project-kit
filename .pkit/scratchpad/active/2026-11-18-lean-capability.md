@@ -397,6 +397,7 @@ No accepted record is modified. Its findings, adopted into the plan:
     - **What it keeps:** the real install from a release, the backbone it needs, git history and validation, and the idea stays private.
     - **What a fix costs:** a new candidate. A project on a candidate moves to no other release (ADR-092 point 7), so the person starts a new testers' branch from the final release, enters the new candidate there, installs the capability again and brings the idea's folder across from the earlier branch.
     - **The candidate's versions** live only in its tag, raise no floor and consume no changeset (PRJ-016).
+23. **Resuming may land in review** (the person, 2026-11-20, after a worked example: a cycle of days 1 to 90, suspended on day 50, resumed as of day 60 but recorded on day 120, so its window as moved ends on day 100). Where the window, moved by the suspension, ended before the day the resumption is recorded, the move of resuming goes from suspended into review, under the same gate, as declaring has two targets. The person records the true day of resuming, and gets back no day they worked. Preferred over refusing such a resumption, which would make them name a later day, and over landing in running past the window's end. Found by `process-author` writing the cycle's gates: the engine refused the move, since the cycle read in review.
 
 ### Next
 
