@@ -8,9 +8,12 @@ day the act was recorded, and reports each refusal as an error. So a gate and th
 never disagree on a fact (DEC-002 point 14). A gate reads no clock: the day is its caller's
 (DEC-003 point 1).
 
-**As things stood on the day.** A gate reads a cycle's suspensions as they stood on the day
-of the act (`timeline`, "As they stood on a day"), so a suspension recorded later never
-turns an act a gate let through into one it refuses.
+**As things stood.** A gate reads the suspensions the cycle's data it is given holds. A
+command gives the cycle as it stands; the check gives it as its suspensions stood on the
+day of the act (`timeline.stood`; `acts`), so a suspension recorded later never turns an
+act a gate let through into one it refuses. A suspension's rules ask the gates with and
+without one suspension, so a suspension recorded late contradicts no act already recorded
+(`suspensions`).
 
 **What only the act's own day can judge.** A yes and a shortlisting rest on verdicts that
 are not stale, and a declaration on a shortlisting that is not stale. A canvas changed
@@ -25,7 +28,8 @@ The gates, each named for the act it gates:
   `stale_before`, `shortlisting` and `stale_verdicts`;
 - an experiment (DEC-003 point 3; DEC-002 points 9 and 10): `declaring`,
   `stale_shortlisting`, `unexplored`, `stopping`, `result` and `deciding`;
-- a cycle (DEC-003 point 4; DEC-002 point 11): `planning`, `changing` and `deciding_cycle`.
+- a cycle (DEC-003 point 4; DEC-002 point 11): `planning`, `changing` and `deciding_cycle`;
+- the idea's goal (DEC-002 point 3): `setting_goal`.
 """
 
 from __future__ import annotations
@@ -186,7 +190,11 @@ def stale_verdicts(canvas: Mapping[str, Any], goal: object) -> list[Refusal]:
 
 
 def _stale_verdict(step: str) -> Refusal:
-    judged = "the boxes it judged" if step == "desirability" else "the canvas or the goal it judged"
+    judged = (
+        "the model or the boxes it judged"
+        if step == "desirability"
+        else "the model, the canvas or the goal it judged"
+    )
     return Refusal(
         f"/verdicts/{step}/fingerprint",
         f"the verdict on {step} is stale, and nothing new rests on a stale verdict: {judged} "
@@ -216,7 +224,7 @@ def declaring(
     - a time box of fourteen days at most, ending no earlier than it starts, and starting
       no earlier than `on`;
     - an expected range whose low is no higher than its high;
-    - its cycle open on `on`: its window, as its suspensions stood then, not ended;
+    - its cycle open on `on`: its window, under the suspensions `cycle` holds, not ended;
     - a shortlisted variant: the declaration rests on a shortlisting recorded no later than
       `on`, the variant was neither shelved nor split before `on`, and where the shortlisting
       the canvas keeps now was recorded before `on`, it is the one the declaration rests on,
@@ -249,7 +257,7 @@ def declaring(
     if _number(low) and _number(high) and low > high:
         found.append(f"its expected range runs from {low} to {high}, its low above its high")
     if cycle is not None:
-        window = timeline.cycle_window(cycle, as_of=on)
+        window = timeline.cycle_window(cycle)
         if window is not None and window.end is not None and on > window.end:
             found.append(
                 f"it was declared on {on}, after its cycle's window ended on {window.end}: an "
@@ -346,12 +354,12 @@ def stopping(
     experiment: Mapping[str, Any], on: date, cycle: Mapping[str, Any] | None
 ) -> list[Refusal]:
     """Why recording a generative experiment's stopping rule reached on `on` is refused: it
-    is recorded only on a declared experiment, while its time box runs, as its cycle's
-    suspensions stood on `on` (DEC-002 point 10). Before its time box starts the experiment
+    is recorded only on a declared experiment, while its time box runs, under the
+    suspensions `cycle` holds (DEC-002 point 10). Before its time box starts the experiment
     has not run, and after it ends it is due already."""
     if not isinstance(experiment.get("declared"), Mapping):
         return [Refusal("/stopped", "its stopping rule is recorded, but it was never declared")]
-    box = timeline.experiment_time_box(experiment, cycle, as_of=on)
+    box = timeline.experiment_time_box(experiment, cycle)
     if box is None:
         return []
     if box.start is None or on < box.start:
@@ -359,7 +367,7 @@ def stopping(
             Refusal(
                 "/stopped",
                 f"its stopping rule was reached on {on}, before its time box started, as its "
-                f"cycle's suspensions worked it out then: {span_text(box)}",
+                f"cycle's suspensions work it out: {span_text(box)}",
             )
         ]
     if box.end is not None and on > box.end:
@@ -377,15 +385,15 @@ def result(
     experiment: Mapping[str, Any], on: date, cycle: Mapping[str, Any] | None
 ) -> list[Refusal]:
     """Why recording `experiment`'s result on `on` is refused: it is recorded only on a
-    declared experiment, and a measurement is recorded as spoiled only where a suspension of
-    its cycle ran through its time box, as the suspensions stood on `on` (DEC-002 point 10).
-    Where `cycle` is None, the reference's to report, nothing tells."""
+    declared experiment, and a measurement is recorded as spoiled only where a suspension
+    `cycle` holds ran through its time box (DEC-002 point 10). Where `cycle` is None, the
+    reference's to report, nothing tells."""
     if not isinstance(experiment.get("declared"), Mapping):
         return [Refusal("/result", "its result is recorded, but it was never declared")]
     if _m(experiment.get("result")).get("spoiled") is not True or cycle is None:
         return []
-    box = timeline.experiment_time_box(experiment, cycle, as_of=on)
-    if box is None or timeline.ran_through(box, cycle, as_of=on):
+    box = timeline.experiment_time_box(experiment, cycle)
+    if box is None or timeline.ran_through(box, cycle):
         return []
     return [
         Refusal(
@@ -401,10 +409,10 @@ def deciding(
     experiment: Mapping[str, Any], on: date, cycle: Mapping[str, Any] | None
 ) -> list[Refusal]:
     """Why deciding `experiment` on `on` is refused (DEC-003 point 3): its result is
-    recorded, no later than `on`; it was declared; and its time box ended before `on`, as
-    its cycle's suspensions stood then, unless it is generative and its stopping rule was
-    reached by `on`, within its time box. A day its cycle was suspended is the suspension
-    rules' to refuse."""
+    recorded, no later than `on`; it was declared; and its time box ended before `on`, under
+    the suspensions `cycle` holds, unless it is generative and its stopping rule was reached
+    by `on`, within its time box. A day its cycle was suspended is the suspension rules' to
+    refuse."""
     found: list[Refusal] = []
     recorded = experiment.get("result")
     if not isinstance(recorded, Mapping):
@@ -425,7 +433,7 @@ def deciding(
     if not isinstance(experiment.get("declared"), Mapping):
         found.append(Refusal("/decision", "it is decided, but it was never declared"))
         return found
-    box = timeline.experiment_time_box(experiment, cycle, as_of=on)
+    box = timeline.experiment_time_box(experiment, cycle)
     if box is None:
         return found
     ended = box.end is not None and on > box.end
@@ -500,8 +508,8 @@ def planning(
 
 def changing(cycle: Mapping[str, Any], on: date) -> list[Refusal]:
     """Why changing `cycle`'s plan on `on` is refused: a plan is frozen once its window
-    starts, as its suspensions stood on `on` (DEC-002 point 11)."""
-    window = timeline.cycle_window(cycle, as_of=on)
+    starts, under the suspensions `cycle` holds (DEC-002 point 11)."""
+    window = timeline.cycle_window(cycle)
     if window is None or window.start is None or on <= window.start:
         return []
     return [
@@ -524,8 +532,8 @@ def deciding_cycle(
     its review names and `evidence` the experiments it names, where they resolve (DEC-003
     point 4): each key result's reach recorded; a winning variant the cycle explored,
     neither shelved nor split before `on` for persevere or pivot; for a pivot, at least one
-    experiment decided by `on`; and its window ended before `on`, as its suspensions stood
-    then."""
+    experiment decided by `on`; and its window ended before `on`, under the suspensions
+    `cycle` holds."""
     found: list[Refusal] = []
     review = _m(cycle.get("review"))
     named = ids.parse_ref(review.get("winning"), ids.CANVAS)
@@ -567,7 +575,7 @@ def deciding_cycle(
                 "it pivots on no decided experiment: a pivot names at least one as its evidence",
             )
         )
-    window = timeline.cycle_window(cycle, as_of=on)
+    window = timeline.cycle_window(cycle)
     if window is not None and (window.end is None or on <= window.end):
         ended = "has no end yet" if window.end is None else f"ends on {window.end}"
         found.append(
@@ -577,6 +585,67 @@ def deciding_cycle(
             )
         )
     return found
+
+
+# --- the goal ------------------------------------------------------------------------------------
+
+
+def setting_goal(
+    goal: Mapping[str, Any],
+    on: date,
+    *,
+    cycles: Sequence[Mapping[str, Any]],
+    previous: Mapping[str, Any] | None = None,
+    experiments: Sequence[Mapping[str, Any]] = (),
+) -> list[Refusal]:
+    """Why setting the idea's goal to `goal` on `on` is refused, in an idea whose cycles are
+    `cycles` and whose experiments are `experiments` (DEC-002 point 3):
+
+    - no cycle is planned, running or suspended on `on`: first planned before `on`, and its
+      window, under the suspensions its data holds, not ended by `on`. The goal set on the
+      day a cycle was first planned may have come first, at the last cycle's review, since
+      days have no order within them (DEC-003 point 1);
+    - where `previous` is the goal it replaces, it keeps that goal's currency while an
+      experiment declared by `on` is undecided then, since that experiment's sums were
+      declared in it. The files keep no goal a later one replaced, so the check passes none,
+      and the command alone asks this."""
+    found: list[Refusal] = []
+    for cycle in cycles:
+        planned = first_planned(cycle)
+        window = timeline.cycle_window(cycle)
+        if planned is None or window is None or on <= planned:
+            continue
+        if window.end is None or on <= window.end:
+            found.append(
+                Refusal(
+                    "",
+                    f"the goal was set on {on}, while the cycle `{cycle.get('id')}` was planned, "
+                    f"running or suspended: it changes only while none of the idea's cycles is",
+                )
+            )
+    if previous is not None and previous.get("currency") != goal.get("currency"):
+        undecided = [
+            f"`{e.get('id')}`"
+            for e in experiments
+            if _on_or_before(_m(e.get("declared")).get("when"), on)
+            and not _on_or_before(_m(e.get("decision")).get("when"), on)
+        ]
+        if undecided:
+            found.append(
+                Refusal(
+                    "/currency",
+                    f"the goal's currency changes from {previous.get('currency')} to "
+                    f"{goal.get('currency')} on {on}, while {', '.join(undecided)}, declared "
+                    f"in the first, {'is' if len(undecided) == 1 else 'are'} undecided: a "
+                    f"declared sum keeps the unit it was declared in",
+                )
+            )
+    return found
+
+
+def _on_or_before(value: object, on: date) -> bool:
+    when = day(value)
+    return when is not None and when <= on
 
 
 def _number(value: object) -> bool:

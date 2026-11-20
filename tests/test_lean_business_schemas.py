@@ -71,13 +71,30 @@ def test_the_shared_shapes_allow_the_ids_and_references_the_check_reads() -> Non
     assert shapes["segment"]["pattern"] == f"^{ids.SEGMENT}$"
     assert shapes["idea-qualified-id"]["pattern"] == f"^{ids.IDEA_QUALIFIED}$"
     assert shapes["variant-qualified-id"]["pattern"] == f"^{ids.VARIANT_QUALIFIED}$"
-    for name, namespace in (
-        ("canvas-ref", ids.CANVAS),
-        ("assumption-ref", ids.ASSUMPTIONS),
-        ("experiment-ref", ids.EXPERIMENT),
-        ("cycle-ref", ids.CYCLE),
-    ):
+    for name, namespace in REFERENCES:
         assert shapes[name]["pattern"] == f"^{ids.REF_PATTERN[namespace]}$"
+
+
+REFERENCES = (
+    ("canvas-ref", ids.CANVAS),
+    ("assumption-ref", ids.ASSUMPTIONS),
+    ("experiment-ref", ids.EXPERIMENT),
+    ("cycle-ref", ids.CYCLE),
+)
+
+
+def test_each_reference_is_marked_and_each_namespace_owned_for_the_cores_pass() -> None:
+    """The core's data validation resolves each reference, and finds an id given twice, only
+    where the references are marked and each namespace's file says where its ids lie
+    (COR-029 points 3 and 6; DEC-002 point 7)."""
+    shapes = json.loads((SCHEMAS / "shapes.schema.json").read_text(encoding="utf-8"))["$defs"]
+    for name, namespace in REFERENCES:
+        assert shapes[name]["x-pkit-reference-namespace"] == namespace
+    for document in (ids.CANVAS, ids.EXPERIMENT, ids.CYCLE):
+        schema = json.loads((SCHEMAS / f"{document}.schema.json").read_text(encoding="utf-8"))
+        assert schema["x-pkit-entry-id"] == "/id"
+    listed = json.loads((SCHEMAS / "assumptions.schema.json").read_text(encoding="utf-8"))
+    assert listed["x-pkit-id-collection"] == "/assumptions"
 
 
 def places(kind: str) -> set[str]:
@@ -119,17 +136,19 @@ def test_a_day_the_calendar_does_not_hold_is_found_where_the_shapes_put_a_day() 
 
 
 def test_an_id_is_read_as_the_schemas_allow_it() -> None:
-    assert ids.is_idea_qualified("meal-plan.direct")
-    assert ids.is_variant_qualified("meal-plan.direct.planning-takes-long")
-    assert not ids.is_idea_qualified("Meal-plan.direct")
+    assert ids.is_idea_qualified("meal-plan--direct")
+    assert ids.is_variant_qualified("meal-plan--direct--planning-takes-long")
+    assert not ids.is_idea_qualified("Meal-plan--direct")
     assert not ids.is_segment("meal--plan")
-    assert ids.parse_ref("[canvas:meal-plan.direct]", ids.CANVAS) == ("canvas", "meal-plan.direct")
-    assert ids.parse_ref("[cycle:meal-plan.direct]", ids.CANVAS) is None
-    assert ids.parse_ref("canvas:meal-plan.direct", ids.CANVAS) is None
-    assert ids.idea_of("meal-plan.direct.x") == "meal-plan"
-    assert ids.qualifier("meal-plan.direct.x") == "meal-plan.direct"
-    assert ids.own("meal-plan.direct.x") == "x"
-    assert ids.ref(ids.CYCLE, "meal-plan.first") == "[cycle:meal-plan.first]"
+    direct = ("canvas", "meal-plan--direct")
+    assert ids.parse_ref("[canvas:meal-plan--direct]", ids.CANVAS) == direct
+    assert ids.qualify("meal-plan", "direct", "x") == "meal-plan--direct--x"
+    assert ids.parse_ref("[cycle:meal-plan--direct]", ids.CANVAS) is None
+    assert ids.parse_ref("canvas:meal-plan--direct", ids.CANVAS) is None
+    assert ids.idea_of("meal-plan--direct--x") == "meal-plan"
+    assert ids.qualifier("meal-plan--direct--x") == "meal-plan--direct"
+    assert ids.own("meal-plan--direct--x") == "x"
+    assert ids.ref(ids.CYCLE, "meal-plan--first") == "[cycle:meal-plan--first]"
 
 
 # --- what is refused ----------------------------------------------------------------------------
@@ -151,18 +170,37 @@ def _set(path: tuple[Any, ...], value: Any) -> Callable[[Any], None]:
 _DROP = object()
 
 REFUSED: list[tuple[str, str, str, Callable[[Any], None]]] = [
-    ("an-upper-case-id", "canvas", "variants/direct/canvas.yaml", _set(("id",), "Meal.direct")),
+    (
+        "an-upper-case-id",
+        "canvas",
+        "variants/direct/canvas.yaml",
+        _set(("id",), "Meal-plan--direct"),
+    ),
+    (
+        "an-id-joined-by-a-full-stop",
+        "canvas",
+        "variants/direct/canvas.yaml",
+        _set(("id",), "meal-plan.direct"),
+    ),
+    (
+        "a-reference-joined-by-a-full-stop",
+        "experiment",
+        "experiments/first-interviews.yaml",
+        _set(("cycle",), "[cycle:meal-plan.first]"),
+    ),
+    ("a-goal-without-its-currency", "goal", "goal.yaml", _set(("currency",), _DROP)),
+    ("a-currency-not-in-capitals", "goal", "goal.yaml", _set(("currency",), "eur")),
     (
         "a-bare-reference",
         "experiment",
         "experiments/first-interviews.yaml",
-        _set(("cycle",), "meal-plan.first"),
+        _set(("cycle",), "meal-plan--first"),
     ),
     (
         "a-reference-into-another-namespace",
         "experiment",
         "experiments/first-interviews.yaml",
-        _set(("assumption",), "[canvas:meal-plan.direct]"),
+        _set(("assumption",), "[canvas:meal-plan--direct]"),
     ),
     (
         "a-shortlisting-without-its-fingerprint",
@@ -234,7 +272,7 @@ REFUSED: list[tuple[str, str, str, Callable[[Any], None]]] = [
         "a-field-the-schema-does-not-name",
         "goal",
         "goal.yaml",
-        _set(("currency",), "EUR"),
+        _set(("margin",), 0.2),
     ),
     (
         "a-rested-on-without-its-day",
@@ -282,7 +320,7 @@ def test_a_split_names_the_variants_it_went_into() -> None:
     outcome: dict[str, Any] = {"kind": "split", "by": "A. Founder", "when": "2026-10-05"}
     data["outcome"] = outcome
     assert errors("canvas", data)
-    outcome["into"] = ["[canvas:meal-plan.cooks]"]
+    outcome["into"] = ["[canvas:meal-plan--cooks]"]
     assert errors("canvas", data) == []
 
 

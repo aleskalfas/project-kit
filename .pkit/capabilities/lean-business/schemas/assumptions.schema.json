@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "assumptions.schema.json",
   "title": "A variant's assumptions — lean-business capability",
-  "description": "Formal shape of `<location>/<idea>/variants/<variant>/assumptions.yaml` (lean-business DEC-002 point 8): the variant's one list of assumptions, each with its id qualified by the variant, its statement as a leap of faith, where it comes from, its kind and its rank by risk. An assumption stores no outcome and no position: whether it is untested, being tested, supported, refuted or inconclusive follows from the experiments that test it (DEC-003 point 8). Its link to the canvas entry it comes from is no reference, since the method removes an entry its experiment refuted (DEC-002 point 7). The list is the namespace experiments reference, `[assumptions:<id>]`. Companion per COR-018.",
+  "description": "Formal shape of `<location>/<idea>/variants/<variant>/assumptions.yaml` (lean-business DEC-002 point 8): the variant's one list of assumptions, each with its id qualified by the variant, its statement as a leap of faith, where it comes from, its kind and its rank by risk. An assumption stores no outcome and no position: whether it is untested, being tested, supported, refuted or inconclusive follows from the experiments that test it (DEC-003 point 8). Its link to the canvas entry it comes from is no reference, since the method removes an entry its experiment refuted (DEC-002 point 7). The list is the namespace experiments reference, `[assumptions:<id>]`, which the core's data validation resolves among the lists it validates (COR-029). Companion per COR-018.",
   "x-pkit-id-collection": "/assumptions",
   "type": "object",
   "required": [
@@ -41,7 +41,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "description": "The assumption's id, qualified by its variant, such as `board-game.platform.groups-pay-monthly`.",
+          "description": "The assumption's id, qualified by its variant, such as `board-game--platform--groups-pay-monthly`.",
           "$ref": "shapes.schema.json#/$defs/variant-qualified-id"
         },
         "statement": {

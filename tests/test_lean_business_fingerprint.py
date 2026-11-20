@@ -18,15 +18,20 @@ from tests.in_process import load
 SCHEMAS = Path(__file__).resolve().parent.parent / ".pkit/capabilities/lean-business/schemas"
 IDEA = Path(__file__).resolve().parent / "fixtures/lean-business/repo/lean-business/meal-plan"
 
-GOAL = {"revenue": {"amount": 1000000, "per": "year"}, "years": 3, "by": "A. Founder"}
+GOAL = {
+    "revenue": {"amount": 1000000, "per": "year"},
+    "currency": "EUR",
+    "years": 3,
+    "by": "A. Founder",
+}
 
 
 def canvas(**boxes: Any) -> dict[str, Any]:
     return {
-        "id": "idea.direct",
+        "id": "idea--direct",
         "archetype": "direct",
         "boxes": {
-            name: [{"id": f"idea.direct.{name}", "text": text}] for name, text in boxes.items()
+            name: [{"id": f"idea--direct--{name}", "text": text}] for name, text in boxes.items()
         },
         "viability": [{"price": {"amount": 8, "per": "month"}, "conversion": 0.05}],
         "traction": {"multiplier": 10, "first-stage": {"metric": "revenue", "target": 50}},
@@ -96,7 +101,8 @@ def test_viability_covers_the_revenue_streams_the_inputs_and_the_goal() -> None:
     assert fingerprint.of_verdict("viability", base, {**GOAL, "years": 5}) != taken
     cheaper = {**base, "viability": [{"price": {"amount": 4, "per": "month"}}]}
     assert fingerprint.of_verdict("viability", cheaper, GOAL) != taken
-    worded = {**base, "boxes": {**base["boxes"], "problem": [{"id": "idea.direct.p", "text": "x"}]}}
+    worded_box = [{"id": "idea--direct--p", "text": "x"}]
+    worded = {**base, "boxes": {**base["boxes"], "problem": worded_box}}
     assert fingerprint.of_verdict("viability", worded, GOAL) == taken
 
 
@@ -114,6 +120,28 @@ def test_the_goal_counts_by_its_content_never_who_set_it_or_when() -> None:
     taken = fingerprint.of_verdict("viability", base, GOAL)
     reset = {**GOAL, "by": "B. Partner", "when": "2027-01-01"}
     assert fingerprint.of_verdict("viability", base, reset) == taken
+    # Its currency is the unit of every sum, so a change of it is a change of content.
+    assert fingerprint.of_verdict("viability", base, {**GOAL, "currency": "USD"}) != taken
+    assert fingerprint.of_shortlisting(base, {**GOAL, "currency": "USD"}) != (
+        fingerprint.of_shortlisting(base, GOAL)
+    )
+
+
+@pytest.mark.parametrize(
+    "model",
+    [{"archetype": "multisided"}, {"sides": ["cooks", "shops"]}],
+    ids=["its-archetype", "its-sides"],
+)
+def test_every_verdict_and_the_shortlisting_cover_the_variants_model(
+    model: dict[str, Any],
+) -> None:
+    base = canvas(problem="Too long")
+    changed = {**base, **model}
+    for step in fingerprint.STEPS:
+        assert fingerprint.of_verdict(step, changed, GOAL) != (
+            fingerprint.of_verdict(step, base, GOAL)
+        )
+    assert fingerprint.of_shortlisting(changed, GOAL) != fingerprint.of_shortlisting(base, GOAL)
 
 
 def test_a_kind_names_what_it_covers_so_one_never_stands_for_another() -> None:
@@ -133,7 +161,7 @@ def test_a_shortlisting_covers_every_box_and_not_the_verdicts_kept_beside_it() -
 
 
 def test_a_declaration_covers_its_fields_but_its_binding_and_what_comes_after() -> None:
-    declared = {"id": "idea.one", "kind": "generative", "learn": "Whether", "start": "2026-12-01"}
+    declared = {"id": "idea--one", "kind": "generative", "learn": "Whether", "start": "2026-12-01"}
     taken = fingerprint.of_declaration(declared)
     recorded = {
         **declared,
@@ -150,7 +178,7 @@ def test_a_declaration_covers_its_fields_but_its_binding_and_what_comes_after() 
 def test_a_declaration_covers_its_record_but_its_own_fingerprint() -> None:
     rested = {"fingerprint": {"form": 1, "sha256": "a" * 64}, "when": "2026-11-20"}
     record = {"by": "A", "when": "2026-11-30", "rested-on": rested}
-    declared = {"id": "idea.one", "kind": "generative", "declared": record}
+    declared = {"id": "idea--one", "kind": "generative", "declared": record}
     taken = fingerprint.of_declaration(declared)
     kept = {**record, "fingerprint": taken.as_data()}
     assert fingerprint.of_declaration({**declared, "declared": kept}) == taken
@@ -174,12 +202,37 @@ def test_a_traction_target_that_leaves_its_multiplier_out_counts_ten() -> None:
     assert fingerprint.of_shortlisting(other, GOAL) != fingerprint.of_shortlisting(written, GOAL)
 
 
+PLANNED = {"first": {"by": "A", "when": "2026-11-20"}, "by": "A", "when": "2026-11-20"}
+
+
 def test_a_plan_never_covers_its_suspensions_or_its_review() -> None:
-    plan = {"window": {"start": "2026-12-01", "days": 90}, "variants": ["[canvas:idea.direct]"]}
+    plan = {
+        "window": {"start": "2026-12-01", "days": 90},
+        "variants": ["[canvas:idea--direct]"],
+        "planned": PLANNED,
+    }
     taken = fingerprint.of_plan(plan)
     lived = {**plan, "suspensions": [{"first-day": "2026-12-10"}], "review": {"decision": "pause"}}
-    assert fingerprint.of_plan({**lived, "planned": {"by": "A"}}) == taken
+    assert fingerprint.of_plan(lived) == taken
     assert fingerprint.of_plan({**plan, "window": {"start": "2026-12-01", "days": 60}}) != taken
+
+
+@pytest.mark.parametrize(
+    "planned",
+    [
+        {**PLANNED, "by": "B"},
+        {**PLANNED, "when": "2026-11-25"},
+        {**PLANNED, "first": {"by": "A", "when": "2026-11-19"}},
+    ],
+    ids=["who-changed-it-last", "when-it-last-changed", "its-first-planning"],
+)
+def test_a_plan_covers_who_planned_it_and_when(planned: dict[str, Any]) -> None:
+    plan = {"window": {"start": "2026-12-01", "days": 90}, "planned": PLANNED}
+    taken = fingerprint.of_plan(plan)
+    assert fingerprint.of_plan({**plan, "planned": planned}) != taken
+    # It never covers the fingerprint kept beside the record.
+    kept = {**PLANNED, "fingerprint": taken.as_data()}
+    assert fingerprint.of_plan({**plan, "planned": kept}) == taken
 
 
 def test_a_step_the_method_does_not_judge_is_refused() -> None:
@@ -240,7 +293,7 @@ def test_each_kind_is_checked_against_what_it_covers() -> None:
     assert fingerprint.check_shortlisting(judged, GOAL).fresh
     assert fingerprint.check_shortlisting(judged, {**GOAL, "years": 4}).stale
     record: dict[str, Any] = {"by": "A"}
-    declared: dict[str, Any] = {"id": "idea.one", "kind": "generative", "declared": record}
+    declared: dict[str, Any] = {"id": "idea--one", "kind": "generative", "declared": record}
     record["fingerprint"] = fingerprint.of_declaration(declared).as_data()
     assert fingerprint.check_declaration(declared).fresh
     assert fingerprint.check_declaration({**declared, "kind": "evaluative"}).stale

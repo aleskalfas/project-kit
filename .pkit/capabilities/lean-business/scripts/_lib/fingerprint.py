@@ -8,21 +8,27 @@ or goal has changed since.
 **Form 1** has two parts, what each kind covers and how the covered data becomes text.
 
 - **What each covers**, read from the files as values, never bytes:
-  - a verdict on `desirability`: the canvas's customer segments, early adopters, existing
-    alternatives, problems and unique value propositions (DEC-003 point 2);
-  - a verdict on `viability`: the revenue streams, the estimate's inputs and the goal;
-  - a verdict on `feasibility`: the traction target and the goal;
-  - a shortlisting: every box, the estimate's inputs, the traction target and the goal;
+  - every verdict: the variant's model, its archetype and its sides, which decide what the
+    boxes mean, and all that its step judges (DEC-003 point 2);
+  - a verdict on `desirability`: besides, the canvas's customer segments, early adopters,
+    existing alternatives, problems and unique value propositions;
+  - a verdict on `viability`: besides, the revenue streams, the estimate's inputs and the
+    goal;
+  - a verdict on `feasibility`: besides, the traction target and the goal;
+  - a shortlisting: the variant's archetype and sides, every box, the estimate's inputs,
+    the traction target and the goal;
   - a declaration: every field of the experiment but its binding (`pkit_schema`,
     `schema_version`) and what is recorded after it is declared (`stopped`, `result`,
     `decision`). Its record, `declared`, counts too, but for the declaration's own
     fingerprint: who declared it, the day and the shortlisting it rested on, which the
     check holds the declaring gate to, are frozen with it;
   - a cycle's plan: its window as declared, its variants, its objective and its
-    constraint, never its suspensions.
+    constraint, and its record, `planned`, but for the plan's own fingerprint: who planned
+    it and when, first and at its last change, which the check holds the planning to. Never
+    its suspensions.
 
-  The goal counts by its content alone, its `revenue` and `years`, never who set it or
-  when. The traction target counts its `multiplier` as ten where the canvas leaves it
+  The goal counts by its content alone, its `revenue`, `currency` and `years`, never who
+  set it or when. The traction target counts its `multiplier` as ten where the canvas leaves it
   out, as the canvas's schema gives its default, so a canvas that writes the default and
   one that leaves it out keep one target. So the covered data is what the person
   modelled, never the verdicts, outcomes and fingerprints kept beside it, nor a file's
@@ -35,10 +41,12 @@ or goal has changed since.
   counts as no key, as an absent box counts as an empty one. A number that is not finite
   has no text. The fingerprint's `sha256` is the SHA-256 of that text as UTF-8.
 
-So a change of layout, key order, quoting or comments makes nothing stale. A change to
-the form, or to the schemas that moves a covered field, is a new form: a release takes the
-fingerprints again through the capability's migration, which first checks each under the
-form it was taken with (`compare`). Every form the capability shipped stays here.
+So a change of layout, key order, quoting or comments makes nothing stale. The form's
+version fixes what each kind covers, so a change of what one covers, of the text, or of the
+schemas that moves a covered field, is a new form once a release has shipped the old: that
+release takes the fingerprints again through the capability's migration, which first checks
+each under the form it was taken with (`compare`). Every form the capability shipped stays
+here.
 
 Whether a kept fingerprint still matches what it covers is read here too (`check_verdict`,
 `check_shortlisting`, `check_declaration`, `check_plan`), so the check and the gates read
@@ -120,8 +128,16 @@ MULTIPLIER = 10
 #: A cycle's plan (DEC-002 point 11).
 PLAN = ("window", "variants", "objective", "constraint")
 
+#: A cycle's record of its planning: who planned it and when, first and at its last change,
+#: and the plan's own fingerprint, the one field of it the plan does not cover.
+PLANNED = "planned"
+
+#: What a variant's model is beside its boxes, which every verdict and each shortlisting
+#: cover (DEC-002 point 13).
+MODEL = ("archetype", "sides")
+
 #: What a goal counts by.
-GOAL_CONTENT = ("revenue", "years")
+GOAL_CONTENT = ("revenue", "currency", "years")
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -196,11 +212,17 @@ def _mapping(value: object) -> Mapping[str, Any]:
 
 
 def goal_content(goal: object) -> dict[str, Any] | None:
-    """What a goal counts by in a fingerprint: its revenue and its years, or None where the
-    idea has no goal."""
+    """What a goal counts by in a fingerprint: its revenue, its currency and its years, or
+    None where the idea has no goal."""
     if not isinstance(goal, Mapping):
         return None
     return {key: goal.get(key) for key in GOAL_CONTENT}
+
+
+def model_of(canvas: object) -> dict[str, Any]:
+    """A variant's model as a fingerprint covers it: its archetype and its sides."""
+    data = _mapping(canvas)
+    return {key: data.get(key) for key in MODEL}
 
 
 def _boxes(canvas: object, names: tuple[str, ...]) -> dict[str, Any]:
@@ -214,7 +236,11 @@ def verdict_covers(step: str, canvas: object, goal: object, form: int = FORM) ->
     _known(form)
     if step not in STEPS:
         raise FingerprintError(f"`{step}` is no desk step")
-    covered: dict[str, Any] = {"of": f"verdict:{step}", "boxes": _boxes(canvas, STEP_BOXES[step])}
+    covered: dict[str, Any] = {
+        "of": f"verdict:{step}",
+        "model": model_of(canvas),
+        "boxes": _boxes(canvas, STEP_BOXES[step]),
+    }
     if step == "viability":
         covered["viability"] = _mapping(canvas).get("viability")
     if step == "feasibility":
@@ -229,6 +255,7 @@ def shortlisting_covers(canvas: object, goal: object, form: int = FORM) -> dict[
     _known(form)
     return {
         "of": "shortlisting",
+        "model": model_of(canvas),
         "boxes": _boxes(canvas, BOXES),
         "viability": _mapping(canvas).get("viability"),
         "traction": traction(canvas),
@@ -257,10 +284,12 @@ def declaration_covers(experiment: object, form: int = FORM) -> dict[str, Any]:
 
 
 def plan_covers(cycle: object, form: int = FORM) -> dict[str, Any]:
-    """What a cycle's plan covers under `form`."""
+    """What a cycle's plan covers under `form`: the plan, and its record `planned` but for
+    the plan's own fingerprint."""
     _known(form)
     data = _mapping(cycle)
-    return {"of": "plan", **{key: data.get(key) for key in PLAN}}
+    record = {k: v for k, v in _mapping(data.get(PLANNED)).items() if k != "fingerprint"}
+    return {"of": "plan", **{key: data.get(key) for key in PLAN}, PLANNED: record}
 
 
 def _known(form: int) -> None:

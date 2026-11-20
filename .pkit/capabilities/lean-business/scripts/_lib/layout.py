@@ -287,7 +287,7 @@ def path_of(location: str, kind: str, qualified: str) -> str:
             raise IdRefused(f"`{qualified}` is no idea's id")
         return f"{location}/{qualified}/{GOAL}"
     if not ids.is_idea_qualified(qualified):
-        raise IdRefused(f"`{qualified}` is no id of {WHAT[kind]}'s subject, `<idea>.<own>`")
+        raise IdRefused(f"`{qualified}` is no id of {WHAT[kind]}'s subject, `<idea>--<own>`")
     idea, own = ids.idea_of(qualified), ids.own(qualified)
     if kind in ("canvas", "assumptions"):
         name = CANVAS if kind == "canvas" else ASSUMPTIONS

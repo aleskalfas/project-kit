@@ -2,16 +2,16 @@
 # its window, as the suspension moved it, ended.
 pkit_schema: lean-business:cycle
 schema_version: 1
-id: meal-plan.first
+id: meal-plan--first
 variants:
-- "[canvas:meal-plan.direct]"
+- "[canvas:meal-plan--direct]"
 window:
   start: 2026-11-01
   days: 90
 objective:
   statement: Show that households that cook every evening come back for a planned week
   key-results:
-  - variant: "[canvas:meal-plan.direct]"
+  - variant: "[canvas:meal-plan--direct]"
     metric: retention
     target: 40
 constraint:
@@ -25,7 +25,7 @@ planned:
   when: 2026-10-20
   fingerprint:
     form: 1
-    sha256: 3adfb4b2462ce91a2ba4876b24825242148c51063dab366c0fd0619da5d3b832
+    sha256: d9b271006ffcf775177398ca970a9486f1c8950f45f40d76189a0f72f1c13bb8
 suspensions:
 - reason: A family matter over the turn of the year
   first-day: 2026-12-20
@@ -38,7 +38,7 @@ suspensions:
 review:
   reached:
   - 52
-  winning: "[canvas:meal-plan.direct]"
+  winning: "[canvas:meal-plan--direct]"
   decision: persevere
   reasons: Retention passed its target, and the interviews told one story
   by: A. Founder

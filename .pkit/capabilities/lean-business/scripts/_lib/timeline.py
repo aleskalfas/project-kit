@@ -19,17 +19,20 @@ the check and the status all read it here, so none of them disagrees with anothe
 Every day is a calendar day, and a window or a time box runs from its first day through its
 last (DEC-003 point 1).
 
-**As they stood on a day.** A gate judges an act on the day it was taken, so it reads the
-suspensions recorded by then (`as_of`): one recorded later counts for nothing, and one
-whose resumption was recorded later reads as ongoing. A command passes today, which every
-recorded day precedes, and the check the day the act was recorded.
+**As they stood on a day.** Each reading here counts the suspensions the cycle's data holds.
+The detections, the commands and the status read the cycle as it stands, with every
+suspension recorded. The check asks a gate of each act with the cycle as its suspensions
+stood on the act's day (`stood`): one recorded later counts for nothing, and one whose
+resumption was recorded later reads as ongoing. A suspension's rules ask it with and
+without one suspension, to tell whether that one contradicts an act (`suspensions`).
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, timedelta
+from typing import Any
 
 from _lib.reading import day
 
@@ -125,14 +128,30 @@ def known_by(suspensions: Sequence[Suspension], as_of: date) -> list[Suspension]
     return found
 
 
-def covered_by(suspensions: object, as_of: date | None = None) -> list[Covered]:
+def stood(
+    cycle: Mapping[str, Any], on: date, keep: Callable[[Suspension], bool] | None = None
+) -> dict[str, Any]:
+    """`cycle`'s data as its suspensions stood on `on` (`known_by`): each recorded by then,
+    and that `keep` keeps where it is given, with its resumption only where that was
+    recorded by then too. What else the cycle holds is as it stands."""
+    written = cycle.get("suspensions")
+    entries = written if isinstance(written, list) else []
+    kept: list[Any] = []
+    for current in known_by(recorded(entries), on):
+        if keep is not None and not keep(current):
+            continue
+        entry = entries[current.index]
+        if not current.resumed_at_all and isinstance(entry.get("resumed"), Mapping):
+            entry = {key: value for key, value in entry.items() if key != "resumed"}
+        kept.append(entry)
+    return {**cycle, "suspensions": kept}
+
+
+def covered_by(suspensions: object) -> list[Covered]:
     """The days each suspension of a cycle covers, from the cycle's `suspensions` as a file
-    writes them, in the order of their first days, as they stood on `as_of` where it is
-    given (`known_by`). A suspension with no readable first day covers nothing."""
-    found = recorded(suspensions)
-    if as_of is not None:
-        found = known_by(found, as_of)
-    covered = [s.covered for s in found]
+    writes them, in the order of their first days. A suspension with no readable first day
+    covers nothing."""
+    covered = [s.covered for s in recorded(suspensions)]
     return sorted((c for c in covered if c is not None), key=lambda each: each.first)
 
 
@@ -201,40 +220,37 @@ def time_box(start: date, end: date, covered: Sequence[Covered]) -> Span:
 # --- read from the files --------------------------------------------------------------------------
 
 
-def cycle_window(cycle: Mapping[str, object], as_of: date | None = None) -> Span | None:
-    """Where a cycle's window falls, from its file as it stands, or as its suspensions stood
-    on `as_of` where it is given. None where its declared window cannot be read."""
+def cycle_window(cycle: Mapping[str, object]) -> Span | None:
+    """Where a cycle's window falls, under the suspensions its data holds. None where its
+    declared window cannot be read."""
     declared = cycle.get("window")
     if not isinstance(declared, Mapping):
         return None
     start, days = day(declared.get("start")), declared.get("days")
     if start is None or isinstance(days, bool) or not isinstance(days, int):
         return None
-    return window(start, days, covered_by(cycle.get("suspensions"), as_of))
+    return window(start, days, covered_by(cycle.get("suspensions")))
 
 
 def experiment_time_box(
-    experiment: Mapping[str, object],
-    cycle: Mapping[str, object] | None,
-    as_of: date | None = None,
+    experiment: Mapping[str, object], cycle: Mapping[str, object] | None
 ) -> Span | None:
-    """Where an experiment's time box falls, from its file and its cycle's as they stand, or
-    as the cycle's suspensions stood on `as_of` where it is given. None where its declared
-    days cannot be read. Without its cycle, no suspension moves it."""
+    """Where an experiment's time box falls, under the suspensions its cycle's data holds.
+    None where its declared days cannot be read. Without its cycle, no suspension moves
+    it."""
     start, end = day(experiment.get("start")), day(experiment.get("end"))
     if start is None or end is None:
         return None
     suspensions = cycle.get("suspensions") if cycle is not None else None
-    return time_box(start, end, covered_by(suspensions, as_of))
+    return time_box(start, end, covered_by(suspensions))
 
 
-def ran_through(box: Span, cycle: Mapping[str, object], as_of: date | None = None) -> bool:
-    """Whether a suspension of `cycle` covers a day of the time box `box`, as the
-    suspensions stood on `as_of` where it is given: a time box the suspension ran through,
-    which one it moved past does not."""
+def ran_through(box: Span, cycle: Mapping[str, object]) -> bool:
+    """Whether a suspension `cycle`'s data holds covers a day of the time box `box`: a time
+    box the suspension ran through, which one it moved past does not."""
     if box.start is None:
         return False
-    for covered in covered_by(cycle.get("suspensions"), as_of):
+    for covered in covered_by(cycle.get("suspensions")):
         reaches = box.end is None or covered.first <= box.end
         if covered.resumed is not None and covered.resumed <= covered.first:
             continue

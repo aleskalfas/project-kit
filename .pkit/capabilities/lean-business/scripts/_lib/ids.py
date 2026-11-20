@@ -1,14 +1,16 @@
 """Ids and the references between an idea's files (lean-business DEC-002 point 7).
 
-- **An id** is lower-case words joined by hyphens, starting with a letter: a *segment*. An
-  idea's id is one segment, its folder's name.
-- **A qualified id** joins its parts with full stops. A variant's, an experiment's and a
-  cycle's id is qualified by its idea, `<idea>.<own>`; an entry's and an assumption's by
-  its variant, `<idea>.<variant>.<own>`. So each is unique across the location, and safe in
-  a path.
+- **An id** is words of lower-case letters and digits, the first beginning with a letter,
+  joined by single hyphens: a *segment*. An idea's id is one segment, its folder's name.
+- **A qualified id** joins its parts with two hyphens, which no part holds. A variant's, an
+  experiment's and a cycle's id is qualified by its idea, `<idea>--<own>`; an entry's and an
+  assumption's by its variant, `<idea>--<variant>--<own>`. So each is unique across the
+  location, safe in a path, and fits the core's token form (COR-019), which holds no full
+  stop.
 - **A reference** names a subject of another file in the typed form `[<namespace>:<id>]`
   (COR-019), the namespace being the stem of the schema that holds the subject: `canvas`
-  for a variant, `assumptions`, `experiment` and `cycle`.
+  for a variant, `assumptions`, `experiment` and `cycle`. The schemas mark each place that
+  holds one, so the core's data validation resolves it (COR-029).
 
 The patterns here are the ones `schemas/shapes.schema.json` writes, and a test holds the
 two equal.
@@ -22,11 +24,14 @@ from typing import NamedTuple
 #: One part of an id.
 SEGMENT = r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*"
 
-#: A variant's, an experiment's or a cycle's id: `<idea>.<own>`.
-IDEA_QUALIFIED = rf"{SEGMENT}\.{SEGMENT}"
+#: What joins the parts of a qualified id: two hyphens, which no part holds.
+JOIN = "--"
 
-#: A canvas entry's or an assumption's id: `<idea>.<variant>.<own>`.
-VARIANT_QUALIFIED = rf"{SEGMENT}\.{SEGMENT}\.{SEGMENT}"
+#: A variant's, an experiment's or a cycle's id: `<idea>--<own>`.
+IDEA_QUALIFIED = rf"{SEGMENT}{JOIN}{SEGMENT}"
+
+#: A canvas entry's or an assumption's id: `<idea>--<variant>--<own>`.
+VARIANT_QUALIFIED = rf"{SEGMENT}{JOIN}{SEGMENT}{JOIN}{SEGMENT}"
 
 #: The namespaces a reference names, each the stem of the schema that holds its subject.
 CANVAS = "canvas"
@@ -70,6 +75,11 @@ def is_variant_qualified(value: object) -> bool:
     return isinstance(value, str) and _VARIANT_QUALIFIED.match(value) is not None
 
 
+def qualify(*parts: str) -> str:
+    """The qualified id whose parts are `parts`, from the outermost."""
+    return JOIN.join(parts)
+
+
 def ref(namespace: str, qualified: str) -> str:
     """The reference to the subject `qualified` of `namespace`, as a file writes it."""
     return f"[{namespace}:{qualified}]"
@@ -86,14 +96,14 @@ def parse_ref(value: object, namespace: str) -> Ref | None:
 
 def idea_of(qualified: str) -> str:
     """The idea a qualified id belongs to: its first part."""
-    return qualified.split(".", 1)[0]
+    return qualified.split(JOIN, 1)[0]
 
 
 def qualifier(qualified: str) -> str:
     """What a qualified id is qualified by: every part but its last."""
-    return qualified.rsplit(".", 1)[0]
+    return qualified.rsplit(JOIN, 1)[0]
 
 
 def own(qualified: str) -> str:
     """A qualified id's own part: its last."""
-    return qualified.rsplit(".", 1)[-1]
+    return qualified.rsplit(JOIN, 1)[-1]

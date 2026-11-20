@@ -20,6 +20,7 @@ import pytest
 from click.testing import CliRunner
 from ruamel.yaml import YAML
 
+from project_kit import data_validate as dv
 from project_kit.cli import main
 from tests.adopter_repo import MakeAdopterRepo
 from tests.in_process import CAPABILITIES, load, run_main
@@ -28,6 +29,7 @@ from tests.in_process import CAPABILITIES, load, run_main
     "lean-business", "check.py", "checks", "fingerprint", "layout", "model"
 )
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = Path(__file__).resolve().parent / "fixtures/lean-business/repo"
 
 IDEA = "lean-business/meal-plan"
@@ -146,6 +148,13 @@ def messages(root: Path, label: str) -> list[str]:
     return [f.message for f in checks.check(root).findings if f.label == label]
 
 
+def data_found(root: Path) -> list[tuple[str, str]]:
+    """What the backbone's data validation finds in the location, which the check leaves to
+    it: each issue's severity and place, a file's place relative to `root`."""
+    report = dv.validate_path(root / "lean-business", REPO_ROOT)
+    return [(i.severity, i.location.removeprefix(f"{root}/")) for i in report.issues]
+
+
 # --- the fixture breaks nothing -----------------------------------------------------------------
 
 
@@ -156,9 +165,11 @@ def test_the_fixture_idea_breaks_nothing(tmp_path: Path) -> None:
     assert report.summary == [
         "1 idea, 2 variants, 2 experiments, 1 cycle in `lean-business` (the default, not "
         "recorded yet)",
-        "the shape of each file is checked by `pkit validate`'s `data` member, or by "
-        "`pkit data validate lean-business`; this check judges what the shapes leave open",
+        "the shape of each file, and each reference that names nothing, is checked by "
+        "`pkit validate`'s `data` member, or by `pkit data validate lean-business`; this "
+        "check judges what they leave open",
     ]
+    assert data_found(root) == []
 
 
 # --- the query contract -------------------------------------------------------------------------
@@ -384,7 +395,7 @@ def test_a_file_git_ignores_is_read_by_neither_validation(tmp_path: Path) -> Non
     assert found(root) == []
     # A file git does not track, and does not ignore, is one validation reads.
     shutil.copy(root / LANDING, root / IDEA / "experiments/seen.yaml")
-    assert kinds(root) == {("error", "id"), ("error", "duplicate-id")}
+    assert kinds(root) == {("error", "id")}
 
 
 # --- days ---------------------------------------------------------------------------------------
@@ -415,49 +426,76 @@ def test_a_day_held_in_a_list_or_a_record_kept_beside_it(tmp_path: Path) -> None
 
 def test_an_id_that_does_not_match_its_place(tmp_path: Path) -> None:
     root = project(tmp_path)
-    edit(root, LANDING, put("id", "meal-plan.landing"))
+    edit(root, LANDING, put("id", "meal-plan--landing"))
     assert found(root) == [("error", "id", f"{LANDING}#/id")]
 
 
 def test_an_entry_not_qualified_by_its_variant(tmp_path: Path) -> None:
     root = project(tmp_path)
-    edit(root, DIRECT, put("boxes", "cost-structure", 0, "id", "meal-plan.other.hosting"))
+    edit(root, DIRECT, put("boxes", "cost-structure", 0, "id", "meal-plan--other--hosting"))
     assert found(root) == [("error", "id", f"{DIRECT}#/boxes/cost-structure/0/id")]
 
 
 def test_an_entry_id_given_twice_in_a_canvas(tmp_path: Path) -> None:
     root = project(tmp_path)
-    edit(root, DIRECT, put("boxes", "unfair-advantage", 0, "id", "meal-plan.direct.hosting"))
+    edit(root, DIRECT, put("boxes", "unfair-advantage", 0, "id", "meal-plan--direct--hosting"))
     assert found(root) == [("error", "duplicate-id", f"{DIRECT}#/boxes/unfair-advantage/0/id")]
 
 
-def test_an_id_given_twice_across_the_location(tmp_path: Path) -> None:
+def test_an_id_given_twice_across_the_location_is_the_data_members(tmp_path: Path) -> None:
     root = project(tmp_path)
     shutil.copy(root / LANDING, root / IDEA / "experiments/landing-page-again.yaml")
-    assert kinds(root) == {("error", "id"), ("error", "duplicate-id")}
-    assert at(root, "duplicate-id") == [f"{IDEA}/experiments/landing-page-again.yaml"]
+    assert found(root) == [("error", "id", f"{IDEA}/experiments/landing-page-again.yaml#/id")]
+    assert data_found(root) == [("error", "lean-business:experiment")]
 
 
 def test_an_assumption_not_qualified_by_its_variant(tmp_path: Path) -> None:
     root = project(tmp_path)
-    edit(root, ASSUMPTIONS, put("assumptions", 1, "id", "meal-plan.other.pays-monthly"))
-    assert found(root) == [
-        ("error", "reference", f"{LANDING}#/assumption"),
-        ("error", "id", f"{ASSUMPTIONS}#/assumptions/1/id"),
-    ]
-
-
-def test_a_reference_that_names_nothing(tmp_path: Path) -> None:
-    root = project(tmp_path)
-    edit(root, INTERVIEWS, put("assumption", "[assumptions:meal-plan.direct.nothing]"))
-    assert found(root) == [("error", "reference", f"{INTERVIEWS}#/assumption")]
+    edit(root, ASSUMPTIONS, put("assumptions", 1, "id", "meal-plan--other--pays-monthly"))
+    assert found(root) == [("error", "id", f"{ASSUMPTIONS}#/assumptions/1/id")]
+    # The landing page names the id it had, which the data member finds names nothing.
+    assert data_found(root) == [("error", f"{LANDING}/assumption")]
 
 
 @pytest.mark.parametrize(
     ("rel", "change", "where"),
     [
-        (INTERVIEWS, put("cycle", "[cycle:other-idea.first]"), f"{INTERVIEWS}#/cycle"),
-        (SIDED, put("comes-from", "[canvas:other-idea.direct]"), f"{SIDED}#/comes-from"),
+        (
+            INTERVIEWS,
+            put("assumption", "[assumptions:meal-plan--direct--nothing]"),
+            f"{INTERVIEWS}/assumption",
+        ),
+        (
+            CYCLE,
+            put("review", "evidence", ["[experiment:meal-plan--nothing]"]),
+            f"{CYCLE}/review/evidence/0",
+        ),
+    ],
+    ids=["an-experiments-assumption", "a-reviews-evidence"],
+)
+def test_a_reference_that_names_nothing_is_the_data_members(
+    tmp_path: Path, rel: str, change: Change, where: str
+) -> None:
+    root = project(tmp_path)
+    edit(root, rel, change)
+    assert found(root) == []
+    assert data_found(root) == [("error", where)]
+
+
+def test_a_reference_into_a_kind_the_location_holds_no_file_of(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    (root / CYCLE).unlink()
+    # The data member only warns: a reference to an instance not yet made is normal to it.
+    assert data_found(root) == [("warning", f"{INTERVIEWS}/cycle"), ("warning", f"{LANDING}/cycle")]
+    assert at(root, "reference") == [f"{INTERVIEWS}#/cycle", f"{LANDING}#/cycle"]
+    assert "the location holds no cycle file" in messages(root, "reference")[0]
+
+
+@pytest.mark.parametrize(
+    ("rel", "change", "where"),
+    [
+        (INTERVIEWS, put("cycle", "[cycle:other-idea--first]"), f"{INTERVIEWS}#/cycle"),
+        (SIDED, put("comes-from", "[canvas:other-idea--direct]"), f"{SIDED}#/comes-from"),
     ],
     ids=["an-experiments-cycle", "a-variants-origin"],
 )
@@ -575,13 +613,13 @@ def test_a_split_into_a_variant_that_does_not_come_from_it(tmp_path: Path) -> No
     root = project(tmp_path)
     split = {
         "kind": "split",
-        "into": ["[canvas:meal-plan.direct]"],
+        "into": ["[canvas:meal-plan--direct]"],
         "by": "A",
         "when": "2026-10-05",
     }
     edit(root, SIDED, put("outcome", split))
     assert found(root) == [("error", "split", f"{SIDED}#/outcome/into/0")]
-    edit(root, DIRECT, put("comes-from", "[canvas:meal-plan.two-sided]"))
+    edit(root, DIRECT, put("comes-from", "[canvas:meal-plan--two-sided]"))
     assert found(root) == []
 
 
@@ -590,21 +628,21 @@ SKETCH = f"{IDEA}/variants/sketch/canvas.yaml"
 
 def test_a_variant_comes_from_one_shelved_or_one_split_into_it(tmp_path: Path) -> None:
     root = project(tmp_path)
-    edit(root, DIRECT, put("comes-from", "[canvas:meal-plan.two-sided]"))
+    edit(root, DIRECT, put("comes-from", "[canvas:meal-plan--two-sided]"))
     assert found(root) == []
     sketch = {
         "pkit_schema": "lean-business:canvas",
         "schema_version": 1,
-        "id": "meal-plan.sketch",
+        "id": "meal-plan--sketch",
         "archetype": "direct",
         "authors": ["A. Founder"],
-        "comes-from": "[canvas:meal-plan.two-sided]",
-        "boxes": {"customer-segments": [{"id": "meal-plan.sketch.cooks", "text": "Cooks"}]},
+        "comes-from": "[canvas:meal-plan--two-sided]",
+        "boxes": {"customer-segments": [{"id": "meal-plan--sketch--cooks", "text": "Cooks"}]},
     }
     write(root, SKETCH, sketch)
     split = {
         "kind": "split",
-        "into": ["[canvas:meal-plan.sketch]"],
+        "into": ["[canvas:meal-plan--sketch]"],
         "by": "A",
         "when": "2026-10-05",
     }
@@ -615,7 +653,7 @@ def test_a_variant_comes_from_one_shelved_or_one_split_into_it(tmp_path: Path) -
 
 def test_a_variant_comes_from_one_neither_split_nor_shelved(tmp_path: Path) -> None:
     root = project(tmp_path)
-    edit(root, SIDED, put("comes-from", "[canvas:meal-plan.direct]"))
+    edit(root, SIDED, put("comes-from", "[canvas:meal-plan--direct]"))
     assert found(root) == [("error", "comes-from", f"{SIDED}#/comes-from")]
     assert "neither split nor shelved" in messages(root, "comes-from")[0]
 
@@ -626,10 +664,33 @@ def test_a_shortlisting_whose_canvas_changed_is_stale(tmp_path: Path) -> None:
     assert found(root) == [("warning", "stale", f"{DIRECT}#/outcome/fingerprint")]
 
 
-def test_a_goal_changed_makes_its_shortlisting_stale(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "change", [put("years", 5), put("currency", "USD")], ids=["its-years", "its-currency"]
+)
+def test_a_goal_changed_makes_its_shortlisting_stale(tmp_path: Path, change: Change) -> None:
     root = project(tmp_path)
-    edit(root, GOAL, put("years", 5), retake=False)
+    edit(root, GOAL, change, retake=False)
     assert found(root) == [("warning", "stale", f"{DIRECT}#/outcome/fingerprint")]
+
+
+@pytest.mark.parametrize(
+    "change",
+    [put("archetype", "marketplace"), put("sides", ["shops", "cooks"])],
+    ids=["its-archetype", "its-sides"],
+)
+def test_a_verdict_whose_model_changed_is_stale(tmp_path: Path, change: Change) -> None:
+    root = project(tmp_path)
+    edit(root, SIDED, drop("outcome"), retake=False)
+    # A change of model makes the verdict stale before any box changes.
+    edit(root, SIDED, change, retake=False)
+    assert found(root) == [("warning", "stale", f"{SIDED}#/verdicts/desirability/fingerprint")]
+    assert "the model or the boxes it judged" in messages(root, "stale")[0]
+
+
+def test_a_shortlisting_whose_model_changed_is_stale(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    edit(root, DIRECT, put("archetype", "multisided"), retake=False)
+    assert ("warning", "stale", f"{DIRECT}#/outcome/fingerprint") in found(root)
 
 
 def test_a_verdict_of_a_variant_with_no_outcome_whose_boxes_changed_is_stale(
@@ -654,9 +715,9 @@ def test_a_fingerprint_of_a_form_the_capability_does_not_know(tmp_path: Path) ->
         lambda d: d["boxes"]["problem"].extend(
             [
                 {
-                    "id": f"meal-plan.direct.p{n}",
+                    "id": f"meal-plan--direct--p{n}",
                     "text": "More",
-                    "alternatives": ["meal-plan.direct.paper-lists"],
+                    "alternatives": ["meal-plan--direct--paper-lists"],
                 }
                 for n in (3, 4)
             ]
@@ -676,18 +737,18 @@ def desirable_sketch(root: Path) -> str:
     """A variant whose desirability has a yes, and which holds no revenue stream."""
     direct = load_file(root, DIRECT)
     boxes = {
-        box: [{**entry, "id": entry["id"].replace(".direct.", ".sketch.")} for entry in entries]
+        box: [{**entry, "id": entry["id"].replace("--direct--", "--sketch--")} for entry in entries]
         for box, entries in direct["boxes"].items()
         if box in ("customer-segments", "early-adopters", "existing-alternatives")
     }
-    boxes["problem"] = [{"id": "meal-plan.sketch.p", "text": "Too long"}]
-    boxes["unique-value-proposition"] = [{"id": "meal-plan.sketch.u", "text": "Quick"}]
+    boxes["problem"] = [{"id": "meal-plan--sketch--p", "text": "Too long"}]
+    boxes["unique-value-proposition"] = [{"id": "meal-plan--sketch--u", "text": "Quick"}]
     rel = f"{IDEA}/variants/sketch/canvas.yaml"
     verdict = {"answer": "yes", "fingerprint": {"form": 1, "sha256": "0" * 64}}
     sketch = {
         "pkit_schema": "lean-business:canvas",
         "schema_version": 1,
-        "id": "meal-plan.sketch",
+        "id": "meal-plan--sketch",
         "archetype": "direct",
         "authors": ["A. Founder"],
         "boxes": boxes,
@@ -713,10 +774,10 @@ def test_a_first_sketch_with_blanks_draws_no_guideline(tmp_path: Path) -> None:
     sketch = {
         "pkit_schema": "lean-business:canvas",
         "schema_version": 1,
-        "id": "meal-plan.sketch",
+        "id": "meal-plan--sketch",
         "archetype": "direct",
         "authors": ["A. Founder"],
-        "boxes": {"customer-segments": [{"id": "meal-plan.sketch.cooks", "text": "Cooks"}]},
+        "boxes": {"customer-segments": [{"id": "meal-plan--sketch--cooks", "text": "Cooks"}]},
     }
     write(root, f"{IDEA}/variants/sketch/canvas.yaml", sketch)
     assert found(root) == []
@@ -727,12 +788,12 @@ def test_a_first_sketch_with_blanks_draws_no_guideline(tmp_path: Path) -> None:
     [
         (drop("boxes", "problem", 1, "alternatives"), "/boxes/problem/1"),
         (
-            put("boxes", "problem", 1, "alternatives", 0, "meal-plan.direct.x"),
+            put("boxes", "problem", 1, "alternatives", 0, "meal-plan--direct--x"),
             "/boxes/problem/1/alternatives/0",
         ),
         (drop("boxes", "solution", 0, "problem"), "/boxes/solution/0"),
         (
-            put("boxes", "unique-value-proposition", 0, "problem", "meal-plan.direct.x"),
+            put("boxes", "unique-value-proposition", 0, "problem", "meal-plan--direct--x"),
             "/boxes/unique-value-proposition/0/problem",
         ),
         (drop("boxes", "early-adopters", 0, "triggers"), "/boxes/early-adopters/0"),
@@ -758,9 +819,9 @@ def test_a_link_between_entries_missing_or_dangling_warns(
 def test_an_untested_assumption_whose_entry_has_gone(tmp_path: Path) -> None:
     root = project(tmp_path)
     untested = {
-        "id": "meal-plan.direct.wasted",
+        "id": "meal-plan--direct--wasted",
         "statement": "Households throw food away",
-        "source": {"entry": "meal-plan.direct.gone"},
+        "source": {"entry": "meal-plan--direct--gone"},
         "kind": "desirability",
         "rank": 3,
     }
@@ -769,7 +830,7 @@ def test_an_untested_assumption_whose_entry_has_gone(tmp_path: Path) -> None:
         ("warning", "assumption-source", f"{ASSUMPTIONS}#/assumptions/2/source/entry")
     ]
     # A tested one keeps its link to an entry its experiment refuted, as the method removes it.
-    edit(root, ASSUMPTIONS, put("assumptions", 0, "source", "entry", "meal-plan.direct.gone"))
+    edit(root, ASSUMPTIONS, put("assumptions", 0, "source", "entry", "meal-plan--direct--gone"))
     assert at(root, "assumption-source") == [f"{ASSUMPTIONS}#/assumptions/2/source/entry"]
 
 
@@ -990,7 +1051,7 @@ def test_an_experiment_on_a_variant_its_cycle_does_not_explore(tmp_path: Path) -
         "schema_version": 1,
         "assumptions": [
             {
-                "id": "meal-plan.two-sided.grocers-pay",
+                "id": "meal-plan--two-sided--grocers-pay",
                 "statement": "Grocers pay",
                 "source": {"input": "price", "side": "shops"},
                 "kind": "viability",
@@ -999,14 +1060,14 @@ def test_an_experiment_on_a_variant_its_cycle_does_not_explore(tmp_path: Path) -
         ],
     }
     write(root, f"{IDEA}/variants/two-sided/assumptions.yaml", sided)
-    edit(root, LANDING, put("assumption", "[assumptions:meal-plan.two-sided.grocers-pay]"))
+    edit(root, LANDING, put("assumption", "[assumptions:meal-plan--two-sided--grocers-pay]"))
     assert at(root, "cycle-variants") == [f"{LANDING}#/assumption"]
     assert kinds(root) == {("error", "cycle-variants"), ("error", "declaration-refused")}
 
 
 def test_a_key_result_for_a_variant_the_cycle_does_not_explore(tmp_path: Path) -> None:
     root = project(tmp_path)
-    result = {"variant": "[canvas:meal-plan.two-sided]", "metric": "acquisition", "target": 5}
+    result = {"variant": "[canvas:meal-plan--two-sided]", "metric": "acquisition", "target": 5}
 
     def more(data: Any) -> None:
         data["objective"]["key-results"].append(result)
@@ -1018,13 +1079,18 @@ def test_a_key_result_for_a_variant_the_cycle_does_not_explore(tmp_path: Path) -
 
 def test_a_variant_explored_without_a_key_result(tmp_path: Path) -> None:
     root = project(tmp_path)
-    edit(root, CYCLE, lambda d: d["variants"].append("[canvas:meal-plan.two-sided]"))
+    edit(root, CYCLE, lambda d: d["variants"].append("[canvas:meal-plan--two-sided]"))
     assert found(root) == [("error", "cycle-variants", f"{CYCLE}#/objective/key-results")]
 
 
-def test_a_plan_changed_since_its_fingerprint(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "change",
+    [put("window", "days", 80), put("planned", "by", "B. Partner")],
+    ids=["its-window", "who-planned-it"],
+)
+def test_a_plan_changed_since_its_fingerprint(tmp_path: Path, change: Change) -> None:
     root = project(tmp_path)
-    edit(root, CYCLE, put("window", "days", 80), retake=False)
+    edit(root, CYCLE, change, retake=False)
     assert found(root) == [("error", "plan-changed", f"{CYCLE}#/planned/fingerprint")]
 
 
@@ -1045,7 +1111,7 @@ def second_cycle(root: Path, start: str, *, review: str | None, planned: str | N
     """A second cycle of the idea, its window from `start`, planned on `planned` or on its
     start, and decided on `review` where it is given."""
     second = load_file(root, CYCLE)
-    second["id"] = "meal-plan.second"
+    second["id"] = "meal-plan--second"
     second["window"]["start"] = start
     second["planned"]["when"] = second["planned"]["first"]["when"] = planned or start
     del second["suspensions"]
@@ -1116,29 +1182,67 @@ def test_a_suspension_recorded_after_the_cycle_was_decided(tmp_path: Path) -> No
     assert "after the cycle was decided on 2027-02-15" in messages(root, "suspension")[0]
 
 
-def test_a_suspension_recorded_later_leaves_the_acts_before_it_standing(tmp_path: Path) -> None:
-    root = project(tmp_path)
+def landing_page_boxed_after_the_suspension(root: Path) -> None:
+    """Moves the landing page's time box to start after the suspension's first day, so the
+    suspension moves it to end on 2027-01-18, after its decision on 2027-01-05."""
 
     def moved(data: Any) -> None:
         data["declared"]["when"] = "2026-12-15"
         data["start"], data["end"] = "2026-12-22", "2027-01-04"
 
     edit(root, LANDING, moved)
+
+
+def test_an_act_is_held_to_its_gate_as_the_suspensions_stood_on_its_day(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    landing_page_boxed_after_the_suspension(root)
+    # Recorded on 2026-12-21, the suspension had moved the time box by the decision's day.
     assert found(root) == [("error", "decision-refused", f"{LANDING}#/decision")]
-    # Recorded once the landing page was decided, on 2027-01-05, the suspension moves its
-    # time box for what comes after, never for the decision before it.
-    edit(root, CYCLE, put("suspensions", 0, "when", "2027-01-06"))
-    edit(root, CYCLE, put("suspensions", 0, "resumed", "when", "2027-01-06"))
-    assert found(root) == []
     # The review comes after it, so reads the window it moved, to 2027-02-12.
+    edit(root, LANDING, put("decision", "when", "2027-01-19"))
     edit(root, CYCLE, put("review", "when", "2027-02-11"))
     assert found(root) == [("error", "review-refused", f"{CYCLE}#/review")]
+
+
+@pytest.mark.parametrize("recorded", ["2027-01-06", "2027-01-05"], ids=["later", "the-same-day"])
+def test_a_suspension_recorded_late_contradicts_no_act_already_recorded(
+    tmp_path: Path, recorded: str
+) -> None:
+    root = project(tmp_path)
+    landing_page_boxed_after_the_suspension(root)
+    # Recorded once the landing page was decided, the suspension would say its time box had
+    # not ended when it was decided. On the decision's own day, which came first cannot be
+    # told, so the break is the suspension's too (DEC-002 point 12).
+    edit(root, CYCLE, put("suspensions", 0, "when", recorded))
+    edit(root, CYCLE, put("suspensions", 0, "resumed", "when", recorded))
+    assert found(root) == [("error", "suspension", f"{CYCLE}#/suspensions/0")]
+    assert (
+        "the decision of `meal-plan--landing-page`, recorded on 2027-01-05"
+        in (messages(root, "suspension")[0])
+    )
+
+
+def test_a_late_suspension_never_reopens_a_window_past_the_goal_set(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    # Set once the cycle's window, moved by its suspension to 2027-02-12, ended.
+    edit(root, GOAL, put("when", "2027-02-13"))
+    assert found(root) == []
+    late = {
+        "reason": "Ill",
+        "first-day": "2027-01-20",
+        "by": "A. Founder",
+        "when": "2027-02-14",
+        "resumed": {"day": "2027-01-22", "by": "A. Founder", "when": "2027-02-14"},
+    }
+    edit(root, CYCLE, lambda d: d["suspensions"].append(late))
+    assert found(root) == [("error", "suspension", f"{CYCLE}#/suspensions/1")]
+    assert "the goal set, recorded on 2027-02-13" in messages(root, "suspension")[0]
 
 
 @pytest.mark.parametrize(
     "change",
     [
-        put("review", "winning", "[canvas:meal-plan.two-sided]"),
+        put("review", "winning", "[canvas:meal-plan--two-sided]"),
         lambda d: d["review"]["reached"].append(1),
         put("review", "decision", "pivot"),
         put("review", "when", "2027-02-12"),
@@ -1159,16 +1263,10 @@ def test_a_review_its_gate_refuses(tmp_path: Path, change: Change) -> None:
 def test_a_pivot_rests_on_a_decided_experiment(tmp_path: Path) -> None:
     root = project(tmp_path)
     edit(root, CYCLE, put("review", "decision", "pivot"))
-    edit(root, CYCLE, put("review", "evidence", ["[experiment:meal-plan.first-interviews]"]))
+    edit(root, CYCLE, put("review", "evidence", ["[experiment:meal-plan--first-interviews]"]))
     assert found(root) == []
     edit(root, INTERVIEWS, drop("decision"))
     assert found(root) == [("error", "review-refused", f"{CYCLE}#/review/evidence")]
-
-
-def test_a_reviews_evidence_names_an_experiment_a_file_holds(tmp_path: Path) -> None:
-    root = project(tmp_path)
-    edit(root, CYCLE, put("review", "evidence", ["[experiment:meal-plan.nothing]"]))
-    assert found(root) == [("error", "reference", f"{CYCLE}#/review/evidence/0")]
 
 
 def test_a_review_under_an_ongoing_suspension(tmp_path: Path) -> None:
@@ -1211,6 +1309,14 @@ def test_the_goal_held_still_from_the_first_planning_though_the_plan_changed(
     edit(root, CYCLE, put("planned", "when", "2026-10-25"))
     edit(root, GOAL, put("when", "2026-10-22"))
     assert found(root) == [("error", "goal-changed", GOAL)]
+
+
+def test_a_goal_names_its_currency(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    edit(root, GOAL, drop("currency"))
+    # The shape requires it; the check reads a goal without one as it reads any other.
+    assert found(root) == []
+    assert data_found(root) == [("error", GOAL)]
 
 
 # --- the clock ----------------------------------------------------------------------------------

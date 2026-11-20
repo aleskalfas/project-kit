@@ -2,12 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "goal.schema.json",
   "title": "An idea's goal — lean-business capability",
-  "description": "Formal shape of `<location>/<idea>/goal.yaml` (lean-business DEC-002 point 3): the idea's one goal, its minimum success criteria, which every variant of the idea is judged against. It gives the recurring revenue to reach, the years to reach it in, and who set it and when. The goal lies above the variants, so it moves with none of them. Its revenue and years are what a viability or feasibility verdict and a shortlisting fingerprint; who set it and when are not (point 13). When the goal may change is the capability's check's to hold (point 3). Document-shaped schema: the file IS the resource. Companion per COR-018.",
+  "description": "Formal shape of `<location>/<idea>/goal.yaml` (lean-business DEC-002 point 3): the idea's one goal, its minimum success criteria, which every variant of the idea is judged against. It gives the recurring revenue to reach, each month or year, in the idea's currency; the years to reach it in; and who set it and when. The currency is the unit of every sum of money the idea holds, and no sum is converted. The goal lies above the variants, so it moves with none of them. Its revenue, currency and years are what a viability or feasibility verdict and a shortlisting fingerprint; who set it and when are not (point 13). When the goal may change, and its currency, is the capability's gate's to hold, which the check shares (point 3). Document-shaped schema: the file IS the resource. Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
     "schema_version",
     "revenue",
+    "currency",
     "years",
     "by",
     "when"
@@ -23,8 +24,13 @@
       "const": 1
     },
     "revenue": {
-      "description": "The recurring revenue to reach, in the project's currency, such as an amount each year.",
+      "description": "The recurring revenue to reach, each month or year, in the idea's currency.",
       "$ref": "shapes.schema.json#/$defs/amount-per-period"
+    },
+    "currency": {
+      "description": "The idea's currency, by its three-letter code, such as `EUR`: the unit of every sum of money the idea holds, none of them converted. It changes only while no declared experiment of the idea is undecided, since a declared sum keeps the unit it was declared in.",
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
     },
     "years": {
       "description": "The years to reach it in: the span over which the viability estimate and the traction target reach the revenue.",

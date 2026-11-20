@@ -2,7 +2,7 @@
 # that no evidence supports yet, ranked by risk.
 #
 # Each assumption carries:
-# - `id` — `<idea>.<variant>.<assumption>`, qualified by the variant it belongs to.
+# - `id` — `<idea>--<variant>--<assumption>`, qualified by the variant it belongs to.
 # - `statement` — what the model takes for granted, said as a leap of faith.
 # - `source` — where it comes from: `entry`, the id of a canvas entry, or `input`, an input
 #   of the estimate (`price`, `lifetime`, `conversion`, `referral-share`), with its `side`
@@ -13,10 +13,19 @@
 #
 # The file is `<location>/<idea>/variants/<variant>/assumptions.yaml`. An assumption stores no
 # state: its outcome follows from the experiments that test it. Experiments name an
-# assumption as `[assumptions:<id>]`. The schema's own collection stays empty: the entries
-# live in a project's files.
+# assumption as `[assumptions:<id>]`. A project's entries live in its own files; the one
+# below is the reference instance, which the experiment's reference instance names: valid,
+# the schema's self-test.
 
 pkit_schema: lean-business:assumptions
 schema_version: 1
 
-assumptions: []
+# --- reference instance -------------------------------------------------
+
+assumptions:
+  - id: example--direct--planning-is-a-burden
+    statement: Households that cook every evening find planning the week a real burden
+    source:
+      entry: example--direct--planning-takes-long
+    kind: desirability
+    rank: 1

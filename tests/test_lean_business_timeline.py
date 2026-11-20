@@ -187,14 +187,25 @@ SUSPENDED = {
 
 
 def test_a_suspension_recorded_later_counts_for_nothing_on_a_day_before() -> None:
-    assert timeline.cycle_window(SUSPENDED, as_of=on(5)) == Span(START, on(10))
-    assert timeline.covered_by(SUSPENDED["suspensions"], as_of=on(5)) == []
+    assert timeline.cycle_window(timeline.stood(SUSPENDED, on(5))) == Span(START, on(10))
+    assert timeline.covered_by(timeline.stood(SUSPENDED, on(5))["suspensions"]) == []
 
 
 def test_a_resumption_recorded_later_reads_as_ongoing_on_a_day_before() -> None:
-    assert timeline.cycle_window(SUSPENDED, as_of=on(8)) == Span(START, None)
-    assert timeline.cycle_window(SUSPENDED, as_of=on(9)) == Span(START, on(13))
+    assert timeline.cycle_window(timeline.stood(SUSPENDED, on(8))) == Span(START, None)
+    assert timeline.cycle_window(timeline.stood(SUSPENDED, on(9))) == Span(START, on(13))
     assert timeline.cycle_window(SUSPENDED) == Span(START, on(13))
+
+
+def test_a_cycle_as_it_stood_is_its_data_with_the_suspensions_known_then() -> None:
+    [entry] = SUSPENDED["suspensions"]
+    unresumed = {key: value for key, value in entry.items() if key != "resumed"}
+    assert timeline.stood(SUSPENDED, on(8)) == {**SUSPENDED, "suspensions": [unresumed]}
+    assert timeline.stood(SUSPENDED, on(9)) == SUSPENDED
+    # It keeps only those `keep` keeps, and leaves the cycle's own data as it is.
+    left_out = timeline.stood(SUSPENDED, on(9), lambda each: each.recorded != on(6))
+    assert left_out == {**SUSPENDED, "suspensions": []}
+    assert "resumed" in entry
 
 
 def test_a_day_of_recording_that_cannot_be_read_counts_as_recorded() -> None:
@@ -204,14 +215,15 @@ def test_a_day_of_recording_that_cannot_be_read_counts_as_recorded() -> None:
 
 def test_an_experiments_time_box_as_its_cycles_suspensions_stood() -> None:
     experiment = {"start": "2026-12-05", "end": "2026-12-11"}
-    assert timeline.experiment_time_box(experiment, SUSPENDED, as_of=on(5)) == Span(on(5), on(11))
+    stood = timeline.stood(SUSPENDED, on(5))
+    assert timeline.experiment_time_box(experiment, stood) == Span(on(5), on(11))
     assert timeline.experiment_time_box(experiment, SUSPENDED) == Span(on(8), on(14))
 
 
 def test_a_suspension_runs_through_a_time_box_that_had_started_by_its_first_day() -> None:
     started = Span(on(3), on(9))
     assert timeline.ran_through(started, SUSPENDED)
-    assert not timeline.ran_through(started, SUSPENDED, as_of=on(5))
+    assert not timeline.ran_through(started, timeline.stood(SUSPENDED, on(5)))
     # One it moved past, and one that ended before it, it ran through not at all.
     assert not timeline.ran_through(Span(on(8), on(14)), SUSPENDED)
     assert not timeline.ran_through(Span(on(1), on(4)), SUSPENDED)

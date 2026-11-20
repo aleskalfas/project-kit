@@ -1,9 +1,9 @@
 # A generative experiment, declared, run and decided after its time box.
 pkit_schema: lean-business:experiment
 schema_version: 1
-id: meal-plan.first-interviews
-assumption: "[assumptions:meal-plan.direct.planning-takes-long]"
-cycle: "[cycle:meal-plan.first]"
+id: meal-plan--first-interviews
+assumption: "[assumptions:meal-plan--direct--planning-takes-long]"
+cycle: "[cycle:meal-plan--first]"
 kind: generative
 learn: Whether households that cook every evening find planning the week a real burden
 stopping-rule: Fifteen interviews, or three in a row that bring nothing new
@@ -23,11 +23,11 @@ declared:
   rested-on:
     fingerprint:
       form: 1
-      sha256: b27eb894334315ef7bbea3aa3619221de87bfb2a7dc8067b01331d892b962896
+      sha256: e5bbc429a458e9df087a4736cb7e2057c8b483e116a8c19389663d5128b1fd25
     when: 2026-10-08
   fingerprint:
     form: 1
-    sha256: ca383d6317a3636446648e3ffb7c98484b0ca67adf3493e2b37fb1e272c78d75
+    sha256: dd665eea20a46f82ffc742eeedc5d43fd9e13fbcbab08d5ea7f864a66015d5f0
 result:
   measured: 9
   evidence: Notes of twelve interviews

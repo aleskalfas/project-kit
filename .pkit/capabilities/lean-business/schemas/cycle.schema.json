@@ -1,8 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "cycle.schema.json",
+  "x-pkit-entry-id": "/id",
   "title": "A cycle — lean-business capability",
-  "description": "Formal shape of `<location>/<idea>/cycles/<cycle>.yaml` (lean-business DEC-002 points 11 and 12): one cycle of an idea, exploring one or more of its shortlisted variants. Its plan is the variants it explores, its window as declared (its first day and the days it holds, 90 by default), its objective with key results, each taken from the traction target of a variant it explores and naming it, and its constraint, the one step of the customer factory it works on, with the evidence that it is the weakest. `planned` records who first planned it and when, who last changed the plan and when, and the plan's fingerprint, which the command takes again with each change while the cycle is planned and never once its window has started. Its suspensions lie beside the plan, never under its fingerprint, and move where the window and each experiment not yet started fall, editing neither. Its review records what each key result reached, the winning variant and the person's decision for it. The cycle stores no list of its experiments, which name it. Where the window falls, whether a variant met the objective and the rules a plan, a suspension and a review keep are the capability's check's to hold. Document-shaped schema: the file IS the resource. Companion per COR-018.",
+  "description": "Formal shape of `<location>/<idea>/cycles/<cycle>.yaml` (lean-business DEC-002 points 11 and 12): one cycle of an idea, exploring one or more of its shortlisted variants. Its plan is the variants it explores, its window as declared (its first day and the days it holds, 90 by default), its objective with key results, each taken from the traction target of a variant it explores and naming it, and its constraint, the one step of the customer factory it works on, with the evidence that it is the weakest. `planned` records who first planned it and when, who last changed the plan and when, and the plan's fingerprint over the plan and those days, which the command takes again with each change while the cycle is planned and never once its window has started. Its suspensions lie beside the plan, never under its fingerprint, and move where the window and each experiment not yet started fall, editing neither. Its review records what each key result reached, the winning variant and the person's decision for it. The cycle stores no list of its experiments, which name it. Where the window falls, whether a variant met the objective and the rules a plan, a suspension and a review keep are the capability's check's to hold. Document-shaped schema: the file IS the resource, and owns the `cycle` namespace, each cycle one entry named by its `id`, which `[cycle:<id>]` names (COR-029 point 6). Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -25,7 +26,7 @@
       "const": 1
     },
     "id": {
-      "description": "The cycle's id, qualified by its idea, such as `board-game.first`; its parts are the idea's folder and the file's name.",
+      "description": "The cycle's id, qualified by its idea, such as `board-game--first`; its parts are the idea's folder and the file's name.",
       "$ref": "shapes.schema.json#/$defs/idea-qualified-id"
     },
     "variants": {
@@ -113,7 +114,7 @@
       }
     },
     "planned": {
-      "description": "Who first planned the cycle and the day, `first`; who last changed its plan and the day, which are the first planning's until the plan changes; and the plan's fingerprint over its window, variants, objective and constraint. Whether another cycle was undecided, or the goal changed, while the cycle was planned is read from the first planning, and whether the plan changed once its window started from the last change.",
+      "description": "Who first planned the cycle and the day, `first`; who last changed its plan and the day, which are the first planning's until the plan changes; and the plan's fingerprint over its window, variants, objective and constraint, and who planned it and when, first and at its last change (DEC-002 point 11). The check judges the planning on its first day, and the last change on its own, as the command's conditions stood on each.",
       "type": "object",
       "required": [
         "first",

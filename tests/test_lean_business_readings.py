@@ -112,8 +112,8 @@ def test_neither_where_the_comparison_cannot_be_made(experiment: dict[str, Any])
 
 # --- the objective ------------------------------------------------------------------------------
 
-DIRECT = "[canvas:idea.direct]"
-SIDED = "[canvas:idea.sided]"
+DIRECT = "[canvas:idea--direct]"
+SIDED = "[canvas:idea--sided]"
 
 
 def cycle(*reached: Any) -> dict[str, Any]:
@@ -130,22 +130,22 @@ def cycle(*reached: Any) -> dict[str, Any]:
 
 
 def test_a_variant_met_the_objective_where_each_of_its_key_results_reached_its_target() -> None:
-    assert readings.met_objective(cycle(40, 0, 10), "idea.direct") is True
-    assert readings.met_objective(cycle(40, 0, 9), "idea.direct") is False
-    assert readings.met_objective(cycle(40, 0, 9), "idea.sided") is False
-    assert readings.met_objective(cycle(0, 100, 0), "idea.sided") is True
+    assert readings.met_objective(cycle(40, 0, 10), "idea--direct") is True
+    assert readings.met_objective(cycle(40, 0, 9), "idea--direct") is False
+    assert readings.met_objective(cycle(40, 0, 9), "idea--sided") is False
+    assert readings.met_objective(cycle(0, 100, 0), "idea--sided") is True
 
 
 def test_whether_it_met_the_objective_is_unknown_without_a_review_or_a_reach() -> None:
-    assert readings.met_objective({**cycle(), "review": None}, "idea.direct") is None
-    assert readings.met_objective(cycle(40, 0), "idea.direct") is None
-    assert readings.met_objective(cycle(40, 0, 10), "idea.other") is None
-    assert [i for i, _ in readings.key_results_of(cycle(), "idea.direct")] == [0, 2]
+    assert readings.met_objective({**cycle(), "review": None}, "idea--direct") is None
+    assert readings.met_objective(cycle(40, 0), "idea--direct") is None
+    assert readings.met_objective(cycle(40, 0, 10), "idea--other") is None
+    assert [i for i, _ in readings.key_results_of(cycle(), "idea--direct")] == [0, 2]
 
 
 # --- an assumption's outcome, and an idea dropped -----------------------------------------------
 
-ASSUMPTION = "idea.direct.pays"
+ASSUMPTION = "idea--direct--pays"
 
 
 def experiment_on(own: str, value: Any = None, *, decided: str | None = None) -> dict[str, Any]:
@@ -166,7 +166,7 @@ def experiment_on(own: str, value: Any = None, *, decided: str | None = None) ->
 
 def test_an_assumption_no_declared_experiment_names_is_untested() -> None:
     draft = {k: v for k, v in experiment_on("draft").items() if k != "declared"}
-    other = {**experiment_on("other"), "assumption": "[assumptions:idea.direct.other]"}
+    other = {**experiment_on("other"), "assumption": "[assumptions:idea--direct--other]"}
     assert readings.assumption_outcome(ASSUMPTION, [draft, other]) == readings.UNTESTED
 
 

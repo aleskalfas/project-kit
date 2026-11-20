@@ -4,6 +4,7 @@ schema_version: 1
 revenue:
   amount: 1000000
   per: year
+currency: EUR
 years: 3
 by: A. Founder
 when: 2026-10-01

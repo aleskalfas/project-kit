@@ -11,16 +11,22 @@ data can show; the person's judgement of the content is never its question.
   ranges apply only to a box that holds entries, so a first sketch with blanks draws none.
 
 Where a gate and the check judge the same fact, they read it through one predicate: the
-gates themselves (`gates`), each asked with the day its act was recorded; pricing
-(`readings.priced`); whether a fingerprint still matches (`fingerprint`); where a window
-and a time box fall (`timeline`); and a suspension's rules (`suspensions`). The model of an
-idea's files and its lookups are `model`'s, and this module turns what a lookup failed to
-find into a finding. Each finding's label is listed, with what it finds, in the
-capability's README, "The check".
+gates themselves (`gates`), each asked of its act through `acts`, with the day the act was
+recorded and the suspensions as they stood then; pricing (`readings.priced`); whether a
+fingerprint still matches (`fingerprint`); where a window and a time box fall
+(`timeline`); and a suspension's rules (`suspensions`). The model of an idea's files and
+its lookups are `model`'s, and this module turns what a lookup failed to find into a
+finding. Each finding's label is listed, with what it finds, in the capability's README,
+"The check".
 
 The shape of each file is the backbone's data validation's, the `data` member of
 `pkit validate` (COR-023), and this check judges only what the shapes leave open: a value
-of the wrong shape it reads as missing.
+of the wrong shape it reads as missing. So is a reference that names nothing, and an id
+given twice among the variants, the assumptions, the experiments or the cycles, which the
+data member's pass finds (COR-029 points 3, 4 and 6). This check adds what that pass does
+not hold: a reference to another idea's subject, or into a kind of which the location holds
+no file, which that pass only warns of, and an entry's id given twice in a canvas (DEC-002
+point 7).
 """
 
 from __future__ import annotations
@@ -30,12 +36,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from _lib import fingerprint, gates, ids, layout, listing, model, readings, schemas
+from _lib import acts, fingerprint, gates, ids, layout, listing, model, readings, schemas
 from _lib import location as locations
 from _lib import suspensions as rules
 from _lib.findings import ERROR, WARNING, Finding, at, ordered
 from _lib.model import Found, IdeaModel, Lookup, Subject
-from _lib.reading import day
 from _lib.root import CONFIG
 from _lib.timeline import Span, cycle_window, experiment_time_box, span_text
 
@@ -44,16 +49,21 @@ PROBLEMS = (1, 3)
 KEY_METRICS = (3, 5)
 HEADLINE_LENGTH = 120
 
-#: Where the shape of each file is checked, which the summary names.
+#: Where the shape of each file, and the references between the files, are checked, which
+#: the summary names.
 SHAPE = (
-    "the shape of each file is checked by `pkit validate`'s `data` member, or by "
-    "`pkit data validate {}`; this check judges what the shapes leave open"
+    "the shape of each file, and each reference that names nothing, is checked by "
+    "`pkit validate`'s `data` member, or by `pkit data validate {}`; this check judges what "
+    "they leave open"
 )
 
-#: The goal the gates are given where the goal's file lies in its place but does not read,
-#: which is an error of its own: a goal set, whose content cannot be read, so no gate reads
-#: the idea as having none.
-UNREAD_GOAL: Mapping[str, Any] = {}
+#: Each kind of subject a reference names, in words, by its namespace.
+KIND = {
+    ids.CANVAS: "canvas",
+    ids.ASSUMPTIONS: "assumptions",
+    ids.EXPERIMENT: "experiment",
+    ids.CYCLE: "cycle",
+}
 
 
 @dataclass
@@ -101,7 +111,6 @@ def check(root: Path) -> Report:
         summary = f"no ideas: nothing is recorded, and `{locations.DEFAULT}` is no folder"
         return Report([summary], ordered(found))
     pools = model.Pools.of(contents)
-    found.extend(_duplicate(d) for d in pools.duplicates())
     for idea in contents.ideas.values():
         found.extend(IdeaCheck(IdeaModel(idea, pools)).run())
     origin = "recorded" if where.recorded else "the default, not recorded yet"
@@ -115,17 +124,6 @@ def check(root: Path) -> Report:
     ]
     summary = [f"{', '.join(counted)} in `{where.path}` ({origin})", SHAPE.format(where.path)]
     return Report(summary, ordered(found))
-
-
-def _duplicate(duplicate: model.Duplicate) -> Finding:
-    return Finding(
-        ERROR,
-        duplicate.files[0],
-        f"the id `{duplicate.id}` is given {duplicate.times} times, in "
-        f"{', '.join(duplicate.files)}: an id is unique across the location, and a "
-        f"`[{duplicate.namespace}:...]` reference to it would be ambiguous",
-        "duplicate-id",
-    )
 
 
 # --- an idea --------------------------------------------------------------------------------------
@@ -178,7 +176,7 @@ class IdeaCheck:
         for cycle in self.model.cycles:
             CycleCheck(self, cycle).run()
         self._one_cycle_at_a_time()
-        self._goal_held_still()
+        self._acts()
         return self.found
 
     def _files(self) -> list[tuple[str, layout.File]]:
@@ -195,9 +193,10 @@ class IdeaCheck:
     # --- shared readings ---
 
     def reference(self, lookup: Lookup, rel: str, pointer: str) -> Subject | None:
-        """The subject a lookup found, or None, with an error where the reference names
-        nothing in the location or a subject of another idea. A value that is no reference
-        is the shape's to report."""
+        """The subject a lookup found, or None, with an error where the reference names a
+        subject of another idea, or one of a kind of which the location holds no file. A
+        reference that names nothing among files of its kind is the data member's to report,
+        and a value that is no reference the shape's."""
         if isinstance(lookup, Found):
             return lookup.subject
         if isinstance(lookup, model.Foreign):
@@ -206,16 +205,14 @@ class IdeaCheck:
                 f"it names `{lookup.id}`, a subject of another idea: an idea stands alone",
                 "reference",
             )
-        elif isinstance(lookup, model.Dangling):
+        elif isinstance(lookup, model.Unheld):
             self.error(
-                at(rel, pointer), f"it names `{lookup.id}`, which no file holds", "reference"
+                at(rel, pointer),
+                f"it names `{lookup.id}`, and the location holds no {KIND[lookup.namespace]} "
+                f"file: the commands write each subject before anything refers to it",
+                "reference",
             )
         return None
-
-    def goal_for_gates(self) -> Mapping[str, Any] | None:
-        """The goal the gates read whether the idea has one: its goal, or `UNREAD_GOAL`
-        where its file does not read."""
-        return UNREAD_GOAL if self.model.goal_unread else self.model.goal
 
     def fingerprint_error(self, rel: str, pointer: str, checked: fingerprint.Checked) -> None:
         """An error where a kept fingerprint cannot be checked at all."""
@@ -291,30 +288,15 @@ class IdeaCheck:
                     "one-cycle",
                 )
 
-    # --- the goal ---
+    # --- the acts ---
 
-    def _goal_held_still(self) -> None:
-        goal_file = self.model.idea.goal
-        if goal_file is None or self.model.goal is None:
-            return
-        set_on = day(self.model.goal.get("when"))
-        if set_on is None:
-            return
-        for cycle in self.model.cycles:
-            planned = model.first_planned(cycle.data)
-            span = cycle_window(cycle.data)
-            # The goal set on the day a cycle was first planned may have come first, at the
-            # last cycle's review: days have no order within them (DEC-003 point 1).
-            if planned is None or span is None or set_on <= planned:
-                continue
-            if span.end is None or set_on <= span.end:
-                self.error(
-                    goal_file.rel,
-                    f"the goal was set on {set_on}, while the cycle "
-                    f"`{cycle.data.get('id', cycle.own)}` was planned, running or suspended: "
-                    f"it changes only while none of the idea's cycles is",
-                    "goal-changed",
-                )
+    def _acts(self) -> None:
+        """Each act recorded in the idea's files, held to its gate on the day it was
+        recorded, as the suspensions stood then (`acts.as_stood`): the goal set, each
+        cycle's planning, the last change to its plan and its review, and each declared
+        experiment's declaration, stopping rule reached, result and decision."""
+        for act in acts.recorded(self.model):
+            self.refused(act.rel, acts.as_stood(act), act.label)
 
 
 # --- a canvas -------------------------------------------------------------------------------------
@@ -456,7 +438,7 @@ class CanvasCheck:
             answer = readings.answer(self.data, step)
             if answer is None:
                 continue
-            self._refused(gates.judging(step, self.idea.goal_for_gates()))
+            self._refused(gates.judging(step, self.idea.model.goal_for_gates()))
             checked = self._verdict(step)
             if answer == "yes" and checked is not None and checked.fresh:
                 self._refused(gates.yes_content(step, self.data))
@@ -653,7 +635,6 @@ class ExperimentCheck:
             self.idea.refused(self.rel, gates.unexplored(self.data, self.cycle), "cycle-variants")
         if model.declared(self.data):
             self._declaration()
-            self._after()
         else:
             for key in ("stopped", "result", "decision"):
                 if isinstance(self.data.get(key), Mapping):
@@ -666,7 +647,8 @@ class ExperimentCheck:
         self._within_window()
 
     def _declaration(self) -> None:
-        declared = _m(self.data.get("declared"))
+        """A declaration that changed since it was declared. Its gate, and those of what was
+        recorded after it, are asked of each act (`IdeaCheck._acts`)."""
         checked = fingerprint.check_declaration(self.data)
         if checked.stale:
             self.idea.error(
@@ -676,35 +658,6 @@ class ExperimentCheck:
                 "declaration-changed",
             )
         self.idea.fingerprint_error(self.rel, "/declared/fingerprint", checked)
-        on = day(declared.get("when"))
-        if on is None:
-            return
-        variant = self.idea.model.variant_tested(self.e)
-        canvas = model.found(self.idea.model.canvas_of(variant)) if variant else None
-        written = declared.get("rested-on")
-        rests_on = fingerprint.rested_on(written)
-        if written is not None and rests_on is None:
-            # It names a shortlisting that does not read whole, which the shape, or the
-            # day, reports: what the declaration rested on cannot be told then.
-            canvas = None
-        refusals = gates.declaring(
-            self.data, on, cycle=self.cycle, canvas=canvas, rests_on=rests_on
-        )
-        self.idea.refused(self.rel, refusals, "declaration-refused")
-
-    def _after(self) -> None:
-        """What was recorded on the experiment after its declaration, each held to the gate
-        of its act on the day it was recorded."""
-        for key, gate, label in (
-            ("stopped", gates.stopping, "stop-refused"),
-            ("result", gates.result, "result-refused"),
-            ("decision", gates.deciding, "decision-refused"),
-        ):
-            recorded = self.data.get(key)
-            on = day(_m(recorded).get("when"))
-            if not isinstance(recorded, Mapping) or on is None:
-                continue
-            self.idea.refused(self.rel, gate(self.data, on, self.cycle), label)
 
     def _within_window(self) -> None:
         if self.cycle is None:
@@ -751,13 +704,12 @@ class CycleCheck:
         if checked.stale:
             self.idea.error(
                 at(self.rel, "/planned/fingerprint"),
-                "its plan changed since its fingerprint was taken: a plan is changed only "
-                "through the command while the cycle is planned, and is frozen once its window "
-                "starts",
+                "its plan, or the record of who planned it and when, changed since its "
+                "fingerprint was taken: a plan is changed only through the command while the "
+                "cycle is planned, and is frozen once its window starts",
                 "plan-changed",
             )
         self.idea.fingerprint_error(self.rel, "/planned/fingerprint", checked)
-        self._planning()
         self._suspensions()
         self._review()
 
@@ -795,29 +747,11 @@ class CycleCheck:
                     "cycle-variants",
                 )
 
-    def _planning(self) -> None:
-        """The planning command's conditions, on the day the cycle was first planned, and a
-        plan frozen once its window started, on the day it last changed."""
-        planned = _m(self.data.get("planned"))
-        first = model.first_planned(self.data)
-        last = day(planned.get("when"))
-        if first is not None:
-            others = [c.data for c in self.idea.model.cycles if c is not self.c]
-            goal = self.idea.goal_for_gates()
-            refusals = gates.planning(self.data, first, goal=goal, others=others)
-            self.idea.refused(self.rel, refusals, "plan-refused")
-        if last is not None and first is not None and last != first:
-            self.idea.refused(self.rel, gates.changing(self.data, last), "plan-refused")
-
     def _suspensions(self) -> None:
-        cycle_id = self.data.get("id")
-        if not isinstance(cycle_id, str):
-            return
-        experiments = [(e.rel, e.data) for e in self.idea.model.experiments_of(cycle_id)]
-        goal_file, goal = self.idea.model.idea.goal, self.idea.model.goal
-        held = (goal_file.rel, goal) if goal_file is not None and goal is not None else None
-        acts = rules.acts_on(self.data, experiments, held, self.rel)
-        for found in rules.of_cycle(self.data, acts):
+        """Each rule a suspension breaks, under the acts its suspensions bear on. The
+        planning and the review are held to their gates as acts (`IdeaCheck._acts`)."""
+        bearing = acts.bearing_on(self.idea.model, self.c)
+        for found in rules.of_cycle(self.data, bearing):
             self.idea.error(
                 at(self.rel, f"/suspensions/{found.index}"),
                 f"the suspension breaks its rules: {found.message}",
@@ -829,22 +763,10 @@ class CycleCheck:
         if not review:
             return
         lookup = self.idea.model.resolve(review.get("winning"), ids.CANVAS)
-        winning = self.idea.reference(lookup, self.rel, "/review/winning")
-        evidence: list[Mapping[str, Any]] = []
+        self.idea.reference(lookup, self.rel, "/review/winning")
         for index, value in enumerate(_list(review.get("evidence"))):
             lookup = self.idea.model.resolve(value, ids.EXPERIMENT)
-            subject = self.idea.reference(lookup, self.rel, f"/review/evidence/{index}")
-            if subject is not None:
-                evidence.append(subject.data)
-        decided = day(review.get("when"))
-        if decided is not None:
-            refusals = gates.deciding_cycle(
-                self.data,
-                decided,
-                winning=winning.data if winning is not None else None,
-                evidence=evidence,
-            )
-            self.idea.refused(self.rel, refusals, "review-refused")
+            self.idea.reference(lookup, self.rel, f"/review/evidence/{index}")
         found = ids.parse_ref(review.get("winning"), ids.CANVAS)
         winner = found.id if found is not None else None
         if (
@@ -865,7 +787,9 @@ class CycleCheck:
 
 def _judged(step: str) -> str:
     """What a verdict on `step` judged, in words."""
-    return "the boxes it judged" if step == "desirability" else "the canvas or the goal it judged"
+    if step == "desirability":
+        return "the model or the boxes it judged"
+    return "the model, the canvas or the goal it judged"
 
 
 def _entry_ids(canvas: Mapping[str, Any]) -> set[str]:

@@ -12,11 +12,14 @@ module, so the check, the process's detections, the commands and the status neve
   (points 2 and 7);
 - `gates`: the gates of the moves and the acts, each asked with the day of its act
   (DEC-003 points 2 to 4);
+- `acts`: the acts recorded in an idea's files, each with the gate that judges it, asked
+  with the cycles as their suspensions stood (DEC-002 points 12 and 14);
 - `fingerprint`: the canonical form, the fingerprints taken over it, and whether a kept
   one still matches (point 13);
 - `timeline`: where a cycle's window and an experiment's time box fall once the cycle's
   suspensions are counted, as they stand or as they stood on a day (point 12);
-- `suspensions`: the rules a suspension keeps (point 12);
+- `suspensions`: the rules a suspension keeps, contradicting no act already recorded among
+  them (point 12);
 - `schemas`: where each kind of file writes a day, read from its schema (DEC-003 point 1);
 - `readings`: the facts worked out from the files, such as an experiment's pass or fail
   and an assumption's outcome (points 2 and 10; DEC-003 point 8);

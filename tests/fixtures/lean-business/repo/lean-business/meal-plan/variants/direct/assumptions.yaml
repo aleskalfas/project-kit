@@ -2,13 +2,13 @@
 pkit_schema: lean-business:assumptions
 schema_version: 1
 assumptions:
-  - id: meal-plan.direct.planning-takes-long
+  - id: meal-plan--direct--planning-takes-long
     statement: Households that cook every evening find planning the week a real burden
     source:
-      entry: meal-plan.direct.planning-takes-long
+      entry: meal-plan--direct--planning-takes-long
     kind: desirability
     rank: 1
-  - id: meal-plan.direct.pays-monthly
+  - id: meal-plan--direct--pays-monthly
     statement: A household pays eight a month for a planned week
     source:
       input: price

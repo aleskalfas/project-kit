@@ -1,7 +1,7 @@
 # A cycle (lean-business DEC-002 points 11 and 12): one stretch of work on an idea,
 # exploring one or more of its shortlisted variants, planned, run and reviewed.
 #
-# - `id` — `<idea>.<cycle>`, its parts the idea's folder and the file's name:
+# - `id` — `<idea>--<cycle>`, its parts the idea's folder and the file's name:
 #   `<location>/<idea>/cycles/<cycle>.yaml`.
 # - The plan: `variants`, the shortlisted variants it explores, `[canvas:<id>]`; `window`,
 #   its first day, `start`, and the days it holds, `days`, 90 by default; `objective`, in
@@ -10,8 +10,9 @@
 #   one step it works on, with the `evidence` that it is the weakest.
 # - `planned` — who first planned it and the day, `first`; who last changed its plan, `by`,
 #   and the day, `when`, the first planning's until the plan changes; and the plan's
-#   `fingerprint`, over its window, variants, objective and constraint. The command takes it
-#   again with each change while the cycle is planned, and never once its window started.
+#   `fingerprint`, over its window, variants, objective and constraint, and who planned it
+#   and when. The command takes it again with each change while the cycle is planned, and
+#   never once its window started.
 # - `suspensions` — each stretch the person's life stopped the cycle: its `reason`, its
 #   `first-day`, who recorded it and when, and once it resumed, `resumed`, with the `day`,
 #   which counts again, and who recorded that and when. They lie beside the plan, never
@@ -21,7 +22,8 @@
 #   and, for a pivot, the decided experiments it rests on, `evidence`; who decided it, when.
 #
 # Where the window falls under the suspensions, and whether a variant met the objective, is
-# worked out, never stored. The cycle lists none of its experiments, which name it. The body
+# worked out, never stored. The cycle lists none of its experiments, which name it as
+# `[cycle:<id>]`, the namespace the file owns. The body
 # below is the reference instance, a cycle planned: valid, the schema's self-test.
 
 pkit_schema: lean-business:cycle
@@ -29,16 +31,16 @@ schema_version: 1
 
 # --- reference instance -------------------------------------------------
 
-id: example.first
+id: example--first
 variants:
-  - "[canvas:example.direct]"
+  - "[canvas:example--direct]"
 window:
   start: 2026-12-01
   days: 90
 objective:
   statement: Show that households that cook every evening come back for a planned week
   key-results:
-    - variant: "[canvas:example.direct]"
+    - variant: "[canvas:example--direct]"
       metric: retention
       target: 40
 constraint:
@@ -52,4 +54,4 @@ planned:
   when: 2026-11-19
   fingerprint:
     form: 1
-    sha256: 23540103b8d87d50f9fc5d076f866959af5c98ff82d7c9145895a9dac10485bc
+    sha256: 2830c5f40755335a1dd9d350a344b6940f3e759b591bfdcf718fd32fcd83a66f

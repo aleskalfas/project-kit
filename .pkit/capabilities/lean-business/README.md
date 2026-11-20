@@ -16,7 +16,9 @@ pkit:
         - lean-business:DEC-001#8
         - lean-business:DEC-002#1
         - lean-business:DEC-002#2
+        - lean-business:DEC-002#4
         - lean-business:DEC-002#7
+        - lean-business:DEC-002#12
         - lean-business:DEC-002#13
         - lean-business:DEC-002#14
       artefact:
@@ -38,7 +40,7 @@ lean-business guides a person through the lean method of validating a business m
 
 - `schemas/` — the shape of each file of an idea and of the capability's configuration, each with its reference instance ([lean-business:DEC-002-lean-business-data-model]; "An idea's folder" below). `shapes.schema.json` holds the shapes they share: the ids, the references, a day, a person and a fingerprint.
 - `scripts/check.py` — the capability's check, `pkit lean check`, and the `lean-business:check` member of `pkit validate` ("The check" below).
-- `scripts/_lib/` — what the check reads through, which the commands are to share: the files git sees (`listing`); the place of each file in an idea's folder, and the file of a subject's id (`layout`); an idea's subjects and the lookups between them, each lookup telling a subject found from a reference that names nothing or another idea's subject (`model`); the gates of the moves and the acts, each asked with the day of its act (`gates`); the canonical form, the fingerprints taken over it, and whether a kept one still matches (`fingerprint`); where a window and a time box fall under a cycle's suspensions, as they stand or as they stood on a day (`timeline`); the rules a suspension keeps (`suspensions`); the places each schema puts a day (`schemas`); and what follows from the files, such as pricing, an experiment's pass or fail, an assumption's outcome and an idea dropped (`readings`).
+- `scripts/_lib/` — what the check reads through, which the commands are to share: the files git sees (`listing`); the place of each file in an idea's folder, and the file of a subject's id (`layout`); an idea's subjects and the lookups between them, each lookup telling a subject found from a reference that names nothing, one into a kind of which the location holds no file, or another idea's subject (`model`); the gates of the moves and the acts, each asked with the day of its act (`gates`); the acts recorded in an idea's files, each with the gate that judges it (`acts`); the canonical form, the fingerprints taken over it, and whether a kept one still matches (`fingerprint`); where a window and a time box fall under a cycle's suspensions, as they stand or as they stood on a day (`timeline`); the rules a suspension keeps, contradicting no act already recorded among them (`suspensions`); the places each schema puts a day (`schemas`); and what follows from the files, such as pricing, an experiment's pass or fail, an assumption's outcome and an idea dropped (`readings`).
 
 The process definitions, the other commands and the skill these records decide are being built under project-kit#3426. This README lists them as they land.
 
@@ -64,13 +66,13 @@ Each idea is a folder of the location, named by the idea's id. Each file names i
 <location>/<idea>/cycles/<cycle>.yaml                  lean-business:cycle
 ```
 
-- **The goal** is the idea's revenue goal over a number of years, against which its variants' viability and feasibility are judged.
-- **A canvas** is one variant of the business model: its archetype, its sides where it serves more than one, its twelve boxes, the inputs of its viability, its traction target, the person's verdict on each step at the desk, and its outcome, shortlisted, shelved or split.
+- **The goal** is the idea's revenue goal over a number of years, against which its variants' viability and feasibility are judged. It names the idea's currency, such as `EUR`, the unit of every sum the idea's files hold.
+- **A canvas** is one variant of the business model: its archetype, its sides where it serves more than one, its twelve boxes, the inputs of its viability, its traction target, the person's verdict on each step at the desk, and its outcome, shortlisted, shelved or split. A price among the inputs is what the business keeps from one active customer, on average, each month or year: a one-off sale counts what a customer pays over their lifetime, spread over that lifetime, and a marketplace's side counts what the business keeps from it, not what flows through it ([lean-business:DEC-002-lean-business-data-model] point 4).
 - **The assumptions** of a variant are its risks, ranked, each from an entry of its canvas or an input of its viability.
 - **An experiment** tests one assumption, inside one cycle. It is declared before it runs, and frozen once declared; its result and the person's decision are recorded after.
 - **A cycle** explores one or more shortlisted variants over a window, 90 days by default, toward an objective. Its suspensions move where the window falls, and its review records the person's decision.
 
-A subject's id is qualified by what holds it: an idea's own subjects by the idea, such as `board-game.direct` for a variant, and a canvas's entries and a variant's assumptions by the variant, such as `board-game.direct.planning-takes-long`. A file refers to another's subject as `[canvas:<id>]`, `[assumptions:<id>]`, `[experiment:<id>]` or `[cycle:<id>]`, and never to another idea's. Each judgement the person made over content keeps a fingerprint of that content, so a later change of it shows ([lean-business:DEC-002-lean-business-data-model] points 7 and 13).
+A subject's id is qualified by what holds it, its parts joined by two hyphens: an idea's own subjects by the idea, such as `board-game--direct` for a variant, and a canvas's entries and a variant's assumptions by the variant, such as `board-game--direct--planning-takes-long`. A file refers to another's subject as `[canvas:<id>]`, `[assumptions:<id>]`, `[experiment:<id>]` or `[cycle:<id>]`, and never to another idea's. Each judgement the person made over content keeps a fingerprint of that content, so a later change of it shows: every verdict and each shortlisting covers the variant's archetype and its sides, so a change of model shows before any box changes, and a plan covers who planned it and when ([lean-business:DEC-002-lean-business-data-model] points 7 and 13).
 
 The capability's configuration, `.pkit/capabilities/lean-business/project/config.yaml`, is bound to `lean-business:config` and records the location.
 
@@ -78,7 +80,9 @@ The capability's configuration, `.pkit/capabilities/lean-business/project/config
 
 `pkit lean check` reads the files of the location as they stand, never today's date, and is the `lean-business:check` member of `pkit validate`. An invariant the capability's records own, broken by a command or by a hand edit, is an error, the one severity that fails validation. A guideline of the book, or a judgement gone stale, is a warning. A guideline's ranges count only a box that holds entries, so a first sketch with blanks draws none ([lean-business:DEC-002-lean-business-data-model] point 14).
 
-The shape of each file is not the check's: the `data` member of `pkit validate` holds each file to its schema, as `pkit data validate <location>` does alone. The check judges what the shapes leave open, and reads a value of the wrong shape as missing. It reads the files git sees, those it tracks and those it neither tracks nor ignores, as the `data` member does, so a file git ignores is neither's; outside a git repository it reads the files as they lie. Where a command's gate would refuse an act, the check asks the same gate with the day the act was recorded, and reads the cycle's suspensions as they stood that day, so a suspension recorded later never turns an act let through into one refused.
+The shape of each file is not the check's: the `data` member of `pkit validate` holds each file to its schema, as `pkit data validate <location>` does alone. Nor is a reference that names nothing among the files of its kind, or an id given twice among the variants, the assumptions, the experiments or the cycles: the schemas mark each reference, and say where each kind of file holds its ids, so the `data` member finds both. The check judges what they leave open, and reads a value of the wrong shape as missing. It reads the files git sees, those it tracks and those it neither tracks nor ignores, as the `data` member does, so a file git ignores is neither's; outside a git repository it reads the files as they lie.
+
+Where a command's gate would refuse an act, the check asks the same gate with the day the act was recorded, and reads the cycles' suspensions as they stood that day. A suspension recorded later contradicts no act already recorded, so where it would turn one let through into one refused, the suspension breaks its rules, and the act stands. Which of an act and a suspension recorded on one day came first cannot be told, so there too the break is the suspension's ([lean-business:DEC-002-lean-business-data-model] point 12).
 
 Each finding carries a label:
 
@@ -90,8 +94,8 @@ Each finding carries a label:
 | `binding` | error | A file at a place of the layout that names another schema, or none. |
 | `day` | error | A value written as a day, `YYYY-MM-DD`, at a place its schema puts a day, that names no day of the calendar, such as `2026-02-30`. |
 | `id` | error | An id that does not match the file's place, or is not qualified by what holds it. |
-| `duplicate-id` | error | An id given twice for one kind of subject. |
-| `reference` | error | A reference that names nothing, or a subject of another idea. |
+| `duplicate-id` | error | An entry's id given twice in one canvas. |
+| `reference` | error | A reference to a subject of another idea, or into a kind of subject of which the location holds no file, which the `data` member only warns of. |
 | `fingerprint` | error | A fingerprint of a canonical form the capability does not know, or one over data that has no canonical text, such as a number that is not finite. |
 | `sides` | error | A direct model that names sides, a side named that the canvas does not name, or viability inputs given for no side or twice for one. |
 | `verdicts` | error | A verdict on a step without a yes on each step before it; a verdict on viability or feasibility in an idea with no goal; a yes that still matches the canvas it judged, where that canvas misses what the yes needs; a shortlisting without a yes on all three steps; or a shortlisting that still matches, over a verdict gone stale. |
@@ -104,13 +108,13 @@ Each finding carries a label:
 | `result-refused` | error | A result recorded as spoiled, where no suspension of its cycle ran through its time box. |
 | `decision-refused` | error | A decision without a result, a result recorded after its decision, or a decision before its time box ended, without a generative experiment's stopping rule reached within its time box. |
 | `cycle-variants` | error | An experiment on an assumption of a variant its cycle does not explore, a key result that names a variant the cycle does not explore, or an explored variant without a key result. |
-| `plan-changed` | error | A cycle whose plan changed since its fingerprint was taken. |
+| `plan-changed` | error | A cycle whose plan, or the record of who planned it and when, changed since its fingerprint was taken. |
 | `plan-refused` | error | A cycle first planned in an idea with no goal, or while another cycle of the idea was undecided, or a plan last changed after its window started. |
 | `one-cycle` | error | Two undecided cycles of one idea, or two whose windows overlap, as worked out. |
-| `suspension` | error | A suspension that breaks its rules: its first day outside the window, a day ahead of the day it was recorded, a resumption before its first day, a covered day that holds another act, two suspensions that overlap, or a suspension or its resumption recorded after the cycle was decided. |
+| `suspension` | error | A suspension that breaks its rules: its first day outside the window, a day ahead of the day it was recorded, a resumption before its first day, a covered day that holds another act, two suspensions that overlap, a suspension that would make an act recorded no later than it read as one its gate refuses, such as the goal set or a review after the window ended, or a suspension or its resumption recorded after the cycle was decided. Where two suspensions break a rule together, the break is the one recorded last. |
 | `review-refused` | error | A review its gate refuses: a winning variant the cycle did not explore, a count of what was reached that differs from the key results, a persevere or a pivot for a variant shelved or split before it, a pivot on no decided experiment, or a review before the window ended. |
 | `goal-changed` | error | The goal set while one of the idea's cycles was planned, running or suspended: after the day it was first planned, and no later than its window's last day. |
-| `stale` | warning | A verdict on a variant with no outcome, or a shortlisting, whose content changed since. |
+| `stale` | warning | A verdict on a variant with no outcome, or a shortlisting, whose content changed since: the variant's archetype or sides, the boxes or inputs it judged, or the goal, its currency among it. |
 | `guideline` | warning | More than three problems for a side, fewer than three or more than five key metrics, a headline over about 120 characters, or no revenue stream once desirability has a yes. |
 | `link` | warning | A problem with no existing alternative, a solution or a value proposition with no problem, an early adopter with no trigger, or a key metric with no step, or one that names an entry its box does not hold. |
 | `sides-incomplete` | warning | A model with several sides that names fewer than two, or an entry or a set of inputs that names no side. |

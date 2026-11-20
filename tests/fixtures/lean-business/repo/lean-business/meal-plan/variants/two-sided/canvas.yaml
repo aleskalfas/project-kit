@@ -1,7 +1,7 @@
 # A multisided model, judged no on desirability and shelved.
 pkit_schema: lean-business:canvas
 schema_version: 1
-id: meal-plan.two-sided
+id: meal-plan--two-sided
 archetype: multisided
 sides:
 - cooks
@@ -10,10 +10,10 @@ authors:
 - A. Founder
 boxes:
   customer-segments:
-  - id: meal-plan.two-sided.households
+  - id: meal-plan--two-sided--households
     text: Households that cook every evening
     side: cooks
-  - id: meal-plan.two-sided.grocers
+  - id: meal-plan--two-sided--grocers
     text: Grocers that deliver
     side: shops
 viability:
@@ -39,7 +39,7 @@ verdicts:
     note: Grocers see no reason to pay for orders they already take
     fingerprint:
       form: 1
-      sha256: 4a278a7767539a3f67028d4403e737db2f1a418343fd2cc604ebe4dd6c06a4c7
+      sha256: a0524b8de2a2dc11da90c153214a312ef021584c461b366ce25824c029f42aaa
     by: A. Founder
     when: 2026-10-05
 outcome:

@@ -1,8 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "experiment.schema.json",
+  "x-pkit-entry-id": "/id",
   "title": "An experiment — lean-business capability",
-  "description": "Formal shape of `<location>/<idea>/experiments/<experiment>.yaml` (lean-business DEC-002 points 9 and 10): one test of one assumption, naming the assumption it tests and the cycle it runs in. Its declared fields depend on its kind: a `generative` experiment, run to discover, says what it sets out to learn, its stopping rule and what counts as fit; an `evaluative` one, run to measure traction, says its one action, its metric, its expected outcome with the direction that counts as success, where that number comes from, the effects known in advance and its control. Every experiment has a time box given by its start and end days, its authors and the estimates made alone before it was declared. Once declared, `declared` records who declared it and when, the shortlisting its gate read, by its fingerprint and its day, and the declaration's own fingerprint, and no declared field, nor any field of that record, changes again. Recorded after: the stopping rule reached, for a generative experiment; the result; and the person's next action. Pass or fail is worked out from the result and the declared expectation, never stored. A draft may leave any declared field out, so which fields a declaration needs, its time box of fourteen days at most and whether its fingerprint still matches are the capability's check's to hold. Document-shaped schema: the file IS the resource. Companion per COR-018.",
+  "description": "Formal shape of `<location>/<idea>/experiments/<experiment>.yaml` (lean-business DEC-002 points 9 and 10): one test of one assumption, naming the assumption it tests and the cycle it runs in. Its declared fields depend on its kind: a `generative` experiment, run to discover, says what it sets out to learn, its stopping rule and what counts as fit; an `evaluative` one, run to measure traction, says its one action, its metric, its expected outcome with the direction that counts as success, where that number comes from, the effects known in advance and its control. Every experiment has a time box given by its start and end days, its authors and the estimates made alone before it was declared. Once declared, `declared` records who declared it and when, the shortlisting its gate read, by its fingerprint and its day, and the declaration's own fingerprint, and no declared field, nor any field of that record, changes again. Recorded after: the stopping rule reached, for a generative experiment; the result; and the person's next action. Pass or fail is worked out from the result and the declared expectation, never stored. A draft may leave any declared field out, so which fields a declaration needs, its time box of fourteen days at most and whether its fingerprint still matches are the capability's check's to hold. Document-shaped schema: the file IS the resource, and owns the `experiment` namespace, each experiment one entry named by its `id`, which `[experiment:<id>]` names (COR-029 point 6). Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -21,7 +22,7 @@
       "const": 1
     },
     "id": {
-      "description": "The experiment's id, qualified by its idea, such as `board-game.first-interviews`; its parts are the idea's folder and the file's name.",
+      "description": "The experiment's id, qualified by its idea, such as `board-game--first-interviews`; its parts are the idea's folder and the file's name.",
       "$ref": "shapes.schema.json#/$defs/idea-qualified-id"
     },
     "assumption": {

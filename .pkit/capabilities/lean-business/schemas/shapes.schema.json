@@ -2,42 +2,46 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "shapes.schema.json",
   "title": "Shared shapes of the lean-business capability's files",
-  "description": "The shapes every schema of the capability shares, so each is written once: ids and the references between files (lean-business DEC-002 point 7), calendar days and the record of who acted and when (DEC-002 point 2), fingerprints (point 13), and the method's small vocabularies. The capability's Python reads the same id and reference patterns (`scripts/_lib/ids.py`), and a test holds the two equal.",
+  "description": "The shapes every schema of the capability shares, so each is written once: ids and the references between files (lean-business DEC-002 point 7), calendar days and the record of who acted and when (DEC-002 point 2), fingerprints (point 13), and the method's small vocabularies. Each reference is marked with the namespace it names, so the core's data validation resolves it (COR-029). The capability's Python reads the same id and reference patterns (`scripts/_lib/ids.py`), and a test holds the two equal.",
   "$defs": {
     "segment": {
-      "description": "One part of an id: lower-case words of letters and digits, joined by single hyphens, starting with a letter (DEC-002 point 7). An idea's id, which is its folder's name, is one segment.",
+      "description": "One part of an id: words of lower-case letters and digits, the first beginning with a letter, joined by single hyphens (DEC-002 point 7). An idea's id, which is its folder's name, is one segment.",
       "type": "string",
       "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
     },
     "idea-qualified-id": {
-      "description": "The id of a variant, an experiment or a cycle: the idea's id and the subject's own, joined by a full stop, such as `board-game.platform` (DEC-002 point 7).",
+      "description": "The id of a variant, an experiment or a cycle: the idea's id and the subject's own, joined by two hyphens, such as `board-game--platform` (DEC-002 point 7). No part holds two hyphens, so the id splits one way, and it fits the core's token form (COR-019).",
       "type": "string",
-      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*--[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
     },
     "variant-qualified-id": {
-      "description": "The id of a canvas entry or an assumption: its variant's id and its own, joined by a full stop, such as `board-game.platform.setup-takes-long` (DEC-002 point 7).",
+      "description": "The id of a canvas entry or an assumption: its variant's id and its own, joined by two hyphens, such as `board-game--platform--setup-takes-long` (DEC-002 point 7).",
       "type": "string",
-      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*--[a-z][a-z0-9]*(?:-[a-z0-9]+)*--[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
     },
     "canvas-ref": {
-      "description": "A reference to a variant, by its canvas: `[canvas:<variant id>]` (COR-019; DEC-002 point 7). It must name a variant of the same idea, which the capability's check holds.",
+      "description": "A reference to a variant, by its canvas: `[canvas:<variant id>]` (COR-019; DEC-002 point 7). The core's data validation resolves it among the files it validates, and reports one that names nothing (COR-029). That it names a subject of the same idea, and of a kind the location holds, the capability's check holds.",
+      "x-pkit-reference-namespace": "canvas",
       "type": "string",
-      "pattern": "^\\[canvas:[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\]$"
+      "pattern": "^\\[canvas:[a-z][a-z0-9]*(?:-[a-z0-9]+)*--[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\]$"
     },
     "assumption-ref": {
-      "description": "A reference to an assumption: `[assumptions:<assumption id>]` (COR-019; DEC-002 point 7).",
+      "description": "A reference to an assumption: `[assumptions:<assumption id>]` (COR-019; DEC-002 point 7). The core's data validation resolves it among the files it validates, and reports one that names nothing (COR-029). That it names a subject of the same idea, and of a kind the location holds, the capability's check holds.",
+      "x-pkit-reference-namespace": "assumptions",
       "type": "string",
-      "pattern": "^\\[assumptions:[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\]$"
+      "pattern": "^\\[assumptions:[a-z][a-z0-9]*(?:-[a-z0-9]+)*--[a-z][a-z0-9]*(?:-[a-z0-9]+)*--[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\]$"
     },
     "experiment-ref": {
-      "description": "A reference to an experiment: `[experiment:<experiment id>]` (COR-019; DEC-002 point 7).",
+      "description": "A reference to an experiment: `[experiment:<experiment id>]` (COR-019; DEC-002 point 7). The core's data validation resolves it among the files it validates, and reports one that names nothing (COR-029). That it names a subject of the same idea, and of a kind the location holds, the capability's check holds.",
+      "x-pkit-reference-namespace": "experiment",
       "type": "string",
-      "pattern": "^\\[experiment:[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\]$"
+      "pattern": "^\\[experiment:[a-z][a-z0-9]*(?:-[a-z0-9]+)*--[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\]$"
     },
     "cycle-ref": {
-      "description": "A reference to a cycle: `[cycle:<cycle id>]` (COR-019; DEC-002 point 7).",
+      "description": "A reference to a cycle: `[cycle:<cycle id>]` (COR-019; DEC-002 point 7). The core's data validation resolves it among the files it validates, and reports one that names nothing (COR-029). That it names a subject of the same idea, and of a kind the location holds, the capability's check holds.",
+      "x-pkit-reference-namespace": "cycle",
       "type": "string",
-      "pattern": "^\\[cycle:[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\]$"
+      "pattern": "^\\[cycle:[a-z][a-z0-9]*(?:-[a-z0-9]+)*--[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\]$"
     },
     "day": {
       "description": "A calendar day, `YYYY-MM-DD` (lean-business DEC-003 point 1). Every date the capability reads is a day, never a time.",
@@ -103,7 +107,7 @@
       ]
     },
     "amount-per-period": {
-      "description": "An amount of money in each period, in the project's currency.",
+      "description": "An amount of money in each period, in the idea's currency, which its goal names (DEC-002 point 3).",
       "type": "object",
       "required": [
         "amount",

@@ -1,7 +1,7 @@
 # An experiment (lean-business DEC-002 points 9 and 10): one test of one assumption,
 # declared before it runs, frozen once declared, and judged against what it declared.
 #
-# - `id` — `<idea>.<experiment>`, its parts the idea's folder and the file's name:
+# - `id` — `<idea>--<experiment>`, its parts the idea's folder and the file's name:
 #   `<location>/<idea>/experiments/<experiment>.yaml`.
 # - `assumption` and `cycle` — the assumption it tests, `[assumptions:<id>]`, and the cycle
 #   it runs in, `[cycle:<id>]`.
@@ -22,7 +22,8 @@
 #   what was `measured`, whether it was `spoiled`, its `evidence` and what was `learned`;
 #   `decision`, the person's `next` action. Each says who recorded it and when.
 #
-# Pass or fail is worked out from the result and the declared expectation, never stored.
+# Pass or fail is worked out from the result and the declared expectation, never stored. The
+# file owns the `experiment` namespace: a review names the experiment `[experiment:<id>]`.
 # The body below is the reference instance, a draft: valid, the schema's self-test.
 
 pkit_schema: lean-business:experiment
@@ -30,9 +31,9 @@ schema_version: 1
 
 # --- reference instance -------------------------------------------------
 
-id: example.first-interviews
-assumption: "[assumptions:example.direct.planning-takes-long]"
-cycle: "[cycle:example.first]"
+id: example--first-interviews
+assumption: "[assumptions:example--direct--planning-is-a-burden]"
+cycle: "[cycle:example--first]"
 kind: generative
 learn: Whether households that cook every evening find planning the week a real burden
 stopping-rule: Fifteen interviews, or three in a row that bring nothing new

@@ -2,9 +2,9 @@
 # started by the suspension's first day; decided once the cycle resumed.
 pkit_schema: lean-business:experiment
 schema_version: 1
-id: meal-plan.landing-page
-assumption: "[assumptions:meal-plan.direct.pays-monthly]"
-cycle: "[cycle:meal-plan.first]"
+id: meal-plan--landing-page
+assumption: "[assumptions:meal-plan--direct--pays-monthly]"
+cycle: "[cycle:meal-plan--first]"
 kind: evaluative
 action: A page that offers the subscription at eight a month, with a sign-up
 metric: acquisition
@@ -31,11 +31,11 @@ declared:
   rested-on:
     fingerprint:
       form: 1
-      sha256: b27eb894334315ef7bbea3aa3619221de87bfb2a7dc8067b01331d892b962896
+      sha256: e5bbc429a458e9df087a4736cb7e2057c8b483e116a8c19389663d5128b1fd25
     when: 2026-10-08
   fingerprint:
     form: 1
-    sha256: 22ce52ed35e6596c94ac4f833f6bfa42ae209221285604c93cc24396369dca73
+    sha256: e6f3f25c21d7da212d809b8ccfc3f3066442deae574973623374746166e5bc43
 result:
   measured: 0.06
   evidence: The page's visits and sign-ups

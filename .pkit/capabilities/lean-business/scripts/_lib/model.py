@@ -5,14 +5,16 @@ It reads what `layout.read` found and answers, and decides nothing: the check tu
 lookup failed to find into a finding, and a command refuses it.
 
 - **The subjects of a location** (`Pools`): each variant, assumption, experiment and cycle,
-  by its namespace and its id, each id with every subject that claims it, so a duplicate
-  shows (`duplicates`).
+  by its namespace and its id, and the namespaces of which the location holds a file. A
+  duplicate id is the core's data validation's to report (COR-029 points 3 and 6).
 - **An idea** (`IdeaModel`): its goal, its experiments and its cycles, and the lookups
   between its files. A lookup answers with a typed result, so "no reference" and "a
   reference that names nothing" never read alike: `Found`, a subject of the idea;
-  `Dangling`, an id no file holds; `Foreign`, a subject of another idea, which an idea
-  never names, since it stands alone; and `NoReference`, a value that is no reference into
-  the namespace, which the shape reports.
+  `Dangling`, an id no file of its kind holds, which the core's data validation reports;
+  `Unheld`, an id of a kind of which the location holds no file, which the core only warns
+  of; `Foreign`, a subject of another idea, which an idea never names, since it stands
+  alone; and `NoReference`, a value that is no reference into the namespace, which the
+  shape reports.
 - **Every fingerprint taken again** (`retaken`): each fingerprint the idea's files keep,
   taken over the files as they stand, as a command keeps it when it records each judgement.
 """
@@ -27,6 +29,11 @@ from typing import Any
 from _lib import fingerprint, ids, layout
 from _lib.reading import day
 
+#: The goal the gates are given where the goal's file lies in its place but does not read,
+#: which is an error of its own: a goal set, whose content cannot be read, so no gate reads
+#: the idea as having none.
+UNREAD_GOAL: Mapping[str, Any] = {}
+
 
 @dataclass(frozen=True)
 class Subject:
@@ -37,23 +44,13 @@ class Subject:
     data: Mapping[str, Any]
 
 
-@dataclass(frozen=True)
-class Duplicate:
-    """An id given more than once in a namespace: the namespace, the id, and the files that
-    give it, in path order."""
-
-    namespace: str
-    id: str
-    files: tuple[str, ...]
-    times: int
-
-
 @dataclass
 class Pools:
     """The subjects of the location, by namespace and id, each id with every subject that
-    claims it."""
+    claims it, and the namespaces of which the location holds a file that reads."""
 
     by: dict[str, dict[str, list[Subject]]] = field(default_factory=dict)
+    held: set[str] = field(default_factory=set)
 
     @staticmethod
     def of(contents: layout.Contents) -> Pools:
@@ -62,6 +59,7 @@ class Pools:
             for variant in idea.variants.values():
                 canvas = variant.canvas
                 if canvas is not None and canvas.data is not None:
+                    pools.held.add(ids.CANVAS)
                     pools.add(
                         ids.CANVAS,
                         canvas.data.get("id"),
@@ -69,6 +67,7 @@ class Pools:
                     )
                 listed = variant.assumptions
                 if listed is not None and listed.data is not None:
+                    pools.held.add(ids.ASSUMPTIONS)
                     for entry in _list(listed.data.get("assumptions")):
                         if isinstance(entry, Mapping):
                             pools.add(
@@ -79,6 +78,7 @@ class Pools:
             for namespace, files in ((ids.EXPERIMENT, idea.experiments), (ids.CYCLE, idea.cycles)):
                 for file in files.values():
                     if file.data is not None:
+                        pools.held.add(namespace)
                         pools.add(
                             namespace, file.data.get("id"), Subject(idea.name, file.rel, file.data)
                         )
@@ -93,15 +93,6 @@ class Pools:
         found = self.by[namespace].get(qualified)
         return found[0] if found else None
 
-    def duplicates(self) -> list[Duplicate]:
-        found: list[Duplicate] = []
-        for namespace, subjects in self.by.items():
-            for qualified, claims in subjects.items():
-                if len(claims) > 1:
-                    files = tuple(sorted({claim.rel for claim in claims}))
-                    found.append(Duplicate(namespace, qualified, files, len(claims)))
-        return found
-
 
 # --- what a lookup finds -------------------------------------------------------------------------
 
@@ -115,8 +106,19 @@ class Found:
 
 @dataclass(frozen=True)
 class Dangling:
-    """An id that no file of the location holds."""
+    """An id that no file of its kind holds, where the location holds files of that kind:
+    the core's data validation reports it (COR-029 point 4)."""
 
+    id: str
+
+
+@dataclass(frozen=True)
+class Unheld:
+    """An id of a kind of which the location holds no file, which the core's data
+    validation only warns of: the commands write each subject before anything refers to
+    it."""
+
+    namespace: str
     id: str
 
 
@@ -134,7 +136,7 @@ class NoReference:
 
 
 #: What a lookup finds.
-Lookup = Found | Dangling | Foreign | NoReference
+Lookup = Found | Dangling | Unheld | Foreign | NoReference
 
 
 def found(lookup: Lookup) -> Mapping[str, Any] | None:
@@ -188,9 +190,14 @@ class IdeaModel:
         idea has a goal cannot be told."""
         return self.idea.goal is not None and self.goal is None
 
+    def goal_for_gates(self) -> Mapping[str, Any] | None:
+        """The goal the gates read whether the idea has one: its goal, or `UNREAD_GOAL`
+        where its file does not read."""
+        return UNREAD_GOAL if self.goal_unread else self.goal
+
     def qualified(self, own: str) -> str:
         """The id the layout gives a subject of the idea whose own name is `own`."""
-        return f"{self.name}.{own}"
+        return ids.qualify(self.name, own)
 
     def canvases(self) -> list[tuple[str, layout.File, Mapping[str, Any]]]:
         """Each variant's canvas that reads, with the variant's name and its file, by name."""
@@ -205,7 +212,9 @@ class IdeaModel:
         if ids.idea_of(qualified) != self.name:
             return Foreign(qualified)
         subject = self.pools.get(namespace, qualified)
-        return Dangling(qualified) if subject is None else Found(subject)
+        if subject is not None:
+            return Found(subject)
+        return Dangling(qualified) if namespace in self.pools.held else Unheld(namespace, qualified)
 
     def resolve(self, value: object, namespace: str) -> Lookup:
         """The subject the reference `value` names in `namespace`."""

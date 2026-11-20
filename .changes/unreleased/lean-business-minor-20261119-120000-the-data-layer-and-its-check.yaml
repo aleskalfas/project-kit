@@ -2,20 +2,30 @@ component: lean-business
 kind: minor
 custom:
   category: Added
+  requires_backbone: release
 body: >
   The capability keeps an idea as a folder of data files, and `pkit lean check`
   holds them to the capability's records (#3426, DEC-002). Each idea under
   the location, `lean-business/` unless a project records another, holds its
-  goal, a canvas and assumptions for each variant, its experiments and its
-  cycles, each bound to its schema, format 1: `lean-business:goal`,
-  `canvas`, `assumptions`, `experiment`, `cycle`, and `config` for the
-  capability's configuration. Ids are qualified by what holds them, and a
-  file names another's subject as `[canvas:<id>]`, `[assumptions:<id>]`,
-  `[experiment:<id>]` or `[cycle:<id>]`. Each judgement keeps a fingerprint
-  of what it judged, over canonical form 1. `check` joins `pkit validate` as
-  the `lean-business:check` member: a broken invariant, such as a changed
-  declaration or plan, a decision or a review the gates would refuse, or a
-  suspension that breaks its rules, is an error, and a guideline of the book
-  or a judgement gone stale is a warning. It works out where each window and
-  time box falls under the cycle's suspensions, and reads no clock. No
-  command writes an idea yet.
+  goal, in the idea's currency, a canvas and assumptions for each variant,
+  its experiments and its cycles, each bound to its schema, format 1:
+  `lean-business:goal`, `canvas`, `assumptions`, `experiment`, `cycle`, and
+  `config` for the capability's configuration. Ids are qualified by what
+  holds them, their parts joined by two hyphens, such as
+  `board-game--direct`, and a file names another's subject as
+  `[canvas:<id>]`, `[assumptions:<id>]`, `[experiment:<id>]` or
+  `[cycle:<id>]`. The schemas mark each reference, and the canvas, the
+  experiment and the cycle each own their namespace, so `pkit data validate`
+  finds a reference that names nothing and an id given twice; it needs the
+  backbone that lets a document schema own a namespace. Each judgement keeps
+  a fingerprint of what it judged, over canonical form 1: every verdict and
+  each shortlisting covers the variant's archetype and sides, and a plan who
+  planned it and when. `check` joins `pkit validate` as the
+  `lean-business:check` member: a broken invariant, such as a changed
+  declaration or plan, a decision or a review the gates would refuse on the
+  day it was recorded, a reference to another idea's subject, or a
+  suspension that breaks its rules, among them one recorded late that
+  contradicts an act already recorded, is an error, and a guideline of the
+  book or a judgement gone stale is a warning. It works out where each
+  window and time box falls under the cycle's suspensions, and reads no
+  clock. No command writes an idea yet.

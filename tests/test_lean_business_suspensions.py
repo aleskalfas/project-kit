@@ -8,7 +8,7 @@ from typing import Any
 
 from tests.in_process import load
 
-(suspensions, timeline) = load("lean-business", "suspensions", "timeline")
+(gates, suspensions, timeline) = load("lean-business", "gates", "suspensions", "timeline")
 
 START = date(2026, 12, 1)
 
@@ -81,10 +81,10 @@ def test_it_resumes_no_earlier_than_its_first_day() -> None:
 
 def test_no_day_it_covers_holds_another_act() -> None:
     kept = suspension(0, on(5), on(5), on(10), on(10))
-    acts = [suspensions.Act(on(9), "the result of `idea.one`"), suspensions.Act(on(10), "x")]
+    acts = [suspensions.Act(on(9), "the result of `idea--one`"), suspensions.Act(on(10), "x")]
     [found] = suspensions.breaks(START, 30, [kept], acts)
     assert (found.rule, found.index) == ("over-work", 0)
-    assert "2026-12-09" in found.message and "the result of `idea.one`" in found.message
+    assert "2026-12-09" in found.message and "the result of `idea--one`" in found.message
 
 
 def test_an_ongoing_suspension_covers_every_act_after_its_first_day() -> None:
@@ -96,10 +96,29 @@ def test_an_ongoing_suspension_covers_every_act_after_its_first_day() -> None:
 def test_its_own_recording_is_no_act_but_another_suspensions_is() -> None:
     one = suspension(0, on(5), on(7), on(10), on(10))
     assert suspensions.breaks(START, 30, [one], []) == []
+    # Recorded last, the one covered breaks the rules: the one covering stood when it came.
     other = suspension(1, on(12), on(12), on(14), on(15))
     covering = suspension(0, on(11), on(11), on(16), on(16))
-    found = rules(*suspensions.breaks(START, 30, [covering, other], []))
-    assert (0, "over-work") in found and (1, "overlap") in found
+    assert rules(*suspensions.breaks(START, 30, [covering, other], [])) == [
+        (1, "over-work"),
+        (1, "over-work"),
+        (1, "overlap"),
+    ]
+    [recording, _, _] = suspensions.breaks(START, 30, [covering, other], [])
+    assert "it was recorded on 2026-12-12, a day the suspension at place 1" in recording.message
+    # Recorded last, the one covering breaks them.
+    covering_late = suspension(0, on(11), on(17), on(16), on(17))
+    assert rules(*suspensions.breaks(START, 30, [covering_late, other], [])) == [
+        (0, "over-work"),
+        (0, "over-work"),
+        (0, "overlap"),
+    ]
+
+
+def test_of_two_recorded_on_one_day_the_later_in_the_list_breaks_the_rules() -> None:
+    one = suspension(0, on(11), on(17), on(16), on(17))
+    two = suspension(1, on(12), on(17), on(14), on(17))
+    assert rules(*suspensions.breaks(START, 30, [one, two], [])) == [(1, "overlap")]
 
 
 def test_suspensions_do_not_overlap() -> None:
@@ -140,35 +159,79 @@ def test_a_cycles_decision_is_read_from_its_review() -> None:
     assert rules(*suspensions.of_cycle(cycle, [])) == [(0, "after-decision")]
 
 
-def test_the_cycles_first_planning_is_an_act_of_its_own() -> None:
-    cycle = {"planned": {"when": "2026-12-04", "first": {"when": "2026-12-02"}}}
-    acts = suspensions.acts_on(cycle, [], None, "c.yaml")
-    assert [(act.day, act.what, act.where) for act in acts] == [
-        (on(2), "the plan's first planning", "c.yaml#/planned/first"),
-        (on(4), "the plan", "c.yaml#/planned"),
-    ]
+# --- contradicting no act already recorded --------------------------------------------------------
 
 
-def test_the_acts_are_read_from_the_cycle_its_experiments_and_the_goal() -> None:
-    cycle = {"planned": {"when": "2026-11-20"}, "review": {"when": "2027-03-01"}}
-    experiment = {
-        "id": "idea.one",
-        "declared": {"when": "2026-12-02"},
-        "stopped": {"when": "2026-12-08"},
-        "result": {"when": "2026-12-09"},
-        "decision": {"when": "nowhen"},
+def needs_the_window_ended(cycle: dict[str, Any], day: date) -> Any:
+    """An act recorded on `day` whose gate refuses it while `cycle`'s window, as the view it
+    is asked with gives the cycle, has not ended: as the goal set and the review read it."""
+
+    def ask(view: Any) -> list[Any]:
+        span = timeline.cycle_window(view(cycle))
+        if span is None or span.end is None or span.end >= day:
+            return [gates.Refusal("", "the window has not ended")]
+        return []
+
+    return suspensions.Act(day, "the review", "c.yaml", "/review", "review-refused", ask)
+
+
+def thirty_days(*suspended: dict[str, Any]) -> dict[str, Any]:
+    """A cycle whose window runs from 2026-12-01 through 2026-12-30, before `suspended`."""
+    return {
+        "id": "idea--first",
+        "window": {"start": "2026-12-01", "days": 30},
+        "suspensions": list(suspended),
     }
-    acts = suspensions.acts_on(
-        cycle, [("e.yaml", experiment)], ("goal.yaml", {"when": "2026-11-01"}), "c.yaml"
-    )
-    assert [(act.day, act.where) for act in acts] == [
-        (on(20, 11), "c.yaml#/planned"),
-        (date(2027, 3, 1), "c.yaml#/review"),
-        (on(2), "e.yaml#/declared"),
-        (on(8), "e.yaml#/stopped"),
-        (on(9), "e.yaml#/result"),
-        (on(1, 11), "goal.yaml"),
-    ]
+
+
+def suspended(first: str, resumed: str, recorded: str) -> dict[str, Any]:
+    return {
+        "first-day": first,
+        "when": recorded,
+        "resumed": {"day": resumed, "when": recorded},
+    }
+
+
+def test_a_suspension_recorded_late_contradicts_an_act_already_recorded() -> None:
+    # Decided on 2026-12-31, after the window ended; recorded on 2027-01-05, the suspension
+    # would move its end to 2027-01-01, so the act would read as one its gate refuses.
+    late = thirty_days(suspended("2026-12-10", "2026-12-12", "2027-01-05"))
+    [found] = suspensions.of_cycle(late, [needs_the_window_ended(late, on(31))])
+    assert (found.index, found.rule) == (0, "contradicts")
+    assert "counted with it, the review, recorded on 2026-12-31" in found.message
+    assert "the window has not ended" in found.message
+
+
+def test_an_act_recorded_after_the_suspension_is_the_acts_own_to_answer() -> None:
+    early = thirty_days(suspended("2026-12-10", "2026-12-12", "2026-12-12"))
+    assert suspensions.of_cycle(early, [needs_the_window_ended(early, on(31))]) == []
+
+
+def test_a_suspension_recorded_on_the_acts_day_contradicts_it() -> None:
+    same_day = thirty_days(suspended("2026-12-10", "2026-12-12", "2026-12-31"))
+    act = needs_the_window_ended(same_day, on(31))
+    assert rules(*suspensions.of_cycle(same_day, [act])) == [(0, "contradicts")]
+
+
+def test_where_two_contradict_an_act_together_the_one_recorded_last_breaks_the_rule() -> None:
+    # Each moves the window's end by one day: alone, to 2026-12-31; together, to 2027-01-01,
+    # past the act recorded on 2027-01-01.
+    first = suspended("2026-12-10", "2026-12-11", "2027-01-02")
+    second = suspended("2026-12-15", "2026-12-16", "2027-01-03")
+    for listed, last in (((first, second), 1), ((second, first), 0)):
+        cycle = thirty_days(*listed)
+        act = needs_the_window_ended(cycle, on(1, 1, 2027))
+        assert rules(*suspensions.of_cycle(cycle, [act])) == [(last, "contradicts")]
+    # Recorded on one day, the later in the list is the one recorded last.
+    same_day = thirty_days(first, {**second, "when": "2027-01-02"})
+    act = needs_the_window_ended(same_day, on(1, 1, 2027))
+    assert rules(*suspensions.of_cycle(same_day, [act])) == [(1, "contradicts")]
+
+
+def test_an_act_on_a_day_the_suspension_covers_is_the_rule_over_work() -> None:
+    cycle = thirty_days(suspended("2026-12-10", "2026-12-12", "2027-01-05"))
+    act = needs_the_window_ended(cycle, on(11))
+    assert rules(*suspensions.of_cycle(cycle, [act])) == [(0, "over-work")]
 
 
 def test_a_cycles_suspensions_are_held_to_the_rules_from_its_file() -> None:

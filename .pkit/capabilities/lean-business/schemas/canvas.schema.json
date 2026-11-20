@@ -1,8 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "canvas.schema.json",
+  "x-pkit-entry-id": "/id",
   "title": "A variant's canvas — lean-business capability",
-  "description": "Formal shape of `<location>/<idea>/variants/<variant>/canvas.yaml` (lean-business DEC-002 points 4 to 6): one variant of an idea, its model on the canvas's nine boxes and three sub-boxes, the inputs its viability estimate needs, its traction target, the person's desk verdicts and the variant's outcome. Each box is a list of entries, each with an id qualified by the variant, its text, its side where the model names several, and the links a check can find missing (point 4). The estimate's outputs are never stored (point 4), and nor is where the variant stands, which follows from its verdicts and outcome (point 5). The box names are the canvas's own; each description here is the capability's (DEC-001 point 6). Which links resolve, which sides are named, the order of the verdicts and whether a fingerprint still matches are the capability's check's to hold. Document-shaped schema: the file IS the resource. Companion per COR-018.",
+  "description": "Formal shape of `<location>/<idea>/variants/<variant>/canvas.yaml` (lean-business DEC-002 points 4 to 6): one variant of an idea, its model on the canvas's nine boxes and three sub-boxes, the inputs its viability estimate needs, its traction target, the person's desk verdicts and the variant's outcome. Each box is a list of entries, each with an id qualified by the variant, its text, its side where the model names several, and the links a check can find missing (point 4). The estimate's outputs are never stored (point 4), and nor is where the variant stands, which follows from its verdicts and outcome (point 5). The box names are the canvas's own; each description here is the capability's (DEC-001 point 6). Which links resolve, which sides are named, the order of the verdicts and whether a fingerprint still matches are the capability's check's to hold. Document-shaped schema: the file IS the resource, and owns the `canvas` namespace, each canvas one entry named by its `id`, which `[canvas:<id>]` names (COR-029 point 6). Companion per COR-018.",
   "type": "object",
   "required": [
     "pkit_schema",
@@ -22,7 +23,7 @@
       "const": 1
     },
     "id": {
-      "description": "The variant's id, qualified by its idea, such as `board-game.platform`. Its parts are the idea's folder and the variant's folder.",
+      "description": "The variant's id, qualified by its idea, such as `board-game--platform`. Its parts are the idea's folder and the variant's folder.",
       "$ref": "shapes.schema.json#/$defs/idea-qualified-id"
     },
     "archetype": {
@@ -194,7 +195,7 @@
       }
     },
     "outcome": {
-      "description": "The variant's outcome, the person's (DEC-002 point 5): `shortlisted`, with the fingerprint of the canvas and the goal it was shortlisted on; `shelved`, with its reason; or `split`, into the variants it names, each of which names this one as the variant it comes from.",
+      "description": "The variant's outcome, the person's (DEC-002 point 5): `shortlisted`, with the fingerprint of the variant's archetype and sides, its canvas and the goal it was shortlisted on; `shelved`, with its reason; or `split`, into the variants it names, each of which names this one as the variant it comes from.",
       "type": "object",
       "required": [
         "kind",
@@ -321,7 +322,7 @@
   },
   "$defs": {
     "entry-id": {
-      "description": "An entry's id, qualified by its variant, such as `board-game.platform.setup-takes-long`.",
+      "description": "An entry's id, qualified by its variant, such as `board-game--platform--setup-takes-long`, so an assumption's link names one entry in the location (DEC-002 point 7).",
       "$ref": "shapes.schema.json#/$defs/variant-qualified-id"
     },
     "entry": {
@@ -500,7 +501,7 @@
       }
     },
     "inputs": {
-      "description": "The estimate's inputs for the model, or for one of its sides: the price a customer pays, how long a customer stays, the share of leads who become customers, and the share of new customers who come by referral. A first sketch may leave any out; the viability step needs them.",
+      "description": "The estimate's inputs for the model, or for one of its sides: the price, what the business keeps from one active customer; how long a customer stays; the share of leads who become customers; and the share of new customers who come by referral. A first sketch may leave any out; the viability step needs them.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -508,6 +509,7 @@
           "$ref": "shapes.schema.json#/$defs/segment"
         },
         "price": {
+          "description": "What the business keeps from one active customer, on average, each month or year, in the idea's currency (DEC-002 point 4), since the estimate divides the goal's yearly revenue by a year's revenue from one customer. A one-off sale counts the total a customer pays over their lifetime, spread over that lifetime. A marketplace's side counts what the business keeps from it, not what flows through it. A side that pays nothing counts at nothing. What turns a pricing into this figure, such as how often a customer buys or the share kept of a sale, is an assumption of the variant.",
           "$ref": "shapes.schema.json#/$defs/amount-per-period"
         },
         "lifetime": {
@@ -528,7 +530,7 @@
       }
     },
     "verdict": {
-      "description": "The person's yes or no on one desk step, a note, and the fingerprint of what it judged (DEC-002 point 5, point 13): the boxes its step reviews and, for viability and feasibility, the goal.",
+      "description": "The person's yes or no on one desk step, a note, and the fingerprint of what it judged (DEC-002 points 5 and 13): the variant's archetype and sides, and all that its step judges, the goal included for viability and feasibility.",
       "type": "object",
       "required": [
         "answer",

@@ -1,26 +1,31 @@
 # A variant's canvas (lean-business DEC-002 points 4 to 6): one story of how an idea makes a
 # business, modelled on one page, with the person's desk verdicts and the variant's outcome.
 #
-# - `id` — the variant's id, `<idea>.<variant>`, its parts the folders the file lies in:
+# - `id` — the variant's id, `<idea>--<variant>`, its parts the folders the file lies in:
 #   `<location>/<idea>/variants/<variant>/canvas.yaml`.
 # - `archetype` — `direct`, `multisided` or `marketplace`; `authors`, one or more people;
 #   `comes-from`, the variant this one was split from or whose shelved story it takes up.
 # - `sides` — the groups of customers a multisided or marketplace model serves. Each entry
 #   and each set of inputs then names its side. A direct model names none.
 # - `boxes` — the nine boxes and three sub-boxes, each a list of entries with an `id`,
-#   `<idea>.<variant>.<entry>`, and a `text`. The links a check can find missing: a problem's
+#   `<idea>--<variant>--<entry>`, and a `text`. The links a check can find missing: a problem's
 #   `alternatives`, a solution's and a value proposition's `problem`, an early adopter's
 #   `triggers`, a channel's `kind` and a key metric's `step`. The problems' order is their
 #   rank.
 # - `viability` — the estimate's inputs, one set for each side: `price`, `lifetime`,
-#   `conversion` and `referral-share`. The estimate's outputs are never stored.
+#   `conversion` and `referral-share`. A price is what the business keeps from one active
+#   customer, on average, each month or year, in the idea's currency: a one-off sale spread
+#   over a customer's lifetime, a marketplace's side by what the business keeps of it, and a
+#   side that pays nothing at nothing. The estimate's outputs are never stored.
 # - `traction` — the yearly growth `multiplier`, ten by default, and the `first-stage`
 #   target, a step of the customer factory and the number it reaches there.
 # - `verdicts` — the person's `yes` or `no` on desirability, viability and feasibility,
-#   each with a note, the fingerprint of what it judged, and who judged it and when.
+#   each with a note, the fingerprint of what it judged, the archetype and the sides
+#   among it, and who judged it and when.
 # - `outcome` — `shortlisted` with its fingerprint, `shelved` with its reason, or `split`
 #   `into` the variants it names, with who decided it and when.
 #
+# The file owns the `canvas` namespace: another file names the variant `[canvas:<id>]`.
 # Where the variant stands follows from its verdicts and outcome, and is never stored. The
 # box names are the canvas's own; the words describing them are the capability's
 # (DEC-001 point 6). The body below is the reference instance: valid, the schema's
@@ -31,28 +36,28 @@ schema_version: 1
 
 # --- reference instance -------------------------------------------------
 
-id: example.direct
+id: example--direct
 archetype: direct
 authors:
   - A. Founder
 boxes:
   customer-segments:
-    - id: example.direct.households
+    - id: example--direct--households
       text: Households that cook every evening
   problem:
-    - id: example.direct.planning-takes-long
+    - id: example--direct--planning-takes-long
       text: Planning the week's meals takes too long
       alternatives:
-        - example.direct.paper-lists
+        - example--direct--paper-lists
   existing-alternatives:
-    - id: example.direct.paper-lists
+    - id: example--direct--paper-lists
       text: Lists on paper, written each weekend
   unique-value-proposition:
-    - id: example.direct.plan-in-a-minute
+    - id: example--direct--plan-in-a-minute
       text: The week's meals planned in a minute
-      problem: example.direct.planning-takes-long
+      problem: example--direct--planning-takes-long
   revenue-streams:
-    - id: example.direct.subscription
+    - id: example--direct--subscription
       text: A monthly subscription
 viability:
   - price:

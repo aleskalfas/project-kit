@@ -38,10 +38,10 @@ def idea_model(root: Path) -> Any:
     ("kind", "qualified", "rel"),
     [
         ("goal", "meal-plan", f"{IDEA}/goal.yaml"),
-        ("canvas", "meal-plan.direct", f"{IDEA}/variants/direct/canvas.yaml"),
-        ("assumptions", "meal-plan.direct", f"{IDEA}/variants/direct/assumptions.yaml"),
-        ("experiment", "meal-plan.landing-page", f"{IDEA}/experiments/landing-page.yaml"),
-        ("cycle", "meal-plan.first", f"{IDEA}/cycles/first.yaml"),
+        ("canvas", "meal-plan--direct", f"{IDEA}/variants/direct/canvas.yaml"),
+        ("assumptions", "meal-plan--direct", f"{IDEA}/variants/direct/assumptions.yaml"),
+        ("experiment", "meal-plan--landing-page", f"{IDEA}/experiments/landing-page.yaml"),
+        ("cycle", "meal-plan--first", f"{IDEA}/cycles/first.yaml"),
     ],
 )
 def test_the_layout_puts_each_subjects_file_where_it_reads_it(
@@ -54,12 +54,12 @@ def test_the_layout_puts_each_subjects_file_where_it_reads_it(
 @pytest.mark.parametrize(
     ("kind", "qualified"),
     [
-        ("goal", "meal-plan.direct"),
+        ("goal", "meal-plan--direct"),
         ("canvas", "meal-plan"),
-        ("experiment", "meal-plan.direct.x"),
-        ("cycle", "Meal-plan.first"),
+        ("experiment", "meal-plan--direct--x"),
+        ("cycle", "Meal-plan--first"),
         ("cycle", "meal-plan/../x.first"),
-        ("note", "meal-plan.x"),
+        ("note", "meal-plan--x"),
     ],
     ids=["goal-of-a-variant", "canvas-of-an-idea", "too-deep", "upper-case", "a-path", "no-kind"],
 )
@@ -123,7 +123,7 @@ def test_a_listing_git_refuses_fails(tmp_path: Path) -> None:
 
 def test_a_lookup_finds_a_subject_of_the_idea(tmp_path: Path) -> None:
     idea = idea_model(project(tmp_path))
-    found = idea.resolve("[canvas:meal-plan.direct]", "canvas")
+    found = idea.resolve("[canvas:meal-plan--direct]", "canvas")
     assert isinstance(found, model.Found)
     assert found.subject.rel == f"{IDEA}/variants/direct/canvas.yaml"
     assert model.found(found) == found.subject.data
@@ -132,10 +132,10 @@ def test_a_lookup_finds_a_subject_of_the_idea(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("value", "namespace", "expected"),
     [
-        ("[canvas:meal-plan.nothing]", "canvas", model.Dangling("meal-plan.nothing")),
-        ("[canvas:other.direct]", "canvas", model.Foreign("other.direct")),
-        ("[cycle:meal-plan.first]", "canvas", model.NoReference()),
-        ("meal-plan.direct", "canvas", model.NoReference()),
+        ("[canvas:meal-plan--nothing]", "canvas", model.Dangling("meal-plan--nothing")),
+        ("[canvas:other--direct]", "canvas", model.Foreign("other--direct")),
+        ("[cycle:meal-plan--first]", "canvas", model.NoReference()),
+        ("meal-plan--direct", "canvas", model.NoReference()),
         (None, "cycle", model.NoReference()),
     ],
     ids=["names-nothing", "another-ideas", "another-namespace", "bare", "none"],
@@ -154,24 +154,39 @@ def test_the_lookups_between_an_ideas_files(tmp_path: Path) -> None:
     [interviews, landing] = idea.experiments
     assert (interviews.own, landing.own) == ("first-interviews", "landing-page")
     assert model.found(idea.cycle_of(landing)) == idea.cycles[0].data
-    assert idea.variant_tested(landing) == "meal-plan.direct"
-    assert idea.experiments_of("meal-plan.first") == [interviews, landing]
-    assert idea.experiments_on("meal-plan.direct.pays-monthly") == [landing]
-    assert idea.declared_on("meal-plan.direct.pays-monthly")
-    assert not idea.declared_on("meal-plan.direct.nothing")
+    assert idea.variant_tested(landing) == "meal-plan--direct"
+    assert idea.experiments_of("meal-plan--first") == [interviews, landing]
+    assert idea.experiments_on("meal-plan--direct--pays-monthly") == [landing]
+    assert idea.declared_on("meal-plan--direct--pays-monthly")
+    assert not idea.declared_on("meal-plan--direct--nothing")
     assert [name for name, _, _ in idea.canvases()] == ["direct", "two-sided"]
 
 
-def test_an_id_given_twice_is_a_duplicate_with_each_file_that_gives_it(tmp_path: Path) -> None:
+def test_a_lookup_into_a_kind_the_location_holds_no_file_of_is_told_apart(tmp_path: Path) -> None:
+    root = project(tmp_path)
+    (root / IDEA / "cycles/first.yaml").unlink()
+    pools = model.Pools.of(layout.read(root, LOCATION))
+    assert pools.held == {"canvas", "assumptions", "experiment"}
+    idea = idea_model(root)
+    assert idea.resolve("[cycle:meal-plan--first]", "cycle") == model.Unheld(
+        "cycle", "meal-plan--first"
+    )
+    assert idea.resolve("[canvas:meal-plan--nothing]", "canvas") == model.Dangling(
+        "meal-plan--nothing"
+    )
+
+
+def test_an_id_given_twice_finds_the_first_file_that_gives_it(tmp_path: Path) -> None:
     root = project(tmp_path)
     shutil.copy(root / IDEA / "experiments/landing-page.yaml", root / IDEA / "experiments/x.yaml")
-    [duplicate] = model.Pools.of(layout.read(root, LOCATION)).duplicates()
-    assert duplicate == model.Duplicate(
-        "experiment",
-        "meal-plan.landing-page",
-        (f"{IDEA}/experiments/landing-page.yaml", f"{IDEA}/experiments/x.yaml"),
-        2,
-    )
+    pools = model.Pools.of(layout.read(root, LOCATION))
+    # The duplicate is the data member's to report; a lookup reads the first that claims it.
+    claims = pools.by["experiment"]["meal-plan--landing-page"]
+    assert [claim.rel for claim in claims] == [
+        f"{IDEA}/experiments/landing-page.yaml",
+        f"{IDEA}/experiments/x.yaml",
+    ]
+    assert pools.get("experiment", "meal-plan--landing-page") == claims[0]
 
 
 def test_a_goal_that_does_not_read_is_told_from_none(tmp_path: Path) -> None:
