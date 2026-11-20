@@ -172,8 +172,8 @@ def shortlisting(canvas: Mapping[str, Any]) -> list[Refusal]:
     return [
         Refusal(
             "/outcome",
-            f"the variant is shortlisted without a yes on {', '.join(missing)}: a shortlisting "
-            f"needs a yes on all three steps, and a no withdraws it",
+            f"a shortlisting needs a yes on all three steps, and the variant has none on "
+            f"{', '.join(missing)}",
         )
     ]
 
