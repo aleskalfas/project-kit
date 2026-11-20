@@ -15,11 +15,11 @@ reads that position here too and never works it out again.
   position is the longest run of the person's standing yes verdicts from the first step
   (`readings.standing`). The detection never reads a box's content or a fingerprint, so a
   stale verdict holds the position (DEC-003 point 2).
-- **The desk stage's gates** (`passing`, `shortlisting`, `shelving`): what each move needs,
-  through the predicates the check shares (`gates`; DEC-002 point 14). The engine asks a
-  gate twice: by `can-move` before the command writes, and by `move` after, against what
-  it wrote (the process area's README, "Seam-ordering contract"). So each gate holds of
-  the data on both sides of the write.
+- **The desk stage's gates** (`passing`, `shortlisting`, `shelving`, `splitting`): what
+  each move needs, through the predicates the check shares (`gates`; DEC-002 point 14). The
+  engine asks a gate twice: by `can-move` before the command writes, and by `move` after,
+  against what it wrote (the process area's README, "Seam-ordering contract"). So each gate
+  holds of the data on both sides of the write.
 - **A cycle** (`cycle`, `cycle_in`, `cycle_lifecycle`): a cycle's position, from its
   review, its suspensions and its window as they work it out (DEC-003 points 1 and 4). A
   decision outranks a suspension, and an ongoing suspension, one with no day of resuming,
@@ -592,6 +592,105 @@ def shelving(subject: Variant) -> Answer:
         return Answer(True, "the canvas records the variant shelved, with its reason")
     return Answer(
         False, "the canvas records the variant shelved without a reason: a shelving says why"
+    )
+
+
+def splitting(subject: Variant) -> Answer:
+    """Whether the person's split may move the variant into split, from sketched or a
+    verdict's state (DEC-003 point 2): a split names the variants it was split into, each of
+    which exists and names this one as the variant it comes from (DEC-002 point 5). Before
+    the command writes the split, the variant has no outcome, and nothing recorded refuses
+    it: the variants it will name are the command's, which the gate cannot see. After, the
+    canvas records the variant split into at least one variant, each name a reference its
+    idea's canvases resolve (`model.resolve`), and each variant it finds another, which names
+    this one, through the predicate the check shares (`gates.split`; DEC-002 point 14). A
+    name whose canvas lies in its place but does not read leaves the split untold, where
+    nothing else refuses it."""
+    assert subject.canvas is not None and subject.idea is not None
+    recorded = subject.canvas.get("outcome")
+    if recorded is None:
+        return Answer(
+            True,
+            "the variant may be split: it has no outcome yet, and a split names the variants it "
+            "was split into, each of which exists and names it as the variant it comes from",
+        )
+    kind = recorded.get("kind") if isinstance(recorded, Mapping) else None
+    if kind == "shortlisted":
+        return Answer(
+            False,
+            "the variant is shortlisted, and a variant is split only from sketched or a "
+            "verdict's state",
+        )
+    if kind == "shelved":
+        return Answer(False, "the variant is shelved, which is final: no shelved variant is split")
+    if kind != "split":
+        raise Unreadable(
+            f"the canvas at `{subject.rel}` records an outcome that is none of shortlisted, "
+            f"shelved and split, so whether the variant may be split cannot be told"
+        )
+    written = _m(recorded).get("into")
+    if written is not None and not isinstance(written, list):
+        return Answer(
+            False,
+            "the canvas records the variants the variant was split into as something other "
+            "than a list of them: a split names each variant it was split into",
+        )
+    if not written:
+        return Answer(
+            False,
+            "the canvas records the variant split into no variant: a split names the variants "
+            "it was split into",
+        )
+    model = subject.idea
+    named: list[tuple[int, Mapping[str, Any]]] = []
+    into: list[str] = []
+    refusals: list[Refusal] = []
+    untold: list[str] = []
+    for index, value in enumerate(written):
+        pointer = f"/outcome/into/{index}"
+        lookup = model.resolve(value, ids.CANVAS)
+        if isinstance(lookup, models.Found):
+            named.append((index, lookup.subject.data))
+            reference = ids.parse_ref(value, ids.CANVAS)
+            into.append(f"`{reference.id if reference is not None else value}`")
+        elif isinstance(lookup, models.NoReference):
+            refusals.append(
+                Refusal(
+                    pointer,
+                    f"the variant named at place {index + 1} of the split is no reference to a "
+                    f"variant's canvas, `[canvas:<idea>--<variant>]`",
+                )
+            )
+        elif isinstance(lookup, models.Foreign):
+            refusals.append(
+                Refusal(
+                    pointer,
+                    f"the variant is split into `{lookup.id}`, a variant of another idea, which "
+                    f"an idea never names",
+                )
+            )
+        else:
+            unread = _unread_file(model, ids.CANVAS, lookup.id)
+            if unread is not None:
+                untold.append(
+                    f"the canvas of `{lookup.id}` at `{unread.rel}`, which the split names, "
+                    f"cannot be read, so whether it names this variant as the one it comes "
+                    f"from cannot be told"
+                )
+            else:
+                refusals.append(
+                    Refusal(
+                        pointer,
+                        f"the variant is split into `{lookup.id}`, which no canvas holds as its "
+                        f"id: each variant a split names exists",
+                    )
+                )
+    refusals.extend(gates.split(subject.id, named))
+    return _answer(
+        refusals,
+        untold,
+        f"the canvas records the variant split into {_joined(into)}, each of which exists and "
+        f"names it as the variant it comes from",
     )
 
 
