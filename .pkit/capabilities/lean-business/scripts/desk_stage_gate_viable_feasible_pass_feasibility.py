@@ -1,35 +1,57 @@
-#!/usr/bin/env python3
-"""Predicate stub: deterministic gate — may the subject move 'viable' -> 'feasible' on 'pass-feasibility'? for lean-business:desk-stage.
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "ruamel.yaml==0.19.1",
+# ]
+# ///
+"""lean-business:desk-stage — the gate on `viable` -> `feasible`, on `pass-feasibility`: may
+the person's yes on feasibility move the variant on? (lean-business DEC-003 point 2).
 
-Scaffolded by `pkit process new` (COR-044). Implementing it is the
-process-author agent's territory — turn the owner's intent into a working
-predicate over reality. The contract it must follow (COR-033 engine contract,
-.pkit/process/README.md "The predicate runner"):
+Feasibility judges whether the first stage's traction target can be reached, against the
+idea's goal, so a yes on it needs, through the predicates the check shares
+(`_lib.positions.passing`):
 
-- READ-ONLY. `status` and `health` run predicates live; mutating here is a
-  side-effect bug.
-- argv: the subject slot first (the subject id), then `--json`;
-  cwd is the repo root.
-- print ONE JSON object to stdout: {"result": <bool>, "reason": "<why>"}
-- FAIL-CLOSED: an error / timeout / non-zero exit / unparseable payload is
-  INDETERMINATE, never a pass.
+- the idea's goal set (`gates.judging`; DEC-002 point 3);
+- the first stage's target given (`gates.yes_content`);
+- a yes on desirability and on viability, neither stale (`gates.stale_before`; DEC-002
+  point 13).
 
-Until implemented this stub EXITS NON-ZERO (indeterminate, fail-closed) so an
-unwritten predicate can never read as green.
+The engine asks it by `can-move` before the command writes the yes, and by `move` after.
+The write adds the verdict and nothing the gate reads, so both read one answer (the process
+area's README, "Seam-ordering contract").
 
-pkit:predicate-stub-unimplemented — DELETE this line once the predicate is
-implemented. `pkit process health --interpretation-only` reads it statically to
-tell "seam declared but never written" from "seam written and merely failing",
-so a seam no subject currently exercises still reports honestly.
+READ-ONLY. The engine runs it from the repository's root as
+
+  desk_stage_gate_viable_feasible_pass_feasibility.py <idea>--<variant> --json
+
+and reads one JSON object on standard output, `{"result": <bool>, "reason": "..."}`.
+
+Exit codes:
+  0  answered
+  2  no answer: the subject is no variant's id; its location, its files or its canvas
+     cannot be read; or nothing else refuses the move, and the goal's file, or the
+     fingerprint of a yes it rests on, cannot be read. Why goes to standard error, and the
+     engine refuses the move as indeterminate.
 """
-import json
+
+from __future__ import annotations
+
 import sys
+from pathlib import Path
 
-subject = sys.argv[1] if len(sys.argv) > 1 else ""
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).parent))
 
-# TODO(process-author): implement this predicate over the owner's reality,
-# print the contract payload above, and exit 0.
-print(json.dumps({
-    "reason": "stub not implemented yet (deterministic gate — may the subject move 'viable' -> 'feasible' on 'pass-feasibility'? for lean-business:desk-stage)",
-}))
-sys.exit(1)
+from _lib import positions
+
+PROG = "desk-stage-gate-viable-feasible-pass-feasibility"
+WHAT = "May the person's yes on feasibility move the variant from viable to feasible?"
+
+
+def judge(variant: positions.Variant) -> positions.Answer:
+    return positions.passing(variant, "feasibility")
+
+
+if __name__ == "__main__":
+    sys.exit(positions.answer_gate(sys.argv[1:], PROG, WHAT, positions.desk_gate(judge)))

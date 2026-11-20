@@ -1,40 +1,51 @@
-#!/usr/bin/env python3
-"""Predicate stub: classified detection — which state is the subject in? for lean-business:desk-stage.
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "ruamel.yaml==0.19.1",
+# ]
+# ///
+"""lean-business:desk-stage — the classifier: which state of its desk stage is a variant in?
+(lean-business DEC-003 points 1 and 2).
 
-Scaffolded by `pkit process new` (COR-044) as one `inferred` stub per state,
-then made the definition's one classifier by hand, as the stamp's help says
-adopting `classified` is (DEC-003 point 1). Implementing it is the
-process-author agent's territory — turn the owner's intent into a working
-predicate over reality. The contract it must follow (COR-033 engine contract,
-.pkit/process/README.md "The predicate runner"; .pkit/process/shape.md,
-"Detection modes"):
+Every state of the definition names it under `mode: classified`, so the engine runs it once
+each time it reads a variant's position (the process area's shape page, "Detection
+modes"). It reads the variant's canvas, at the place the layout gives it, and answers from
+its outcome and its verdicts alone (`_lib.positions.desk_stage`):
 
-- READ-ONLY. `status` and `health` run predicates live; mutating here is a
-  side-effect bug.
-- argv: the subject slot first (the subject id), then `--json`;
-  cwd is the repo root.
-- print ONE JSON object to stdout: {"state": "<state id>" | null, "reason": "<why>"}
-  (the `classified` answer every state of the definition names; null only
-  with a reason that is not blank)
-- FAIL-CLOSED: an error / timeout / non-zero exit / unparseable payload is
-  INDETERMINATE, never a pass.
+- an outcome places the variant in `shortlisted`, `shelved` or `split`, whatever its
+  verdicts say;
+- else the longest run of the person's yes verdicts from desirability places it in
+  `sketched`, `desirable`, `viable` or `feasible`. A stale verdict holds the position.
 
-Until implemented this stub EXITS NON-ZERO (indeterminate, fail-closed) so an
-unwritten predicate can never read as green.
+READ-ONLY. The engine runs it from the repository's root as
 
-pkit:predicate-stub-unimplemented — DELETE this line once the predicate is
-implemented. `pkit process health --interpretation-only` reads it statically to
-tell "seam declared but never written" from "seam written and merely failing",
-so a seam no subject currently exercises still reports honestly.
+  desk_stage_detect.py <idea>--<variant> --json
+
+and reads one JSON object on standard output:
+
+  {"state": "<state>", "reason": "..."}   the variant stands there
+  {"state": null, "reason": "..."}        it has no canvas, so it stands in no state
+
+Exit codes:
+  0  answered
+  2  no answer: the subject is no variant's id, or its location, its files, its outcome or
+     a verdict its position rests on cannot be read. Why goes to standard error, and the
+     engine reads every state as indeterminate.
 """
-import json
+
+from __future__ import annotations
+
 import sys
+from pathlib import Path
 
-subject = sys.argv[1] if len(sys.argv) > 1 else ""
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).parent))
 
-# TODO(process-author): implement this predicate over the owner's reality,
-# print the contract payload above, and exit 0.
-print(json.dumps({
-    "reason": "stub not implemented yet (classified detection — which state is the subject in? for lean-business:desk-stage)",
-}))
-sys.exit(1)
+from _lib import positions
+
+PROG = "desk-stage-detect"
+WHAT = "Classify which state of its desk stage a variant is in, for the process engine."
+
+if __name__ == "__main__":
+    sys.exit(positions.answer_detection(sys.argv[1:], PROG, WHAT, positions.desk_stage_of))
