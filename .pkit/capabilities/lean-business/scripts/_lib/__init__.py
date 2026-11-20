@@ -23,7 +23,10 @@ module, so the check, the process's detections, the commands and the status neve
 - `schemas`: where each kind of file writes a day, read from its schema (DEC-003 point 1);
 - `readings`: the facts worked out from the files, such as an experiment's pass or fail
   and an assumption's outcome (points 2 and 10; DEC-003 point 8);
-- `checks`: the capability's check, a member of validation (point 14).
+- `checks`: the capability's check, a member of validation (point 14);
+- `positions`: where each subject of the capability's processes stands, read from its files
+  whenever a process predicate asks, and what the predicates answer the engine (DEC-003
+  points 1 and 2).
 
 None reads the clock: a gate, and a reading that depends on a day, takes the day from its
 caller (DEC-003 point 1; COR-055 point 2).
