@@ -12,10 +12,13 @@ move after it is refused (lean-business DEC-001 point 3; DEC-002 points 1 and 14
   holds the text of each file as it would stand, and the configuration's where the write
   records the location.
 - **Held** (`hold`). Before anything is written, the location's files are copied twice
-  into a folder of their own, once as they stand and once as the write would leave them,
-  and each copy is held to the capability's check (`checks`) and to the backbone's data
-  validation, `pkit data validate`, which holds each file to its schema and resolves the
-  references and the ids between them (COR-023, COR-029). The findings of the two are
+  into a folder of their own, once as they stand and once as the write would leave them.
+  Where the write records the location, both copies take the configuration as the write
+  leaves it, so the check reads the same files in each, and a write that records where
+  files already lie adds none of their errors. Each copy is held to the capability's check
+  (`checks`) and to the backbone's data validation, `pkit data validate`, which holds each
+  file to its schema and resolves the references and the ids between them (COR-023,
+  COR-029). The findings of the two are
   compared. A write that adds an error is refused, and nothing is written. An error already
   in the files is named and refuses nothing, so a file broken by hand never freezes the
   commands on it. A warning the write adds is named.
@@ -209,9 +212,12 @@ def hold(files: Files) -> Held:
     files stand and as the write would leave them. Raises Refused where either cannot be
     run."""
     written = files.written()
+    # The configuration the write leaves lies under both copies, so the check reads the same
+    # location in each, and the two differ only by the content the write changes.
+    configured = {CONFIG: written[CONFIG]} if CONFIG in written else {}
     staging = Path(tempfile.mkdtemp(prefix="lean-business-"))
     try:
-        before = _stage(files.root, files.location, staging / "before", {})
+        before = _stage(files.root, files.location, staging / "before", configured)
         after = _stage(files.root, files.location, staging / "after", written)
         found_before = _found(files.root, before, files.location)
         found_after = _found(files.root, after, files.location)

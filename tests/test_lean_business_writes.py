@@ -204,6 +204,25 @@ def test_set_location_refuses_while_the_location_in_use_holds_an_idea(world: lb.
     assert not (world.root / lb.CONFIG).exists()
 
 
+@pytest.mark.parametrize("recorded", [False, True], ids=["none-recorded", "the-old-one-recorded"])
+def test_set_location_after_the_folder_is_moved_refuses_nothing_on_an_error_already_there(
+    world: lb.World, recorded: bool
+) -> None:
+    # An error the check finds and the schema does not: a direct model naming a side.
+    world.edit(lb.DIRECT, lambda data: data.insert(4, "sides", ["cooks"]))
+    if recorded:
+        first = world.run("add_entry", "meal-plan--direct", "cost-structure", "Packaging")
+        assert first.code == 0, first.err
+        assert world.read(lb.CONFIG)["location"] == "lean-business"
+    # As set-location's refusal asks: the folder moved first, then the location recorded.
+    shutil.move(world.root / "lean-business", world.root / "ideas")
+    run = world.run("set_location", "ideas")
+    assert run.code == 0, run.err
+    assert world.read(lb.CONFIG)["location"] == "ideas"
+    assert "Already in the files, and left as they were: 1 error" in run.out
+    assert "ideas/meal-plan/variants/direct/canvas.yaml#/sides  [sides]" in run.out
+
+
 def test_set_location_refuses_a_folder_the_rules_refuse(world: lb.World) -> None:
     run = world.run("set_location", ".pkit/ideas")
     assert run.code == 1
