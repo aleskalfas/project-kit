@@ -861,7 +861,10 @@ def test_the_path_from_a_result_to_a_decision(world: lb.World) -> None:
     on(world, date(2027, 3, 16))
     run = world.run("decide", DRAFT, "double-down", terminal=True, answers=[True])
     assert run.code == 0, run.err
-    assert run.asked == ["What did the experiment find, and what comes next?"]
+    assert run.asked == [
+        "Decide the experiment on what it found, with the next action given? Once decided, "
+        "neither its result nor its next action can change."
+    ]
     assert f"`{DRAFT}` moved from due to decided." in run.out
     assert world.read(DRAFT_FILE)["decision"] == {
         "next": "double-down",
