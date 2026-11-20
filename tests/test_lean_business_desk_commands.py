@@ -680,7 +680,7 @@ def test_shelve_moves_a_variant_into_shelved_and_says_when_the_idea_is_dropped(
         "shelve", PLATFORM, "--reason", "Publishers sell direct", terminal=True, answers=[True]
     )
     assert run.code == 0, run.err
-    assert run.asked == ["Shelve the variant, and why? A shelved variant is final."]
+    assert run.asked == ["Shelve the variant, for the reason given? A shelved variant is final."]
     assert world.engine.moves == [("desk-stage", PLATFORM, "sketched", "shelved", lb.PERSON)]
     assert world.read(PLATFORM_FILE)["outcome"] == {
         "kind": "shelved",
@@ -734,7 +734,7 @@ def test_shelve_off_a_terminal_without_the_persons_word_asks_and_writes_nothing(
     kept = lb.snapshot(world.root)
     run = world.run("shelve", PLATFORM, "--reason", "Publishers sell direct")
     assert run.code == lb.acting.ASKED
-    assert run.out.startswith("Shelve the variant, and why?")
+    assert run.out.startswith("Shelve the variant, for the reason given?")
     assert lb.snapshot(world.root) == kept
     assert world.engine.moves == []
 
