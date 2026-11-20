@@ -92,6 +92,24 @@ process:
         predicate:
           run: desk-stage-gate-viable-feasible-pass-feasibility
       prompt: "Is the variant feasible: can the first stage's traction target be reached?"
+    - from: feasible
+      to: shortlisted
+      trigger: shortlist
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-feasible-shortlisted-shortlist
+      prompt: Shortlist the variant, to test it in a cycle?
+    - from: shortlisted
+      to: shortlisted
+      trigger: shortlist
+      authorisation: user
+      gate:
+        kind: deterministic
+        predicate:
+          run: desk-stage-gate-shortlisted-shortlisted-shortlist
+      prompt: Shortlist the variant again, on its canvas and the goal as they stand now?
     - from: desirable
       to: sketched
       trigger: fail-desirability
@@ -137,24 +155,6 @@ process:
       trigger: fail-feasibility
       authorisation: user
       prompt: Is the variant no longer feasible? A no takes it back to viable and withdraws its shortlisting.
-    - from: feasible
-      to: shortlisted
-      trigger: shortlist
-      authorisation: user
-      gate:
-        kind: deterministic
-        predicate:
-          run: desk-stage-gate-feasible-shortlisted-shortlist
-      prompt: Shortlist the variant, to test it in a cycle?
-    - from: shortlisted
-      to: shortlisted
-      trigger: shortlist
-      authorisation: user
-      gate:
-        kind: deterministic
-        predicate:
-          run: desk-stage-gate-shortlisted-shortlisted-shortlist
-      prompt: Shortlist the variant again, on its canvas and the goal as they stand now?
     - from: sketched
       to: shelved
       trigger: shelve
