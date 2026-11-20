@@ -399,6 +399,7 @@ No accepted record is modified. Its findings, adopted into the plan:
     - **The candidate's versions** live only in its tag, raise no floor and consume no changeset (PRJ-016).
 23. **Resuming may land in review** (the person, 2026-11-20, after a worked example: a cycle of days 1 to 90, suspended on day 50, resumed as of day 60 but recorded on day 120, so its window as moved ends on day 100). Where the window, moved by the suspension, ended before the day the resumption is recorded, the move of resuming goes from suspended into review, under the same gate, as declaring has two targets. The person records the true day of resuming, and gets back no day they worked. Preferred over refusing such a resumption, which would make them name a later day, and over landing in running past the window's end. Found by `process-author` writing the cycle's gates: the engine refused the move, since the cycle read in review.
 24. **A command for every piece of content** (the person, 2026-11-20, option B after a worked example: a problem added to the board game's canvas). Each entry of a canvas and its links, each viability input and the traction target, each assumption, and each field of a draft experiment has a command that writes it, assigns its ids and refuses at once what the data shows wrong, as every write in pkit goes through a command. Preferred over editing the content in the files with two commands beside (`add-assumption`, and copying a canvas on a split). A hand edit stays possible, and the check holds it alike (DEC-002 point 14). Written into DEC-001 point 3 as a refinement.
+25. **The candidate waits for the whole build** (the person, 2026-11-20). The release candidate for the first use is cut once all four builders of phase 3 and the skill have landed, not after the experiment path alone. Preferred over an earlier candidate, which would start the first experiment's fourteen days sooner but cost a second candidate, testers' branch and reinstall (decision 22).
 
 ### Next
 
@@ -538,7 +539,7 @@ The plan the builders follow (2026-11-20). It carries out DEC-001 point 3 as ref
 
 The skill (phase 4) starts after builder 2, beside builders 3 and 4, since the surface is then fixed. Builders 3 and 4 go in turn, since both edit the `commands:` map and the README's commands.
 
-**The first use** follows the skill. Before the candidate is cut, a dry run in a scratch repository: `pkit upgrade --pre` to a local build, `pkit capabilities install lean-business`, and one command. It confirms that a candidate ships a capability project-kit incubates unregistered. Whether to cut the candidate after builder 2 and the skill, before builders 3 and 4, is the person's to weigh against decision 22's cost of a second candidate. It is put to them when builder 2 lands.
+**The first use** follows the skill. Before the candidate is cut, a dry run in a scratch repository: `pkit upgrade --pre` to a local build, `pkit capabilities install lean-business`, and one command. It confirms that a candidate ships a capability project-kit incubates unregistered. The candidate is cut once all four builders and the skill have landed (decision 25).
 
 ## Deferred past the first slice
 
