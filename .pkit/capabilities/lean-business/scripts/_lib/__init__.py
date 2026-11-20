@@ -1,4 +1,5 @@
-"""The lean-business capability's data layer: an idea's files read, worked out and checked.
+"""The lean-business capability's library: an idea's files read, worked out, checked and
+written.
 
 Imported by the capability's scripts. Each fact two readers share is worked out in one
 module, so the check, the process's detections, the commands and the status never disagree
@@ -27,6 +28,25 @@ module, so the check, the process's detections, the commands and the status neve
 - `positions`: where each subject of the capability's processes stands, read from its files
   whenever a process predicate asks, and what the predicates answer the engine (DEC-003
   points 1 to 4 and 7).
+
+What the commands write and read through (DEC-001 point 3; DEC-003 point 5):
+
+- `acting`: the context a command runs in, with the day its entry read and the engine it
+  asks; its consent forms; content, an act, a move and an act the script's move follows;
+  and what a command prints after its write;
+- `writes`: a write built, held to the check and the data validation as the files would
+  stand, then written, or undone where a move after it is refused; the location's record;
+- `editing`: a file edited round trip, its comments, quoting and order kept;
+- `naming`: the ids a write gives, from `--id` or the text, and those taken or named;
+- `staling`: each verdict and shortlisting a write leaves stale;
+- `engine` and `backbone`: the process engine's status, can-move and move, reached through
+  `pkit`;
+- `canvases`: a variant's canvas and its boxes, as the desk commands read and change them;
+- `estimates`: the viability estimate, worked out from the goal and the inputs (DEC-002
+  point 4);
+- `grid`: a canvas drawn as the book's grid, with its credit line (DEC-001 point 6);
+- `briefing`: the status, each position the engine's, and its structured form (DEC-002
+  point 15).
 
 None reads the clock: a gate, and a reading that depends on a day, takes the day from its
 caller (DEC-003 point 1; COR-055 point 2).

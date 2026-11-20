@@ -12,7 +12,7 @@ idea (lean-business DEC-002 point 1).
   may record its folder before its first idea.
 
 This module reads the location, as the check and every command that only reads do. Recording
-it, at a command's first write, belongs with the commands that write an idea.
+it, at a command's first write, is `writes`'s.
 """
 
 from __future__ import annotations

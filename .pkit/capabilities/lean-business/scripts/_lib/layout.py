@@ -223,7 +223,7 @@ def _astray(root: Path, rel: str, contents: Contents) -> None:
     schemas."""
     if not rel.endswith(SUFFIX):
         return
-    named = _schema_named(root, rel)
+    named = schema_named(root, rel)
     if named is not None:
         contents.strays.append(
             Stray(
@@ -236,7 +236,7 @@ def _other_suffix(root: Path, rel: str, parts: tuple[str, ...], contents: Conten
     """Note `rel`, which ends in `.yml`, astray where it lies at a place of the layout once
     its suffix is `.yaml`, or names a schema of the capability's."""
     swapped = (*parts[:-1], parts[-1][: -len(OTHER_SUFFIX)] + SUFFIX)
-    if _place(swapped) is None and _schema_named(root, rel) is None:
+    if _place(swapped) is None and schema_named(root, rel) is None:
         return
     contents.strays.append(
         Stray(
@@ -247,7 +247,7 @@ def _other_suffix(root: Path, rel: str, parts: tuple[str, ...], contents: Conten
     )
 
 
-def _schema_named(root: Path, rel: str) -> str | None:
+def schema_named(root: Path, rel: str) -> str | None:
     """The schema of the capability's the YAML file `rel` names, or None."""
     try:
         raw = (root / rel).read_bytes()
@@ -311,7 +311,7 @@ def outside(root: Path, location: str) -> list[Stray]:
             continue
         if not _data_validation_reads(rel):
             continue
-        named = _schema_named(root, rel)
+        named = schema_named(root, rel)
         if named is None or (rel == CONFIG and named == CONFIG_SCHEMA):
             continue
         where = (

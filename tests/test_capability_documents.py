@@ -47,6 +47,7 @@ from ruamel.yaml import YAML
 
 from project_kit.command_runner import registered_commands
 from tests import test_doc_examples_documents as doc_examples
+from tests import test_lean_business_documents as lean_business
 from tests import test_pm_documents as project_management
 from tests import test_software_analysis_documents as software_analysis
 from tests import test_visual_communication_documents as visual_communication
@@ -68,6 +69,7 @@ JSON_CHOICE = "json"
 #: program, by the command's words.
 CONTRACTS: Mapping[str, tuple[Contract, ...]] = {
     **doc_examples.CONTRACTS,
+    **lean_business.CONTRACTS,
     **project_management.CONTRACTS,
     **software_analysis.CONTRACTS,
     **visual_communication.CONTRACTS,

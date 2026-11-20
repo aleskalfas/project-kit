@@ -1,0 +1,25 @@
+component: lean-business
+kind: minor
+custom:
+  category: Added
+body: >
+  The desk's commands write an idea (#3426, DEC-001 point 3, DEC-003 point
+  5). `pkit lean set-location` records where the ideas live; `set-goal` sets
+  an idea's goal; `new-variant`, `add-side`, `add-entry`, `edit-entry`,
+  `remove-entry`, `set-inputs` and `set-traction` write a canvas's content;
+  `judge` records a verdict on a desk step and `shortlist` shortlists a
+  variant; `canvas` draws the canvas as the book's grid with its credit line,
+  `estimate` works out what the goal asks of a variant, and `status` shows
+  where each idea stands and what waits, `--json` printing its structured
+  form, `schema_version: 1`. Every write is held to the check and to `pkit
+  data validate` as the files would stand, and refused where it adds an
+  error; an error already there is named and refuses nothing. A write keeps
+  each file's comments and quoting, gives each entry an id from its text or
+  `--id` and prints it, and warns of each verdict and shortlisting it leaves
+  stale. Content asks nothing. A judgement is the person's: at a terminal the
+  command asks, off one it acts only with `--person-decided`, and with
+  neither it prints the question and exits 3; it records git's `user.name`
+  and the day. A move asks the process engine before the write and moves
+  after it, and where the engine refuses after the write, everything written
+  is undone. The first write records the location, and refuses where the
+  default folder holds files of another kind.
