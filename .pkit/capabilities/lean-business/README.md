@@ -7,20 +7,42 @@ pkit:
       path:
         - .pkit/capabilities/lean-business/package.yaml
         - .pkit/capabilities/lean-business/scripts/check.py
+        - .pkit/capabilities/lean-business/scripts/set_location.py
+        - .pkit/capabilities/lean-business/scripts/set_goal.py
+        - .pkit/capabilities/lean-business/scripts/new_variant.py
+        - .pkit/capabilities/lean-business/scripts/add_side.py
+        - .pkit/capabilities/lean-business/scripts/add_entry.py
+        - .pkit/capabilities/lean-business/scripts/edit_entry.py
+        - .pkit/capabilities/lean-business/scripts/remove_entry.py
+        - .pkit/capabilities/lean-business/scripts/set_inputs.py
+        - .pkit/capabilities/lean-business/scripts/set_traction.py
+        - .pkit/capabilities/lean-business/scripts/judge.py
+        - .pkit/capabilities/lean-business/scripts/shortlist.py
+        - .pkit/capabilities/lean-business/scripts/canvas.py
+        - .pkit/capabilities/lean-business/scripts/estimate.py
+        - .pkit/capabilities/lean-business/scripts/status.py
         - .pkit/capabilities/lean-business/scripts/_lib/*.py
         - .pkit/capabilities/lean-business/schemas/*.schema.json
       record:
         - lean-business:DEC-001#1
+        - lean-business:DEC-001#3
         - lean-business:DEC-001#5
         - lean-business:DEC-001#6
         - lean-business:DEC-001#8
+        - lean-business:DEC-001#10
         - lean-business:DEC-002#1
         - lean-business:DEC-002#2
+        - lean-business:DEC-002#3
         - lean-business:DEC-002#4
+        - lean-business:DEC-002#6
         - lean-business:DEC-002#7
         - lean-business:DEC-002#12
         - lean-business:DEC-002#13
         - lean-business:DEC-002#14
+        - lean-business:DEC-002#15
+        - lean-business:DEC-003#2
+        - lean-business:DEC-003#5
+        - lean-business:DEC-003#7
       artefact:
         - .pkit/cli/README.md#validate
 ---
@@ -40,9 +62,10 @@ lean-business guides a person through the lean method of validating a business m
 
 - `schemas/` — the shape of each file of an idea and of the capability's configuration, each with its reference instance ([lean-business:DEC-002-lean-business-data-model]; "An idea's folder" below). `shapes.schema.json` holds the shapes they share: the ids, the references, a day, a person and a fingerprint.
 - `scripts/check.py` — the capability's check, `pkit lean check`, and the `lean-business:check` member of `pkit validate` ("The check" below).
-- `scripts/_lib/` — what the check reads through, which the commands are to share: the files git sees (`listing`); the place of each file in an idea's folder, and the file of a subject's id (`layout`); an idea's subjects and the lookups between them, each lookup telling a subject found from a reference that names nothing, one into a kind of which the location holds no file, or another idea's subject (`model`); the gates of the moves and the acts, each asked with the day of its act (`gates`); the acts recorded in an idea's files, each with the gate that judges it (`acts`); the canonical form, the fingerprints taken over it, and whether a kept one still matches (`fingerprint`); where a window and a time box fall under a cycle's suspensions, as they stand or as they stood on a day (`timeline`); the rules a suspension keeps, contradicting no act already recorded among them (`suspensions`); the places each schema puts a day (`schemas`); and what follows from the files, such as pricing, an experiment's pass or fail, an assumption's outcome and an idea dropped (`readings`).
+- `scripts/*.py`, one for each of the other commands ("Commands" below).
+- `scripts/_lib/` — what the check and the commands share. What every write goes through: the context a command runs in, its consent forms, and its acts and moves (`acting`); the hold of a write against the check and the data validation, its commit and its undoing, and the location's record (`writes`); the round-trip edit of a file (`editing`); the ids a write gives (`naming`); the judgements a write leaves stale (`staling`); the process engine's status, can-move and move (`engine`), reached through `pkit` (`backbone`). What the desk commands read and draw: a variant's canvas and its boxes (`canvases`), the estimate (`estimates`), the grid (`grid`) and the status (`briefing`). And what the check reads through: the files git sees (`listing`); the place of each file in an idea's folder, and the file of a subject's id (`layout`); an idea's subjects and the lookups between them, each lookup telling a subject found from a reference that names nothing, one into a kind of which the location holds no file, or another idea's subject (`model`); the gates of the moves and the acts, each asked with the day of its act (`gates`); the acts recorded in an idea's files, each with the gate that judges it (`acts`); the canonical form, the fingerprints taken over it, and whether a kept one still matches (`fingerprint`); where a window and a time box fall under a cycle's suspensions, as they stand or as they stood on a day (`timeline`); the rules a suspension keeps, contradicting no act already recorded among them (`suspensions`); the places each schema puts a day (`schemas`); and what follows from the files, such as pricing, an experiment's pass or fail, an assumption's outcome and an idea dropped (`readings`).
 
-The process definitions, the other commands and the skill these records decide are being built under project-kit#3426. This README lists them as they land.
+The commands of the experiments and the cycles, and the skill these records decide, are being built under project-kit#3426. This README lists them as they land.
 
 ## Adopter setup
 
@@ -52,7 +75,7 @@ Install:
 pkit capabilities install lean-business
 ```
 
-The ideas live in `lean-business/` at the repository's root, one folder per idea. The first command that writes an idea records that location in the capability's own configuration, `.pkit/capabilities/lean-business/project/config.yaml`. To keep the ideas elsewhere, record another location before the first idea ([lean-business:DEC-002-lean-business-data-model] point 1). An idea's data is as private as the repository that holds it.
+The ideas live in `lean-business/` at the repository's root, one folder per idea. The first command that writes an idea records that location in the capability's own configuration, `.pkit/capabilities/lean-business/project/config.yaml`. To keep the ideas elsewhere, record another location before the first idea, with `pkit lean set-location <path>` ([lean-business:DEC-002-lean-business-data-model] point 1). Where `lean-business/` already holds files of another kind, the first write is refused, writes nothing and names `set-location`. An idea's data is as private as the repository that holds it.
 
 ## An idea's folder
 
@@ -134,6 +157,82 @@ Checks the files of the location, as "The check" above says.
 - **Prints** a summary, then each finding with its severity, its place and its label: a file relative to the project root, with `#` and a JSON Pointer where it lies within the file. `--json` prints the findings document `pkit validate` reads, `{"summary": [...], "findings": [...]}`, each finding with its `severity`, `location`, `message` and `label`, the errors first.
 - **Writes** nothing, and runs offline.
 - **Exits** 1 when a finding is an error; 0 otherwise. With `--json` it always exits 0, as `pkit validate` requires.
+
+### The desk's commands
+
+| Command | What it does | Kind |
+|---|---|---|
+| `set-location <path>` | Records the folder that holds the ideas, relative to the repository's top. Refused for a folder the location's rules refuse, as for the check's `location` label, and while the location in use holds an idea: move its folder first. | content |
+| `set-goal <idea> [--revenue <amount>] [--per month\|year] [--currency <code>] [--years <n>]` | Sets the idea's goal, or changes what it is given; a first goal needs every flag, and creates the idea's folder. Refused while a cycle of the idea is planned, running or suspended, and a change of currency while a declared experiment is undecided. | act |
+| `new-variant <idea>--<variant> --archetype direct\|multisided\|marketplace [--author <name>]... [--comes-from <variant>]` | Starts a variant: its canvas and an empty list of assumptions, with the idea's folder where none is. The authors are git's `user.name` where none is given. | content |
+| `add-side <variant> <side>` | Names a side, a group of customers a model with several serves. | content |
+| `add-entry <variant> <box> <text> [--id <id>] [--side <side>] [links]` | Adds an entry to a box, and prints the id it gives. Its links are flags: `--alternative` on a problem, `--problem` on a value proposition or a solution, `--sub-headline` on a value proposition, `--trigger` on an early adopter, `--kind` on a channel and `--step` on a key metric. A link names an entry by its own part of its id, or by the whole. | content |
+| `edit-entry <entry> [--text] [--side] [links] [--clear <field>]... [--drop-alternative <entry>]... [--drop-trigger <text>]...` | Changes an entry's words, side or links. Its id never changes. | content |
+| `remove-entry <entry>` | Takes an entry out of its canvas. Where another entry or an assumption still names it, warns and keeps them as they are. | content |
+| `set-inputs <variant> [--side <side>] [--price <amount> month\|year] [--lifetime <length> month\|year] [--conversion <share>] [--referral-share <share>] [--clear <input>]...` | Gives the estimate its inputs, merged into the set for the side. | content |
+| `set-traction <variant> [--multiplier <n>] [--first-stage-metric <metric> --first-stage-target <n>] [--clear]` | Gives the variant its traction target; `--clear` removes it. | content |
+| `judge <variant> desirability\|viability\|feasibility yes\|no [--note <text>]` | Records the person's verdict on a step, with the fingerprint of what it judged. A yes on the next step moves the variant on, and a no on a step it passed takes it back to the state before that step, clearing the verdicts after it and its shortlisting. A no on the next step, and a yes on a step it passed, judged again, move nothing. Refused on a shelved or split variant, and on a step after the next. | act, or move |
+| `shortlist <variant>` | Shortlists a feasible variant, or takes its shortlisting again, with the fingerprint of its canvas and the goal. | move |
+| `canvas <variant> [--ids]` | Draws the canvas as a grid ("The grid" below). | read-only |
+| `estimate <variant>` | Works out what the goal asks of the variant ("The estimate" below). | read-only |
+| `status [<idea>] [--json]` | Where the ideas stand and what waits on you ("The status" below). | read-only |
+
+**What every write does.** A command builds its write, holds it, then writes it. It holds the files as they would stand to the check and to the `data` member of `pkit validate`, and refuses the write, writing nothing, where it would add an error. An error already in the files refuses nothing: the command names each, and leaves them as they were. Beyond the check, it refuses an id typed with `--id` that is taken, or that a reference still names. It warns of each warning the write adds, and of each verdict and shortlisting the write leaves stale, each with the command that judges it again. A shortlisting gone stale on a variant that a cycle not yet reviewed explores is said louder, since no experiment is declared on the variant until it is judged and shortlisted again ([lean-business:DEC-003-lean-business-process] point 7). The first write records the location (Adopter setup, above). A file written keeps its comments, its quoting and its order; a key a write adds lands where the schema writes it.
+
+**Ids.** An entry's id comes from `--id`, or else from the first words of its text: accents stripped, kebab-cased, a leading digit given a letter, and the box's name where no word is left. The command qualifies it by the variant and prints it. It numbers one taken, `-2`, `-3`, and never gives again an id that a file still names, so a removed entry's id is not reused while an assumption names it. An id never changes when the text does ([lean-business:DEC-002-lean-business-data-model] point 7).
+
+**Content, acts and moves.** Content, a canvas's words and links, its inputs, its target and where the ideas live, is written without asking and records nobody. A judgement is the person's ([lean-business:DEC-001-lean-business-discipline] point 3): an act records it, and a move takes the process engine with it ([lean-business:DEC-003-lean-business-process] point 5).
+
+- **The person's word.** At a terminal, the command asks, and a move asks its process's own prompt. Off one, it acts only with `--person-decided`, the flag by which an agent says the person decided in the session. With neither, it prints the question, does nothing and exits 3.
+- **Who and when.** An act records the person as git's `user.name`, refusing where git names none, and the day it ran.
+- **A move** asks the engine first whether its gate lets it go, writes, then moves the subject to where the engine places it after the write. Where the engine refuses the move after the write, the command undoes everything it wrote, the location's record included, and says so.
+
+**Exit codes.** 0, done or shown; 1, refused, with the reason; 2, a usage error; 3, a question printed for the person, nothing done.
+
+### The grid
+
+`pkit lean canvas` draws the canvas's twelve boxes as the book arranges them, five columns over a bottom row:
+
+```
++--------------+-------------+-------------------+------------------+-------------------+
+| PROBLEM      | SOLUTION    | UNIQUE VALUE      | UNFAIR ADVANTAGE | CUSTOMER SEGMENTS |
+|              |             | PROPOSITION       |                  |                   |
++--------------+-------------+-------------------+------------------+-------------------+
+| EXISTING     | KEY METRICS | HIGH-LEVEL        | CHANNELS         | EARLY ADOPTERS    |
+| ALTERNATIVES |             | CONCEPT           |                  |                   |
++--------------+-------------+-------------------+------------------+-------------------+
+| COST STRUCTURE                         | REVENUE STREAMS                              |
++----------------------------------------+----------------------------------------------+
+```
+
+Each column holds its upper box over its lower one, each entry a bullet: a value proposition with its sub-headline, an early adopter with its triggers, a channel with its kind and a key metric with its step. `--ids` adds under each entry its own part of its id, in brackets, which `edit-entry` and `remove-entry` take after the variant's id and `--`. The grid ends with the line that credits the Lean Canvas and the Business Model Canvas it adapts, and names their licence (Credits and licence, below).
+
+### The estimate
+
+`pkit lean estimate` works out, for each side that pays, what the idea's goal asks of the variant through the customer factory ([lean-business:DEC-002-lean-business-data-model] point 4). Nothing it works out is stored.
+
+- **A year's revenue from one customer:** the price, times twelve where it is counted by the month.
+- **The active customers needed:** the goal's yearly revenue divided by that, rounded up.
+- **The customers lost each year:** the active customers divided by a customer's lifetime in years, and as many won each year to replace them.
+- **Won by referral:** the referral share of those, and the rest won through the channels.
+- **The leads needed each year:** those won through the channels divided by the conversion.
+- **The active customers on the way:** for each year of the goal's span, the last year's the number needed, and each year before it the traction multiplier fewer, rounded up. The multiplier is ten where the variant gives none.
+
+A side that pays nothing counts at nothing. A model with several paying sides is worked out for each as though it alone carried the goal, since the inputs say nothing of how the goal divides among them. Where an input is missing, the estimate names it and works out the rest. Whether a number is within reach is the person's judgement, at the viability step.
+
+### The status
+
+`pkit lean status` gives one line for each idea: whether it has a goal, its variants counted by where they stand, and how many things wait on you. `pkit lean status <idea>` gives the idea in full: its goal, each variant, cycle and experiment with where it stands, and what waits on you, each with the command that takes it. Each position is the process engine's ([lean-business:DEC-002-lean-business-data-model] point 15). At the desk, what waits is a goal to set, the next step of a variant to judge, and a feasible variant that may be shortlisted.
+
+`--json` prints its structured form, whose keys a reader may depend on:
+
+- `schema_version`: 1. A change that would break a reader raises it; an added key leaves it.
+- `location`: the folder the ideas live in.
+- `ideas`: one for each idea, or the one named, each with:
+  - `id`;
+  - `goal`: `revenue`, `per`, `currency` and `years`, or `null` where the idea has none;
+  - `variants`, `cycles` and `experiments`: each an `id`, its `state`, and `why`. Where the engine could not tell where the subject stands, `state` is `null` and `why` says what stopped it; otherwise `why` is `null`;
+  - `waiting`: each a `subject`, `what` waits and the `command` that takes it.
 
 ## Credits and licence
 
