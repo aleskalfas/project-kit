@@ -12,7 +12,8 @@ What the files mean is read from that text by the reader the check uses
 and a key given twice is refused. So a command judges the file as the check will.
 
 - **A day** is written as the calendar day it is, a `date`, which comes out plain,
-  `2026-11-20`.
+  `2026-11-20`, each time it appears: one day a command writes in two places is never
+  written as an alias of the other.
 - **An answer**, `yes` or `no`, is written quoted (`quoted`), so no reader of an older
   YAML takes it for a truth value.
 """
@@ -21,11 +22,13 @@ from __future__ import annotations
 
 import io
 from collections.abc import Iterable, Mapping, Sequence
+from datetime import date
 from typing import Any
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 from ruamel.yaml.error import YAMLError
+from ruamel.yaml.representer import RoundTripRepresenter
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 from ruamel.yaml.util import load_yaml_guess_indent
 
@@ -39,9 +42,18 @@ NEW_INDENT = (2, 4, 2)
 FORMAT = 1
 
 
+class _Representer(RoundTripRepresenter):
+    """The round-trip representer, which writes a day as itself wherever it appears, never
+    as an anchor and its alias."""
+
+    def ignore_aliases(self, data: Any) -> bool:
+        return isinstance(data, date) or super().ignore_aliases(data)
+
+
 def _yaml(indent: tuple[int, int, int]) -> YAML:
     mapping, sequence, offset = indent
     yaml = YAML()
+    yaml.Representer = _Representer
     yaml.preserve_quotes = True
     yaml.width = 4096
     yaml.indent(mapping=mapping, sequence=sequence, offset=offset)
