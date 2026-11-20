@@ -503,7 +503,13 @@ def test_canvas_shows_each_entrys_own_id_where_asked(world: lb.World) -> None:
     assert "|   [paper-lists]" in run.out
 
 
+def _inputs(world: lb.World, change: Any) -> None:
+    """Make `change` to the `direct` variant's one set of inputs."""
+    world.edit(lb.DIRECT, lambda data: change(data["viability"][0]))
+
+
 def test_estimate_works_the_numbers_out_from_the_goal_and_the_inputs(world: lb.World) -> None:
+    _inputs(world, lambda inputs: inputs.insert(3, "referral-share", 0.25))
     run = world.run("estimate", "meal-plan--direct")
     assert run.code == 0, run.err
     assert run.out.splitlines()[1:] == [
@@ -513,10 +519,49 @@ def test_estimate_works_the_numbers_out_from_the_goal_and_the_inputs(world: lb.W
         "  a year's revenue from one customer: 96 EUR",
         "  active customers needed: 10,417",
         "  customers lost each year, and as many won to replace them: 5,209",
-        "  of those, won by referral: 0; through the channels: 5,209",
-        "  leads needed each year: 104,170",
+        "  of those, won by referral: 1,303; through the channels: 3,907",
+        "  leads needed each year: 78,128",
         "  active customers on the way: year 1: 105, year 2: 1,042, year 3: 10,417",
     ]
+
+
+_ON_THE_WAY = "  active customers on the way: year 1: 105, year 2: 1,042, year 3: 10,417"
+
+
+@pytest.mark.parametrize(
+    ("removed", "shown"),
+    [
+        (
+            (),
+            [
+                "  a year's revenue from one customer: 96 EUR",
+                "  active customers needed: 10,417",
+                "  customers lost each year, and as many won to replace them: 5,209",
+                _ON_THE_WAY,
+                "  not worked out, for want of: referral-share",
+            ],
+        ),
+        (
+            ("lifetime", "conversion"),
+            [
+                "  a year's revenue from one customer: 96 EUR",
+                "  active customers needed: 10,417",
+                _ON_THE_WAY,
+                "  not worked out, for want of: lifetime, conversion, referral-share",
+            ],
+        ),
+        (("price",), ["  nothing is worked out, for want of: price, referral-share"]),
+    ],
+    ids=["the-referral-share", "the-lifetime-and-the-conversion", "the-price"],
+)
+def test_estimate_names_each_input_missing_and_works_out_what_rests_on_none(
+    world: lb.World, removed: tuple[str, ...], shown: list[str]
+) -> None:
+    # The fixture's inputs give no referral share.
+    _inputs(world, lambda inputs: [inputs.pop(name) for name in removed])
+    run = world.run("estimate", "meal-plan--direct")
+    assert run.code == 0, run.err
+    assert run.out.split("The model:\n")[1].splitlines() == shown
 
 
 def test_estimate_counts_only_the_sides_that_pay(world: lb.World) -> None:

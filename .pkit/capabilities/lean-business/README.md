@@ -219,7 +219,7 @@ Each column holds its upper box over its lower one, each entry a bullet: a value
 - **The leads needed each year:** those won through the channels divided by the conversion.
 - **The active customers on the way:** for each year of the goal's span, the last year's the number needed, and each year before it the traction multiplier fewer, rounded up. The multiplier is ten where the variant gives none.
 
-A side that pays nothing counts at nothing. A model with several paying sides is worked out for each as though it alone carried the goal, since the inputs say nothing of how the goal divides among them. Where an input is missing, the estimate names it and works out the rest. Whether a number is within reach is the person's judgement, at the viability step.
+A side that pays nothing counts at nothing. A model with several paying sides is worked out for each as though it alone carried the goal, since the inputs say nothing of how the goal divides among them. Where inputs are missing, the estimate names each of them, and works out each number that rests on none of them. A side that pays nothing needs no input but its price. Whether a number is within reach is the person's judgement, at the viability step.
 
 ### The status
 

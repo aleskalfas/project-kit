@@ -21,6 +21,9 @@ README gives the formulas; in short, for each side that pays:
 A side that pays nothing counts at nothing, and the estimate counts only the sides that
 pay. A model with several paying sides is worked out for each as though it alone carried
 the goal, since the inputs say nothing of how the goal divides among them.
+
+Where inputs are missing, the estimate names each of them, and works out each number that
+rests on none of them. A side that pays nothing needs no input but its price.
 """
 
 from __future__ import annotations
@@ -34,6 +37,9 @@ from _lib import fingerprint
 
 #: The months in a year, by which an amount or a length counted by the month is a year's.
 MONTHS = 12
+
+#: A side's inputs, in the order the estimate names those missing.
+INPUTS = ("price", "lifetime", "conversion", "referral-share")
 
 
 @dataclass(frozen=True)
@@ -111,37 +117,51 @@ def estimate(canvas: Mapping[str, Any], goal: Mapping[str, Any]) -> Estimate | N
     )
 
 
+def _yearly_price(price: object) -> float | None:
+    if not isinstance(price, Mapping):
+        return None
+    return _yearly(price.get("amount"), price.get("per"))
+
+
+def _years_kept(lifetime: object) -> float | None:
+    if not isinstance(lifetime, Mapping):
+        return None
+    length = _number(lifetime.get("length"))
+    unit = lifetime.get("unit")
+    if length is None or length <= 0 or unit not in ("month", "year"):
+        return None
+    return length / MONTHS if unit == "month" else length
+
+
+def _conversion(value: object) -> float | None:
+    found = _number(value)
+    return found if found is not None and found > 0 else None
+
+
+def _referral_share(value: object) -> float | None:
+    found = _number(value)
+    return found if found is not None and 0 <= found < 1 else None
+
+
 def _side(inputs: Mapping[str, Any], yearly: float, years: float, multiplier: float) -> Side:
     side = inputs.get("side") if isinstance(inputs.get("side"), str) else None
-    price = inputs.get("price")
-    yearly_price = (
-        _yearly(price.get("amount"), price.get("per")) if isinstance(price, Mapping) else None
-    )
-    if yearly_price is None:
-        return Side(side, missing=("price",))
+    yearly_price = _yearly_price(inputs.get("price"))
     if yearly_price == 0:
         return Side(side, yearly_price=0.0, pays_nothing=True)
+    years_kept = _years_kept(inputs.get("lifetime"))
+    conversion = _conversion(inputs.get("conversion"))
+    share = _referral_share(inputs.get("referral-share"))
+    given = (yearly_price, years_kept, conversion, share)
+    missing = tuple(name for name, value in zip(INPUTS, given, strict=True) if value is None)
+    if yearly_price is None:
+        return Side(side, missing=missing)
     active = math.ceil(yearly / yearly_price)
-    missing: list[str] = []
-    lifetime = inputs.get("lifetime")
-    years_kept = None
-    if isinstance(lifetime, Mapping):
-        length = _number(lifetime.get("length"))
-        unit = lifetime.get("unit")
-        if length is not None and length > 0 and unit in ("month", "year"):
-            years_kept = length / MONTHS if unit == "month" else length
-    lost = by_referral = by_channels = leads = None
-    if years_kept is None:
-        missing.append("lifetime")
-    else:
-        lost = active / years_kept
-        share = _number(inputs.get("referral-share")) or 0.0
+    lost = active / years_kept if years_kept is not None else None
+    by_referral = by_channels = leads = None
+    if lost is not None and share is not None:
         by_referral = lost * share
         by_channels = lost - by_referral
-        conversion = _number(inputs.get("conversion"))
-        if conversion is None or conversion <= 0:
-            missing.append("conversion")
-        else:
+        if conversion is not None:
             leads = by_channels / conversion
     return Side(
         side,
@@ -152,7 +172,7 @@ def _side(inputs: Mapping[str, Any], yearly: float, years: float, multiplier: fl
         by_channels=by_channels,
         leads_each_year=leads,
         roadmap=roadmap(active, years, multiplier),
-        missing=tuple(missing),
+        missing=missing,
     )
 
 
@@ -186,7 +206,7 @@ def lines(found: Estimate) -> list[str]:
             out.append("  pays nothing, so it counts at nothing toward the goal")
             continue
         if side.yearly_price is None or side.active is None:
-            out.append("  no price is given, so nothing can be worked out")
+            out.append(f"  nothing is worked out, for want of: {', '.join(side.missing)}")
             continue
         out.append(
             f"  a year's revenue from one customer: {_amount(side.yearly_price)} {found.currency}"
