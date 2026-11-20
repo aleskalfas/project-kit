@@ -41,7 +41,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "description": "The assumption's id, qualified by its variant, such as `board-game--platform--groups-pay-monthly`.",
+          "description": "The assumption's id, qualified by its variant, such as `meal-plan--direct--pays-monthly`.",
           "$ref": "shapes.schema.json#/$defs/variant-qualified-id"
         },
         "statement": {

@@ -10,12 +10,12 @@
       "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
     },
     "idea-qualified-id": {
-      "description": "The id of a variant, an experiment or a cycle: the idea's id and the subject's own, joined by two hyphens, such as `board-game--platform` (DEC-002 point 7). No part holds two hyphens, so the id splits one way, and it fits the core's token form (COR-019).",
+      "description": "The id of a variant, an experiment or a cycle: the idea's id and the subject's own, joined by two hyphens, such as `meal-plan--direct` (DEC-002 point 7). No part holds two hyphens, so the id splits one way, and it fits the core's token form (COR-019).",
       "type": "string",
       "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*--[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
     },
     "variant-qualified-id": {
-      "description": "The id of a canvas entry or an assumption: its variant's id and its own, joined by two hyphens, such as `board-game--platform--setup-takes-long` (DEC-002 point 7).",
+      "description": "The id of a canvas entry or an assumption: its variant's id and its own, joined by two hyphens, such as `meal-plan--direct--planning-takes-long` (DEC-002 point 7).",
       "type": "string",
       "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*--[a-z][a-z0-9]*(?:-[a-z0-9]+)*--[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
     },

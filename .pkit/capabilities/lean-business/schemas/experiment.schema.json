@@ -22,7 +22,7 @@
       "const": 1
     },
     "id": {
-      "description": "The experiment's id, qualified by its idea, such as `board-game--first-interviews`; its parts are the idea's folder and the file's name.",
+      "description": "The experiment's id, qualified by its idea, such as `meal-plan--first-interviews`; its parts are the idea's folder and the file's name.",
       "$ref": "shapes.schema.json#/$defs/idea-qualified-id"
     },
     "assumption": {

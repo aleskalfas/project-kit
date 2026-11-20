@@ -23,7 +23,7 @@
       "const": 1
     },
     "id": {
-      "description": "The variant's id, qualified by its idea, such as `board-game--platform`. Its parts are the idea's folder and the variant's folder.",
+      "description": "The variant's id, qualified by its idea, such as `meal-plan--direct`. Its parts are the idea's folder and the variant's folder.",
       "$ref": "shapes.schema.json#/$defs/idea-qualified-id"
     },
     "archetype": {
@@ -322,7 +322,7 @@
   },
   "$defs": {
     "entry-id": {
-      "description": "An entry's id, qualified by its variant, such as `board-game--platform--setup-takes-long`, so an assumption's link names one entry in the location (DEC-002 point 7).",
+      "description": "An entry's id, qualified by its variant, such as `meal-plan--direct--planning-takes-long`, so an assumption's link names one entry in the location (DEC-002 point 7).",
       "$ref": "shapes.schema.json#/$defs/variant-qualified-id"
     },
     "entry": {
