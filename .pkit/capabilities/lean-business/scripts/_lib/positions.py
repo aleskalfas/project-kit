@@ -37,6 +37,10 @@ reads that position here too and never works it out again.
   predicate the check shares (`suspensions.of_cycle`; DEC-002 points 12 and 14). The
   person's moves, resuming and deciding, hold on both sides of the command's write, as the
   desk stage's do: before it, on what the files show; after it, on what it recorded.
+  Resuming's two moves, to running and into review, are one predicate. Before the write,
+  each is open where some day of resuming the rules allow takes the cycle to its target,
+  since only the day the person names decides which it takes; after, the detection places
+  the cycle there.
 - **An experiment** (`experiment`, `experiment_in`, `experiment_lifecycle`): an
   experiment's position, from its decision, its declaration, a generative experiment's
   stopping rule and its time box as its cycle's suspensions move it (DEC-003 points 1 and
@@ -83,7 +87,7 @@ import json
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -888,19 +892,20 @@ def cycle_lifecycle(subject: Cycle, on: date) -> Position:
     if current:
         return Position(SUSPENDED, _why_suspended(current))
     span = window(subject)
-    if span.start is None or span.end is None:
+    placed = _placed(span, on)
+    if placed is None:
         raise Unreadable(
             f"the window of `{subject.id}` has no end as its suspensions work it out, though "
             f"none is ongoing, so where it stands cannot be told"
         )
     moved = ", as its suspensions work it out" if _listed(subject) else ""
-    if on < span.start:
+    if placed == PLANNED:
         return Position(
             PLANNED,
             f"its plan is recorded, and its window starts on {span.start}{moved}, after today, "
             f"{on}",
         )
-    if on <= span.end:
+    if placed == RUNNING:
         return Position(
             RUNNING,
             f"its window runs from {span.start} through {span.end}{moved}, and holds today, "
@@ -910,6 +915,19 @@ def cycle_lifecycle(subject: Cycle, on: date) -> Position:
         IN_REVIEW,
         f"its window ended on {span.end}{moved}, before today, {on}, and no decision is recorded",
     )
+
+
+def _placed(span: Span, on: date) -> str | None:
+    """The state the window `span` places an undecided cycle with no suspension ongoing in,
+    on the day `on`, by its dates alone: planned before its first day, running through its
+    last, and in review after it. None where it has no start or no end."""
+    if span.start is None or span.end is None:
+        return None
+    if on < span.start:
+        return PLANNED
+    if on <= span.end:
+        return RUNNING
+    return IN_REVIEW
 
 
 def _why_suspended(current: Sequence[Suspension]) -> str:
@@ -1008,44 +1026,218 @@ def shifting_window(subject: Cycle, on: date) -> Answer:
     )
 
 
-def resuming_cycle(subject: Cycle, on: date) -> Answer:
-    """Whether the person's resumption may move the cycle from suspended to running
-    (DEC-003 point 4). Before the command records it, the cycle is suspended, with no
-    decision recorded. After, no suspension is ongoing, the suspension last by its first
-    day, the one the cycle was suspended by, has a day of resuming that keeps its rules
-    (`suspensions.of_cycle`), and the window, falling later by the days the suspension
-    covered, still holds `on`."""
+def resuming_cycle(subject: Cycle, on: date, target: str) -> Answer:
+    """Whether the person's resumption may move the cycle from suspended to `target`,
+    running or in review (DEC-003 point 4). Both moves are this one predicate, and the day
+    of resuming the person names decides which the resumption takes: into review where the
+    window, moved later by the days the suspension covered, ended before the day the
+    resumption is recorded, and else to running.
+
+    Before the command records it, the cycle is suspended, with no decision recorded, and
+    some day of resuming that falls between the ongoing suspension's first day and `on`
+    places the cycle at `target` (`_resumable`). After, no suspension is ongoing, the
+    suspension last by its first day, the one the cycle was suspended by, has a day of
+    resuming that keeps its rules (`suspensions.of_cycle`), and the detection places the
+    cycle at `target` on `on`, where the resumption took it on the day it was recorded, as
+    the suspensions stood then (`_took`): a cycle that resumed to running and stands in
+    review on a later day, or the other way about, was moved there since by another move."""
     position = cycle_lifecycle(subject, on)
     if position.state == SUSPENDED:
-        return Answer(
-            True,
-            f"the cycle may resume: {position.reason}; resuming records the day it resumed, "
-            f"which its rules hold no earlier than the suspension's first day and no later "
-            f"than the day it is recorded",
-        )
+        return _resumable(subject, on, target, position)
     if position.state in (None, DECIDED):
-        return Answer(False, _not(position, RUNNING))
+        return Answer(False, _not(position, target))
     resumed = [each for each in _listed(subject) if each.resumed_at_all]
     if not resumed:
         return Answer(
             False, f"the cycle was never suspended, so it resumes from nothing: {position.reason}"
         )
     last = max(resumed, key=lambda each: (each.first_day or date.min, each.index))
+    took = _took(subject, last)
+    at = f"/suspensions/{last.index}/resumed"
     refused: list[Refusal] = []
-    if position.state != RUNNING:
+    if position.state != target:
         refused.append(
             Refusal(
-                f"/suspensions/{last.index}/resumed",
-                f"it resumed on {last.resumed}, and {_not(position, RUNNING)}; the definition "
-                f"declares no move from `{SUSPENDED}` to `{position.state}`",
+                at,
+                f"it resumed on {last.resumed}, and {_not(position, target)}; "
+                f"{_since(last, took, position.state)}",
             )
         )
+    elif took is not None and took != target:
+        refused.append(Refusal(at, _since(last, took, target)))
     return _kept(
         subject,
         [last],
         f"the cycle resumed on {last.resumed}, a day its rules allow: {position.reason}",
         refused,
     )
+
+
+#: Where a resumption takes a cycle, in words.
+_RESUMED_INTO = {RUNNING: "to running", IN_REVIEW: "into review"}
+
+#: The move that takes a resumed cycle on to each target of resuming, in words.
+_MOVED_SINCE = {
+    RUNNING: "a suspension recorded since took it back to running, by the move `shift-window`",
+    IN_REVIEW: "the dates moved it into review since, by the move `end`",
+}
+
+
+def _took(subject: Cycle, last: Suspension) -> str | None:
+    """The state the resumption of `last` took the cycle to on the day it was recorded, as
+    its suspensions stood then (`timeline.stood`). None where that day cannot be read, which
+    the rules' reading says (`_untold_rules`), or where the window then had no end."""
+    assert subject.data is not None
+    noted = last.resumption_recorded
+    if noted is None:
+        return None
+    span = timeline.cycle_window(timeline.stood(subject.data, noted))
+    return _placed(span, noted) if span is not None else None
+
+
+def _since(last: Suspension, took: str | None, stands: str | None) -> str:
+    """How a cycle that the resumption of `last` took to `took`, on the day it was recorded,
+    comes to stand at `stands`, in words."""
+    if stands not in _RESUMED_INTO:
+        return f"the definition declares no move from `{SUSPENDED}` to `{stands}`"
+    if took == stands:
+        return f"resuming takes it by the other move, from `{SUSPENDED}` to `{stands}`"
+    noted = last.resumption_recorded
+    if took in _RESUMED_INTO:
+        return (
+            f"its resumption, recorded on {noted}, took it {_RESUMED_INTO[took]}, and "
+            f"{_MOVED_SINCE[stands]}"
+        )
+    if took == PLANNED:
+        return (
+            f"its resumption, recorded on {noted}, left it planned, and the definition declares "
+            f"no move from `{SUSPENDED}` to `{PLANNED}`"
+        )
+    return f"the other move of resuming goes from `{SUSPENDED}` to `{stands}`"
+
+
+def _resumable(subject: Cycle, on: date, target: str, position: Position) -> Answer:
+    """Whether a resumption recorded on `on` may take the suspended cycle at `position` to
+    `target`, before the command writes it: whether a day of resuming its rules allow,
+    from the ongoing suspension's first day through `on`, places the cycle there. The later
+    that day, the later the window ends, so resuming on `on` keeps the cycle furthest from
+    review, and resuming on the suspension's first day, so that it covers no day, nearest.
+    Whether the resumed suspension keeps its other rules is judged once it is recorded, as
+    the command judges it through the rules' predicate before it writes.
+
+    Neither target is open where more than one suspension is ongoing, which the rules
+    forbid, since a resumption leaves the cycle suspended; nor where the suspension's first
+    day is later than `on`, since no day its rules allow has come yet."""
+    window(subject)
+    current = ongoing(subject)
+    if len(current) > 1:
+        return Answer(
+            False,
+            f"the cycle may not resume while more than one suspension is ongoing, which their "
+            f"rules forbid, since resuming from one leaves it suspended: {position.reason}",
+        )
+    suspension = current[0]
+    first = suspension.first_day
+    assert first is not None
+    if first > on:
+        return Answer(
+            False,
+            f"the suspension's first day, {first}, is later than today, {on}, so no day of "
+            f"resuming its rules allow has come yet: {position.reason}",
+        )
+    earliest = _resumed_window(subject, suspension, first)
+    latest = _resumed_window(subject, suspension, on)
+    runs, ends = _placed(latest, on) == RUNNING, _placed(earliest, on) == IN_REVIEW
+    from_first_running = _first_running(subject, suspension, on) if runs and ends else None
+    rules = (
+        "resuming records the day it resumed, which its rules hold no earlier than the "
+        "suspension's first day and no later than the day it is recorded"
+    )
+    if target == RUNNING:
+        if not runs:
+            return Answer(
+                False,
+                f"no day of resuming runs the cycle again: {position.reason}; resumed even "
+                f"today, {on}, {_falls(latest, on)}",
+            )
+        if from_first_running is None:
+            return Answer(True, f"the cycle may resume: {position.reason}; {rules}")
+        return Answer(
+            True,
+            f"the cycle may resume: {position.reason}; {rules}; resumed "
+            f"{_days(from_first_running, on)}, its window, moved later by the days the "
+            f"suspension covered, still holds today, {on}, while resumed earlier, it ended "
+            f"before today, and resuming goes into review",
+        )
+    if not ends:
+        return Answer(
+            False,
+            f"no day of resuming leaves the cycle's window ended: {position.reason}; resumed "
+            f"even on the suspension's first day, {first}, so that it covers no day, "
+            f"{_falls(earliest, on)}",
+        )
+    until = from_first_running - timedelta(days=1) if from_first_running is not None else on
+    return Answer(
+        True,
+        f"the cycle may resume into review: {position.reason}; {rules}; resumed "
+        f"{_days(first, until)}, its window, moved later by the days the suspension covered, "
+        f"ended before today, {on}, and the days the person worked since are not given back",
+    )
+
+
+def _resumed_window(subject: Cycle, suspension: Suspension, when: date) -> Span:
+    """Where the cycle's window would fall were its ongoing `suspension` resumed on `when`,
+    its other suspensions as recorded: as the detection reads it once the resumption is
+    recorded (`timeline.cycle_window`). Its declared window and its suspensions' days were
+    read already (`window`)."""
+    assert subject.data is not None
+    entries = [
+        {**entry, "resumed": {"day": when.isoformat()}} if index == suspension.index else entry
+        for index, entry in enumerate(_list(subject.data.get("suspensions")))
+    ]
+    span = timeline.cycle_window({**subject.data, "suspensions": entries})
+    assert span is not None
+    return span
+
+
+def _first_running(subject: Cycle, suspension: Suspension, on: date) -> date:
+    """The earliest day of resuming from which the window, moved later by the days the
+    ongoing `suspension` covered, still holds `on`, where resuming on the suspension's first
+    day leaves it ended before `on`, and resuming on `on` does not. The later the day, the
+    later the window ends, so the days are halved until the two meet."""
+    assert suspension.first_day is not None
+    ended, holds = suspension.first_day, on
+    while (holds - ended).days > 1:
+        middle = ended + timedelta(days=(holds - ended).days // 2)
+        span = _resumed_window(subject, suspension, middle)
+        if span.end is not None and span.end >= on:
+            holds = middle
+        else:
+            ended = middle
+    return holds
+
+
+def _falls(span: Span, on: date) -> str:
+    """Where the window `span` would fall, said of the day `on`, and the move that would
+    take a cycle resumed so, in words."""
+    placed = _placed(span, on)
+    if placed == RUNNING:
+        return (
+            f"its window would run through {span.end}, and hold today, so resuming goes to running"
+        )
+    if placed == IN_REVIEW:
+        return f"its window would end on {span.end}, before today, so resuming goes into review"
+    if placed == PLANNED:
+        return (
+            f"its window would start on {span.start}, after today, and the definition "
+            f"declares no move from `{SUSPENDED}` to `{PLANNED}`"
+        )
+    return "its window would have no end, so the cycle would stay suspended"
+
+
+def _days(first: date, last: date) -> str:
+    """The days from `first` through `last`, in words."""
+    return f"on {first}" if first == last else f"on a day from {first} through {last}"
 
 
 def deciding_cycle(subject: Cycle, on: date) -> Answer:
