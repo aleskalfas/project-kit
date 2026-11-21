@@ -1,8 +1,8 @@
 ---
 id: ADR-100
 title: A seat's clone runs its builds at once, one for each Task, and counts its runs in one register
-status: proposed
-date: 2026-11-18
+status: accepted
+date: 2026-11-22
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 

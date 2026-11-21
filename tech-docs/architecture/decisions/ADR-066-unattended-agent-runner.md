@@ -79,7 +79,7 @@ The points:
 
 - **The adapter holds the tie to the harness.** Starting an agent turns harness-neutral content into one harness's terms, which is an adapter's work ([COR-005](../../../.pkit/decisions/core/COR-005-bundle-pattern.md) and [COR-013](../../../.pkit/decisions/core/COR-013-agent-architecture.md)). DEC-056 point 5 already puts the realisation of a run's rules there.
 - **Registered, not found by file name.** The adapter registers its runner in its package's `commands:` tree, under one fixed reference. The backbone finds it with its one lookup, and runs it as a process with a policy for agent runs (ADR-057 point 5). No backbone code imports the adapter's ([ADR-003](ADR-003-permission-core-code-home.md)).
-- **Reached through one backbone command.** A capability never calls a harness, and never looks for an adapter. It asks the backbone's run command to run an agent.
+- **Reached through one backbone command.** A capability never calls a harness, and never looks for an adapter. It asks the backbone's run command to run an agent. The run command also has a call that starts no agent, and is no run, so point 2's lists for a run do not bind it, by which a command of a build asks it to find and end what is left of that build's runs, to name what the latest of their records names, and to take a command's word given after the run (refinement per [ADR-100](ADR-100-runs-in-seat-clone.md)).
 - **What the backbone's run command does:**
   - it refuses inside a run (point 8)
   - it makes, checks and removes a confined run's clone (point 7), and makes, checks and keeps a working run's for its caller (refinement per [ADR-073](ADR-073-builder-runs.md) point 1)
@@ -87,6 +87,8 @@ The points:
   - it judges which allowed commands the platform requires outside the sandbox, by ADR-027's test (point 6)
   - it runs the runner a confined run's clone registers, from the clone's root. For an unconfined run whose folder is a project's root, such as a review's in the person's checkout or a drift command's clone, the backbone runs the runner that project registers, from that folder. For any other folder, the runner of the project the command runs in.
   - where the caller of an unconfined run asks for the person's local settings, it names the checkout the command runs in to the runner, as the one they come from
+  - it keeps its record of each working run, kept apart for each run, keeping the harness session's id, and removed with the run's clone on the word of the hand-back that brought that clone's commits back, its commit a run ended built at kept, from the word of the run's caller, only while a hand-back may still bring it back, and cleared on the word of whatever ends the build without moving the branch, at any ending but an exit 9 that leaves the build waiting on its hand-back (ADR-073 points 6 and 8), before it posts its event: a hand-back that ends at exit 5 or is given up, a recovery that marks the build lost, and a recovery that finds the Task's branch already at the commits the build's state names (ADR-073 point 5) (refinement per [ADR-100](ADR-100-runs-in-seat-clone.md))
+  - in the call that starts no agent, given the clone and the Task alone, it acts on every live record for them, ends nothing of a run whose caller lives, nor anything for them while the latest record's caller lives, runs the runner read from the default branch's head each record names, which finds and ends what is left of the run as it finds it before a check, confirming each process by that record, returns what the latest record names, the clone, the branch, the commits and the default branch's head among them, by the order of the ids the backbone gives, and takes each command's word given after the run (refinement per [ADR-100](ADR-100-runs-in-seat-clone.md))
 - **What the runner does,** in its harness's terms:
   - it checks the platform and the harness's version
   - it builds the run's settings and the agent's definition
@@ -102,6 +104,8 @@ The points:
 - for a confined run, the commit, the command whose runs the rules name (point 5), and the folder the run's files go to
 - for an unconfined run, the folder it runs in, and whether the person's local settings are carried into it (point 10)
 - for a working run, the repository, branch and commit its clone is made at, the default branch's head its rules are read from, and the file its progress goes to (refinement per [ADR-073](ADR-073-builder-runs.md) points 1, 2 and 5)
+- for a working run, also the build's name, its Task in the clone the caller runs in, which the backbone keeps in its record of the run, as it keeps the branch and commit the clone is made at, and, before its own hand-back begins, its word that the run ended built, on which the record keeps the commit the run command's own check of the clone saw at the branch's head as the commit the run ended built at, a run that ended built being one whose ending is built by ADR-073 point 6's precedence (exit 0 or 9): its result built, the clone's check and its checks bearing it out, and no call its own denies refused (refinement per [ADR-100](ADR-100-runs-in-seat-clone.md))
+- for a resumed run, which makes no clone, of the bullet for a working run, the default branch's head its rules are read from, the one its build's start event names (ADR-073 point 7), and the file its progress goes to, and none of the repository, branch and commit its clone is made at, which name the clone a run makes; and no clone and no session, the run command resuming the run in the clone, and the session, that the latest record for the build names (refinement per [ADR-100](ADR-100-runs-in-seat-clone.md))
 - a wall-clock limit, and an effort level where it sets one
 
 **The caller gets back:**
@@ -110,6 +114,7 @@ The points:
 - the calls the harness refused, where it reports them
 - for a confined run, the run's files as untrusted data, the check's verdict (point 7), and each command the run ran outside the sandbox (point 6)
 - for a working run, its kept clone, the check's verdict, the harness session's id, and its progress in the file the caller named (refinement per [ADR-073](ADR-073-builder-runs.md) points 1, 5 and 7)
+- for a working run, as the run starts, the path of its progress file, which the run command writes in the run's settings folder under the name the caller gives, and, while the run runs, each process the runner starts, the harness and each check's, by its id and start time, each held until the caller has written it into the build's state and lets it go, the run command letting it go only once the caller does, and ending it where the caller's end of the pipe closes (refinement per [ADR-100](ADR-100-runs-in-seat-clone.md))
 
 **A run is refused before it starts when:**
 - the marker of a run is set (point 8), or no runner is found, or more than one (point 1)
@@ -121,6 +126,7 @@ The points:
   - a deny that binds the run cannot be held natively (point 3)
   - the run's settings fail the harness's settings schema (point 3)
   - the clone, or the shell's temp folder inside the workspace, cannot be made (points 6 and 7)
+- for a resumed run, the head its caller passes is not the one the latest record names (refinement per [ADR-100](ADR-100-runs-in-seat-clone.md))
 
 Which of these causes are the harness's or the platform's, for DEC-069 point 2's fallback, is decided with the confined form (#2225). Each refusal names its cause. A start report that does not match the run's settings ends the run at once (point 9). At the wall-clock limit, the runner ends the harness and every process of the run it can reach (point 11).
 
