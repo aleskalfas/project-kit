@@ -6,6 +6,8 @@ date: 2026-10-28
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [DEC-082](DEC-082-pace-of-subagents.md).** Whenever a Task's work frees a slot of a seat, the ready Tasks of its pools rank nearest that Task first: those of its Feature, then its EPIC, then its Milestone, then the rest, by priority within each. Overturned: point 5's "the Tasks rank as there", where a Task's work freed the slot, so far as it ranks them by priority alone. Priority alone orders them where no Task's work freed the slot. The rest stands.
+
 **In plain terms:** a project's topology may declare **pools of workers**. Each seat that builds names the pools it serves. A person puts a line of work into a pool by marking its Milestone with the pool's name, and a worker chooses its next Task only from ready Tasks whose Milestone is in one of its pools. So several planners can each run a line of work, and a person decides how many workers each line gets. Starting or finishing a line changes no committed configuration. Where the topology declares no pool, every seat takes from the one shared pool of [project-management:DEC-059-topology-of-seats]. And every topology, with pools or without, now grants nothing to code that cannot read it in full, which changes DEC-059 point 1.
 
 ## Context

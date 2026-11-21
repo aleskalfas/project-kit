@@ -1,8 +1,8 @@
 ---
 id: DEC-082
 title: The project-manager keeps as many slots full at once as its pace allows, under a committed ceiling
-status: proposed
-date: 2026-11-17
+status: accepted
+date: 2026-11-22
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
