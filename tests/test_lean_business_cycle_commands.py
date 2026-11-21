@@ -682,10 +682,12 @@ def test_status_shows_what_waits_in_its_order(
     ]
 
 
-def test_status_marks_stale_judgements_and_what_takes_each_again(world: lb.World) -> None:
-    def reworded(data: Any) -> None:
-        data["boxes"]["problem"][0]["text"] = "Planning the week takes an evening"
+def reworded(data: Any) -> None:
+    """The direct variant's canvas with its problem reworded since its verdicts."""
+    data["boxes"]["problem"][0]["text"] = "Planning the week takes an evening"
 
+
+def test_status_marks_stale_judgements_and_what_takes_each_again(world: lb.World) -> None:
     world.edit(lb.DIRECT, reworded)
     idea = briefing(world)
     direct = idea["variants"][0]
@@ -699,6 +701,23 @@ def test_status_marks_stale_judgements_and_what_takes_each_again(world: lb.World
     ]
     run = world.run("status", "meal-plan")
     assert f"    meal-plan--direct: shortlisted; stale: {', '.join(stale)}" in run.out
+
+
+def test_status_marks_nothing_judged_against_a_goal_that_does_not_read_stale(
+    world: lb.World,
+) -> None:
+    # Whether a verdict judged against the goal, or the shortlisting, is stale cannot be
+    # told while the goal's file does not read, so the briefing marks none, as the check
+    # marks none. Desirability is judged without the goal.
+    world.edit(lb.DIRECT, reworded)
+    (world.root / lb.GOAL).write_text("revenue: [unclosed\n", encoding="utf-8")
+    idea = briefing(world)
+    assert idea["variants"][0]["stale"] == ["desirability"]
+    assert [w["command"] for w in idea["waiting"]] == [
+        "pkit lean judge meal-plan--direct desirability yes|no"
+    ]
+    run = world.run("status", "meal-plan")
+    assert "    meal-plan--direct: shortlisted; stale: desirability" in run.out.splitlines()
 
 
 def test_status_lists_a_cycle_and_an_experiment_whose_file_does_not_read(

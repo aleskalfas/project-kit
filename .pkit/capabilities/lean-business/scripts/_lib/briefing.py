@@ -499,7 +499,7 @@ def of_idea(engine: Engine, idea: IdeaModel, on: date) -> IdeaStatus:
     for own in sorted(idea.idea.variants):
         at = _standing(engine, engines.DESK, ids.qualify(name, own))
         held = canvases.get(own)
-        stale = _stale(held, idea.goal) if held is not None else ()
+        stale = _stale(held, idea) if held is not None else ()
         found.variants.append(VariantStatus(at, stale))
     for own, file in sorted(idea.idea.cycles.items()):
         at = _standing(engine, engines.CYCLE, idea.qualified(own))
@@ -516,19 +516,27 @@ def of_idea(engine: Engine, idea: IdeaModel, on: date) -> IdeaStatus:
     return found
 
 
-def _stale(canvas: Mapping[str, Any], goal: Mapping[str, Any] | None) -> tuple[str, ...]:
-    """The judgements of a variant gone stale, each verdict by its step and the
-    shortlisting, none where its outcome is final."""
+def _stale(canvas: Mapping[str, Any], idea: IdeaModel) -> tuple[str, ...]:
+    """The judgements of a variant of `idea` gone stale, each verdict by its step and the
+    shortlisting, none where its outcome is final. Where the idea's goal file does not
+    read, whether a verdict judged against the goal, or the shortlisting, is stale cannot
+    be told, so neither is marked, as the check marks neither."""
     outcome = _m(canvas.get("outcome"))
     if outcome.get("kind") in FINAL:
         return ()
+    unread = idea.goal_unread
     found = [
         step
         for step in STEPS
-        if readings.answer(canvas, step) is not None
-        and fingerprint.check_verdict(step, canvas, goal).stale
+        if not (unread and step in positions.AGAINST_THE_GOAL)
+        and readings.answer(canvas, step) is not None
+        and fingerprint.check_verdict(step, canvas, idea.goal).stale
     ]
-    if outcome.get("kind") == "shortlisted" and fingerprint.check_shortlisting(canvas, goal).stale:
+    if (
+        not unread
+        and outcome.get("kind") == "shortlisted"
+        and fingerprint.check_shortlisting(canvas, idea.goal).stale
+    ):
         found.append(SHORTLISTING)
     return tuple(found)
 
