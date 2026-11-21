@@ -215,19 +215,25 @@ class VariantStatus:
 
 @dataclass(frozen=True)
 class CycleStatus:
-    """A cycle's position, and what its file says that the briefing shows."""
+    """A cycle's position, and what its file says that the briefing shows: None where its
+    file does not read."""
 
     at: Standing
-    data: Mapping[str, Any]
+    data: Mapping[str, Any] | None
     on: date
 
     @property
+    def decided(self) -> bool:
+        """Whether the cycle is decided: a cycle whose file does not read counts as not."""
+        return self.data is not None and self.at.state == positions.DECIDED
+
+    @property
     def window(self) -> Span | None:
-        return timeline.cycle_window(self.data)
+        return timeline.cycle_window(self.data) if self.data is not None else None
 
     @property
     def days(self) -> int | None:
-        held = _m(self.data.get("window")).get("days")
+        held = _m(_m(self.data).get("window")).get("days")
         return held if isinstance(held, int) and not isinstance(held, bool) else None
 
     def counted(self) -> int | None:
@@ -239,7 +245,7 @@ class CycleStatus:
         if window.start is None or window.start > self.on:
             return 0
         last = self.on if window.end is None else min(self.on, window.end)
-        covered = timeline.covered_by(self.data.get("suspensions"))
+        covered = timeline.covered_by(_m(self.data).get("suspensions"))
         return sum(
             1
             for offset in range((last - window.start).days + 1)
@@ -247,9 +253,10 @@ class CycleStatus:
         )
 
     def key_results(self) -> list[dict[str, Any]]:
-        reached = _list(_m(self.data.get("review")).get("reached"))
+        data = _m(self.data)
+        reached = _list(_m(data.get("review")).get("reached"))
         found: list[dict[str, Any]] = []
-        for index, result in enumerate(_list(_m(self.data.get("objective")).get("key-results"))):
+        for index, result in enumerate(_list(_m(data.get("objective")).get("key-results"))):
             held = _m(result)
             named = ids.parse_ref(held.get("variant"), ids.CANVAS)
             found.append(
@@ -263,9 +270,12 @@ class CycleStatus:
         return found
 
     def as_data(self) -> dict[str, Any]:
+        """The cycle's keys, each null where its file does not read, its lists too, since
+        an empty one would say the cycle holds none."""
+        data = self.data
         window = self.window
-        constraint = self.data.get("constraint")
-        review = self.data.get("review")
+        constraint = _m(data).get("constraint")
+        review = _m(data).get("review")
         winning = ids.parse_ref(_m(review).get("winning"), ids.CANVAS)
         return {
             **self.at.as_data(),
@@ -274,8 +284,8 @@ class CycleStatus:
                 if window is not None
                 else None
             ),
-            "objective": _text(_m(self.data.get("objective")).get("statement")),
-            "key_results": self.key_results(),
+            "objective": _text(_m(_m(data).get("objective")).get("statement")),
+            "key_results": self.key_results() if data is not None else None,
             "constraint": (
                 {
                     "step": _text(_m(constraint).get("step")),
@@ -284,15 +294,19 @@ class CycleStatus:
                 if isinstance(constraint, Mapping)
                 else None
             ),
-            "suspensions": [
-                {
-                    "reason": _text(entry.get("reason")),
-                    "first_day": _iso(day(entry.get("first-day"))),
-                    "resumed": _iso(day(_m(entry.get("resumed")).get("day"))),
-                    "recorded": _iso(day(entry.get("when"))),
-                }
-                for entry in cycle_words.suspensions_of(self.data)
-            ],
+            "suspensions": (
+                [
+                    {
+                        "reason": _text(entry.get("reason")),
+                        "first_day": _iso(day(entry.get("first-day"))),
+                        "resumed": _iso(day(_m(entry.get("resumed")).get("day"))),
+                        "recorded": _iso(day(entry.get("when"))),
+                    }
+                    for entry in cycle_words.suspensions_of(data)
+                ]
+                if data is not None
+                else None
+            ),
             "review": (
                 {
                     "decision": _text(_m(review).get("decision")),
@@ -305,10 +319,13 @@ class CycleStatus:
         }
 
     def lines(self) -> list[str]:
+        data = self.data
+        if data is None:
+            return [f"    {self.at.id}: {self.at.where}"]
         window = self.window
         falls = span_text(window) if window is not None else "a window that does not read"
         if self.at.state == positions.DECIDED:
-            review = _m(self.data.get("review"))
+            review = _m(data.get("review"))
             winning = ids.parse_ref(review.get("winning"), ids.CANVAS)
             named = f" for `{winning.id}`" if winning is not None else ""
             return [f"    {self.at.id}: decided, {review.get('decision')}{named}; window {falls}"]
@@ -316,7 +333,7 @@ class CycleStatus:
         # A window not yet started has no day of it gone to show.
         gone = f", day {counted} of {days}" if counted and days is not None else ""
         out = [f"    {self.at.id}: {self.at.where}{gone}; window {falls}"]
-        objective = _text(_m(self.data.get("objective")).get("statement"))
+        objective = _text(_m(data.get("objective")).get("statement"))
         if objective is not None:
             out.append(f"      objective: {objective}")
         for result in self.key_results():
@@ -325,40 +342,44 @@ class CycleStatus:
                 f"      key result: `{result['variant']}`, {result['metric']}, target "
                 f"{result['target']}{reached}"
             )
-        constraint = _m(self.data.get("constraint"))
+        constraint = _m(data.get("constraint"))
         if constraint:
             out.append(f"      constraint: {constraint.get('step')}: {constraint.get('evidence')}")
-        for entry in cycle_words.suspensions_of(self.data):
+        for entry in cycle_words.suspensions_of(data):
             out.append(f"      suspended {cycle_words.away(entry)}")
         return out
 
 
 @dataclass(frozen=True)
 class ExperimentStatus:
-    """An experiment's position, and what its file says that the briefing shows."""
+    """An experiment's position, and what its file says that the briefing shows: None where
+    its file does not read."""
 
     at: Standing
-    data: Mapping[str, Any]
+    data: Mapping[str, Any] | None
     cycle: Mapping[str, Any] | None
 
     @property
     def time_box(self) -> Span | None:
+        if self.data is None:
+            return None
         return timeline.experiment_time_box(self.data, self.cycle)
 
     def expected(self) -> str | None:
         """What it declared it expects, in words."""
-        if self.data.get("kind") == "generative":
-            fit = _m(self.data.get("fit"))
+        held = _m(self.data)
+        if held.get("kind") == "generative":
+            fit = _m(held.get("fit"))
             if fit.get("count") is None:
                 return None
             return f"a fit of {fit.get('count')} {fit.get('of')}"
-        expected = _m(self.data.get("expected"))
+        expected = _m(held.get("expected"))
         direction = {"at-least": "at least", "at-most": "at most"}.get(
             str(expected.get("direction"))
         )
         if direction is None:
             return None
-        metric = self.data.get("metric")
+        metric = held.get("metric")
         threshold = _number(expected.get("threshold"))
         if threshold is not None:
             return f"{metric} {direction} {threshold}"
@@ -370,13 +391,13 @@ class ExperimentStatus:
         )
 
     def outcome(self) -> str | None:
-        return readings.experiment_outcome(self.data)
+        return readings.experiment_outcome(self.data) if self.data is not None else None
 
     def as_data(self) -> dict[str, Any]:
-        cycle = ids.parse_ref(self.data.get("cycle"), ids.CYCLE)
+        cycle = ids.parse_ref(_m(self.data).get("cycle"), ids.CYCLE)
         return {
             **self.at.as_data(),
-            "kind": _text(self.data.get("kind")),
+            "kind": _text(_m(self.data).get("kind")),
             "cycle": cycle.id if cycle is not None else None,
             "time_box": _span(self.time_box),
             "expected": self.expected(),
@@ -384,8 +405,11 @@ class ExperimentStatus:
         }
 
     def lines(self) -> list[str]:
+        data = self.data
+        if data is None:
+            return [f"    {self.at.id}: {self.at.where}"]
         outcome = self.outcome()
-        decision = _m(self.data.get("decision"))
+        decision = _m(data.get("decision"))
         if self.at.state == positions.DECIDED:
             next_action = positions.NEXT_ACTIONS.get(str(decision.get("next")), "decided")
             result = f"; its result, {positions.OUTCOME_WORDS[outcome]}" if outcome else ""
@@ -406,8 +430,8 @@ class ExperimentStatus:
         if outcome is None:
             out.append("      result: waits for its result")
         else:
-            measured = _m(self.data.get("result")).get("measured")
-            spoiled = _m(self.data.get("result")).get("spoiled") is True
+            measured = _m(data.get("result")).get("measured")
+            spoiled = _m(data.get("result")).get("spoiled") is True
             how = "spoiled" if spoiled else f"measured {measured}"
             out.append(f"      result: {positions.OUTCOME_WORDS[outcome]}, {how}")
         return out
@@ -466,7 +490,9 @@ def _standing(engine: Engine, process: str, subject: str) -> Standing:
 
 
 def of_idea(engine: Engine, idea: IdeaModel, on: date) -> IdeaStatus:
-    """The status of `idea` on the day `on`, each subject's position asked of `engine`."""
+    """The status of `idea` on the day `on`, each subject's position asked of `engine`.
+    Each subject whose file lies in its place is listed, with its data where the file
+    reads."""
     name = idea.name
     found = IdeaStatus(name, idea.goal)
     canvases = {own: data for own, _, data in idea.canvases()}
@@ -475,15 +501,15 @@ def of_idea(engine: Engine, idea: IdeaModel, on: date) -> IdeaStatus:
         held = canvases.get(own)
         stale = _stale(held, idea.goal) if held is not None else ()
         found.variants.append(VariantStatus(at, stale))
-    for cycle in idea.cycles:
-        at = _standing(engine, engines.CYCLE, idea.qualified(cycle.own))
-        found.cycles.append(CycleStatus(at, cycle.data, on))
-    by_id = {c.at.id: c.data for c in found.cycles}
-    for experiment in idea.experiments:
-        at = _standing(engine, engines.EXPERIMENT, idea.qualified(experiment.own))
-        named = ids.parse_ref(experiment.data.get("cycle"), ids.CYCLE)
+    for own, file in sorted(idea.idea.cycles.items()):
+        at = _standing(engine, engines.CYCLE, idea.qualified(own))
+        found.cycles.append(CycleStatus(at, file.data, on))
+    by_id = {c.at.id: c.data for c in found.cycles if c.data is not None}
+    for own, file in sorted(idea.idea.experiments.items()):
+        at = _standing(engine, engines.EXPERIMENT, idea.qualified(own))
+        named = ids.parse_ref(_m(file.data).get("cycle"), ids.CYCLE)
         cycle = by_id.get(named.id) if named is not None else None
-        found.experiments.append(ExperimentStatus(at, experiment.data, cycle))
+        found.experiments.append(ExperimentStatus(at, file.data, cycle))
     found.last_act = last_act(idea)
     found.offer = offer(idea, found.cycles, on)
     found.waiting = list(_waiting(idea, found))
@@ -562,9 +588,10 @@ def last_act(idea: IdeaModel) -> LastAct | None:
 def offer(idea: IdeaModel, statuses: Sequence[CycleStatus], on: date) -> Offer | None:
     """The offer to record a silence of `SILENCE` days or more on a cycle running or in
     review as a suspension, or None where no cycle has one, or where such a suspension,
-    resumed on `on`, would break the suspension's rules."""
+    resumed on `on`, would break the suspension's rules. A cycle whose file does not read
+    has none: it counts as undecided, and where it stands cannot be told."""
     for status in statuses:
-        if status.at.state not in OFFERED_IN:
+        if status.data is None or status.at.state not in OFFERED_IN:
             continue
         cycle = next((c for c in idea.cycles if idea.qualified(c.own) == status.at.id), None)
         window = status.window
@@ -662,7 +689,7 @@ def _waiting(idea: IdeaModel, status: IdeaStatus) -> Iterator[Waiting]:
             )
     states = {cycle.at.id: cycle.at.state for cycle in status.cycles}
     for experiment in status.experiments:
-        named = ids.parse_ref(experiment.data.get("cycle"), ids.CYCLE)
+        named = ids.parse_ref(_m(experiment.data).get("cycle"), ids.CYCLE)
         if (
             experiment.at.state == positions.DRAFTED
             and named is not None
@@ -709,15 +736,15 @@ def _desk(variants: Sequence[VariantStatus]) -> Iterator[Waiting]:
 
 def _planning(idea: IdeaModel, status: IdeaStatus) -> Waiting | None:
     """The next cycle to plan, where the idea has a goal and a shortlisted variant whose
-    shortlisting is not stale, no cycle of it is undecided, and its last cycle did not
-    pause; else None."""
-    if idea.goal is None or any(c.at.state != positions.DECIDED for c in status.cycles):
+    shortlisting is not stale, no cycle of it is undecided, a cycle whose file does not
+    read counted as undecided, and its last cycle did not pause; else None."""
+    if idea.goal is None or not all(c.decided for c in status.cycles):
         return None
     reviewed = sorted(
         (
-            (when, _m(c.data.get("review")).get("decision"))
+            (when, _m(_m(c.data).get("review")).get("decision"))
             for c in status.cycles
-            if (when := day(_m(c.data.get("review")).get("when"))) is not None
+            if (when := day(_m(_m(c.data).get("review")).get("when"))) is not None
         ),
         key=lambda pair: pair[0],
     )

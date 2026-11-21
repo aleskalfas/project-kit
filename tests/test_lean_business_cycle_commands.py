@@ -699,3 +699,35 @@ def test_status_marks_stale_judgements_and_what_takes_each_again(world: lb.World
     ]
     run = world.run("status", "meal-plan")
     assert f"    meal-plan--direct: shortlisted; stale: {', '.join(stale)}" in run.out
+
+
+def test_status_lists_a_cycle_and_an_experiment_whose_file_does_not_read(
+    world: lb.World,
+) -> None:
+    # Each stays in the briefing, where it stands cannot be told, and what its file would
+    # say is null. A cycle that cannot be read counts as undecided, so no next cycle waits
+    # to be planned.
+    (world.root / lb.CYCLE).write_text("id: [unclosed\n", encoding="utf-8")
+    (world.root / lb.IDEA / "experiments/landing-page.yaml").write_text(
+        "id: [unclosed\n", encoding="utf-8"
+    )
+    idea = briefing(world)
+    (cycle,) = idea["cycles"]
+    assert cycle["id"] == FIRST and cycle["why"], cycle
+    assert {key: value for key, value in cycle.items() if key not in ("id", "why")} == (
+        dict.fromkeys(
+            ("state", "window", "objective", "key_results", "constraint", "suspensions", "review")
+        )
+    )
+    (landing,) = (e for e in idea["experiments"] if e["id"] == LANDING_PAGE)
+    assert landing["why"], landing
+    assert {key: value for key, value in landing.items() if key not in ("id", "why")} == (
+        dict.fromkeys(("state", "kind", "cycle", "time_box", "expected", "outcome"))
+    )
+    assert idea["waiting"] == []
+    shown = world.run("status", "meal-plan").out.splitlines()
+    assert f"    {FIRST}: cannot be told: {cycle['why']}" in shown
+    assert f"    {LANDING_PAGE}: cannot be told: {landing['why']}" in shown
+    every = world.run("status").out.splitlines()
+    (line,) = (each for each in every if each.startswith("meal-plan"))
+    assert "waiting" not in line

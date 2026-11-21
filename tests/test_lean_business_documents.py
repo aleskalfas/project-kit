@@ -36,7 +36,7 @@ _CYCLE = {
     "window.days": "int|null",
     "window.counted": "int|null",
     "objective": "str|null",
-    "key_results": "list",
+    "key_results": "list|null",
     "key_results[]": "object",
     "key_results[].variant": "str|null",
     "key_results[].metric": "str|null",
@@ -45,7 +45,7 @@ _CYCLE = {
     "constraint": "object|null",
     "constraint.step": "str|null",
     "constraint.evidence": "str|null",
-    "suspensions": "list",
+    "suspensions": "list|null",
     "suspensions[]": "object",
     "suspensions[].reason": "str|null",
     "suspensions[].first_day": "str|null",
@@ -137,16 +137,18 @@ def test_the_status_document_holds_its_contract(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     world = lb.world(tmp_path, monkeypatch, date(2026, 11, 20))
-    # An idea with no goal and a variant to judge, beside one whose canvas cannot be read,
-    # so the engine cannot tell where it stands.
+    # An idea with no goal and a variant to judge, beside one whose canvas and cycle cannot
+    # be read, so the engine cannot tell where either stands.
     assert world.run("new_variant", "board-game--platform", "--archetype", "marketplace").code == 0
-    unreadable = world.root / "lean-business/garden/variants/plots/canvas.yaml"
-    unreadable.parent.mkdir(parents=True)
-    unreadable.write_text("id: [unclosed\n", encoding="utf-8")
+    for rel in ("variants/plots/canvas.yaml", "cycles/spring.yaml"):
+        unreadable = world.root / "lean-business/garden" / rel
+        unreadable.parent.mkdir(parents=True)
+        unreadable.write_text("id: [unclosed\n", encoding="utf-8")
     every = _printed(world)
     assert any(
         variant["state"] is None for idea in every["ideas"] for variant in idea["variants"]
     ), every
+    assert any(cycle["key_results"] is None for idea in every["ideas"] for cycle in idea["cycles"])
     reviewed = _printed(world, "meal-plan")
     # The idea's cycle running and quiet since it was planned, so the briefing offers to
     # record the silence, and a verdict of its variant gone stale.

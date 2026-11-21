@@ -332,7 +332,7 @@ Each position is the process engine's ([lean-business:DEC-002-lean-business-data
     - an experiment: its `kind`; its `cycle`; its `time_box`, a `start` and an `end`, as its cycle's suspensions move it; what it `expected`, in words; and its `outcome` once its result is recorded, `pass`, `fail` or `neither`, else `null`;
   - `waiting`: each a `subject`, `what` waits and the `command` that takes it.
 
-A day is written `YYYY-MM-DD`. A window's or a time box's `start` or `end` is `null` where an ongoing suspension leaves it none, and any value the files do not give, or that does not read, is `null`.
+A day is written `YYYY-MM-DD`. A window's or a time box's `start` or `end` is `null` where an ongoing suspension leaves it none, and any value the files do not give, or that does not read, is `null`. A cycle or an experiment whose file does not read is listed all the same, and each of its keys besides `id`, `state` and `why` is `null`, a cycle's `key_results` and `suspensions` too.
 
 ## Credits and licence
 
