@@ -57,6 +57,7 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
   - pushing, and every other write to a remote
   - starting an agent
   - every command of this capability that writes
+  - messaging another session, and listing the sessions messaging reaches (refinement per [project-management:DEC-081-delegation-between-seats])
 
   This capability declares them, scoped to the build command's runs, beside the drift command's ([project-management:DEC-056-drift-fixers] point 5). In the permission model they are denies, which prevail over every allow ([pkit:COR-028] point 1). The adapter realises them for that run only, on a mechanism that fails closed, and the permission overview shows them.
 - **The builder acts as no instance.** It writes nothing as the seat, and no command of this capability acts as an instance inside an *agent run*, a run the backbone's run command starts (ADR-066 point 8).

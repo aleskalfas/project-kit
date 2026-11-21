@@ -1,8 +1,8 @@
 ---
 id: DEC-081
 title: Only the seat a worker's topology names directs it by message, and only within what the tracker holds
-status: proposed
-date: 2026-11-17
+status: accepted
+date: 2026-11-22
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
