@@ -68,6 +68,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
   - the mode that refuses what no rule allows (`dontAsk` in Claude Code), always passed
   - the harness's own memory turned off
   - an environment that names no signing agent, and a sandbox deny on the signing agents' sockets where they lie, so nothing in the run signs (ADR-066 point 4)
+  - the picker's answer for each agent's name a capability's allow names, which the runner gets for the default branch's head as it gets the builder's definition, through the adapter's resolver (ADR-087 point 2), and keeps in the model it writes outside the clone, by which the hook judges the run's calls (refinement per [ADR-101](ADR-101-capability-contributed-allows.md))
 - **Outside the clone.** The runner writes the run's settings, and the hook and model it reads, to a folder of the backbone's that the run does not write.
 - **The project's instructions** to the harness are read from the clone, as a build needs them. They grant nothing (point 10).
 

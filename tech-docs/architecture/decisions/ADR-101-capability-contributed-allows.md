@@ -1,8 +1,8 @@
 ---
 id: ADR-101
 title: A capability may allow a privilege it defines to an agent it ships, reported as a widening
-status: proposed
-date: 2026-11-19
+status: accepted
+date: 2026-11-22
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
