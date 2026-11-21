@@ -48,7 +48,11 @@ DRAFT_FILE = f"{lb.IDEA}/experiments/weekly-calls.yaml"
 LANDING_PAGE = "meal-plan--landing-page"
 
 #: The prompts of the cycle's process definition.
-RESUME_PROMPT = "Are you back to resume the cycle, and on which day did you resume?"
+RESUME_PROMPT = (
+    "Resume the cycle on the day given, the day you came back? Its days count again from then, "
+    "and its window falls later by the days the suspension covered; where the window, so moved, "
+    "has ended, the cycle goes into review."
+)
 
 
 @pytest.fixture
