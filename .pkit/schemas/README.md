@@ -283,7 +283,7 @@ A document schema, whose file is itself one resource, owns a namespace through t
 - **In place of `x-pkit-id-collection`, never beside it.** A companion that declares both is an error of `pkit schemas validate`.
 - **The id is held, never derived.** It is read from the field the pointer names, never from the file's path or name. A document in which the pointer reaches no string is an error.
 - **No collection to add to.** `pkit schemas add` refuses a document namespace. `pkit schemas rename` renames the example document's id, and the tokens and keys that cite it.
-- **Declared by hand.** The stamp of a document schema, `pkit new schema <owner> <name> --no-namespace`, declares no annotation. Add `x-pkit-entry-id` to the companion it writes.
+- **Declared by hand.** The stamp of a document schema, [`pkit new schema <owner> <name> --no-namespace`](../cli/README.md#new-schema-owner-name---collection-form-form---collection-name-key---no-namespace), declares no annotation. Add `x-pkit-entry-id` to the companion it writes.
 - **Adopter data.** How bound documents join a namespace's pool is in [`data-binding.md`, "Cross-file references in adopter data"](data-binding.md#cross-file-references-in-adopter-data-x-pkit-reference-namespace-cor-029).
 
 ### What the resolver pass checks

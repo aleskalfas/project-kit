@@ -158,5 +158,5 @@ The `schema` skill covers schemas that describe adopter data, through its `autho
 
 - **The stamp.** `pkit new schema <owner> <name>` stamps a pair into its owner's home. `<owner>` is a capability's name, or `core`, which stamps into this area, `.pkit/schemas/`. The other schemas verbs, `schemas validate`, `list`, `show`, `add` and `rename`, treat `core` as an owner beside every capability.
 - **A schema of adopter data** adds the `binds_to:` field to its YAML, beside the namespace's content.
-- **A document schema whose documents others cite** declares `x-pkit-entry-id` in its companion by hand, since the stamp declares no annotation.
+- **A document schema whose documents others cite** declares `x-pkit-entry-id` in its companion by hand, since the stamp declares none.
 - **The adopter's files** carry the `pkit_schema:` field and the editor's directive, as recommended above.
