@@ -80,7 +80,7 @@ def _number(text: str, flag: str) -> int | float:
         value = float(text)
     except ValueError:
         raise Refused(f"{flag} takes a number, and `{text}` is none") from None
-    return int(value) if value == int(value) else value
+    return editing.number(value)
 
 
 def _period(text: str, flag: str) -> str:

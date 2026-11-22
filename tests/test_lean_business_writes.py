@@ -118,6 +118,14 @@ def test_a_key_added_lands_where_the_schema_writes_it_and_comments_stay(world: l
     assert "traction:\n  multiplier: 8\n  first-stage:" in text
 
 
+def test_a_number_is_written_whole_where_it_is_whole_and_refused_where_it_is_not_finite() -> None:
+    assert editing.number(8.0) == 8
+    assert editing.number(0.05) == 0.05
+    for value in (float("nan"), float("inf"), float("-inf"), float("1e400")):
+        with pytest.raises(writes.Refused, match="is no finite number"):
+            editing.number(value)
+
+
 def test_one_day_written_in_two_places_is_written_as_itself_in_each() -> None:
     doc = editing.new("lean-business:cycle", {"id": "meal-plan--second"})
     doc.data["planned"] = editing.mapping(

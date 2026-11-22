@@ -63,6 +63,9 @@ GENERATIVE = (
 
 LANDING_PAGE = "meal-plan--landing-page"
 
+#: What a command says of a number that is not finite, such as `nan` or `1e400`.
+NOT_FINITE = "is no finite number, and a file holds only finite numbers"
+
 
 @pytest.fixture
 def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> lb.World:
@@ -361,6 +364,25 @@ def test_plan_cycle_gives_a_window_of_ninety_days_where_none_is_given(world: lb.
     assert world.read(SECOND_FILE)["window"]["days"] == 90
 
 
+@pytest.mark.parametrize(
+    ("flags", "refused"),
+    [
+        (("--days", "0"), "--days is one at least"),
+        (("--days", "3000000"), "--days is 3650 at most"),
+        (("--key-result", "direct:revenue:nan"), f"`nan` {NOT_FINITE}"),
+        (("--key-result", "direct:revenue:1e400"), f"`inf` {NOT_FINITE}"),
+    ],
+)
+def test_plan_cycle_refuses_a_window_out_of_bounds_and_a_target_that_is_not_finite(
+    world: lb.World, flags: tuple[str, ...], refused: str
+) -> None:
+    kept = lb.snapshot(world.root)
+    run = world.run("plan_cycle", SECOND, *PLAN, *flags, "--person-decided")
+    assert run.code == 1
+    assert refused in run.err
+    assert lb.snapshot(world.root) == kept
+
+
 def test_plan_cycle_refuses_while_the_last_cycle_is_undecided(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -629,6 +651,25 @@ def test_draft_experiment_refuses_an_expectation_or_a_control_that_does_not_read
     assert refused in run.err
 
 
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ("--direction", "at-least", "--threshold", "nan"),
+        ("--direction", "at-least", "--threshold", "inf"),
+        ("--direction", "at-most", "--range", "1", "1e400"),
+    ],
+)
+def test_draft_experiment_refuses_an_expected_number_that_is_not_finite(
+    world: lb.World, argv: tuple[str, ...]
+) -> None:
+    world.run("new_experiment", DRAFT, "--kind", "evaluative")
+    kept = lb.snapshot(world.root)
+    run = world.run("draft_experiment", DRAFT, *argv)
+    assert run.code == 1
+    assert NOT_FINITE in run.err
+    assert lb.snapshot(world.root) == kept
+
+
 def test_draft_and_remove_experiment_refuse_once_declared(world: lb.World) -> None:
     kept = lb.snapshot(world.root)
     run = world.run("draft_experiment", LANDING_PAGE, "--action", "Another page")
@@ -673,6 +714,16 @@ def test_record_estimate_replaces_the_same_persons_earlier_one(world: lb.World) 
         {"by": lb.PERSON, "value": 7.5},
         {"by": "B. Partner", "value": 4},
     ]
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "1e400"])
+def test_record_estimate_refuses_a_guess_that_is_not_finite(world: lb.World, value: str) -> None:
+    drafted(world)
+    kept = lb.snapshot(world.root)
+    run = world.run("record_estimate", DRAFT, value, "--person-decided")
+    assert run.code == 1
+    assert NOT_FINITE in run.err
+    assert lb.snapshot(world.root) == kept
 
 
 def test_record_estimate_refuses_once_declared(world: lb.World) -> None:
@@ -903,6 +954,17 @@ def test_record_result_refuses_a_spoiled_measurement_no_suspension_ran_through(
     )
     assert run.code == 1
     assert "a measurement is spoiled only by a suspension its time box ran through" in run.err
+
+
+def test_record_result_refuses_a_measurement_that_is_not_finite(world: lb.World) -> None:
+    declared(world)
+    on(world, date(2027, 3, 26))
+    kept = lb.snapshot(world.root)
+    argv = ("--evidence", "The call notes", "--learned", "Nothing", "--person-decided")
+    run = world.run("record_result", DRAFT, "--measured", "nan", *argv)
+    assert run.code == 1
+    assert f"`nan` {NOT_FINITE}" in run.err
+    assert lb.snapshot(world.root) == kept
 
 
 def test_record_result_and_decide_refuse_a_draft_or_a_decided_one(world: lb.World) -> None:

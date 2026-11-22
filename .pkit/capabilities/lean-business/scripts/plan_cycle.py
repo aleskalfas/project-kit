@@ -12,8 +12,8 @@ point 11; DEC-003 points 4 and 5).
 The plan is the person's act, so it takes their word and records who planned it and when,
 with the plan's fingerprint (DEC-003 point 5). Planning is no move: a cycle whose plan is
 recorded stands planned. Its window holds 90 days where `--days` gives none, sized to the
-time the person can give it. A key result names the variant it is taken from, its step of
-the customer factory and the number to reach there.
+time the person can give it, and 3650 days, ten years, at most. A key result names the
+variant it is taken from, its step of the customer factory and the number to reach there.
 
 Refused: a variant that is not shortlisted, as the process engine places it; and, through
 the predicate the check shares (`gates.planning`), an idea with no goal and a cycle of the

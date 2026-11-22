@@ -79,6 +79,10 @@ SUSPENSION_ORDER = ("reason", "first-day", "by", "when", "resumed")
 #: The days a window holds where the plan gives none (DEC-002 point 11).
 DAYS = 90
 
+#: The most days a window holds: ten years, far beyond any cycle the method sizes, and well
+#: short of the calendar's last day, where the days worked out from a window run out.
+MOST_DAYS = 3650
+
 #: The flags of the plan's parts, by their dest.
 PLAN_FLAGS = (
     "variants",
@@ -156,8 +160,8 @@ def plan_flags(parser: argparse.ArgumentParser, *, first: bool) -> None:
     parser.add_argument(
         "--days",
         type=int,
-        help=f"The days the window holds, sized to the time you can give it; {DAYS} where "
-        f"none is given.",
+        help=f"The days the window holds, sized to the time you can give it, {MOST_DAYS} at "
+        f"most; {DAYS} where none is given.",
     )
     parser.add_argument("--objective", required=first, help="What the cycle sets out to reach.")
     parser.add_argument(
@@ -209,6 +213,8 @@ def lay_plan(ctx: acting.Context, files: Files, cycle: Cycle, args: argparse.Nam
     if args.days is not None:
         if args.days < 1:
             raise Refused("--days is one at least: a window holds a day or more")
+        if args.days > MOST_DAYS:
+            raise Refused(f"--days is {MOST_DAYS} at most: a window holds ten years at most")
         editing.place(window, "days", args.days, ("start", "days"))
     elif "days" not in window:
         editing.place(window, "days", DAYS, ("start", "days"))

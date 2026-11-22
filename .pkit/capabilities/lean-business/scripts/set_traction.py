@@ -56,10 +56,6 @@ def parser() -> argparse.ArgumentParser:
     return made
 
 
-def _number(value: float) -> int | float:
-    return int(value) if value == int(value) else value
-
-
 def run(args: argparse.Namespace, ctx: Context) -> None:
     setting = [args.multiplier, args.first_stage_metric, args.first_stage_target]
     if args.clear and any(value is not None for value in setting):
@@ -68,9 +64,13 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
         raise Refused("give --multiplier, the first stage's metric and target, or --clear")
     if (args.first_stage_metric is None) != (args.first_stage_target is None):
         raise Refused("the first stage's target is a metric and a number, given together")
-    if args.multiplier is not None and args.multiplier <= 1:
+    multiplier = editing.number(args.multiplier) if args.multiplier is not None else None
+    target = (
+        editing.number(args.first_stage_target) if args.first_stage_target is not None else None
+    )
+    if multiplier is not None and multiplier <= 1:
         raise Refused("--multiplier is above 1: the traction grows each year")
-    if args.first_stage_target is not None and args.first_stage_target <= 0:
+    if target is not None and target <= 0:
         raise Refused("--first-stage-target is above 0")
     files = writes.Files(ctx.root, writes.for_writing(ctx.root))
     canvas = canvases.open_variant(files, str(args.variant))
@@ -84,13 +84,13 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
             traction = editing.mapping()
             editing.place(canvas.data, "traction", traction, canvases.ORDER)
         order = ("multiplier", "first-stage")
-        if args.multiplier is not None:
-            editing.place(traction, "multiplier", _number(args.multiplier), order)
+        if multiplier is not None:
+            editing.place(traction, "multiplier", multiplier, order)
         if args.first_stage_metric is not None:
             stage = editing.mapping(
                 [
                     ("metric", args.first_stage_metric),
-                    ("target", _number(args.first_stage_target)),
+                    ("target", target),
                 ]
             )
             editing.place(traction, "first-stage", stage, order)

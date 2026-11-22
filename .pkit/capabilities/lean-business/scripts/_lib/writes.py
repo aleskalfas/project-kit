@@ -45,6 +45,7 @@ from pathlib import Path, PurePosixPath
 
 from _lib import backbone, checks, editing, layout, listing
 from _lib import location as locations
+from _lib.editing import Refused
 from _lib.findings import ERROR, WARNING, Finding, ordered
 from _lib.reading import ReadError
 from _lib.root import CAPABILITY, CONFIG
@@ -54,10 +55,6 @@ READ = (layout.SUFFIX, layout.OTHER_SUFFIX)
 
 #: The label the findings of the backbone's data validation carry here.
 DATA = "data"
-
-
-class Refused(Exception):
-    """A command refuses: nothing it asked for was written, or what it wrote was undone."""
 
 
 # --- where a write goes ----------------------------------------------------------------------

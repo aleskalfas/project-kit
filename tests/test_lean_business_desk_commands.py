@@ -478,6 +478,36 @@ def test_set_inputs_refuses_an_input_out_of_its_range(
     assert refused in run.err
 
 
+@pytest.mark.parametrize(
+    ("command", "argv"),
+    [
+        ("set_goal", ("meal-plan", "--years", "nan")),
+        ("set_goal", ("meal-plan", "--revenue", "1e400")),
+        ("set_inputs", ("meal-plan--direct", "--price", "nan", "month")),
+        ("set_inputs", ("meal-plan--direct", "--lifetime", "inf", "year")),
+        ("set_traction", ("meal-plan--direct", "--multiplier", "inf")),
+        (
+            "set_traction",
+            (
+                "meal-plan--direct",
+                "--first-stage-metric",
+                "activation",
+                "--first-stage-target",
+                "nan",
+            ),
+        ),
+    ],
+)
+def test_a_number_that_is_not_finite_is_refused_and_nothing_is_written(
+    world: lb.World, command: str, argv: tuple[str, ...]
+) -> None:
+    kept = lb.snapshot(world.root)
+    run = world.run(command, *argv)
+    assert run.code == 1
+    assert "is no finite number, and a file holds only finite numbers" in run.err
+    assert lb.snapshot(world.root) == kept
+
+
 def test_set_traction_sets_and_clears_the_traction_target(world: lb.World) -> None:
     flags = ("--first-stage-metric", "activation", "--first-stage-target", "100")
     run = world.run("set_traction", "meal-plan--direct", *flags)

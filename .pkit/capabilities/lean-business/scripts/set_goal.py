@@ -64,10 +64,6 @@ def parser() -> argparse.ArgumentParser:
     return made
 
 
-def _number(value: float) -> int | float:
-    return int(value) if value == int(value) else value
-
-
 def run(args: argparse.Namespace, ctx: Context) -> None:
     idea = str(args.idea)
     if not ids.is_segment(idea):
@@ -77,9 +73,11 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
         )
     if args.currency is not None and not CURRENCY.match(args.currency):
         raise Refused(f"`{args.currency}` is no currency's code: three capital letters, as EUR")
-    if args.revenue is not None and args.revenue < 0:
+    amount = editing.number(args.revenue) if args.revenue is not None else None
+    years = editing.number(args.years) if args.years is not None else None
+    if amount is not None and amount < 0:
         raise Refused("the revenue to reach is never below nothing")
-    if args.years is not None and args.years <= 0:
+    if years is not None and years <= 0:
         raise Refused("the years to reach the goal are more than none")
     files = writes.Files(ctx.root, writes.for_writing(ctx.root))
     rel = files.path("goal", idea)
@@ -101,14 +99,14 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
     if not isinstance(revenue, dict):
         revenue = editing.mapping()
         editing.place(data, "revenue", revenue, ORDER)
-    if args.revenue is not None:
-        editing.place(revenue, "amount", _number(args.revenue), ("amount", "per"))
+    if amount is not None:
+        editing.place(revenue, "amount", amount, ("amount", "per"))
     if args.per is not None:
         editing.place(revenue, "per", args.per, ("amount", "per"))
     if args.currency is not None:
         editing.place(data, "currency", args.currency, ORDER)
-    if args.years is not None:
-        editing.place(data, "years", _number(args.years), ORDER)
+    if years is not None:
+        editing.place(data, "years", years, ORDER)
     editing.place(data, "by", ctx.who, ORDER)
     editing.place(data, "when", ctx.on, ORDER)
     goal = doc.plain()

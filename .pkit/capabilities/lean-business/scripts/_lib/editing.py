@@ -16,12 +16,14 @@ and a key given twice is refused. So a command judges the file as the check will
   written as an alias of the other.
 - **An answer**, `yes` or `no`, is written quoted (`quoted`), so no reader of an older
   YAML takes it for a truth value.
-- **A number** is written whole where it is whole (`number`), `8` rather than `8.0`.
+- **A number** is written whole where it is whole (`number`), `8` rather than `8.0`, and
+  one that is not finite, such as `nan` or `inf`, is refused.
 """
 
 from __future__ import annotations
 
 import io
+import math
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import date
 from typing import Any
@@ -41,6 +43,12 @@ NEW_INDENT = (2, 4, 2)
 
 #: The format every file of the capability is written in, its `schema_version`.
 FORMAT = 1
+
+
+class Refused(Exception):
+    """A command refuses: nothing it asked for was written, or what it wrote was undone.
+    Every write goes through `writes`, which the commands import it from; it lies here, below
+    `writes`, as a file's change is refused here too (`number`)."""
 
 
 class _Representer(RoundTripRepresenter):
@@ -151,5 +159,8 @@ def quoted(text: str) -> DoubleQuotedScalarString:
 
 
 def number(value: float) -> int | float:
-    """`value` as a file writes it: whole where it is whole."""
+    """`value` as a file writes it: whole where it is whole. Raises Refused for a value that
+    is not finite, such as `nan`, `inf` or `1e400`, which no file holds as a number."""
+    if not math.isfinite(value):
+        raise Refused(f"`{value}` is no finite number, and a file holds only finite numbers")
     return int(value) if value == int(value) else value
