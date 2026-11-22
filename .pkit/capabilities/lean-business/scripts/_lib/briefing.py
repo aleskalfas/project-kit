@@ -7,8 +7,8 @@ position is the process engine's (`engine`), never worked out here again; where 
 or a time box falls is the one predicate the check shares (`timeline`). Without an idea,
 the status gives one line for each idea; with one, the briefing, in this order:
 
-- **Its first line** names the idea, and says so where the idea is dropped
-  (`readings.dropped`, which `shelve` reads too; DEC-003 point 8).
+- **Its first line** names the idea, and says where the idea is dropped, or where whether
+  it is cannot be told (`readings.dropped`, which `shelve` reads too; DEC-003 point 8).
 - **An offer** (`offer`), after a silence (`SILENCE`): where nothing has been recorded on
   a running cycle, or one in review, for that many days of its window, the gap may be
   recorded as a suspension, from the day after the last work recorded on the cycle, or
@@ -947,14 +947,20 @@ def line(idea: IdeaStatus) -> str:
         goal = "a goal whose file cannot be read"
     else:
         goal = "a goal" if idea.goal is not None else "no goal"
-    dropped = ", dropped" if idea.dropped else ""
+    if idea.dropped is None:
+        dropped = ", whether it is dropped cannot be told"
+    else:
+        dropped = ", dropped" if idea.dropped else ""
     waits = f"; {len(idea.waiting)} waiting" if idea.waiting else ""
     return f"{idea.id}: {goal}, {variants}{f' ({states})' if states else ''}{dropped}{waits}"
 
 
 def lines(idea: IdeaStatus) -> list[str]:
     """The idea's briefing, in full."""
-    dropped = ", dropped: every variant not split is shelved" if idea.dropped else ""
+    if idea.dropped is None:
+        dropped = "; whether it is dropped cannot be told, since a variant's canvas cannot be read"
+    else:
+        dropped = ", dropped: every variant not split is shelved" if idea.dropped else ""
     out = [f"The idea `{idea.id}`{dropped}"]
     if idea.offer is not None:
         out.extend(f"  {each}" for each in idea.offer.lines())

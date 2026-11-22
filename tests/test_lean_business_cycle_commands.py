@@ -849,12 +849,19 @@ def test_status_says_an_idea_is_dropped_once_each_variant_not_split_is_shelved(
     assert not any(line.startswith("  canvases") for line in lines)
     (line,) = world.run("status").out.splitlines()
     assert ", dropped" in line
-    # A canvas that does not read leaves it open, since its variant may be in play.
+    # Where a canvas does not read, whether the idea is dropped cannot be told, since its
+    # variant may be in play, and each form says so.
     unread = world.root / lb.IDEA / "variants/plots/canvas.yaml"
     unread.parent.mkdir(parents=True)
     unread.write_text("id: [unclosed\n", encoding="utf-8")
     assert briefing(world)["dropped"] is None
-    assert world.run("status", "meal-plan").out.splitlines()[0] == "The idea `meal-plan`"
+    assert world.run("status", "meal-plan").out.splitlines()[0] == (
+        "The idea `meal-plan`; whether it is dropped cannot be told, since a variant's canvas "
+        "cannot be read"
+    )
+    (line,) = world.run("status").out.splitlines()
+    assert ", whether it is dropped cannot be told" in line
+    assert ", dropped" not in line
 
 
 def test_status_names_a_cycles_acts_as_the_check_names_them(world: lb.World) -> None:
