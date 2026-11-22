@@ -430,6 +430,26 @@ def test_content_takes_no_question_and_records_no_one(world: lb.World) -> None:
     }
 
 
+@pytest.mark.parametrize(
+    ("command", "argv", "subject"),
+    [
+        ("new_variant", ("board-game--platform", "--archetype", "marketplace"), "a variant"),
+        ("new_experiment", ("meal-plan--calls", "--kind", "generative"), "an experiment"),
+    ],
+)
+def test_a_new_subjects_authors_are_git_users_and_where_git_names_nobody_it_says_so(
+    world: lb.World, command: str, argv: tuple[str, ...], subject: str
+) -> None:
+    before = lb.snapshot(world.root)
+    run = world.run(command, *argv, who=None)
+    assert run.code == 1
+    assert f"{subject} names its authors, and none is given and git names nobody" in run.err
+    assert "an act records who made it" not in run.err
+    assert lb.snapshot(world.root) == before
+    run = world.run(command, *argv, "--author", "B. Partner", who=None)
+    assert run.code == 0, run.err
+
+
 # --- the five ways a command meets the engine -------------------------------------------------
 
 

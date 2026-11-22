@@ -109,6 +109,20 @@ class Context:
     def say(self, line: str = "") -> None:
         print(line, file=self.out)
 
+    def authors(self, given: Sequence[str] | None, subject: str) -> list[str]:
+        """The authors a command writes into the new `subject`, such as `a variant`: those
+        `given`, else git's `user.name`. Raises Refused where neither names anyone."""
+        named = [name.strip() for name in given or [] if name.strip()]
+        if named:
+            return named
+        name = self.whom()
+        if not name or not name.strip():
+            raise Refused(
+                f"{subject} names its authors, and none is given and git names nobody: give "
+                f"`--author <name>`, or set git's user.name, `git config user.name <your name>`"
+            )
+        return [name.strip()]
+
 
 def git_user(root: Path) -> str | None:
     """Git's `user.name` for the project at `root`, or None."""

@@ -12,8 +12,9 @@ Content, so it asks nothing and records no who or when. The draft may come befor
 cycle is planned, so the assumption it tests and the cycle it runs in may each wait for
 `draft-experiment`. Each is named as every command names one, read within the
 experiment's idea (`naming.named`), and is refused where nothing holds it. Its authors are
-those `--author` gives, or git's user.name. A draft in a suspended cycle is warned of,
-since nothing is declared or recorded on it until the cycle resumes.
+those `--author` gives, or git's user.name, and it is refused where neither names anyone. A
+draft in a suspended cycle is warned of, since nothing is declared or recorded on it until
+the cycle resumes.
 
 Usage:
   pkit lean new-experiment <idea>--<experiment> --kind generative|evaluative
@@ -89,7 +90,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
     if args.cycle is not None:
         cycle = experiments.cycle_ref(files, idea, str(args.cycle))
         experiments.cycle_held(files, cycle)
-    authors = [a.strip() for a in args.authors or [] if a.strip()] or [ctx.who]
+    authors = ctx.authors(args.authors, "an experiment")
     body = editing.mapping(
         [
             ("id", experiment),

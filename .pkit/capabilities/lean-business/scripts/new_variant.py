@@ -10,8 +10,8 @@ empty list of assumptions (lean-business DEC-002 points 4 and 7).
 
 Content, so it asks nothing and records no who or when. It creates the idea's folder where
 none is, since a first sketch may come before the goal. The variant's authors default to
-git's `user.name`. A variant that takes up the story of a shelved one, or comes from a
-split, names it with `--comes-from`.
+git's `user.name`, and it is refused where neither names anyone. A variant that takes up
+the story of a shelved one, or comes from a split, names it with `--comes-from`.
 
 The variant's id is the one given, `<idea>--<variant>`. It is refused where the variant
 exists, or where a reference still names it, since an id named is never given again.
@@ -77,7 +77,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
         fallback="variant",
         taken=naming.in_use(files, idea),
     )
-    authors = [a.strip() for a in args.authors or [] if a.strip()] or [ctx.who]
+    authors = ctx.authors(args.authors, "a variant")
     body = editing.mapping(
         [
             ("id", variant),
