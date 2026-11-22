@@ -371,6 +371,36 @@ def test_resume_refuses_a_cycle_not_suspended_and_a_day_its_rules_refuse(
     assert f"`{FIRST}` stands running, not suspended: only a suspended cycle resumes" in run.err
 
 
+def test_resume_refuses_a_suspended_cycle_with_no_suspension_or_two_to_resume_from(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The engine reads a cycle suspended only where one suspension is ongoing, so the first
+    # case needs an engine that disagrees with the file: here, the fixture's suspension,
+    # resumed, is all the file holds. Two ongoing at once are a break the engine lets through.
+    world = lb.world(tmp_path, monkeypatch, date(2027, 2, 28))
+    first_only(world)
+    kept = lb.snapshot(world.root)
+    with monkeypatch.context() as stubbed:
+        stubbed.setattr(world.engine, "_state", lambda process, subject: "suspended")
+        run = world.run("resume", FIRST, "--person-decided")
+    assert run.code == 1
+    assert (
+        f"`{FIRST}` stands suspended, yet records no suspension without a resumption, so there "
+        f"is none to resume from" in run.err
+    )
+    assert "leaves it suspended" not in run.err
+    assert lb.snapshot(world.root) == kept
+
+    def twice(data: Any) -> None:
+        suspended_on_day_50(data)
+        data["suspensions"].append(dict(data["suspensions"][0], **{"first-day": date(2027, 1, 5)}))
+
+    world.edit(lb.CYCLE, twice)
+    run = world.run("resume", FIRST, "--person-decided")
+    assert run.code == 1
+    assert f"`{FIRST}` has 2 suspensions ongoing, and resuming from one leaves it" in run.err
+
+
 # --- review-cycle -----------------------------------------------------------------------------
 
 

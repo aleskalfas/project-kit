@@ -83,7 +83,12 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
         for index, entry in enumerate(listed if isinstance(listed, list) else [])
         if isinstance(entry, Mapping) and not isinstance(entry.get("resumed"), Mapping)
     ]
-    if len(ongoing) != 1:
+    if not ongoing:
+        raise Refused(
+            f"`{subject}` stands suspended, yet records no suspension without a resumption, so "
+            f"there is none to resume from: `pkit lean check` names the break"
+        )
+    if len(ongoing) > 1:
         raise Refused(
             f"`{subject}` has {len(ongoing)} suspensions ongoing, and resuming from one leaves "
             f"it suspended: `pkit lean check` names the break"
