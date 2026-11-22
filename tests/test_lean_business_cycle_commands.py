@@ -1061,6 +1061,18 @@ def test_status_gives_null_for_a_cycles_list_that_does_not_read_and_lists_an_ent
     assert "      its suspensions cannot be read" in shown
 
 
+def test_status_gives_what_the_review_recorded_for_a_key_result_that_does_not_read(
+    world: lb.World,
+) -> None:
+    # The review records what each key result reached apart from the key result, at its place
+    # in the objective's list, so a key result that does not read still gives that value.
+    world.edit(lb.CYCLE, lambda data: data["objective"].update({"key-results": ["nope"]}))
+    first = briefing(world)["cycles"][0]
+    assert first["key_results"] == [
+        {"variant": None, "metric": None, "target": None, "reached": 52}
+    ]
+
+
 def test_status_says_a_cycles_objective_or_constraint_cannot_be_read(world: lb.World) -> None:
     # Every cycle holds both, so one that does not read is said not to, never left out.
     planned(world)
