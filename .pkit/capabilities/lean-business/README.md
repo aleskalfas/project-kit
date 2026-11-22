@@ -341,7 +341,7 @@ Each position is the process engine's ([lean-business:DEC-002-lean-business-data
   - `id`;
   - `goal`: its `revenue`, the period it is counted `per`, `month` or `year`, its `currency` and its `years`; or `null` where the idea has none or its goal's file cannot be read;
   - `goal_why`: why whether the idea has a goal cannot be told, where its goal's file lies in its place but cannot be read; otherwise `null`;
-  - `dropped`: `true` where the idea is dropped, and `false` where it is not. It is `null` where a variant's canvas cannot be read and the canvases that read leave it open;
+  - `dropped`: `true` where the idea is dropped, and `false` where it is not. It is `null` where a variant's canvas cannot be read and each canvas that reads is shelved or split;
   - `last_act`: the `day` of your last recorded act, and `what` was recorded that day, each in words; `null` where nothing is recorded;
   - `offer`: the offer to record a silence, or `null` where none is made. It holds the `cycle`, the day of the `last_work` recorded on it, the `first_day` the suspension would cover, the `window_end` now, the `window_end_if_back_today`, and the `command` that records it;
   - `variants`, `cycles` and `experiments`: each an `id`, its `state`, and `why`. A `state` is one of the states its process's definition declares:

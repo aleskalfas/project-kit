@@ -691,8 +691,9 @@ def _assumptions(
 
 def _dropped(idea: IdeaModel) -> bool | None:
     """Whether `idea` is dropped, from its variants' canvases (`readings.dropped`). Where a
-    canvas does not read, it is not dropped where a canvas that reads leaves it open, and
-    otherwise that cannot be told, so None."""
+    canvas does not read, the idea is not dropped where a canvas that reads is neither
+    shelved nor split, since that variant is in play; where each canvas that reads is
+    shelved or split, whether it is dropped cannot be told, so None."""
     read = [
         variant.canvas.data if variant.canvas is not None else None
         for variant in idea.idea.variants.values()
