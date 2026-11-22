@@ -359,7 +359,7 @@ A day is written `YYYY-MM-DD`. A window's or a time box's `start` or `end` is `n
 
 ## Credits and licence
 
-The method is Ash Maurya's, from *Running Lean: Iterate from Plan A to a Plan That Works*, third edition (O'Reilly, 2022). The capability carries the method in its own words and ships no text of the book.
+The method comes from *Running Lean* (third edition, Ash Maurya, 2022). The capability carries the method in its own words and ships no text of the book.
 
 The canvas follows the Lean Canvas, Ash Maurya's adaptation of Alex Osterwalder's Business Model Canvas, both published under the Creative Commons Attribution-ShareAlike 3.0 licence. The capability uses the names of the canvas's boxes as its fields, describes them in its own words, and ships no file under that licence. Wherever it draws a canvas, it draws it with the credit and licence line beneath ([lean-business:DEC-001-lean-business-discipline]).
 
