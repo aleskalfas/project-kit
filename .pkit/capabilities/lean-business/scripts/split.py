@@ -292,8 +292,7 @@ def _round_trip(value: Any) -> Any:
 
 
 def _words(named: list[str]) -> str:
-    quoted = [f"`{n}`" for n in named]
-    return quoted[0] if len(quoted) == 1 else f"{', '.join(quoted[:-1])} and {quoted[-1]}"
+    return positions.joined([f"`{n}`" for n in named])
 
 
 def main() -> int:

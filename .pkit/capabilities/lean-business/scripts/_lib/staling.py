@@ -11,7 +11,9 @@ and shortlists it again (DEC-003 point 7).
 A judgement already stale before the write, or one the write itself takes again or
 clears, is not named: the write did not make it stale. Nor is a verdict of a variant
 shelved or split, whose content stays editable: those outcomes are final, so nothing rests
-on its verdicts any more, and no verdict of it is judged again (DEC-002 point 13).
+on its verdicts any more, and no verdict of it is judged again (DEC-002 point 13). A
+shortlisted variant's verdicts are named too, beyond point 13's verdicts of a variant with
+no outcome: its shortlisting rests on them, and is taken again once they stand again.
 """
 
 from __future__ import annotations
@@ -21,7 +23,7 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any
 
-from _lib import fingerprint, gates, layout
+from _lib import fingerprint, gates, layout, positions
 from _lib.reading import ReadError, load_yaml
 from _lib.writes import Files
 
@@ -33,9 +35,6 @@ class Stale:
     line: str
     loud: bool = False
 
-
-#: The outcomes that are final, on whose variant's verdicts nothing rests any more.
-FINAL = ("shelved", "split")
 
 #: The label of the check's findings on a judgement that is stale, which a command names in
 #: its own words rather than again as the check's.
@@ -74,7 +73,7 @@ def _idea(files: Files, idea: str) -> list[Stale]:
         stood, becomes = _before(files, rel), _after(files, rel)
         if not isinstance(stood, Mapping) or not isinstance(becomes, Mapping):
             continue
-        if _kind(becomes) in FINAL:
+        if _kind(becomes) in positions.FINAL:
             continue
         variant = becomes.get("id")
         for step in fingerprint.STEPS:

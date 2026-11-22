@@ -36,7 +36,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import acting, canvases, readings, writes
+from _lib import acting, canvases, positions, readings, writes
 from _lib.acting import Context
 from _lib.fingerprint import BOXES
 from _lib.writes import Refused
@@ -62,7 +62,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
     still = [*_naming_in_canvas(canvas.plain(), name), *_assumptions_naming(files, canvas, name)]
     if still:
         raise Refused(
-            f"the side `{name}` is still named by {_listed(still)}: change or remove each "
+            f"the side `{name}` is still named by {positions.joined(still)}: change or remove each "
             f"first, with `edit-entry --side` or `--clear side`, `set-inputs --side {name} "
             f"--clear <input>`, or `edit-assumption --side`"
         )
@@ -72,10 +72,6 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
         del canvas.data["sides"]
     files.put(canvas.rel, canvas.doc)
     acting.content(ctx, files, f"`{canvas.id}` no longer serves the side `{name}`.")
-
-
-def _listed(named: list[str]) -> str:
-    return named[0] if len(named) == 1 else f"{', '.join(named[:-1])} and {named[-1]}"
 
 
 def _naming_in_canvas(canvas: Mapping[str, object], side: str) -> list[str]:

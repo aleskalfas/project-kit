@@ -69,9 +69,6 @@ NEXT_STEP = {
 #: A variant's judgement besides its verdicts that may go stale.
 SHORTLISTING = "shortlisting"
 
-#: The outcomes that are final, on whose variant's judgements nothing rests any more.
-FINAL = ("shelved", "split")
-
 #: The cycle's states in which the briefing offers to record a silence as a suspension.
 OFFERED_IN = (positions.RUNNING, positions.IN_REVIEW)
 
@@ -522,7 +519,7 @@ def _stale(canvas: Mapping[str, Any], idea: IdeaModel) -> tuple[str, ...]:
     read, whether a verdict judged against the goal, or the shortlisting, is stale cannot
     be told, so neither is marked, as the check marks neither."""
     outcome = _m(canvas.get("outcome"))
-    if outcome.get("kind") in FINAL:
+    if outcome.get("kind") in positions.FINAL:
         return ()
     unread = idea.goal_unread
     found = [

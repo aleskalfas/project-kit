@@ -122,6 +122,10 @@ BY_STANDING = (SKETCHED, DESIRABLE, VIABLE, FEASIBLE)
 #: DEC-003 point 1).
 BY_OUTCOME = {"shortlisted": SHORTLISTED, "shelved": SHELVED, "split": SPLIT}
 
+#: The outcomes that are final: nothing rests on a shelved or split variant's judgements any
+#: more, so none of them goes stale (DEC-002 point 13).
+FINAL = (SHELVED, SPLIT)
+
 #: The steps judged against the idea's goal, whose verdicts' fingerprints cover it.
 AGAINST_THE_GOAL = gates.JUDGED_AGAINST_THE_GOAL
 
@@ -237,7 +241,8 @@ def _quoted(text: str) -> str:
     return flat if len(flat) <= QUOTED else f"{flat[: QUOTED - 1]}…"
 
 
-def _joined(words: Sequence[str]) -> str:
+def joined(words: Sequence[str]) -> str:
+    """`words` in a sentence: `a`, `a and b`, `a, b and c`."""
     if len(words) < 2:
         return "".join(words)
     return f"{', '.join(words[:-1])} and {words[-1]}"
@@ -411,7 +416,7 @@ def _outcome(subject: Variant) -> Position | None:
             for ref in (ids.parse_ref(v, ids.CANVAS) for v in _list(_m(recorded).get("into")))
             if ref is not None
         ]
-        named = f" into {_joined([f'`{v}`' for v in into])}" if into else ""
+        named = f" into {joined([f'`{v}`' for v in into])}" if into else ""
         why = f"the person split the variant{on}{named}"
     return Position(BY_OUTCOME[kind], why)
 
@@ -445,14 +450,12 @@ def _standing(subject: Variant) -> tuple[str, ...]:
 
 def _why_standing(canvas: Mapping[str, Any], run: tuple[str, ...]) -> str:
     if len(run) == len(STEPS):
-        return (
-            f"the person's yes stands on {_joined(list(run))}, and the variant has no outcome yet"
-        )
+        return f"the person's yes stands on {joined(list(run))}, and the variant has no outcome yet"
     following = STEPS[len(run)]
     has = "a no" if readings.answer(canvas, following) == "no" else "no verdict"
     if not run:
         return f"a canvas exists, and desirability has {has}"
-    return f"the person's yes stands on {_joined(list(run))}, and {following} has {has}"
+    return f"the person's yes stands on {joined(list(run))}, and {following} has {has}"
 
 
 # --- the desk stage's gates -------------------------------------------------------------------
@@ -536,7 +539,7 @@ def passing(subject: Variant, step: str) -> Answer:
     held: list[str] = []
     if before:
         stale = "neither" if len(before) == 2 else "not"
-        held.append(f"the variant has a yes on {_joined(list(before))}, {stale} stale")
+        held.append(f"the variant has a yes on {joined(list(before))}, {stale} stale")
     if step in AGAINST_THE_GOAL:
         held.append("the idea's goal is set")
     held.append(JUDGED[step])
@@ -561,7 +564,7 @@ def shortlisting(subject: Variant) -> Answer:
     return _answer(
         _sifted(subject, refusals),
         _untold(subject, STEPS, against_the_goal=True),
-        f"the variant may be shortlisted: it has a yes on {_joined(list(STEPS))}, none stale",
+        f"the variant may be shortlisted: it has a yes on {joined(list(STEPS))}, none stale",
     )
 
 
@@ -693,7 +696,7 @@ def splitting(subject: Variant) -> Answer:
     return _answer(
         refusals,
         untold,
-        f"the canvas records the variant split into {_joined(into)}, each of which exists and "
+        f"the canvas records the variant split into {joined(into)}, each of which exists and "
         f"names it as the variant it comes from",
     )
 
