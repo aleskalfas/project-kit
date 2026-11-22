@@ -85,7 +85,8 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
     plain = experiment.plain()
     experiments.refuse_if_suspended(ctx, plain, "its declaration")
     _open(ctx, plain)
-    canvas = _canvas(files, plain)
+    variant = _variant(plain)
+    canvas = _canvas(files, variant)
     refusals = _refusals(files, experiment, plain, canvas, ctx.on)
     if refusals:
         raise Refused("; ".join(refusals))
@@ -125,7 +126,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
         )
         files.put(experiment.rel, experiment.doc)
         return files, (
-            f"Declared `{subject}`, resting on the shortlisting of `{canvas.get('id')}` "
+            f"Declared `{subject}`, resting on the shortlisting of `{variant}` "
             f"recorded on {rests_on.when}: its time box runs {plain.get('start')} through "
             f"{plain.get('end')}."
         )
@@ -148,13 +149,18 @@ def _open(ctx: Context, plain: Mapping[str, Any]) -> None:
         )
 
 
-def _canvas(files: writes.Files, plain: Mapping[str, Any]) -> Mapping[str, Any] | None:
-    """The canvas of the variant whose assumption the experiment tests, or None where it
-    names none, or the variant has no canvas."""
+def _variant(plain: Mapping[str, Any]) -> str | None:
+    """The variant whose assumption the experiment tests, by the place of its file, or None
+    where the experiment names no assumption."""
     named = ids.parse_ref(plain.get("assumption"), ids.ASSUMPTIONS)
-    if named is None:
+    return ids.qualifier(named.id) if named is not None else None
+
+
+def _canvas(files: writes.Files, variant: str | None) -> Mapping[str, Any] | None:
+    """The canvas of `variant`, or None where it is None or has no canvas."""
+    if variant is None:
         return None
-    doc = files.read(files.path("canvas", ids.qualifier(named.id)))
+    doc = files.read(files.path("canvas", variant))
     read = doc.plain() if doc is not None else None
     return read if isinstance(read, Mapping) else None
 

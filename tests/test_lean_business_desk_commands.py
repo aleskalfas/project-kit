@@ -1054,9 +1054,12 @@ def test_canvas_shows_each_entrys_own_id_where_asked(world: lb.World) -> None:
 
 
 @pytest.mark.parametrize("held", ["meal-plan--other", None], ids=["another", "none"])
-def test_canvas_names_the_variant_by_its_files_place(world: lb.World, held: str | None) -> None:
+def test_canvas_and_estimate_name_the_variant_by_its_files_place(
+    world: lb.World, held: str | None
+) -> None:
     # The id the canvas's file holds may differ from its place after a hand edit, or be
-    # missing; the heading names the variant as the status's variants and each command do.
+    # missing; the heading and the estimate name the variant as the status's variants and
+    # each command do.
     world.edit(lb.DIRECT, lambda data: data.update({"id": held}))
     run = world.run("canvas", "meal-plan--direct", "--ids")
     assert run.code == 0, run.err
@@ -1066,6 +1069,11 @@ def test_canvas_names_the_variant_by_its_files_place(world: lb.World, held: str 
     run = world.run("status", "meal-plan")
     assert run.code == 0, run.err
     assert "    `meal-plan--direct`, a direct model" in run.out.splitlines()
+    run = world.run("estimate", "meal-plan--direct")
+    assert run.code == 0, run.err
+    assert run.out.splitlines()[0] == (
+        "The estimate for `meal-plan--direct`, worked out now and stored nowhere."
+    )
 
 
 def _inputs(world: lb.World, change: Any) -> None:

@@ -48,7 +48,8 @@ def parser() -> argparse.ArgumentParser:
 
 
 def run(args: argparse.Namespace, ctx: Context) -> None:
-    canvas, goal = canvases.read_variant(ctx.root, str(args.variant))
+    variant = str(args.variant)
+    canvas, goal = canvases.read_variant(ctx.root, variant)
     if goal is None:
         raise Refused(
             "the estimate works from the idea's goal, and the idea has none: `pkit lean "
@@ -57,7 +58,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
     found = estimates.estimate(canvas, goal)
     if found is None:
         raise Refused("the idea's goal gives no yearly revenue or no years to reach it in")
-    ctx.say(f"The estimate for `{canvas.get('id')}`, worked out now and stored nowhere.")
+    ctx.say(f"The estimate for `{variant}`, worked out now and stored nowhere.")
     for line in estimates.lines(found):
         ctx.say(line)
 

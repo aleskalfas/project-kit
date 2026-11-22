@@ -903,6 +903,19 @@ def test_declare_freezes_the_draft_and_moves_it_into_declared(world: lb.World) -
     )
 
 
+def test_declare_names_the_variant_by_its_files_place(world: lb.World) -> None:
+    # The id the canvas's file holds may differ from its place after a hand edit; the
+    # declaration names the variant whose canvas it read, as the canvas's heading does.
+    drafted(world)
+    world.edit(lb.DIRECT, lambda data: data.update({"id": "meal-plan--other"}))
+    run = world.run("declare", DRAFT, "--person-decided")
+    assert run.code == 0, run.err
+    assert (
+        f"Declared `{DRAFT}`, resting on the shortlisting of `meal-plan--direct` recorded on "
+        "2026-10-08"
+    ) in run.out
+
+
 def test_declare_moves_a_time_box_starting_today_straight_into_running(world: lb.World) -> None:
     drafted(world)
     on(world, date(2027, 3, 12))
