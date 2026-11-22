@@ -16,10 +16,14 @@ body: >
   persevering where the objective was missed. `pkit lean status <idea>` now
   gives the full briefing: an offer to record a silence of 21 days of an open
   cycle's window as a suspension, the last act, each cycle in full, each
-  variant's stale judgements, each experiment's expectation beside its result,
-  and what waits on the person in order, the next cycle to plan among it. It
-  says where the goal's file cannot be read. Its structured form adds
-  `goal_why`, `last_act` and `offer`, and keys on each variant, cycle and
-  experiment, at `schema_version` 1. Where the process engine places a cycle
+  variant's stale judgements and its assumptions, each with its outcome
+  (DEC-003 point 8), the canvas of each variant neither shelved nor split,
+  drawn as `pkit lean canvas` draws it, each experiment's expectation beside
+  its result, and what waits on the person in order, the next cycle to plan
+  among it. It says where the goal's file cannot be read, and where the idea
+  is dropped. Its structured form adds `goal_why`, `dropped`, `last_act` and
+  `offer`, and keys on each variant, cycle and experiment, at
+  `schema_version` 1; the README lists the values of each of its sets, and a
+  value outside its set is null. Where the process engine places a cycle
   in none of its states after a suspension's write, the suspension stands and
   the command says the move waits.
