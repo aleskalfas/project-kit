@@ -59,10 +59,10 @@ Ask one question at a time. Where the person wants to stop after one item, stop:
 
 ## Example
 
-The person last worked on `meal-plan` on 7 January 2027, when they declared the employers page. They come back on 22 January. The briefing opens with its offer, in words like these:
+The person last worked on `meal-plan` on 7 January 2027, when they declared the employers page. They come back on 28 January, after three weeks of silence. The briefing opens with its offer, in words like these:
 
-> Nothing has been recorded on `meal-plan--first` since 2027-01-07. If you were away, the gap can be recorded as a suspension from 2027-01-08, which would move the window's end, 2027-03-30, later by the days you were away.
+> Nothing has been recorded on `meal-plan--first` since 2027-01-07. If you were away, the gap can be recorded as a suspension from 2027-01-08, which would move the window's end, 2027-03-30, later by the days you were away: to 2027-04-19, were you back today.
 
-You say that the gap may be no more than the wait for the grocers offer, which ran until the 17th, and ask whether they were away. They were: from the 8th, in their words "for family matters", and they came back today. You record it through `suspend.md`. The window's end moves to 13 April, and the employers page, which had not started, now starts today.
+You say that the gap may be no more than the wait for the grocers offer, which ran until the 17th, and ask whether they were away. They were: from the 8th, in their words "for family matters", and they came back today. You record it through `suspend.md`. The window's end moves to 19 April, and the employers page, which had not started, now starts today.
 
-Then you tell them the rest. The grocers offer ran from 4 to 17 January and is due: it expected at least 2 grocers to pay for a trial month, and waits for its result. The employers page runs from today for fourteen days. The window has run 38 of its 120 days. What waits first is the grocers offer's result, so you open `result.md`.
+Then you tell them the rest. The grocers offer ran from 4 to 17 January and is due: it expected at least 2 grocers to pay for a trial month, and waits for its result. The employers page runs from today for fourteen days. The window is on its day 39 of 120, the days away not counted. What waits first is the grocers offer's result, so you open `result.md`.

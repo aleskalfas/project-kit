@@ -54,11 +54,11 @@ Take each of these as its own question, one at a time:
 
 ## Example
 
-The window of `meal-plan--first` ends on 13 April 2027, moved two weeks by the January suspension. On 14 April, you first ask what each key result reached: 26 households came back for a second planned week, and no grocer paid. Then you lay out the report:
+The window of `meal-plan--first` ends on 19 April 2027, moved twenty days by the January suspension. On 20 April, you first ask what each key result reached: 26 households came back for a second planned week, and no grocer paid. Then you lay out the report:
 
 - **Households:** 26 back for a second week, of the 40 planned. The interviews passed. The price page failed, 3 of 6. The employers page passed: two employers paid for their staff's plans.
 - **Grocers:** 0 paying, of the 2 planned. The first offer was spoiled by the suspension, and the second, in February, failed.
-- **The suspension:** 8 to 21 January, for family matters, recorded on 22 January.
+- **The suspension:** 8 to 27 January, for family matters, recorded on 28 January.
 
 You ask which variant did best, and the person names households. You ask what they decide for it. They want to pivot toward employers, in their words "Parents will not pay alone, but their employers will". Asked for your view, you say the pivot rests on two employers so far, a thin base, and that persevering on the missed objective would draw a warning. They keep the pivot. You run the command without the flag, show them its question, and on their confirmation run:
 

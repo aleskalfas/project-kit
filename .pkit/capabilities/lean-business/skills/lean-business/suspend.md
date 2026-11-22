@@ -56,10 +56,10 @@ It goes back to running, or into review where the window, moved by the suspensio
 
 ## Example
 
-The person was away from 8 January 2027 and came back on 22 January, as `return.md` found. You tell them what it would do. The window's end moves from 30 March to 13 April. The employers page, declared to start on 11 January, has not started, so it moves to start on 22 January. The grocers offer, running since 4 January, keeps its dates, and came due when it ended on the 17th. They answer yes, and confirm the command's question:
+The person was away from 8 January 2027 and came back on 28 January, as `return.md` found. You tell them what it would do. The window's end moves from 30 March to 19 April. The employers page, declared to start on 11 January, has not started, so it moves to start on 28 January. The grocers offer, running since 4 January, keeps its dates, and came due when it ended on the 17th. They answer yes, and confirm the command's question:
 
 ```
-pkit lean suspend meal-plan--first --reason "Family matters" --since 2027-01-08 --resumed 2027-01-22 --person-decided
+pkit lean suspend meal-plan--first --reason "Family matters" --since 2027-01-08 --resumed 2027-01-28 --person-decided
 ```
 
 The cycle is running again, and the grocers offer waits for its result.
