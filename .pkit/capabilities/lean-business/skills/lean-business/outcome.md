@@ -56,7 +56,7 @@ Split a variant whose canvas tells more than one story, such as two kinds of cus
    pkit lean split <variant> --into <name> --into <name> --person-decided
    ```
 
-Each new variant starts as a copy of the canvas and its assumptions, its ids given anew, naming the split variant as the one it comes from. No verdict and no outcome is copied. Then trim each copy to its own story through the content commands (`sketch.md`): remove what belongs to the other story, and set its archetype and sides.
+Each new variant starts as a copy of the canvas and its assumptions, its ids re-qualified by the new variant, naming the split variant as the one it comes from. No verdict and no outcome is copied. Then trim each copy to its own story through the content commands (`sketch.md`): remove what belongs to the other story, and set its archetype and sides.
 
 ## Taking a shelved story up again
 
