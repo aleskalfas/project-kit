@@ -69,6 +69,9 @@ NEXT_STEP = {
 #: A variant's judgement besides its verdicts that may go stale.
 SHORTLISTING = "shortlisting"
 
+#: Each value of the goal, in words, by its key in the structured form.
+GOAL_WORDS = {"revenue": "revenue", "per": "period", "currency": "currency", "years": "years"}
+
 #: The cycle's states in which the briefing offers to record a silence as a suspension.
 OFFERED_IN = (positions.RUNNING, positions.IN_REVIEW)
 
@@ -477,14 +480,15 @@ class IdeaStatus:
 
 
 def _goal_data(goal: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """The goal's values, each None where it does not read as the value it is."""
     if goal is None:
         return None
     revenue = _m(goal.get("revenue"))
     return {
-        "revenue": revenue.get("amount"),
-        "per": revenue.get("per"),
-        "currency": goal.get("currency"),
-        "years": goal.get("years"),
+        "revenue": _number(revenue.get("amount")),
+        "per": _text(revenue.get("per")),
+        "currency": _text(goal.get("currency")),
+        "years": _number(goal.get("years")),
     }
 
 
@@ -827,6 +831,9 @@ def lines(idea: IdeaStatus) -> list[str]:
         out.append(f"  goal: {idea.goal_why}")
     elif goal is None:
         out.append("  goal: none yet")
+    elif None in goal.values():
+        unread = [GOAL_WORDS[name] for name, value in goal.items() if value is None]
+        out.append(f"  goal: set, but its {positions.joined(unread)} cannot be read")
     else:
         out.append(
             f"  goal: {goal['revenue']} {goal['currency']} a {goal['per']}, within "

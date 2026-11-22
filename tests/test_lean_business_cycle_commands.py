@@ -793,6 +793,18 @@ def test_status_says_the_goal_cannot_be_read_where_its_file_does_not_read(
     assert run.out.startswith("meal-plan: a goal whose file cannot be read, 2 variants")
 
 
+def test_status_gives_null_for_a_goal_value_that_does_not_read(world: lb.World) -> None:
+    def misshapen(data: Any) -> None:
+        data["years"] = "ten"
+        data["revenue"]["per"] = 12
+
+    world.edit(lb.GOAL, misshapen)
+    idea = briefing(world)
+    assert idea["goal"] == {"revenue": 1000000, "per": None, "currency": "EUR", "years": None}
+    run = world.run("status", "meal-plan")
+    assert "  goal: set, but its period and years cannot be read" in run.out.splitlines()
+
+
 def test_status_lists_a_cycle_and_an_experiment_whose_file_does_not_read(
     world: lb.World,
 ) -> None:
