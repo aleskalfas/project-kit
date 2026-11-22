@@ -51,6 +51,7 @@ LIB_NAMES = (
     "acting",
     "backbone",
     "briefing",
+    "cycles",
     "editing",
     "engine",
     "estimates",

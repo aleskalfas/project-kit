@@ -81,7 +81,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
     )
     doc = editing.new(layout.SCHEMA["cycle"], {"id": cycle_id})
     cycle = cycles.Cycle(rel, doc, cycle_id)
-    cycles.lay_plan(ctx, files, cycle, args)
+    cycles.lay_plan(ctx, files, cycle, args, first=True)
     cycles.stamp(ctx, cycle)
     held = experiments.read_idea(files, idea)
     refusals = gates.planning(

@@ -6,7 +6,8 @@ it write it (lean-business DEC-002 points 11 to 13; DEC-003 points 4 and 5).
 - **The plan's flags** (`plan_flags`), one for each part of the plan, a repeated part
   repeating its flag: the variants it explores, its window's first day and its days, its
   objective and key results, `--key-result <variant>:<step>:<target>`, and its constraint.
-  Planning gives each; a change gives the parts it changes, each replacing the part whole.
+  Planning gives each; a change gives the parts it changes, each replacing the part whole,
+  and leaves the others as they are.
 - **The plan laid** (`lay_plan`). A variant the plan names is shortlisted, as the process
   engine places it, since a cycle explores only what the desk let through (DEC-002 point
   11). The rest of the plan's rules are the check's, which every write is held to: a goal
@@ -194,9 +195,14 @@ def given(args: argparse.Namespace) -> bool:
 # --- the plan laid ----------------------------------------------------------------------------
 
 
-def lay_plan(ctx: acting.Context, files: Files, cycle: Cycle, args: argparse.Namespace) -> None:
-    """Lay each part of the plan the flags give into `cycle`, each replacing the part whole.
-    Raises Refused for a part that does not read, or a variant that is not shortlisted."""
+def lay_plan(
+    ctx: acting.Context, files: Files, cycle: Cycle, args: argparse.Namespace, *, first: bool
+) -> None:
+    """Lay each part of the plan the flags give into `cycle`, each replacing the part whole,
+    and leave each part no flag gives as it is, even where the file lacks it. The window
+    holds `DAYS` days where the flags give none at the plan's `first` laying, its planning,
+    and only then. Raises Refused for a part that does not read, or a variant that is not
+    shortlisted."""
     data, idea = cycle.data, cycle.idea
     if args.variants is not None:
         named = [variant_of(idea, given) for given in args.variants]
@@ -207,31 +213,35 @@ def lay_plan(ctx: acting.Context, files: Files, cycle: Cycle, args: argparse.Nam
             shortlisted(ctx, files, variant)
         variants = editing.seq(ids.ref(ids.CANVAS, v) for v in named)
         editing.place(data, "variants", variants, ORDER)
-    window = _part(data, "window")
-    if args.start is not None:
-        editing.place(window, "start", a_day(args.start, "--start"), ("start", "days"))
-    if args.days is not None:
-        if args.days < 1:
-            raise Refused("--days is one at least: a window holds a day or more")
-        if args.days > MOST_DAYS:
-            raise Refused(f"--days is {MOST_DAYS} at most: a window holds ten years at most")
-        editing.place(window, "days", args.days, ("start", "days"))
-    elif "days" not in window:
-        editing.place(window, "days", DAYS, ("start", "days"))
-    objective = _part(data, "objective")
-    if args.objective is not None:
-        editing.place(objective, "statement", _words(args.objective, "--objective"), _OBJECTIVE)
-    if args.key_results is not None:
-        results = editing.seq(key_result(idea, given) for given in args.key_results)
-        editing.place(objective, "key-results", results, _OBJECTIVE)
-    constraint = _part(data, "constraint")
-    if args.constraint_step is not None:
-        editing.place(constraint, "step", args.constraint_step, _CONSTRAINT)
-    if args.constraint_evidence is not None:
-        evidence = _words(args.constraint_evidence, "--constraint-evidence")
-        editing.place(constraint, "evidence", evidence, _CONSTRAINT)
+    days = args.days if args.days is not None else (DAYS if first else None)
+    if args.start is not None or days is not None:
+        window = _part(data, "window")
+        if args.start is not None:
+            editing.place(window, "start", a_day(args.start, "--start"), _WINDOW)
+        if days is not None:
+            if days < 1:
+                raise Refused("--days is one at least: a window holds a day or more")
+            if days > MOST_DAYS:
+                raise Refused(f"--days is {MOST_DAYS} at most: a window holds ten years at most")
+            editing.place(window, "days", days, _WINDOW)
+    if args.objective is not None or args.key_results is not None:
+        objective = _part(data, "objective")
+        if args.objective is not None:
+            statement = _words(args.objective, "--objective")
+            editing.place(objective, "statement", statement, _OBJECTIVE)
+        if args.key_results is not None:
+            results = editing.seq(key_result(idea, given) for given in args.key_results)
+            editing.place(objective, "key-results", results, _OBJECTIVE)
+    if args.constraint_step is not None or args.constraint_evidence is not None:
+        constraint = _part(data, "constraint")
+        if args.constraint_step is not None:
+            editing.place(constraint, "step", args.constraint_step, _CONSTRAINT)
+        if args.constraint_evidence is not None:
+            evidence = _words(args.constraint_evidence, "--constraint-evidence")
+            editing.place(constraint, "evidence", evidence, _CONSTRAINT)
 
 
+_WINDOW = ("start", "days")
 _OBJECTIVE = ("statement", "key-results")
 _CONSTRAINT = ("step", "evidence")
 

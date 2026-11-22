@@ -477,6 +477,31 @@ def test_change_plan_on_the_day_of_the_first_planning_may_move_the_start_to_that
     assert world.read(SECOND_FILE)["window"] == {"start": DAY, "days": 60}
 
 
+def test_change_plan_leaves_a_part_it_is_not_given_as_it_is_where_the_file_lacks_it(
+    world: lb.World,
+) -> None:
+    planned(world)
+    world.edit(SECOND_FILE, lambda data: data.pop("constraint"))
+    run = world.run("change_plan", SECOND, "--objective", "Keep them paying", "--person-decided")
+    assert run.code == 0, run.err
+    changed = world.read(SECOND_FILE)
+    assert "constraint" not in changed
+    assert changed["objective"]["statement"] == "Keep them paying"
+
+
+@pytest.mark.parametrize(("first", "laid"), [(True, {"days": 90}), (False, {})])
+def test_a_window_takes_ninety_days_where_none_is_given_at_its_planning_alone(
+    world: lb.World, first: bool, laid: dict[str, int]
+) -> None:
+    cycles, writes = lb.LIB["cycles"], lb.LIB["writes"]
+    doc = lb.LIB["editing"].load(f"id: {SECOND}\nwindow:\n  start: 2027-03-10\n")
+    args = lb.SCRIPT["change_plan"].parser().parse_args([SECOND, "--start", "2027-03-11"])
+    files = writes.Files(world.root, writes.for_writing(world.root))
+    ctx = lb.context(world.root, DAY, world.engine)
+    cycles.lay_plan(ctx, files, cycles.Cycle(SECOND_FILE, doc, SECOND), args, first=first)
+    assert doc.plain() == {"id": SECOND, "window": {"start": "2027-03-11", **laid}}
+
+
 def test_change_plan_is_held_to_the_check(world: lb.World) -> None:
     drafted(world)
     kept = lb.snapshot(world.root)

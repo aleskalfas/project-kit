@@ -12,8 +12,8 @@ The change is the person's act, so it takes their word, and records who changed 
 last and when, keeping who first planned it, with the plan's fingerprint taken again
 (DEC-003 point 5). It is no move. Each part of the plan a flag gives replaces that part
 whole, so `--variant` and `--key-result` give every variant and key result the plan then
-holds. The cycle is named as every command names one, read within the location
-(`naming.named`).
+holds, and a part no flag gives stays as it is, even where the file lacks it. The cycle is
+named as every command names one, read within the location (`naming.named`).
 
 Refused: a cycle that is not planned, as the process engine places it; after the day the
 cycle was first planned, through the predicate the check shares (`gates.changing`), a
@@ -80,7 +80,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
             f"starts, and is frozen from its first day"
         )
     before = cycles.words(cycle.plain())
-    cycles.lay_plan(ctx, files, cycle, args)
+    cycles.lay_plan(ctx, files, cycle, args, first=False)
     # A change on the day of the first planning is part of planning, as the check reads it.
     if model.first_planned(cycle.plain()) != ctx.on:
         refusals = gates.changing(cycle.plain(), ctx.on)
