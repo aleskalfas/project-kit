@@ -11,7 +11,7 @@ body: >
   its box, a problem's position being its rank, and `set-authors` replaces
   the authors of a variant or of a draft experiment. `shelve` shelves a
   variant for good with its reason, and says when the idea is then dropped;
-  `split` splits a variant not yet shortlisted into the variants it names,
+  `split` splits a variant with no outcome yet into the variants it names,
   each created as a copy of its canvas and its assumptions, ids and links
   re-qualified, with no verdict. Each move takes the person's word as the
   desk's others do. A change to a shelved or split variant's content names
