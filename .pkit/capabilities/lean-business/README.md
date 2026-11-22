@@ -140,7 +140,7 @@ The capability's configuration, `.pkit/capabilities/lean-business/project/config
 
 The shape of each file is not the check's: the `data` member of `pkit validate` holds each file to its schema, as `pkit data validate <location>` does alone. Nor is a reference that names nothing among the files of its kind, or an id given twice among the variants, the assumptions, the experiments or the cycles: the schemas mark each reference, and say where each kind of file holds its ids, so the `data` member finds both. The check judges what they leave open, and reads a value of the wrong shape as missing. It reads the files git sees, those it tracks and those it neither tracks nor ignores, as the `data` member does ([the CLI reference, "validate"](../../cli/README.md#validate)), so a file git ignores is neither's; outside a git repository it reads the files as they lie.
 
-Where a command's gate would refuse an act, the check asks the same gate with the day the act was recorded, and reads the cycles' suspensions as they stood that day. A suspension recorded later contradicts no act already recorded, so where it would turn one let through into one refused, the suspension breaks its rules, and the act stands. Which of an act and a suspension recorded on one day came first cannot be told, so there too the break is the suspension's ([lean-business:DEC-002-lean-business-data-model] point 12).
+Where a command's gate would refuse an act, the check asks the same gate with the day the act was recorded, and reads the cycles' suspensions as they stood that day. Where only a suspension recorded that same day makes the gate refuse the act, the act stands, since which of the two came first cannot be told. The `suspension` label below holds a suspension to its rules ([lean-business:DEC-002-lean-business-data-model] point 12).
 
 Each finding carries a label:
 
@@ -199,11 +199,11 @@ Checks the files of the location, as "The check" above says.
 
 **Content, acts and moves.** Content, a canvas's words and links, its inputs, its target, the authors of a variant or a draft, and where the ideas live, is written without asking, and records neither who decided it nor when. A judgement is the person's ([lean-business:DEC-001-lean-business-discipline] point 3): an act records it, and a move takes the process engine with it ([lean-business:DEC-003-lean-business-process] point 5).
 
-- **The person's word.** At a terminal, the command asks, and a move asks its process's own prompt. Off one, it acts only with `--person-decided`, the flag by which an agent says the person decided in the session. With neither, it prints the question, does nothing and exits 3.
+- **The person's word.** At a terminal, the command asks, and a move asks its process's own prompt. Off one, it acts only with `--person-decided`, the flag by which an agent says the person decided in the session.
 - **Who and when.** An act records the person as git's `user.name`, refusing where git names none, and the day it ran. Two acts record less: `record-estimate` records the person and no day, and `rank` records neither, so it needs no name from git.
 - **A move** asks the engine first whether its gate lets it go, writes, then moves the subject to where the engine places it after the write. Where the engine refuses the move after the write, the command undoes everything it wrote, the location's record included (Adopter setup, above), and says so.
 
-**Exit codes.** 0, done or shown; 1, refused, with the reason; 2, a usage error; 3, a question printed for the person, nothing done.
+**Exit codes.** 0, done or shown; 1, refused, with the reason; 2, a usage error; 3, off a terminal without `--person-decided`: the question printed for the person, nothing done.
 
 ### The location, the goal and the status
 
@@ -231,7 +231,7 @@ Checks the files of the location, as "The check" above says.
 | `judge <variant> desirability\|viability\|feasibility yes\|no [--note <text>]` | Records the person's verdict on a step, with the fingerprint of what it judged. A yes on the next step moves the variant on, and a no on a step it passed takes it back to the state before that step, clearing the verdicts after it and its shortlisting. A no on the next step, and a yes on a step it passed, judged again, move nothing. Refused on a shelved or split variant, and on a step after the next. | act, or move |
 | `shortlist <variant>` | Shortlists a feasible variant, or takes its shortlisting again, with the fingerprint of its canvas and the goal. | move |
 | `shelve <variant> --reason <text>` | Shelves the variant for good, with the reason, from any state but shelved and split: a shortlisting is replaced, and the verdicts stay. Where every variant of the idea not split is then shelved, the idea is dropped, and the command says so. | move |
-| `split <variant> --into <variant> [--into <variant>]...` | Splits a variant with no outcome yet into the variants named, each created as a copy of it ("Splitting a variant" below). | move |
+| `split <variant> --into <variant> [--into <variant>]...` | Splits a variant with no outcome yet into the variants named ("Splitting a variant" below). | move |
 | `canvas <variant> [--ids]` | Draws the canvas as a grid ("The grid" below). | read-only |
 | `estimate <variant>` | Works out what the goal asks of the variant ("The estimate" below). | read-only |
 
@@ -361,7 +361,7 @@ A day is written `YYYY-MM-DD`. A window's or a time box's `start` or `end` is `n
 
 The method comes from *Running Lean* (third edition, Ash Maurya, 2022). The capability carries the method in its own words and ships no text of the book.
 
-The canvas follows the Lean Canvas, Ash Maurya's adaptation of Alex Osterwalder's Business Model Canvas, both published under the Creative Commons Attribution-ShareAlike 3.0 licence. The capability uses the names of the canvas's boxes as its fields, describes them in its own words, and ships no file under that licence. Wherever it draws a canvas, it draws it with the credit and licence line beneath ([lean-business:DEC-001-lean-business-discipline]).
+The canvas follows the Lean Canvas, Ash Maurya's adaptation of Alex Osterwalder's Business Model Canvas, both published under the Creative Commons Attribution-ShareAlike 3.0 licence. The capability uses the names of the canvas's boxes as its fields, describes them in its own words, and ships no file under that licence ([lean-business:DEC-001-lean-business-discipline]).
 
 The names *Running Lean* and *Lean Canvas* may be trademarks of their owners. They are used here only to credit the source.
 
