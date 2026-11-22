@@ -14,7 +14,7 @@ commands:
     query-contract: true
   set-location:
     script: scripts/set_location.py
-    help: "Record the folder that holds the project's ideas, relative to the repository's top, in the capability's configuration (DEC-002 point 1). Running it is the consent. Refused for a folder the location's rules refuse, and while the location in use holds an idea: move its folder first."
+    help: "Record the folder that holds the project's ideas, relative to the repository's top, in the capability's configuration (DEC-002 point 1). Running it is the consent. Refused for a folder the location's rules refuse, and while the location in use holds an idea: move its folder first. Naming the location in use, the default while none is recorded, records it as it stands."
   set-goal:
     script: scripts/set_goal.py
     help: "Set an idea's goal: --revenue, --per month|year, --currency, --years (DEC-002 point 3). The person's act: asks at a terminal, needs --person-decided off one, and records who and when. A first goal needs every flag; it creates the idea's folder. Refused while a cycle is planned, running or suspended, and a change of currency while a declared experiment is undecided."

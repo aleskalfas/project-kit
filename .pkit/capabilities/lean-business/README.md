@@ -194,7 +194,7 @@ Checks the files of the location, as "The check" above says.
 
 | Command | What it does | Kind |
 |---|---|---|
-| `set-location <path>` | Records the folder that holds the ideas, relative to the repository's top. Refused for a folder the location's rules refuse, as for the check's `location` label, and while the location in use holds an idea: move its folder first. | content |
+| `set-location <path>` | Records the folder that holds the ideas, relative to the repository's top. Refused for a folder the location's rules refuse, as for the check's `location` label, and while the location in use holds an idea: move its folder first. Naming the location in use, the default while none is recorded, records it as it stands. | content |
 | `set-goal <idea> [--revenue <amount>] [--per month\|year] [--currency <code>] [--years <n>]` | Sets the idea's goal, or changes what it is given; a first goal needs every flag, and creates the idea's folder. Refused while a cycle of the idea is planned, running or suspended, and a change of currency while a declared experiment is undecided. | act |
 | `new-variant <idea>--<variant> --archetype direct\|multisided\|marketplace [--author <name>]... [--comes-from <variant>]` | Starts a variant: its canvas and an empty list of assumptions, with the idea's folder where none is. The authors are git's `user.name` where none is given. | content |
 | `set-archetype <variant> direct\|multisided\|marketplace` | Changes the variant's archetype. Refused on the way to direct while the canvas names a side: `remove-side` takes each out first. | content |

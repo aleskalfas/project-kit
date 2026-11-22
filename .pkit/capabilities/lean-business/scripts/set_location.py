@@ -16,7 +16,8 @@ refuse it where it is the top itself, lies outside the repository, under `.pkit/
 hidden folder, is reached through a link, or is a file.
 
 Moving the ideas is the person's own act: where the location in use already holds an
-idea, move its folder first, then run the command.
+idea, move its folder first, then run the command. Naming the location in use, the default
+while none is recorded, records it as it stands.
 
 Usage:
   pkit lean set-location <path>
@@ -66,7 +67,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
         ctx.say(f"`{path}/` is recorded already as where the ideas live; nothing changed.")
         return
     in_use = recorded if recorded is not None else locations.DEFAULT
-    held = _ideas_in(ctx, in_use)
+    held = _ideas_in(ctx, in_use) if path != in_use else []
     if held:
         raise Refused(
             f"the ideas live in `{in_use}/`, which holds {', '.join(f'`{i}`' for i in held)}: "

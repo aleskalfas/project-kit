@@ -257,6 +257,19 @@ def test_set_location_after_the_folder_is_moved_refuses_nothing_on_an_error_alre
     assert "ideas/meal-plan/variants/direct/canvas.yaml#/sides  [sides]" in run.out
 
 
+def test_set_location_naming_the_location_in_use_records_it_as_it_stands(
+    world: lb.World,
+) -> None:
+    assert not (world.root / lb.CONFIG).exists()
+    run = world.run("set_location", "lean-business/")
+    assert run.code == 0, run.err
+    assert "The ideas live in `lean-business/` from now on." in run.out
+    assert world.read(lb.CONFIG)["location"] == "lean-business"
+    again = world.run("set_location", "lean-business")
+    assert again.code == 0, again.err
+    assert "is recorded already" in again.out
+
+
 def test_set_location_refuses_a_folder_the_rules_refuse(world: lb.World) -> None:
     run = world.run("set_location", ".pkit/ideas")
     assert run.code == 1
