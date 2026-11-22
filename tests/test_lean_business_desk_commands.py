@@ -431,6 +431,59 @@ def test_move_entry_reranks_a_problem_and_names_each_judgement_it_stales(
     assert "is at position 1 of problem, its rank among the problems already" in run.out
 
 
+def test_move_entry_keeps_each_comment_above_the_entry_it_was_written_above(
+    world: lb.World,
+) -> None:
+    path = world.root / lb.DIRECT
+    text = path.read_text(encoding="utf-8")
+    problems = (
+        "  problem:\n"
+        "  - id: meal-plan--direct--planning-takes-long\n"
+        "    text: Planning the week's meals takes too long\n"
+        "    alternatives:\n"
+        "    - meal-plan--direct--paper-lists\n"
+        "  - id: meal-plan--direct--food-wasted\n"
+        "    text: Food bought for the week goes to waste\n"
+        "    alternatives:\n"
+        "    - meal-plan--direct--paper-lists\n"
+        "  existing-alternatives:\n"
+    )
+    commented = (
+        "  problem:\n"
+        "  # The one households name first\n"
+        "  - id: meal-plan--direct--planning-takes-long\n"
+        "    text: Planning the week's meals takes too long\n"
+        "    alternatives:\n"
+        "    - meal-plan--direct--paper-lists\n"
+        "  # Heard twice, in the second round\n"
+        "  - id: meal-plan--direct--food-wasted\n"
+        "    text: Food bought for the week goes to waste\n"
+        "    alternatives:\n"
+        "    - meal-plan--direct--paper-lists\n"
+        "  # What they do today\n"
+        "  existing-alternatives:\n"
+    )
+    assert problems in text
+    path.write_text(text.replace(problems, commented), encoding="utf-8")
+    run = world.run("move_entry", "meal-plan--direct--food-wasted", "--to", "1")
+    assert run.code == 0, run.err
+    assert (
+        "  problem:\n"
+        "  # Heard twice, in the second round\n"
+        "  - id: meal-plan--direct--food-wasted\n"
+        "    text: Food bought for the week goes to waste\n"
+        "    alternatives:\n"
+        "    - meal-plan--direct--paper-lists\n"
+        "  # The one households name first\n"
+        "  - id: meal-plan--direct--planning-takes-long\n"
+        "    text: Planning the week's meals takes too long\n"
+        "    alternatives:\n"
+        "    - meal-plan--direct--paper-lists\n"
+        "  # What they do today\n"
+        "  existing-alternatives:\n"
+    ) in path.read_text(encoding="utf-8")
+
+
 @pytest.mark.parametrize("to", ["0", "3"])
 def test_move_entry_refuses_a_position_its_box_does_not_hold(world: lb.World, to: str) -> None:
     run = world.run("move_entry", "meal-plan--direct--food-wasted", "--to", to)

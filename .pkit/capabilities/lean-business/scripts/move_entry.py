@@ -34,7 +34,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 
-from _lib import acting, canvases, writes
+from _lib import acting, canvases, editing, writes
 from _lib.acting import Context
 from _lib.writes import Refused
 
@@ -71,9 +71,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
     if to == index + 1:
         ctx.say(f"`{entry_id}` is at position {to} of {box}{ranked} already; nothing changed.")
         return
-    entry = held[index]
-    del held[index]
-    held.insert(to - 1, entry)
+    editing.move(canvas.boxes(), box, index, to - 1)
     files.put(canvas.rel, canvas.doc)
     acting.content(ctx, files, f"Moved `{entry_id}` to position {to} of {box}{ranked}.")
 

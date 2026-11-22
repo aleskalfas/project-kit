@@ -2,16 +2,18 @@
 DEC-002 point 2).
 
 A command reads a file into a `Doc`, changes its `data` in place, and takes its `text`, the
-file as it would stand. A key it adds goes at the end of its mapping, and one it removes
-leaves the rest as they were, so a file a person laid out stays laid out. A file a command
-creates (`new`) names its schema first, then its format, then its body, its lists indented
-as the schemas' reference instances indent theirs.
+file as it would stand. A key it adds goes where the schema writes it (`place`), and one it
+removes leaves the rest as they were, so a file a person laid out stays laid out. A file a
+command creates (`new`) names its schema first, then its format, then its body, its lists
+indented as the schemas' reference instances indent theirs.
 
-**What a file read keeps** (`load`): its comments, its key order and its quoting; what comes
-before its body, up to and through a line `---` that starts it; its line endings, a line feed or
-a carriage return before each; and its indentation, a nested mapping's step and a list's, as
-its first nested mapping and its first list indent them. A file indented one way in one
-place and another way in another is written the first way throughout.
+**What a file read keeps** (`load`): its comments, each above the key or the item it was
+written above where a key is added (`place`) or an item moved (`move`); its key order and
+its quoting; what comes before its body, up to and through a line `---` that starts it; its
+line endings, a line feed or a carriage return before each; and its indentation, a nested
+mapping's step and a list's, as its first nested mapping and its first list indent them. A
+file indented one way in one place and another way in another is written the first way
+throughout.
 
 What the files mean is read from that text by the reader the check uses
 (`reading.load_yaml`), never from the round-trip value (`plain`): a day is its text there,
@@ -37,9 +39,10 @@ from typing import Any
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
-from ruamel.yaml.error import YAMLError
+from ruamel.yaml.error import CommentMark, YAMLError
 from ruamel.yaml.representer import RoundTripRepresenter
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
+from ruamel.yaml.tokens import CommentToken
 from ruamel.yaml.util import load_yaml_guess_indent
 
 from _lib.reading import ReadError, load_yaml
@@ -191,19 +194,117 @@ def mapping(pairs: Iterable[tuple[str, Any]] = ()) -> CommentedMap:
 def place(into: CommentedMap, key: str, value: Any, order: Sequence[str]) -> None:
     """Set `key` of the mapping `into` to `value`: where it is, in its place; where it is
     not, after the last key that comes before it in `order`, so a key a command adds lands
-    where the schema's reference instance writes it. A key `order` does not name goes last."""
+    where the schema's reference instance writes it. A key `order` does not name goes last.
+    The comment lines written after the key before it, which lead the key after, stay there,
+    as do those after the value it replaces (`_take_after`)."""
     if key in into:
+        after = _take_after(into, key)
         into[key] = value
+        _put_after(into, key, after)
         return
-    if key not in order:
-        into[key] = value
-        return
-    before = set(order[: order.index(key)])
-    position = 0
-    for index, held in enumerate(into):
-        if held in before:
-            position = index + 1
+    position = len(into)
+    if key in order:
+        before = set(order[: order.index(key)])
+        position = 0
+        for index, held in enumerate(into):
+            if held in before:
+                position = index + 1
+    after = _take_after(into, list(into)[position - 1]) if position > 0 else ""
     into.insert(position, key, value)
+    _put_after(into, key, after)
+
+
+def move(holder: CommentedMap, key: str, index: int, to: int) -> None:
+    """Move the item at `index` of the list `holder[key]` to `to`, each comment line written
+    above an item kept above it, and those after the last item kept after the last."""
+    items = holder[key]
+    count = len(items)
+    leading = [_take_first(holder, key), *(_take_after(items, i) for i in range(count - 1))]
+    after = _take_after(items, count - 1)
+    own = items.ca.items.pop(index, None)
+    item = items[index]
+    del items[index]
+    items.insert(to, item)
+    if own is not None:
+        items.ca.items[to] = own
+    leading.insert(to, leading.pop(index))
+    _put_first(holder, key, leading[0])
+    for position in range(1, count):
+        _put_after(items, position - 1, leading[position])
+    _put_after(items, count - 1, after)
+
+
+# --- the comments around an item ------------------------------------------------------------
+#
+# The round trip keeps a comment line where it read it: after the item before it, in the
+# deepest last place of that item's value, with the comment on that item's own line. So a
+# comment written above an item goes with the item before it, which a key inserted or an
+# item moved would carry off. These take such lines out, and put them back where they lead.
+
+
+def _tail(holder: CommentedMap | CommentedSeq, key: Any) -> tuple[dict[Any, Any], Any, int]:
+    """Where the comment lines after the item `key` of `holder` are kept: the place of the
+    comment on its line, in the deepest last item of its value."""
+    value = holder[key]
+    if isinstance(value, CommentedMap) and value:
+        return _tail(value, list(value)[-1])
+    if isinstance(value, CommentedSeq) and value:
+        return _tail(value, len(value) - 1)
+    return holder.ca.items, key, 2 if isinstance(holder, CommentedMap) else 0
+
+
+def _take_after(holder: CommentedMap | CommentedSeq, key: Any) -> str:
+    """The comment lines written after the item `key` of `holder`, before the next, taken
+    out; the comment on the item's own line stays."""
+    kept, at, place_of = _tail(holder, key)
+    slots = kept.get(at)
+    token = slots[place_of] if slots is not None else None
+    if token is None:
+        return ""
+    line, _, rest = token.value.partition("\n")
+    if line.strip():
+        token.value = line + "\n"
+    else:
+        slots[place_of] = None
+    return rest
+
+
+def _put_after(holder: CommentedMap | CommentedSeq, key: Any, lines: str) -> None:
+    """Write the comment lines `lines` after the item `key` of `holder`."""
+    if not lines:
+        return
+    kept, at, place_of = _tail(holder, key)
+    slots = kept.setdefault(at, [None, None, None, None])
+    token = slots[place_of]
+    if token is None:
+        slots[place_of] = CommentToken("\n" + lines, CommentMark(0), None)
+    else:
+        token.value = token.value + lines
+
+
+def _take_first(holder: CommentedMap, key: str) -> str:
+    """The comment lines written above the first item of the list `holder[key]`, taken out:
+    the round trip keeps them with the key that holds the list, and with the list too."""
+    slots = holder.ca.items.get(key)
+    tokens = slots[3] if slots is not None else None
+    if not tokens:
+        return ""
+    lines = "".join(" " * token.column + token.value for token in tokens)
+    slots[3] = None
+    own = holder[key].ca
+    if own.comment is not None and own.comment[1] is tokens:
+        own.comment = None
+    return lines
+
+
+def _put_first(holder: CommentedMap, key: str, lines: str) -> None:
+    """Write the comment lines `lines` above the first item of the list `holder[key]`."""
+    if not lines:
+        return
+    first = lines.split("\n", 1)[0]
+    column = _spaces(first) if first.strip() else 0
+    token = CommentToken(lines[column:], CommentMark(column), None)
+    holder.ca.items.setdefault(key, [None, None, None, None])[3] = [token]
 
 
 def seq(items: Iterable[Any] = ()) -> CommentedSeq:

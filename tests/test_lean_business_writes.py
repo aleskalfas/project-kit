@@ -156,6 +156,34 @@ def test_a_key_added_to_a_file_takes_its_indent_and_its_line_endings() -> None:
     )
 
 
+def test_a_key_added_or_replaced_leaves_each_comment_above_the_key_it_was_written_above() -> None:
+    doc = editing.load(
+        "id: idea--first  # the first\n"
+        "# Sized to a quarter\n"
+        "window:\n"
+        "  start: 2027-03-10\n"
+        "# What it sets out to reach\n"
+        "objective:\n"
+        "  statement: Grow\n"
+    )
+    order = ("id", "variants", "window", "objective")
+    editing.place(doc.data, "variants", editing.seq(["one"]), order)
+    editing.place(doc.data["window"], "days", 60, ("start", "days"))
+    editing.place(doc.data, "objective", editing.mapping([("statement", "Keep")]), order)
+    assert doc.text() == (
+        "id: idea--first  # the first\n"
+        "variants:\n"
+        "- one\n"
+        "# Sized to a quarter\n"
+        "window:\n"
+        "  start: 2027-03-10\n"
+        "  days: 60\n"
+        "# What it sets out to reach\n"
+        "objective:\n"
+        "  statement: Keep\n"
+    )
+
+
 def test_a_key_added_lands_where_the_schema_writes_it_and_comments_stay(world: lb.World) -> None:
     run = world.run("set_traction", "meal-plan--direct", "--multiplier", "8")
     assert run.code == 0, run.err
