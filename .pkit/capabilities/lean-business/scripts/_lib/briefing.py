@@ -100,6 +100,10 @@ ASSUMPTION_WORDS = {
 #: The cycle's states in which the briefing offers to record a silence as a suspension.
 OFFERED_IN = (positions.RUNNING, positions.IN_REVIEW)
 
+#: What the plain form says of a step of the customer factory that does not read, where the
+#: structured form gives null.
+UNREAD_STEP = "a step that cannot be read"
+
 #: What each command that takes a waiting item is given, past the subject.
 RECORD_RESULT = "[--measured <number>] [--spoiled] --evidence <text> --learned <text>"
 DECIDE = "correct-course|double-down|stop"
@@ -345,12 +349,22 @@ class CycleStatus:
             )
         return found
 
+    def constraint(self) -> dict[str, Any] | None:
+        """The cycle's constraint, its step and its evidence, each None where it does not
+        read; None where the cycle holds none."""
+        held = _m(self.data).get("constraint")
+        if not isinstance(held, Mapping):
+            return None
+        return {
+            "step": _among(held.get("step"), canvas_words.FACTORY_STEPS),
+            "evidence": _text(held.get("evidence")),
+        }
+
     def as_data(self) -> dict[str, Any]:
         """The cycle's keys, each null where its file does not read, its lists too, since
         an empty one would say the cycle holds none."""
         data = self.data
         window = self.window
-        constraint = _m(data).get("constraint")
         review = _m(data).get("review")
         winning = ids.parse_ref(_m(review).get("winning"), ids.CANVAS)
         return {
@@ -362,14 +376,7 @@ class CycleStatus:
             ),
             "objective": _text(_m(_m(data).get("objective")).get("statement")),
             "key_results": self.key_results() if data is not None else None,
-            "constraint": (
-                {
-                    "step": _among(_m(constraint).get("step"), canvas_words.FACTORY_STEPS),
-                    "evidence": _text(_m(constraint).get("evidence")),
-                }
-                if isinstance(constraint, Mapping)
-                else None
-            ),
+            "constraint": self.constraint(),
             "suspensions": (
                 [
                     {
@@ -412,18 +419,27 @@ class CycleStatus:
         objective = _text(_m(data.get("objective")).get("statement"))
         if objective is not None:
             out.append(f"      objective: {objective}")
-        for result in self.key_results():
-            reached = f", reached {result['reached']}" if result["reached"] is not None else ""
+        out.extend(f"      key result: {_key_result(result)}" for result in self.key_results())
+        constraint = self.constraint()
+        if constraint is not None:
+            evidence = constraint["evidence"]
             out.append(
-                f"      key result: `{result['variant']}`, {result['metric']}, target "
-                f"{result['target']}{reached}"
+                f"      constraint: {constraint['step'] or UNREAD_STEP}: "
+                f"{evidence if evidence is not None else 'evidence that cannot be read'}"
             )
-        constraint = _m(data.get("constraint"))
-        if constraint:
-            out.append(f"      constraint: {constraint.get('step')}: {constraint.get('evidence')}")
         for entry in cycle_words.suspensions_of(data):
             out.append(f"      suspended {cycle_words.away(entry)}")
         return out
+
+
+def _key_result(result: Mapping[str, Any]) -> str:
+    """A key result of the structured form in words, each value it gives as null said not to
+    read."""
+    variant, target, reached = result["variant"], result["target"], result["reached"]
+    named = f"`{variant}`" if variant is not None else "a variant that cannot be read"
+    aimed = f"target {target}" if target is not None else "a target that cannot be read"
+    gone = f", reached {reached}" if reached is not None else ""
+    return f"{named}, {result['metric'] or UNREAD_STEP}, {aimed}{gone}"
 
 
 @dataclass(frozen=True)

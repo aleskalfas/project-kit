@@ -962,6 +962,28 @@ def test_status_gives_null_for_a_value_outside_its_set(world: lb.World) -> None:
     assert idea["cycles"][0]["review"]["decision"] is None
 
 
+def test_status_says_in_words_that_a_value_outside_its_set_cannot_be_read(
+    world: lb.World,
+) -> None:
+    # The plain form reads each value as the structured form does, and says where one does
+    # not read rather than print null or the word the file holds.
+    planned(world)
+
+    def misshapen(data: Any) -> None:
+        data["objective"]["key-results"][0]["metric"] = "sales"
+        del data["objective"]["key-results"][0]["target"]
+        data["constraint"]["step"] = "sales"
+
+    world.edit(SECOND_FILE, misshapen)
+    run = world.run("status", "meal-plan")
+    assert run.code == 0, run.err
+    shown = run.out.splitlines()
+    unread = "a step that cannot be read"
+    assert f"      key result: `meal-plan--direct`, {unread}, a target that cannot be read" in shown
+    assert f"      constraint: {unread}: Few of those who came back paid" in shown
+    assert "None" not in run.out and "sales" not in run.out
+
+
 def test_status_lists_a_cycle_and_an_experiment_whose_file_does_not_read(
     world: lb.World,
 ) -> None:
