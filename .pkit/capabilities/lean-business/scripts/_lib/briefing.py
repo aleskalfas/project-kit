@@ -545,6 +545,21 @@ def _evaluated(metric: object, expected: object) -> Expectation:
     )
 
 
+def _measured(experiment: Mapping[str, Any]) -> str:
+    """What an experiment's recorded result measured, in words: that a suspension spoiled it,
+    that nothing was measured where it gives no measurement, or what it measured. A
+    measurement that is not a number is no number to compare, so the result works out to
+    neither, as where nothing was measured (`readings.experiment_outcome`), and it is said
+    not to read."""
+    result = _m(experiment.get("result"))
+    if result.get("spoiled") is True:
+        return "spoiled"
+    if "measured" not in result:
+        return "nothing measured"
+    measured = _number(result.get("measured"))
+    return f"measured {measured}" if measured is not None else "a measurement that cannot be read"
+
+
 @dataclass(frozen=True)
 class ExperimentStatus:
     """An experiment's position, and what its file says that the briefing shows: None where
@@ -641,15 +656,7 @@ class ExperimentStatus:
         elif outcome is None:
             out.append("      result: waits for its result")
         else:
-            measured = _number(_m(data.get("result")).get("measured"))
-            spoiled = _m(data.get("result")).get("spoiled") is True
-            if spoiled:
-                how = "spoiled"
-            elif measured is None:
-                how = "nothing measured"
-            else:
-                how = f"measured {measured}"
-            out.append(f"      result: {positions.OUTCOME_WORDS[outcome]}, {how}")
+            out.append(f"      result: {positions.OUTCOME_WORDS[outcome]}, {_measured(data)}")
         return out
 
 

@@ -917,6 +917,22 @@ def test_status_says_an_experiments_result_cannot_be_read(world: lb.World) -> No
     assert _landing_page_lines(world)[-1] == "      result: waits for its result"
 
 
+def test_status_says_a_measurement_cannot_be_read(world: lb.World) -> None:
+    # A measurement that is not a number is no number to compare, so the landing page, due,
+    # works out to neither, as where nothing was measured; the plain form says what it
+    # measured cannot be read, rather than that nothing was.
+    def unread(data: Any) -> None:
+        del data["decision"]
+        data["result"]["measured"] = "lots"
+
+    world.edit(LANDING_FILE, unread)
+    (landing,) = (e for e in briefing(world)["experiments"] if e["id"] == LANDING_PAGE)
+    assert (landing["state"], landing["outcome"]) == ("due", "neither")
+    shown = _landing_page_lines(world)
+    assert shown[-1] == "      result: neither pass nor fail, a measurement that cannot be read"
+    assert not any("lots" in line for line in shown)
+
+
 def test_status_shows_what_waits_in_its_order(
     world: lb.World, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
