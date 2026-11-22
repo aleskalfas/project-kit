@@ -46,6 +46,9 @@ pkit:
         - .pkit/capabilities/lean-business/scripts/review_cycle.py
         - .pkit/capabilities/lean-business/scripts/_lib/*.py
         - .pkit/capabilities/lean-business/schemas/*.schema.json
+        - .pkit/capabilities/lean-business/schemas/desk-stage.yaml
+        - .pkit/capabilities/lean-business/schemas/experiment-lifecycle.yaml
+        - .pkit/capabilities/lean-business/schemas/cycle-lifecycle.yaml
         - .pkit/capabilities/lean-business/skills/lean-business/lean-business.md
       record:
         - lean-business:DEC-001#1
@@ -94,6 +97,7 @@ lean-business guides a person through the lean method of validating a business m
   - [lean-business:DEC-003-lean-business-process]: the processes of a variant, an experiment and a cycle, and why each judgement is the person's.
 
 - `schemas/` — the shape of each file of an idea and of the capability's configuration, each with its reference instance ([lean-business:DEC-002-lean-business-data-model]; "An idea's folder" below). `shapes.schema.json` holds the shapes they share: the ids, the references, a day, a person and a fingerprint.
+- `schemas/desk-stage.yaml`, `schemas/experiment-lifecycle.yaml` and `schemas/cycle-lifecycle.yaml` — the definitions of the three processes the process engine runs: a variant's stage at the desk, an experiment's life and a cycle's ([lean-business:DEC-003-lean-business-process]).
 - `scripts/check.py` — the capability's check, `pkit lean check`, and the `lean-business:check` member of `pkit validate` ("The check" below).
 - `scripts/*.py` — one for each of the other commands "Commands" below describes, and the predicates that the process engine, not you, runs for the capability's processes: for each process, the one that tells where a subject stands, and the gates its moves carry.
 - `scripts/_lib/` — the code the check and the commands share.
@@ -164,7 +168,7 @@ Each finding carries a label:
 | `decision-refused` | error | A decision without a result, a result recorded after its decision, or a decision before its time box ended, without a generative experiment's stopping rule reached within its time box. |
 | `cycle-variants` | error | An experiment on an assumption of a variant its cycle does not explore, a key result that names a variant the cycle does not explore, or an explored variant without a key result. |
 | `plan-changed` | error | A cycle whose plan, or the record of who planned it and when, changed since its fingerprint was taken. |
-| `plan-refused` | error | A cycle first planned in an idea with no goal, or while another cycle of the idea was undecided, or a plan last changed on its window's first day or later. |
+| `plan-refused` | error | A cycle first planned in an idea with no goal, or while another cycle of the idea was undecided, or a plan last changed on its window's first day or later, save on the day it was first planned, when a change is part of the planning. |
 | `one-cycle` | error | Two undecided cycles of one idea, or two whose windows overlap, as worked out. |
 | `suspension` | error | A suspension that breaks its rules: its first day outside the window as earlier suspensions move it, a day ahead of the day it was recorded, a resumption before its first day, a covered day that holds work recorded on the cycle, two suspensions that overlap, a suspension that would make an act recorded no later than it read as one its gate refuses, such as the goal set or a review after the window ended, or a suspension or its resumption recorded after the cycle was decided. Work recorded on the cycle is an act on the cycle, on one of its experiments or on the goal, and the recording of another suspension or of its resumption. Where two suspensions break a rule together, the break is the one recorded last. |
 | `review-refused` | error | A review its gate refuses: a winning variant the cycle did not explore, a count of what was reached that differs from the key results, a persevere or a pivot for a variant shelved or split before it, a pivot on no decided experiment, or a review before the window ended. |
@@ -190,12 +194,30 @@ Checks the files of the location, as "The check" above says.
 - **Writes** nothing, and runs offline.
 - **Exits** 1 when a finding is an error; 0 otherwise. With `--json` it always exits 0, as `pkit validate` requires.
 
-### The desk's commands
+### What the other commands share
+
+**What every write does.** A command builds its write, holds it, then writes it. It holds the files as they would stand to the check and to the `data` member of `pkit validate`, and refuses the write, writing nothing, where it would add an error. An error already in the files refuses nothing: the command names each, and leaves them as they were. Beyond the check, it refuses an id typed with `--id` that is taken, or that a reference still names. It warns of each warning the write adds, and of each verdict and shortlisting the write leaves stale, naming for a verdict the command that judges it again. A shelved or split variant's content stays editable, and a change to it names none of its verdicts stale, since nothing rests on them any more. A shortlisting gone stale on a variant that a cycle not yet reviewed explores is said louder, since no experiment is declared on the variant until it is judged and shortlisted again ([lean-business:DEC-003-lean-business-process] point 7). A file written keeps its comments, its quoting and its order; a key a write adds lands where the schema writes it.
+
+**Content, acts and moves.** Content, a canvas's words and links, its inputs, its target, the authors of a variant or a draft, and where the ideas live, is written without asking, and records neither who decided it nor when. A judgement is the person's ([lean-business:DEC-001-lean-business-discipline] point 3): an act records it, and a move takes the process engine with it ([lean-business:DEC-003-lean-business-process] point 5).
+
+- **The person's word.** At a terminal, the command asks, and a move asks its process's own prompt. Off one, it acts only with `--person-decided`, the flag by which an agent says the person decided in the session. With neither, it prints the question, does nothing and exits 3.
+- **Who and when.** An act records the person as git's `user.name`, refusing where git names none, and the day it ran. Two acts record less: `record-estimate` records the person and no day, and `rank` records neither, so it needs no name from git.
+- **A move** asks the engine first whether its gate lets it go, writes, then moves the subject to where the engine places it after the write. Where the engine refuses the move after the write, the command undoes everything it wrote, the location's record included (Adopter setup, above), and says so.
+
+**Exit codes.** 0, done or shown; 1, refused, with the reason; 2, a usage error; 3, a question printed for the person, nothing done.
+
+### The location, the goal and the status
 
 | Command | What it does | Kind |
 |---|---|---|
 | `set-location <path>` | Records the folder that holds the ideas, relative to the repository's top. Refused for a folder the location's rules refuse, as for the check's `location` label, and while the location in use holds an idea: move its folder first. Naming the location in use, the default while none is recorded, records it as it stands. | content |
 | `set-goal <idea> [--revenue <amount>] [--per month\|year] [--currency <code>] [--years <n>]` | Sets the idea's goal, or changes what it is given; a first goal needs every flag, and creates the idea's folder. Refused while a cycle of the idea is planned, running or suspended, and a change of currency while a declared experiment is undecided. | act |
+| `status [<idea>] [--json]` | Where the ideas stand and what waits on you ("The status" below). | read-only |
+
+### The desk's commands
+
+| Command | What it does | Kind |
+|---|---|---|
 | `new-variant <idea>--<variant> --archetype direct\|multisided\|marketplace [--author <name>]... [--comes-from <variant>]` | Starts a variant: its canvas and an empty list of assumptions, with the idea's folder where none is. The authors are git's `user.name` where none is given, and it is refused where git names nobody. | content |
 | `set-archetype <variant> direct\|multisided\|marketplace` | Changes the variant's archetype. Refused on the way to direct while the canvas names a side: `remove-side` takes each out first. | content |
 | `set-authors <variant>\|<experiment> <name>...` | Replaces the authors of a variant, or of a draft experiment, with those named, in order. Refused once the experiment is declared. | content |
@@ -213,21 +235,10 @@ Checks the files of the location, as "The check" above says.
 | `split <variant> --into <variant>...` | Splits a variant with no outcome yet into the variants named, each created as a copy of it ("Splitting a variant" below). | move |
 | `canvas <variant> [--ids]` | Draws the canvas as a grid ("The grid" below). | read-only |
 | `estimate <variant>` | Works out what the goal asks of the variant ("The estimate" below). | read-only |
-| `status [<idea>] [--json]` | Where the ideas stand and what waits on you ("The status" below). | read-only |
-
-**What every write does.** A command builds its write, holds it, then writes it. It holds the files as they would stand to the check and to the `data` member of `pkit validate`, and refuses the write, writing nothing, where it would add an error. An error already in the files refuses nothing: the command names each, and leaves them as they were. Beyond the check, it refuses an id typed with `--id` that is taken, or that a reference still names. It warns of each warning the write adds, and of each verdict and shortlisting the write leaves stale, naming for a verdict the command that judges it again. A shelved or split variant's content stays editable, and a change to it names none of its verdicts stale, since nothing rests on them any more. A shortlisting gone stale on a variant that a cycle not yet reviewed explores is said louder, since no experiment is declared on the variant until it is judged and shortlisted again ([lean-business:DEC-003-lean-business-process] point 7). A file written keeps its comments, its quoting and its order; a key a write adds lands where the schema writes it.
 
 **Ids.** An entry's id comes from `--id`, or else from the first words of its text: accents stripped, kebab-cased, a leading digit given a letter, and the box's name where no word is left. The command qualifies it by the variant and prints it. It numbers one taken, `-2`, `-3`, and never gives again an id that a file still names, so a removed entry's id is not reused while an assumption names it. An id, an entry's or an assumption's, never changes when its words do ([lean-business:DEC-002-lean-business-data-model] point 7).
 
 **Splitting a variant.** `split` names each variant it creates by its own part or by its id within the idea, and creates each as a copy of the variant split: its archetype, authors, sides, boxes, inputs and traction target, and its assumptions with their ranks. Each entry and each assumption keeps its own part of its id under the new variant's id, as do the links between entries and the entry each assumption comes from. Each copy names the variant split as the one it comes from, and carries none of its verdicts and no outcome, so it is judged at the desk afresh. A name is refused where its variant exists, or where a file still names its id or an id its copy would give. Where the variant split holds an error in what a copy takes, each copy would repeat it, so the split is refused and names the file to fix first.
-
-**Content, acts and moves.** Content, a canvas's words and links, its inputs, its target, the authors of a variant or a draft, and where the ideas live, is written without asking, and records neither who decided it nor when. A judgement is the person's ([lean-business:DEC-001-lean-business-discipline] point 3): an act records it, and a move takes the process engine with it ([lean-business:DEC-003-lean-business-process] point 5).
-
-- **The person's word.** At a terminal, the command asks, and a move asks its process's own prompt. Off one, it acts only with `--person-decided`, the flag by which an agent says the person decided in the session. With neither, it prints the question, does nothing and exits 3.
-- **Who and when.** An act records the person as git's `user.name`, refusing where git names none, and the day it ran.
-- **A move** asks the engine first whether its gate lets it go, writes, then moves the subject to where the engine places it after the write. Where the engine refuses the move after the write, the command undoes everything it wrote, the location's record included (Adopter setup, above), and says so.
-
-**Exit codes.** 0, done or shown; 1, refused, with the reason; 2, a usage error; 3, a question printed for the person, nothing done.
 
 ### The commands of assumptions, cycles and experiments
 
@@ -236,9 +247,9 @@ Checks the files of the location, as "The check" above says.
 | `add-assumption <variant> <statement> --kind desirability\|viability\|feasibility (--entry <entry> \| --input <input> [--side <side>]) [--id <id>]` | Adds an assumption to the variant's list, from an entry of its canvas or an input of the estimate, and prints the id it gives. It goes one past the highest rank; ranking it is `rank`'s. Refused for an entry the canvas does not hold. | content |
 | `edit-assumption <assumption> [--statement <text>] [--kind <step>] [--entry <entry> \| --input <input>] [--side <side>]` | Changes an assumption's words, kind or source. Warns where a declared experiment tests it. | content |
 | `remove-assumption <assumption>` | Takes an assumption out of its list; the others keep their ranks. Refused while an experiment tests it, declared or a draft. | content |
-| `rank <variant> <assumption>...` | Ranks the assumptions by risk, the riskiest first: those named take the first ranks, in the order given, and the rest follow as they were ranked. Records no who or when. | act |
+| `rank <variant> <assumption>...` | Ranks the assumptions by risk, the riskiest first: those named take the first ranks, in the order given, and the rest follow as they were ranked. | act |
 | `plan-cycle <idea>--<cycle> --variant <variant>... --start <day> [--days <n>] --objective <text> --key-result <variant>:<step>:<target>... --constraint-step <step> --constraint-evidence <text>` | Plans the idea's next cycle, with who planned it, the day and the plan's fingerprint. Its window holds 90 days where `--days` gives none, and 3650 days, ten years, at most. Refused for a variant not shortlisted, and for a first plan the check's `plan-refused` label finds. Warns where the window has started by today. | act |
-| `change-plan <cycle> [plan-cycle's flags]` | Changes a planned cycle's plan, each part given replacing that part whole and each part not given left as it is, and takes its fingerprint again; who first planned it stays. Refused once the cycle is not planned, and, after the day it was first planned, for a start moved to today or before: on that day, a change is part of the planning. Warns where the window has started by today. | act |
+| `change-plan <cycle> [plan-cycle's flags]` | Changes a planned cycle's plan, each part given replacing that part whole and each part not given left as it is, and takes its fingerprint again; who first planned it stays. Refused once the cycle is not planned, and for a change the check's `plan-refused` label finds. Warns where the window has started by today. | act |
 | `new-experiment <idea>--<experiment> --kind generative\|evaluative [--assumption <assumption>] [--cycle <cycle>] [--author <name>]...` | Starts a draft. The assumption and the cycle may wait for `draft-experiment`. The authors are git's `user.name` where none is given, and it is refused where git names nobody. | content |
 | `draft-experiment <experiment> [field flags] [--clear <field>]...` | Writes what the draft will declare ("Drafting an experiment" below). Refused once declared. | content |
 | `remove-experiment <experiment>` | Removes a draft. Refused once declared. | content |
