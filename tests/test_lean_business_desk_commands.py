@@ -1157,6 +1157,7 @@ def test_status_json_is_its_documented_structured_form(world: lb.World) -> None:
         "id",
         "goal",
         "goal_why",
+        "dropped",
         "last_act",
         "offer",
         "variants",
@@ -1166,9 +1167,26 @@ def test_status_json_is_its_documented_structured_form(world: lb.World) -> None:
     }
     assert idea["goal"] == {"revenue": 1000000, "per": "year", "currency": "EUR", "years": 3}
     assert idea["goal_why"] is None
+    assert idea["dropped"] is False
+    direct_assumptions = [
+        {"id": "meal-plan--direct--planning-takes-long", "rank": 1, "outcome": "supported"},
+        {"id": "meal-plan--direct--pays-monthly", "rank": 2, "outcome": "supported"},
+    ]
     assert idea["variants"] == [
-        {"id": "meal-plan--direct", "state": "shortlisted", "why": None, "stale": []},
-        {"id": "meal-plan--two-sided", "state": "shelved", "why": None, "stale": []},
+        {
+            "id": "meal-plan--direct",
+            "state": "shortlisted",
+            "why": None,
+            "stale": [],
+            "assumptions": direct_assumptions,
+        },
+        {
+            "id": "meal-plan--two-sided",
+            "state": "shelved",
+            "why": None,
+            "stale": [],
+            "assumptions": [],
+        },
     ]
     (cycle,) = idea["cycles"]
     assert (cycle["id"], cycle["state"], cycle["why"]) == ("meal-plan--first", "decided", None)
