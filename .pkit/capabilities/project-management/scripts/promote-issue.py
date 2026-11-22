@@ -237,6 +237,7 @@ def main() -> int:
             config,
             dry_run=args.dry_run,
             login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("promote-issue", args.issue_number, exc)
@@ -248,7 +249,6 @@ def main() -> int:
             verb="promote-issue",
             flag="--bypass-owner",
             bypass=args.bypass_owner,
-            invoker=invoker,
             dry_run=args.dry_run,
         )
         instance_claims.say_guard(decision)

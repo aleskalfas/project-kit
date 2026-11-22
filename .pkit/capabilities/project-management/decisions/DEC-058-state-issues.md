@@ -29,7 +29,7 @@ Data that a person reviews before it binds is committed configuration, read from
 
 ### 2. A state issue holds one piece of state, named by its key
 
-- **One piece, one key.** Each state issue holds one piece of shared state, named by a key, such as a seat's name.
+- **One piece, one key.** Each state issue holds one piece of shared state, named by a key, such as a seat's name. One piece of state may hold parts, each folded apart under the piece's one key, such as a seat's holder and its pace, and the record that adds a part says how it folds (refinement per [project-management:DEC-082-pace-of-subagents]).
 - **The marker.** A hidden stamp this capability owns says that the issue is a state issue, and gives its key. It sits in the issue's first comment, and in its description outside the part that is rewritten, so every rewrite keeps it. It needs no label, so a repository that cannot create labels holds state issues too ([project-management:DEC-043-ownership-substrate-selection] point 2).
 - **Finding it.** A reader finds a state issue by a number that configuration records, or by its marker, through a listing that GitHub's search index plays no part in, since search results lag.
 - **Two for one key.** Where two state issues carry one key, the one GitHub numbered first holds the state. A reader that finds state issues by their marker lists them again before it claims and when it reads after claiming, and writes only to the first.
@@ -53,7 +53,7 @@ Where the state says who holds something, such as a seat, a clone claims it and 
 - **The claimant:** a claim names the account, and a key that the clone generates the first time it claims and keeps beside its instance id, never committed ([project-management:DEC-035-instance-ownership] point 1). So a read after a claim tells one clone's claim from another's under one account, whether or not either clone has an instance number. The claim also says where the clone lies, in words a person reads, such as its machine and folder.
 - **Under a credential that names no user's account,** a clone claims on a state issue only where the membership gate is closed and its own account is a member, which it reads before it claims, by the test point 4 applies to any author (DEC-076 point 6) (refinement per [project-management:DEC-076-app-credentials]).
 - **The guard:** a clone acts under a claim it holds, and never under one it does not. A command that acts as the holder reads the claim first, and refuses a clone that does not hold it.
-- **The release:** the holder's release event frees the state. The record that adds the state says whether a claim also lapses, and when.
+- **The release:** the holder's release event frees the state, which is free while no clone holds it, whatever its other parts hold, and the record that adds another part says whether a release clears it (refinement per [project-management:DEC-082-pace-of-subagents]). The record that adds the state says whether a claim also lapses, and when.
 - **The release by force:** an event of its own, carrying its reason. The record that adds the state says who may release by force. Taking over is a release by force and then a claim, two events. A claim by another clone between them holds, as point 6 says.
 
 Two clones that share one key, such as copies of one snapshot, cannot be told apart. Whoever copies a clone clears its runtime file, as for its number. Like DEC-035's guard, which is no lock, this guard catches the mistakes of clones that follow the procedure, and is no security boundary.

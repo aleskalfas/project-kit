@@ -1,7 +1,7 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:project-management
-# pkit-digest: sha256:a95740d58d01e3ae79941dd005f9308f17de49ceb1f93c475e1e5a7e0ede2a8d
+# pkit-digest: sha256:3d07b15893780842ccdd15daabd8f4101dbcc999acc4805a6c317fdbd8eb7d84
 # pkit-tool-access: withheld: ["Monitor", "PowerShell", "RemoteTrigger", "Workflow", "SendMessage", "ListAgents"]
 name: project-manager
 description: Project-management agent that files, validates, and transitions 
@@ -154,7 +154,7 @@ When you execute a transition-state operation that changed an issue's state, imm
 
 ### 8. Maintain audit trail
 
-For every bypassable-with-audit mutation that the user overrode, post the audit comment template from the validation-severity schema onto the affected issue or PR **before** the mutation runs. The comment preserves the why even if the mutation later fails. Format the comment per the schema's `audit_comment_template`, substituting the user's name, email, and reason.
+For every bypassable-with-audit mutation that the user overrode, post the audit comment template from the validation-severity schema onto the affected issue or PR **before** the mutation runs. The comment preserves the why even if the mutation later fails. Format the comment per the schema's `audit_comment_template`, filled with the reason: it names no authoriser and no email, since the account that posts it shows who acted ([project-management:DEC-078-one-actor-per-act] point 2).
 
 ### 9. Run the fixers after each merge into the default branch
 

@@ -1,0 +1,15 @@
+component: project-management
+kind: major
+body: >
+  No comment the commands post names an authoriser beside the account that
+  posts it, or carries an email (DEC-078 point 2). The validation-severity
+  schema's audit-comment template reads `Bypassed: <reason>`, in place of
+  `Bypassed by <name> <<email>>: <reason>`, so every bypass, CI bypass,
+  reviewer override, `--force` and clash-guard audit comment loses the name
+  and the email git's configuration put beside its poster. The comment a head
+  named at a terminal leaves names the commit and the command, and no person
+  as having named the head, and the `full` projection's provenance comment
+  of a move names no actor. A tool that read who bypassed from an audit
+  comment's text reads the comment's author instead, whom GitHub shows beside
+  it. The freeform comment verb refuses a first line in the template's new
+  form, as it refuses the old one.

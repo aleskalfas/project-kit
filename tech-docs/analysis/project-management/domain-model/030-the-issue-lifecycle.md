@@ -23,6 +23,7 @@ pkit:
         - project-management:DEC-061#6
         - project-management:DEC-062#5
         - project-management:DEC-075
+        - project-management:DEC-078#3
       artefact:
         - TERM-issue-lifecycle
         - TERM-authorisation
@@ -265,7 +266,7 @@ A journal is the record the [backbone](../../core/glossary.md#term-backbone--bac
 
 **Attributes:**
 
-- an entry for each move, with who made it and the [version](../../core/glossary.md#term-version--version) that made it (DEC-049 point 1)
+- an entry for each move, with the [version](../../core/glossary.md#term-version--version) that made it, and who made it where the commands know who acts (DEC-049 point 1). Where they do not know who acts, an entry names nobody ([DEC-078 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-078-one-actor-per-act.md#3-where-the-commands-know-no-acting-account-an-act-names-no-actor))
 - whether the project commits it (DEC-049 point 1)
 
 **Relations:**
@@ -277,7 +278,7 @@ A journal is the record the [backbone](../../core/glossary.md#term-backbone--bac
 
 **Always true:**
 
-- A move that fails to go into the journal is surfaced, and never dropped silently (DEC-049 point 1).
+- A move that fails to go into the journal is surfaced, and never dropped silently (DEC-049 point 1). So is a move the engine does not record because the commands do not know who acts (DEC-078 point 3).
 
 ## What is built on these concepts
 

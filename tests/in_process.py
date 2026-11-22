@@ -27,10 +27,13 @@ from __future__ import annotations
 
 import contextlib
 import importlib
+import importlib.abc
+import importlib.machinery
 import importlib.util
 import inspect
 import io
 import itertools
+import json
 import os
 import shlex
 import subprocess
@@ -45,7 +48,15 @@ from typing import Any, Protocol
 import pytest
 from click.testing import CliRunner
 
-from project_kit import cli, command_runner, data_points, process, report_context, validators
+from project_kit import (
+    acting_account,
+    cli,
+    command_runner,
+    data_points,
+    process,
+    report_context,
+    validators,
+)
 from project_kit.command_runner import CommandRun, Ending
 
 REPO = Path(__file__).resolve().parent.parent
@@ -192,6 +203,8 @@ def _project_management(original: Callable[..., Any], pkit: Runner) -> Callable[
         errors: str | None = None,
         **options: Any,
     ) -> subprocess.CompletedProcess[Any]:
+        if is_account_call(argv):
+            return answer_account(argv, env=env, **options)
         if env is not None and dict(env) != {**os.environ, **_UNROUTED}:
             raise TypeError(
                 "the in-process `pkit` runs in the caller's environment with routing off, "
@@ -202,6 +215,151 @@ def _project_management(original: Callable[..., Any], pkit: Runner) -> Callable[
         return pkit(argv, **options)
 
     return run
+
+
+# --- the account commands, answered in this process ----------------------------------------
+
+#: The first two words of the backbone's account commands (ADR-094 point 1).
+ACCOUNT_WORDS = ("account",)
+
+
+def is_account_call(argv: Sequence[Any]) -> bool:
+    """Whether `argv` runs one of the backbone's account commands, `pkit account ...`."""
+    words = [os.fspath(word) for word in argv]
+    return len(words) > 1 and Path(words[0]).name == "pkit" and words[1] == "account"
+
+
+def answer_account(
+    argv: Sequence[Any],
+    *,
+    input: str | None = None,
+    env: Mapping[str, str] | None = None,
+    **_options: Any,
+) -> subprocess.CompletedProcess[str]:
+    """`pkit account read`, `spell` or `compare`, answered by the backbone's own code in
+    this process, as a capability's command starts it: in the caller's environment, or
+    `env` where the call gives one, and with no offline marker of a query's. The reading
+    asks the `gh` first on that environment's PATH, as a process would, and keeps no
+    answer from an earlier call. A request the backbone refuses is exit 1."""
+    words = [os.fspath(word) for word in argv][1:]
+    saved = dict(os.environ)
+    try:
+        if env is not None:
+            os.environ.clear()
+            os.environ.update(env)
+        if words[1:2] == ["read"]:
+            acting_account.forget_service_answers()
+            document = acting_account.read().document()
+        else:
+            request = json.loads(input or "null")
+            form = (
+                acting_account.spell_document
+                if words[1:2] == ["spell"]
+                else acting_account.compare_document
+            )
+            document = form(request)
+    except (acting_account.FormError, ValueError) as exc:
+        return subprocess.CompletedProcess(list(argv), 1, "", f"error: {exc}\n")
+    finally:
+        os.environ.clear()
+        os.environ.update(saved)
+    return subprocess.CompletedProcess(list(argv), 0, json.dumps(document), "")
+
+
+#: The lines a fake `pkit` script a test writes starts with, so that it answers the
+#: backbone's account commands with the backbone's own code, as the real `pkit` does
+#: (ADR-094 point 1): `pkit account read` asks the `gh` first on PATH, and `spell` and
+#: `compare` read their request on standard input. Any other call goes on to the
+#: lines after it. It imports the module alone, not the whole command line.
+ACCOUNT_COMMANDS_SCRIPT = """\
+import json as _json
+import sys as _sys
+
+if _sys.argv[1:2] == ["account"]:
+    from project_kit import acting_account as _account
+
+    if _sys.argv[2:3] == ["read"]:
+        _document = _account.read().document()
+    else:
+        _request = _json.load(_sys.stdin)
+        _spells = _sys.argv[2:3] == ["spell"]
+        _form = _account.spell_document if _spells else _account.compare_document
+        _document = _form(_request)
+    print(_json.dumps(_document))
+    _sys.exit(0)
+"""
+
+
+#: The attribute that marks a capability's `_lib.backbone` whose account calls are
+#: answered in this process.
+_ANSWERS_ACCOUNTS = "_answers_accounts_in_process"
+
+
+def answer_accounts_of(backbone: ModuleType) -> None:
+    """Answer the account commands a capability's `_lib.backbone` starts in this process
+    (`answer_account`), every other call going on as before. Its `_run` is looked up when
+    called, so a route set later still takes every call but these. Idempotent. A
+    `_run` whose first parameter is not the call's `argv`, as software-analysis's
+    `_run(root, argv, run)`, is left as it is: no such capability reads an account."""
+    original = vars(backbone).get("_run")
+    if original is None or getattr(original, _ANSWERS_ACCOUNTS, False):
+        return
+    try:
+        first = next(iter(inspect.signature(original).parameters), None)
+    except (TypeError, ValueError):
+        return
+    if first != "argv":
+        return
+
+    def run(argv: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
+        if is_account_call(argv):
+            return answer_account(argv, **options)
+        return original(argv, **options)
+
+    setattr(run, _ANSWERS_ACCOUNTS, True)
+    setattr(backbone, "_run", run)  # noqa: B010 - a module's attribute, set by its name
+
+
+class _AnswersAccounts(importlib.abc.MetaPathFinder):
+    """A finder that makes each capability's `_lib.backbone`, wherever and whenever it is
+    imported, answer the account commands in this process (`answer_accounts_of`). It finds
+    the module as the other finders do and adds that step after the module runs."""
+
+    def find_spec(
+        self, fullname: str, path: Sequence[str] | None, target: ModuleType | None = None
+    ) -> importlib.machinery.ModuleSpec | None:
+        if fullname != "_lib.backbone":
+            return None
+        for finder in sys.meta_path:
+            if finder is self or not hasattr(finder, "find_spec"):
+                continue
+            spec = finder.find_spec(fullname, path, target)
+            if spec is not None and spec.loader is not None:
+                spec.loader = _Answering(spec.loader)
+                return spec
+        return None
+
+
+class _Answering(importlib.abc.Loader):
+    """A loader that runs the module as `loader` does, then has it answer the account
+    commands in this process."""
+
+    def __init__(self, loader: importlib.abc.Loader) -> None:
+        self._loader = loader
+
+    def create_module(self, spec: importlib.machinery.ModuleSpec) -> ModuleType | None:
+        return self._loader.create_module(spec)
+
+    def exec_module(self, module: ModuleType) -> None:
+        self._loader.exec_module(module)
+        answer_accounts_of(module)
+
+
+def answer_accounts_everywhere() -> None:
+    """Have every capability's `_lib.backbone` imported from now on answer the account
+    commands in this process. Idempotent."""
+    if not any(isinstance(finder, _AnswersAccounts) for finder in sys.meta_path):
+        sys.meta_path.insert(0, _AnswersAccounts())
 
 
 #: How each capability's one private function is replaced, by the capability's name.
@@ -304,6 +462,8 @@ def load(
             module = sys.modules.pop(name)
             if isinstance(module, ModuleType):
                 _LOADED.add(module)
+                if module.__name__ == "_lib.backbone":
+                    answer_accounts_of(module)
         sys.modules.update(saved)
 
 

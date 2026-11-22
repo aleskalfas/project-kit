@@ -11,6 +11,7 @@ pkit:
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/scripts/add.py
         - .pkit/capabilities/visual-communication/design-knowledge/colour.md
+        - .pkit/capabilities/visual-communication/design-knowledge/working-in-layers.md
         - tests/test_visual_communication_neutral.py
       record:
         - visual-communication:DEC-003#6
@@ -39,6 +40,7 @@ pkit:
         - visual-communication:DEC-022#6
         - visual-communication:DEC-025#1
         - visual-communication:DEC-025#4
+        - visual-communication:DEC-025#7
         - visual-communication:DEC-032#1
         - visual-communication:DEC-032#2
         - visual-communication:DEC-032#3
@@ -51,6 +53,11 @@ pkit:
         - visual-communication:DEC-038#1
         - visual-communication:DEC-038#3
         - visual-communication:DEC-038#6
+        - visual-communication:DEC-068#3
+        - visual-communication:DEC-068#4
+        - visual-communication:DEC-069#3
+        - visual-communication:DEC-069#5
+        - visual-communication:DEC-069#6
       artefact:
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#content-files
@@ -58,6 +65,9 @@ pkit:
         - .pkit/capabilities/visual-communication/components.md#values-states-and-colour
         - .pkit/capabilities/visual-communication/files.md#the-neutral-brand
         - .pkit/capabilities/visual-communication/checks.md#scenes
+        - .pkit/capabilities/visual-communication/components.md#primitives
+        - .pkit/capabilities/visual-communication/components.md#ties-and-connectors
+        - .pkit/capabilities/visual-communication/outputs.md#produced-pictures
 ---
 
 # The starter
@@ -87,15 +97,20 @@ Each pattern answers one question a visual answers. Choose a pattern by its ques
 
 ### `layers`: what rests on what?
 
-- **Form:** levels stacked one on another, the top first, as a stack of one width or as steps that narrow to the top. Each level is shaded by its place, from the order's first end at the top to its last at the foot. Notes may stand to the right of the stack, sharing its height, for what holds across the levels. Ties join a note or a level to another, and end at a level's drawn edge.
+- **Form:** levels stacked one on another, the top first, as a stack of one width or as steps that narrow to the top. Each level is shaded by its place, from the order's first end at the top to its last at the foot. Notes may stand in a column to the right of the stack, to its left, or on both sides, each column sharing the stack's height, for what holds across the levels. Ties join a note or a level to another, and end at a level's drawn edge.
 - **Source:** Nancy Duarte's structure (*slide:ology*, chapter 3). Lohse, Biolsi, Walker and Rueter's structure diagrams, and Yuri Engelhardt's lining up in an order, check it. Its shades follow Cynthia Brewer's sequential schemes, which show an order by lightness ([*An order's steps*](#an-orders-steps)).
 - **Options:**
   - `shape`, its words `stack` and `steps`. With `stack`, the default, each level is as wide as the stack. With `steps`, each level is one step narrower than the one under it, centred on it: the last level is as wide as the stack, and a step is the stack's width over twice the number of levels, so the top stays wider than half the stack. Each level's frame is its step, so a tie into it ends at its edge (visual-communication DEC-038 points 1, 3 and 6). A level takes the width of its step and breaks its text to it (the capability's `components.md`, under *Breaking lines*), so a narrow level that holds more text stands taller than a wide one.
   - `shade`, its words `steps` and `plain`. With `steps`, the default, each level's place takes a step of the order, spread evenly between the two ends the brand gives over the levels drawn, the first end at the top (visual-communication DEC-032 points 3 and 4). With `plain`, a level takes no colour from its place, so each takes its own component's family. Either way, a level that names a concept takes its concept's family, so the levels of a page whose point is an order name none.
 - **Lists:**
   - `levels`, each drawn by the `level`, unless the component field `level` names another;
-  - `notes`, each drawn by the `card`, unless the component field `note` names another;
+  - `notes`, to the right of the stack, and `left-notes`, to its left, each drawn by the `card`, unless the component field `note` names another;
   - `ties`, a list of ties with the end fields `from` and `to`, each drawn by the `connector`, unless the component field `tie` names another.
+- **Its columns of notes:** each stands a third of the width, less the gap beside it, and the stack takes the rest, so with a column on each side the three stand about as wide.
+- **A note's ties:** a tie from a note to a level ties the note to what it explains, so it is a *leader* (visual-communication DEC-069 point 3), and takes no look by which the page draws its ties between levels (point 6). Draw it with the connector's `weight: thin` and `arrow: none`, through the component field `tie` where every tie on the page is a leader, or else on each leader, since the ties between levels keep the connector's default weight, `thick` ([`connector`](#connector)). Two notes whose leaders would cross in one column, such as one tied to the first and third levels and another tied to the second, stand on two sides, where they cross nowhere.
+- **What it keeps, and why:**
+  - **The side a note's tie leaves by.** A tie leaves each end by the side that faces the other ([`connector`](#connector)). So a note's tie to a level beside it leaves the note toward the stack. One to a level that lies farther above or below the note than the level stands from the column leaves by the note's top or its foot, toward the note beside it, and runs over that note. A note alone in its column spans the stack, so each of its ties leaves toward the stack. Tie each note to the levels beside it, or set it alone in its column.
+  - **Notes in equal shares.** The notes of a column share the stack's height in equal parts, whatever levels their ties reach. A column of notes beside the stack may stand lined up and in the order of their ends where their leaders are as easy to follow as with each note set by its level, or where the page is too crowded to set each by its level (visual-communication DEC-069 point 5), so list a column's notes in the order of the levels their ties reach. No layout operator sets a note by where its ties end: operators stack, align and size a list's items by their order and their place, and a layout none computes is work outside the engine (visual-communication DEC-005 point 2).
 - **Its boundaries:** a level rests on the one below it, where a list's items have no order. Layers say nothing of time, where steps follow one another. As steps, each level also stands narrower than the one it rests on, the few on the many; where the levels are of one breadth, a stack says so. Its shades never show the order alone: each level's place shows it too, and as steps its width.
 
 ### `list`: what are the items?
@@ -123,6 +138,9 @@ Each pattern answers one question a visual answers. Choose a pattern by its ques
   - `left`, `middle` and `right`, each drawn by the `card`, unless the component field `item` names another;
   - `ties`, a list of ties with the end fields `from` and `to`, each drawn by the `connector`, unless the component field `tie` names another.
 - **Ends:** an end names its item by its key path, such as `right[groups].groups[project-management].items[doc-check]` (visual-communication DEC-011 point 3). So a tie reaches an item that a pattern in a column draws, such as an item of a group.
+- **What it keeps, and why:**
+  - **The side a tie leaves by.** A tie leaves each end by the side that faces the other ([`connector`](#connector)). So a tie between items of two columns leaves across, unless they lie farther apart down than across, as a long column's first item and the next column's last may. Such a tie leaves by its item's top or its foot, and runs over the items under it or above it in its column. Tie items that stand across from each other.
+  - **Where a cornered tie turns.** Ties with corners that share a lane turn at its middle ([`connector`](#connector)), so where their turns overlap, they lie on each other. Draw ties that share a lane `straight`, the default.
 - **Its boundaries:** ties say what is connected, where groups say only what belongs together. The content sets each item's column and its place there, and no tie moves an item.
 
 ### `panels`: which views, side by side, show one point?
@@ -192,12 +210,16 @@ A block draws one item of a pattern, or stands alone where content places it.
 
 ### `connector`
 
-- **Form:** a line from where a tie starts to where it ends, in its colour family's text, with arrowheads where the content asks. Its turns are drawn round, so a route with corners reads as one smooth path. It routes around nothing, so a tie best joins items set apart, with nothing between them.
-- **Source:** Yuri Engelhardt's linking by a connector.
+- **Form:** a line from where a tie starts to where it ends, in its colour family's text, with arrowheads where the content asks. It is thick, for a link between two items, or thin, for a *leader*, the line that ties a note to what it explains (visual-communication DEC-069 point 3). Its turns are drawn round, so a route with corners reads as one smooth path. It routes around nothing, so a tie best joins items set apart, with nothing between them.
+- **Source:** Yuri Engelhardt's linking by a connector. Colin Ware: a line's weight tells the kind of relation it draws. Edward Tufte's layering: a page whose frame lies behind its content lets the content come forward.
 - **Ends:** it takes the two ends a pattern's list of ties gives it, so a pattern draws it as a tie.
 - **Options:**
   - `route`: `straight`, the default, or `corners`.
   - `arrow`, where its arrowheads stand: `end`, the default, `start`, `both` or `none`.
+  - `weight`: `thick`, the default, as wide as a line drawn on its own, or `thin`, as wide as an edge. Drawn `thin`, a leader reads lighter than the `thick` links between the items its note explains, so the page's notes stand behind what they explain. An arrowhead is as long as five widths of its line (the capability's `components.md`, under *Primitives*), so a `thin` line's would be too small to read.
+- **What it keeps, and why:** the connector tool, not the connector, sets where a tie meets its ends and where it turns (the capability's `components.md`, under *Ties and connectors*). No component chooses either, so the starter keeps both:
+  - **The side it leaves by.** A tie leaves each end's frame by the side that faces the other end: the left or the right where the two frames lie farther apart across than down, else the top or the bottom. So it may leave an item by its top or its foot toward another item that stands there, and run over it. Each pattern's entry says what follows for its ties.
+  - **Where it turns.** With corners, it turns twice, halfway between its ends. So ties with corners that share one gap turn at its middle, and where their turns overlap, they lie on each other and read as one line. Draw ties that share a gap `straight`, the default.
 
 ## The web parts, by their job on a page
 
@@ -205,17 +227,18 @@ The web parts draw the pages of a site (visual-communication DEC-022 point 4). E
 
 | Part | Its job on a page | Take another part when |
 |---|---|---|
-| `header` | Says whose site the page belongs to, and leads to its other pages | the links stand alone, with no title: `navigation` |
+| `header` | Says whose site the page belongs to, and leads to its other pages | the links stand alone, with no title: `navigation`; the words name the page, not the site: `title` |
 | `navigation` | Leads to the site's other pages | the links head every page, beside the site's title: `header` |
-| `section` | Says one thing, beside a picture where it has one | the facts fall into rows and columns: `table` |
+| `title` | Names the page, and states its point under its name | the words name one part of the page: `section` |
+| `section` | Says one thing, beside a picture where it has one | the facts fall into rows and columns: `table`; the words name the whole page: `title` |
 | `sections` | Lays sections down a page, in their order | the page says one thing: `section` |
 | `form` | Takes a reader's answer | the reader answers nothing: `section` or `table` |
 | `table` | Shows facts in rows and columns, on a page or, with no inset of its own, on a slide | each fact needs a sentence of its own: `section`; on a slide, the items share no columns of facts: `list` |
 
 Each web part fits every size the brand gives: a desktop, a tablet, a phone and a projector. Its widths come from the width it gets, never from a number of its own. Where a size leaves it too little room, it changes its shape at that size. A row whose items ask for more than it gets is reported at that size (visual-communication DEC-022 point 5).
 
-- **Their inset.** A part placed in a page's header, main part or footer is as wide as the page. `header`, `section`, `form` and `table` each set their own inset, so a tinted part's fill reaches the page's edge. A table whose `inset` is `none` sets none, as on a slide ([`table`](#table)). The inset is `starter.margin` on a desktop and a tablet, and `starter.inset` on a phone. `navigation` keeps the same inset at either side alone, since a header places it. `sections` sets none, since each section sets its own.
-- **The length of a line.** The text of a section, the head and the fields of a form, and a table's head run no longer than `size.line`, which the capability's `files.md` describes under *The foundations*.
+- **Their inset.** A part placed in a page's header, main part or footer is as wide as the page. `header`, `title`, `section`, `form` and `table` each set their own inset, so a tinted part's fill reaches the page's edge. A table whose `inset` is `none` sets none, as on a slide ([`table`](#table)). The inset is `starter.margin` on a desktop and a tablet, and `starter.inset` on a phone. `navigation` keeps the same inset at either side alone, since a header places it. `sections` sets none, since each section sets its own.
+- **The length of a line.** A page's title and its lead, the text of a section, the head and the fields of a form, and a table's head run no longer than `size.line`, which the capability's `files.md` describes under *The foundations*.
 - **At rest.** A part is drawn as a page stands before anyone uses it. A form is never sent and a link never followed, and no part shows a hover, a focus or a press (visual-communication DEC-022 point 6).
 
 ### `header`
@@ -225,7 +248,8 @@ Each web part fits every size the brand gives: a desktop, a tablet, a phone and 
 - **Fields:** `title`, required, the site's name. `links`, optional, the links of its navigation, each with the fields of the `link`.
 - **Options:** `fill`: `plain`, the default, lies on the page's background; `tint` lies on its colour family's fill, its title in the family's text.
 - **Its logo** is the picture the brand gives `picture.logo`, no wider than `starter.logo`. Under a brand that gives none, the header draws no logo, and its title starts at the inset.
-- **On a desktop** the title stands on one line, so a long title belongs in a section, not the header.
+- **On a desktop** the title stands on one line, so a long title belongs in a [`title`](#title) or a section, not the header.
+- **The site's title is no page's.** It says whose site each page belongs to, the same on every page, so a page's own title stands in a [`title`](#title), which sets it apart from the heads of the page's parts where the brand gives `type.title` a value (visual-communication DEC-068 point 4).
 
 ### `navigation`
 
@@ -234,6 +258,15 @@ Each web part fits every size the brand gives: a desktop, a tablet, a phone and 
 - **Options:** `align`, its words `start`, the default, and `end`, where the links of a row stand. A column on a phone always starts at the start.
 - **Lists:** `links`, each drawn by the `link`, unless the component field `link` names another.
 - **Too many links.** Links that ask for more than the row's width are reported at that size. Fewer links, or shorter labels, mend it.
+
+### `title`
+
+- **Form:** the page's title, and the lead under it, on the page's background or on its family's fill. The lead stands a small space under the title, closer than a section's text stands under its head, so the two read as one head.
+- **Source:** the GOV.UK Design System's headings, the largest of which names a page, with the lead paragraph under it, and the U.S. Web Design System's intro text, under a page's heading.
+- **Fields:** `title`, required, the page's name, in a few words, and `lead`, optional, what the page says, in a sentence.
+- **Options:** `fill`: `plain`, the default, or `tint`, as a header's.
+- **Where it stands:** where the page's content places its title (visual-communication DEC-068 point 3). On a page of sections it is the first of the `sections`, named by `use`, and a page whose main part is a form or a table lays the title and the form, or the table, down in a `sections`.
+- **Apart from every other head.** Its title takes the starter's type of a page's title, `starter.type.title`, which no other component reads. Its default is the shared type of a page's title, `type.title`, so a brand that gives that type a size above its heading's and draws the starter at its defaults, as the neutral brand does (the capability's `files.md`, under *The neutral brand*), draws the page's head larger than any head of the page's parts, a section's, a form's, a table's or a card's, on every size it gives and in every mode. The rule on one focal point asks this of a page of sections: the page's head is drawn apart from each section's, never by its place alone (visual-communication DEC-068 point 3). A brand that gives `type.title` no value sets the title in its heading, as a section's head, so the page's head is drawn as its sections' are. That brand gives `type.title` a value to set it apart.
 
 ### `section`
 
@@ -316,7 +349,7 @@ A web block draws one item of a web part's list.
 
 Each component's file declares its own colour family, or none. An item that names a concept takes the concept's family instead, and an item whose place in its list takes a family or a step of an order takes that before its component's. A state may then change it (visual-communication DEC-010 point 6).
 
-- **`neutral`:** the blocks `card`, `level`, `tag`, `group`, `code`, `aside` and `connector`, the web parts `header` and `section`, and the web block [`field`](#field). A field in `error` takes `red`.
+- **`neutral`:** the blocks `card`, `level`, `tag`, `group`, `code`, `aside` and `connector`, the web parts `header`, `title` and `section`, and the web block [`field`](#field). A field in `error` takes `red`.
 - **`blue`:** the web block [`button`](#button). A `disabled` button takes `neutral`.
 - **None:** the patterns, the web parts `navigation`, `sections`, `form` and `table`, and the web blocks `link`, `row` and `cell`. None of them takes a colour from a family.
 
@@ -324,7 +357,7 @@ A text in a family's text lies on that family's fill, whose contrast the capabil
 
 A level, a group, a code block and an aside always lie on their family's fill, so their heads read the family's text. So do a level's and an aside's text and a code block's plain runs. A code block's prompts and comments take `text-secondary`, and its commands `accent`, whatever its family.
 
-A header and a section lie on the page's `background`, or on their family's fill where tinted. A link takes `accent`, and a field's note `text-secondary`. A button and a field's box lie on their family's fill, and their text reads the family's text.
+A header, a title and a section lie on the page's `background`, or on their family's fill where tinted. A link takes `accent`, and a field's note `text-secondary`. A button and a field's box lie on their family's fill, and their text reads the family's text.
 
 A connector's line takes its family's text, not its line. Nothing beside the line shows the tie, so it needs a contrast of 3 to 1 against what it lies on (WCAG 2.1, success criterion 1.4.11). A family's line edges a fill, and may be faint: the neutral family's is the shared `line`. A family's text is the member a brand makes legible, since the foundations pair it with the family's fill.
 
@@ -336,7 +369,7 @@ A connector's line takes its family's text, not its line. Nothing beside the lin
 - **What may fail on one.** A step may lie far in lightness from every family's fill, so a part that keeps its contrast on every family may fall below it on a step, measured as drawn (the capability's `components.md`, under *Values, states and colour*). The starter's owner audited each component that paints from its family on the steps, for the two kinds of part that may fail:
   - **A part painted with a shared role over the step.** A code block's prompts and comments, in `text-secondary`, and its commands, in `accent`, and a tinted header's links, in `accent`. Under the neutral brand (the capability's `files.md`, under *The neutral brand*) each falls below its contrast, so a code block or a tinted header drawn as a level fails there.
   - **A part painted with the order's text over a fill outside its family,** such as a card's text on the surface. None of the starter's components draws one on a step: a plain card's texts take shared roles, and the parts that paint their family's text off its fill, a sign and a field's edge, are drawn on a step only within the step's own fill, or, for a sign, only for a concept, which a step never names.
-- **The default passes.** The `level`, which draws the levels, and a `card` with `fill: tint`, a `tag`, a `group`, an `aside`, a `button`, a `field` and a `section` with `fill: tint` paint each text and sign that lies on the step itself in the order's text, which the neutral brand (the capability's `files.md`, under *The neutral brand*) keeps legible on every step. The check finds what falls below its contrast where it is drawn, as for any family (the capability's `checks.md`, `contrast-drawn`).
+- **The default passes.** The `level`, which draws the levels, and a `card` with `fill: tint`, a `tag`, a `group`, an `aside`, a `button`, a `field`, and a `title` and a `section` with `fill: tint` paint each text and sign that lies on the step itself in the order's text, which the neutral brand (the capability's `files.md`, under *The neutral brand*) keeps legible on every step. The check finds what falls below its contrast where it is drawn, as for any family (the capability's `checks.md`, `contrast-drawn`).
 
 ## Signs
 
@@ -349,13 +382,13 @@ A concept that a piece shows by its colour shows a sign beside it too, so colour
 | `group` with no head | alone in the head's row, and the items start under it |
 | `tag`, `button` | before the label |
 | `field` | in the box, before the text |
-| `header` | before the title |
+| `header`, `title` | before the title |
 | `section` | before the head |
 | `connector` | on the line, halfway along it |
 
-- **Its size** is the starter's own role `starter.sign`, the side of a square the sign fills whole. A web part's or a web block's sign is no wider than the room it gets: a header's than the room inside its insets, a section's than its text, a field's than the field, and a button's than its label.
+- **Its size** is the starter's own role `starter.sign`, the side of a square the sign fills whole. A web part's or a web block's sign is no wider than the room it gets: a header's than the room inside its insets, a title's than its words, a section's than its text, a field's than the field, and a button's than its label.
 - **Its paint** is its family's text, the member a brand makes legible, since a sign, as a connector's line, needs a contrast of 3 to 1 against what it lies on (visual-communication DEC-036 point 8). A state changes its paint, never its sign.
-- **The gap** between a sign and the text after it, in a tag, a button, a field, a header and a section, is the shared role `space.sign-gap`, the gap a run's sign keeps. Between a block's sign and what stands before it, the gap is `space.2`.
+- **The gap** between a sign and the text after it, in a tag, a button, a field, a header, a title and a section, is the shared role `space.sign-gap`, the gap a run's sign keeps. Between a block's sign and what stands before it, the gap is `space.2`.
 - **A run's sign.** A run of a card's or a level's text, or a plain run of a code block's text, that names a concept with a sign starts with that sign, in the run's paint (visual-communication DEC-036 point 3). A code block's prompts, commands and comments take shared roles, not a family, and draw no sign.
 - **A legend** says in words what each sign and colour stands for ([`legend`](#legend-what-does-each-colour-and-sign-stand-for)).
 
@@ -365,7 +398,7 @@ A component reads a shared role where the starter means just that role, such as 
 
 - **Colours** are always shared: `surface`, `line`, `text-primary`, `text-secondary`, `accent`, and each family's `fill`, `line` and `text`. The starter declares no colour role, and so no contrast pair.
 - **Shared sizes and types:** `type.body` sets a card's and a level's plain text, a tag's label and an aside's text. `space.1` and `space.2` lie around a tag's label. `space.2` lies between a block's head, tag, command and text, and before the sign at the end of its first row. It is also the least a card keeps between a top bar and what it holds. So a brand's thick bar lowers every card's head alike.
-- **For the web parts:** `type.strong` sets a button's and a field's label. They also read `size.line` and `picture.logo`, which [*The length of a line*](#the-web-parts-by-their-job-on-a-page) and [`header`](#header) describe.
+- **For the web parts:** `type.strong` sets a button's and a field's label. They also read `size.line` and `picture.logo`, which [*The length of a line*](#the-web-parts-by-their-job-on-a-page) and [`header`](#header) describe. A title's lead is in `type.body`, and its title reads `type.title` through the starter's own `starter.type.title`, as [`title`](#title) says. `type.title` defaults to `type.heading`, so a brand released before it owes it no value (the capability's `files.md`, under *The foundations*).
 - **Three more shared roles:** `stroke.thick`, `type.strong` and `type.code`, roles of the foundations (the capability's `files.md`, under *The foundations*). None has a default, so every brand gives each a value (visual-communication DEC-008 point 2).
 - **The starter's own roles,** each with a default whose chain ends at a shared role:
 
@@ -380,19 +413,21 @@ A component reads a shared role where the starter means just that role, such as 
 | `starter.bar` | how thick a card's or an aside's bar is | `space.1` |
 | `starter.edge` | how wide a block's edge is | `stroke.thin` |
 | `starter.connector` | how wide a connector's line is | `stroke.thick` |
+| `starter.leader` | how wide a connector's line is with `weight: thin`, as a leader is drawn | `stroke.thin` |
 | `starter.turn` | the radius a connector's turns are drawn round at | `space.2` |
 | `starter.type.head` | the type of a block's head and a list's head | `type.heading` |
+| `starter.type.title` | the type of a page's title, as [`title`](#title) says | `type.title` |
 | `starter.type.strong` | the type of a strong run in a card's or a level's text | `type.strong` |
 | `starter.type.code` | the type of a code block's text | `type.code` |
 | `starter.sign` | the side of the square a component draws its concept's sign in, as [*Signs*](#signs) says | `space.3` |
 
 A brand that does not name the starter draws it at these defaults, in the brand's own values for the shared roles. A brand that names the starter by its major, 1, may give any of these roles a value of its own (visual-communication DEC-008 point 4).
 
-At the defaults a connector's line is as wide as a line drawn on its own, not as an edge. A strong run keeps the body's size and line height, in a heavier weight, so it stands out without breaking its line. A code block's text is in a monospace type, so the columns of its lines stay in line.
+At the defaults a connector's line is as wide as a line drawn on its own, not as an edge, and a thin connector's as an edge. A strong run keeps the body's size and line height, in a heavier weight, so it stands out without breaking its line. A code block's text is in a monospace type, so the columns of its lines stay in line.
 
 ## What the starter leaves out, for now
 
-- **Notes to the left of the stack.** `layers` places them to the right only.
+- **A picture's points.** No component of the starter draws a picture with points, so a tie ends at a picture's box, never at a point in it. A picture file has no points (visual-communication DEC-025 point 7), and no producer ships yet, so no piece holds a produced picture whose points a block could expose (the capability's `outputs.md`, under *Produced pictures*).
 - **A colour family for each place** of a list (project-kit#3129). An order's levels take its steps instead ([*An order's steps*](#an-orders-steps)).
 - **A legend in a column,** or one the engine fills from the concepts a page names. A legend's entries stand in one row, and content lists each (visual-communication DEC-036 point 6).
 - **The other patterns and blocks** of the starter's second wave (project-kit#3129).
