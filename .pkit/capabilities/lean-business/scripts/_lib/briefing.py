@@ -7,6 +7,8 @@ position is the process engine's (`engine`), never worked out here again; where 
 or a time box falls is the one predicate the check shares (`timeline`). Without an idea,
 the status gives one line for each idea; with one, the briefing, in this order:
 
+- **Its first line** names the idea, and says so where the idea is dropped
+  (`readings.dropped`, which `shelve` reads too; DEC-003 point 8).
 - **An offer** (`offer`), after a silence (`SILENCE`): where nothing has been recorded on
   a running cycle, or one in review, for that many days of its window, the gap may be
   recorded as a suspension, from the day after the last work recorded on the cycle, or
@@ -19,20 +21,19 @@ the status gives one line for each idea; with one, the briefing, in this order:
   time away.
 - **The last act** (`last_act`): the day of the person's last recorded act on the idea,
   and each act recorded that day.
-- **The goal, the cycles, the variants and the experiments,** each with where it stands.
-  The cycle not yet decided comes in full: its window as its suspensions move it, the days
-  of it gone by today, its objective, key results and constraint, and its suspensions. A
-  decided one comes in a line. A variant's stale judgements are marked, and its
-  assumptions come the riskiest first, each with its outcome. An experiment not yet
-  decided comes with its time box, its declared expectation, and the result beside it or
-  that it waits for one.
-- **The readings** (DEC-003 point 8), worked out here and stored nowhere: each
-  assumption's outcome, from the experiments that test it (`readings.assumption_outcome`,
-  which the declaring command's warning reads too), and whether the idea is dropped
-  (`readings.dropped`, which `shelve` reads too).
+- **The goal, the cycles and the variants,** each with where it stands. The cycle not yet
+  decided comes in full: its window as its suspensions move it, the days of it gone by
+  today, its objective, key results and constraint, and its suspensions. A decided one
+  comes in a line. A variant's stale judgements are marked, and its assumptions come the
+  riskiest first, each with its outcome, worked out here and stored nowhere from the
+  experiments that test it (`readings.assumption_outcome`, which the declaring command's
+  warning reads too; DEC-003 point 8).
 - **The canvases** of the variants in play, each variant neither shelved nor split whose
   canvas reads, drawn as `pkit lean canvas` draws one (`grid`), its credit line beneath,
   in the plain form only (DEC-002 point 15; DEC-001 point 6).
+- **The experiments,** each with where it stands. One declared and not yet decided comes
+  with its time box, its declared expectation, and the result beside it or that it waits
+  for one.
 - **What waits on the person,** each with the command that takes it, what others wait on
   first: a suspended cycle to resume; a goal to set; a due experiment's result, then its
   next action; a cycle in review to review; a draft in an open cycle to declare; at the
