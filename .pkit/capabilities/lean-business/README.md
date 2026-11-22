@@ -319,7 +319,7 @@ A side that pays nothing counts at nothing. A model with several paying sides is
    - *being tested,* while one that tests it is declared, running or due;
    - otherwise, from the one that tests it and was decided last: *supported* where its result worked out to a pass, *refuted* where to a fail, and *inconclusive* where to neither.
 
-   An assumption's outcome cannot be told while an experiment's file of the idea cannot be read, since that experiment may test it.
+   While an experiment's file of the idea cannot be read, that experiment may test any assumption, so an assumption's outcome cannot be told, unless an experiment that reads shows it being tested, which no other experiment can change.
 6. **The canvases of the variants in play:** of each variant neither shelved nor split, drawn as `pkit lean canvas` draws it, its credit line beneath ("The grid" above). A variant whose canvas cannot be read is not drawn, and one whose position cannot be told is drawn, since it may still be in play. `pkit lean canvas` draws a shelved or split one.
 7. **The experiments.** One not yet decided comes with where it stands. Once declared, it comes too with its time box as its cycle's suspensions move it, or that the time box waits for its cycle to resume, and with its declared expectation, and beside it the result, worked out to a pass, a fail or neither, or that it waits for one. A decided one comes in a line, with your next action and its result.
 8. **What waits on you,** each with the command that takes it, in this order:

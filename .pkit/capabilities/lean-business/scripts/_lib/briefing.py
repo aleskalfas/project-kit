@@ -610,10 +610,8 @@ def of_idea(engine: Engine, idea: IdeaModel, on: date) -> IdeaStatus:
     unread = idea.idea.goal.rel if idea.goal_unread and idea.idea.goal is not None else None
     found = IdeaStatus(name, idea.goal, unread)
     canvases = {own: data for own, _, data in idea.canvases()}
-    # An experiment whose file does not read may test any assumption, so while one does
-    # not, no assumption's outcome can be told.
     told = all(file.data is not None for file in idea.idea.experiments.values())
-    tested = [experiment.data for experiment in idea.experiments] if told else None
+    tested = [experiment.data for experiment in idea.experiments]
     for own, variant in sorted(idea.idea.variants.items()):
         at = _standing(engine, engines.DESK, ids.qualify(name, own))
         held = canvases.get(own)
@@ -622,7 +620,7 @@ def of_idea(engine: Engine, idea: IdeaModel, on: date) -> IdeaStatus:
         if listed is not None and listed.data is None:
             found.variants.append(VariantStatus(at, stale, held, assumptions_unread=listed.rel))
             continue
-        assumptions = _assumptions(listed.data if listed is not None else None, tested)
+        assumptions = _assumptions(listed.data if listed is not None else None, tested, told)
         found.variants.append(VariantStatus(at, stale, held, assumptions))
     found.dropped = _dropped(idea)
     for own, file in sorted(idea.idea.cycles.items()):
@@ -666,11 +664,13 @@ def _stale(canvas: Mapping[str, Any], idea: IdeaModel) -> tuple[str, ...]:
 
 
 def _assumptions(
-    listed: Mapping[str, Any] | None, tested: Sequence[Mapping[str, Any]] | None
+    listed: Mapping[str, Any] | None, tested: Sequence[Mapping[str, Any]], told: bool
 ) -> tuple[AssumptionStatus, ...]:
     """The assumptions a variant's list `listed` holds, the riskiest first, those whose rank
     does not read last, each with its outcome worked out from `tested`, the files of its
-    idea's experiments, or None where they do not all read."""
+    idea's experiments that read. `told` is whether every one of them reads. Where one does
+    not, it may test any assumption, so an outcome is told only where it is being tested,
+    which no other experiment can change, and is otherwise None."""
     found: list[AssumptionStatus] = []
     for entry in _list(_m(listed).get("assumptions")):
         if not isinstance(entry, Mapping):
@@ -678,11 +678,9 @@ def _assumptions(
         named = _text(entry.get("id"))
         rank = entry.get("rank")
         ranked = rank if isinstance(rank, int) and not isinstance(rank, bool) else None
-        outcome = (
-            readings.assumption_outcome(named, tested)
-            if named is not None and tested is not None
-            else None
-        )
+        outcome = readings.assumption_outcome(named, tested) if named is not None else None
+        if not told and outcome != readings.BEING_TESTED:
+            outcome = None
         found.append(AssumptionStatus(named, ranked, outcome))
     return tuple(sorted(found, key=lambda each: (each.rank is None, each.rank or 0)))
 

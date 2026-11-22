@@ -801,6 +801,21 @@ def test_status_tells_no_outcome_while_an_experiments_file_does_not_read(
     assert f"      its assumptions: `{listed}` cannot be read" in lines
 
 
+def test_status_tells_an_assumption_being_tested_while_an_experiments_file_does_not_read(
+    world: lb.World,
+) -> None:
+    # A declared experiment that reads tests the first assumption, which the unreadable one
+    # cannot change; the second's outcome, from an experiment decided, it may.
+    declared(world)
+    (world.root / lb.IDEA / "experiments/broken.yaml").write_text(
+        "id: [unclosed\n", encoding="utf-8"
+    )
+    (direct, _) = briefing(world)["variants"]
+    assert [a["outcome"] for a in direct["assumptions"]] == ["being-tested", None]
+    lines = world.run("status", "meal-plan").out.splitlines()
+    assert "      assumption 1 `meal-plan--direct--planning-takes-long`: being tested" in lines
+
+
 def test_status_says_an_idea_is_dropped_once_each_variant_not_split_is_shelved(
     world: lb.World,
 ) -> None:
