@@ -467,7 +467,8 @@ class CycleStatus:
 
 def _suspension(entry: object) -> dict[str, Any]:
     """A suspension of a cycle's list as the structured form gives it, each value None where
-    it does not read, all of them where the entry does not."""
+    it does not read, all of them where the entry does not. `resumed` is None while the
+    suspension is ongoing too, so a None there does not alone say that it is."""
     held = _m(entry)
     return {
         "reason": _text(held.get("reason")),
