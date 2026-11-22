@@ -261,7 +261,7 @@ class AssumptionStatus:
 class VariantStatus:
     """A variant's position, each of its judgements gone stale, its canvas, None where its
     file does not read, and its assumptions, the riskiest first, or the file that holds
-    them where it does not read."""
+    them where it, or the list it holds, does not read."""
 
     at: Standing
     stale: tuple[str, ...] = ()
@@ -288,7 +288,7 @@ class VariantStatus:
         stale = f"; stale: {', '.join(self.stale)}" if self.stale else ""
         out = [f"    {self.at.id}: {self.at.where}{stale}"]
         if self.assumptions_unread is not None:
-            out.append(f"      its assumptions: `{self.assumptions_unread}` cannot be read")
+            out.append(f"      its assumptions, in `{self.assumptions_unread}`, cannot be read")
         out.extend(assumption.line() for assumption in self.assumptions)
         return out
 
@@ -617,11 +617,9 @@ def of_idea(engine: Engine, idea: IdeaModel, on: date) -> IdeaStatus:
         held = canvases.get(own)
         stale = _stale(held, idea) if held is not None else ()
         listed = variant.assumptions
-        if listed is not None and listed.data is None:
-            found.variants.append(VariantStatus(at, stale, held, assumptions_unread=listed.rel))
-            continue
-        assumptions = _assumptions(listed.data if listed is not None else None, tested, told)
-        found.variants.append(VariantStatus(at, stale, held, assumptions))
+        assumptions = _assumptions(listed.data, tested, told) if listed is not None else ()
+        unread = listed.rel if listed is not None and assumptions is None else None
+        found.variants.append(VariantStatus(at, stale, held, assumptions or (), unread))
     found.dropped = _dropped(idea)
     for own, file in sorted(idea.idea.cycles.items()):
         at = _standing(engine, engines.CYCLE, idea.qualified(own))
@@ -665,15 +663,21 @@ def _stale(canvas: Mapping[str, Any], idea: IdeaModel) -> tuple[str, ...]:
 
 def _assumptions(
     listed: Mapping[str, Any] | None, tested: Sequence[Mapping[str, Any]], told: bool
-) -> tuple[AssumptionStatus, ...]:
-    """The assumptions a variant's list `listed` holds, the riskiest first, those whose rank
+) -> tuple[AssumptionStatus, ...] | None:
+    """The assumptions a variant's file `listed` holds, the riskiest first, those whose rank
     does not read last, each with its outcome worked out from `tested`, the files of its
-    idea's experiments that read. `told` is whether every one of them reads. Where one does
-    not, it may test any assumption, so an outcome is told only where it is being tested,
-    which no other experiment can change, and is otherwise None."""
+    idea's experiments that read; None where the file, or the list it holds, does not read.
+    An entry that does not read is listed all the same, each of its values None, so the list
+    does not look whole without it. `told` is whether every experiment's file reads. Where
+    one does not, it may test any assumption, so an outcome is told only where it is being
+    tested, which no other experiment can change, and is otherwise None."""
+    held = _m(listed).get("assumptions")
+    if not isinstance(held, list):
+        return None
     found: list[AssumptionStatus] = []
-    for entry in _list(_m(listed).get("assumptions")):
+    for entry in held:
         if not isinstance(entry, Mapping):
+            found.append(AssumptionStatus(None, None, None))
             continue
         named = _text(entry.get("id"))
         rank = entry.get("rank")

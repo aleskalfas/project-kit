@@ -798,7 +798,27 @@ def test_status_tells_no_outcome_while_an_experiments_file_does_not_read(
     (direct, _) = briefing(world)["variants"]
     assert direct["assumptions"] is None
     lines = world.run("status", "meal-plan").out.splitlines()
-    assert f"      its assumptions: `{listed}` cannot be read" in lines
+    assert f"      its assumptions, in `{listed}`, cannot be read" in lines
+
+
+def test_status_gives_null_for_a_list_of_assumptions_or_an_entry_that_does_not_read(
+    world: lb.World,
+) -> None:
+    # A file that reads, but whose list does not, is null, not empty; an entry that does not
+    # read is listed, so the list does not look whole without it.
+    listed = f"{lb.IDEA}/variants/direct/assumptions.yaml"
+    world.edit(listed, lambda data: data["assumptions"].append("nope"))
+    (direct, _) = briefing(world)["variants"]
+    assert direct["assumptions"][-1] == {"id": None, "rank": None, "outcome": None}
+    assert len(direct["assumptions"]) == 3
+    lines = world.run("status", "meal-plan").out.splitlines()
+    unread = "assumption, its rank unread, whose id cannot be read: its outcome cannot be told"
+    assert f"      {unread}" in lines
+    world.edit(listed, lambda data: data.update({"assumptions": "nope"}))
+    (direct, _) = briefing(world)["variants"]
+    assert direct["assumptions"] is None
+    lines = world.run("status", "meal-plan").out.splitlines()
+    assert f"      its assumptions, in `{listed}`, cannot be read" in lines
 
 
 def test_status_tells_an_assumption_being_tested_while_an_experiments_file_does_not_read(
