@@ -42,8 +42,10 @@ the status gives one line for each idea; with one, the briefing, in this order:
   cycle to plan.
 
 **Its structured form** (`document`) is a contract its readers depend on (ADR-097): the
-capability's README lists its keys. It carries `schema_version`; a change that would break
-a reader raises it, and an added key leaves it.
+capability's README lists its keys, and the values of each set. A value a file holds
+outside its set does not read, so the form gives it as null (`_among`). It carries
+`schema_version`; a change that would break a reader raises it, and an added key leaves
+it.
 """
 
 from __future__ import annotations
@@ -53,7 +55,8 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
 
-from _lib import acts, fingerprint, grid, ids, positions, readings, timeline
+from _lib import acts, estimates, fingerprint, grid, ids, positions, readings, timeline
+from _lib import canvases as canvas_words
 from _lib import cycles as cycle_words
 from _lib import engine as engines
 from _lib import suspensions as rules
@@ -124,6 +127,12 @@ def _list(value: object) -> list[Any]:
 
 def _text(value: object) -> str | None:
     return value if isinstance(value, str) else None
+
+
+def _among(value: object, values: Sequence[str]) -> str | None:
+    """`value` where it is one of the set `values`, else None: a value outside its set does
+    not read as one of it."""
+    return value if isinstance(value, str) and value in values else None
 
 
 def _number(value: object) -> int | float | None:
@@ -327,7 +336,7 @@ class CycleStatus:
             found.append(
                 {
                     "variant": named.id if named is not None else None,
-                    "metric": _text(held.get("metric")),
+                    "metric": _among(held.get("metric"), canvas_words.FACTORY_STEPS),
                     "target": _number(held.get("target")),
                     "reached": _number(reached[index]) if index < len(reached) else None,
                 }
@@ -353,7 +362,7 @@ class CycleStatus:
             "key_results": self.key_results() if data is not None else None,
             "constraint": (
                 {
-                    "step": _text(_m(constraint).get("step")),
+                    "step": _among(_m(constraint).get("step"), canvas_words.FACTORY_STEPS),
                     "evidence": _text(_m(constraint).get("evidence")),
                 }
                 if isinstance(constraint, Mapping)
@@ -374,7 +383,7 @@ class CycleStatus:
             ),
             "review": (
                 {
-                    "decision": _text(_m(review).get("decision")),
+                    "decision": _among(_m(review).get("decision"), positions.DECISIONS),
                     "winning": winning.id if winning is not None else None,
                     "when": _iso(day(_m(review).get("when"))),
                 }
@@ -463,7 +472,7 @@ class ExperimentStatus:
         assumption = ids.parse_ref(_m(self.data).get("assumption"), ids.ASSUMPTIONS)
         return {
             **self.at.as_data(),
-            "kind": _text(_m(self.data).get("kind")),
+            "kind": _among(_m(self.data).get("kind"), positions.KINDS),
             "assumption": assumption.id if assumption is not None else None,
             "cycle": cycle.id if cycle is not None else None,
             "time_box": _span(self.time_box),
@@ -556,7 +565,7 @@ def _goal_data(goal: Mapping[str, Any] | None) -> dict[str, Any] | None:
     revenue = _m(goal.get("revenue"))
     return {
         "revenue": _number(revenue.get("amount")),
-        "per": _text(revenue.get("per")),
+        "per": _among(revenue.get("per"), estimates.PERIODS),
         "currency": _text(goal.get("currency")),
         "years": _number(goal.get("years")),
     }

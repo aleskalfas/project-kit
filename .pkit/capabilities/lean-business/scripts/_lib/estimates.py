@@ -38,6 +38,9 @@ from _lib import fingerprint
 #: The months in a year, by which an amount or a length counted by the month is a year's.
 MONTHS = 12
 
+#: The periods an amount or a length is counted in.
+PERIODS = ("month", "year")
+
 #: A side's inputs, in the order the estimate names those missing.
 INPUTS = ("price", "lifetime", "conversion", "referral-share")
 
@@ -80,7 +83,7 @@ def _number(value: object) -> float | None:
 
 def _yearly(amount: object, per: object) -> float | None:
     found = _number(amount)
-    if found is None or per not in ("month", "year"):
+    if found is None or per not in PERIODS:
         return None
     return found * MONTHS if per == "month" else found
 
@@ -128,7 +131,7 @@ def _years_kept(lifetime: object) -> float | None:
         return None
     length = _number(lifetime.get("length"))
     unit = lifetime.get("unit")
-    if length is None or length <= 0 or unit not in ("month", "year"):
+    if length is None or length <= 0 or unit not in PERIODS:
         return None
     return length / MONTHS if unit == "month" else length
 

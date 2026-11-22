@@ -7,8 +7,11 @@ with `tests/document_contracts.py`. A key that goes, or comes back, fails until 
 change updates the pin, beside the changeset that declares the break.
 `tests/test_capability_documents.py` holds the ratchet over every capability's commands.
 
-A subject's `state` is a state of the capability's process definitions, whose values
-those definitions own, so this contract pins its type and lists no values.
+Each set the capability's README lists is pinned with its values. Where the values come
+from, the test reads them as the code gives them: a subject's `state` from the process
+definition that declares it, a value a file holds from the schema that allows it, and a
+reading from the code that works it out. So a value the code comes to give, or no longer
+gives, fails until the pin follows it.
 """
 
 from __future__ import annotations
@@ -20,9 +23,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from ruamel.yaml import YAML
 
 from tests import lean_business_world as lb
 from tests.document_contracts import Contract, Form, check
+
+_SCHEMAS = lb.CAPABILITY / "schemas"
 
 #: A subject's place in the status: its id, its state, and why the engine could not tell.
 _STANDING = {"id": "str", "state": "str|null", "why": "str|null"}
@@ -74,6 +80,9 @@ _EXPERIMENT = {
     "expected": "str|null",
     "outcome": "str|null",
 }
+
+#: The steps of the customer factory, which a key result counts and a constraint names.
+_FACTORY_STEPS = frozenset({"acquisition", "activation", "retention", "revenue", "referral"})
 
 LEAN_STATUS = Contract(
     name="pkit lean status --json",
@@ -131,9 +140,67 @@ LEAN_STATUS = Contract(
             }
         )
     },
+    sets={
+        "ideas[].goal.per": frozenset({"month", "year"}),
+        "ideas[].variants[].state": frozenset(
+            {"sketched", "desirable", "viable", "feasible", "shortlisted", "shelved", "split"}
+        ),
+        "ideas[].variants[].stale[]": frozenset(
+            {"desirability", "viability", "feasibility", "shortlisting"}
+        ),
+        "ideas[].variants[].assumptions[].outcome": frozenset(
+            {"untested", "being-tested", "supported", "refuted", "inconclusive"}
+        ),
+        "ideas[].cycles[].state": frozenset(
+            {"planned", "running", "suspended", "in-review", "decided"}
+        ),
+        "ideas[].cycles[].key_results[].metric": _FACTORY_STEPS,
+        "ideas[].cycles[].constraint.step": _FACTORY_STEPS,
+        "ideas[].cycles[].review.decision": frozenset({"persevere", "pivot", "pause"}),
+        "ideas[].experiments[].state": frozenset(
+            {"drafted", "declared", "running", "due", "decided"}
+        ),
+        "ideas[].experiments[].kind": frozenset({"generative", "evaluative"}),
+        "ideas[].experiments[].outcome": frozenset({"pass", "fail", "neither"}),
+    },
 )
 
 CONTRACTS: Mapping[str, tuple[Contract, ...]] = {"lean-business status": (LEAN_STATUS,)}
+
+
+def _states(process: str) -> tuple[str, ...]:
+    """The states the process definition `process` declares."""
+    definition = YAML(typ="safe").load((_SCHEMAS / f"{process}.yaml").read_text())
+    return tuple(state["id"] for state in definition["process"]["states"])
+
+
+def _enum(schema: str, *path: str) -> tuple[str, ...]:
+    """The values the schema `schema` allows at the place `path` leads to."""
+    held: Any = json.loads((_SCHEMAS / f"{schema}.schema.json").read_text(encoding="utf-8"))
+    for key in path:
+        held = held[key]
+    return tuple(held["enum"])
+
+
+def _enumerations() -> dict[str, tuple[str, ...]]:
+    """Every value the code can give each set the contract pins."""
+    briefing = lb.LIB["briefing"]
+    steps = _enum("shapes", "$defs", "factory-step")
+    return {
+        "ideas[].goal.per": lb.LIB["estimates"].PERIODS,
+        "ideas[].variants[].state": _states("desk-stage"),
+        "ideas[].variants[].stale[]": (*lb.LIB["fingerprint"].STEPS, briefing.SHORTLISTING),
+        "ideas[].variants[].assumptions[].outcome": tuple(briefing.ASSUMPTION_WORDS),
+        "ideas[].cycles[].state": _states("cycle-lifecycle"),
+        "ideas[].cycles[].key_results[].metric": steps,
+        "ideas[].cycles[].constraint.step": steps,
+        "ideas[].cycles[].review.decision": _enum(
+            "cycle", "properties", "review", "properties", "decision"
+        ),
+        "ideas[].experiments[].state": _states("experiment-lifecycle"),
+        "ideas[].experiments[].kind": _enum("experiment", "properties", "kind"),
+        "ideas[].experiments[].outcome": tuple(lb.positions.OUTCOME_WORDS),
+    }
 
 
 def _printed(world: lb.World, *args: str) -> dict[str, Any]:
@@ -181,4 +248,4 @@ def test_the_status_document_holds_its_contract(
     running = _printed(world, "meal-plan")
     (idea,) = running["ideas"]
     assert idea["offer"] is not None and idea["variants"][0]["stale"], running
-    check(LEAN_STATUS, {"answer": [every, reviewed, running]})
+    check(LEAN_STATUS, {"answer": [every, reviewed, running]}, enumerations=_enumerations())

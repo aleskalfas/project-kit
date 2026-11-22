@@ -952,6 +952,16 @@ def test_status_gives_null_for_a_goal_value_that_does_not_read(world: lb.World) 
     assert "  goal: set, but its period and years cannot be read" in run.out.splitlines()
 
 
+def test_status_gives_null_for_a_value_outside_its_set(world: lb.World) -> None:
+    # The structured form gives each set only the values its README lists: one a hand edit
+    # wrote outside them does not read.
+    world.edit(lb.GOAL, lambda data: data["revenue"].update({"per": "week"}))
+    world.edit(lb.CYCLE, lambda data: data["review"].update({"decision": "maybe"}))
+    idea = briefing(world)
+    assert idea["goal"]["per"] is None
+    assert idea["cycles"][0]["review"]["decision"] is None
+
+
 def test_status_lists_a_cycle_and_an_experiment_whose_file_does_not_read(
     world: lb.World,
 ) -> None:
