@@ -28,8 +28,11 @@ BEFORE_ITS_REVIEW = date(2026, 11, 20)
 IDEA = "meal-plan"
 DIRECT = "meal-plan--direct"
 ASSUMPTIONS = f"{lb.IDEA}/variants/direct/assumptions.yaml"
+#: The direct variant's assumptions in the fixture, the riskiest first: that planning the
+#: week takes long, which the fixture's interviews tested and the drafts here test, and that
+#: a household pays monthly, which its landing page, declared, tests.
+PLANNING_TAKES_LONG = "meal-plan--direct--planning-takes-long"
 TESTED = "meal-plan--direct--pays-monthly"
-UNTESTED = "meal-plan--direct--planning-takes-long"
 
 SECOND = "meal-plan--second"
 SECOND_FILE = f"{lb.IDEA}/cycles/second.yaml"
@@ -238,7 +241,7 @@ def test_edit_assumption_replaces_its_source(world: lb.World) -> None:
 
 
 def test_edit_assumption_refuses_a_side_on_one_from_an_entry(world: lb.World) -> None:
-    run = world.run("edit_assumption", UNTESTED, "--side", "cooks")
+    run = world.run("edit_assumption", PLANNING_TAKES_LONG, "--side", "cooks")
     assert run.code == 1
     assert "comes from no input, so it names no side" in run.err
 
@@ -269,7 +272,7 @@ def test_remove_assumption_takes_out_an_untested_one_and_keeps_the_ranks(world: 
     )
     run = world.run("remove_assumption", "meal-plan--direct--households-cook-alone")
     assert run.code == 0, run.err
-    assert ranks(world) == {UNTESTED: 1, TESTED: 2}
+    assert ranks(world) == {PLANNING_TAKES_LONG: 1, TESTED: 2}
 
 
 # --- rank -------------------------------------------------------------------------------------
@@ -290,14 +293,14 @@ def test_rank_puts_the_named_first_and_the_rest_after_them_as_they_were(world: l
     assert run.code == 0, run.err
     assert run.asked == [
         f"Rank the assumptions of `{DIRECT}` by risk, the riskiest first: 1. `{added}`, 2. "
-        f"`{UNTESTED}`, 3. `{TESTED}`? The riskiest is tested first."
+        f"`{PLANNING_TAKES_LONG}`, 3. `{TESTED}`? The riskiest is tested first."
     ]
-    assert ranks(world) == {added: 1, UNTESTED: 2, TESTED: 3}
-    assert [a["id"] for a in listed(world)] == [UNTESTED, TESTED, added]
+    assert ranks(world) == {added: 1, PLANNING_TAKES_LONG: 2, TESTED: 3}
+    assert [a["id"] for a in listed(world)] == [PLANNING_TAKES_LONG, TESTED, added]
 
 
 def test_rank_asks_nothing_where_they_are_ranked_so_already(world: lb.World) -> None:
-    run = world.run("rank", DIRECT, UNTESTED)
+    run = world.run("rank", DIRECT, PLANNING_TAKES_LONG)
     assert run.code == 0, run.err
     assert "ranked so already" in run.out
     assert run.asked == []
@@ -1125,7 +1128,7 @@ def test_each_command_that_names_an_assumption_takes_each_name_of_it(
     assert listed(world)[-1]["statement"] == "Households cook on their own"
     run = world.run("rank", DIRECT, name, "--person-decided")
     assert run.code == 0, run.err
-    assert ranks(world) == {ADDED: 1, UNTESTED: 2, TESTED: 3}
+    assert ranks(world) == {ADDED: 1, PLANNING_TAKES_LONG: 2, TESTED: 3}
     assert both_drafts_name(world, "--assumption", name) == [f"[assumptions:{ADDED}]"] * 2
     for draft in (DRAFT, OTHER_DRAFT):
         assert world.run("remove_experiment", draft).code == 0
