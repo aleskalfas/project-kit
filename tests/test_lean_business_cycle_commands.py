@@ -686,6 +686,16 @@ def test_status_briefs_a_running_cycle_and_its_experiment_in_full(world: lb.Worl
     }
 
 
+def test_status_says_a_result_measured_nothing(world: lb.World) -> None:
+    declared(world)
+    on(world, date(2027, 3, 26))
+    argv = ("--evidence", "The call notes", "--learned", "Too few calls", "--person-decided")
+    assert world.run("record_result", DRAFT, *argv).code == 0
+    run = world.run("status", "meal-plan")
+    assert "      result: neither pass nor fail, nothing measured" in run.out.splitlines()
+    assert "None" not in run.out
+
+
 def test_status_shows_what_waits_in_its_order(
     world: lb.World, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

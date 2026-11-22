@@ -427,9 +427,14 @@ class ExperimentStatus:
         if outcome is None:
             out.append("      result: waits for its result")
         else:
-            measured = _m(data.get("result")).get("measured")
+            measured = _number(_m(data.get("result")).get("measured"))
             spoiled = _m(data.get("result")).get("spoiled") is True
-            how = "spoiled" if spoiled else f"measured {measured}"
+            if spoiled:
+                how = "spoiled"
+            elif measured is None:
+                how = "nothing measured"
+            else:
+                how = f"measured {measured}"
             out.append(f"      result: {positions.OUTCOME_WORDS[outcome]}, {how}")
         return out
 
