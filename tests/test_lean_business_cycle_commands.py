@@ -885,6 +885,38 @@ def test_status_says_a_result_measured_nothing(world: lb.World) -> None:
     assert "None" not in run.out
 
 
+def _landing_page_lines(world: lb.World) -> list[str]:
+    """The landing page's lines among the briefing's experiments: its own, and those beneath
+    it."""
+    lines = world.run("status", "meal-plan").out.splitlines()
+    shown = lines[lines.index("  experiments:") + 1 :]
+    start = next(i for i, line in enumerate(shown) if line.startswith(f"    {LANDING_PAGE}: "))
+    end = start + 1
+    while end < len(shown) and shown[end].startswith(" " * 6):
+        end += 1
+    return shown[start:end]
+
+
+def test_status_says_an_experiments_result_cannot_be_read(world: lb.World) -> None:
+    # A result that does not read is read as none recorded, so the structured form gives no
+    # outcome. The plain form says the result cannot be read, decided or due, rather than
+    # leave it out or say that it waits for one; where the file holds none, it waits.
+    world.edit(LANDING_FILE, lambda data: data.update({"result": "nope"}))
+    (landing,) = (e for e in briefing(world)["experiments"] if e["id"] == LANDING_PAGE)
+    assert (landing["state"], landing["outcome"]) == ("decided", None)
+    assert _landing_page_lines(world) == [
+        f"    {LANDING_PAGE}: decided, double down; its result cannot be read"
+    ]
+    world.edit(LANDING_FILE, lambda data: data.pop("decision"))
+    (landing,) = (e for e in briefing(world)["experiments"] if e["id"] == LANDING_PAGE)
+    assert (landing["state"], landing["outcome"]) == ("due", None)
+    shown = _landing_page_lines(world)
+    assert shown[-1] == "      its result cannot be read"
+    assert not any("nope" in line or "waits for its result" in line for line in shown)
+    world.edit(LANDING_FILE, lambda data: data.pop("result"))
+    assert _landing_page_lines(world)[-1] == "      result: waits for its result"
+
+
 def test_status_shows_what_waits_in_its_order(
     world: lb.World, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

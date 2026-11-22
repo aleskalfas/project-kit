@@ -584,6 +584,14 @@ class ExperimentStatus:
     def outcome(self) -> str | None:
         return readings.experiment_outcome(self.data) if self.data is not None else None
 
+    @property
+    def result_unread(self) -> bool:
+        """Whether its file holds a result that does not read as one. The outcome, the engine
+        and the commands read such a result as none recorded, so its outcome is None, and the
+        plain form says it cannot be read rather than that it waits for one."""
+        held = _m(self.data)
+        return "result" in held and not isinstance(held["result"], Mapping)
+
     def as_data(self) -> dict[str, Any]:
         cycle = ids.parse_ref(_m(self.data).get("cycle"), ids.CYCLE)
         assumption = ids.parse_ref(_m(self.data).get("assumption"), ids.ASSUMPTIONS)
@@ -610,7 +618,10 @@ class ExperimentStatus:
                 if following is not None
                 else "its next action cannot be read"
             )
-            result = f"; its result, {positions.OUTCOME_WORDS[outcome]}" if outcome else ""
+            if outcome is not None:
+                result = f"; its result, {positions.OUTCOME_WORDS[outcome]}"
+            else:
+                result = "; its result cannot be read" if self.result_unread else ""
             return [f"    {self.at.id}: decided, {next_action}{result}"]
         box = self.time_box
         if self.at.state == positions.DRAFTED or box is None:
@@ -625,7 +636,9 @@ class ExperimentStatus:
         expectation = self.expectation()
         if expectation is not None:
             out.append(f"      expected: {expectation.said}")
-        if outcome is None:
+        if self.result_unread:
+            out.append("      its result cannot be read")
+        elif outcome is None:
             out.append("      result: waits for its result")
         else:
             measured = _number(_m(data.get("result")).get("measured"))
