@@ -16,6 +16,7 @@ command against the engine itself."""
 
 from __future__ import annotations
 
+import dataclasses
 import shutil
 import sys
 from datetime import date
@@ -279,6 +280,26 @@ def test_at_a_terminal_an_act_is_taken_on_a_yes_and_not_on_a_no(world: lb.World)
     )
     assert taken.code == 0, taken.err
     assert world.read(lb.DIRECT)["verdicts"]["desirability"]["answer"] == "no"
+
+
+def test_at_a_terminal_an_input_that_ends_with_no_answer_is_a_no(
+    world: lb.World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def ended(prompt: str) -> str:
+        raise EOFError
+
+    sketched(world)
+    before = lb.snapshot(world.root)
+    monkeypatch.setattr("builtins.input", ended)
+    monkeypatch.chdir(world.root)
+    at_terminal = dataclasses.replace(
+        lb.context(world.root, DAY, world.engine, terminal=True), ask=acting.real_context(DAY).ask
+    )
+    script = lb.SCRIPT["judge"]
+    argv = ("meal-plan--direct", "desirability", "no")
+    assert acting.invoke(script.parser(), script.run, argv, at_terminal) == acting.REFUSED
+    assert "you answered no, so nothing was written" in at_terminal.err.getvalue()
+    assert lb.snapshot(world.root) == before
 
 
 def test_an_act_records_who_by_gits_user_name_and_refuses_without_one(world: lb.World) -> None:

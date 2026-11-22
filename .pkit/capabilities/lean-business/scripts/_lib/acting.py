@@ -124,7 +124,13 @@ def git_user(root: Path) -> str | None:
 
 
 def _ask_at_terminal(question: str) -> bool:
-    answer = input(f"{question} [y/N] ")
+    """The person's answer at the terminal: a yes, or else a no, as an input that ends with
+    no answer, Ctrl-D, is read."""
+    try:
+        answer = input(f"{question} [y/N] ")
+    except EOFError:
+        print()
+        return False
     return answer.strip().lower() in ("y", "yes")
 
 
