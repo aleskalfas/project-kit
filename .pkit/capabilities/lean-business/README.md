@@ -53,6 +53,7 @@ pkit:
       record:
         - lean-business:DEC-001#1
         - lean-business:DEC-001#3
+        - lean-business:DEC-001#4
         - lean-business:DEC-001#5
         - lean-business:DEC-001#6
         - lean-business:DEC-001#8
@@ -137,9 +138,9 @@ The capability's configuration, `.pkit/capabilities/lean-business/project/config
 
 ## The check
 
-`pkit lean check` reads the files of the location as they stand, never today's date, and is the `lean-business:check` member of `pkit validate`. An invariant the capability's records own, broken by a command or by a hand edit, is an error, the one severity that fails validation. A guideline of the book, or a judgement gone stale, is a warning. A guideline's ranges count only a box that holds entries, so a first sketch with blanks draws none ([lean-business:DEC-002-lean-business-data-model] point 14).
+`pkit lean check` reads the files of the location as they stand, never today's date, and is the `lean-business:check` member of `pkit validate`. An invariant the capability's records own, broken by a command or by a hand edit, is an error, the one severity that fails validation ([the CLI reference, "validate"](../../cli/README.md#validate)). A guideline of the book, or a judgement gone stale, is a warning. A guideline's ranges count only a box that holds entries, so a first sketch with blanks draws none ([lean-business:DEC-002-lean-business-data-model] point 14).
 
-The shape of each file is not the check's: the `data` member of `pkit validate` holds each file to its schema, as `pkit data validate <location>` does alone. Nor is a reference that names nothing among the files of its kind, or an id given twice among the variants, the assumptions, the experiments or the cycles: the schemas mark each reference, and say where each kind of file holds its ids, so the `data` member finds both. The check judges what they leave open, and reads a value of the wrong shape as missing. It reads the files git sees, those it tracks and those it neither tracks nor ignores, as the `data` member does, so a file git ignores is neither's; outside a git repository it reads the files as they lie.
+The shape of each file is not the check's: the `data` member of `pkit validate` holds each file to its schema, as `pkit data validate <location>` does alone. Nor is a reference that names nothing among the files of its kind, or an id given twice among the variants, the assumptions, the experiments or the cycles: the schemas mark each reference, and say where each kind of file holds its ids, so the `data` member finds both. The check judges what they leave open, and reads a value of the wrong shape as missing. It reads the files git sees, those it tracks and those it neither tracks nor ignores, as the `data` member does ([the CLI reference, "validate"](../../cli/README.md#validate)), so a file git ignores is neither's; outside a git repository it reads the files as they lie.
 
 Where a command's gate would refuse an act, the check asks the same gate with the day the act was recorded, and reads the cycles' suspensions as they stood that day. A suspension recorded later contradicts no act already recorded, so where it would turn one let through into one refused, the suspension breaks its rules, and the act stands. Which of an act and a suspension recorded on one day came first cannot be told, so there too the break is the suspension's ([lean-business:DEC-002-lean-business-data-model] point 12).
 
@@ -154,7 +155,7 @@ Each finding carries a label:
 | `day` | error | A value written as a day, `YYYY-MM-DD`, at a place its schema puts a day, that names no day of the calendar, such as `2026-02-30`. |
 | `id` | error | An id that does not match the file's place, or is not qualified by what holds it. |
 | `duplicate-id` | error | An entry's id given twice in one canvas. |
-| `reference` | error | A reference to a subject of another idea, or into a kind of subject of which the location holds no file, which the `data` member only warns of. |
+| `reference` | error | A reference to a subject of another idea, or into a kind of subject of which the location holds no file, which the `data` member only warns of ([the CLI reference, "data validate"](../../cli/README.md#data-validate-path)). |
 | `fingerprint` | error | A fingerprint of a canonical form the capability does not know, or one over data that has no canonical text, such as a number that is not finite. |
 | `sides` | error | A direct model that names sides, a side named that the canvas does not name, or viability inputs given for no side or twice for one. |
 | `verdicts` | error | A verdict on a step without a yes on each step before it; a verdict on viability or feasibility in an idea with no goal; a yes that still matches the canvas it judged, where that canvas misses what the yes needs; a shortlisting without a yes on all three steps; or a shortlisting that still matches, over a verdict gone stale. |
@@ -190,9 +191,9 @@ The commands run as `pkit lean-business <command>`, or `pkit lean <command>` for
 Checks the files of the location, as "The check" above says.
 
 - **Reads** the location the capability's configuration records, or `lean-business/` while none is recorded. A location whose folder does not exist yet holds no idea.
-- **Prints** a summary, then each finding with its severity, its place and its label: a file relative to the project root, with `#` and a JSON Pointer where it lies within the file. `--json` prints the findings document `pkit validate` reads, `{"summary": [...], "findings": [...]}`, each finding with its `severity`, `location`, `message` and `label`, the errors first.
+- **Prints** a summary, then each finding with its severity, its place and its label: a file relative to the project root, with `#` and a JSON Pointer where it lies within the file. `--json` prints the findings document `pkit validate` reads ([the CLI reference, "validate"](../../cli/README.md#validate)), `{"summary": [...], "findings": [...]}`, each finding with its `severity`, `location`, `message` and `label`, the errors first.
 - **Writes** nothing, and runs offline.
-- **Exits** 1 when a finding is an error; 0 otherwise. With `--json` it always exits 0, as `pkit validate` requires.
+- **Exits** 1 when a finding is an error; 0 otherwise. With `--json` it always exits 0, as `pkit validate` requires ([the CLI reference, "validate"](../../cli/README.md#validate)).
 
 ### What the other commands share
 
