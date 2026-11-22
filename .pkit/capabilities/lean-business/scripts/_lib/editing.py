@@ -258,7 +258,13 @@ def _take_after(holder: CommentedMap | CommentedSeq, key: Any) -> str:
     out; the comment on the item's own line stays."""
     kept, at, place_of = _tail(holder, key)
     slots = kept.get(at)
-    token = slots[place_of] if slots is not None else None
+    return _take_below(slots, place_of) if slots is not None else ""
+
+
+def _take_below(slots: list[Any], place_of: int) -> str:
+    """The lines after the first of the comment at `slots[place_of]`, taken out: the round
+    trip keeps the comment on an item's line, or a key's, with the lines below it."""
+    token = slots[place_of]
     if token is None:
         return ""
     line, _, rest = token.value.partition("\n")
@@ -284,12 +290,16 @@ def _put_after(holder: CommentedMap | CommentedSeq, key: Any, lines: str) -> Non
 
 def _take_first(holder: CommentedMap, key: str) -> str:
     """The comment lines written above the first item of the list `holder[key]`, taken out:
-    the round trip keeps them with the key that holds the list, and with the list too."""
+    the round trip keeps them with the key that holds the list, and with the list too, below
+    the comment on the key's line where the key has one."""
     slots = holder.ca.items.get(key)
-    tokens = slots[3] if slots is not None else None
-    if not tokens:
+    if slots is None:
         return ""
-    lines = "".join(" " * token.column + token.value for token in tokens)
+    lines = _take_below(slots, 2)
+    tokens = slots[3]
+    if not tokens:
+        return lines
+    lines += "".join(" " * token.column + token.value for token in tokens)
     slots[3] = None
     own = holder[key].ca
     if own.comment is not None and own.comment[1] is tokens:

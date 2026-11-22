@@ -432,8 +432,13 @@ def test_move_entry_reranks_a_problem_and_names_each_judgement_it_stales(
     assert "is at position 1 of problem, its rank among the problems already" in run.out
 
 
+@pytest.mark.parametrize(
+    "key",
+    ["  problem:\n", "  problem:  # ranked by how much it hurts\n"],
+    ids=["a-bare-key", "a-key-with-a-comment-on-its-line"],
+)
 def test_move_entry_keeps_each_comment_above_the_entry_it_was_written_above(
-    world: lb.World,
+    world: lb.World, key: str
 ) -> None:
     path = world.root / lb.DIRECT
     text = path.read_text(encoding="utf-8")
@@ -450,7 +455,7 @@ def test_move_entry_keeps_each_comment_above_the_entry_it_was_written_above(
         "  existing-alternatives:\n"
     )
     commented = (
-        "  problem:\n"
+        f"{key}"
         "  # The one households name first\n"
         "  - id: meal-plan--direct--planning-takes-long\n"
         "    text: Planning the week's meals takes too long\n"
@@ -469,7 +474,7 @@ def test_move_entry_keeps_each_comment_above_the_entry_it_was_written_above(
     run = world.run("move_entry", "meal-plan--direct--food-wasted", "--to", "1")
     assert run.code == 0, run.err
     assert (
-        "  problem:\n"
+        f"{key}"
         "  # Heard twice, in the second round\n"
         "  - id: meal-plan--direct--food-wasted\n"
         "    text: Food bought for the week goes to waste\n"
