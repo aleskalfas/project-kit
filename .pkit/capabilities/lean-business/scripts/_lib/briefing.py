@@ -725,7 +725,8 @@ def _desk(variants: Sequence[VariantStatus]) -> Iterator[Waiting]:
                     f"pkit lean judge {subject} {step} yes|no",
                 )
         step = NEXT_STEP.get(variant.at.state or "")
-        if step is not None:
+        # A step whose verdict is stale is judged again, listed above, by the same command.
+        if step is not None and step not in variant.stale:
             yield Waiting(
                 subject, f"{step} is judged next", f"pkit lean judge {subject} {step} yes|no"
             )

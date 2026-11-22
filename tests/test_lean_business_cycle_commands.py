@@ -733,6 +733,26 @@ def test_status_marks_stale_judgements_and_what_takes_each_again(world: lb.World
     assert f"    meal-plan--direct: shortlisted; stale: {', '.join(stale)}" in run.out
 
 
+def test_status_lists_a_stale_verdict_on_the_step_judged_next_once(world: lb.World) -> None:
+    # A no on desirability leaves the variant sketched, with desirability judged next; an
+    # entry added since makes that no stale, and one command takes both.
+    variant = "meal-plan--boxes"
+    assert world.run("new_variant", variant, "--archetype", "direct").code == 0
+    run = world.run("judge", variant, "desirability", "no", "--person-decided")
+    assert run.code == 0, run.err
+    assert world.run("add_entry", variant, "problem", "Recipes run out").code == 0
+    idea = briefing(world)
+    assert [v["stale"] for v in idea["variants"] if v["id"] == variant] == [["desirability"]]
+    waiting = [w for w in idea["waiting"] if w["subject"] == variant]
+    assert waiting == [
+        {
+            "subject": variant,
+            "what": "its verdict on desirability is stale: what it judged changed since",
+            "command": f"pkit lean judge {variant} desirability yes|no",
+        }
+    ]
+
+
 def test_status_marks_nothing_judged_against_a_goal_that_does_not_read_stale(
     world: lb.World,
 ) -> None:
