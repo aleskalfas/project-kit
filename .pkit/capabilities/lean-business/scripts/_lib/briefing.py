@@ -711,8 +711,8 @@ def of_idea(engine: Engine, idea: IdeaModel, on: date) -> IdeaStatus:
     Each subject whose file lies in its place is listed, with its data where the file
     reads."""
     name = idea.name
-    unread = idea.idea.goal.rel if idea.goal_unread and idea.idea.goal is not None else None
-    found = IdeaStatus(name, idea.goal, unread)
+    goal_unread = idea.idea.goal.rel if idea.goal_unread and idea.idea.goal is not None else None
+    found = IdeaStatus(name, idea.goal, goal_unread)
     canvases = {own: data for own, _, data in idea.canvases()}
     told = all(file.data is not None for file in idea.idea.experiments.values())
     tested = [experiment.data for experiment in idea.experiments]
@@ -722,8 +722,8 @@ def of_idea(engine: Engine, idea: IdeaModel, on: date) -> IdeaStatus:
         stale = _stale(held, idea) if held is not None else ()
         listed = variant.assumptions
         assumptions = _assumptions(listed.data, tested, told) if listed is not None else ()
-        unread = listed.rel if listed is not None and assumptions is None else None
-        found.variants.append(VariantStatus(at, stale, held, assumptions or (), unread))
+        assumptions_unread = listed.rel if listed is not None and assumptions is None else None
+        found.variants.append(VariantStatus(at, stale, held, assumptions or (), assumptions_unread))
     found.dropped = _dropped(idea)
     for own, file in sorted(idea.idea.cycles.items()):
         at = _standing(engine, engines.CYCLE, idea.qualified(own))
