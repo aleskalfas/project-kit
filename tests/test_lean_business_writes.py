@@ -76,6 +76,23 @@ def test_an_id_from_text_is_numbered_where_it_is_taken_and_a_typed_one_is_refuse
         naming.given("idea--v", typed="Paper Lists", text="", fallback="x", taken=taken)
 
 
+def test_a_typed_id_is_its_own_part_or_the_whole_and_one_of_more_parts_is_refused(
+    world: lb.World,
+) -> None:
+    for typed in ("paper-lists", "idea--v--paper-lists"):
+        given = naming.given("idea--v", typed=typed, text="", fallback="x", taken=set())
+        assert given == "idea--v--paper-lists"
+    for typed in ("idea--v--paper--lists", "other--v--paper-lists"):
+        with pytest.raises(writes.Refused, match="is no id"):
+            naming.given("idea--v", typed=typed, text="", fallback="x", taken=set())
+    before = lb.snapshot(world.root)
+    typed = ("--id", "meal-plan--direct--paper--lists")
+    run = world.run("add_entry", "meal-plan--direct", "problem", "Paper lists", *typed)
+    assert run.code == 1
+    assert "`meal-plan--direct--paper--lists` is no id" in run.err
+    assert lb.snapshot(world.root) == before
+
+
 def test_an_id_a_reference_still_names_is_never_given_again(world: lb.World) -> None:
     # The assumption keeps naming the problem it tested, removed from the canvas.
     entry = "meal-plan--direct--planning-takes-long"

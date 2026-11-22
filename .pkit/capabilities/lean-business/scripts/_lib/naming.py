@@ -105,11 +105,11 @@ def _named(value: object) -> Iterable[str]:
 
 
 def given(qualifier: str, *, typed: str | None, text: str, fallback: str, taken: set[str]) -> str:
-    """The qualified id a command gives a subject held by `qualifier`: the one `typed`,
-    refused where it is taken; else one taken from `text`, numbered where that is taken.
-    Raises Refused for a typed id that is no id, or that is taken."""
+    """The qualified id a command gives a subject held by `qualifier`: the one `typed`, its
+    own part or the whole id, refused where it is taken; else one taken from `text`, numbered
+    where that is taken. Raises Refused for a typed id that is no id, or that is taken."""
     if typed is not None:
-        own = typed.rsplit(ids.JOIN, 1)[-1] if typed.startswith(qualifier + ids.JOIN) else typed
+        own = typed.removeprefix(qualifier + ids.JOIN)
         if not ids.is_segment(own):
             raise Refused(
                 f"`{typed}` is no id: an id is words of lower-case letters and digits, the "
