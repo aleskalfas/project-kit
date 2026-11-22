@@ -11,6 +11,7 @@ on `direct`'s assumptions, are decided."""
 from __future__ import annotations
 
 import shutil
+from collections.abc import Callable
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -118,6 +119,46 @@ def declared(world: lb.World) -> None:
 
 def on(world: lb.World, day: date) -> None:
     world.engine.on = day
+
+
+def due_with_a_result(world: lb.World) -> None:
+    """The draft declared, its stopping rule reached on 2027-03-15, and its result recorded
+    on 2027-03-16, the day it then stands on, waiting for its decision."""
+    declared(world)
+    on(world, date(2027, 3, 15))
+    assert world.run("reach_stopping_rule", DRAFT, "--person-decided").code == 0
+    on(world, date(2027, 3, 16))
+    argv = ("--measured", "9", "--evidence", "Notes", "--learned", "Some", "--person-decided")
+    assert world.run("record_result", DRAFT, *argv).code == 0
+
+
+#: The variants a split of `direct` makes, each shortlisted (`two_shortlisted`).
+WEEKLY, DAILY = "meal-plan--weekly", "meal-plan--daily"
+
+
+def two_shortlisted(world: lb.World) -> None:
+    """Two shortlisted variants: `direct` taken back to the desk and split in two, each copy
+    judged and shortlisted afresh, with the assumptions of `direct` copied to each."""
+    steps = [
+        ("judge", DIRECT, "viability", "no"),
+        ("split", DIRECT, "--into", "weekly", "--into", "daily"),
+    ]
+    for variant in (WEEKLY, DAILY):
+        steps += [("judge", variant, step, "yes") for step in ("desirability", "viability")]
+        steps += [("judge", variant, "feasibility", "yes"), ("shortlist", variant)]
+    for argv in steps:
+        run = world.run(*argv, "--person-decided")
+        assert run.code == 0, (argv, run.err)
+
+
+def planned_over(world: lb.World, *variants: str) -> None:
+    """The second cycle planned to explore `variants`, each with a key result."""
+    plan = [*PLAN[2:8]]
+    for variant in variants:
+        own = variant.removeprefix(f"{IDEA}--")
+        plan += ["--variant", own, "--key-result", f"{own}:revenue:30"]
+    run = world.run("plan_cycle", SECOND, *plan, *PLAN[10:], "--person-decided")
+    assert run.code == 0, run.err
 
 
 def suspended(world: lb.World) -> None:
@@ -415,6 +456,37 @@ def test_plan_cycle_refuses_a_key_result_of_a_variant_it_does_not_explore(world:
     assert not (world.root / SECOND_FILE).exists()
 
 
+def test_plan_cycle_refuses_an_idea_with_no_goal(world: lb.World) -> None:
+    (world.root / lb.GOAL).unlink()
+    kept = lb.snapshot(world.root)
+    run = world.run("plan_cycle", SECOND, *PLAN, "--person-decided")
+    assert run.code == 1
+    assert "it was planned in an idea with no goal" in run.err
+    assert lb.snapshot(world.root) == kept
+
+
+def test_plan_cycle_refuses_a_window_that_overlaps_another_cycles(world: lb.World) -> None:
+    # The fixture's cycle, decided, its window drawn out by hand to run into the next one's.
+    world.edit(lb.CYCLE, lambda data: data["window"].update(days=150))
+    kept = lb.snapshot(world.root)
+    run = world.run("plan_cycle", SECOND, *PLAN, "--person-decided")
+    assert run.code == 1
+    assert "[one-cycle]" in run.err
+    assert "overlaps the window of `meal-plan--first`" in run.err
+    assert lb.snapshot(world.root) == kept
+
+
+def test_plan_cycle_refuses_a_variant_with_no_key_result(world: lb.World) -> None:
+    two_shortlisted(world)
+    kept = lb.snapshot(world.root)
+    plan = [*PLAN[2:8], "--variant", "weekly", "--variant", "daily"]
+    plan += ["--key-result", "weekly:revenue:30", *PLAN[10:]]
+    run = world.run("plan_cycle", SECOND, *plan, "--person-decided")
+    assert run.code == 1
+    assert f"the cycle explores `{DAILY}`, and no key result names it" in run.err
+    assert lb.snapshot(world.root) == kept
+
+
 def test_plan_cycle_refuses_a_cycle_that_exists(world: lb.World) -> None:
     run = world.run("plan_cycle", "meal-plan--first", *PLAN, "--person-decided")
     assert run.code == 1
@@ -513,6 +585,22 @@ def test_a_window_takes_ninety_days_where_none_is_given_at_its_planning_alone(
     assert doc.plain() == {"id": SECOND, "window": {"start": "2027-03-11", **laid}}
 
 
+def test_change_plan_refuses_to_drop_a_variant_an_experiment_of_the_cycle_tests(
+    world: lb.World,
+) -> None:
+    two_shortlisted(world)
+    planned_over(world, WEEKLY, DAILY)
+    tested = ("--assumption", "weekly--planning-takes-long", "--cycle", "second")
+    run = world.run("new_experiment", DRAFT, "--kind", "generative", *tested)
+    assert run.code == 0, run.err
+    kept = lb.snapshot(world.root)
+    argv = ("--variant", "daily", "--key-result", "daily:revenue:30", "--person-decided")
+    run = world.run("change_plan", SECOND, *argv)
+    assert run.code == 1
+    assert "[cycle-variants]" in run.err
+    assert lb.snapshot(world.root) == kept
+
+
 def test_change_plan_is_held_to_the_check(world: lb.World) -> None:
     drafted(world)
     kept = lb.snapshot(world.root)
@@ -565,6 +653,18 @@ def test_new_experiment_refuses_what_names_nothing(
     run = world.run("new_experiment", DRAFT, "--kind", "generative", *argv)
     assert run.code == 1
     assert refused in run.err
+
+
+def test_new_experiment_in_a_suspended_cycle_writes_the_draft_and_warns(
+    world: lb.World,
+) -> None:
+    planned(world)
+    suspended(world)
+    run = world.run("new_experiment", DRAFT, "--kind", "generative", "--cycle", "second")
+    assert run.code == 0, run.err
+    assert world.read(DRAFT_FILE)["cycle"] == f"[cycle:{SECOND}]"
+    assert f"its cycle, `{SECOND}`, is suspended" in run.out
+    assert f"`pkit lean resume {SECOND}`" in run.out
 
 
 def test_new_experiment_refuses_an_experiment_that_exists(world: lb.World) -> None:
@@ -875,6 +975,65 @@ def test_declare_warns_where_a_riskier_assumption_is_untested(world: lb.World) -
     ) in run.out
 
 
+def test_declare_refuses_while_the_cycle_is_suspended(world: lb.World) -> None:
+    drafted(world)
+    suspended(world)
+    kept = lb.snapshot(world.root)
+    run = world.run("declare", DRAFT, "--person-decided")
+    assert run.code == 1
+    assert f"`pkit lean resume {SECOND}`, so its declaration waits" in run.err
+    assert lb.snapshot(world.root) == kept
+
+
+@pytest.mark.parametrize(
+    ("cycle", "day", "stands"),
+    [("second", date(2027, 5, 10), "in-review"), ("first", DAY, "decided")],
+    ids=["in-review", "decided"],
+)
+def test_declare_refuses_a_draft_whose_cycle_is_not_open(
+    world: lb.World, cycle: str, day: date, stands: str
+) -> None:
+    planned(world)
+    run = world.run("new_experiment", DRAFT, "--kind", "generative", "--cycle", cycle)
+    assert run.code == 0, run.err
+    on(world, day)
+    kept = lb.snapshot(world.root)
+    run = world.run("declare", DRAFT, "--person-decided")
+    assert run.code == 1
+    assert (
+        f"its cycle, `{IDEA}--{cycle}`, stands {stands}: an experiment is declared only in an "
+        "open cycle, planned or running"
+    ) in run.err
+    assert lb.snapshot(world.root) == kept
+
+
+def test_declare_refuses_a_draft_on_a_variant_its_cycle_does_not_explore(
+    world: lb.World,
+) -> None:
+    # The draft tests an assumption of `weekly`, and is edited by hand to test the same
+    # assumption of `daily`, shortlisted, which the cycle does not explore.
+    two_shortlisted(world)
+    planned_over(world, WEEKLY)
+    tested = ("--assumption", "weekly--planning-takes-long", "--cycle", "second")
+    assert world.run("new_experiment", DRAFT, "--kind", "generative", *tested).code == 0
+    times = ("--start", "2027-03-12", "--end", "2027-03-25")
+    assert world.run("draft_experiment", DRAFT, *GENERATIVE, *times).code == 0
+    assert world.run("record_estimate", DRAFT, "6", "--person-decided").code == 0
+
+    def elsewhere(data: Any) -> None:
+        data["assumption"] = f"[assumptions:{DAILY}--planning-takes-long]"
+
+    world.edit(DRAFT_FILE, elsewhere)
+    kept = lb.snapshot(world.root)
+    run = world.run("declare", DRAFT, "--person-decided")
+    assert run.code == 1
+    assert (
+        f"it tests an assumption of `{DAILY}`, which its cycle, `{SECOND}`, does not explore"
+        in run.err
+    )
+    assert lb.snapshot(world.root) == kept
+
+
 def test_declare_refuses_one_declared_already(world: lb.World) -> None:
     run = world.run("declare", LANDING_PAGE, "--person-decided")
     assert run.code == 1
@@ -902,6 +1061,35 @@ def test_reach_stopping_rule_refuses_before_the_time_box_starts(world: lb.World)
     run = world.run("reach_stopping_rule", DRAFT, "--person-decided")
     assert run.code == 1
     assert "before its time box started" in run.err
+
+
+def test_reach_stopping_rule_refuses_after_the_time_box_ended(world: lb.World) -> None:
+    declared(world)
+    on(world, date(2027, 3, 26))
+    run = world.run("reach_stopping_rule", DRAFT, "--person-decided")
+    assert run.code == 1
+    assert "after its time box ended on 2027-03-25" in run.err
+    assert "stopped" not in world.read(DRAFT_FILE)
+
+
+def test_reach_stopping_rule_refuses_one_recorded_already(world: lb.World) -> None:
+    declared(world)
+    on(world, date(2027, 3, 15))
+    assert world.run("reach_stopping_rule", DRAFT, "--person-decided").code == 0
+    on(world, date(2027, 3, 16))
+    kept = lb.snapshot(world.root)
+    run = world.run("reach_stopping_rule", DRAFT, "--person-decided")
+    assert run.code == 1
+    assert f"`{DRAFT}` records its stopping rule reached already, on 2027-03-15" in run.err
+    assert lb.snapshot(world.root) == kept
+
+
+def test_reach_stopping_rule_refuses_a_draft(world: lb.World) -> None:
+    drafted(world)
+    on(world, date(2027, 3, 15))
+    run = world.run("reach_stopping_rule", DRAFT, "--person-decided")
+    assert run.code == 1
+    assert f"`{DRAFT}` is a draft: a stopping rule is reached once it is declared" in run.err
 
 
 def test_reach_stopping_rule_refuses_an_evaluative_experiment(world: lb.World) -> None:
@@ -1070,6 +1258,29 @@ def test_record_result_and_decide_refuse_a_draft_or_a_decided_one(world: lb.Worl
     assert "is decided already" in run.err
 
 
+def test_decide_refuses_while_the_cycle_is_suspended(world: lb.World) -> None:
+    due_with_a_result(world)
+    on(world, date(2027, 3, 17))
+    argv = ("--reason", "Ill", "--since", "2027-03-17", "--person-decided")
+    assert world.run("suspend", SECOND, *argv).code == 0
+    kept = lb.snapshot(world.root)
+    run = world.run("decide", DRAFT, "double-down", "--person-decided")
+    assert run.code == 1
+    assert f"`pkit lean resume {SECOND}`, so its decision waits" in run.err
+    assert lb.snapshot(world.root) == kept
+
+
+def test_decide_refuses_where_its_result_was_recorded_after_today(world: lb.World) -> None:
+    # The result, recorded on 2027-03-16, is later than the day the decision would be.
+    due_with_a_result(world)
+    on(world, date(2027, 3, 15))
+    kept = lb.snapshot(world.root)
+    run = world.run("decide", DRAFT, "double-down", "--person-decided")
+    assert run.code == 1
+    assert "its result was recorded on 2027-03-16, after its decision, on 2027-03-15" in run.err
+    assert lb.snapshot(world.root) == kept
+
+
 def test_record_result_refuses_while_the_cycle_is_suspended(world: lb.World) -> None:
     declared(world)
     suspended(world)
@@ -1078,6 +1289,51 @@ def test_record_result_refuses_while_the_cycle_is_suspended(world: lb.World) -> 
     )
     assert run.code == 1
     assert f"`pkit lean resume {SECOND}`" in run.err
+
+
+# --- asked off a terminal, and answered no ----------------------------------------------------
+
+
+def running(world: lb.World) -> None:
+    """The draft declared, on a day its time box runs."""
+    declared(world)
+    on(world, date(2027, 3, 15))
+
+
+def ended(world: lb.World) -> None:
+    """The draft declared, on the day after its time box ended."""
+    declared(world)
+    on(world, date(2027, 3, 26))
+
+
+#: Each act and move of the experiment path that asks the person, with the world it is asked
+#: in and what it is given.
+ASKING: dict[str, tuple[Callable[[lb.World], None], tuple[str, ...]]] = {
+    "plan_cycle": (lambda _: None, (SECOND, *PLAN)),
+    "change_plan": (planned, (SECOND, "--objective", "Keep them")),
+    "record_estimate": (drafted, (DRAFT, "7")),
+    "declare": (drafted, (DRAFT,)),
+    "reach_stopping_rule": (running, (DRAFT,)),
+    "record_result": (ended, (DRAFT, "--evidence", "Notes", "--learned", "Some")),
+    "decide": (due_with_a_result, (DRAFT, "double-down")),
+}
+
+
+@pytest.mark.parametrize("command", list(ASKING))
+def test_each_asking_command_writes_nothing_off_a_terminal_or_on_a_no(
+    world: lb.World, command: str
+) -> None:
+    prepared, argv = ASKING[command]
+    prepared(world)
+    kept = lb.snapshot(world.root)
+    run = world.run(command, *argv)
+    assert run.code == 3, run.err
+    assert "?" in run.out + run.err
+    assert lb.snapshot(world.root) == kept
+    run = world.run(command, *argv, terminal=True, answers=[False])
+    assert run.code == 1, run.err
+    assert len(run.asked) == 1
+    assert lb.snapshot(world.root) == kept
 
 
 # --- naming an assumption or a cycle ----------------------------------------------------------
