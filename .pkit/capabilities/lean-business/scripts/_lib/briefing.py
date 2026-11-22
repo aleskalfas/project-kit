@@ -25,6 +25,9 @@ the status gives one line for each idea; with one, the briefing, in this order:
   decided one comes in a line. A variant's stale judgements are marked. An experiment not
   yet decided comes with its time box, its declared expectation, and the result beside it
   or that it waits for one.
+- **The canvases** of the variants in play, each variant neither shelved nor split whose
+  canvas reads, drawn as `pkit lean canvas` draws one (`grid`), its credit line beneath,
+  in the plain form only (DEC-002 point 15; DEC-001 point 6).
 - **What waits on the person,** each with the command that takes it, what others wait on
   first: a suspended cycle to resume; a goal to set; a due experiment's result, then its
   next action; a cycle in review to review; a draft in an open cycle to declare; at the
@@ -45,7 +48,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
 
-from _lib import acts, fingerprint, ids, positions, readings, timeline
+from _lib import acts, fingerprint, grid, ids, positions, readings, timeline
 from _lib import cycles as cycle_words
 from _lib import engine as engines
 from _lib import suspensions as rules
@@ -208,10 +211,18 @@ class Offer:
 
 @dataclass(frozen=True)
 class VariantStatus:
-    """A variant's position, and each of its judgements gone stale."""
+    """A variant's position, each of its judgements gone stale, and its canvas, None where
+    its file does not read."""
 
     at: Standing
     stale: tuple[str, ...] = ()
+    canvas: Mapping[str, Any] | None = None
+
+    @property
+    def in_play(self) -> bool:
+        """Whether the variant is in play: neither shelved nor split. One whose position
+        cannot be told counts as in play, since it may be."""
+        return self.at.state not in positions.FINAL
 
     def as_data(self) -> dict[str, Any]:
         return {**self.at.as_data(), "stale": list(self.stale)}
@@ -521,7 +532,7 @@ def of_idea(engine: Engine, idea: IdeaModel, on: date) -> IdeaStatus:
         at = _standing(engine, engines.DESK, ids.qualify(name, own))
         held = canvases.get(own)
         stale = _stale(held, idea) if held is not None else ()
-        found.variants.append(VariantStatus(at, stale))
+        found.variants.append(VariantStatus(at, stale, held))
     for own, file in sorted(idea.idea.cycles.items()):
         at = _standing(engine, engines.CYCLE, idea.qualified(own))
         found.cycles.append(CycleStatus(at, file.data, on))
@@ -839,6 +850,12 @@ def lines(idea: IdeaStatus) -> list[str]:
         for variant in idea.variants:
             stale = f"; stale: {', '.join(variant.stale)}" if variant.stale else ""
             out.append(f"    {variant.at.id}: {variant.at.where}{stale}")
+    drawn = [v.canvas for v in idea.variants if v.canvas is not None and v.in_play]
+    if drawn:
+        out.append("  canvases, of the variants neither shelved nor split:")
+        for canvas in drawn:
+            out.append(f"    {grid.heading(canvas)}")
+            out.extend(f"    {each}" for each in grid.draw(canvas))
     if idea.experiments:
         out.append("  experiments:")
         for experiment in idea.experiments:

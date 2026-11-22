@@ -141,6 +141,14 @@ def briefing(world: lb.World) -> dict[str, Any]:
     return idea
 
 
+def drawn(world: lb.World, variant: str) -> list[str]:
+    """The variant's canvas as `pkit lean canvas` draws it, indented as the briefing draws
+    it."""
+    run = world.run("canvas", variant)
+    assert run.code == 0, run.err
+    return [f"    {line}" for line in run.out.splitlines()]
+
+
 # --- suspend ----------------------------------------------------------------------------------
 
 
@@ -662,6 +670,8 @@ def test_status_briefs_a_running_cycle_and_its_experiment_in_full(world: lb.Worl
         "  variants:",
         "    meal-plan--direct: shortlisted",
         "    meal-plan--two-sided: shelved",
+        "  canvases, of the variants neither shelved nor split:",
+        *drawn(world, "meal-plan--direct"),
         "  experiments:",
         "    meal-plan--first-interviews: decided, double down; its result, a pass",
         f"    {LANDING_PAGE}: decided, double down; its result, a pass",
@@ -695,6 +705,32 @@ def test_status_briefs_a_running_cycle_and_its_experiment_in_full(world: lb.Worl
         "expected": "a fit of 8 calls that tell the same story",
         "outcome": "pass",
     }
+
+
+def test_status_draws_the_canvas_of_each_variant_in_play(world: lb.World) -> None:
+    # The direct variant shortlisted and a sketch beside it are drawn, as `canvas` draws
+    # each, credit line included; the shelved one is not, nor a variant whose canvas does
+    # not read. A canvas holding a value of the wrong shape is drawn all the same.
+    sketch = "meal-plan--boxes"
+    assert world.run("new_variant", sketch, "--archetype", "direct").code == 0
+    run = world.run("add_entry", sketch, "early-adopters", "Parents of twins")
+    assert run.code == 0, run.err
+
+    def misshapen(data: Any) -> None:
+        data["boxes"]["early-adopters"][0]["triggers"] = 5
+
+    world.edit(f"{lb.IDEA}/variants/boxes/canvas.yaml", misshapen)
+    unread = world.root / lb.IDEA / "variants/plots/canvas.yaml"
+    unread.parent.mkdir(parents=True)
+    unread.write_text("id: [unclosed\n", encoding="utf-8")
+    run = world.run("status", "meal-plan")
+    assert run.code == 0, run.err
+    lines = run.out.splitlines()
+    start = lines.index("  canvases, of the variants neither shelved nor split:")
+    end = lines.index("  experiments:")
+    block = lines[start + 1 : end]
+    assert block == [*drawn(world, sketch), *drawn(world, "meal-plan--direct")]
+    assert sum(line.startswith("    Arranged as the Lean Canvas") for line in block) == 2
 
 
 def test_status_names_a_cycles_acts_as_the_check_names_them(world: lb.World) -> None:

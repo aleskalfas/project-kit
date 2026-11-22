@@ -16,6 +16,10 @@ Five columns, each a box over a box, and a row of two boxes along the bottom:
 The upper boxes share one height, and the lower ones another, each the height of the box
 with the most to say. The line beneath credits where the arrangement comes from and names
 the licence the template is published under; it claims no licence for the grid.
+
+`pkit lean canvas` draws one variant's canvas, and the status of an idea draws the canvas
+of each variant in play, each the same way: the line that names the variant and its model
+(`heading`), then the grid (`draw`).
 """
 
 from __future__ import annotations
@@ -79,7 +83,8 @@ def entry_lines(entry: Mapping[str, Any], box: str, width: int, *, with_ids: boo
     if box == "unique-value-proposition" and isinstance(entry.get("sub-headline"), str):
         text = f"{text}: {entry['sub-headline']}"
     if box == "early-adopters":
-        triggers = [t for t in entry.get("triggers") or [] if isinstance(t, str)]
+        held = entry.get("triggers")
+        triggers = [t for t in held if isinstance(t, str)] if isinstance(held, list) else []
         if triggers:
             text = f"{text}; switches on: {'; '.join(triggers)}"
     lines = textwrap.wrap(text, width - 2) or [""]
@@ -95,6 +100,21 @@ def _box(canvas: Mapping[str, Any], box: str, width: int, *, with_ids: bool) -> 
     for entry in readings.entries(canvas, box):
         lines.extend(entry_lines(entry, box, width, with_ids=with_ids))
     return lines
+
+
+def heading(canvas: Mapping[str, Any]) -> str:
+    """The line above the grid: the variant's id, its model's archetype, and the sides it
+    serves where it names any."""
+    archetype = canvas.get("archetype")
+    model = (
+        f"a {archetype} model"
+        if isinstance(archetype, str)
+        else "a model whose archetype cannot be read"
+    )
+    sides = canvas.get("sides")
+    named = [s for s in sides if isinstance(s, str)] if isinstance(sides, list) else []
+    head = f"`{canvas.get('id')}`, {model}"
+    return f"{head}, serving {', '.join(named)}" if named else head
 
 
 def _padded(lines: Sequence[str], height: int) -> list[str]:

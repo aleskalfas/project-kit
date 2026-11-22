@@ -49,10 +49,7 @@ def parser() -> argparse.ArgumentParser:
 
 def run(args: argparse.Namespace, ctx: Context) -> None:
     canvas, _ = canvases.read_variant(ctx.root, str(args.variant))
-    sides = canvas.get("sides")
-    named = [s for s in sides if isinstance(s, str)] if isinstance(sides, list) else []
-    head = f"`{canvas.get('id')}`, a {canvas.get('archetype')} model"
-    ctx.say(f"{head}, serving {', '.join(named)}" if named else head)
+    ctx.say(grid.heading(canvas))
     if args.ids:
         ctx.say(
             f"Each entry's id is `{canvas.get('id')}--` and the part under it in brackets, "

@@ -316,8 +316,9 @@ A side that pays nothing counts at nothing. A model with several paying sides is
 3. **The goal,** or which of its values cannot be read, or that its file cannot be read, so whether the idea has a goal cannot be told.
 4. **The cycles.** The one not yet decided comes in full: where it stands; the days of its window gone by today, the suspended days not counted; where its window falls as its suspensions move it; its objective; each key result with its target and, once reviewed, what it reached; its constraint; and each suspension with its days, its reason and the day it was recorded. A decided one comes in a line, with its decision and its winning variant.
 5. **The variants,** each with where it stands, and each of its judgements gone stale: a verdict, by its step, or its shortlisting.
-6. **The experiments.** One not yet decided comes with where it stands. Once declared, it comes too with its time box as its cycle's suspensions move it, or that the time box waits for its cycle to resume, and with its declared expectation, and beside it the result, worked out to a pass, a fail or neither, or that it waits for one. A decided one comes in a line, with your next action and its result.
-7. **What waits on you,** each with the command that takes it, in this order:
+6. **The canvases of the variants in play:** of each variant neither shelved nor split, drawn as `pkit lean canvas` draws it, its credit line beneath ("The grid" above). A variant whose canvas cannot be read is not drawn, and one whose position cannot be told is drawn, since it may still be in play. `pkit lean canvas` draws a shelved or split one.
+7. **The experiments.** One not yet decided comes with where it stands. Once declared, it comes too with its time box as its cycle's suspensions move it, or that the time box waits for its cycle to resume, and with its declared expectation, and beside it the result, worked out to a pass, a fail or neither, or that it waits for one. A decided one comes in a line, with your next action and its result.
+8. **What waits on you,** each with the command that takes it, in this order:
    - a suspended cycle to resume;
    - a goal to set;
    - a due experiment's result, then its next action;
@@ -328,7 +329,7 @@ A side that pays nothing counts at nothing. A model with several paying sides is
 
 Each position is the process engine's ([lean-business:DEC-002-lean-business-data-model] point 15). Where a window or a time box falls is worked out as the check works it out, and the days are counted to today, read when the command runs.
 
-`--json` prints its structured form, whose keys a reader may depend on:
+`--json` prints its structured form, which draws no canvas, and whose keys a reader may depend on:
 
 - `schema_version`: 1. A change that would break a reader raises it; an added key leaves it.
 - `location`: the folder the ideas live in.
