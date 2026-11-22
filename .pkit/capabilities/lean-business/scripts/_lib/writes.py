@@ -23,7 +23,8 @@ move after it is refused (lean-business DEC-001 point 3; DEC-002 points 1 and 14
   in the files is named and refuses nothing, so a file broken by hand never freezes the
   commands on it. A warning the write adds is named.
 - **Written** (`commit`). Each file is written whole, beside its place first and then moved
-  into it, the configuration last. Where a step fails, every step taken is taken back.
+  into it, the configuration last, and none through a link, its own or a folder's. Where a
+  step fails, every step taken is taken back.
 - **Undone** (`Undo`). The command keeps what it wrote, so where the engine refuses the move
   after the write, every file it wrote or created is put back or removed, the location's
   record included, and every folder it created that is empty again.
@@ -375,8 +376,12 @@ def commit(root: Path, written: Mapping[str, str | None]) -> Undo:
     try:
         for rel, text in written.items():
             path = root / rel
-            if path.is_symlink():
-                raise Refused(f"`{rel}` is a link, and a command writes no file through a link")
+            link = _link_on(root, path)
+            if link is not None:
+                raise Refused(
+                    f"`{rel}` is reached through the link `{link}`, and a command writes no "
+                    f"file through a link"
+                )
             before = path.read_bytes() if path.is_file() else None
             if text is None:
                 if before is None:
@@ -395,6 +400,15 @@ def commit(root: Path, written: Mapping[str, str | None]) -> Undo:
         undo()
         raise
     return undo
+
+
+def _link_on(root: Path, path: Path) -> str | None:
+    """The first link on the way from `root` to `path`, the file itself or a folder it lies
+    in, relative to `root`; None where there is none."""
+    for step in reversed((path, *path.parents)):
+        if step != root and step.is_relative_to(root) and step.is_symlink():
+            return step.relative_to(root).as_posix()
+    return None
 
 
 def _make_folders(root: Path, folder: Path, undo: Undo) -> None:

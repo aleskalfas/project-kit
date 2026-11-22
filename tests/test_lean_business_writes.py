@@ -249,6 +249,22 @@ def test_a_warning_the_write_adds_is_named(world: lb.World) -> None:
     assert "the problem names no existing alternative it is framed against" in run.out
 
 
+def test_a_write_through_a_linked_folder_is_refused_and_writes_nothing(
+    world: lb.World, tmp_path: Path
+) -> None:
+    folder = world.root / lb.IDEA / "variants/direct"
+    elsewhere = tmp_path / "elsewhere"
+    shutil.move(folder, elsewhere)
+    folder.symlink_to(elsewhere, target_is_directory=True)
+    before = (elsewhere / "canvas.yaml").read_bytes()
+    with pytest.raises(writes.Refused) as refused:
+        writes.commit(world.root, {lb.DIRECT: "changed: true\n"})
+    assert f"`{lb.DIRECT}` is reached through the link `{lb.IDEA}/variants/direct`" in str(
+        refused.value
+    )
+    assert (elsewhere / "canvas.yaml").read_bytes() == before
+
+
 # --- the location -----------------------------------------------------------------------------
 
 
