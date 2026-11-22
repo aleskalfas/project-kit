@@ -1,11 +1,17 @@
-"""An idea's file as a command changes it: YAML read and written round trip, its comments,
-its key order, its quoting and its indentation kept (lean-business DEC-002 point 2).
+"""An idea's file as a command changes it: YAML read and written round trip (lean-business
+DEC-002 point 2).
 
 A command reads a file into a `Doc`, changes its `data` in place, and takes its `text`, the
 file as it would stand. A key it adds goes at the end of its mapping, and one it removes
 leaves the rest as they were, so a file a person laid out stays laid out. A file a command
 creates (`new`) names its schema first, then its format, then its body, its lists indented
 as the schemas' reference instances indent theirs.
+
+**What a file read keeps** (`load`): its comments, its key order and its quoting; what comes
+before its body, up to and through a line `---` that starts it; its line endings, a line feed or
+a carriage return before each; and its indentation, a nested mapping's step and a list's, as
+its first nested mapping and its first list indent them. A file indented one way in one
+place and another way in another is written the first way throughout.
 
 What the files mean is read from that text by the reader the check uses
 (`reading.load_yaml`), never from the round-trip value (`plain`): a day is its text there,
@@ -23,6 +29,7 @@ and a key given twice is refused. So a command judges the file as the check will
 from __future__ import annotations
 
 import io
+import itertools
 import math
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import date
@@ -70,18 +77,28 @@ def _yaml(indent: tuple[int, int, int]) -> YAML:
 
 
 class Doc:
-    """A file's YAML, as a command changes it: its `data`, a mapping changed in place, and
-    the indentation it was written with, which `text` keeps."""
+    """A file's YAML, as a command changes it: its `data`, a mapping changed in place; the
+    indentation it was written with; what came before its body, `head`; and its line
+    ending. `text` keeps each."""
 
-    def __init__(self, data: CommentedMap, indent: tuple[int, int, int] = NEW_INDENT) -> None:
+    def __init__(
+        self,
+        data: CommentedMap,
+        indent: tuple[int, int, int] = NEW_INDENT,
+        *,
+        head: str = "",
+        newline: str = "\n",
+    ) -> None:
         self.data = data
         self.indent = indent
+        self.head = head
+        self.newline = newline
 
     def text(self) -> str:
         """The file as it would stand."""
         out = io.StringIO()
         _yaml(self.indent).dump(self.data, out)
-        return out.getvalue()
+        return (self.head + out.getvalue()).replace("\n", self.newline)
 
     def plain(self) -> Any:
         """What the file means, read from its text as the check reads it."""
@@ -89,22 +106,65 @@ class Doc:
 
 
 def load(text: str, source: str = "") -> Doc:
-    """The file whose text is `text`, round trip. Raises ReadError where it does not parse,
-    or is not a mapping. `source` names it in a refusal."""
+    """The file whose text is `text`, round trip, with what it keeps (the module's
+    docstring). Raises ReadError where it does not parse, or is not a mapping. `source`
+    names it in a refusal."""
     where = f"{source}: " if source else ""
     load_yaml(text, source)
+    newline = "\r\n" if "\r\n" in text else "\n"
+    # Read with each line ended by a line feed alone: the round trip writes a comment with
+    # the ending it read, and every other line with a line feed.
+    lines = text.replace("\r\n", "\n")
     try:
-        _, sequence, offset = load_yaml_guess_indent(text)
+        _, sequence, offset = load_yaml_guess_indent(lines)
     except (YAMLError, ValueError) as exc:
         raise ReadError(f"{where}does not parse as YAML: {exc}") from exc
-    indent = (2, max(sequence or 2, 2) if offset else 2, offset or 0)
+    if offset is None:
+        sequence, offset = 2, 0
+    indent = (_mapping_step(lines), max(sequence or 2, offset + 2), offset)
     try:
-        data = _yaml(indent).load(text)
+        data = _yaml(indent).load(lines)
     except (YAMLError, ValueError) as exc:
         raise ReadError(f"{where}does not parse as YAML: {exc}") from exc
     if not isinstance(data, CommentedMap):
         raise ReadError(f"{where}is not a mapping")
-    return Doc(data, indent)
+    return Doc(data, indent, head=_head(lines), newline=newline)
+
+
+def _head(lines: str) -> str:
+    """What comes before the body of the file whose text is `lines`, which the round trip
+    drops: up to and through the line `---` that starts it, where only comments, blank lines
+    and directives come before that; else nothing."""
+    held = lines.splitlines(keepends=True)
+    for index, line in enumerate(held):
+        bare = line.rstrip()
+        if bare == "---":
+            return "".join(held[: index + 1])
+        if bare.strip() and not bare.lstrip().startswith(("#", "%")):
+            return ""
+    return ""
+
+
+def _mapping_step(lines: str) -> int:
+    """How far the file whose text is `lines` indents a mapping nested in a mapping: from
+    the first key that opens one to the key under it; two where none nests."""
+    held = [line for line in lines.splitlines() if line.strip() and not _comment(line)]
+    for line, under in itertools.pairwise(held):
+        key = line.rstrip()
+        if not key.endswith(":") or key.lstrip().startswith("-"):
+            continue
+        step = _spaces(under) - _spaces(line)
+        if step > 0 and not under.lstrip().startswith("-"):
+            return step
+    return 2
+
+
+def _comment(line: str) -> bool:
+    return line.lstrip().startswith("#")
+
+
+def _spaces(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
 
 
 def new(schema: str, body: Mapping[str, Any]) -> Doc:

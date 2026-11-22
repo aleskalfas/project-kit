@@ -128,6 +128,34 @@ def test_a_file_written_unchanged_keeps_every_byte(path: Path) -> None:
     assert editing.load(text).text() == text
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "# A note on the cycle\n---\nid: idea--first\nwindow:\n    start: 2027-03-10\n"
+        "    days: 60\nvariants:\n        - one\n",
+        "%YAML 1.2\n---\nid: idea--first\n",
+        "id: idea--first  # the first\r\nwindow:\r\n  start: 2027-03-10\r\n",
+        "window:\n    start: 2027-03-10\n    notes:\n    -   one\n    -   two\n",
+    ],
+    ids=["a-head-and-four-spaces", "a-directive", "crlf", "four-spaces-dash-at-the-key"],
+)
+def test_a_file_written_unchanged_keeps_its_head_its_line_endings_and_its_indent(
+    text: str,
+) -> None:
+    assert editing.load(text).text() == text
+
+
+def test_a_key_added_to_a_file_takes_its_indent_and_its_line_endings() -> None:
+    doc = editing.load("# A note\r\n---\r\nid: idea--first\r\nwindow:\r\n    days: 60\r\n")
+    editing.place(
+        doc.data, "objective", editing.mapping([("statement", "Grow")]), ("id", "objective")
+    )
+    assert doc.text() == (
+        "# A note\r\n---\r\nid: idea--first\r\nobjective:\r\n    statement: Grow\r\n"
+        "window:\r\n    days: 60\r\n"
+    )
+
+
 def test_a_key_added_lands_where_the_schema_writes_it_and_comments_stay(world: lb.World) -> None:
     run = world.run("set_traction", "meal-plan--direct", "--multiplier", "8")
     assert run.code == 0, run.err
