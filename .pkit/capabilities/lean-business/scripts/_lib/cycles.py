@@ -424,8 +424,10 @@ def _running_on(box: Span, when: date) -> bool:
 def away(entry: Mapping[str, Any]) -> str:
     """A suspension of a cycle's list, in words, as the review and the status show it: its
     days, its reason, and the day it was recorded, with how long after its first day, so one
-    recorded late stands apart from one recorded as it began (DEC-002 point 12). Each value
-    that does not read is said not to, rather than printed as the file holds it."""
+    recorded late stands apart from one recorded as it began (DEC-002 point 12). A resumption
+    that is not a mapping is read as none, so the suspension is said to be ongoing, as the
+    window's working reads it (`timeline.recorded`). Each other value that does not read is
+    said not to, rather than printed as the file holds it."""
     first, recorded = day(entry.get("first-day")), day(entry.get("when"))
     resumption = entry.get("resumed")
     resumed = day(resumption.get("day")) if isinstance(resumption, Mapping) else None
