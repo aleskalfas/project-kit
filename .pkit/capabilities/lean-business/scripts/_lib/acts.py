@@ -131,6 +131,7 @@ def of_cycle(idea: IdeaModel, cycle: Cycle) -> list[Act]:
     last change to its plan, where it fell on a later day, by `gates.changing`; and its
     review, by `gates.deciding_cycle`."""
     data, rel = cycle.data, cycle.rel
+    named = data.get("id", cycle.own)
     found_acts: list[Act] = []
     first = model.first_planned(data)
     if first is not None:
@@ -141,7 +142,14 @@ def of_cycle(idea: IdeaModel, cycle: Cycle) -> list[Act]:
             return gates.planning(data, first, goal=goal, others=others)
 
         found_acts.append(
-            Act(first, "the plan's first planning", rel, "/planned/first", "plan-refused", plan)
+            Act(
+                first,
+                f"the first planning of `{named}`",
+                rel,
+                "/planned/first",
+                "plan-refused",
+                plan,
+            )
         )
     last = day(_m(data.get("planned")).get("when"))
     if last is not None and last != first:
@@ -149,7 +157,16 @@ def of_cycle(idea: IdeaModel, cycle: Cycle) -> list[Act]:
         def change(view: View) -> list[Refusal]:
             return gates.changing(view(data), last)
 
-        found_acts.append(Act(last, "the plan", rel, "/planned", "plan-refused", change))
+        found_acts.append(
+            Act(
+                last,
+                f"the last change to the plan of `{named}`",
+                rel,
+                "/planned",
+                "plan-refused",
+                change,
+            )
+        )
     review = _m(data.get("review"))
     decided = day(review.get("when"))
     if decided is not None:
@@ -160,7 +177,9 @@ def of_cycle(idea: IdeaModel, cycle: Cycle) -> list[Act]:
         def decide(view: View) -> list[Refusal]:
             return gates.deciding_cycle(view(data), decided, winning=winning, evidence=evidence)
 
-        found_acts.append(Act(decided, "the review", rel, "/review", "review-refused", decide))
+        found_acts.append(
+            Act(decided, f"the review of `{named}`", rel, "/review", "review-refused", decide)
+        )
     return found_acts
 
 

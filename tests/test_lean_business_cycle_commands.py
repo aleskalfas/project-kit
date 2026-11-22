@@ -697,6 +697,17 @@ def test_status_briefs_a_running_cycle_and_its_experiment_in_full(world: lb.Worl
     }
 
 
+def test_status_names_a_cycles_acts_as_the_check_names_them(world: lb.World) -> None:
+    planned(world)
+    first = {"day": "2027-03-01", "what": [f"the first planning of `{SECOND}`"]}
+    assert briefing(world)["last_act"] == first
+    on(world, date(2027, 3, 2))
+    run = world.run("change_plan", SECOND, "--objective", "Keep them", "--person-decided")
+    assert run.code == 0, run.err
+    changed = {"day": "2027-03-02", "what": [f"the last change to the plan of `{SECOND}`"]}
+    assert briefing(world)["last_act"] == changed
+
+
 def test_status_says_a_result_measured_nothing(world: lb.World) -> None:
     declared(world)
     on(world, date(2027, 3, 26))

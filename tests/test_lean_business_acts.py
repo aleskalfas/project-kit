@@ -54,8 +54,8 @@ def test_the_acts_a_cycles_suspensions_bear_on(tmp_path: Path) -> None:
     [cycle] = idea.cycles
     bearing = acts.bearing_on(idea, cycle)
     assert [act.what for act in bearing] == [
-        "the plan's first planning",
-        "the review",
+        "the first planning of `meal-plan--first`",
+        "the review of `meal-plan--first`",
         "the declaration of `meal-plan--first-interviews`",
         "the result of `meal-plan--first-interviews`",
         "the decision of `meal-plan--first-interviews`",

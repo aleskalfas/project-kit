@@ -563,18 +563,17 @@ def _stale(canvas: Mapping[str, Any], idea: IdeaModel) -> tuple[str, ...]:
 
 
 def _acts(idea: IdeaModel) -> Iterator[tuple[date, str]]:
-    """Each act recorded on the idea, with its day, in words: the goal set; each variant's
-    verdicts and outcome; each cycle's planning, the last change to its plan, its
-    suspensions, their resumptions and its review; and each experiment's declaration,
-    stopping rule reached, result and decision."""
+    """Each act recorded on the idea, with its day, in words: those the check judges
+    (`acts.recorded`), the goal set, each cycle's and each experiment's; and besides them
+    each variant's verdicts and outcome, and each cycle's suspensions and their
+    resumptions, which no gate judges as acts."""
 
     def at(value: object, what: str) -> Iterator[tuple[date, str]]:
         when = day(value)
         if when is not None:
             yield when, what
 
-    if idea.goal is not None:
-        yield from at(idea.goal.get("when"), "the goal set")
+    yield from ((act.day, act.what) for act in acts.recorded(idea))
     for own, _, canvas in idea.canvases():
         variant = idea.qualified(own)
         for step in STEPS:
@@ -584,24 +583,9 @@ def _acts(idea: IdeaModel) -> Iterator[tuple[date, str]]:
         yield from at(outcome.get("when"), f"`{variant}` {outcome.get('kind')}")
     for cycle in idea.cycles:
         named = idea.qualified(cycle.own)
-        planned = _m(cycle.data.get("planned"))
-        first = _m(planned.get("first")).get("when")
-        yield from at(first, f"the planning of `{named}`")
-        if planned.get("when") != first:
-            yield from at(planned.get("when"), f"a change to the plan of `{named}`")
         for entry in cycle_words.suspensions_of(cycle.data):
             yield from at(entry.get("when"), f"a suspension of `{named}`")
             yield from at(_m(entry.get("resumed")).get("when"), f"the resumption of `{named}`")
-        yield from at(_m(cycle.data.get("review")).get("when"), f"the review of `{named}`")
-    for experiment in idea.experiments:
-        named = idea.qualified(experiment.own)
-        for key, what in (
-            ("declared", "the declaration"),
-            ("stopped", "the stopping rule reached"),
-            ("result", "the result"),
-            ("decision", "the decision"),
-        ):
-            yield from at(_m(experiment.data.get(key)).get("when"), f"{what} of `{named}`")
 
 
 def last_act(idea: IdeaModel) -> LastAct | None:
