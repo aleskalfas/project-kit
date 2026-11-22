@@ -14,8 +14,9 @@ body: >
   and the person's decision for it, after a progress report of the key
   results, the suspensions and the experiments not yet decided; it warns when
   persevering where the objective was missed. `pkit lean status <idea>` now
-  gives the full briefing: an offer to record a silence of 21 days of an open
-  cycle's window as a suspension, the last act, each cycle in full, each
+  gives the full briefing: an offer to record a silence of 21 days of the
+  window of a running cycle, or of one in review, as a suspension, the last
+  act, each cycle in full, each
   variant's stale judgements and its assumptions, each with its outcome
   (DEC-003 point 8), the canvas of each variant neither shelved nor split,
   drawn as `pkit lean canvas` draws it, each experiment's expectation beside
