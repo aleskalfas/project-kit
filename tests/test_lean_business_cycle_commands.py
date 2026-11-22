@@ -1077,6 +1077,116 @@ def test_status_says_a_cycles_objective_or_constraint_cannot_be_read(world: lb.W
     assert "      its constraint cannot be read" in shown
 
 
+def test_status_says_a_suspensions_value_cannot_be_read(world: lb.World) -> None:
+    # The fixture's cycle, its review taken away, comes in full, its suspension with it.
+    def misshapen(data: Any) -> None:
+        data["suspensions"][0].update({"first-day": "someday", "reason": 5})
+
+    first_only(world, misshapen)
+    (suspension,) = briefing(world)["cycles"][0]["suspensions"]
+    assert (suspension["first_day"], suspension["reason"]) == (None, None)
+    run = world.run("status", "meal-plan")
+    assert (
+        "      suspended from a day that cannot be read until 2027-01-03: a reason that cannot "
+        "be read; recorded on 2026-12-21"
+    ) in run.out.splitlines()
+    assert "None" not in run.out and "someday" not in run.out
+
+
+def test_status_says_a_decided_cycles_winning_variant_cannot_be_read(world: lb.World) -> None:
+    world.edit(lb.CYCLE, lambda data: data["review"].update({"winning": "nope"}))
+    assert briefing(world)["cycles"][0]["review"]["winning"] is None
+    shown = world.run("status", "meal-plan").out.splitlines()
+    assert (
+        f"    {FIRST}: decided, persevere for a variant that cannot be read; window 2026-11-01 "
+        "through 2027-02-12"
+    ) in shown
+
+
+def test_status_says_an_outcomes_kind_cannot_be_read_in_the_last_act(world: lb.World) -> None:
+    def misshapen(data: Any) -> None:
+        data["outcome"].update({"kind": "maybe", "when": date(2027, 2, 20)})
+
+    world.edit(lb.DIRECT, misshapen)
+    what = "an outcome of `meal-plan--direct` whose kind cannot be read"
+    assert briefing(world)["last_act"] == {"day": "2027-02-20", "what": [what]}
+    run = world.run("status", "meal-plan")
+    assert f"  last act: on 2027-02-20, {what}" in run.out.splitlines()
+    assert "maybe" not in run.out
+
+
+def _without(key: str) -> Any:
+    return lambda data: data["fit"].pop(key)
+
+
+@pytest.mark.parametrize(
+    ("change", "said"),
+    [
+        (_without("of"), "what its fit counts cannot be read"),
+        (_without("count"), "its fit's count cannot be read"),
+        (lambda data: data.pop("fit"), "its fit's count and what its fit counts cannot be read"),
+        (lambda data: data.update({"kind": "maybe"}), "its kind cannot be read"),
+    ],
+    ids=["what-it-counts", "its-count", "no-fit", "its-kind"],
+)
+def test_status_says_a_value_of_a_generative_expectation_cannot_be_read(
+    world: lb.World, change: Any, said: str
+) -> None:
+    # A declared experiment holds its expectation, so one its file does not give does not
+    # read either.
+    declared(world)
+    world.edit(DRAFT_FILE, change)
+    (draft,) = (e for e in briefing(world)["experiments"] if e["id"] == DRAFT)
+    assert draft["expected"] is None
+    run = world.run("status", "meal-plan")
+    assert f"      expected: {said}" in run.out.splitlines()
+    assert "None" not in run.out and "maybe" not in run.out
+
+
+def _expected(value: object) -> Any:
+    return lambda data: data.update({"expected": value})
+
+
+def _misshapen_range(data: Any) -> None:
+    data["metric"] = "sales"
+    data["expected"]["range"]["high"] = "high"
+
+
+@pytest.mark.parametrize(
+    ("change", "said", "read"),
+    [
+        (_expected({"direction": "at-most", "threshold": 0.1}), "acquisition at most 0.1", True),
+        (
+            lambda data: None,
+            "acquisition at least 0.03, of a 90% range from 0.03 to 0.08",
+            True,
+        ),
+        (_misshapen_range, "its metric and its range's high cannot be read", False),
+        (
+            _expected({"direction": "sideways"}),
+            "its direction and its threshold or range cannot be read",
+            False,
+        ),
+    ],
+    ids=["a-threshold", "a-range", "its-metric-and-its-high", "neither"],
+)
+def test_status_says_a_value_of_an_evaluative_expectation_cannot_be_read(
+    world: lb.World, change: Any, said: str, read: bool
+) -> None:
+    # The landing page, its decision taken away, is due with its result, so its expectation
+    # comes in full.
+    def undecided(data: Any) -> None:
+        del data["decision"]
+        change(data)
+
+    world.edit(LANDING_FILE, undecided)
+    (landing,) = (e for e in briefing(world)["experiments"] if e["id"] == LANDING_PAGE)
+    assert landing["expected"] == (said if read else None)
+    run = world.run("status", "meal-plan")
+    assert f"      expected: {said}" in run.out.splitlines()
+    assert "None" not in run.out and "sales" not in run.out and "sideways" not in run.out
+
+
 def test_status_lists_a_cycle_and_an_experiment_whose_file_does_not_read(
     world: lb.World,
 ) -> None:

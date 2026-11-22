@@ -424,20 +424,27 @@ def _running_on(box: Span, when: date) -> bool:
 def away(entry: Mapping[str, Any]) -> str:
     """A suspension of a cycle's list, in words, as the review and the status show it: its
     days, its reason, and the day it was recorded, with how long after its first day, so one
-    recorded late stands apart from one recorded as it began (DEC-002 point 12)."""
+    recorded late stands apart from one recorded as it began (DEC-002 point 12). Each value
+    that does not read is said not to, rather than printed as the file holds it."""
     first, recorded = day(entry.get("first-day")), day(entry.get("when"))
     resumption = entry.get("resumed")
     resumed = day(resumption.get("day")) if isinstance(resumption, Mapping) else None
     if first is not None and resumed is not None:
         span = f"from {first} until {resumed}, {_days((resumed - first).days)}"
     elif isinstance(resumption, Mapping):
-        span = f"from {first}, resumed"
+        span = f"from {_day_said(first)} until {_day_said(resumed)}"
     else:
-        span = f"from {first}, ongoing"
-    noted = f"recorded on {recorded}"
+        span = f"from {_day_said(first)}, ongoing"
+    noted = f"recorded on {_day_said(recorded)}"
     if first is not None and recorded is not None and recorded > first:
         noted += f", {_days((recorded - first).days)} after its first day"
-    return f"{span}: {entry.get('reason')}; {noted}"
+    reason = entry.get("reason")
+    said = reason if isinstance(reason, str) else "a reason that cannot be read"
+    return f"{span}: {said}; {noted}"
+
+
+def _day_said(when: date | None) -> str:
+    return str(when) if when is not None else "a day that cannot be read"
 
 
 def suspensions_of(cycle: Mapping[str, Any]) -> Sequence[Mapping[str, Any]]:

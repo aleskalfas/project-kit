@@ -42,6 +42,9 @@ the status gives one line for each idea; with one, the briefing, in this order:
   shortlisted variant and no cycle undecided, and its last cycle did not pause, the next
   cycle to plan.
 
+**The plain form** reads each value the structured form gives too as that form reads it,
+and says in its place where one does not read, rather than print what the file holds.
+
 **Its structured form** (`document`) is a contract its readers depend on (ADR-097): the
 capability's README lists its keys, and the values of each set. A value a file holds
 outside its set does not read, so the form gives it as null (`_among`). It carries
@@ -56,7 +59,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
 
-from _lib import acts, estimates, fingerprint, grid, ids, positions, readings, timeline
+from _lib import acts, estimates, fingerprint, grid, ids, model, positions, readings, timeline
 from _lib import canvases as canvas_words
 from _lib import cycles as cycle_words
 from _lib import engine as engines
@@ -103,6 +106,12 @@ OFFERED_IN = (positions.RUNNING, positions.IN_REVIEW)
 #: What the plain form says of a step of the customer factory that does not read, where the
 #: structured form gives null.
 UNREAD_STEP = "a step that cannot be read"
+
+#: The directions of an evaluative experiment's expectation, each in words.
+DIRECTIONS = {"at-least": "at least", "at-most": "at most"}
+
+#: The part of an experiment's file that holds its expectation, by its kind.
+EXPECTATION_KEY = {"generative": "fit", "evaluative": "expected"}
 
 #: What each command that takes a waiting item is given, past the subject.
 RECORD_RESULT = "[--measured <number>] [--spoiled] --evidence <text> --learned <text>"
@@ -416,9 +425,11 @@ class CycleStatus:
         falls = span_text(window) if window is not None else "a window that does not read"
         if self.at.state == positions.DECIDED:
             review = _m(data.get("review"))
+            decision = _among(review.get("decision"), positions.DECISIONS)
             winning = ids.parse_ref(review.get("winning"), ids.CANVAS)
-            named = f" for `{winning.id}`" if winning is not None else ""
-            return [f"    {self.at.id}: decided, {review.get('decision')}{named}; window {falls}"]
+            decided = decision or "a decision that cannot be read"
+            named = f"`{winning.id}`" if winning is not None else "a variant that cannot be read"
+            return [f"    {self.at.id}: decided, {decided} for {named}; window {falls}"]
         counted, days = self.counted(), self.days
         # A window not yet started has no day of it gone to show.
         gone = f", day {counted} of {days}" if counted and days is not None else ""
@@ -477,6 +488,64 @@ def _key_result(result: Mapping[str, Any]) -> str:
 
 
 @dataclass(frozen=True)
+class Expectation:
+    """What an experiment declared it expects: in words where each of its values reads, else
+    None, with the values that do not, each named as the plain form says it."""
+
+    words: str | None
+    unread: tuple[str, ...] = ()
+
+    @classmethod
+    def of(cls, words: str | None, *values: tuple[str, object]) -> Expectation:
+        """`words` where none of `values`, each a name and what it reads as, is None; else
+        the expectation that names each that is."""
+        unread = tuple(name for name, value in values if value is None)
+        return cls(None, unread) if unread else cls(words)
+
+    @property
+    def said(self) -> str:
+        """In words, or which of its values cannot be read."""
+        if self.words is not None:
+            return self.words
+        return f"{positions.joined(self.unread)} cannot be read"
+
+
+def _fit(fit: object) -> Expectation:
+    """A generative experiment's fit: the count its result is held against, and what it
+    counts."""
+    held = _m(fit)
+    count, counts = _number(held.get("count")), _text(held.get("of"))
+    return Expectation.of(
+        f"a fit of {count} {counts}", ("its fit's count", count), ("what its fit counts", counts)
+    )
+
+
+def _evaluated(metric: object, expected: object) -> Expectation:
+    """An evaluative experiment's expectation: its metric, its direction, and the threshold
+    its result is held against, or the 90% range whose bound in that direction it is held
+    against. A threshold that does not read gives way to a range, as the result's reading
+    does (`readings.experiment_outcome`)."""
+    held = _m(expected)
+    step = _among(metric, canvas_words.FACTORY_STEPS)
+    direction = _among(held.get("direction"), tuple(DIRECTIONS))
+    named = (("its metric", step), ("its direction", direction))
+    going = f"{step} {DIRECTIONS.get(direction or '')}"
+    threshold = _number(held.get("threshold"))
+    if threshold is not None or "range" not in held:
+        bound = "its threshold" if "threshold" in held else "its threshold or range"
+        return Expectation.of(f"{going} {threshold}", *named, (bound, threshold))
+    span = _m(held.get("range"))
+    low, high = _number(span.get("low")), _number(span.get("high"))
+    reached = low if direction == "at-least" else high
+    return Expectation.of(
+        f"{going} {reached}, of a 90% range from {low} to {high}",
+        *named,
+        ("its range's low", low),
+        ("its range's high", high),
+    )
+
+
+@dataclass(frozen=True)
 class ExperimentStatus:
     """An experiment's position, and what its file says that the briefing shows: None where
     its file does not read."""
@@ -491,30 +560,26 @@ class ExperimentStatus:
             return None
         return timeline.experiment_time_box(self.data, self.cycle)
 
-    def expected(self) -> str | None:
-        """What it declared it expects, in words."""
+    def expectation(self) -> Expectation | None:
+        """What it declared it expects, or None where its file gives no expectation and it
+        is not declared, as a draft may give none. A declared experiment holds one, so one
+        it does not give does not read."""
         held = _m(self.data)
-        if held.get("kind") == "generative":
-            fit = _m(held.get("fit"))
-            if fit.get("count") is None:
-                return None
-            return f"a fit of {fit.get('count')} {fit.get('of')}"
-        expected = _m(held.get("expected"))
-        direction = {"at-least": "at least", "at-most": "at most"}.get(
-            str(expected.get("direction"))
-        )
-        if direction is None:
+        kind = _among(held.get("kind"), positions.KINDS)
+        keys = (EXPECTATION_KEY[kind],) if kind is not None else tuple(EXPECTATION_KEY.values())
+        if not any(key in held for key in keys) and not model.declared(held):
             return None
-        metric = held.get("metric")
-        threshold = _number(expected.get("threshold"))
-        if threshold is not None:
-            return f"{metric} {direction} {threshold}"
-        span = _m(expected.get("range"))
-        bound = span.get("low") if expected.get("direction") == "at-least" else span.get("high")
-        return (
-            f"{metric} {direction} {bound}, of a 90% range from {span.get('low')} to "
-            f"{span.get('high')}"
-        )
+        if kind == "generative":
+            return _fit(held.get("fit"))
+        if kind == "evaluative":
+            return _evaluated(held.get("metric"), held.get("expected"))
+        return Expectation(None, ("its kind",))
+
+    def expected(self) -> str | None:
+        """What it declared it expects, in words, where each value of it reads; else None,
+        as a value that does not read is."""
+        expectation = self.expectation()
+        return expectation.words if expectation is not None else None
 
     def outcome(self) -> str | None:
         return readings.experiment_outcome(self.data) if self.data is not None else None
@@ -539,7 +604,12 @@ class ExperimentStatus:
         outcome = self.outcome()
         decision = _m(data.get("decision"))
         if self.at.state == positions.DECIDED:
-            next_action = positions.NEXT_ACTIONS.get(str(decision.get("next")), "decided")
+            following = _among(decision.get("next"), tuple(positions.NEXT_ACTIONS))
+            next_action = (
+                positions.NEXT_ACTIONS[following]
+                if following is not None
+                else "its next action cannot be read"
+            )
             result = f"; its result, {positions.OUTCOME_WORDS[outcome]}" if outcome else ""
             return [f"    {self.at.id}: decided, {next_action}{result}"]
         box = self.time_box
@@ -552,9 +622,9 @@ class ExperimentStatus:
         out = [f"    {self.at.id}: {self.at.where}{days}"]
         if self.at.state == positions.DRAFTED:
             return out
-        expected = self.expected()
-        if expected is not None:
-            out.append(f"      expected: {expected}")
+        expectation = self.expectation()
+        if expectation is not None:
+            out.append(f"      expected: {expectation.said}")
         if outcome is None:
             out.append("      result: waits for its result")
         else:
@@ -756,7 +826,13 @@ def _acts(idea: IdeaModel) -> Iterator[tuple[date, str]]:
             verdict = _m(_m(canvas.get("verdicts")).get(step))
             yield from at(verdict.get("when"), f"the verdict on {step} of `{variant}`")
         outcome = _m(canvas.get("outcome"))
-        yield from at(outcome.get("when"), f"`{variant}` {outcome.get('kind')}")
+        kind = _among(outcome.get("kind"), tuple(positions.BY_OUTCOME))
+        given = (
+            f"`{variant}` {kind}"
+            if kind is not None
+            else f"an outcome of `{variant}` whose kind cannot be read"
+        )
+        yield from at(outcome.get("when"), given)
     for cycle in idea.cycles:
         named = idea.qualified(cycle.own)
         for entry in cycle_words.suspensions_of(cycle.data):
