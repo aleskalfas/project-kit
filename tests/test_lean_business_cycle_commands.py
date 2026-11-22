@@ -669,6 +669,8 @@ def test_status_briefs_a_running_cycle_and_its_experiment_in_full(world: lb.Worl
         "      constraint: revenue: Few of those who came back paid",
         "  variants:",
         "    meal-plan--direct: shortlisted",
+        "      assumption 1 `meal-plan--direct--planning-takes-long`: being tested",
+        "      assumption 2 `meal-plan--direct--pays-monthly`: supported",
         "    meal-plan--two-sided: shelved",
         "  canvases, of the variants neither shelved nor split:",
         *drawn(world, "meal-plan--direct"),
@@ -700,6 +702,7 @@ def test_status_briefs_a_running_cycle_and_its_experiment_in_full(world: lb.Worl
         "state": "due",
         "why": None,
         "kind": "generative",
+        "assumption": "meal-plan--direct--planning-takes-long",
         "cycle": SECOND,
         "time_box": {"start": "2027-03-12", "end": "2027-03-25"},
         "expected": "a fit of 8 calls that tell the same story",
@@ -731,6 +734,92 @@ def test_status_draws_the_canvas_of_each_variant_in_play(world: lb.World) -> Non
     block = lines[start + 1 : end]
     assert block == [*drawn(world, sketch), *drawn(world, "meal-plan--direct")]
     assert sum(line.startswith("    Arranged as the Lean Canvas") for line in block) == 2
+
+
+LANDING_FILE = f"{lb.IDEA}/experiments/landing-page.yaml"
+
+
+@pytest.mark.parametrize(
+    ("result", "outcome", "words"),
+    [
+        ({"measured": 0.06}, "supported", "supported"),
+        ({"measured": 0.01}, "refuted", "refuted"),
+        ({"measured": 0.06, "spoiled": True}, "inconclusive", "inconclusive"),
+    ],
+    ids=["passed", "failed", "spoiled"],
+)
+def test_status_reads_each_assumptions_outcome_from_the_experiment_decided_last(
+    world: lb.World, result: dict[str, Any], outcome: str, words: str
+) -> None:
+    # The landing page, decided, tests the second assumption; one added since is tested by
+    # none.
+    world.edit(LANDING_FILE, lambda data: data["result"].update(result))
+    run = world.run(
+        "add_assumption",
+        "meal-plan--direct",
+        "One household in ten converts",
+        "--kind",
+        "viability",
+        "--input",
+        "conversion",
+    )
+    assert run.code == 0, run.err
+    added = "meal-plan--direct--one-household-in-ten-converts"
+    (direct, two_sided) = briefing(world)["variants"]
+    assert direct["assumptions"] == [
+        {"id": "meal-plan--direct--planning-takes-long", "rank": 1, "outcome": "supported"},
+        {"id": "meal-plan--direct--pays-monthly", "rank": 2, "outcome": outcome},
+        {"id": added, "rank": 3, "outcome": "untested"},
+    ]
+    assert two_sided["assumptions"] == []
+    lines = world.run("status", "meal-plan").out.splitlines()
+    assert lines[lines.index("    meal-plan--direct: shortlisted") + 1 :][:3] == [
+        "      assumption 1 `meal-plan--direct--planning-takes-long`: supported",
+        f"      assumption 2 `meal-plan--direct--pays-monthly`: {words}",
+        f"      assumption 3 `{added}`: untested",
+    ]
+
+
+def test_status_tells_no_outcome_while_an_experiments_file_does_not_read(
+    world: lb.World,
+) -> None:
+    # The unreadable experiment may test any assumption; a list of assumptions that does
+    # not read is null, not empty.
+    (world.root / lb.IDEA / "experiments/broken.yaml").write_text(
+        "id: [unclosed\n", encoding="utf-8"
+    )
+    (direct, _) = briefing(world)["variants"]
+    assert [a["outcome"] for a in direct["assumptions"]] == [None, None]
+    lines = world.run("status", "meal-plan").out.splitlines()
+    untold = "its outcome cannot be told"
+    assert f"      assumption 1 `meal-plan--direct--planning-takes-long`: {untold}" in lines
+    listed = f"{lb.IDEA}/variants/direct/assumptions.yaml"
+    (world.root / listed).write_text("assumptions: [unclosed\n", encoding="utf-8")
+    (direct, _) = briefing(world)["variants"]
+    assert direct["assumptions"] is None
+    lines = world.run("status", "meal-plan").out.splitlines()
+    assert f"      its assumptions: `{listed}` cannot be read" in lines
+
+
+def test_status_says_an_idea_is_dropped_once_each_variant_not_split_is_shelved(
+    world: lb.World,
+) -> None:
+    assert briefing(world)["dropped"] is False
+    run = world.run("shelve", "meal-plan--direct", "--reason", "No one pays", "--person-decided")
+    assert run.code == 0, run.err
+    assert briefing(world)["dropped"] is True
+    lines = world.run("status", "meal-plan").out.splitlines()
+    assert lines[0] == "The idea `meal-plan`, dropped: every variant not split is shelved"
+    # No variant is in play, so no canvas is drawn.
+    assert not any(line.startswith("  canvases") for line in lines)
+    (line,) = world.run("status").out.splitlines()
+    assert ", dropped" in line
+    # A canvas that does not read leaves it open, since its variant may be in play.
+    unread = world.root / lb.IDEA / "variants/plots/canvas.yaml"
+    unread.parent.mkdir(parents=True)
+    unread.write_text("id: [unclosed\n", encoding="utf-8")
+    assert briefing(world)["dropped"] is None
+    assert world.run("status", "meal-plan").out.splitlines()[0] == "The idea `meal-plan`"
 
 
 def test_status_names_a_cycles_acts_as_the_check_names_them(world: lb.World) -> None:
@@ -884,7 +973,7 @@ def test_status_lists_a_cycle_and_an_experiment_whose_file_does_not_read(
     (landing,) = (e for e in idea["experiments"] if e["id"] == LANDING_PAGE)
     assert landing["why"], landing
     assert {key: value for key, value in landing.items() if key not in ("id", "why")} == (
-        dict.fromkeys(("state", "kind", "cycle", "time_box", "expected", "outcome"))
+        dict.fromkeys(("state", "kind", "assumption", "cycle", "time_box", "expected", "outcome"))
     )
     assert idea["waiting"] == []
     shown = world.run("status", "meal-plan").out.splitlines()

@@ -28,7 +28,15 @@ from tests.document_contracts import Contract, Form, check
 _STANDING = {"id": "str", "state": "str|null", "why": "str|null"}
 
 #: What the briefing adds to a subject's place, for each kind of subject.
-_VARIANT = {"stale": "list", "stale[]": "str"}
+_VARIANT = {
+    "stale": "list",
+    "stale[]": "str",
+    "assumptions": "list|null",
+    "assumptions[]": "object",
+    "assumptions[].id": "str|null",
+    "assumptions[].rank": "int|null",
+    "assumptions[].outcome": "str|null",
+}
 _CYCLE = {
     "window": "object|null",
     "window.start": "str|null",
@@ -58,6 +66,7 @@ _CYCLE = {
 }
 _EXPERIMENT = {
     "kind": "str|null",
+    "assumption": "str|null",
     "cycle": "str|null",
     "time_box": "object|null",
     "time_box.start": "str|null",
@@ -83,6 +92,7 @@ LEAN_STATUS = Contract(
                 "ideas[].goal.currency": "str|null",
                 "ideas[].goal.years": "int|float|null",
                 "ideas[].goal_why": "str|null",
+                "ideas[].dropped": "bool|null",
                 "ideas[].last_act": "object|null",
                 "ideas[].last_act.day": "str",
                 "ideas[].last_act.what": "list",

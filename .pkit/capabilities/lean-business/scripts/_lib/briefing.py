@@ -22,9 +22,14 @@ the status gives one line for each idea; with one, the briefing, in this order:
 - **The goal, the cycles, the variants and the experiments,** each with where it stands.
   The cycle not yet decided comes in full: its window as its suspensions move it, the days
   of it gone by today, its objective, key results and constraint, and its suspensions. A
-  decided one comes in a line. A variant's stale judgements are marked. An experiment not
-  yet decided comes with its time box, its declared expectation, and the result beside it
-  or that it waits for one.
+  decided one comes in a line. A variant's stale judgements are marked, and its
+  assumptions come the riskiest first, each with its outcome. An experiment not yet
+  decided comes with its time box, its declared expectation, and the result beside it or
+  that it waits for one.
+- **The readings** (DEC-003 point 8), worked out here and stored nowhere: each
+  assumption's outcome, from the experiments that test it (`readings.assumption_outcome`,
+  which the declaring command's warning reads too), and whether the idea is dropped
+  (`readings.dropped`, which `shelve` reads too).
 - **The canvases** of the variants in play, each variant neither shelved nor split whose
   canvas reads, drawn as `pkit lean canvas` draws one (`grid`), its credit line beneath,
   in the plain form only (DEC-002 point 15; DEC-001 point 6).
@@ -78,6 +83,15 @@ SHORTLISTING = "shortlisting"
 
 #: Each value of the goal, in words, by its key in the structured form.
 GOAL_WORDS = {"revenue": "revenue", "per": "period", "currency": "currency", "years": "years"}
+
+#: Each outcome of an assumption, in words (DEC-003 point 8).
+ASSUMPTION_WORDS = {
+    readings.UNTESTED: "untested",
+    readings.BEING_TESTED: "being tested",
+    readings.SUPPORTED: "supported",
+    readings.REFUTED: "refuted",
+    readings.INCONCLUSIVE: "inconclusive",
+}
 
 #: The cycle's states in which the briefing offers to record a silence as a suspension.
 OFFERED_IN = (positions.RUNNING, positions.IN_REVIEW)
@@ -210,13 +224,35 @@ class Offer:
 
 
 @dataclass(frozen=True)
+class AssumptionStatus:
+    """An assumption of a variant: its id and its rank, each None where it does not read,
+    and its outcome, None where it cannot be told."""
+
+    id: str | None
+    rank: int | None
+    outcome: str | None
+
+    def as_data(self) -> dict[str, Any]:
+        return {"id": self.id, "rank": self.rank, "outcome": self.outcome}
+
+    def line(self) -> str:
+        rank = f" {self.rank}" if self.rank is not None else ", its rank unread,"
+        named = f"`{self.id}`" if self.id is not None else "whose id cannot be read"
+        outcome = ASSUMPTION_WORDS.get(self.outcome or "", "its outcome cannot be told")
+        return f"      assumption{rank} {named}: {outcome}"
+
+
+@dataclass(frozen=True)
 class VariantStatus:
-    """A variant's position, each of its judgements gone stale, and its canvas, None where
-    its file does not read."""
+    """A variant's position, each of its judgements gone stale, its canvas, None where its
+    file does not read, and its assumptions, the riskiest first, or the file that holds
+    them where it does not read."""
 
     at: Standing
     stale: tuple[str, ...] = ()
     canvas: Mapping[str, Any] | None = None
+    assumptions: tuple[AssumptionStatus, ...] = ()
+    assumptions_unread: str | None = None
 
     @property
     def in_play(self) -> bool:
@@ -225,7 +261,21 @@ class VariantStatus:
         return self.at.state not in positions.FINAL
 
     def as_data(self) -> dict[str, Any]:
-        return {**self.at.as_data(), "stale": list(self.stale)}
+        return {
+            **self.at.as_data(),
+            "stale": list(self.stale),
+            "assumptions": (
+                [a.as_data() for a in self.assumptions] if self.assumptions_unread is None else None
+            ),
+        }
+
+    def lines(self) -> list[str]:
+        stale = f"; stale: {', '.join(self.stale)}" if self.stale else ""
+        out = [f"    {self.at.id}: {self.at.where}{stale}"]
+        if self.assumptions_unread is not None:
+            out.append(f"      its assumptions: `{self.assumptions_unread}` cannot be read")
+        out.extend(assumption.line() for assumption in self.assumptions)
+        return out
 
 
 @dataclass(frozen=True)
@@ -410,9 +460,11 @@ class ExperimentStatus:
 
     def as_data(self) -> dict[str, Any]:
         cycle = ids.parse_ref(_m(self.data).get("cycle"), ids.CYCLE)
+        assumption = ids.parse_ref(_m(self.data).get("assumption"), ids.ASSUMPTIONS)
         return {
             **self.at.as_data(),
             "kind": _text(_m(self.data).get("kind")),
+            "assumption": assumption.id if assumption is not None else None,
             "cycle": cycle.id if cycle is not None else None,
             "time_box": _span(self.time_box),
             "expected": self.expected(),
@@ -460,8 +512,9 @@ class ExperimentStatus:
 @dataclass
 class IdeaStatus:
     """An idea's status: its goal, or the goal's file where it lies in its place but does
-    not read, each subject with where it stands, what waits, the last act and, after a
-    silence, the offer to record it."""
+    not read, each subject with where it stands, what waits, the last act, after a silence
+    the offer to record it, and whether the idea is dropped, None where that cannot be
+    told."""
 
     id: str
     goal: Mapping[str, Any] | None
@@ -472,12 +525,14 @@ class IdeaStatus:
     waiting: list[Waiting] = field(default_factory=list)
     last_act: LastAct | None = None
     offer: Offer | None = None
+    dropped: bool | None = False
 
     def as_data(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "goal": _goal_data(self.goal),
             "goal_why": self.goal_why,
+            "dropped": self.dropped,
             "last_act": self.last_act.as_data() if self.last_act is not None else None,
             "offer": self.offer.as_data() if self.offer is not None else None,
             "variants": [v.as_data() for v in self.variants],
@@ -528,11 +583,21 @@ def of_idea(engine: Engine, idea: IdeaModel, on: date) -> IdeaStatus:
     unread = idea.idea.goal.rel if idea.goal_unread and idea.idea.goal is not None else None
     found = IdeaStatus(name, idea.goal, unread)
     canvases = {own: data for own, _, data in idea.canvases()}
-    for own in sorted(idea.idea.variants):
+    # An experiment whose file does not read may test any assumption, so while one does
+    # not, no assumption's outcome can be told.
+    told = all(file.data is not None for file in idea.idea.experiments.values())
+    tested = [experiment.data for experiment in idea.experiments] if told else None
+    for own, variant in sorted(idea.idea.variants.items()):
         at = _standing(engine, engines.DESK, ids.qualify(name, own))
         held = canvases.get(own)
         stale = _stale(held, idea) if held is not None else ()
-        found.variants.append(VariantStatus(at, stale, held))
+        listed = variant.assumptions
+        if listed is not None and listed.data is None:
+            found.variants.append(VariantStatus(at, stale, held, assumptions_unread=listed.rel))
+            continue
+        assumptions = _assumptions(listed.data if listed is not None else None, tested)
+        found.variants.append(VariantStatus(at, stale, held, assumptions))
+    found.dropped = _dropped(idea)
     for own, file in sorted(idea.idea.cycles.items()):
         at = _standing(engine, engines.CYCLE, idea.qualified(own))
         found.cycles.append(CycleStatus(at, file.data, on))
@@ -571,6 +636,42 @@ def _stale(canvas: Mapping[str, Any], idea: IdeaModel) -> tuple[str, ...]:
     ):
         found.append(SHORTLISTING)
     return tuple(found)
+
+
+def _assumptions(
+    listed: Mapping[str, Any] | None, tested: Sequence[Mapping[str, Any]] | None
+) -> tuple[AssumptionStatus, ...]:
+    """The assumptions a variant's list `listed` holds, the riskiest first, those whose rank
+    does not read last, each with its outcome worked out from `tested`, the files of its
+    idea's experiments, or None where they do not all read."""
+    found: list[AssumptionStatus] = []
+    for entry in _list(_m(listed).get("assumptions")):
+        if not isinstance(entry, Mapping):
+            continue
+        named = _text(entry.get("id"))
+        rank = entry.get("rank")
+        ranked = rank if isinstance(rank, int) and not isinstance(rank, bool) else None
+        outcome = (
+            readings.assumption_outcome(named, tested)
+            if named is not None and tested is not None
+            else None
+        )
+        found.append(AssumptionStatus(named, ranked, outcome))
+    return tuple(sorted(found, key=lambda each: (each.rank is None, each.rank or 0)))
+
+
+def _dropped(idea: IdeaModel) -> bool | None:
+    """Whether `idea` is dropped, from its variants' canvases (`readings.dropped`). Where a
+    canvas does not read, it is not dropped where a canvas that reads leaves it open, and
+    otherwise that cannot be told, so None."""
+    read = [
+        variant.canvas.data if variant.canvas is not None else None
+        for variant in idea.idea.variants.values()
+    ]
+    known = [data for data in read if data is not None]
+    if len(known) == len(read):
+        return readings.dropped(known)
+    return False if known and not readings.dropped(known) else None
 
 
 def _acts(idea: IdeaModel) -> Iterator[tuple[date, str]]:
@@ -817,13 +918,15 @@ def line(idea: IdeaStatus) -> str:
         goal = "a goal whose file cannot be read"
     else:
         goal = "a goal" if idea.goal is not None else "no goal"
+    dropped = ", dropped" if idea.dropped else ""
     waits = f"; {len(idea.waiting)} waiting" if idea.waiting else ""
-    return f"{idea.id}: {goal}, {variants}{f' ({states})' if states else ''}{waits}"
+    return f"{idea.id}: {goal}, {variants}{f' ({states})' if states else ''}{dropped}{waits}"
 
 
 def lines(idea: IdeaStatus) -> list[str]:
     """The idea's briefing, in full."""
-    out = [f"The idea `{idea.id}`"]
+    dropped = ", dropped: every variant not split is shelved" if idea.dropped else ""
+    out = [f"The idea `{idea.id}`{dropped}"]
     if idea.offer is not None:
         out.extend(f"  {each}" for each in idea.offer.lines())
     if idea.last_act is not None:
@@ -848,8 +951,7 @@ def lines(idea: IdeaStatus) -> list[str]:
     if idea.variants:
         out.append("  variants:")
         for variant in idea.variants:
-            stale = f"; stale: {', '.join(variant.stale)}" if variant.stale else ""
-            out.append(f"    {variant.at.id}: {variant.at.where}{stale}")
+            out.extend(variant.lines())
     drawn = [v.canvas for v in idea.variants if v.canvas is not None and v.in_play]
     if drawn:
         out.append("  canvases, of the variants neither shelved nor split:")
