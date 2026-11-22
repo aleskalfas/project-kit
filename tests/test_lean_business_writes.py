@@ -355,6 +355,14 @@ def test_set_location_refuses_a_folder_the_rules_refuse(world: lb.World) -> None
     assert "lies under `.pkit/`" in run.err
 
 
+def test_set_location_refuses_a_folder_holding_a_control_character(world: lb.World) -> None:
+    shutil.rmtree(world.root / "lean-business")
+    run = world.run("set_location", "ideas\n")
+    assert run.code == 1
+    assert "holds a control character" in run.err
+    assert not (world.root / lb.CONFIG).exists()
+
+
 # --- the consent forms ------------------------------------------------------------------------
 
 

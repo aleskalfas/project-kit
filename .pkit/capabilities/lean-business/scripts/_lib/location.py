@@ -6,8 +6,9 @@ idea (lean-business DEC-002 point 1).
   later change of the default moves no recorded location (COR-049 point 5).
 - **Until it is recorded** the location is read as the default.
 - **Refused:** the repository's top itself, a path outside the repository, under `.pkit/`,
-  under a hidden folder, reached through a link, or a file rather than a folder. An empty
-  `location:` is refused too, rather than read as no location.
+  under a hidden folder, reached through a link, holding a control character such as a
+  line feed, or a file rather than a folder. An empty `location:` is refused too, rather
+  than read as no location.
 - **A location whose folder does not exist yet** holds no idea, which is no fault: a project
   may record its folder before its first idea.
 
@@ -17,6 +18,7 @@ it, at a command's first write, is `writes`'s.
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -28,6 +30,9 @@ DEFAULT = "lean-business"
 
 #: The configuration's key that records the location.
 KEY = "location"
+
+#: The Unicode category of a control character, such as a line feed, a tab or a null.
+CONTROL = "Cc"
 
 
 class LocationRefused(Exception):
@@ -83,6 +88,8 @@ def shape_problem(rel: str) -> str | None:
     alone, or None."""
     if rel in ("", "."):
         return "is the repository's top itself: name a folder within it"
+    if any(unicodedata.category(char) == CONTROL for char in rel):
+        return "holds a control character, such as a line feed or a tab"
     if "\\" in rel:
         return "holds a `\\`: write the path with `/`"
     if PurePosixPath(rel).is_absolute():
