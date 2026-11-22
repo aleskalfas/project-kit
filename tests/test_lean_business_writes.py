@@ -272,6 +272,21 @@ def test_a_write_through_a_linked_folder_is_refused_and_writes_nothing(
     assert (elsewhere / "canvas.yaml").read_bytes() == before
 
 
+@pytest.mark.parametrize(
+    "rel",
+    ["../outside.yaml", f"{lb.IDEA}/../../outside.yaml", "/outside.yaml", "", "."],
+    ids=["up", "up-from-within", "absolute", "empty", "the-root"],
+)
+def test_a_write_to_a_path_not_below_the_root_is_refused_and_writes_nothing(
+    world: lb.World, rel: str
+) -> None:
+    before = lb.snapshot(world.root)
+    with pytest.raises(writes.Refused, match="is no path below the project's root"):
+        writes.commit(world.root, {lb.DIRECT: "changed: true\n", rel: "x: 1\n"})
+    assert lb.snapshot(world.root) == before
+    assert not (world.root.parent / "outside.yaml").exists()
+
+
 # --- the location -----------------------------------------------------------------------------
 
 

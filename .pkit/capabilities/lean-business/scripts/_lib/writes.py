@@ -23,8 +23,8 @@ move after it is refused (lean-business DEC-001 point 3; DEC-002 points 1 and 14
   in the files is named and refuses nothing, so a file broken by hand never freezes the
   commands on it. A warning the write adds is named.
 - **Written** (`commit`). Each file is written whole, beside its place first and then moved
-  into it, the configuration last, and none through a link, its own or a folder's. Where a
-  step fails, every step taken is taken back.
+  into it, the configuration last, none through a link, its own or a folder's, and none
+  but below the project's root. Where a step fails, every step taken is taken back.
 - **Undone** (`Undo`). The command keeps what it wrote, so where the engine refuses the move
   after the write, every file it wrote or created is put back or removed, the location's
   record included, and every folder it created that is empty again.
@@ -370,8 +370,13 @@ class Undo:
 
 def commit(root: Path, written: Mapping[str, str | None]) -> Undo:
     """Write each file of `written`, in its order, whole, or remove it where its text is
-    None. Returns how to take the write back. Raises Refused, with every step taken back,
-    where a step fails."""
+    None. Returns how to take the write back. Raises Refused, writing nothing, where a path
+    is not one below `root`; and, with every step taken back, where a step fails."""
+    for rel in written:
+        if not _below(rel):
+            raise Refused(
+                f"`{rel}` is no path below the project's root, and a command writes only there"
+            )
     undo = Undo(root)
     try:
         for rel, text in written.items():
@@ -400,6 +405,13 @@ def commit(root: Path, written: Mapping[str, str | None]) -> Undo:
         undo()
         raise
     return undo
+
+
+def _below(rel: str) -> bool:
+    """Whether `rel` is a path below the root it is joined to: with no anchor, a root or a
+    drive, that would replace the root's, naming something, and with no `..` part."""
+    path = Path(rel)
+    return not path.anchor and bool(path.parts) and ".." not in path.parts
 
 
 def _link_on(root: Path, path: Path) -> str | None:
