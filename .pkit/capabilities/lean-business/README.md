@@ -230,7 +230,7 @@ Checks the files of the location, as "The check" above says.
 | `set-traction <variant> [--multiplier <n>] [--first-stage-metric <metric> --first-stage-target <n>] [--clear]` | Gives the variant its traction target; `--clear` removes it. | content |
 | `judge <variant> desirability\|viability\|feasibility yes\|no [--note <text>]` | Records the person's verdict on a step, with the fingerprint of what it judged. A yes on the next step moves the variant on, and a no on a step it passed takes it back to the state before that step, clearing the verdicts after it and its shortlisting. A no on the next step, and a yes on a step it passed, judged again, move nothing. Refused on a shelved or split variant, and on a step after the next. | act, or move |
 | `shortlist <variant>` | Shortlists a feasible variant, or takes its shortlisting again, with the fingerprint of its canvas and the goal. | move |
-| `shelve <variant> --reason <text>` | Shelves the variant for good, with the reason, from any state but shelved and split: a shortlisting is replaced, and the verdicts stay. Where every variant of the idea not split is then shelved, the idea is dropped, and the command says so. | move |
+| `shelve <variant> --reason <text>` | Shelves the variant for good, with the reason, from any state but shelved and split: a shortlisting is replaced, and the verdicts stay. Where that leaves the idea dropped ("The status" below), the command says so. | move |
 | `split <variant> --into <variant> [--into <variant>]...` | Splits a variant with no outcome yet into the variants named ("Splitting a variant" below). | move |
 | `canvas <variant> [--ids]` | Draws the canvas as a grid ("The grid" below). | read-only |
 | `estimate <variant>` | Works out what the goal asks of the variant ("The estimate" below). | read-only |
@@ -320,7 +320,7 @@ A side that pays nothing counts at nothing. A model with several paying sides is
    - otherwise, from the one that tests it and was decided last: *supported* where its result worked out to a pass, *refuted* where to a fail, and *inconclusive* where to neither.
 
    While an experiment's file of the idea cannot be read, that experiment may test any assumption, so an assumption's outcome cannot be told, unless an experiment that reads shows it being tested, which no other experiment can change.
-6. **The canvases of the variants in play:** of each variant neither shelved nor split, drawn as `pkit lean canvas` draws it, its credit line beneath ("The grid" above). A variant whose canvas cannot be read is not drawn, and one whose position cannot be told is drawn, since it may still be in play. `pkit lean canvas` draws a shelved or split one.
+6. **The canvases of the variants in play:** of each variant neither shelved nor split, drawn as `pkit lean canvas` draws it ("The grid" above). A variant whose canvas cannot be read is not drawn, and one whose position cannot be told is drawn, since it may still be in play. `pkit lean canvas` draws a shelved or split one.
 7. **The experiments.** One not yet decided comes with where it stands. Once declared, it comes too with its time box as its cycle's suspensions move it, or that the time box waits for its cycle to resume, and with its declared expectation, and beside it the result, worked out to a pass, a fail or neither, or that it waits for one. A decided one comes in a line, with your next action and its result.
 8. **What waits on you,** each with the command that takes it, in this order:
    - a suspended cycle to resume;
