@@ -332,11 +332,17 @@ class CycleStatus:
             if not any(run.covers(window.start + timedelta(days=offset)) for run in covered)
         )
 
-    def key_results(self) -> list[dict[str, Any]]:
+    def key_results(self) -> list[dict[str, Any]] | None:
+        """The key results of the cycle's objective, each value None where it does not read,
+        an entry that does not read listed all the same; None where the list does not read,
+        since an empty one would say the cycle holds none."""
         data = _m(self.data)
+        listed = _m(data.get("objective")).get("key-results")
+        if not isinstance(listed, list):
+            return None
         reached = _list(_m(data.get("review")).get("reached"))
         found: list[dict[str, Any]] = []
-        for index, result in enumerate(_list(_m(data.get("objective")).get("key-results"))):
+        for index, result in enumerate(listed):
             held = _m(result)
             named = ids.parse_ref(held.get("variant"), ids.CANVAS)
             found.append(
@@ -351,7 +357,8 @@ class CycleStatus:
 
     def constraint(self) -> dict[str, Any] | None:
         """The cycle's constraint, its step and its evidence, each None where it does not
-        read; None where the cycle holds none."""
+        read; None where the constraint does not read, as where the file gives none, since
+        every cycle holds one."""
         held = _m(self.data).get("constraint")
         if not isinstance(held, Mapping):
             return None
@@ -360,13 +367,23 @@ class CycleStatus:
             "evidence": _text(held.get("evidence")),
         }
 
+    def suspensions(self) -> list[object] | None:
+        """The suspensions the cycle's file lists, each as the file holds it: empty where the
+        file gives no list, as a cycle never suspended does not, and None where the list
+        does not read, or the file does not."""
+        if self.data is None:
+            return None
+        listed = self.data.get("suspensions", [])
+        return listed if isinstance(listed, list) else None
+
     def as_data(self) -> dict[str, Any]:
-        """The cycle's keys, each null where its file does not read, its lists too, since
-        an empty one would say the cycle holds none."""
+        """The cycle's keys, each null where its file does not read. A list is null too
+        where it does not read itself, since an empty one would say the cycle holds none."""
         data = self.data
         window = self.window
         review = _m(data).get("review")
         winning = ids.parse_ref(_m(review).get("winning"), ids.CANVAS)
+        suspensions = self.suspensions()
         return {
             **self.at.as_data(),
             "window": (
@@ -375,20 +392,10 @@ class CycleStatus:
                 else None
             ),
             "objective": _text(_m(_m(data).get("objective")).get("statement")),
-            "key_results": self.key_results() if data is not None else None,
+            "key_results": self.key_results(),
             "constraint": self.constraint(),
             "suspensions": (
-                [
-                    {
-                        "reason": _text(entry.get("reason")),
-                        "first_day": _iso(day(entry.get("first-day"))),
-                        "resumed": _iso(day(_m(entry.get("resumed")).get("day"))),
-                        "recorded": _iso(day(entry.get("when"))),
-                    }
-                    for entry in cycle_words.suspensions_of(data)
-                ]
-                if data is not None
-                else None
+                [_suspension(entry) for entry in suspensions] if suspensions is not None else None
             ),
             "review": (
                 {
@@ -417,19 +424,46 @@ class CycleStatus:
         gone = f", day {counted} of {days}" if counted and days is not None else ""
         out = [f"    {self.at.id}: {self.at.where}{gone}; window {falls}"]
         objective = _text(_m(data.get("objective")).get("statement"))
-        if objective is not None:
-            out.append(f"      objective: {objective}")
-        out.extend(f"      key result: {_key_result(result)}" for result in self.key_results())
+        out.append(
+            f"      objective: {objective}"
+            if objective is not None
+            else "      its objective cannot be read"
+        )
+        results = self.key_results()
+        if results is None:
+            out.append("      its key results cannot be read")
+        out.extend(f"      key result: {_key_result(result)}" for result in results or ())
         constraint = self.constraint()
-        if constraint is not None:
+        if constraint is None:
+            out.append("      its constraint cannot be read")
+        else:
             evidence = constraint["evidence"]
             out.append(
                 f"      constraint: {constraint['step'] or UNREAD_STEP}: "
                 f"{evidence if evidence is not None else 'evidence that cannot be read'}"
             )
-        for entry in cycle_words.suspensions_of(data):
-            out.append(f"      suspended {cycle_words.away(entry)}")
+        suspensions = self.suspensions()
+        if suspensions is None:
+            out.append("      its suspensions cannot be read")
+        for entry in suspensions or ():
+            out.append(
+                f"      suspended {cycle_words.away(entry)}"
+                if isinstance(entry, Mapping)
+                else "      a suspension that cannot be read"
+            )
         return out
+
+
+def _suspension(entry: object) -> dict[str, Any]:
+    """A suspension of a cycle's list as the structured form gives it, each value None where
+    it does not read, all of them where the entry does not."""
+    held = _m(entry)
+    return {
+        "reason": _text(held.get("reason")),
+        "first_day": _iso(day(held.get("first-day"))),
+        "resumed": _iso(day(_m(held.get("resumed")).get("day"))),
+        "recorded": _iso(day(held.get("when"))),
+    }
 
 
 def _key_result(result: Mapping[str, Any]) -> str:

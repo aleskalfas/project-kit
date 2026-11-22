@@ -1026,6 +1026,57 @@ def test_status_says_in_words_that_a_value_outside_its_set_cannot_be_read(
     assert "None" not in run.out and "sales" not in run.out
 
 
+def test_status_gives_null_for_a_cycles_list_that_does_not_read_and_lists_an_entry_that_does_not(
+    world: lb.World,
+) -> None:
+    # A list the cycle's file holds that does not read is null, since an empty one would say
+    # the cycle holds none; an entry that does not read is listed, so the list does not look
+    # whole without it. Each form says so.
+    planned(world)
+
+    def entries(data: Any) -> None:
+        data["objective"]["key-results"].append("nope")
+        data["suspensions"] = ["nope"]
+
+    world.edit(SECOND_FILE, entries)
+    second = briefing(world)["cycles"][1]
+    assert second["key_results"][-1] == dict.fromkeys(("variant", "metric", "target", "reached"))
+    assert second["suspensions"] == [dict.fromkeys(("reason", "first_day", "resumed", "recorded"))]
+    shown = world.run("status", "meal-plan").out.splitlines()
+    unread = (
+        "a variant that cannot be read, a step that cannot be read, a target that cannot be read"
+    )
+    assert f"      key result: {unread}" in shown
+    assert "      a suspension that cannot be read" in shown
+
+    def lists(data: Any) -> None:
+        data["objective"]["key-results"] = "nope"
+        data["suspensions"] = "nope"
+
+    world.edit(SECOND_FILE, lists)
+    second = briefing(world)["cycles"][1]
+    assert (second["key_results"], second["suspensions"]) == (None, None)
+    shown = world.run("status", "meal-plan").out.splitlines()
+    assert "      its key results cannot be read" in shown
+    assert "      its suspensions cannot be read" in shown
+
+
+def test_status_says_a_cycles_objective_or_constraint_cannot_be_read(world: lb.World) -> None:
+    # Every cycle holds both, so one that does not read is said not to, never left out.
+    planned(world)
+
+    def misshapen(data: Any) -> None:
+        data["objective"]["statement"] = 5
+        data["constraint"] = "revenue"
+
+    world.edit(SECOND_FILE, misshapen)
+    second = briefing(world)["cycles"][1]
+    assert (second["objective"], second["constraint"]) == (None, None)
+    shown = world.run("status", "meal-plan").out.splitlines()
+    assert "      its objective cannot be read" in shown
+    assert "      its constraint cannot be read" in shown
+
+
 def test_status_lists_a_cycle_and_an_experiment_whose_file_does_not_read(
     world: lb.World,
 ) -> None:
