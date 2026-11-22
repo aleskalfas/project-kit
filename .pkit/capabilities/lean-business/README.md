@@ -270,15 +270,15 @@ Refused: a time box over fourteen days, or ending before it starts; a range whos
 `pkit lean canvas` draws the canvas's twelve boxes as the book arranges them, five columns over a bottom row:
 
 ```
-+--------------+-------------+-------------------+------------------+-------------------+
-| PROBLEM      | SOLUTION    | UNIQUE VALUE      | UNFAIR ADVANTAGE | CUSTOMER SEGMENTS |
-|              |             | PROPOSITION       |                  |                   |
-+--------------+-------------+-------------------+------------------+-------------------+
-| EXISTING     | KEY METRICS | HIGH-LEVEL        | CHANNELS         | EARLY ADOPTERS    |
-| ALTERNATIVES |             | CONCEPT           |                  |                   |
-+--------------+-------------+-------------------+------------------+-------------------+
-| COST STRUCTURE                         | REVENUE STREAMS                              |
-+----------------------------------------+----------------------------------------------+
++------------------+------------------+------------------+------------------+------------------+
+| PROBLEM          | SOLUTION         | UNIQUE VALUE     | UNFAIR ADVANTAGE | CUSTOMER         |
+|                  |                  | PROPOSITION      |                  | SEGMENTS         |
++------------------+------------------+------------------+------------------+------------------+
+| EXISTING         | KEY METRICS      | HIGH-LEVEL       | CHANNELS         | EARLY ADOPTERS   |
+| ALTERNATIVES     |                  | CONCEPT          |                  |                  |
++----------------------------------------------------------------------------------------------+
+| COST STRUCTURE                               | REVENUE STREAMS                               |
++----------------------------------------------+-----------------------------------------------+
 ```
 
 Each column holds its upper box over its lower one, each entry a bullet: a value proposition with its sub-headline, an early adopter with its triggers, a channel with its kind and a key metric with its step. `--ids` adds under each entry its own part of its id, in brackets, which `edit-entry` and `remove-entry` take after the variant's id and `--`. The grid ends with the line that credits the Lean Canvas and the Business Model Canvas it adapts, and names their licence (Credits and licence, below).

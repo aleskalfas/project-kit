@@ -3,15 +3,15 @@ licence line beneath (lean-business DEC-001 point 6).
 
 Five columns, each a box over a box, and a row of two boxes along the bottom:
 
-    +-------------+-------------+-------------+-------------+-------------+
-    | PROBLEM     | SOLUTION    | UNIQUE      | UNFAIR      | CUSTOMER    |
-    |             |             | VALUE PROP. | ADVANTAGE   | SEGMENTS    |
-    +-------------+-------------+-------------+-------------+-------------+
-    | EXISTING    | KEY METRICS | HIGH-LEVEL  | CHANNELS    | EARLY       |
-    | ALTERNATIVES|             | CONCEPT     |             | ADOPTERS    |
-    +-------------+-------------+-------------+-------------+-------------+
-    | COST STRUCTURE                  | REVENUE STREAMS                   |
-    +---------------------------------+-----------------------------------+
+    +------------------+------------------+------------------+------------------+------------------+
+    | PROBLEM          | SOLUTION         | UNIQUE VALUE     | UNFAIR ADVANTAGE | CUSTOMER         |
+    |                  |                  | PROPOSITION      |                  | SEGMENTS         |
+    +------------------+------------------+------------------+------------------+------------------+
+    | EXISTING         | KEY METRICS      | HIGH-LEVEL       | CHANNELS         | EARLY ADOPTERS   |
+    | ALTERNATIVES     |                  | CONCEPT          |                  |                  |
+    +----------------------------------------------------------------------------------------------+
+    | COST STRUCTURE                               | REVENUE STREAMS                               |
+    +----------------------------------------------+-----------------------------------------------+
 
 The upper boxes share one height, and the lower ones another, each the height of the box
 with the most to say. The line beneath credits where the arrangement comes from and names

@@ -18,6 +18,7 @@ from typing import Any
 import pytest
 
 from tests import lean_business_world as lb
+from tests.in_process import CAPABILITIES
 
 DAY = date(2026, 11, 20)
 
@@ -1015,6 +1016,13 @@ def test_canvas_draws_the_grid_with_its_credit_line(world: lb.World) -> None:
     assert "[paper-lists]" not in run.out
     assert lines[-3].startswith("Arranged as the Lean Canvas, Ash Maurya's adaptation")
     assert "Creative Commons Attribution-ShareAlike 3.0" in run.out
+
+
+def test_the_readmes_grid_is_the_grid_drawn_for_an_empty_canvas() -> None:
+    readme = (CAPABILITIES / "lean-business/README.md").read_text(encoding="utf-8")
+    sample = readme.split("### The grid", 1)[1].split("```\n", 2)[1]
+    drawn = lb.LIB["grid"].draw({})
+    assert sample.splitlines() == [line for line in drawn if line.startswith(("+", "|"))]
 
 
 def test_canvas_shows_each_entrys_own_id_where_asked(world: lb.World) -> None:
