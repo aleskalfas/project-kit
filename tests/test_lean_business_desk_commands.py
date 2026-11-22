@@ -134,6 +134,14 @@ def test_new_variant_creates_its_canvas_and_an_empty_list_of_assumptions(world: 
     }
 
 
+def test_new_variant_refuses_an_id_with_a_line_feed_after_it(world: lb.World) -> None:
+    before = lb.snapshot(world.root)
+    run = world.run("new_variant", "meal-plan--boxes\n", "--archetype", "direct")
+    assert run.code == 1
+    assert "is no variant's id" in run.err
+    assert lb.snapshot(world.root) == before
+
+
 def test_new_variant_refuses_a_variant_that_exists(world: lb.World) -> None:
     run = world.run("new_variant", "meal-plan--direct", "--archetype", "direct")
     assert run.code == 1

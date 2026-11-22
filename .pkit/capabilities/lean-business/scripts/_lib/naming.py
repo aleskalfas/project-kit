@@ -46,7 +46,10 @@ LEADING = "n"
 
 _WORD = re.compile(r"[a-z0-9]+")
 _APOSTROPHES = re.compile("['\u2019]")
-_REFERENCE = re.compile(r"^\[[a-z]+:(.+)\]$")
+#: A value read as a reference, for the ids a file names. A line feed after it is let
+#: through on purpose: the backbone's reference pass reads such a value as naming its id, so
+#: the id is never given again while it stands.
+_REFERENCE = re.compile(r"\[[a-z]+:(.+)\]\n?")
 
 
 def from_text(text: str, fallback: str) -> str:
@@ -98,7 +101,7 @@ def _named(value: object) -> Iterable[str]:
         for item in value:
             yield from _named(item)
     elif isinstance(value, str):
-        reference = _REFERENCE.match(value)
+        reference = _REFERENCE.fullmatch(value)
         found = reference.group(1) if reference else value
         if ids.is_idea_qualified(found) or ids.is_variant_qualified(found):
             yield found

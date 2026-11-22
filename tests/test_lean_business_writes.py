@@ -107,6 +107,13 @@ def test_an_id_a_reference_still_names_is_never_given_again(world: lb.World) -> 
     assert f"Added `{entry}-2` to problem." in run.out
 
 
+def test_a_reference_with_a_line_feed_after_it_still_names_its_id(world: lb.World) -> None:
+    # The backbone's reference pass reads it as naming the id, so the id stays taken.
+    files = writes.Files(world.root, writes.for_writing(world.root))
+    files.texts[f"{lb.IDEA}/experiments/stray.yaml"] = 'cycle: "[cycle:meal-plan--later]\\n"\n'
+    assert "meal-plan--later" in naming.in_use(files, "meal-plan")
+
+
 def test_an_id_never_changes_with_its_text(world: lb.World) -> None:
     entry = "meal-plan--direct--paper-lists"
     run = world.run("edit_entry", entry, "--text", "Spreadsheets kept by hand")

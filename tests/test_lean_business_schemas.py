@@ -66,13 +66,19 @@ def test_every_fixture_file_is_valid_under_data_validation() -> None:
     assert len(dv.discover_data_files(FIXTURES)) == 7
 
 
+def whole(pattern: str) -> str:
+    """`pattern` as the shared shapes write it to match a whole value: the lookahead after
+    `$` refuses the final line feed Python's `$` matches before."""
+    return f"^{pattern}$(?!\\n)"
+
+
 def test_the_shared_shapes_allow_the_ids_and_references_the_check_reads() -> None:
     shapes = json.loads((SCHEMAS / "shapes.schema.json").read_text(encoding="utf-8"))["$defs"]
-    assert shapes["segment"]["pattern"] == f"^{ids.SEGMENT}$"
-    assert shapes["idea-qualified-id"]["pattern"] == f"^{ids.IDEA_QUALIFIED}$"
-    assert shapes["variant-qualified-id"]["pattern"] == f"^{ids.VARIANT_QUALIFIED}$"
+    assert shapes["segment"]["pattern"] == whole(ids.SEGMENT)
+    assert shapes["idea-qualified-id"]["pattern"] == whole(ids.IDEA_QUALIFIED)
+    assert shapes["variant-qualified-id"]["pattern"] == whole(ids.VARIANT_QUALIFIED)
     for name, namespace in REFERENCES:
-        assert shapes[name]["pattern"] == f"^{ids.REF_PATTERN[namespace]}$"
+        assert shapes[name]["pattern"] == whole(ids.REF_PATTERN[namespace])
 
 
 REFERENCES = (
@@ -151,6 +157,13 @@ def test_an_id_is_read_as_the_schemas_allow_it() -> None:
     assert ids.ref(ids.CYCLE, "meal-plan--first") == "[cycle:meal-plan--first]"
 
 
+def test_an_id_or_a_reference_with_a_line_feed_after_it_is_none() -> None:
+    assert not ids.is_segment("meal-plan\n")
+    assert not ids.is_idea_qualified("meal-plan--direct\n")
+    assert not ids.is_variant_qualified("meal-plan--direct--x\n")
+    assert ids.parse_ref("[cycle:meal-plan--first]\n", ids.CYCLE) is None
+
+
 # --- what is refused ----------------------------------------------------------------------------
 
 
@@ -187,6 +200,18 @@ REFUSED: list[tuple[str, str, str, Callable[[Any], None]]] = [
         "experiment",
         "experiments/first-interviews.yaml",
         _set(("cycle",), "[cycle:meal-plan.first]"),
+    ),
+    (
+        "an-id-with-a-line-feed-after-it",
+        "canvas",
+        "variants/direct/canvas.yaml",
+        _set(("id",), "meal-plan--direct\n"),
+    ),
+    (
+        "a-reference-with-a-line-feed-after-it",
+        "experiment",
+        "experiments/first-interviews.yaml",
+        _set(("cycle",), "[cycle:meal-plan--first]\n"),
     ),
     ("a-goal-without-its-currency", "goal", "goal.yaml", _set(("currency",), _DROP)),
     ("a-currency-not-in-capitals", "goal", "goal.yaml", _set(("currency",), "eur")),

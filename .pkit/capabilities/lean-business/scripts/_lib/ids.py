@@ -13,7 +13,9 @@
   holds one, so the core's data validation resolves it (COR-029).
 
 The patterns here are the ones `schemas/shapes.schema.json` writes, and a test holds the
-two equal.
+two equal. Each is matched against the whole value (`fullmatch`), since Python's `$` also
+matches before a final line feed, and would let an id or a reference with one after it
+through.
 """
 
 from __future__ import annotations
@@ -50,10 +52,10 @@ ID_PATTERN = {
 #: The full pattern of a reference into each namespace.
 REF_PATTERN = {namespace: rf"\[{namespace}:{qid}\]" for namespace, qid in ID_PATTERN.items()}
 
-_SEGMENT = re.compile(rf"^{SEGMENT}$")
-_IDEA_QUALIFIED = re.compile(rf"^{IDEA_QUALIFIED}$")
-_VARIANT_QUALIFIED = re.compile(rf"^{VARIANT_QUALIFIED}$")
-_REFS = {namespace: re.compile(rf"^{pattern}$") for namespace, pattern in REF_PATTERN.items()}
+_SEGMENT = re.compile(SEGMENT)
+_IDEA_QUALIFIED = re.compile(IDEA_QUALIFIED)
+_VARIANT_QUALIFIED = re.compile(VARIANT_QUALIFIED)
+_REFS = {namespace: re.compile(pattern) for namespace, pattern in REF_PATTERN.items()}
 
 
 class Ref(NamedTuple):
@@ -64,15 +66,15 @@ class Ref(NamedTuple):
 
 
 def is_segment(value: object) -> bool:
-    return isinstance(value, str) and _SEGMENT.match(value) is not None
+    return isinstance(value, str) and _SEGMENT.fullmatch(value) is not None
 
 
 def is_idea_qualified(value: object) -> bool:
-    return isinstance(value, str) and _IDEA_QUALIFIED.match(value) is not None
+    return isinstance(value, str) and _IDEA_QUALIFIED.fullmatch(value) is not None
 
 
 def is_variant_qualified(value: object) -> bool:
-    return isinstance(value, str) and _VARIANT_QUALIFIED.match(value) is not None
+    return isinstance(value, str) and _VARIANT_QUALIFIED.fullmatch(value) is not None
 
 
 def qualify(*parts: str) -> str:
@@ -89,7 +91,7 @@ def parse_ref(value: object, namespace: str) -> Ref | None:
     """The reference `value` writes into `namespace`, or None where it is no such
     reference."""
     pattern = _REFS.get(namespace)
-    if not isinstance(value, str) or pattern is None or pattern.match(value) is None:
+    if not isinstance(value, str) or pattern is None or pattern.fullmatch(value) is None:
         return None
     return Ref(namespace, value[len(namespace) + 2 : -1])
 
