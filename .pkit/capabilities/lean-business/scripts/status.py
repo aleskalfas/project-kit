@@ -11,14 +11,14 @@
 Read-only, worked out from the files each time and kept nowhere. Each subject's position is
 the process engine's. Without an idea it gives one line for each idea; with one, the
 briefing that orients a person coming back to it (`briefing`): its first line, which says
-whether the idea is dropped; after a long silence on a cycle, an offer to record the gap
-as a suspension; the person's last act; the goal; each cycle and variant with where it
-stands, the cycle not yet decided in full, and each assumption with its outcome; the
-canvas of each variant neither shelved nor split, drawn as `canvas` draws it; each
-experiment with where it stands; and what waits on the person, each with the command that
-takes it. The day the silence and the window's days are counted to
-is today, read at the command's entry. `--json` prints the structured form, whose keys the
-capability's README lists, with its `schema_version`.
+where the idea is dropped, or where whether it is cannot be told; after a long silence on
+a cycle, an offer to record the gap as a suspension; the person's last act; the goal; each
+cycle and variant with where it stands, the cycle not yet decided in full, and each
+assumption with its outcome; the canvas of each variant neither shelved nor split, drawn
+as `canvas` draws it; each experiment with where it stands; and what waits on the person,
+each with the command that takes it. The day the silence and the window's days are
+counted to is today, read at the command's entry. `--json` prints the structured form,
+whose keys the capability's README lists, with its `schema_version`.
 
 Usage:
   pkit lean status [<idea>] [--json]
