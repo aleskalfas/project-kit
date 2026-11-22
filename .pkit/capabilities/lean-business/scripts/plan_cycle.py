@@ -23,8 +23,10 @@ key result naming a variant the cycle does not explore. A window that has starte
 is warned of, since its plan is frozen from its first day.
 
 Usage:
-  pkit lean plan-cycle <idea>--<cycle> --variant <variant>... --start <day> [--days <n>]
-                       --objective <text> --key-result <variant>:<step>:<target>...
+  pkit lean plan-cycle <idea>--<cycle> --variant <variant> [--variant <variant>]...
+                       --start <day> [--days <n>] --objective <text>
+                       --key-result <variant>:<step>:<target>
+                       [--key-result <variant>:<step>:<target>]...
                        --constraint-step <step> --constraint-evidence <text>
                        [--person-decided]
 

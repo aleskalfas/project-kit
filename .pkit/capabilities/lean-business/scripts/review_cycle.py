@@ -33,9 +33,9 @@ persevere or a pivot for a variant shelved or split; and a pivot with no decided
 as its evidence.
 
 Usage:
-  pkit lean review-cycle <cycle> --reached <number>... [--winning <variant>]
-                         --decision persevere|pivot|pause --reasons <text>
-                         [--evidence <experiment>]... [--person-decided]
+  pkit lean review-cycle <cycle> --reached <number> [--reached <number>]...
+                         [--winning <variant>] --decision persevere|pivot|pause
+                         --reasons <text> [--evidence <experiment>]... [--person-decided]
 
 Exit codes:
   0  decided

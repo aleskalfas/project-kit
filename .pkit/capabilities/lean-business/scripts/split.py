@@ -32,7 +32,7 @@ refused where its variant or its assumptions exist, or where something still nam
 or an id the copy would give, since an id named is never given again.
 
 Usage:
-  pkit lean split <variant> --into <variant>... [--person-decided]
+  pkit lean split <variant> --into <variant> [--into <variant>]... [--person-decided]
 
 Exit codes:
   0  written

@@ -103,12 +103,13 @@ OFFERED_IN = (positions.RUNNING, positions.IN_REVIEW)
 RECORD_RESULT = "[--measured <number>] [--spoiled] --evidence <text> --learned <text>"
 DECIDE = "correct-course|double-down|stop"
 REVIEW = (
-    "--reached <number>... [--winning <variant>] --decision persevere|pivot|pause "
-    "--reasons <text> [--evidence <experiment>]..."
+    "--reached <number> [--reached <number>]... [--winning <variant>] "
+    "--decision persevere|pivot|pause --reasons <text> [--evidence <experiment>]..."
 )
 PLAN = (
-    "--variant <variant>... --start <day> [--days <n>] --objective <text> "
-    "--key-result <variant>:<step>:<target>... --constraint-step <step> "
+    "--variant <variant> [--variant <variant>]... --start <day> [--days <n>] "
+    "--objective <text> --key-result <variant>:<step>:<target> "
+    "[--key-result <variant>:<step>:<target>]... --constraint-step <step> "
     "--constraint-evidence <text>"
 )
 
