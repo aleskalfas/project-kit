@@ -472,9 +472,17 @@ def test_change_plan_on_the_day_of_the_first_planning_may_move_the_start_to_that
     world: lb.World,
 ) -> None:
     planned(world)
-    run = world.run("change_plan", SECOND, "--start", DAY.isoformat(), "--person-decided")
+    argv = ("--start", DAY.isoformat(), "--person-decided")
+    run = world.run("change_plan", SECOND, *argv, who="B. Partner")
     assert run.code == 0, run.err
-    assert world.read(SECOND_FILE)["window"] == {"start": DAY, "days": 60}
+    changed = world.read(SECOND_FILE)
+    assert changed["window"] == {"start": DAY, "days": 60}
+    assert changed["planned"]["first"] == {"by": lb.PERSON, "when": DAY}
+    assert (changed["planned"]["by"], changed["planned"]["when"]) == ("B. Partner", DAY)
+    assert (
+        f"warning: its window started on {DAY}, by today, {DAY}, so its plan is frozen from now"
+        in run.out
+    )
 
 
 def test_change_plan_leaves_a_part_it_is_not_given_as_it_is_where_the_file_lacks_it(

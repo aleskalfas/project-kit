@@ -22,7 +22,9 @@ window's first day; and a variant given that is not shortlisted. A change on the
 the first planning is part of the planning, as the check reads it (`acts.of_cycle`), so
 it may move the start to that day or before. The check, which every write is held to,
 refuses the rest, such as a variant dropped that an experiment of the cycle tests, a
-variant left with no key result, or a window that comes to overlap another cycle's.
+variant left with no key result, or a window that comes to overlap another cycle's. A
+window that has started by today is warned of, as `plan-cycle` warns of it, since its plan
+is frozen from its first day.
 
 Usage:
   pkit lean change-plan <cycle> [--variant <variant>]... [--start <day>] [--days <n>]
@@ -99,6 +101,9 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
         ),
         decided=args.person_decided,
     )
+    started = cycles.started(cycle.plain(), ctx.on)
+    if started is not None:
+        ctx.say(started)
 
 
 def main() -> int:
