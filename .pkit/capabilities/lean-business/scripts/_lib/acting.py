@@ -271,12 +271,14 @@ def person_move(
     build: Callable[[], tuple[Files, str]],
     *,
     decided: bool,
+    added: Callable[[Held], str | None] | None = None,
 ) -> str:
     """Take the person's move on `trigger` from where `before` places `subject`: refused
     where no move the trigger declares from there may be taken; else the write `build`
     gives, with what it says was written, held, asked and written; then the move to where
-    the engine places the subject after it, from the origin `before` read. Returns the
-    state it moved to."""
+    the engine places the subject after it, from the origin `before` read. `added` says
+    more of the errors a write would add, where the command can tell more. Returns the state
+    it moved to."""
     origin = before.state
     declared = before.by(trigger)
     if origin is None or not declared:
@@ -290,7 +292,7 @@ def person_move(
         why = "; ".join(f"to {move.to}: {verdict.reason}" for move, verdict in asked)
         raise Refused(f"the process engine refuses `{trigger}` for `{subject}`: {why}")
     files, done = build()
-    prepared = _held(files)
+    prepared = _held(files, added)
     consent(ctx, opened[0].prompt or f"Take `{trigger}` for `{subject}`?", decided)
     undo = writes.commit(ctx.root, files.written())
     after = _after(ctx, process, subject, undo)
@@ -403,13 +405,15 @@ class Prepared:
     stale: tuple[staling.Stale, ...]
 
 
-def _held(files: Files) -> Prepared:
-    """`writes.hold`, refused where the write adds an error, and what the write leaves
-    stale, read from the files as they stand."""
+def _held(files: Files, added: Callable[[Held], str | None] | None = None) -> Prepared:
+    """`writes.hold`, refused where the write adds an error, with what `added` says more of
+    them; and what the write leaves stale, read from the files as they stand."""
     held = writes.hold(files)
     if held.added:
         named = "\n".join(_finding(f) for f in held.added)
-        raise Refused(f"the write would add {_count(len(held.added), 'error')}:\n{named}")
+        said = added(held) if added is not None else None
+        more = f", {said}" if said else ""
+        raise Refused(f"the write would add {_count(len(held.added), 'error')}{more}:\n{named}")
     return Prepared(held, tuple(staling.stale(files)))
 
 

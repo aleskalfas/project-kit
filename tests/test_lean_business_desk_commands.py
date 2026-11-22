@@ -922,6 +922,26 @@ def test_split_refuses_a_variant_that_exists(world: lb.World) -> None:
     )
 
 
+def test_split_of_a_variant_holding_an_error_a_copy_would_repeat_names_it_to_fix_first(
+    world: lb.World,
+) -> None:
+    platform(world)
+
+    def unnamed_side(data: Any) -> None:
+        data["boxes"]["existing-alternatives"][0]["side"] = "cooks"
+
+    world.edit(PLATFORM_FILE, unnamed_side)
+    kept = lb.snapshot(world.root)
+    run = world.run("split", PLATFORM, "--into", "online", "--person-decided")
+    assert run.code == 1
+    assert (
+        f"the write would add 1 error, as each copy repeats what `{PLATFORM_FILE}` holds "
+        f"already: fix it in `{PLATFORM_FILE}` first, then split"
+    ) in run.err
+    assert f"{ONLINE_FOLDER}/canvas.yaml" in run.err
+    assert lb.snapshot(world.root) == kept
+
+
 def test_split_never_gives_again_an_id_a_reference_still_names(world: lb.World) -> None:
     platform(world)
     named = f"{ONLINE}--players-wait-weeks-for-a"

@@ -23,7 +23,9 @@ Each variant it names is created as a copy of this one, to be worked on from the
   the same way.
 
 The copies are new files in the capability's own layout, so the comments of the files they
-copy, which speak of the variant split, are not carried over.
+copy, which speak of the variant split, are not carried over. An error the variant split
+holds already, in what a copy takes, the copy would repeat, so the split is refused, naming
+the file to fix first.
 
 Each name is the new variant's own part, or its whole id within the same idea. A name is
 refused where its variant or its assumptions exist, or where something still names its id
@@ -107,9 +109,13 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
             f"sketched or a verdict's state"
         )
 
+    sources: list[str] = []
+    copies_written: list[str] = []
+
     def build() -> tuple[writes.Files, str]:
         files = writes.Files(ctx.root, writes.for_writing(ctx.root))
         canvas = canvases.open_variant(files, variant)
+        sources.extend((canvas.rel, files.path("assumptions", variant)))
         source = canvas.plain()
         listed = _assumptions_of(files, variant)
         taken = naming.in_use(files, idea)
@@ -117,6 +123,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
         for index, new in enumerate(into):
             canvas_rel = files.path("canvas", new)
             assumptions_rel = files.path("assumptions", new)
+            copies_written.extend((canvas_rel, assumptions_rel))
             for rel in (canvas_rel, assumptions_rel):
                 if files.exists(rel):
                     raise Refused(f"the variant `{new}` cannot be created: `{rel}` exists already")
@@ -158,9 +165,34 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
             f"assumptions, with no verdict, to judge at the desk afresh."
         )
 
+    def repeated(held: writes.Held) -> str | None:
+        """Where each error the split would add lies in a copy, and the variant split holds
+        one already: each copy repeats it, so it is fixed in the variant first."""
+        if not all(_file(f.location) in copies_written for f in held.added):
+            return None
+        holding = sorted({_file(f.location) for f in held.standing} & set(sources))
+        if not holding:
+            return None
+        return (
+            f"as each copy repeats what {_words(holding)} holds already: fix it in "
+            f"{_words(holding)} first, then split"
+        )
+
     acting.person_move(
-        ctx, engine.DESK, variant, TRIGGER, before, build, decided=args.person_decided
+        ctx,
+        engine.DESK,
+        variant,
+        TRIGGER,
+        before,
+        build,
+        decided=args.person_decided,
+        added=repeated,
     )
+
+
+def _file(location: str) -> str:
+    """The file a finding's place names, without the place within it."""
+    return location.split("#", 1)[0]
 
 
 def _named(idea: str, given: str) -> str:
