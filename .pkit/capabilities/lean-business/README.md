@@ -46,9 +46,7 @@ pkit:
         - .pkit/capabilities/lean-business/scripts/review_cycle.py
         - .pkit/capabilities/lean-business/scripts/_lib/*.py
         - .pkit/capabilities/lean-business/schemas/*.schema.json
-        - .pkit/capabilities/lean-business/schemas/desk-stage.yaml
-        - .pkit/capabilities/lean-business/schemas/experiment-lifecycle.yaml
-        - .pkit/capabilities/lean-business/schemas/cycle-lifecycle.yaml
+        - .pkit/capabilities/lean-business/schemas/*.yaml
         - .pkit/capabilities/lean-business/skills/lean-business/lean-business.md
       record:
         - lean-business:DEC-001#1
