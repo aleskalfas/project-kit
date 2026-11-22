@@ -86,6 +86,11 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
     outcome = positions.OUTCOME_WORDS[readings.experiment_outcome(plain) or readings.NEITHER]
 
     def build() -> tuple[writes.Files, str]:
+        # Said once the engine opened a move of `decide`, before the question.
+        ctx.say(
+            f"Deciding `{subject}`: its result works out to {outcome}, and the next action is "
+            f"to {positions.NEXT_ACTIONS[following]}."
+        )
         decision = editing.mapping([("next", following), ("by", ctx.who), ("when", ctx.on)])
         editing.place(experiment.data, "decision", decision, ORDER)
         files.put(experiment.rel, experiment.doc)
@@ -94,10 +99,6 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
             f"{positions.NEXT_ACTIONS[following]}."
         )
 
-    ctx.say(
-        f"Deciding `{subject}`: its result works out to {outcome}, and the next action is to "
-        f"{positions.NEXT_ACTIONS[following]}."
-    )
     acting.person_move(
         ctx, engine.EXPERIMENT, subject, TRIGGER, before, build, decided=args.person_decided
     )

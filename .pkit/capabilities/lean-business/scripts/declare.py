@@ -90,8 +90,6 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
     if refusals:
         raise Refused("; ".join(refusals))
     riskier = _riskier(files, experiment.idea, plain)
-    if riskier is not None:
-        ctx.say(riskier)
 
     def build() -> tuple[writes.Files, str]:
         rests_on = fingerprint.shortlisting(canvas) if canvas is not None else None
@@ -99,6 +97,9 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
             raise Refused(
                 "the variant whose assumption it tests keeps no shortlisting that reads whole"
             )
+        # Said once the engine opened a move of `declare`, before the question.
+        if riskier is not None:
+            ctx.say(riskier)
         declared = editing.mapping(
             [
                 ("by", ctx.who),

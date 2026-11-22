@@ -957,6 +957,40 @@ def test_the_path_from_a_result_to_a_decision(world: lb.World) -> None:
     }
 
 
+def refused_by_the_engine(world: lb.World, monkeypatch: pytest.MonkeyPatch) -> None:
+    """An engine whose `can-move` refuses every move."""
+
+    def refused(process: str, subject: str, to: str, actor: str) -> Any:
+        return lb.engine.Verdict(False, "its gate refuses it")
+
+    monkeypatch.setattr(world.engine, "can_move", refused)
+
+
+def test_decide_and_declare_say_nothing_before_the_engine_refuses_the_move(
+    world: lb.World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    drafted(world)
+    added(world)
+    assert world.run("rank", DIRECT, "households-cook-alone", "--person-decided").code == 0
+    with monkeypatch.context() as stubbed:
+        refused_by_the_engine(world, stubbed)
+        run = world.run("declare", DRAFT, "--person-decided")
+    assert run.code == 1
+    assert "the process engine refuses `declare`" in run.err
+    assert run.out == ""
+    assert world.run("remove_assumption", ADDED).code == 0
+    assert world.run("declare", DRAFT, "--person-decided").code == 0
+    on(world, date(2027, 3, 15))
+    assert world.run("reach_stopping_rule", DRAFT, "--person-decided").code == 0
+    argv = ("--measured", "9", "--evidence", "Notes", "--learned", "Some", "--person-decided")
+    assert world.run("record_result", DRAFT, *argv).code == 0
+    refused_by_the_engine(world, monkeypatch)
+    run = world.run("decide", DRAFT, "double-down", "--person-decided")
+    assert run.code == 1
+    assert "the process engine refuses `decide`" in run.err
+    assert run.out == ""
+
+
 def test_record_result_replaces_an_earlier_one_and_says_what_it_works_out_to(
     world: lb.World,
 ) -> None:
@@ -987,6 +1021,25 @@ def test_record_result_refuses_a_spoiled_measurement_no_suspension_ran_through(
     )
     assert run.code == 1
     assert "a measurement is spoiled only by a suspension its time box ran through" in run.err
+
+
+def test_record_result_asks_of_a_spoiled_measurement_where_nothing_was_measured(
+    world: lb.World,
+) -> None:
+    declared(world)
+    suspended(world)
+    on(world, date(2027, 3, 16))
+    run = world.run("resume", SECOND, "--person-decided")
+    assert run.code == 0, run.err
+    on(world, date(2027, 3, 28))
+    argv = ("--evidence", "The call notes", "--learned", "Nothing to read")
+    run = world.run("record_result", DRAFT, "--spoiled", *argv, terminal=True, answers=[True])
+    assert run.code == 0, run.err
+    assert run.asked == [
+        f"Record the result of `{DRAFT}`: nothing measured, spoiled, which works out to "
+        "neither pass nor fail?"
+    ]
+    assert world.read(DRAFT_FILE)["result"]["spoiled"] is True
 
 
 def test_record_result_refuses_a_measurement_that_is_not_finite(world: lb.World) -> None:

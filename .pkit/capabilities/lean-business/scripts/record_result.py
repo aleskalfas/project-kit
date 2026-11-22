@@ -114,9 +114,11 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
 
 
 def _measured(args: argparse.Namespace) -> str:
+    """What the result measured, and whether a suspension spoiled it, as the question says."""
     if args.measured is None:
-        return "nothing measured"
-    measured = f"{editing.number(args.measured)} measured"
+        measured = "nothing measured"
+    else:
+        measured = f"{editing.number(args.measured)} measured"
     return f"{measured}, spoiled" if args.spoiled else measured
 
 
