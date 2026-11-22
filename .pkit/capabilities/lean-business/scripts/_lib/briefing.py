@@ -441,11 +441,13 @@ class ExperimentStatus:
 
 @dataclass
 class IdeaStatus:
-    """An idea's status: its goal, each subject with where it stands, what waits, the last
-    act and, after a silence, the offer to record it."""
+    """An idea's status: its goal, or the goal's file where it lies in its place but does
+    not read, each subject with where it stands, what waits, the last act and, after a
+    silence, the offer to record it."""
 
     id: str
     goal: Mapping[str, Any] | None
+    goal_unread: str | None = None
     variants: list[VariantStatus] = field(default_factory=list)
     cycles: list[CycleStatus] = field(default_factory=list)
     experiments: list[ExperimentStatus] = field(default_factory=list)
@@ -457,6 +459,7 @@ class IdeaStatus:
         return {
             "id": self.id,
             "goal": _goal_data(self.goal),
+            "goal_why": self.goal_why,
             "last_act": self.last_act.as_data() if self.last_act is not None else None,
             "offer": self.offer.as_data() if self.offer is not None else None,
             "variants": [v.as_data() for v in self.variants],
@@ -464,6 +467,13 @@ class IdeaStatus:
             "experiments": [e.as_data() for e in self.experiments],
             "waiting": [w.as_data() for w in self.waiting],
         }
+
+    @property
+    def goal_why(self) -> str | None:
+        """Why whether the idea has a goal cannot be told, where its file does not read."""
+        if self.goal_unread is None:
+            return None
+        return f"the idea's goal at `{self.goal_unread}` cannot be read"
 
 
 def _goal_data(goal: Mapping[str, Any] | None) -> dict[str, Any] | None:
@@ -496,7 +506,8 @@ def of_idea(engine: Engine, idea: IdeaModel, on: date) -> IdeaStatus:
     Each subject whose file lies in its place is listed, with its data where the file
     reads."""
     name = idea.name
-    found = IdeaStatus(name, idea.goal)
+    unread = idea.idea.goal.rel if idea.goal_unread and idea.idea.goal is not None else None
+    found = IdeaStatus(name, idea.goal, unread)
     canvases = {own: data for own, _, data in idea.canvases()}
     for own in sorted(idea.idea.variants):
         at = _standing(engine, engines.DESK, ids.qualify(name, own))
@@ -796,7 +807,10 @@ def line(idea: IdeaStatus) -> str:
         counted[key] = counted.get(key, 0) + 1
     states = ", ".join(f"{count} {state}" for state, count in counted.items())
     variants = f"{len(idea.variants)} variant{'s' if len(idea.variants) != 1 else ''}"
-    goal = "a goal" if idea.goal is not None else "no goal"
+    if idea.goal_unread is not None:
+        goal = "a goal whose file cannot be read"
+    else:
+        goal = "a goal" if idea.goal is not None else "no goal"
     waits = f"; {len(idea.waiting)} waiting" if idea.waiting else ""
     return f"{idea.id}: {goal}, {variants}{f' ({states})' if states else ''}{waits}"
 
@@ -809,7 +823,9 @@ def lines(idea: IdeaStatus) -> list[str]:
     if idea.last_act is not None:
         out.append(f"  last act: on {idea.last_act.day}, {', '.join(idea.last_act.what)}")
     goal = _goal_data(idea.goal)
-    if goal is None:
+    if idea.goal_why is not None:
+        out.append(f"  goal: {idea.goal_why}")
+    elif goal is None:
         out.append("  goal: none yet")
     else:
         out.append(

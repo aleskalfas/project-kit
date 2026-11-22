@@ -780,6 +780,19 @@ def test_status_marks_nothing_judged_against_a_goal_that_does_not_read_stale(
     assert "    meal-plan--direct: shortlisted; stale: desirability" in run.out.splitlines()
 
 
+def test_status_says_the_goal_cannot_be_read_where_its_file_does_not_read(
+    world: lb.World,
+) -> None:
+    (world.root / lb.GOAL).write_text("revenue: [unclosed\n", encoding="utf-8")
+    why = f"the idea's goal at `{lb.GOAL}` cannot be read"
+    idea = briefing(world)
+    assert (idea["goal"], idea["goal_why"]) == (None, why)
+    run = world.run("status", "meal-plan")
+    assert f"  goal: {why}" in run.out.splitlines()
+    run = world.run("status")
+    assert run.out.startswith("meal-plan: a goal whose file cannot be read, 2 variants")
+
+
 def test_status_lists_a_cycle_and_an_experiment_whose_file_does_not_read(
     world: lb.World,
 ) -> None:

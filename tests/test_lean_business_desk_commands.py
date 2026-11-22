@@ -1127,6 +1127,7 @@ def test_status_json_is_its_documented_structured_form(world: lb.World) -> None:
     assert set(idea) == {
         "id",
         "goal",
+        "goal_why",
         "last_act",
         "offer",
         "variants",
@@ -1135,6 +1136,7 @@ def test_status_json_is_its_documented_structured_form(world: lb.World) -> None:
         "waiting",
     }
     assert idea["goal"] == {"revenue": 1000000, "per": "year", "currency": "EUR", "years": 3}
+    assert idea["goal_why"] is None
     assert idea["variants"] == [
         {"id": "meal-plan--direct", "state": "shortlisted", "why": None, "stale": []},
         {"id": "meal-plan--two-sided", "state": "shelved", "why": None, "stale": []},

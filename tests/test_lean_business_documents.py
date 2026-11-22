@@ -82,6 +82,7 @@ LEAN_STATUS = Contract(
                 "ideas[].goal.per": "str|null",
                 "ideas[].goal.currency": "str|null",
                 "ideas[].goal.years": "int|float|null",
+                "ideas[].goal_why": "str|null",
                 "ideas[].last_act": "object|null",
                 "ideas[].last_act.day": "str",
                 "ideas[].last_act.what": "list",
@@ -137,10 +138,10 @@ def test_the_status_document_holds_its_contract(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     world = lb.world(tmp_path, monkeypatch, date(2026, 11, 20))
-    # An idea with no goal and a variant to judge, beside one whose canvas and cycle cannot
-    # be read, so the engine cannot tell where either stands.
+    # An idea with no goal and a variant to judge, beside one whose goal, canvas and cycle
+    # cannot be read, so the engine cannot tell where either stands.
     assert world.run("new_variant", "board-game--platform", "--archetype", "marketplace").code == 0
-    for rel in ("variants/plots/canvas.yaml", "cycles/spring.yaml"):
+    for rel in ("goal.yaml", "variants/plots/canvas.yaml", "cycles/spring.yaml"):
         unreadable = world.root / "lean-business/garden" / rel
         unreadable.parent.mkdir(parents=True)
         unreadable.write_text("id: [unclosed\n", encoding="utf-8")
@@ -149,6 +150,7 @@ def test_the_status_document_holds_its_contract(
         variant["state"] is None for idea in every["ideas"] for variant in idea["variants"]
     ), every
     assert any(cycle["key_results"] is None for idea in every["ideas"] for cycle in idea["cycles"])
+    assert any(idea["goal_why"] is not None for idea in every["ideas"]), every
     reviewed = _printed(world, "meal-plan")
     # The idea's cycle running and quiet since it was planned, so the briefing offers to
     # record the silence, and a verdict of its variant gone stale.

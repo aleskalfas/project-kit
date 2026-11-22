@@ -298,11 +298,11 @@ A side that pays nothing counts at nothing. A model with several paying sides is
 
 ### The status
 
-`pkit lean status` gives one line for each idea: whether it has a goal, its variants counted by where they stand, and how many things wait on you. `pkit lean status <idea>` gives the idea's briefing, from its files alone, to bring you back to it after a day or after months ([lean-business:DEC-001-lean-business-discipline] point 10). It comes in this order:
+`pkit lean status` gives one line for each idea: whether it has a goal, or that its goal's file cannot be read, its variants counted by where they stand, and how many things wait on you. `pkit lean status <idea>` gives the idea's briefing, from its files alone, to bring you back to it after a day or after months ([lean-business:DEC-001-lean-business-discipline] point 10). It comes in this order:
 
 1. **An offer, after a silence of 14 days.** Where nothing has been recorded on a running cycle, or on one in review, for 14 days or more of its window, the briefing first offers to record the gap as a suspension. The suspension would start on the day after the last work recorded on the cycle, or on the window's first day where that is later. The briefing says where the window's end falls now and where it would fall were you back today, with the `suspend` command that records it. Work recorded on the cycle is what a suspension may not cover: an act on the cycle, on its experiments or on the goal, and each suspension and resumption recorded. No offer is made where such a suspension would break its rules. It is an offer, never an act: only you know whether the silence was time away.
 2. **Your last act:** its day, and each act recorded that day.
-3. **The goal.**
+3. **The goal,** or that its file cannot be read, so whether the idea has a goal cannot be told.
 4. **The cycles.** The one not yet decided comes in full: where it stands; the days of its window gone by today, the suspended days not counted; where its window falls as its suspensions move it; its objective; each key result with its target and, once reviewed, what it reached; its constraint; and each suspension with its days, its reason and the day it was recorded. A decided one comes in a line, with its decision and its winning variant.
 5. **The variants,** each with where it stands, and each of its judgements gone stale: a verdict, by its step, or its shortlisting.
 6. **The experiments.** One not yet decided comes with where it stands, and its time box as its cycle's suspensions move it, or that the time box waits for its cycle to resume. Once declared, it comes with its declared expectation, and beside it the result, worked out to a pass, a fail or neither, or that it waits for one. A decided one comes in a line, with your next action and its result.
@@ -323,7 +323,8 @@ Each position is the process engine's ([lean-business:DEC-002-lean-business-data
 - `location`: the folder the ideas live in.
 - `ideas`: one for each idea, or the one named, each with:
   - `id`;
-  - `goal`: `revenue`, `per`, `currency` and `years`, or `null` where the idea has none;
+  - `goal`: `revenue`, `per`, `currency` and `years`, or `null` where the idea has none or its goal's file cannot be read;
+  - `goal_why`: why whether the idea has a goal cannot be told, where its goal's file lies in its place but cannot be read; otherwise `null`;
   - `last_act`: the `day` of your last recorded act, and `what` was recorded that day, each in words; `null` where nothing is recorded;
   - `offer`: the offer to record a silence, or `null` where none is made. It holds the `cycle`, the day of the `last_work` recorded on it, the `first_day` the suspension would cover, the `window_end` now, the `window_end_if_back_today`, and the `command` that records it;
   - `variants`, `cycles` and `experiments`: each an `id`, its `state`, and `why`. Where the engine could not tell where the subject stands, `state` is `null` and `why` says what stopped it; otherwise `why` is `null`. Each also has:
