@@ -981,11 +981,11 @@ def lines(idea: IdeaStatus) -> list[str]:
         out.append("  variants:")
         for variant in idea.variants:
             out.extend(variant.lines())
-    drawn = [v.canvas for v in idea.variants if v.canvas is not None and v.in_play]
+    drawn = [(v.at.id, v.canvas) for v in idea.variants if v.canvas is not None and v.in_play]
     if drawn:
         out.append("  canvases, of the variants neither shelved nor split:")
-        for canvas in drawn:
-            out.append(f"    {grid.heading(canvas)}")
+        for variant, canvas in drawn:
+            out.append(f"    {grid.heading(variant, canvas)}")
             out.extend(f"    {each}" for each in grid.draw(canvas))
     if idea.experiments:
         out.append("  experiments:")

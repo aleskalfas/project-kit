@@ -102,9 +102,9 @@ def _box(canvas: Mapping[str, Any], box: str, width: int, *, with_ids: bool) -> 
     return lines
 
 
-def heading(canvas: Mapping[str, Any]) -> str:
-    """The line above the grid: the variant's id, its model's archetype, and the sides it
-    serves where it names any."""
+def heading(variant: str, canvas: Mapping[str, Any]) -> str:
+    """The line above the grid: `variant`, the variant's id as its file's place gives it, its
+    model's archetype, and the sides it serves where it names any."""
     archetype = canvas.get("archetype")
     model = (
         f"a {archetype} model"
@@ -113,7 +113,7 @@ def heading(canvas: Mapping[str, Any]) -> str:
     )
     sides = canvas.get("sides")
     named = [s for s in sides if isinstance(s, str)] if isinstance(sides, list) else []
-    head = f"`{canvas.get('id')}`, {model}"
+    head = f"`{variant}`, {model}"
     return f"{head}, serving {', '.join(named)}" if named else head
 
 

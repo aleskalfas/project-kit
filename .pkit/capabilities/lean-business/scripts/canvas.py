@@ -48,11 +48,12 @@ def parser() -> argparse.ArgumentParser:
 
 
 def run(args: argparse.Namespace, ctx: Context) -> None:
-    canvas, _ = canvases.read_variant(ctx.root, str(args.variant))
-    ctx.say(grid.heading(canvas))
+    variant = str(args.variant)
+    canvas, _ = canvases.read_variant(ctx.root, variant)
+    ctx.say(grid.heading(variant, canvas))
     if args.ids:
         ctx.say(
-            f"Each entry's id is `{canvas.get('id')}--` and the part under it in brackets, "
+            f"Each entry's id is `{variant}--` and the part under it in brackets, "
             f"as `edit-entry` and `remove-entry` name it."
         )
     for line in grid.draw(canvas, with_ids=args.ids):
