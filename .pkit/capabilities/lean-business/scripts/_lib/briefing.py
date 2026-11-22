@@ -10,10 +10,13 @@ the status gives one line for each idea; with one, the briefing, in this order:
 - **An offer** (`offer`), after a silence (`SILENCE`): where nothing has been recorded on
   a running cycle, or one in review, for that many days of its window, the gap may be
   recorded as a suspension, from the day after the last work recorded on the cycle, or
-  from the window's first day where that is later. It is offered only where such a
-  suspension, resumed today, keeps the suspension's rules (`suspensions.of_cycle`), and it
-  says where the window's end falls now and where it would fall. It is an offer, never an
-  act: only the person knows whether the silence was time away.
+  from the window's first day where that is later. Only the silent days within the window
+  count: those after the last work, through today or through the window's end where that
+  is earlier, so a cycle long in review is not offered the days after its window. It is
+  offered only where such a suspension, resumed today, keeps the suspension's rules
+  (`suspensions.of_cycle`), and it says where the window's end falls now and where it
+  would fall. It is an offer, never an act: only the person knows whether the silence was
+  time away.
 - **The last act** (`last_act`): the day of the person's last recorded act on the idea,
   and each act recorded that day.
 - **The goal, the cycles, the variants and the experiments,** each with where it stands.
@@ -56,8 +59,9 @@ from _lib.timeline import Span, span_text
 SCHEMA_VERSION = 1
 
 #: The days of a cycle's window with nothing recorded on it after which the briefing offers
-#: to record the gap as a suspension (DEC-001 point 10).
-SILENCE = 14
+#: to record the gap as a suspension. DEC-001 point 10 leaves how long a silence must be to
+#: the build, which sets it at three weeks; use may show it should change.
+SILENCE = 21
 
 #: The step judged next in each state of the desk stage that judges one.
 NEXT_STEP = {
@@ -611,10 +615,12 @@ def last_act(idea: IdeaModel) -> LastAct | None:
 
 
 def offer(idea: IdeaModel, statuses: Sequence[CycleStatus], on: date) -> Offer | None:
-    """The offer to record a silence of `SILENCE` days or more on a cycle running or in
-    review as a suspension, or None where no cycle has one, or where such a suspension,
-    resumed on `on`, would break the suspension's rules. A cycle whose file does not read
-    has none: it counts as undecided, and where it stands cannot be told."""
+    """The offer to record a silence of `SILENCE` days or more of its window on a cycle
+    running or in review as a suspension, or None where no cycle has one, or where such a
+    suspension, resumed on `on`, would break the suspension's rules. The silent days are
+    those after the last work, through `on` or the window's end where that is earlier. A
+    cycle whose file does not read has none: it counts as undecided, and where it stands
+    cannot be told."""
     for status in statuses:
         if status.data is None or status.at.state not in OFFERED_IN:
             continue
@@ -629,7 +635,8 @@ def offer(idea: IdeaModel, statuses: Sequence[CycleStatus], on: date) -> Offer |
         quiet = window.start - timedelta(days=1)
         if last is not None and last > quiet:
             quiet = last
-        if (on - quiet).days < SILENCE:
+        through = on if window.end is None else min(on, window.end)
+        if (through - quiet).days < SILENCE:
             continue
         first = quiet + timedelta(days=1)
         candidate = _suspended(cycle.data, first, on)

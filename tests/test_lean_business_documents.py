@@ -166,6 +166,8 @@ def test_the_status_document_holds_its_contract(
 
     world.edit(lb.CYCLE, quiet)
     world.edit(lb.DIRECT, reworded)
+    # Three weeks of its window gone with nothing recorded, the silence the offer waits for.
+    world.engine.on = date(2026, 11, 21)
     running = _printed(world, "meal-plan")
     (idea,) = running["ideas"]
     assert idea["offer"] is not None and idea["variants"][0]["stale"], running

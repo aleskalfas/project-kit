@@ -14,12 +14,12 @@ body: >
   and the person's decision for it, after a progress report of the key
   results, the suspensions and the experiments not yet decided; it warns when
   persevering where the objective was missed. `pkit lean status <idea>` now
-  gives the full briefing: an offer to record a silence of 14 days on an open
-  cycle as a suspension, the last act, each cycle in full, each variant's
-  stale judgements, each experiment's expectation beside its result, and what
-  waits on the person in order, the next cycle to plan among it. It says
-  where the goal's file cannot be read. Its structured form adds `goal_why`,
-  `last_act` and `offer`, and keys on each variant, cycle and experiment, at
-  `schema_version` 1. Where the process engine places a cycle in none of its
-  states after a suspension's write, the suspension stands and the command
-  says the move waits.
+  gives the full briefing: an offer to record a silence of 21 days of an open
+  cycle's window as a suspension, the last act, each cycle in full, each
+  variant's stale judgements, each experiment's expectation beside its result,
+  and what waits on the person in order, the next cycle to plan among it. It
+  says where the goal's file cannot be read. Its structured form adds
+  `goal_why`, `last_act` and `offer`, and keys on each variant, cycle and
+  experiment, at `schema_version` 1. Where the process engine places a cycle
+  in none of its states after a suspension's write, the suspension stands and
+  the command says the move waits.

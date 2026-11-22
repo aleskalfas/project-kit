@@ -552,10 +552,10 @@ def quiet(world: lb.World) -> None:
 
 @pytest.mark.parametrize(
     ("day", "offered"),
-    [(date(2026, 11, 13), False), (date(2026, 11, 14), True)],
-    ids=["after-13-days-none", "after-14-days-offered"],
+    [(date(2026, 11, 20), False), (date(2026, 11, 21), True)],
+    ids=["after-20-days-none", "after-21-days-offered"],
 )
-def test_status_offers_to_record_a_silence_of_fourteen_days_as_a_suspension(
+def test_status_offers_to_record_a_silence_of_three_weeks_as_a_suspension(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, day: date, offered: bool
 ) -> None:
     world = lb.world(tmp_path, monkeypatch, day)
@@ -573,7 +573,7 @@ def test_status_offers_to_record_a_silence_of_fourteen_days_as_a_suspension(
         "last_work": "2026-10-20",
         "first_day": "2026-11-01",
         "window_end": "2027-01-29",
-        "window_end_if_back_today": "2027-02-11",
+        "window_end_if_back_today": "2027-02-18",
         "command": command,
     }
     run = world.run("status", "meal-plan")
@@ -581,7 +581,7 @@ def test_status_offers_to_record_a_silence_of_fourteen_days_as_a_suspension(
     assert lines[1:3] == [
         f"  Nothing has been recorded on `{FIRST}` since 2026-10-20. If you were away, the gap "
         f"can be recorded as a suspension from 2026-11-01, which would move the window's end, "
-        f"2027-01-29, later by the days you were away: to 2027-02-11, were you back today.",
+        f"2027-01-29, later by the days you were away: to 2027-02-18, were you back today.",
         f"    {command}",
     ]
     # The offer holds: the suspension it offers is one the command records.
@@ -600,23 +600,34 @@ def test_status_offers_to_record_a_silence_of_fourteen_days_as_a_suspension(
     assert briefing(world)["offer"] is None
 
 
-def test_status_makes_no_offer_a_suspension_would_break_its_rules_for(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("last_work", "offered"),
+    [(date(2027, 2, 14), False), (date(2027, 2, 1), False), (date(2027, 1, 22), True)],
+    ids=["after-its-window", "11-days-before-its-end", "21-days-before-its-end"],
+)
+def test_status_counts_only_the_silent_days_within_the_window(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, last_work: date, offered: bool
 ) -> None:
-    # The cycle in review, nothing recorded on it since a result recorded on 2027-02-14,
-    # after its window ended on 2027-02-12: a suspension from the day after would start
-    # outside the window.
+    # The cycle in review on 2027-03-20, its window ended on 2027-02-12, nothing recorded
+    # on it since a result: the days after its window are no silence of it, so only the
+    # days from the result through the window's end count.
     world = lb.world(tmp_path, monkeypatch, date(2027, 3, 20))
     world.edit(lb.CYCLE, lambda data: data.pop("review"))
 
     def late(data: Any) -> None:
-        data["result"]["when"] = date(2027, 2, 14)
+        data["result"]["when"] = last_work
         del data["decision"]
 
     world.edit(f"{lb.IDEA}/experiments/landing-page.yaml", late)
     idea = briefing(world)
     assert idea["cycles"][0]["state"] == "in-review"
-    assert idea["offer"] is None
+    if not offered:
+        assert idea["offer"] is None
+        return
+    assert (idea["offer"]["last_work"], idea["offer"]["first_day"]) == (
+        "2027-01-22",
+        "2027-01-23",
+    )
 
 
 def test_status_briefs_a_running_cycle_and_its_experiment_in_full(world: lb.World) -> None:
