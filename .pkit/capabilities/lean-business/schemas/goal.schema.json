@@ -30,7 +30,7 @@
     "currency": {
       "description": "The idea's currency, by its three-letter code, such as `EUR`: the unit of every sum of money the idea holds, none of them converted. It changes only while no declared experiment of the idea is undecided, since a declared sum keeps the unit it was declared in.",
       "type": "string",
-      "pattern": "^[A-Z]{3}$"
+      "pattern": "^[A-Z]{3}$(?!\\n)"
     },
     "years": {
       "description": "The years to reach it in: the span over which the viability estimate and the traction target reach the revenue.",

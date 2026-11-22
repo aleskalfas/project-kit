@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "shapes.schema.json",
   "title": "Shared shapes of the lean-business capability's files",
-  "description": "The shapes every schema of the capability shares, so each is written once: ids and the references between files (lean-business DEC-002 point 7), calendar days and the record of who acted and when (DEC-002 point 2), fingerprints (point 13), and the method's small vocabularies. Each reference is marked with the namespace it names, so the core's data validation resolves it (COR-029). The capability's Python reads the same id and reference patterns (`scripts/_lib/ids.py`), and a test holds the two equal. An id's and a reference's pattern ends `$(?!\\n)`: a pattern's `$` ends the value, and the lookahead keeps a validator that runs it with Python's regular expressions, as the core's data validation does, from letting a final line feed through, since Python's `$` matches before one too.",
+  "description": "The shapes every schema of the capability shares, so each is written once: ids and the references between files (lean-business DEC-002 point 7), calendar days and the record of who acted and when (DEC-002 point 2), fingerprints (point 13), and the method's small vocabularies. Each reference is marked with the namespace it names, so the core's data validation resolves it (COR-029). The capability's Python reads the same id and reference patterns (`scripts/_lib/ids.py`), and a test holds the two equal. Each pattern that matches a whole value ends `$(?!\\n)`, as the goal's currency's does: a pattern's `$` ends the value, and the lookahead keeps a validator that runs it with Python's regular expressions, as the core's data validation does, from letting a final line feed through, since Python's `$` matches before one too.",
   "$defs": {
     "segment": {
       "description": "One part of an id: words of lower-case letters and digits, the first beginning with a letter, joined by single hyphens (DEC-002 point 7). An idea's id, which is its folder's name, is one segment.",
@@ -46,7 +46,7 @@
     "day": {
       "description": "A calendar day, `YYYY-MM-DD` (lean-business DEC-003 point 1). Every date the capability reads is a day, never a time.",
       "type": "string",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$(?!\\n)"
     },
     "person": {
       "description": "Who made a judgement or took an act, in words: a name, with an address where the project uses one.",
@@ -85,7 +85,7 @@
         "sha256": {
           "description": "The digest, 64 lower-case hexadecimal digits.",
           "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
+          "pattern": "^[0-9a-f]{64}$(?!\\n)"
         }
       }
     },

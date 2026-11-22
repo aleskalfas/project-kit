@@ -18,7 +18,7 @@ from ruamel.yaml.constructor import SafeConstructor
 from ruamel.yaml.error import YAMLError
 
 #: A calendar day as the files write it (DEC-003 point 1).
-_DAY = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+_DAY = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
 
 class ReadError(Exception):
@@ -62,7 +62,7 @@ def read_yaml(path: Path) -> Any:
 def written_as_day(value: object) -> bool:
     """Whether `value` is written in the shape of a day, `YYYY-MM-DD`, whether or not the
     calendar holds it."""
-    return isinstance(value, str) and _DAY.match(value) is not None
+    return isinstance(value, str) and _DAY.fullmatch(value) is not None
 
 
 def day(value: object) -> date | None:

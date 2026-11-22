@@ -255,6 +255,7 @@ def test_compare_finds_a_match_a_difference_an_unknown_form_and_no_fingerprint()
         {"form": 1},
         {"form": True, "sha256": kept["sha256"]},
         {"form": 1, "sha256": "x"},
+        {"form": 1, "sha256": kept["sha256"] + "\n"},
     ):
         assert (
             fingerprint.compare(stored, lambda form: fingerprint.take(data, form)) == "unreadable"

@@ -164,6 +164,11 @@ def test_an_id_or_a_reference_with_a_line_feed_after_it_is_none() -> None:
     assert ids.parse_ref("[cycle:meal-plan--first]\n", ids.CYCLE) is None
 
 
+def test_a_day_with_a_line_feed_after_it_is_not_written_as_a_day() -> None:
+    assert reading.written_as_day("2026-10-01")
+    assert not reading.written_as_day("2026-10-01\n")
+
+
 # --- what is refused ----------------------------------------------------------------------------
 
 
@@ -215,6 +220,19 @@ REFUSED: list[tuple[str, str, str, Callable[[Any], None]]] = [
     ),
     ("a-goal-without-its-currency", "goal", "goal.yaml", _set(("currency",), _DROP)),
     ("a-currency-not-in-capitals", "goal", "goal.yaml", _set(("currency",), "eur")),
+    (
+        "a-currency-with-a-line-feed-after-it",
+        "goal",
+        "goal.yaml",
+        _set(("currency",), "EUR\n"),
+    ),
+    ("a-day-with-a-line-feed-after-it", "goal", "goal.yaml", _set(("when",), "2026-10-01\n")),
+    (
+        "a-digest-with-a-line-feed-after-it",
+        "cycle",
+        "cycles/first.yaml",
+        _set(("planned", "fingerprint", "sha256"), "a" * 64 + "\n"),
+    ),
     (
         "a-bare-reference",
         "experiment",

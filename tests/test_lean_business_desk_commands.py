@@ -83,6 +83,14 @@ def test_set_goal_sets_a_first_goal_from_every_flag_and_creates_the_idea(
     }
 
 
+def test_set_goal_refuses_a_currency_with_a_line_feed_after_it(world: lb.World) -> None:
+    flags = ("--revenue", "20000", "--per", "month", "--currency", "CZK\n", "--years", "2")
+    run = world.run("set_goal", "board-game", *flags, "--person-decided")
+    assert run.code == 1
+    assert "is no currency's code" in run.err
+    assert not (world.root / "lean-business/board-game").exists()
+
+
 def test_set_goal_refuses_while_a_cycle_is_planned_running_or_suspended(world: lb.World) -> None:
     run = world.run("set_goal", "meal-plan", "--years", "4", "--person-decided")
     assert run.code == 1

@@ -139,7 +139,7 @@ MODEL = ("archetype", "sides")
 #: What a goal counts by.
 GOAL_CONTENT = ("revenue", "currency", "years")
 
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
 class FingerprintError(Exception):
@@ -333,7 +333,7 @@ def read(stored: object) -> Fingerprint | None:
     form, digest = stored.get("form"), stored.get("sha256")
     if isinstance(form, bool) or not isinstance(form, int) or form < 1:
         return None
-    if not isinstance(digest, str) or _SHA256.match(digest) is None:
+    if not isinstance(digest, str) or _SHA256.fullmatch(digest) is None:
         return None
     return Fingerprint(form, digest)
 

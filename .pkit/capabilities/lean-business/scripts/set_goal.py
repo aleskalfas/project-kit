@@ -46,7 +46,7 @@ from _lib.writes import Refused
 #: A goal's keys, in the order the schema's reference instance writes them.
 ORDER = ("pkit_schema", "schema_version", "revenue", "currency", "years", "by", "when")
 
-CURRENCY = re.compile(r"^[A-Z]{3}$")
+CURRENCY = re.compile(r"[A-Z]{3}")
 
 
 def parser() -> argparse.ArgumentParser:
@@ -71,7 +71,7 @@ def run(args: argparse.Namespace, ctx: Context) -> None:
             f"`{idea}` is no idea's id: words of lower-case letters and digits, the first "
             f"beginning with a letter, joined by single hyphens"
         )
-    if args.currency is not None and not CURRENCY.match(args.currency):
+    if args.currency is not None and not CURRENCY.fullmatch(args.currency):
         raise Refused(f"`{args.currency}` is no currency's code: three capital letters, as EUR")
     amount = editing.number(args.revenue) if args.revenue is not None else None
     years = editing.number(args.years) if args.years is not None else None
