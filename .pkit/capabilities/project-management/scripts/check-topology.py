@@ -5,7 +5,8 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""Project-management capability — check-topology (DEC-059 points 1 to 3, DEC-061 point 10).
+"""Project-management capability — check-topology (DEC-059 points 1 to 3, DEC-061 point 10,
+DEC-081 point 3).
 
 Checks the topology a change declares, `project/topology.yaml` in the working
 tree, against the topology it would replace: the default branch's, read at the
@@ -20,6 +21,9 @@ it read. Each of these fails the check:
 - a seat that names a pool the topology does not declare, a seat that names
   pools where the topology declares none, and a planner's seat that names any
   pool (DEC-061 point 10)
+- a planner's or a lead's seat that names a directing seat, and a worker's seat
+  that names a seat the topology does not hold, a retired seat, itself or
+  another worker's seat to direct it (DEC-081 point 3)
 - a topology under the `label` ownership substrate (DEC-059 point 9)
 - a seat of the base deleted or moved rather than retired (point 6)
 - a base that cannot be resolved, while the working tree holds a topology

@@ -857,6 +857,7 @@ seats:
   - name: tester
     role: worker
     agent: project-manager    # the default
+    directed_by: planner      # optional: the seat that directs it by message
     pools: [alpha]            # the pools a seat that builds serves
     scope:
       types: [test]           # workstreams, types of the type axis, or both
@@ -872,6 +873,7 @@ seats:
 - **The organizer seat's clone** may release another seat by force. At most one seat is the organizer seat
 - **Each seat names its state issue,** which says who holds the seat. The topology never says who holds a seat
 - **Pools of workers are optional.** Where the topology declares `pools`, each seat that builds names the pools it serves, and takes its work only from them. A planner names no pool ("Pools of workers" below)
+- **A worker's seat may name the seat that directs it,** by `directed_by`: one planner's or lead's seat, not retired ([project-management:DEC-081-delegation-between-seats] point 3). A directing seat directs only the workers whose seats name it, and a planner's or a lead's seat names none, since the person directs it. So directing has one level. A worker that names none counts no message as a directive, and works from the Tasks it may take alone. A change of who directs a worker binds once it merges, as the rest of the topology does, so no message can name another directing seat
 
 **Adding seats.** Add the seats at the end of the file on a branch, and run `pkit pm create-seats` there. The command creates a state issue for each seat that names none and is not retired. It writes each issue's number into that seat's entry. Commit the file with the change, so the change lands with its state issues.
 
@@ -887,6 +889,7 @@ seats:
 - a seat that is not retired and names no state issue, or two seats that name one
 - a scope that names a workstream or a type the project does not declare
 - a seat that names a pool the topology does not declare, a seat that names pools where none are declared, or a planner's seat that names a pool
+- a planner's or a lead's seat that names a directing seat, or a worker's seat that names, to direct it, a seat the topology does not hold, a retired seat, itself or another worker's seat
 - the `label` substrate in `project/instance-ownership.yaml`, since a label cannot carry what a claim names
 - a seat of the base deleted or moved rather than retired
 - a base that cannot be resolved, while the working tree holds a topology
@@ -907,7 +910,7 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 - **What a release frees:** every claim that the seat's clone made as that seat stops counting, with no write to those issues. A dead clone's Tasks in Backlog and In Progress are then free for another clone to take. A clone that takes the seat again, the same clone included, revives none of those claims
 - **What a release leaves in Review:** a Task in Review waits on its reviewers and a person, so no worker takes it up ([project-management:DEC-059-topology-of-seats] point 9). `seats` names each such Task with its pull request, and the person lands it or hands it over to a worker
 
-**Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition, its scope and its pools. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub. Where the topology declares pools, it shows each pool's open milestones too ("Pools of workers" below).
+**Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition, its scope and its pools, and for each worker that is not retired the seat that directs it, or `directed by no seat`. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub. Where the topology declares pools, it shows each pool's open milestones too ("Pools of workers" below).
 
 **The Tasks in Review a released seat left.** Last, `seats` names each Task in Review whose claim stopped counting because its seat was released, by its clone or by force. It lists them under the seat and the clone that made the claim, each with the open pull request from the Task's branch, `<type>/<N>-<slug>`:
 
@@ -933,7 +936,7 @@ Tasks in Review that a released seat left, each for a person to land or to hand 
 
 **Code that cannot read the topology in full.** The parse marks a topology with a key this code does not know, at any depth ([project-management:DEC-061-pools-of-workers] point 9). It marks too a value it cannot read, such as an unknown role, release mode or schema version, or a list written as a string. On the mark, `next-task`, `start-work`, `take-seat` and `release-seat --force` refuse with exit 2, and say what was not understood. `seats` warns and lists the rest, and work in flight goes on, such as `review-work` and `done-work`.
 
-**The order of work.** The guard protects only the commands run from a checkout that holds it. So a project adds pools, or any later key, to its topology only once every clone that may take a seat runs this code. No check enforces this order yet: it is the operator's discipline.
+**The order of work.** The guard protects only the commands run from a checkout that holds it. So a project adds pools, a worker's `directed_by`, or any later key, to its topology only once every clone that may take a seat runs this code. No check enforces this order yet: it is the operator's discipline.
 
 #### Pools of workers — the `Pool:` line and `set-pool` (per [project-management:DEC-061-pools-of-workers])
 

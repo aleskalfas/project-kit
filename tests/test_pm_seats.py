@@ -519,11 +519,29 @@ def test_the_listing_shows_each_seat_its_role_and_its_holder(
     assert f"seats: the topology of origin/main at {TIP}, 5 seat(s), 1 retired" in out
     assert "  1. planner (planner, agent project-manager, organizer), #11: held by @me" in out
     assert out.splitlines()[1].endswith("← this clone")
-    assert "  2. worker-1 (worker, agent project-manager), #12: held by @you, clone k7" in out
-    assert "  3. worker-2 (worker, agent project-manager), #13: free" in out
-    assert "  4. tester (worker, agent test-writer, scope: types test), #14: free" in out
+    assert (
+        "  2. worker-1 (worker, agent project-manager, directed by no seat), #12: held by @you, "
+        "clone k7" in out
+    )
+    assert "  3. worker-2 (worker, agent project-manager, directed by no seat), #13: free" in out
+    assert (
+        "  4. tester (worker, agent test-writer, scope: types test, directed by no seat), #14: free"
+        in out
+    )
     assert "  5. old (worker, agent project-manager, retired), #15: free" in out
     assert repo.writes() == []
+
+
+def test_the_listing_shows_each_workers_directing_seat(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    seats = [dict(seat) for seat in SEATS]
+    seats[1]["directed_by"] = "planner"
+    assert _list(root, _repo(), git=_git(seats)) == 0
+    out = capsys.readouterr().out
+    assert "  2. worker-1 (worker, agent project-manager, directed by planner), #12: free" in out
+    assert "  3. worker-2 (worker, agent project-manager, directed by no seat), #13: free" in out
+    assert "  1. planner (planner, agent project-manager, organizer), #11: free" in out
 
 
 def test_the_listing_names_the_state_issues_no_seat_names(
@@ -663,7 +681,10 @@ def test_a_seat_its_own_clone_took_again_frees_none_of_the_claims_it_released(
     repo.prs = {60: "feat/50-add-the-dispatcher"}
     assert _list(root, repo) == 0
     out = capsys.readouterr().out
-    assert "  2. worker-1 (worker, agent project-manager), #12: held by @you, clone k7" in out
+    assert (
+        "  2. worker-1 (worker, agent project-manager, directed by no seat), #12: held by @you, "
+        "clone k7" in out
+    )
     assert f"{LEFT_HEADING}\n  seat worker-1, clone k7 of @you:\n" in out
     assert "    #50 Add the dispatcher: pull request #60" in out
 
@@ -743,7 +764,10 @@ def test_the_listing_warns_of_what_it_cannot_read_and_lists_the_rest(
 ) -> None:
     assert _list(root, _repo(), git=_git(extra=UNREAD)) == 0
     captured = capsys.readouterr()
-    assert "  2. worker-1 (worker, agent project-manager), #12: free" in captured.out
+    assert (
+        "  2. worker-1 (worker, agent project-manager, directed by no seat), #12: free"
+        in captured.out
+    )
     assert "this code cannot read the topology in full" in captured.err
 
 
@@ -812,7 +836,10 @@ def test_the_listing_shows_the_pools_and_counts_the_tasks_they_hold_back(
     repo.add(42, "## What\n\nx\n", title="[Task] in alpha", labels=("state:backlog",), milestone=3)
     assert _list(schemas, repo, git=_git(POOLED, extra=POOLS)) == 0
     captured = capsys.readouterr()
-    assert "  2. worker-1 (worker, agent project-manager, pools: alpha), #12: free" in captured.out
+    assert (
+        "  2. worker-1 (worker, agent project-manager, pools: alpha, directed by no seat), "
+        "#12: free" in captured.out
+    )
     assert "  alpha: #3 Sprint 3: auth" in captured.out
     _stranded(captured.err)
     assert "warn: 1 Task(s) in Backlog are in no pool" in captured.err
@@ -830,7 +857,10 @@ def test_the_listing_exits_3_where_the_milestones_cannot_be_read(
     repo.failing.add("milestones")
     assert _list(schemas, repo, git=_git(POOLED, extra=POOLS)) == 3
     captured = capsys.readouterr()
-    assert "  2. worker-1 (worker, agent project-manager, pools: alpha), #12: free" in captured.out
+    assert (
+        "  2. worker-1 (worker, agent project-manager, pools: alpha, directed by no seat), "
+        "#12: free" in captured.out
+    )
     assert "the open milestones could not be read" in captured.err
     assert "the pool bravo is served by no seat" in captured.err
 
