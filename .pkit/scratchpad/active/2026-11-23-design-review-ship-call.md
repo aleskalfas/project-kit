@@ -79,4 +79,35 @@ These are proposals, not decisions. The Feature [project-kit#3468](https://githu
 ### Open
 
 - **The principle's source.** [visual-communication:DEC-028-principles-of-visual-communication] wants a named source for a rule, and DEC-030 point 8 keeps a project's taste out of the design knowledge. The principle may be the project's, kept beside its examples, rather than the capability's.
-- **One test before building.** Have the capability's own designer draw the development piece free-first in the engine, with the brand, and have the person mark it. It tells whether the designer reaches the bar, or whether the fresh session's lack of guidance was the reason. Page marks against examples, and one round of mends, can be weighed on the same run.
+
+## What the test found
+
+[project-kit#3470](https://github.com/aleskalfas/project-kit/issues/3470) fixed each question's pass before it ran. Each is read against that pass here.
+
+**1. The designer's reach: not met.** The capability's `graphic-designer` drew the first presentation freely, in the engine, with project-kit's brand, and without reading the examples. The person shipped neither the draw nor its mended version. They said each was better than the other in some parts and worse in others.
+
+**2. The page marks: not scored.** The `graphic-design-reviewer`, given the three shipped designs of the second presentation and the principle, marked five of the ten pages below the level, all for their finish. Its rule-by-rule grades of the same draw found nearly nothing wrong. After the mend it again marked five below:
+- it raised one page the mend had changed;
+- it lowered one page that was unchanged, which it now read for its finish as well as its clarity.
+
+The person marked no page, so agreement with the marks was not measured.
+
+**3. The round of mends: not met.** The person preferred neither the draw nor the mended version.
+
+**4. The rebuild in the project's style.** The person turned the test to this question after the first three. The designer took a free draft the person had shipped, one from each presentation, drawn outside the engine. It rebuilt each as a piece, with project-kit's brand and libraries:
+- **The first rebuild shipped.** The person shipped the draft and its rebuild alike.
+- **The second fell short, twice.**
+  - First the person was not sure. A sequence whose colours stood for its meaning lost that meaning, and running text drawn at the screen's size was too small for the room.
+  - After one round on the person's own notes, the person called it shippable save one page. That page's running text needed a size the brand gives a piece's own parts no way to reach.
+- **What the rebuilds could not carry:**
+  - **The brand:** no type above the projector's title size, and no size between its body and title sizes that a piece's own parts can use; no italic, and two weights; no warm colour light or strong enough to carry heat; one accent.
+  - **The engine:** no curve or path, dashed stroke, opacity, turned text or page number, and no mark placed from a number in the content.
+  - **The starter library:** the deck's slide layout and the panels fitted. Everything else was drawn as parts local to each piece. Some of these would serve other pieces: a sequence of steps, a block of running text, a split with a divider, an annotated picture, and a comparison of two kinds.
+
+**What this supports:**
+- **Drawing freely in the engine did not reach the bar here.** A free draft drawn outside it did, as before.
+- **A shipped free draft survives a rebuild in the project's style,** once in two. In the other case it came close after one round on the person's notes.
+- **The rebuilds fell short through the brand and the engine, not through the designer.** What they lacked is a list of what the brand, the engine and the libraries need, drawn from below.
+- **Page marks against examples** are as yet untested against the person.
+
+**What it does not support:** a claim from more than two pieces, or from another person's bar.
