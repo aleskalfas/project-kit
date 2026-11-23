@@ -8,7 +8,11 @@ body: >
   `check-topology` refuses the key on a planner's or a lead's seat, and on a
   worker's seat a name the topology does not hold, a retired seat, the seat
   itself or another worker's seat. `pkit pm seats` shows each worker's
-  directing seat, or `directed by no seat`. Add the key only once every
+  directing seat, or `directed by no seat`, and for each held seat the
+  session its holder recorded as running the seat's loop, by its name,
+  machine, messaging address and process, or `no session recorded`. A seat's
+  state issue reads a new event, `state-session`, that records that session
+  (DEC-081 point 4, DEC-084 point 1). Add the key only once every
   clone that may take a seat runs this release: an older one reads a
   topology that holds it as one it cannot read in full, and takes nothing.
   `pkit pm next-task --task N` takes the Task a directive names, and only
