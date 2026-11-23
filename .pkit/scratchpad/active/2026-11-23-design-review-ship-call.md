@@ -16,7 +16,7 @@ So what judges a piece well enough to end the designer's loop? And how should th
 
 ## What the tests found, and how far it goes
 
-**The set.** One presentation of ten slides that explains, projected and read from six metres. It has twelve designs:
+**The set.** One presentation that explains. It has twelve designs:
 - six rounds drawn by one agent session under a critic loop, from a first draft to two rounds of polish. The critic was core's `critic` agent, sent the same brief each round and asked what blocks;
 - two weak designs drawn on purpose;
 - the capability's own drawing, with its starter library;
@@ -35,8 +35,8 @@ The sample is small. Two fresh sessions drew the six designs the person shipped,
 - **Beside the three shipped designs of the second presentation:**
   - Without the principle, it called the rounds "plainer, a difference of style, not of level".
   - With the principle, its answer on the whole design failed all twelve.
-  - Its marks on each slide, though, split the two groups. The fresh designs each missed one or two slides of content, each a drawing that missed part of its point. The rounds missed the pages that open and divide the piece, and its pictures, in the person's own terms "a tidy template, not a designed piece".
-- **A rule fixed in writing before two more runs:** a design ships where at least 8 of its 10 slides are marked at the level. It matched the person on 11 of 12 designs in each of three runs, and every miss sat at exactly 8.
+  - Its marks on each slide, though, split the two groups as the person had. Where a fresh design missed a slide, its drawing missed part of the slide's point. Where a round missed, the person's own words fit it: "a tidy template, not a designed piece".
+- **A rule fixed in writing before two more runs:** a design ships where no more than a set number of its slides are marked below the level. It matched the person on 11 of 12 designs in each of three runs, and every miss sat exactly at that number.
 
 **The principle,** as the judge read it: "Judge two things apart, on each slide and on the whole: its finish: whether it looks designed by a professional, in its pictures, colours, type and details, or made by hand in an office program; its clarity: whether what is drawn carries the slide's point. Neither makes up for the other. A hand-made finish fails a slide as surely as a missed point does."
 
@@ -47,15 +47,16 @@ The sample is small. Two fresh sessions drew the six designs the person shipped,
 - **A free draft can reach the bar.** A fresh session with no guidance reached the person's bar.
 
 **What it does not support:**
-- **A verdict on a whole design that replaces the person.** The count was chosen after a run, its margin is thin, and it breaks on long pieces: a piece of forty slides that fails only its opening and dividing pages and its pictures still passes.
+- **A verdict on a whole design that replaces the person.** The count was chosen after a run, its margin is thin, and it breaks on long pieces: a long piece whose failing slides are few still passes, however much those slides matter.
+- **One round of mends against two, or any round that mends the capability's review's findings.** The loop ran under core's `critic`, not under the capability's review, and no test compared one round with two.
 - **Any claim about why the fresh designs worked.** It could be the lack of guidance, the lack of a library, or drawing before mapping.
 - **That the judge would fail a weak free draft, or pass good work by another hand.** Neither was in the set.
 
 ## What the record takes from it
 
-[visual-communication:DEC-070-ship-call-and-one-round] takes only what the tests support without a further test:
+[visual-communication:DEC-070-ship-call-and-one-round] takes only what the tests support without a further test, and the maintainer's choice of one round:
 - **The person makes the ship call,** and the review informs it. No grade, bar, hold, verdict or calibration ends the designer's loop.
-- **The loop is one round of mends.** The designer mends what is plainly wrong once, the review reads again, and the piece goes to the person. No round runs for polish.
+- **The loop is one round of mends.** The designer mends what is plainly wrong once, the review reads again, and the piece goes to the person. The tests support only that no round runs for polish. One round rather than two is the maintainer's choice, which the record weighs by its cost.
 - **The rule sets stay** as the canon both agents read and cite, and nothing grades them rule by rule.
 
 ## What a test may add
