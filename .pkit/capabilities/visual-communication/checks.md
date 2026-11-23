@@ -137,15 +137,11 @@ pkit:
         - visual-communication:DEC-038#5
         - visual-communication:DEC-038#7
         - COR-073#5
-        - visual-communication:DEC-042#3
-        - visual-communication:DEC-042#6
         - COR-051#7
         - visual-communication:DEC-046#3
         - visual-communication:DEC-062#1
         - visual-communication:DEC-063#1
         - visual-communication:DEC-063#2
-        - visual-communication:DEC-065#1
-        - visual-communication:DEC-065#2
         - visual-communication:DEC-066#1
         - visual-communication:DEC-066#2
         - visual-communication:DEC-067#1
@@ -189,7 +185,6 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-library-folder
         - .pkit/capabilities/visual-communication/files.md#the-libraries-the-capability-ships
         - .pkit/capabilities/visual-communication/files.md#the-location
-        - .pkit/capabilities/visual-communication/files.md#the-bar-and-the-bounds
         - .pkit/capabilities/visual-communication/files.md#the-lock
         - .pkit/capabilities/visual-communication/files.md#notations
         - .pkit/capabilities/visual-communication/files.md#signs
@@ -213,7 +208,6 @@ pkit:
         - .pkit/lifecycle/manifest.md#how-a-registered-command-is-run
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
         - .pkit/capabilities/visual-communication/outputs.md#what-the-report-says
-        - .pkit/capabilities/visual-communication/outputs.md#when-it-ends-the-loop
 ---
 
 # What the check reports
@@ -301,8 +295,6 @@ In the tables, `<piece>/` is the piece's folder, `<location>/pieces/<piece>/`, a
 |---|---|---|---|---|
 | `location` | The configuration records a location that is refused or missing, or a `location:` line with no value. | fails | the configuration, `.pkit/capabilities/visual-communication/project/config.yaml` | Restore the folder, or change the `location:` line; write the folder on an empty one, or remove it ([files](files.md#the-location)). |
 | `grant` | The grant of the designer, `graphic-designer`, the category `visual-communication.work` of the agents overlay, does not cover the location the configuration records, or names a path inside `.pkit/`. The check reads the category as the deploy reads it, so a value the designer's own block under `overrides.graphic-designer` gives replaces the top-level line (DEC-030 point 5). A path covers the location where it is the location or a folder that holds it, so a pattern such as `visual/**` covers none. With no location recorded, only the paths inside `.pkit/` are judged. A grant that names no path, such as `[]`, which switches the designer off, fails nothing. An overlay that cannot be read fails too. A check of one piece does not judge the grant. | fails | the overlay, `.pkit/agents/project/overlay.yaml#visual-communication.work`, or `#overrides.graphic-designer.visual-communication.work` | For the top-level line, run `pkit agents reconcile --write`, which moves it to the location while it stays as `pkit` wrote it (COR-073 point 5). Otherwise name the location in the line, or write `[]`. Take any path inside `.pkit/` out. |
-| `bar-ungraded` | The configuration's bar covers what the check does not find graded: a rule set or a rule that no rule set the capability ships and does not load into sessions, and none of the project's own that inherits one, holds, or that is withdrawn or superseded. The check counts as the project's own only the sets in `rule-sets/` under the project's internal documentation root. It does not see a set the project keeps elsewhere, nor the majors such a set pins, so where only such a set pins a covered set, the check compares the cover's major with the covered set's own. | fails | the configuration, `.pkit/capabilities/visual-communication/project/config.yaml#bar.covers` | Cover a set or a rule the check finds graded, keeping a set of the project's own that inherits one in `rule-sets/` under the internal documentation root, or take the item out ([files](files.md#the-bar-and-the-bounds)). |
-| `bar-major` | The configuration's bar covers a set at a major other than the one a rule set of the project's pins for it, in its `inherits`, or than the set's own where none pins it, as a pin behind its set fails (COR-051 point 7; DEC-042 point 3). | fails | the configuration, `.pkit/capabilities/visual-communication/project/config.yaml#bar.covers` | Write the major the message names, once the project has reviewed the set at it. |
 | `files-unlisted` | git cannot list the location's files, or those of a version's `pictures/` folder. | fails | `.`, or `<version>/pictures/` | The message gives git's error. |
 | `file-unreadable` | The configuration, or a file of the capability's format, cannot be read ([how files are read](files.md#how-the-files-are-read)). | fails | the file | Mend the file. |
 | `binding` | The file names no schema, or another schema than its name and place call for. A file at another format number is the core's data validation's to report. | fails | the file | Write the binding the message names ([the binding](files.md#the-binding)). |
@@ -497,7 +489,7 @@ Computing a piece's scenes, one for each language and each key over the size axe
 
 **A finding on several pages.** A page drawn in a layout draws the top's other fields ([Layouts](components.md#layouts)), such as a site's header and footer ([The foundations](files.md#the-foundations)). A finding in what such a field draws is read alike on each page that draws it, and is reported once (DEC-022 point 8). It lies at the first such page, and its message ends naming each page. A finding in a page's own part is that page's alone.
 
-**In the viewing step's report.** The viewing step runs these checks on the scenes it computes, and its report gives the findings of every row of this table, as of every finding computing a scene finds, such as `loss` ([Losses](#losses)) and a picture file's an image shows ([Picture files](#picture-files)), and of no check that computes no scene: each on the images it holds on, and apart those on no image drawn ([what the report says](outputs.md#what-the-report-says), DEC-062 point 1). A check whose silence a reader leans on states its *reach* at the end of its row: the kinds of place it measures and those it leaves out, beside an id of its own, by which the report names each image it measured, and what it states as a fact where it could measure nothing (DEC-063 points 1 and 2). A check with no reach counts as having measured nothing, though its findings stand. A reach's words are in the check's code, which the report carries, so a change to them is a change of code, and a test holds the two equal. The graphic-design review reads what each check means from this page's body, and what each found from that report. So the hold by which the review's verdict ends the designer's loop lapses on a version of the capability whose code, or whose text in this page's body, differs from the version calibrated ([When it ends the loop](outputs.md#when-it-ends-the-loop), DEC-065 point 2).
+**In the viewing step's report.** The viewing step runs these checks on the scenes it computes, and its report gives the findings of every row of this table, as of every finding computing a scene finds, such as `loss` ([Losses](#losses)) and a picture file's an image shows ([Picture files](#picture-files)), and of no check that computes no scene: each on the images it holds on, and apart those on no image drawn ([what the report says](outputs.md#what-the-report-says), DEC-062 point 1). A check whose silence a reader leans on states its *reach* at the end of its row: the kinds of place it measures and those it leaves out, beside an id of its own, by which the report names each image it measured, and what it states as a fact where it could measure nothing (DEC-063 points 1 and 2). A check with no reach counts as having measured nothing, though its findings stand. A reach's words are in the check's code, which the report carries, so a change to them is a change of code, and a test holds the two equal. The graphic-design review reads what each check means from this page's body, and what each found from that report.
 
 Each fails, unless its row says otherwise.
 

@@ -11,11 +11,10 @@ body: >
   row's gaps, it reads from the frames whether the row is exact by them, only
   to tell whether the distances between its centres are judged. Siblings of
   one kind whose sizes differ by less than the brand's smallest step of space
-  are judged on the image at the edges they do not share. Each fault in its
-  report takes an id, `F<n>`. A fault a check already reports is one fault,
-  named in one line. A new kind of fault, a stray text, takes in a text the
-  piece does not place and a text that runs out of its box into empty space,
-  and cites no rule. The reviewer says which rules of `COMM` and `GRAPHIC` a
+  are judged on the image at the edges they do not share. A fault a check
+  already reports is one fault, named in one line. A new kind of fault, a
+  stray text, takes in a text the piece does not place and a text that runs
+  out of its box into empty space, and cites no rule. The reviewer says which rules of `COMM` and `GRAPHIC` a
   fault cites and which name none, and why. A main visual missing, blank,
   hidden where its point lies or wrong cites `RS-COMM-001` on a page that rule
   judges, whatever kind of fault names it. An offset of the brand's smallest
