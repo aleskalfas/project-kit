@@ -1,22 +1,26 @@
 """The Claude Code adapter's probe of messaging between sessions (project-management DEC-081,
-Context; #3461).
+Context, and DEC-084, Implications; #3461).
 
 - the probe starts nothing without its flag, nor inside an agent's run, nor its terminal part
   without a terminal, and refuses a harness older than messaging;
 - it runs under the bare `python3`, as its own hook does;
 - the probe agent withholds neither messaging tool, and each folder's settings make it the
   session's agent and register the hook on every event the probe reads;
-- the scratch folder holds a clone with a linked worktree, a folder for each other session,
-  and the inbound cases' settings;
+- the scratch folder holds a clone with a linked worktree, another clone whose shell runs in
+  the sandbox with the probe's outside copy excluded, a folder for each other session, and the
+  inbound cases' settings;
 - the hook appends each event less the transcripts' paths, prints nothing and never fails; the
-  scan names variables, never a value but the inbox's path and the session's id;
+  scan names variables, never a value but the inbox's path and the session's id, and reads the
+  session's process; the check tells a running process from an ended one;
 - the results name no scratch, temp or home folder, no user and no machine, and each listing
   keeps only the probe's rows;
-- what the evidence says: the tools an agent holds, whether a message was delivered, and the
-  folder a row shows;
-- the results file holds each of the eight measurements, and its evidence fenced;
-- with a stub harness, the headless part runs each of its runs, and the terminal part walks each
-  of its steps, to the results file.
+- what the evidence says: the tools an agent holds, whether a message was delivered, the
+  folder a row shows, a session's own name from the listing's first line, a message's reply
+  address against the sender's own, the session's process against its address, and a
+  process's state as another clone sees it;
+- the results file holds each measurement the parts run take, and its evidence fenced;
+- with a stub harness, the headless part runs each of its runs, and the terminal part and the
+  address part walk each of their steps, to the results file.
 
 A stub harness on a PATH the test builds stands in for `claude`: no real session starts.
 """
@@ -222,6 +226,12 @@ def test_the_scratch_folder_holds_a_clone_with_a_linked_worktree(
     for name in ("twin", "held", "sender", "remote", "sink"):
         assert (tmp_path / name / ".claude" / "agents" / "pkit-probe.md").is_file()
     assert not (tmp_path / "build" / ".claude").exists()
+    assert (tmp_path / "probe-outside.py").read_bytes() == PROBE.read_bytes()
+    other = tmp_path / "other"
+    assert (other / ".git").is_dir()
+    sandbox = json.loads((other / ".claude" / "settings.json").read_text())["sandbox"]
+    assert sandbox["enabled"] is True
+    assert sandbox["excludedCommands"] == [f"python3 {tmp_path / 'probe-outside.py'}"]
     for case in probe_module.INBOUND_CASES:
         written = json.loads(
             (tmp_path / f"inbound-{case.key}" / ".claude" / "settings.json").read_text()
@@ -299,6 +309,56 @@ def test_the_scan_names_variables_and_no_value_but_the_inbox_and_the_session(
     scan = json.loads(done.stdout)["probe_scan"]
     assert scan["variables_naming_a_probe_session"] == ["A_TITLE"]
     assert scan["session_id"] == "s-2"
+
+
+def test_the_scan_reads_the_sessions_process_and_the_processes_its_shell_runs_under(
+    tmp_path: Path,
+) -> None:
+    """This test's own process stands for the session's: the scan's shell runs under it."""
+    me = os.getpid()
+    env = {
+        **os.environ,
+        "CLAUDE_PID": str(me),
+        "CLAUDE_CODE_MESSAGING_SOCKET": f"/tmp/cc-socks/{me}.sock",
+    }
+    done = subprocess.run(
+        [sys.executable, str(PROBE), "--scan-env", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+    scan = json.loads(done.stdout)["probe_scan"]
+    assert (scan["claude_pid"], scan["socket_pid"]) == (me, me)
+    assert scan["process_start"]
+    assert scan["chain"][0]["pid"] == me
+    assert scan["confined"] is False
+    assert not list(tmp_path.glob("confinement-*"))
+
+
+def test_the_check_tells_a_running_process_from_an_ended_one(
+    probe_module: Any, tmp_path: Path
+) -> None:
+    me = os.getpid()
+    start, _ = probe_module.ps_field(me, "lstart")
+    assert start
+    running = probe_module.check_process(tmp_path, me, start)
+    assert running["signal"] == "exists"
+    assert probe_module.liveness_reading(running, live=True).startswith("tells it runs")
+    ended = subprocess.Popen([sys.executable, "-c", "pass"])
+    ended.wait()
+    gone = probe_module.check_process(tmp_path, ended.pid, start)
+    assert gone["signal"] == "no such process"
+    assert probe_module.liveness_reading(gone, live=False) == (
+        "tells it ended: ps shows no process under its id"
+    )
+    printed = subprocess.run(
+        [sys.executable, str(PROBE), "--check-process", str(tmp_path), str(me), start],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    assert json.loads(printed)["probe_check"]["start"] == start
 
 
 # --- keeping the person's data out of the results --------------------------------------------
@@ -477,6 +537,89 @@ def test_the_folder_a_row_shows_is_read_from_that_row_alone(probe_module: Any) -
     assert reading([], started) == "the row shows no folder of the probe's"
 
 
+def test_a_sessions_own_name_is_read_from_the_listings_first_line(
+    probe_module: Any, tmp_path: Path
+) -> None:
+    """The hook sees the listing as a structure; its first line read as JSON would be `{`."""
+    listing = {
+        "listing": "This session is pkit-probe-a [5c2091] — the name other sessions use\n\n"
+        "Peer sessions (1):\n  pkit-probe-b [aa11bb]  ·  interactive  ·  idle",
+        "sections": [{"kind": "sessions", "rows": [{"name": "pkit-probe-b"}]}],
+    }
+    assert probe_module.listing_text(listing).startswith("This session is pkit-probe-a")
+    assert probe_module.listing_text("plain text") == "plain text"
+    probe = _probe(probe_module, tmp_path, tmp_path / "no-harness")
+    entries = [
+        {"hook_event_name": "PostToolUse", "tool_name": "ListAgents", "tool_response": listing}
+    ]
+    probe_module.name_findings(probe, "a session", entries, [], probe.path("clone"))
+    assert "a session: the session reads its name through the listing's first line" in (
+        probe.report.render()
+    )
+
+
+def test_a_messages_reply_address_is_read_from_its_frame_and_compared_with_the_senders_own(
+    probe_module: Any,
+) -> None:
+    frame = (
+        '<cross-session-message from="uds:/tmp/cc-socks/41.sock" from-name="pkit-probe-a" '
+        'from-mode="prompting">\nprobe-m9-first: no answer is needed.\n</cross-session-message>'
+    )
+    assert probe_module.message_sender(frame) == ("uds:/tmp/cc-socks/41.sock", "pkit-probe-a")
+    assert probe_module.message_sender(None) == (None, None)
+    same = probe_module.same_address
+    assert same("uds:/tmp/cc-socks/41.sock", "/tmp/cc-socks/41.sock")
+    assert same("/tmp/cc-socks/41.sock", "/tmp/cc-socks/41.sock")
+    assert not same("uds:/tmp/cc-socks/42.sock", "/tmp/cc-socks/41.sock")
+    assert not same(None, "/tmp/cc-socks/41.sock")
+    reading = probe_module.second_address_reading
+    one, two = "/tmp/cc-socks/41.sock", "/tmp/cc-socks/42.sock"
+    assert reading((f"uds:{one}", one), (f"uds:{two}", two)).startswith("holds")
+    assert reading((f"uds:{one}", one), (f"uds:{one}", two)).startswith("does not hold")
+    assert "not the address its own shell reads" in reading(
+        (f"uds:{one}", two), (f"uds:{two}", two)
+    )
+    assert "read no address" in reading((f"uds:{one}", None), (f"uds:{two}", two))
+    assert reading((None, one), (f"uds:{two}", two)) == (
+        "not measured: no message from the first session arrived"
+    )
+    subagent = probe_module.subagent_address_reading
+    assert "session's own" in subagent("a subagent", f"uds:{one}", one, one)
+    assert "of its own" in subagent("a subagent", f"uds:{two}", one, two)
+    assert "another address" in subagent("a subagent", "uds:/x", one, two)
+    assert "no message" in subagent("a subagent", None, one, two)
+
+
+def test_the_sessions_process_is_read_against_the_process_its_address_names(
+    probe_module: Any,
+) -> None:
+    reading = probe_module.process_reading
+    chain = [{"pid": 7, "command": "zsh"}, {"pid": 41, "command": "claude"}]
+    scan = {"claude_pid": 41, "socket_pid": 41, "chain": chain, "socket_held": "yes"}
+    assert reading(scan).startswith("holds") and "lsof shows it holds" in reading(scan)
+    assert reading({**scan, "socket_pid": 42}).startswith("does not hold")
+    assert "not among" in reading({**scan, "chain": chain[:1]})
+    assert reading({**scan, "socket_held": "no"}).startswith("does not hold as lsof shows it")
+    assert reading({**scan, "claude_pid": None}).startswith("cannot tell")
+    assert reading(None).startswith("not measured")
+
+
+def test_a_check_says_where_it_ran_and_what_it_could_tell(probe_module: Any) -> None:
+    where = probe_module.where_checked
+    assert where({"copy": "probe-outside.py", "confined": False}) == "a command outside the sandbox"
+    assert where({"copy": "probe-messaging.py", "confined": True}) == "a command in the sandbox"
+    assert "though the settings exclude it" in where({"copy": "probe-outside.py", "confined": True})
+    liveness = probe_module.liveness_reading
+    unread = {"start": None, "start_unread": "operation not permitted", "signal": "not permitted"}
+    assert liveness(unread, live=True).startswith("cannot tell")
+    other = {"start": "Tue", "recorded_start": "Mon", "start_unread": None}
+    assert liveness(other, live=True).startswith("does not tell it runs")
+    assert liveness(other, live=False) == "tells it ended: another process holds its id"
+    still = {"start": "Mon", "recorded_start": "Mon", "start_unread": None}
+    assert liveness(still, live=False).startswith("does not tell it ended")
+    assert liveness(None, live=True).startswith("not measured")
+
+
 def test_the_inbound_settings_are_read_from_each_file_that_may_set_them(
     probe_module: Any, tmp_path: Path
 ) -> None:
@@ -525,6 +668,16 @@ def test_the_results_hold_each_measurement_with_its_evidence_scrubbed(
     assert "Asked “Same address?”, the person answered: yes." in text
     assert "pkit-probe-b <scratch>/clone-wt" in text
     assert "````text\n```\ninner\n```\n````" in text
+
+
+def test_the_results_hold_only_the_measurements_the_parts_run_take(probe_module: Any) -> None:
+    assert probe_module.measured_by("address") == [2, 9, 10, 11, 12]
+    assert probe_module.measured_by("all") == list(range(1, 13))
+    scrub = probe_module.Scrubber(Path("/nowhere"), Path("/home"), None, "someone", "host", None)
+    report = probe_module.Report(scrub, ["heading"], probe_module.measured_by("address"))
+    text = report.render()
+    assert "\n## 9. A second session's address" in text
+    assert "\n## 1. " not in text and "| 1. " not in text
 
 
 # --- the parts, against a stub harness -------------------------------------------------------
@@ -591,3 +744,139 @@ def test_the_terminal_part_walks_each_step_to_the_results(
         section = text.split(f"\n## {number}. ")[1].split("\n## ")[0]
         assert "- Not measured." not in section
     assert "the person read the reply address as the listing's: yes" in text
+
+
+def _frame(socket: str, marker: str) -> str:
+    return (
+        f'<cross-session-message from="uds:{socket}" from-name="pkit-probe-a" '
+        f'from-mode="prompting">\n{marker}: no answer is needed.\n</cross-session-message>'
+    )
+
+
+def _scan(pid: int, start: str, *, confined: bool = False) -> dict[str, Any]:
+    return {
+        "messaging_socket": f"/tmp/cc-socks/{pid}.sock",
+        "claude_pid": pid,
+        "socket_pid": pid,
+        "process_start": start,
+        "socket_held": "yes",
+        "chain": [{"pid": 3, "command": "zsh"}, {"pid": pid, "command": "claude"}],
+        "confined": confined,
+    }
+
+
+def _printed(key: str, value: Any, agent: str | None = None) -> dict[str, Any]:
+    entry = {
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Bash",
+        "tool_response": {"stdout": json.dumps({key: value})},
+    }
+    return {**entry, "agent_id": agent} if agent else entry
+
+
+def _at(folder: Path, *entries: dict[str, Any]) -> list[dict[str, Any]]:
+    """Hook events as a session in a folder records them."""
+    return [{**entry, "cwd": str(folder)} for entry in entries]
+
+
+def _message(socket: str, marker: str) -> dict[str, Any]:
+    """A marked message as the session that takes it records it."""
+    return {"hook_event_name": "UserPromptSubmit", "prompt": _frame(socket, marker)}
+
+
+def _check(pid: int, copy: str, start: str | None, *, confined: bool) -> dict[str, Any]:
+    recorded = "Mon Nov 23 15:00:00 2026" if pid == 41 else "Mon Nov 23 15:05:00 2026"
+    return {
+        "copy": copy,
+        "pid": pid,
+        "recorded_start": recorded,
+        "signal": "exists" if start else "no such process",
+        "start": start,
+        "start_unread": None,
+        "confined": confined,
+    }
+
+
+def test_the_address_part_walks_each_step_to_the_results(
+    probe_module: Any,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Each wait for the person writes what the sessions would have recorded by then, so the
+    part reads evidence shaped as the harness gives it."""
+    probe = _probe(probe_module, tmp_path, _stub(tmp_path))
+    first, second = "Mon Nov 23 15:00:00 2026", "Mon Nov 23 15:05:00 2026"
+    listing = {
+        "hook_event_name": "PostToolUse",
+        "tool_name": "ListAgents",
+        "tool_response": {"listing": "This session is pkit-probe-a [5c2091] — the name\n"},
+    }
+    inside, outside = "probe-messaging.py", "probe-outside.py"
+    clone, other, twin = probe.path("clone"), probe.path("other"), probe.path("twin")
+    sends = [
+        {
+            "hook_event_name": "PreToolUse",
+            "tool_name": "SendMessage",
+            "agent_id": agent,
+            "tool_input": {"to": "pkit-probe-b", "message": f"{marker}: no answer"},
+        }
+        for agent, marker in (("fg", "probe-m11-foreground"), ("bg", "probe-m11-background"))
+    ]
+    live_checks = [
+        _printed("probe_check", _check(pid, copy, start, confined=copy == inside))
+        for pid, start in ((41, first), (42, second))
+        for copy in (inside, outside)
+    ]
+    ended_checks = [
+        _printed("probe_check", _check(42, copy, None, confined=copy == inside))
+        for copy in (inside, outside)
+    ]
+    by_wait = {
+        "has done both": _at(clone, listing, _printed("probe_scan", _scan(41, first))),
+        "has run it": _at(other, _printed("probe_scan", _scan(77, "Mon", confined=True))),
+        "has done all three": _at(twin, listing, _printed("probe_scan", _scan(42, second)))
+        + _at(other, _message("/tmp/cc-socks/42.sock", "probe-m9-second")),
+        "shows the message": _at(other, _message("/tmp/cc-socks/41.sock", "probe-m9-first")),
+        "both agents have finished": _at(
+            clone,
+            *sends,
+            *(_printed("probe_scan", _scan(41, first), agent) for agent in ("fg", "bg")),
+        )
+        + _at(other, _message("/tmp/cc-socks/41.sock", "probe-m11-foreground")),
+        "has run all 4": _at(other, *live_checks),
+        "has run all 2": _at(other, *ended_checks),
+    }
+    log = probe.path("evidence", "hooks.jsonl")
+
+    def wait(what: str) -> None:
+        for key, entries in by_wait.items():
+            if key in what:
+                with open(log, "a", encoding="utf-8") as handle:
+                    handle.writelines(json.dumps(entry) + "\n" for entry in entries)
+
+    monkeypatch.setattr(probe, "wait", wait)
+    probe.report.numbers = probe_module.measured_by("address")
+    probe_module.address_part(probe)
+    probe.save()
+    shown = capsys.readouterr().out
+    assert probe.steps == len(probe_module.ADDRESS_STEPS)
+    assert f"cd {probe.root / 'other'} && claude --name pkit-probe-b" in shown
+    assert f"python3 {probe.root / 'probe-outside.py'} --check-process {probe.root} 41" in shown
+    text = probe.out.read_text()
+    assert "the session reads its name through the listing's first line" in text
+    assert "| 9. A second session's address | holds: the two sessions sent" in text
+    assert "the first pkit-probe-a: holds: the address and CLAUDE_PID name process 41" in text
+    assert "a foreground subagent: its message carried the session's own messaging address" in (
+        text
+    )
+    assert "a background subagent: no message from it arrived" in text
+    assert (
+        "the first pkit-probe-a's process, running, from a command in the sandbox: tells it runs"
+        in text
+    )
+    assert (
+        "the second pkit-probe-a's process, ended, from a command outside the sandbox: tells it "
+        "ended: ps shows no process under its id" in text
+    )
+    assert str(tmp_path) not in text

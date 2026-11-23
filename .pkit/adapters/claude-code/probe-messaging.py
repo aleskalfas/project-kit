@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""The probe of messaging between Claude Code sessions (project-management DEC-081, Context).
+"""The probe of messaging between Claude Code sessions (project-management DEC-081, Context, and
+DEC-084, Implications).
 
 DEC-081 lets a worker take direction by message only from the session its directing seat's
 state issue records. It rests on facts of Claude Code's messaging between sessions that the
 harness's documentation leaves unconfirmed, so its build measures them before it rests anything
-on them. This probe takes those measurements. It runs headless what a session started with `-p`
-can show, walks the person through each step that needs a session at a terminal, and writes the
-harness's version and each measurement's result to one file.
+on them. DEC-084 decides again on what they found: a seat records its session's messaging
+address and process, and a message's reply address is checked against them. Its build measures
+four more facts first. This probe takes both sets of measurements. It runs headless what a
+session started with `-p` can show, walks the person through each step that needs a session at a
+terminal, and writes the harness's version and each measurement's result to one file.
 
 A person runs it, never a test: it starts real Claude Code sessions, which sign in and spend.
 So it refuses to start unless given `--start-claude`, and it refuses inside an agent's run.
@@ -16,7 +19,8 @@ git repository with a linked worktree, and a folder for each other session. Each
 settings make a probe agent, whose definition withholds neither messaging tool, the session's
 agent through the `agent` setting, and register a hook that appends each event it sees to
 `evidence/hooks.jsonl`. The hook is this script, copied into the scratch folder (`--capture`),
-and so is the scan of a session's environment its shell runs (`--scan-env`). The results go to
+and so is the scan of a session's environment and processes its shell runs (`--scan-env`), and
+the check of another session's process (`--check-process`). The results go to
 `results.md` there, or to `--out`. In them, `<scratch>` stands for the scratch folder and `~`
 for the home folder, and each listing leaves out the rows of sessions outside the probe. The
 scratch folder is kept, with the raw evidence, for the person to read and then remove.
@@ -24,6 +28,7 @@ scratch folder is kept, with the raw evidence, for the person to read and then r
 Usage:
     python3 .pkit/adapters/claude-code/probe-messaging.py --start-claude
     python3 .pkit/adapters/claude-code/probe-messaging.py --start-claude --part headless
+    python3 .pkit/adapters/claude-code/probe-messaging.py --start-claude --part address
 """
 
 from __future__ import annotations
@@ -62,8 +67,17 @@ START_FLAG = "--start-claude"
 #: The hook's entry: one event on standard input, appended to the hook log.
 CAPTURE_FLAG = "--capture"
 
-#: The shell's entry: what the session's environment says of its name and its inbox.
+#: The shell's entry: what the session's environment says of its name and its inbox, and the
+#: processes its shell runs under.
 SCAN_FLAG = "--scan-env"
+
+#: The shell's entry: whether a process another session recorded runs, as seen from here.
+CHECK_FLAG = "--check-process"
+
+#: A second copy of this script, which the sandboxed session's settings exclude from its
+#: sandbox, so one check runs inside the sandbox and one outside, as the methodology's command
+#: runs on macOS (ADR-014 point 2).
+OUTSIDE_COPY = "probe-outside.py"
 
 HARNESS = "claude"
 
@@ -122,6 +136,8 @@ SENDER = "sender"
 REMOTE = "remote"
 SINK = "sink"
 BUILD = "build"
+#: Another clone, a git repository of its own, whose session runs its shell in the sandbox.
+OTHER = "other"
 EVIDENCE = "evidence"
 HOOK_LOG = "hooks.jsonl"
 RESULTS = "results.md"
@@ -169,6 +185,24 @@ TITLES = {
     6: "A build's run",
     7: "Remote control",
     8: "Resume by messaging",
+    9: "A second session's address",
+    10: "The session's process and its address",
+    11: "A subagent's reply address",
+    12: "Another clone's process",
+}
+
+#: The measurements each part takes: DEC-081's first eight, and DEC-084's four, with a
+#: session's own name read again.
+PART_MEASUREMENTS = {
+    "headless": (1, 5, 6, 8),
+    "terminal": (1, 2, 3, 4, 5, 7, 8),
+    "address": (2, 9, 10, 11, 12),
+}
+PARTS = {
+    "all": ("headless", "terminal", "address"),
+    "headless": ("headless",),
+    "terminal": ("terminal",),
+    "address": ("address",),
 }
 
 ANSWERS = {"y": "yes", "n": "no", "?": "could not tell"}
@@ -220,6 +254,137 @@ def hook(args: list[str]) -> int:
     with contextlib.suppress(Exception):
         capture(Path(args[0]), sys.stdin.read(), os.environ)
     return 0
+
+
+def ps_field(pid: int, *fields: str) -> tuple[str | None, str | None]:
+    """Fields of a process as `ps` shows them from where this runs, on one line: the line, or
+    None with why `ps` could not tell. None with no reason means `ps` shows no process under
+    the id."""
+    columns = [part for field in fields for part in ("-o", f"{field}=")]
+    try:
+        done = subprocess.run(
+            ["ps", *columns, "-p", str(pid)],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return None, f"ps could not run ({type(exc).__name__})"
+    value = done.stdout.decode("utf-8", errors="replace").strip()
+    if value:
+        return value, None
+    return None, first_line(done.stderr.decode("utf-8", errors="replace")) or None
+
+
+def ancestors(start: int, limit: int = 12) -> list[dict[str, Any]]:
+    """The processes a shell runs under, nearest first: each one's id, its command's name and
+    when it started, as `ps` shows them. The walk stops where `ps` shows no parent."""
+    chain: list[dict[str, Any]] = []
+    pid = start
+    while pid > 1 and len(chain) < limit:
+        line, why = ps_field(pid, "ppid", "comm")
+        if line is None:
+            chain.append({"pid": pid, "unread": why or "ps shows no such process"})
+            break
+        parent, _, command = line.partition(" ")
+        started, _ = ps_field(pid, "lstart")
+        chain.append({"pid": pid, "command": Path(command.strip()).name, "start": started})
+        if not parent.strip().isdigit():
+            break
+        pid = int(parent.strip())
+    return chain
+
+
+def socket_held(pid: int | None, path: str | None) -> str:
+    """Whether a process holds a socket at a path, as `lsof` shows it: yes, no, or why it
+    cannot tell."""
+    if pid is None or not path:
+        return "cannot tell: no process or no address"
+    lsof = shutil.which("lsof")
+    if lsof is None:
+        return "cannot tell: no lsof"
+    try:
+        done = subprocess.run(
+            [lsof, "-n", "-P", "-a", "-p", str(pid), "-U", "-F", "n"],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return f"cannot tell: lsof could not run ({type(exc).__name__})"
+    names_held = [
+        line[1:] for line in done.stdout.decode("utf-8", errors="replace").splitlines() if line
+    ]
+    if path in names_held:
+        return "yes"
+    why = first_line(done.stderr.decode("utf-8", errors="replace"))
+    return f"cannot tell: {why}" if why else "no"
+
+
+def confined(root: Path) -> bool:
+    """Whether this command runs confined: a write to the scratch folder's root, outside every
+    session's folder, is refused inside the sandbox."""
+    target = root / f"confinement-{os.getpid()}.tmp"
+    try:
+        target.write_text("", encoding="utf-8")
+    except OSError:
+        return True
+    with contextlib.suppress(OSError):
+        target.unlink()
+    return False
+
+
+def as_pid(value: Any) -> int | None:
+    text = str(value or "").strip()
+    return int(text) if text.isdigit() else None
+
+
+def scan_processes(root: Path, env: Mapping[str, str], shell: int) -> dict[str, Any]:
+    """What a session's shell reads of the session's process: the process `CLAUDE_PID` names
+    and when it started, the process the messaging address is named after, the processes the
+    shell runs under, whether the first holds the address's socket, and whether the shell runs
+    confined."""
+    claude_pid = as_pid(env.get("CLAUDE_PID"))
+    address = env.get("CLAUDE_CODE_MESSAGING_SOCKET")
+    socket_pid = as_pid(Path(address).stem) if address else None
+    start, why = ps_field(claude_pid, "lstart") if claude_pid is not None else (None, None)
+    return {
+        "claude_pid": claude_pid,
+        "process_start": start,
+        "process_unread": why,
+        "socket_pid": socket_pid,
+        "socket_held": socket_held(claude_pid, address),
+        "chain": ancestors(shell),
+        "confined": confined(root),
+    }
+
+
+def check_process(root: Path, pid: int, start: str) -> dict[str, Any]:
+    """Whether a process another session recorded runs, as seen from where this runs: what a
+    signal of nothing says of it, when `ps` says it started, and whether this check ran
+    confined. The copy that ran names whether the session's settings excluded it from the
+    sandbox."""
+    try:
+        os.kill(pid, 0)
+        signalled = "exists"
+    except ProcessLookupError:
+        signalled = "no such process"
+    except PermissionError:
+        signalled = "not permitted"
+    except OSError as exc:
+        signalled = type(exc).__name__
+    seen, why = ps_field(pid, "lstart")
+    return {
+        "copy": Path(__file__).name,
+        "pid": pid,
+        "recorded_start": start,
+        "signal": signalled,
+        "start": seen,
+        "start_unread": why,
+        "confined": confined(root),
+    }
 
 
 # --- the harness ----------------------------------------------------------------------------
@@ -295,6 +460,15 @@ def scan_command(root: Path) -> str:
     return f"python3 {shlex.quote(str(root / COPY))} {SCAN_FLAG} {shlex.quote(str(root))}"
 
 
+def check_command(root: Path, copy: str, pid: int, start: str) -> str:
+    """The shell command that checks whether a recorded process runs, through one copy of the
+    probe: `COPY` runs where the session's shell runs, `OUTSIDE_COPY` outside its sandbox."""
+    return (
+        f"python3 {shlex.quote(str(root / copy))} {CHECK_FLAG} {shlex.quote(str(root))} {pid} "
+        f"{shlex.quote(start)}"
+    )
+
+
 def folder_settings(root: Path, inbound: str | None = None) -> dict[str, Any]:
     """A probe folder's settings: the probe agent as the session's agent, the hook on every
     event the probe reads, and the allows that keep its steps from asking."""
@@ -315,6 +489,8 @@ def folder_settings(root: Path, inbound: str | None = None) -> dict[str, Any]:
                 "Agent",
                 f"Edit(/{root / EVIDENCE}/**)",
                 f"Bash(python3 {root / COPY} {SCAN_FLAG}:*)",
+                f"Bash(python3 {root / COPY} {CHECK_FLAG}:*)",
+                f"Bash(python3 {root / OUTSIDE_COPY} {CHECK_FLAG}:*)",
                 "Bash(sleep:*)",
                 "Bash(cd:*)",
                 "Bash(pwd)",
@@ -324,6 +500,20 @@ def folder_settings(root: Path, inbound: str | None = None) -> dict[str, Any]:
     }
     if inbound is not None:
         settings["crossSessionInbound"] = inbound
+    return settings
+
+
+def sandboxed_settings(root: Path) -> dict[str, Any]:
+    """Another clone's settings: a probe folder's, its shell in the sandbox, and the outside
+    copy of the probe excluded from it, as the methodology's command is on macOS. The sandbox
+    does not fail closed, since each check reports whether it ran confined."""
+    settings = folder_settings(root)
+    settings["sandbox"] = {
+        "enabled": True,
+        "failIfUnavailable": False,
+        "autoAllowBashIfSandboxed": True,
+        "excludedCommands": [f"python3 {root / OUTSIDE_COPY}"],
+    }
     return settings
 
 
@@ -428,20 +618,28 @@ INBOUND_CASES = (
 )
 
 
+def make_repository(folder: Path) -> None:
+    git("init", "-q", str(folder))
+    git("-C", str(folder), "add", "-A")
+    git("-C", str(folder), "commit", "-q", "-m", "probe")
+
+
 def make_scratch(root: Path, source: Path = HERE) -> None:
-    """The scratch folder: this script's copy, the clone with its linked worktree, a folder
-    for each other session, and the evidence folder."""
+    """The scratch folder: this script's two copies, the clone with its linked worktree,
+    another clone whose shell runs in the sandbox, a folder for each other session, and the
+    evidence folder."""
     shutil.copy2(source, root / COPY)
+    shutil.copy2(source, root / OUTSIDE_COPY)
     (root / EVIDENCE).mkdir()
     settings = folder_settings(root)
     clone = root / CLONE
     write_folder(clone, settings)
     (clone / SUBFOLDER).mkdir()
     (clone / SUBFOLDER / ".keep").write_text("", encoding="utf-8")
-    git("init", "-q", str(clone))
-    git("-C", str(clone), "add", "-A")
-    git("-C", str(clone), "commit", "-q", "-m", "probe")
+    make_repository(clone)
     git("-C", str(clone), "worktree", "add", "-q", "-b", "probe-worktree", str(root / WORKTREE))
+    write_folder(root / OTHER, sandboxed_settings(root))
+    make_repository(root / OTHER)
     for name in (TWIN, HELD, SENDER, REMOTE, SINK):
         write_folder(root / name, settings)
     (root / BUILD).mkdir()
@@ -549,6 +747,15 @@ def plain(value: Any) -> str:
     if isinstance(value, dict) and set(value) & {"stdout", "content"}:
         return plain(value.get("stdout", value.get("content")))
     return json.dumps(value, indent=1)
+
+
+def listing_text(value: Any) -> str:
+    """A listing as the session's agent reads it. The hook sees the listing as a structure,
+    whose `listing` holds the text the agent reads, its own name on the first line; read as
+    plain JSON, its first line would be `{`."""
+    if isinstance(value, dict) and isinstance(value.get("listing"), str):
+        return str(value["listing"])
+    return plain(value)
 
 
 def cut(text: str, limit: int = EVIDENCE_LIMIT) -> str:
@@ -659,16 +866,37 @@ def prompts(entries: Iterable[dict[str, Any]], marker: str | None = None) -> lis
     return [prompt for prompt in found if marker is None or marker in prompt]
 
 
-def last_scan(entries: Iterable[dict[str, Any]]) -> dict[str, Any] | None:
-    """The scan the session's shell printed last."""
-    found = None
-    for response in responses(entries, "Bash"):
-        for line in plain(response).splitlines():
+def shell_printed(
+    entries: Iterable[dict[str, Any]], key: str, agent_id: str | None = None
+) -> list[dict[str, Any]]:
+    """What one agent's shell printed under a key, in order: the session's own agent where
+    `agent_id` is None, else one subagent."""
+    found: list[dict[str, Any]] = []
+    for entry in of_event(entries, "PostToolUse", "Bash"):
+        if entry.get("agent_id") != agent_id:
+            continue
+        for line in plain(entry.get("tool_response")).splitlines():
             with contextlib.suppress(ValueError):
                 data = json.loads(line)
-                if isinstance(data, dict) and isinstance(data.get("probe_scan"), dict):
-                    found = data["probe_scan"]
+                if isinstance(data, dict) and isinstance(data.get(key), dict):
+                    found.append(data[key])
     return found
+
+
+def last_scan(
+    entries: Iterable[dict[str, Any]], agent_id: str | None = None
+) -> dict[str, Any] | None:
+    """The scan an agent's shell printed last."""
+    found = shell_printed(entries, "probe_scan", agent_id)
+    return found[-1] if found else None
+
+
+def agent_sending(entries: Iterable[dict[str, Any]], marker: str) -> str | None:
+    """The subagent that sent a marked message."""
+    for entry in of_event(entries, "PreToolUse", "SendMessage"):
+        if entry.get("agent_id") and marker in json.dumps(entry.get("tool_input")):
+            return str(entry["agent_id"])
+    return None
 
 
 def start_of(entries: Iterable[dict[str, Any]]) -> dict[str, Any] | None:
@@ -843,6 +1071,155 @@ def folder_reading(paths: list[str], started: str, current: str | None = None) -
     return f"the row shows {shows}"
 
 
+#: The attributes of the frame the harness puts a message from another session in.
+REPLY_ADDRESS = re.compile(r'(?<![\w-])from="([^"]*)"')
+SENDER_NAME = re.compile(r'(?<![\w-])from-name="([^"]*)"')
+
+
+def message_sender(prompt: str | None) -> tuple[str | None, str | None]:
+    """The reply address and the sender's name a message from another session carries, as the
+    harness frames it for the session that takes it."""
+    if not prompt:
+        return None, None
+    address, name = REPLY_ADDRESS.search(prompt), SENDER_NAME.search(prompt)
+    return (address.group(1) if address else None), (name.group(1) if name else None)
+
+
+def same_address(reply: str | None, own: str | None) -> bool:
+    """Whether a message's reply address is a session's own messaging address: the same, or
+    the same with a scheme before it, as `uds:` is on the harness measured."""
+    if not reply or not own:
+        return False
+    return reply == own or reply.partition(":")[2] == own
+
+
+def second_address_reading(
+    first: tuple[str | None, str | None], second: tuple[str | None, str | None]
+) -> str:
+    """Measurement 9: whether two sessions under one name send under addresses of their own.
+    Each pair is the reply address the receiver took from that session, and the messaging
+    address the session's own shell reads."""
+    (first_reply, first_own), (second_reply, second_own) = first, second
+    missing = [
+        label for label, reply in (("first", first_reply), ("second", second_reply)) if not reply
+    ]
+    if missing:
+        return f"not measured: no message from the {' or the '.join(missing)} session arrived"
+    if first_reply == second_reply:
+        return f"does not hold: both sessions' messages carried the reply address {first_reply}"
+    unread = [label for label, own in (("first", first_own), ("second", second_own)) if not own]
+    if unread:
+        return (
+            "the two messages carried different reply addresses, but the "
+            f"{' and the '.join(unread)} session's shell read no address to compare them with"
+        )
+    astray = [
+        label
+        for label, reply, own in (
+            ("first", first_reply, first_own),
+            ("second", second_reply, second_own),
+        )
+        if not same_address(reply, own)
+    ]
+    if astray:
+        return (
+            "the two messages carried different reply addresses, but the "
+            f"{' and the '.join(astray)} session's is not the address its own shell reads"
+        )
+    return (
+        "holds: the two sessions sent under different reply addresses, each the messaging "
+        "address its own shell reads"
+    )
+
+
+def process_reading(scan: Mapping[str, Any] | None) -> str:
+    """Measurement 10: whether the process `CLAUDE_PID` names, the one an adapter's declaration
+    would name, is the process the session's messaging address belongs to."""
+    if not scan:
+        return "not measured: the session's shell printed no scan"
+    claude_pid, socket_pid = scan.get("claude_pid"), scan.get("socket_pid")
+    chain = [row.get("pid") for row in scan.get("chain") or [] if isinstance(row, dict)]
+    held = str(scan.get("socket_held") or "cannot tell")
+    if claude_pid is None:
+        return "cannot tell: the session's shell reads no CLAUDE_PID"
+    if socket_pid is None:
+        return "cannot tell: the messaging address names no process"
+    if socket_pid != claude_pid:
+        return (
+            f"does not hold: the address is named after process {socket_pid}, and CLAUDE_PID "
+            f"names process {claude_pid}"
+        )
+    if claude_pid not in chain:
+        return (
+            f"does not hold: the address and CLAUDE_PID name process {claude_pid}, which is not "
+            "among the processes the shell runs under"
+        )
+    if held == "no":
+        return (
+            f"does not hold as lsof shows it: the address and CLAUDE_PID name process "
+            f"{claude_pid}, which the shell runs under, but lsof shows it holds no socket there"
+        )
+    return (
+        f"holds: the address and CLAUDE_PID name process {claude_pid}, which the shell runs "
+        "under"
+        + ("; lsof shows it holds the address's socket" if held == "yes" else f"; lsof: {held}")
+    )
+
+
+def subagent_address_reading(
+    kind: str, reply: str | None, session_own: str | None, subagent_own: str | None
+) -> str:
+    """Measurement 11: what reply address a subagent's message carries, against the session's
+    own address and the one the subagent's shell reads."""
+    if not reply:
+        return f"{kind}: no message from it arrived"
+    if same_address(reply, session_own):
+        return f"{kind}: its message carried the session's own messaging address"
+    if same_address(reply, subagent_own):
+        return f"{kind}: its message carried an address of its own, the one its shell reads"
+    return f"{kind}: its message carried another address, {reply}"
+
+
+def where_checked(check: Mapping[str, Any]) -> str:
+    """Where a check ran, from what it found of its confinement and the copy that ran it."""
+    excluded = check.get("copy") == OUTSIDE_COPY
+    if check.get("confined") is True:
+        return "a command in the sandbox" + (
+            ", though the settings exclude it from the sandbox" if excluded else ""
+        )
+    if check.get("confined") is False:
+        return "a command outside the sandbox" + (
+            "" if excluded else ", though its session's sandbox is on"
+        )
+    return "a command that could not tell whether it ran in the sandbox"
+
+
+def liveness_reading(check: Mapping[str, Any] | None, live: bool) -> str:
+    """Measurement 12: whether a check from another clone told a recorded process's state. A
+    live process shows the start time its own session read; an ended one shows no process
+    under its id, or another process's start time."""
+    if not check:
+        return "not measured: the check printed nothing"
+    seen, recorded = check.get("start"), check.get("recorded_start")
+    why = check.get("start_unread")
+    if seen is None and why:
+        return (
+            f"cannot tell: ps could not read the process ({why}); a signal of nothing says "
+            + str(check.get("signal"))
+        )
+    if live:
+        if seen is not None and seen == recorded:
+            return "tells it runs: ps shows it started when its own session read"
+        if seen is not None:
+            return f"does not tell it runs: the process under its id started {seen}, not {recorded}"
+        return "does not tell it runs: ps shows no process under its id"
+    if seen is not None and seen == recorded:
+        return "does not tell it ended: ps still shows it, started when its session read"
+    if seen is not None:
+        return "tells it ended: another process holds its id"
+    return "tells it ended: ps shows no process under its id"
+
+
 # --- a headless run -------------------------------------------------------------------------
 
 
@@ -1009,9 +1386,13 @@ class Report:
     """The results: for each measurement its result lines, its findings, the person's answers
     and its evidence, every text scrubbed."""
 
-    def __init__(self, scrub: Scrubber, heading: list[str]) -> None:
+    def __init__(
+        self, scrub: Scrubber, heading: list[str], numbers: Iterable[int] = tuple(TITLES)
+    ) -> None:
         self.scrub = scrub
         self.heading = heading
+        #: The measurements the parts run take, which the results show.
+        self.numbers = sorted(set(numbers))
         self.results: dict[int, list[str]] = {number: [] for number in TITLES}
         self.findings: dict[int, list[str]] = {number: [] for number in TITLES}
         self.evidence: dict[int, list[tuple[str, str]]] = {number: [] for number in TITLES}
@@ -1046,11 +1427,11 @@ class Report:
     def render(self) -> str:
         lines = ["# Messaging probe: results", "", *self.heading, ""]
         lines += ["| Measurement | Result |", "|---|---|"]
-        for number, title in TITLES.items():
+        for number in self.numbers:
             result = "; ".join(self.results[number]) or "not measured"
-            lines.append(f"| {number}. {title} | {cell(result)} |")
-        for number, title in TITLES.items():
-            lines += ["", f"## {number}. {title}", ""]
+            lines.append(f"| {number}. {TITLES[number]} | {cell(result)} |")
+        for number in self.numbers:
+            lines += ["", f"## {number}. {TITLES[number]}", ""]
             items = self.results[number] + self.findings[number]
             lines += [f"- {item}" for item in items] or ["- Not measured."]
             if self.evidence[number]:
@@ -1089,6 +1470,8 @@ class Probe:
         self.runs: list[Run] = []
         self.steps = 0
         self.own_socket: str | None = None
+        #: What each session of the address part read of itself, by its label.
+        self.scans: dict[str, dict[str, Any]] = {}
 
     def path(self, *parts: str) -> Path:
         return self.root.joinpath(*parts)
@@ -1636,11 +2019,12 @@ def scrubbed_listing(probe: Probe, listing: Any) -> Any:
 def name_findings(
     probe: Probe, label: str, entries: list[dict[str, Any]], rows: Any, folder: Path
 ) -> None:
-    """What a session could read of its own name, and under what name the harness lists it."""
+    """What a session could read of its own name, and under what name the harness lists it.
+    The agent reads the listing's text, whose first line names the session itself."""
     start = start_of(entries) or {}
     title = start.get("session_title")
     listing = last_listing(entries)
-    first = first_line(plain(listing)) if listing is not None else ""
+    first = first_line(listing_text(listing)) if listing is not None else ""
     scan = last_scan(entries) or {}
     variables = scan.get("variables_naming_a_probe_session") or []
     listed_as = probe.names_in(rows, folder)
@@ -1721,7 +2105,7 @@ def reply_address(probe: Probe, marker: str, file: str, twin: bool) -> None:
     scrub = probe.report.scrub
     show("the message as it reached the session (the hook's view)", scrub("\n".join(received)))
     show(f"what {SESSION_B} wrote it carried", scrub(written or "(no file)"))
-    show(f"{SESSION_B}'s listing after it", scrub(plain(listing_b)))
+    show(f"{SESSION_B}'s listing after it", scrub(listing_text(listing_b)))
     if probe.own_socket:
         say(f"{SESSION_A}'s own inbox, as its shell saw it: {scrub(probe.own_socket)}")
     label = "with a second session of its name" if twin else "with one session of its name"
@@ -1937,7 +2321,7 @@ def step_remote(probe: Probe) -> None:
     type_in(SESSION_RC, STEP_LIST.format(n=probe.steps))
     probe.wait(f"{SESSION_RC} has listed")
     listing = last_listing(probe.log.since(mark, folder))
-    show(f"{SESSION_RC}'s listing", report.scrub(plain(listing)))
+    show(f"{SESSION_RC}'s listing", report.scrub(listing_text(listing)))
     paths = row_paths(scrubbed_listing(probe, listing), SESSION_B)
     question = f"In that listing, does {SESSION_B}'s row show its folder?"
     local = ask(question)
@@ -1984,16 +2368,304 @@ def terminal_part(probe: Probe) -> None:
     say(f"Close every probe session: type /exit in {SESSION_A} and {SESSION_B}.")
 
 
+# --- the address part (DEC-084) -------------------------------------------------------------
+
+STEP_SCAN = "Probe step {n}. Run this shell command: {scan} Do nothing else."
+STEP_LIST_SCAN_AND_SEND = (
+    "Probe step {n}. Call the ListAgents tool once. Then run this shell command: {scan} Then "
+    "send the session named {to}, with SendMessage, this message, word for word: {marker}: no "
+    "answer is needed. Do nothing else."
+)
+SUBAGENT_SEND_BRIEF = (
+    "First run this shell command: {scan} Then send the session named {to}, with SendMessage, "
+    "this message, word for word: {marker}: no answer is needed. Then finish."
+)
+STEP_SUBAGENTS_SEND = (
+    "Probe step {n}. Do these in order, and nothing else. (1) Start the pkit-probe agent in the "
+    'foreground, and wait for it, with this brief: "{fg}" (2) Start the pkit-probe agent in the '
+    'background with this brief: "{bg}" Wait until it has finished.'
+)
+STEP_CHECKS = (
+    "Probe step {n}. Run each of these shell commands, each as a call of its own, one after "
+    "the other, and do nothing else. {commands}"
+)
+
+#: The marks of the address part's messages.
+MARK_FIRST = "probe-m9-first"
+MARK_SECOND = "probe-m9-second"
+MARK_FOREGROUND = "probe-m11-foreground"
+MARK_BACKGROUND = "probe-m11-background"
+
+
+def report_process(probe: Probe, label: str, scan: dict[str, Any] | None) -> None:
+    """Measurement 10 for one session, from the scan its shell printed."""
+    report = probe.report
+    report.result(10, f"{label}: {process_reading(scan)}")
+    if scan:
+        chain = ", ".join(
+            f"{row.get('pid')} {row.get('command', row.get('unread'))}"
+            for row in scan.get("chain") or []
+            if isinstance(row, dict)
+        )
+        report.finding(
+            10,
+            f"{label}: the shell reads the messaging address `{scan.get('messaging_socket')}` "
+            f"and CLAUDE_PID `{scan.get('claude_pid')}`, which started "
+            f"`{scan.get('process_start') or scan.get('process_unread')}`; it runs under "
+            f"{chain or 'no process ps showed'}.",
+        )
+    report.attach(10, f"{label}: the scan of its shell", scan)
+
+
+def received(entries: list[dict[str, Any]], marker: str) -> tuple[str | None, str | None, str]:
+    """The reply address and sender's name a marked message carried, with the frame as the
+    receiving session took it."""
+    found = prompts(entries, marker)
+    address, name = message_sender(found[-1] if found else None)
+    return address, name, found[-1] if found else ""
+
+
+def address_first_session(probe: Probe) -> None:
+    probe.step(f"Start {SESSION_A} in the clone (measurements 2 and 10)")
+    folder = probe.path(CLONE)
+    mark = probe.log.mark()
+    run_line(
+        "In a new terminal, the first of three",
+        f"cd {shlex.quote(str(folder))} && claude --name {SESSION_A}",
+    )
+    say("Trust the folder if Claude Code asks.")
+    type_in(SESSION_A, STEP_LIST_AND_SCAN.format(n=probe.steps, scan=scan_command(probe.root)))
+    probe.wait(f"{SESSION_A} has done both")
+    entries = probe.log.since(mark, folder)
+    name_findings(probe, "the address part, started with --name", entries, probe.sessions(), folder)
+    scan = last_scan(entries)
+    if scan:
+        probe.scans["first"] = scan
+    report_process(probe, f"the first {SESSION_A}", scan)
+
+
+def address_other_session(probe: Probe) -> None:
+    probe.step(f"Start {SESSION_B} in another clone, its shell in the sandbox (measurement 12)")
+    folder = probe.path(OTHER)
+    mark = probe.log.mark()
+    run_line("In a second terminal", f"cd {shlex.quote(str(folder))} && claude --name {SESSION_B}")
+    say("Trust the folder if Claude Code asks.")
+    type_in(SESSION_B, STEP_SCAN.format(n=probe.steps, scan=scan_command(probe.root)))
+    probe.wait(f"{SESSION_B} has run it")
+    scan = last_scan(probe.log.since(mark, folder))
+    if scan:
+        probe.scans["other"] = scan
+    probe.report.finding(
+        12,
+        f"{SESSION_B}'s shell ran "
+        + (
+            "confined by the sandbox"
+            if (scan or {}).get("confined") is True
+            else "outside the sandbox"
+            if (scan or {}).get("confined") is False
+            else "where the probe could not tell"
+        )
+        + ".",
+    )
+    probe.report.attach(12, f"{SESSION_B}: the scan of its shell", scan)
+
+
+def address_second_session(probe: Probe) -> None:
+    probe.step(
+        f"A second session named {SESSION_A} messages {SESSION_B} (measurements 2, 9 and 10)"
+    )
+    folder = probe.path(TWIN)
+    mark = probe.log.mark()
+    run_line("In a third terminal", f"cd {shlex.quote(str(folder))} && claude --name {SESSION_A}")
+    say("Trust the folder if Claude Code asks.")
+    type_in(
+        f"the second {SESSION_A}",
+        STEP_LIST_SCAN_AND_SEND.format(
+            n=probe.steps, scan=scan_command(probe.root), to=SESSION_B, marker=MARK_SECOND
+        ),
+    )
+    probe.wait(f"the second {SESSION_A} has done all three, and {SESSION_B} shows the message")
+    entries = probe.log.since(mark, folder)
+    name_findings(probe, "a second session under the same name", entries, probe.sessions(), folder)
+    scan = last_scan(entries)
+    if scan:
+        probe.scans["second"] = scan
+    report_process(probe, f"the second {SESSION_A}", scan)
+
+
+def address_first_sends(probe: Probe) -> None:
+    probe.step(f"The first {SESSION_A} messages {SESSION_B} (measurement 9)")
+    say(f"In the first terminal, the first {SESSION_A}:")
+    type_in(SESSION_A, STEP_SEND.format(n=probe.steps, to=SESSION_B, marker=MARK_FIRST))
+    probe.wait(f"{SESSION_B} shows the message")
+    entries_b = probe.log.since(0, probe.path(OTHER))
+    report = probe.report
+    readings: list[tuple[str | None, str | None]] = []
+    for label, marker in (("first", MARK_FIRST), ("second", MARK_SECOND)):
+        address, name, frame = received(entries_b, marker)
+        own = probe.scans.get(label, {}).get("messaging_socket")
+        readings.append((address, own))
+        report.finding(
+            9,
+            f"The {label} {SESSION_A}'s message carried the reply address `{address}` and the "
+            f"name `{name}`; its shell reads the address `{own}`.",
+        )
+        report.attach(9, f"the {label} {SESSION_A}'s message, as {SESSION_B} took it", frame)
+    report.result(9, second_address_reading(readings[0], readings[1]))
+
+
+def address_subagents(probe: Probe) -> None:
+    probe.step(f"{SESSION_A}'s subagents message {SESSION_B} (measurement 11)")
+    folder = probe.path(CLONE)
+    mark = probe.log.mark()
+    scan = scan_command(probe.root)
+    type_in(
+        SESSION_A,
+        STEP_SUBAGENTS_SEND.format(
+            n=probe.steps,
+            fg=SUBAGENT_SEND_BRIEF.format(scan=scan, to=SESSION_B, marker=MARK_FOREGROUND),
+            bg=SUBAGENT_SEND_BRIEF.format(scan=scan, to=SESSION_B, marker=MARK_BACKGROUND),
+        ),
+    )
+    probe.wait(f"both agents have finished, and {SESSION_B} shows their messages")
+    entries_a = probe.log.since(mark, folder)
+    entries_b = probe.log.since(0, probe.path(OTHER))
+    own = probe.scans.get("first", {}).get("messaging_socket")
+    report = probe.report
+    for kind, marker in (
+        ("a foreground subagent", MARK_FOREGROUND),
+        ("a background subagent", MARK_BACKGROUND),
+    ):
+        agent = agent_sending(entries_a, marker)
+        sub_scan = last_scan(entries_a, agent) if agent else None
+        sub_own = (sub_scan or {}).get("messaging_socket")
+        address, name, frame = received(entries_b, marker)
+        report.result(11, subagent_address_reading(kind, address, own, sub_own))
+        report.finding(
+            11,
+            f"{kind}: its message carried the reply address `{address}` and the name `{name}`; "
+            f"its shell reads the address `{sub_own}` and CLAUDE_PID "
+            f"`{(sub_scan or {}).get('claude_pid')}`; the session's own address is `{own}`.",
+        )
+        report.attach(11, f"{kind}: its message, as {SESSION_B} took it", frame)
+        report.attach(11, f"{kind}: the scan of its shell", sub_scan)
+
+
+def run_checks(probe: Probe, labels: tuple[str, ...]) -> list[dict[str, Any]]:
+    """Have the session in another clone check each named session's recorded process, once
+    from where its shell runs and once outside its sandbox, and return what each check
+    printed."""
+    targets = [
+        (label, probe.scans[label])
+        for label in labels
+        if probe.scans.get(label, {}).get("claude_pid") is not None
+        and probe.scans[label].get("process_start")
+    ]
+    if not targets:
+        return []
+    commands = [
+        check_command(probe.root, copy, int(scan["claude_pid"]), str(scan["process_start"]))
+        for _, scan in targets
+        for copy in (COPY, OUTSIDE_COPY)
+    ]
+    folder = probe.path(OTHER)
+    mark = probe.log.mark()
+    numbered = " ".join(f"({index}) {command}" for index, command in enumerate(commands, 1))
+    type_in(SESSION_B, STEP_CHECKS.format(n=probe.steps, commands=numbered))
+    probe.wait(f"{SESSION_B} has run all {len(commands)}")
+    return shell_printed(probe.log.since(mark, folder), "probe_check")
+
+
+def report_checks(
+    probe: Probe, checks: list[dict[str, Any]], labels: tuple[str, ...], live: bool
+) -> None:
+    report = probe.report
+    state = "running" if live else "ended"
+    for label in labels:
+        scan = probe.scans.get(label, {})
+        pid = scan.get("claude_pid")
+        mine = [check for check in checks if check.get("pid") == pid]
+        if not mine:
+            report.result(12, f"the {label} {SESSION_A}'s process, {state}: not measured")
+            continue
+        for check in mine:
+            report.result(
+                12,
+                f"the {label} {SESSION_A}'s process, {state}, from {where_checked(check)}: "
+                f"{liveness_reading(check, live)}",
+            )
+        own = check_process(probe.root, int(pid), str(scan.get("process_start")))
+        report.finding(
+            12,
+            f"the {label} {SESSION_A}'s process, {state}, from the person's terminal: "
+            f"{liveness_reading(own, live)}.",
+        )
+        report.attach(12, f"the {label} {SESSION_A}'s process, {state}: the checks", mine)
+
+
+def address_checks_live(probe: Probe) -> None:
+    probe.step(f"{SESSION_B} checks whether each {SESSION_A}'s process runs (measurement 12)")
+    labels = ("first", "second")
+    checks = run_checks(probe, labels)
+    report_checks(probe, checks, labels, live=True)
+
+
+def address_checks_ended(probe: Probe) -> None:
+    probe.step(f"The second {SESSION_A} ends, and {SESSION_B} checks it again (measurement 12)")
+    say(f"Close the second {SESSION_A}: type /exit in the third terminal.")
+    probe.wait(f"the second {SESSION_A} has closed")
+    labels = ("second",)
+    checks = run_checks(probe, labels)
+    report_checks(probe, checks, labels, live=False)
+
+
+ADDRESS_STEPS: tuple[Callable[[Probe], None], ...] = (
+    address_first_session,
+    address_other_session,
+    address_second_session,
+    address_first_sends,
+    address_subagents,
+    address_checks_live,
+    address_checks_ended,
+)
+
+
+def address_part(probe: Probe) -> None:
+    say(
+        "The address part takes DEC-084's measurements, and needs you for about a quarter of an "
+        "hour, in three terminals. Each step names the terminal to use, the line to run there, "
+        "and the prompt to type into the session. Press Ctrl-C to stop: the results so far are "
+        "kept."
+    )
+    for step in ADDRESS_STEPS:
+        step(probe)
+        probe.save()
+    say(f"Close every probe session: type /exit in {SESSION_A} and {SESSION_B}.")
+
+
 # --- the entry ------------------------------------------------------------------------------
 
 
+def measured_by(part: str) -> list[int]:
+    """The measurements the parts a run names take."""
+    return sorted({number for name in PARTS[part] for number in PART_MEASUREMENTS[name]})
+
+
 def heading(version: tuple[int, int, int], part: str, now: datetime.datetime) -> list[str]:
-    parts = {"all": "headless and terminal", "headless": "headless", "terminal": "terminal"}[part]
+    parts = ", ".join(PARTS[part])
+    sources = []
+    if {"headless", "terminal"} & set(PARTS[part]):
+        sources.append("the first eight are those project-management DEC-081's Context leaves")
+    if "address" in PARTS[part]:
+        sources.append(
+            "9 to 12 are those DEC-084's Implications list, with a session's own name (2) read "
+            "again"
+        )
     return [
         f"Claude Code {dotted(version)} on {platform.platform(terse=True)} ({sys.platform}), "
         f"{now:%Y-%m-%d %H:%M} UTC; parts run: {parts}.",
         "",
-        "The measurements are those project-management DEC-081's Context leaves unconfirmed. "
+        f"Of the measurements, {'; '.join(sources)}. "
         "`<scratch>` stands for the probe's scratch folder and `~` for the home folder, and "
         "each listing leaves out the rows of sessions outside the probe. Where a result says "
         "the person answered, it is what the person saw at a terminal.",
@@ -2010,20 +2682,25 @@ def main(argv: list[str] | None = None) -> int:
     if args[:1] == [CAPTURE_FLAG]:
         return hook(args[1:])
     if args[:1] == [SCAN_FLAG]:
-        print(json.dumps({"probe_scan": scan_environment(os.environ)}))
+        scan = scan_environment(os.environ)
+        if args[1:2]:
+            scan.update(scan_processes(Path(args[1]), os.environ, os.getppid()))
+        print(json.dumps({"probe_scan": scan}))
+        return 0
+    if args[:1] == [CHECK_FLAG] and len(args) == 4 and args[2].isdigit():
+        print(json.dumps({"probe_check": check_process(Path(args[1]), int(args[2]), args[3])}))
         return 0
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
     parser.add_argument(START_FLAG, action="store_true", help="start real Claude Code sessions")
-    parser.add_argument(
-        "--part", choices=("all", "headless", "terminal"), default="all", help="what to run"
-    )
+    parser.add_argument("--part", choices=tuple(PARTS), default="all", help="what to run")
     parser.add_argument("--root", help="the folder to make the scratch folder in")
     parser.add_argument("--out", help="the results' file (default: results.md in the scratch)")
     parsed = parser.parse_args(args)
     if not parsed.start_claude:
         return refuse(
             "the probe starts real Claude Code sessions, which sign in and spend. Pass "
-            f"{START_FLAG} to start them (project-management DEC-081, Context)."
+            f"{START_FLAG} to start them (project-management DEC-081, Context, and DEC-084, "
+            "Implications)."
         )
     if RUN_MARKER in os.environ:
         return refuse("an agent's run starts no session; a person runs the probe at a terminal")
@@ -2050,19 +2727,19 @@ def main(argv: list[str] | None = None) -> int:
         os.getuid() if hasattr(os, "getuid") else None,
     )
     now = datetime.datetime.now(datetime.timezone.utc)
-    report = Report(scrub, heading(version, parsed.part, now))
+    report = Report(scrub, heading(version, parsed.part, now), measured_by(parsed.part))
     out = Path(parsed.out) if parsed.out else root / RESULTS
     help_text = harness_output(harness, ["--help"], os.environ, home)
     probe = Probe(harness, root, os.environ, report, out, help_text)
     print(f"probing Claude Code {dotted(version)} on {sys.platform}, in {root}")
     print(f"the results go to {out}\n")
-    measure_settings(probe, home)
+    if {"headless", "terminal"} & set(PARTS[parsed.part]):
+        measure_settings(probe, home)
     stopped = False
+    runs = {"headless": headless_part, "terminal": terminal_part, "address": address_part}
     try:
-        if parsed.part in ("all", "headless"):
-            headless_part(probe)
-        if parsed.part in ("all", "terminal"):
-            terminal_part(probe)
+        for name in PARTS[parsed.part]:
+            runs[name](probe)
     except (KeyboardInterrupt, Stopped) as stop:
         stopped = True
         report.note(f"The probe stopped before its end: {stop or 'the person stopped it'}.")
