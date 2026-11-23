@@ -1,4 +1,4 @@
-"""The makers' record of drafts and `pkit visual draft` (visual-communication DEC-042 point 7,
+"""The makers' record of drafts and `pkit visual draft` (visual-communication DEC-070 point 4,
 DEC-029 points 3 and 4, #3224).
 
 Held here:
@@ -10,8 +10,8 @@ Held here:
   that differs from it, or that the record lists nothing for, is the asker's;
 - **the command writes nothing**: no command changes what a brief says (DEC-029 point 4);
 - **a page before the first render**: a piece with no lock yet finds its page under the
-  versions its first render would lock, so a draft is digested as it is written (DEC-042
-  point 7), and what that render's search refuses refuses the draft;
+  versions its first render would lock, so a draft is digested as it is written (DEC-070
+  point 4), and what that render's search refuses refuses the draft;
 - **a brief that cannot be read is refused**, with `--check` or without, and never read as
   no brief, so a refused read is never told as whose a text is;
 - **the part an entry lies in**: each draft of a piece whose top holds pages, such as a

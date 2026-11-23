@@ -68,7 +68,6 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/roles.schema.json
         - .pkit/capabilities/visual-communication/schemas/notation.schema.json
         - .pkit/capabilities/visual-communication/schemas/review.schema.json
-        - .pkit/capabilities/visual-communication/schemas/calibration.schema.json
         - .pkit/capabilities/visual-communication/libraries/foundations/library.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
@@ -93,7 +92,6 @@ pkit:
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
         - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
-        - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
         - .pkit/capabilities/visual-communication/schemas/config.yaml
       record:
         - visual-communication:DEC-001#3
@@ -195,11 +193,9 @@ pkit:
         - visual-communication:DEC-036#3
         - visual-communication:DEC-036#7
         - visual-communication:DEC-036#8
-        - visual-communication:DEC-042#3
-        - visual-communication:DEC-042#6
-        - visual-communication:DEC-042#7
-        - visual-communication:DEC-042#9
         - visual-communication:DEC-068#4
+        - visual-communication:DEC-070#4
+        - visual-communication:DEC-070#5
         - ADR-057#2
       artefact:
         - .pkit/cli/README.md#validate
@@ -229,7 +225,7 @@ The *location* is the one folder of the repository that holds the project's visu
 
 ### Where it is recorded
 
-The capability's configuration, `.pkit/capabilities/visual-communication/project/config.yaml`, records the location under the key `location`, as a path relative to the repository's top. Beside it, the configuration may name a browser ([The browser](#the-browser)), a bar for the designer's loop and the bounds of the loop ([The bar and the bounds](#the-bar-and-the-bounds)), and holds nothing else. A command records the location the first time it writes there, so a later change of the default moves no recorded location (DEC-002 point 1). A configuration as a command creates it:
+The capability's configuration, `.pkit/capabilities/visual-communication/project/config.yaml`, records the location under the key `location`, as a path relative to the repository's top. Beside it, the configuration may name a browser ([The browser](#the-browser)), and holds nothing else. A command records the location the first time it writes there, so a later change of the default moves no recorded location (DEC-002 point 1). A configuration as a command creates it:
 
 ```yaml
 pkit_schema: visual-communication:config
@@ -266,26 +262,6 @@ browser: ~/browsers/chromium/chrome
 - **The path** names the program, not its folder. It is absolute, or starts `~/` in your home folder, or is relative to the repository's top.
 - **Only here.** No flag and no environment variable names a browser. A command starts that program with no prompt, so the choice lies in a file the project reviews.
 - **No command writes it.** Write the line by hand, and remove it to go back to the first browser found.
-
-### The bar and the bounds
-
-The configuration may hold a *bar*, under the key `bar`, and the *bounds* of the designer's loop, under the key `bounds` (DEC-042 points 3 and 6). The bar says how good a page and the piece must be before the loop may end. The bounds say how many rounds the loop may run. They sit side by side, and neither is part of the other:
-
-```yaml
-bar:
-  covers: [COMM@2, GRAPHIC@4]
-  at-least: professional
-bounds:
-  to-the-bar: 5
-  polish: 2
-```
-
-- **`covers`** lists the rules the bar holds each page and the piece to. An item is a rule set's id, such as `COMM@2`, or one rule's id, such as `RS-COMM-003@2`, each with the major of its set. A set of the project's own covers only its own rules, never those it inherits.
-- **`at-least`** is the grade each page and the piece must reach on them: `professional` or `excellent`. A grade below `professional` is refused, since a loop that met such a bar would end on a rule finding the designer could still mend.
-- **One bar.** A project keeps one bar. The capability ships none.
-- **`to-the-bar`** is the most rounds the loop runs to the bar, and **`polish`** the most rounds of polish once it meets it. Absent, the schema's default holds: 5 rounds to the bar and 2 of polish. Whoever dispatches the designer may lower either for one run, and never raise it.
-- **Only here.** No flag, no agent and no dispatcher hands anyone a bar, so the choice lies in a file the project reviews.
-- **Checked** by the core's data validation against the schema, which refuses another shape. The capability's check fails a bar that covers what it does not find graded, and one whose major for a set differs from the major the project's sets in `rule-sets/` under its internal documentation root pin for it, or from the set's own where none of them pins it ([`bar-ungraded` and `bar-major`](checks.md#files-and-binding)). The project corrects either in the configuration.
 
 ## What the location holds
 
@@ -360,7 +336,7 @@ It removes each folder whole, then takes each entry out of the list as text ([Th
 - `before-after/<piece>/`: a piece's scenes drawn around a change to its lock's versions, in `before/` without the change and in `after/` with it;
 - `handover/<piece>/`: what `pkit visual produce` hands a producer, and what the producer writes, until the command keeps it in the piece's folder;
 - `look/<piece>/`: the images, the frames and the report `pkit visual look` writes;
-- `reviews/<piece>/`: the reviewer's report of each round, as whoever dispatched the reviewer kept it, whole in `round-<n>.md` and its document alone in `round-<n>.yaml` ([Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
+- `reviews/<piece>/`: the reviewer's report of each reading, kept whole in `reading-<n>.md` by a person or a session that dispatched the reviewer ([Where the review's reports are kept](outputs.md#where-the-reviews-reports-are-kept) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 
 *What is made from a piece* names the files in each. While `pkit visual look` runs, the folder also holds a temporary folder of the fonts it hands its tool, which the run removes.
 
@@ -398,9 +374,9 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 ```
 
-The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `brief`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports`, `code`, `review` and `calibration`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
+The schema is `visual-communication:<kind>`, one of `config`, `piece`, `content`, `brief`, `library`, `component`, `roles`, `notation`, `libraries`, `produced-record`, `code-record`, `findings`, `exports`, `code` and `review`. The format number is `1`, shared by every schema of the capability (DEC-003 point 1). The command that creates a file writes both fields, and a person who writes a file by hand writes them too (DEC-002 point 3).
 
-No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks the shape of each bound file it reads against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). The documents of the reviewer's kept reports name `visual-communication:review`, yet `pkit validate` checks none of them. They lie in the clone's local folder, which git ignores ([The clone's local folder](#the-clones-local-folder)), and the core's data validation reads only the files git sees (ADR-057 point 2). Nor does the check read them. The accepted calibration's data, `calibration.yaml` in the capability's own folder, names `visual-communication:calibration`. The capability ships it once whoever maintains the capability accepts a calibration's report, and no command writes it ([The accepted calibration's data](outputs.md#the-accepted-calibrations-data) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
+No path binds a file, and the capability writes no line that points an editor at a schema (DEC-002 point 3). The core's data validation checks the shape of each bound file it reads against the schema it names. The check finds the configuration, and each file of the location's table that has a schema, by its name and place. It reports one whose binding is missing or names another schema (*What the check reports*). The document a reviewer's report opens with, the fixed form of its report, names `visual-communication:review` ([visual-communication:DEC-070-ship-call-and-one-round] point 5), yet `pkit validate` checks no kept report. A kept report lies in a folder git ignores, such as the clone's local folder ([The clone's local folder](#the-clones-local-folder)), and the core's data validation reads only the files git sees (ADR-057 point 2). Nor does the check read them. Token files, the Resolver document, fonts and pictures carry no binding: each keeps its own format.
 
 ### How the files are read
 
@@ -644,7 +620,7 @@ A reason holds these fields:
 
 #### The makers' record of drafts
 
-The designer owns each word of a piece that is not the asker's, and the asker's words include a lead, title or takeaway once the asker has seen it (DEC-042 point 7). The `drafts` of a part record the ones the designer drafted and the asker has not seen:
+The designer owns each word of a piece that is not the asker's, and the asker's words include a lead, title or takeaway once the asker has seen it ([visual-communication:DEC-070-ship-call-and-one-round] point 4). The `drafts` of a part record the ones the designer drafted and the asker has not seen:
 
 ```yaml
 cover:
