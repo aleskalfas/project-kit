@@ -635,7 +635,7 @@ def test_pin_newer_version_that_cannot_be_fetched_runs_nothing_and_keeps_the_pin
     output = " ".join(result.output.split())
     assert "pkit 2.0.0 could not be fetched" in output
     assert "The pin was not advanced" in output
-    assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v2.0.0 project-kit --version`" in output
+    assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v2.0.0 pkit --version`" in output
 
 
 def test_bypassed_pin_raises_a_project_pinned_below_through_this_releases_url(
@@ -672,8 +672,8 @@ def test_bypassed_pin_raises_a_project_pinned_below_through_this_releases_url(
     assert result.exit_code == 0, result.output
     [(probe, probe_env), (run, run_env)] = spawned
     source = f"git+https://github.com/aleskalfas/project-kit.git@v{target}"
-    assert probe == ["uvx", "--from", source, "project-kit", "--version"]
-    assert run[:4] == ["uvx", "--from", source, "project-kit"]
+    assert probe == ["uvx", "--from", source, "pkit", "--version"]
+    assert run[:4] == ["uvx", "--from", source, "pkit"]
     assert run[4] == "upgrade"
     assert probe_env["GIT_TERMINAL_PROMPT"] == "0"
     assert "GIT_TERMINAL_PROMPT" not in run_env

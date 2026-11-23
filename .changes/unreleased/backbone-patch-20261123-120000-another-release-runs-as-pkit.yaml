@@ -1,0 +1,15 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The router runs another release, and every command pkit prints names it, as
+  `uvx --from <source>@v<version> pkit`: the console script the package
+  provides is the command. It named the package, `project-kit`, which uv
+  refuses as the command, so its probe of another release always failed. A
+  project pinned at another release than the installed pkit ran the installed
+  one instead of its pin, a raise of the pin to a newer release stopped as
+  though that release could not be fetched, and the first hop onto a release
+  candidate from a final release failed. The router's notice, the remedies
+  `sync` and `upgrade` print, the first hop and the install script's line now
+  name `pkit` too.
