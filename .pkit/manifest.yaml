@@ -1,6 +1,6 @@
 schema_version: 1
-backbone_version: 2.2.0
-completed_version: 2.2.0
+backbone_version: 3.0.0rc2
+completed_version: 3.0.0rc2
 components:
   - kind: adapter
     name: claude-code
