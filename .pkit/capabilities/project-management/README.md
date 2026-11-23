@@ -982,6 +982,12 @@ What else holds a Task back:
 
 **Two clones at once never both start one Task.** Where `start-work` fails and the Task is now another instance's, the first claim held. This clone then takes the next ready Task. Any other failure of `start-work` stops the run, with its exit code.
 
+**A Task a directive names.** `next-task --task <N>` takes the Task a directive from the worker's directing seat names ([project-management:DEC-081-delegation-between-seats] point 6). It takes N only where N is among the Tasks this run would offer the clone: ready, in its seat's scope, in its pools where the topology declares them, and neither assigned to another account nor held by another instance. It starts N claimed, through the same `start-work`, so the clash guard keeps a second agent off it whichever seat named it.
+
+- **Otherwise it starts nothing,** and exits 6 with why, such as `it is in no open Milestone of the pools this seat serves`. A directive widens nothing: scheduling the Task, or putting it into a pool, stays the person's act
+- **A lost claim** also exits 6, and takes no other Task. The worker reports the loss to its directing seat, and runs `next-task` again for its next ready Task
+- **What a person directs** stays as it was: a person who directs a seat to a Task outside its pools does so with `start-work`, in the worker's own session, which warns of it
+
 **Who takes.** Outside a topology, a clone takes with no scope, and a clone with no instance id reads no owner. In a project with a topology, a clone that holds no seat takes nothing, and nor does a planner's seat, which builds none of the work. The seat's scope is the one the topology on the default branch gives the seat. A clone whose seat cannot be confirmed on its state issue takes nothing either.
 
 `--dry-run` says which Task it would start, and runs `start-work --dry-run` on it. The command asks before it starts a Task, unless `--yes` is given. A listing that reaches `--limit`, 1000 open issues by default, refuses, since a dependency it did not return could be open.
@@ -993,6 +999,7 @@ What else holds a Task back:
 | 2 | A clone that holds no seat, a planner's seat or a seat that cannot be confirmed, a listing that reached `--limit`, or code that cannot read the topology in full |
 | 3 | The open issues could not be read, or where pools are declared the open milestones, or where the board carries the state its Status, or a ready Task's owner could not be read and no other Task was free |
 | 5 | No Task is ready for this clone, so nothing was started. Where pools are declared, the line says why in terms of the seat's pools |
+| 6 | The Task `--task` names is not among those this clone may take, or another instance claimed it first, so nothing was started. The line says why |
 | other | `start-work`'s own exit code, where it failed for a cause other than a lost claim |
 
 `scripts/_lib/task_pool.py` reckons which Tasks are ready, once for every command that needs it ([project-management:DEC-025-parallelization-primitive]).
