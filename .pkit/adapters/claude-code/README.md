@@ -512,7 +512,7 @@ Where the hook finds a `pkit` on its `PATH`, it adds nothing. The line reaches e
 
 ### The probe of messaging between sessions (`probe-messaging.py`)
 
-[project-management:DEC-081] lets a worker take direction by message only from the session its directing seat's state issue records. It rests on facts of Claude Code's messaging between sessions that the harness's documentation leaves unconfirmed, and its build measures them before it rests anything on them (DEC-081's Context). This probe takes those measurements: the six the record lists, and two more, the listing under remote control and a session resumed by a message.
+[project-management:DEC-081] lets a worker take direction by message only from the session its directing seat's state issue records. It rests on facts of Claude Code's messaging between sessions that the harness's documentation leaves unconfirmed, and its build measures them before it rests anything on them (DEC-081's Context). This probe takes those measurements: the six the record lists, and two more, the listing under remote control and a subagent resumed by a message.
 
 A person runs it, never a test. It starts real sessions, which sign in and spend, so it refuses to start unless given `--start-claude`, and it refuses inside an agent's run. It needs Claude Code 2.1.224 or later, and runs under the system's `python3`, 3.9 or later:
 
@@ -522,7 +522,7 @@ python3 .pkit/adapters/claude-code/probe-messaging.py --start-claude
 
 It makes a new scratch folder under `~/.cache` (or `--root`), outside every working tree: a git repository with a linked worktree, and a folder for each other session. Each folder's settings name a probe agent, which withholds neither messaging tool, as the session's agent, and register a hook that records each event the session sees. The hook is the probe itself, copied into the scratch folder. The probe runs in two parts, and `--part headless` or `--part terminal` runs one alone:
 
-- **The headless part** runs what a session started with `claude -p` can show: whether the session's agent and its subagents hold the tools, a session resumed by a message, five cases of a held message, and whether a run shaped as a builder's working run can send or receive. It starts fourteen runs, in about fifteen minutes.
+- **The headless part** runs what a session started with `claude -p` can show: whether the session's agent and its subagents hold the tools, a subagent resumed by a message, five cases of a held message, and whether a run shaped as a builder's working run can send or receive. It starts fourteen runs, in about fifteen minutes.
 - **The terminal part** walks the person through each step that needs a session at a terminal, in up to four terminals. It prints the line to run and the prompt to type, reads what the sessions recorded, and asks the person what only a terminal shows, such as an approval dialog. It takes about half an hour.
 
 The sessions it starts shorten the deadline of a held message through `CLAUDE_CODE_USER_DIALOG_TIMEOUT_MS`, so a step waits a minute at most rather than five.
