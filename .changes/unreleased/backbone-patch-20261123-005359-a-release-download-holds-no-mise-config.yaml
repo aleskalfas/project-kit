@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Installing pkit from a release, or running one as a project's pinned or
+  candidate release, works on a machine where mise supplies `git` or `sed`
+  through its shims, since the release's download no longer holds a mise
+  configuration that mise reads on its own and refuses until it is trusted.
+  Releases before this one still hold it: on such a machine,
+  `mise settings add ignored_config_paths "$HOME/.cache/uv"` lets uv's
+  downloads of them work.

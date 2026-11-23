@@ -1,9 +1,22 @@
-# Local-first task runner for project-kit.
+# Local-first task runner for project-kit's contributors.
 #
-# Bootstrap chain: mise provisions uv (the one tool pinned below); uv then
-# installs the Python interpreter per `requires-python` in pyproject.toml and
-# syncs dependencies. So a bare machine with only mise reaches a working tree
-# with `mise trust && uv sync`.
+# mise loads this file only where `MISE_ENV=dev` is set. Set it once in your
+# shell's environment, and trust the file once in your checkout:
+#
+#     export MISE_ENV=dev
+#     mise trust mise.dev.toml
+#
+# The file is not `mise.toml`, which mise loads anywhere in the tree: mise
+# refuses this file until it is trusted, and a copy of the repository that uv
+# downloads, to install pkit or to run a pinned or candidate release, is never
+# trusted. There a tool that mise supplies through its shims, such as `git` or
+# `sed`, would fail. Where `MISE_ENV` is unset, mise does not read this file,
+# so it leaves such a copy alone.
+#
+# Bootstrap chain: mise provisions uv (pinned below); uv then installs the
+# Python interpreter per `requires-python` in pyproject.toml and syncs
+# dependencies. So a bare machine with only mise, and `MISE_ENV=dev` set,
+# reaches a working tree with `mise trust mise.dev.toml && uv sync`.
 #
 # Python is intentionally NOT pinned here — `requires-python` in pyproject.toml
 # is the single source of truth for the interpreter version. Pinning it in both
