@@ -332,10 +332,10 @@ Contributors use **changie** — a dev-only tool provisioned through `mise`
 (`[tools]` in `mise.dev.toml`) and wrapped by `mise run changeset`:
 
 ```
-MISE_ENV=dev mise run changeset        # or: changie new
+mise run changeset        # or: changie new
 ```
 
-The task runner's setup, done once, is under "Optional task runner" in
+The task runner's setup is under "Optional task runner" in
 [`CONTRIBUTING.md`, "Running checks"](../../CONTRIBUTING.md#running-checks) <!-- unanchored: names the section that sets the task runner up, and an anchor on a page that anchors this one through others would make a cycle -->.
 
 changie's native `component` / `kind` / `body` fields are exactly the schema

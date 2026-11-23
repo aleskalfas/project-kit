@@ -5,9 +5,10 @@ A *changeset* is a small YAML file a surface-changing PR drops under
 `.changes/unreleased/`. It names one component, the semver *segment* that
 component's surface moved (`patch` / `minor` / `major` / `none`), and a
 human-readable note. Contributors author them with `changie` — a dev-only
-tool provisioned through `mise` by `mise.dev.toml`, which mise reads only
-where a contributor sets `MISE_ENV=dev`, never bundled in the wheel and never
-a runtime dependency (see `.pkit/release/README.md`). The file is equally
+tool provisioned through `mise` by `mise.dev.toml`, which a contributor
+switches on once, in their checkout, by linking it as `mise.local.toml` and
+trusting it. changie is never bundled in the wheel and never a runtime
+dependency (see `.pkit/release/README.md`). A changeset is equally
 hand-writable, and this module — not changie — is what *reads* them at
 release time. The release step (`project_kit.release`) consumes them; the
 CI guard checks for the *file*, not the tool.

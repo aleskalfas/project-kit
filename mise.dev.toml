@@ -1,22 +1,28 @@
 # Local-first task runner for project-kit's contributors.
 #
-# mise loads this file only where `MISE_ENV=dev` is set. Set it once in your
-# shell's environment, and trust the file once in your checkout:
+# mise does not load a file by this name on its own. Switch it on once in your
+# checkout, and in each git worktree you run its tasks in: link it as
+# `mise.local.toml`, which mise loads and the repository ignores, and trust it.
 #
-#     export MISE_ENV=dev
-#     mise trust mise.dev.toml
+#     ln -s mise.dev.toml mise.local.toml
+#     mise trust mise.local.toml
 #
-# The file is not `mise.toml`, which mise loads anywhere in the tree: mise
-# refuses this file until it is trusted, and a copy of the repository that uv
-# downloads, to install pkit or to run a pinned or candidate release, is never
-# trusted. There a tool that mise supplies through its shims, such as `git` or
-# `sed`, would fail. Where `MISE_ENV` is unset, mise does not read this file,
-# so it leaves such a copy alone.
+# The file is not `mise.toml`, and no commit holds the link, so a copy of the
+# repository that uv downloads, to install pkit or to run a pinned or candidate
+# release, holds no configuration mise loads on its own. Such a copy is never
+# trusted, and where mise refuses a configuration there, each tool it supplies
+# through its shims, such as `git` or `sed`, fails.
+#
+# Where `MISE_ENV=dev` is set, mise reads this file in such a copy all the
+# same. So keep it to what mise reads untrusted outside its paranoid mode:
+# tools with plain version strings and tasks that list no secrets, with no
+# `[env]` and no template syntax, not even in a comment. A task runs from this
+# file's directory, so a path in it needs no template to find the checkout.
 #
 # Bootstrap chain: mise provisions uv (pinned below); uv then installs the
 # Python interpreter per `requires-python` in pyproject.toml and syncs
-# dependencies. So a bare machine with only mise, and `MISE_ENV=dev` set,
-# reaches a working tree with `mise trust mise.dev.toml && uv sync`.
+# dependencies. So a bare machine with only mise reaches a working tree with
+# the link, `mise trust mise.local.toml` and `uv sync`.
 #
 # Python is intentionally NOT pinned here — `requires-python` in pyproject.toml
 # is the single source of truth for the interpreter version. Pinning it in both
@@ -90,5 +96,5 @@ echo "bare 'pkit' resolves to : ${p:-<none>}"
 [ -n "$p" ] && ls -l "$p"
 if [ -n "${PKIT_PINNED_BIN:-}" ]; then pinned="$PKIT_PINNED_BIN"; else pinned="$(uv tool dir --bin 2>/dev/null || echo "${UV_TOOL_BIN_DIR:-${XDG_BIN_HOME:-$HOME/.local/bin}}")/pkit"; fi
 if [ -x "$pinned" ]; then echo "global install          : $pinned  ->  pkit $(binver "$pinned")"; else echo "global install          : $pinned  ->  MISSING (run pkit:pinned-install)"; fi
-echo "this checkout (dev)     : backbone $(cat "{{config_root}}/.pkit/VERSION" 2>/dev/null)  <- what bare 'pkit' runs from here (route 1)"
+echo "this checkout (dev)     : backbone $(cat .pkit/VERSION 2>/dev/null)  <- what bare 'pkit' runs from here (route 1)"
 '''
