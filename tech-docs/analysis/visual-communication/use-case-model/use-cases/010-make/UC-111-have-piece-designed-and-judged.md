@@ -61,8 +61,8 @@ pkit:
 **Main path:**
 
 1. The developer asks the AI agent for a piece. The developer says who the piece is for, where it is shown, and whether it explains.
-7. For a presentation, the AI agent has a session of its own draw a sketch of every page, outside the engine. The session has only the developer's words, the takeaways and where the piece is shown. It has no method, no library and no brand.
-2. The AI agent designs the piece by the rules of visual communication: what each page says, and how it looks. For a presentation, it rebuilds the sketch as the piece by its method, with the brand and the libraries. Where they cannot carry a part, it draws the nearest that keeps the part's meaning. It writes what each page must show into the piece's brief, and the reason for each choice of its design.
+7. For a presentation, the AI agent has a session of its own draw a sketch of every page, outside the engine. The session has only the developer's words, the takeaways and where the piece is shown. It has no method, no design knowledge, no library and no brand.
+2. The AI agent designs the piece by the rules of visual communication: what each page says, and how it looks. For a presentation, it rebuilds the sketch as the piece by its method, with the brand and the libraries. Where they cannot carry a part, it draws the nearest that keeps the part's meaning, and where nothing near keeps it, it stops on that part and says what is missing. It writes what each page must show into the piece's brief, and the reason for each choice of its design.
 3. The system renders the piece, and draws each of its pages as an image, with `pkit visual render` and `pkit visual look`.
 4. A reviewer reads every drawn page, and reports each break of a rule as a finding that names the rule and the page.
 5. The AI agent mends once each fault, each brief finding, each break a rule's text settles, each fact its source contradicts, and each thing the reviewer says a reader cannot make out where the piece is shown, such as a difference told by colour alone. The system draws the piece again, and the reviewer reads every page again.
