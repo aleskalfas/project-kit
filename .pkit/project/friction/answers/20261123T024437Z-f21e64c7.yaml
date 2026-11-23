@@ -407,7 +407,7 @@ answers:
     revalidated:
       at: 2026-11-23T02:46:18Z
       outcome: unchanged
-      unchanged-because: Running checks changes only its optional mise task runner, whose file mise.dev.toml a contributor now switches on by linking it as mise.local.toml and trusting it; the checks this page sends the reader to, the paragraph on lint and format and the bullet on suppressions, are as they were.
+      unchanged-because: Running checks changes only its optional mise task runner, whose file mise.dev.toml a contributor now switches on by linking it as mise.local.toml and trusting it, and the two mise tasks of the development install, which name it; the checks this page sends the reader to, the paragraph on lint and format and the bullet on suppressions, are as they were.
   - artefact: CONTRIBUTING.md
     read:
       - 20261026T013726Z-d41bac9b.yaml
