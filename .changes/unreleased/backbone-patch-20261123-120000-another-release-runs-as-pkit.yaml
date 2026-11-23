@@ -12,4 +12,9 @@ body: >
   though that release could not be fetched, and the first hop onto a release
   candidate from a final release failed. The router's notice, the remedies
   `sync` and `upgrade` print, the first hop and the install script's line now
-  name `pkit` too.
+  name `pkit` too. A raise runs the pin's own code, so in a project pinned at a
+  release before this one, a raise by the pin's `pkit upgrade` or
+  `pkit pin <version>` still stops, leaves the pin where it was, and blames the
+  fetch or the newer release's upgrade. With this release or later installed,
+  raise such a pin with `PKIT_NO_ROUTE=1 pkit pin <version>`, naming this
+  release or later, or move on purpose with `pkit unpin`, then `pkit upgrade`.
