@@ -72,7 +72,7 @@ At a terminal, the command shows the head's commit and the repository it comes f
 
 ### 5. A reviewer of such a head is told to start nothing
 
-A local reviewer runs unconfined in the person's checkout ([pkit:ADR-066] point 10). The backbone's refusal tells it to run from a checkout at the head. So a reviewer of a head from elsewhere could start what this record withholds.
+A local reviewer runs unconfined in the checkout the review command runs in, or, in a seat's clone, in a clone of its own ([pkit:ADR-066] point 10, [pkit:ADR-102] point 2). The backbone's refusal tells it to run from a checkout at the head. So a reviewer of a head from elsewhere could start what this record withholds.
 
 - **The brief says what the head may do.** For a head from elsewhere that nobody named, it tells the reviewer to start nothing of the head and to check it out nowhere. That holds whatever the refusal advises. It outranks the agents README and a reviewer's definition, which allow a reproduction.
 - **A check it cannot run stays what its own rule makes it.** The reviewer of the answers blocks, since they would go unchecked.
