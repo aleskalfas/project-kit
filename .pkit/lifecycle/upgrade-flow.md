@@ -304,7 +304,7 @@ A project moves onto a release candidate only when someone asks, and such a move
 - **The first hop,** from a final release whose pkit has no `--pre`, is the candidate's own upgrade through the router's bypass. It runs the candidate's code in its own process, and moves the project, pinned:
 
   ```
-  PKIT_NO_ROUTE=1 uvx --from <distribution URL>@v<candidate> project-kit upgrade
+  PKIT_NO_ROUTE=1 uvx --from <distribution URL>@v<candidate> pkit upgrade
   ```
 
 - **A move onto a candidate cut short** goes on with the command that started it, run again, or with `pkit upgrade --pre`. Either hands over to the candidate, whose upgrade finishes the move from the recorded states ("Two recorded states, and an interrupted upgrade", above). No other release finishes it (below).

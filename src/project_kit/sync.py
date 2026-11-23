@@ -53,6 +53,7 @@ from project_kit.router import (
     DISTRIBUTION_GIT_URL,
     fell_back_from_pin,
     is_source_checkout,
+    pinned_command,
     read_version_pin,
 )
 
@@ -846,7 +847,7 @@ def _mismatch_lines(
         f"refusing to run `pkit {command}`: {state}, and the project pins {pin}.",
         rule,
         f"To run it at the pin: let the router run it, which it does unless `PKIT_NO_ROUTE` is "
-        f"set, or run `uvx --from {DISTRIBUTION_GIT_URL}@v{pin} project-kit {command}`.",
+        f"set, or run `{pinned_command(pin)} {command}`.",
         "To move the project on: run `pkit upgrade`.",
     ]
 
@@ -872,8 +873,7 @@ def fallback_remedies(command: str, pin: str) -> list[str]:
         ]
     return [
         f"Reconnect and run `pkit {command}` again: the router runs the pin whenever it can "
-        f"fetch it. Or run the pin through uvx: `uvx --from {DISTRIBUTION_GIT_URL}@v{pin} "
-        f"project-kit {command}`.",
+        f"fetch it. Or run the pin through uvx: `{pinned_command(pin)} {command}`.",
         "To move the project on purpose: `pkit unpin`, then `pkit upgrade`.",
     ]
 
@@ -1045,11 +1045,11 @@ def _content_downgrade_remedy(command: str, content: str | None, pin: str | None
     the raise (ADR-065 point 8). With no pin, or one that is not a version, the
     remedy is a pkit at the content's version, run once or installed.
     """
-    if _parse_version(pin) is not None and not _is_older(pin, content):
+    if pin is not None and _parse_version(pin) is not None and not _is_older(pin, content):
         return [
             f"Run it with pkit {pin}, the version this project pins: reconnect and re-run "
             f"`pkit {command}` (the router runs the pin whenever it can fetch it), or run "
-            f"`uvx --from {DISTRIBUTION_GIT_URL}@v{pin} project-kit {command}`.",
+            f"`{pinned_command(pin)} {command}`.",
             "To move the pin instead, run `pkit pin <version>`; it takes a version no older "
             "than the project's content.",
         ]
@@ -1062,9 +1062,10 @@ def _content_downgrade_remedy(command: str, content: str | None, pin: str | None
         if command != "upgrade":
             lines.append("Or run `pkit upgrade`, which finishes the interrupted raise.")
         return lines
+    assert content is not None  # no pin is a version here, so the content is what is ahead
     return [
-        f"Run it with pkit {content} or newer: `uvx --from {DISTRIBUTION_GIT_URL}@v{content} "
-        f"project-kit {command}`, or install that version as your pkit: `uv tool install "
+        f"Run it with pkit {content} or newer: `{pinned_command(content)} {command}`, or "
+        "install that version as your pkit: `uv tool install "
         f"--force {DISTRIBUTION_GIT_URL}@v{content}`.",
     ]
 

@@ -1,0 +1,13 @@
+component: project-management
+kind: none
+body: >
+  Design-ahead: the record ADR-102, accepted, decides that in a seat's clone
+  each reviewer works in a clone of its own. The backbone's run command makes
+  it from the code host at the default branch's head, in a folder only the
+  person's account writes, and the runner holds that run to the snapshot that
+  binds the seat's clone and the allow, ask and deny rules of its settings
+  file. So no reviewer moves the seat's working tree off the default branch,
+  and no reviewer writes where another works. Outside a seat's clone,
+  reviewers work in the checkout the review command runs in. DEC-067 point 5's
+  first sentence now says where a local reviewer runs. No behaviour changes
+  until the record is built (#3467).

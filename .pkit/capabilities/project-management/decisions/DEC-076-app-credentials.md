@@ -6,6 +6,8 @@ date: 2026-11-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [DEC-083](DEC-083-person-pace-account.md).** Under a credential that names no user's account, the command that sets a seat's pace writes no person's setting or clear, even on the person's word. Overturned: point 5's "passes the same under a credential that names no user's account", so far as it reaches a person's setting or clear of a seat's pace. The rest stands.
+
 **In plain terms:** an agent may reach the hosting service under a credential the service does not answer for as a user's account, such as an App installation's token or a CI workflow's. Under such a credential, the commands take no person's identity for the account they act as: neither git's email nor `PM_INVOKER_LOGIN` passes that account at the membership gate, and the variable names only the person the agent works for, who serves where naming a person grants nothing, such as the default assignee. Such a clone claims no Task, builds nothing in a project with a topology, and changes no member list. Where the service gives no answer about a credential, a person's own among them, no person stands for it either, and a clone that holds an instance id refuses until the service answers. The acting account comes from the backbone's reading of it ([pkit:ADR-094]), and each act's actor follows [project-management:DEC-078-one-actor-per-act].
 
 ## Context
@@ -128,6 +130,7 @@ These needs stay unmet under a credential that names no user's account. Each is 
 - **A person's own clones, kept off a Task such a clone started for that person.** Meeting it needs the same mark, read by the person's clones too.
 - **The closed membership gate where the commands know no acting account.** Meeting it needs the service's answer with the account's login (point 1).
 - **A planner's seat behind an open gate.** Meeting it needs the service's answer about a bot's account's write access, measured alike for every reader (point 6).
+- **A person's setting of a seat's pace** (refinement per [project-management:DEC-083-person-pace-account]): lifting or clearing a person's setting that stands, and setting the pace of a seat that no seat directs, but through the ceiling. Meeting it would rank as a person's a setting whose actor is a bot's account, or one the commands cannot tell is a user's, which DEC-083 rules out.
 
 A setup that needs one of them gives the agent another credential, which is the setup's own choice.
 
