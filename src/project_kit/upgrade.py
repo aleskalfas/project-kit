@@ -115,6 +115,7 @@ from project_kit.router import (
     is_routed_child,
     is_source_checkout,
     pin_file_path,
+    pinned_command,
     read_version_pin,
     run_bypassed,
     running_version,
@@ -1339,7 +1340,7 @@ def reconcile_forward_via_target(
 
     Syncing to a newer version needs that version's code and bundled content,
     which the currently-installed tool does not carry. Bootstrap the target wheel
-    with `uvx project-kit@v<target>` and run its `upgrade` there — under the
+    with `uvx --from …@v<target> pkit` and run its `upgrade` there — under the
     router's PKIT_NO_ROUTE bypass, so the bootstrapped process runs self instead
     of routing back through this project's (older) pin. That upgrade syncs content
     and runs the forward migrations. Raises ClickException on a non-zero exit so
@@ -1362,13 +1363,12 @@ def reconcile_forward_via_target(
         raise click.ClickException(
             f"pkit {target} could not be fetched (offline, a missing tag, a credential the "
             f"server asked for, or uvx unavailable), so its upgrade did not run. The pin was "
-            f"not advanced; re-run where `uvx --from {DISTRIBUTION_GIT_URL}@v{target} "
-            "project-kit --version` resolves."
+            f"not advanced; re-run where `{pinned_command(target)} --version` resolves."
         ) from None
     if returncode != 0:
         raise click.ClickException(
             f"reconciling content forward to {target} failed: the bootstrapped "
-            f"`uvx project-kit@v{target} {' '.join(argv)}` exited {returncode}. The pin was "
+            f"`{pinned_command(target)} {' '.join(argv)}` exited {returncode}. The pin was "
             "not advanced; resolve the error reported above and retry."
         )
 
