@@ -1,10 +1,8 @@
 # changie config — contributor convenience for authoring changeset files
-# (PRJ-002 D1). DEV-ONLY: changie is provisioned through mise ([tools] in
-# mise.dev.toml, which a contributor switches on once, in their checkout, by
-# linking it as mise.local.toml and trusting it), never bundled in the wheel,
-# never a runtime dependency, never required to install or use pkit. A
-# changeset is equally hand-writable; the CI guard and `pkit release` read the
-# FILE, not the tool.
+# (PRJ-002 D1). DEV-ONLY: a contributor writes a changeset by hand, or with
+# changie installed however they choose. changie is never bundled in the
+# wheel, never a runtime dependency, never required to install or use pkit;
+# the CI guard and `pkit release` read the FILE, not the tool.
 #
 # changie's native `component` + `kind` + `body` fields map onto the schema
 # `project_kit.changesets` parses: component (backbone / an adapter / a
