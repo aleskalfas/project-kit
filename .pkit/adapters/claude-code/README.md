@@ -22,7 +22,7 @@ pkit:
         - .pkit/agents/tool_access.py
         - .pkit/agents/definition_source.py
         - .pkit/cli/install-pkit.sh
-      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", ADR-095, ADR-099, "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068"]
+      record: [COR-002, COR-004, COR-005, COR-007, "COR-013#7", "COR-013#8", COR-016, COR-017, COR-020, COR-026, COR-028, COR-047, COR-070, COR-074, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-073, ADR-076, ADR-085, ADR-086, ADR-087, "ADR-090#3", "ADR-090#4", ADR-095, ADR-099, "project-management:DEC-029", "project-management:DEC-030", "project-management:DEC-068", "project-management:DEC-081"]
       artefact:
         - .pkit/lifecycle/component-registry.md#uninstall-origin-aware-removal-cor-031-d4
         - .pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift
@@ -49,6 +49,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, tool access, storyboard paths, the workspace sentence
 ├── run-agent.py                       # the agent runner: starts one agent in Claude Code for `pkit agents run`
 ├── probe-confined-run.py              # the probe of the runner's confined form; a person runs it, never a test
+├── probe-messaging.py                 # the probe of messaging between sessions; a person runs it, never a test
 ├── tool-access.json                   # Claude Code's keys for an agent's tool access, its names' forms, the built-in tools it knows, and the withheld entries it admits
 ├── harness-support.yaml               # how far Claude Code meets each harness requirement the core declares
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
@@ -508,6 +509,25 @@ The start hook adds one line to its context where no `pkit` command is on the `P
 The line names the install script, which installs the version the project pins or records ([ADR-090](../../../tech-docs/architecture/decisions/ADR-090-self-fetch-over-https.md) point 4). The CLI reference's ["Installing pkit on PATH"](../../cli/README.md#installing-pkit-on-path) <!-- unanchored: named as the section that says how to run the script, whose form rests on ADR-090 point 3, which the page anchors --> says how to run it. The hook names the script and never runs it, as no hook does (ADR-090 point 3).
 
 Where the hook finds a `pkit` on its `PATH`, it adds nothing. The line reaches each session and each subagent at its start, as the workspace sentence does, and no confined run, which loads no project settings.
+
+### The probe of messaging between sessions (`probe-messaging.py`)
+
+[project-management:DEC-081] lets a worker take direction by message only from the session its directing seat's state issue records. It rests on facts of Claude Code's messaging between sessions that the harness's documentation leaves unconfirmed, and its build measures them before it rests anything on them (DEC-081's Context). This probe takes those measurements: the six the record lists, and two more, the listing under remote control and a session resumed by a message.
+
+A person runs it, never a test. It starts real sessions, which sign in and spend, so it refuses to start unless given `--start-claude`, and it refuses inside an agent's run. It needs Claude Code 2.1.224 or later, and runs under the system's `python3`, 3.9 or later:
+
+```
+python3 .pkit/adapters/claude-code/probe-messaging.py --start-claude
+```
+
+It makes a new scratch folder under `~/.cache` (or `--root`), outside every working tree: a git repository with a linked worktree, and a folder for each other session. Each folder's settings name a probe agent, which withholds neither messaging tool, as the session's agent, and register a hook that records each event the session sees. The hook is the probe itself, copied into the scratch folder. The probe runs in two parts, and `--part headless` or `--part terminal` runs one alone:
+
+- **The headless part** runs what a session started with `claude -p` can show: whether the session's agent and its subagents hold the tools, a session resumed by a message, five cases of a held message, and whether a run shaped as a builder's working run can send or receive. It starts fourteen runs, in about fifteen minutes.
+- **The terminal part** walks the person through each step that needs a session at a terminal, in up to four terminals. It prints the line to run and the prompt to type, reads what the sessions recorded, and asks the person what only a terminal shows, such as an approval dialog. It takes about half an hour.
+
+The sessions it starts shorten the deadline of a held message through `CLAUDE_CODE_USER_DIALOG_TIMEOUT_MS`, so a step waits a minute at most rather than five.
+
+It writes the harness's version and each measurement's result to `results.md` in the scratch folder, or to `--out`: a table of the results, then each measurement's findings and the evidence they rest on. In the file, `<scratch>` stands for the scratch folder and `~` for the home folder, the user's and the machine's names are replaced, and each listing leaves out the rows of sessions outside the probe. Read the results before posting them anywhere, since what the probe replaces is all it knows to replace. The scratch folder keeps the raw evidence as it was, so remove it once done. The results are recorded on [#3461](https://github.com/aleskalfas/project-kit/issues/3461) <!-- unanchored: names the Task that records the results, a pointer and no statement of the system -->.
 
 ### Harness support (`harness-support.yaml`)
 

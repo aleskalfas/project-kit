@@ -1,0 +1,16 @@
+component: claude-code
+kind: minor
+custom:
+  category: Added
+body: >
+  A new probe, `probe-messaging.py`, measures what Claude Code's messaging
+  between sessions does, as project-management DEC-081 asks before its build
+  rests anything on it. A person runs it, with
+  `python3 .pkit/adapters/claude-code/probe-messaging.py --start-claude`,
+  never a test: it starts real sessions, which sign in and spend, and it
+  refuses inside an agent's run. It runs headless what a session started with
+  `-p` can show, walks the person through each step that needs a session at a
+  terminal, and writes the harness's version and each measurement's result to
+  one file, with the scratch folder, the home folder, the user's and the
+  machine's names and other sessions' rows left out. The README's "The probe
+  of messaging between sessions" says so.
