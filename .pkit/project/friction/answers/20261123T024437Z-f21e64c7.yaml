@@ -349,11 +349,12 @@ answers:
       - 20261118T110156Z-9a08eba0.yaml
       - 20261118T191220Z-3b107524.yaml
       - 20261122T001341Z-1f604dc7.yaml
+      - 20261123T005053Z-b5822da6.yaml
       - 20261123T010957Z-208ac0f1.yaml
     revalidated:
       at: 2026-11-23T02:45:55Z
       outcome: unchanged
-      unchanged-because: "This change edits only the module docstring of src/project_kit/changesets.py, which names mise.dev.toml as where changie is provisioned and now says a contributor switches it on by linking it as mise.local.toml and trusting it; no code changed, and nothing the manifest reference states about components or their versions changed. Judged with the default branch's revalidation of 2026-11-23T00:51:22Z, which this branch does not hold: the manifest's entries still rest on ADR-066 for the runner the adapter registers and the run command it serves, since ADR-102's reviewer's clone adds to that command's work only with #3467, and this change touches neither."
+      unchanged-because: "This change edits only the module docstring of src/project_kit/changesets.py, which names mise.dev.toml as where changie is provisioned and now says a contributor switches it on by linking it as mise.local.toml and trusting it; no code changed, and nothing the manifest reference states about components or their versions changed. Judged with the default branch's revalidation of 2026-11-23T00:51:22Z: the manifest's entries still rest on ADR-066 for the runner the adapter registers and the run command it serves, since ADR-102's reviewer's clone adds to that command's work only with #3467, and this change touches neither."
   - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-operator.md
     read:
       - 20261025T221340Z-215a759f.yaml
