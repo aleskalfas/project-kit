@@ -301,30 +301,6 @@ answers:
           reason: "DEC-030 takes a top line on when the designer stops, what it mends alone and how much it decides alone, and loses DEC-042's sentences on the bar, the verdict and grades. DEC-070 leaves this README as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
         - anchor:
             kind: record
-            value: visual-communication:DEC-042#1
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this README as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#10
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this README as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#3
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this README as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#4
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this README as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#6
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this README as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#9
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this README as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
             value: visual-communication:DEC-046#2
           reason: "DEC-046's top line overturns what it says of grades, bars, the hold and a calibration. DEC-070 leaves this README as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
         - anchor:
@@ -342,10 +318,6 @@ answers:
         - anchor:
             kind: record
             value: visual-communication:DEC-068#7
-          reason: "DEC-068's top line overturns what it says of grades, bars, the hold and a calibration, its point 9 whole. DEC-070 leaves this README as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-068#9
           reason: "DEC-068's top line overturns what it says of grades, bars, the hold and a calibration, its point 9 whole. DEC-070 leaves this README as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
   - artefact: .pkit/capabilities/visual-communication/checks.md
     read:
@@ -598,14 +570,6 @@ answers:
           reason: "DEC-030 takes a top line on when the designer stops, what it mends alone and how much it decides alone, and loses DEC-042's sentences on the bar, the verdict and grades. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
         - anchor:
             kind: record
-            value: visual-communication:DEC-042#3
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#6
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
             value: visual-communication:DEC-046#3
           reason: "DEC-046's top line overturns what it says of grades, bars, the hold and a calibration. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
         - anchor:
@@ -620,14 +584,6 @@ answers:
             kind: record
             value: visual-communication:DEC-063#2
           reason: "DEC-063's top line overturns what it says of grades and a calibration. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-065#1
-          reason: "DEC-070 supersedes DEC-065, so no hold remains for a change to the code to lapse. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-065#2
-          reason: "DEC-070 supersedes DEC-065, so no hold remains for a change to the code to lapse. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
         - anchor:
             kind: record
             value: visual-communication:DEC-066#1
@@ -904,22 +860,6 @@ answers:
           reason: "DEC-030 takes a top line on when the designer stops, what it mends alone and how much it decides alone, and loses DEC-042's sentences on the bar, the verdict and grades. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
         - anchor:
             kind: record
-            value: visual-communication:DEC-042#3
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#6
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#7
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#9
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
             value: visual-communication:DEC-068#4
           reason: "DEC-068's top line overturns what it says of grades, bars, the hold and a calibration, its point 9 whole. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
   - artefact: .pkit/capabilities/visual-communication/outputs.md
@@ -1136,30 +1076,6 @@ answers:
           reason: "DEC-030 takes a top line on when the designer stops, what it mends alone and how much it decides alone, and loses DEC-042's sentences on the bar, the verdict and grades. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
         - anchor:
             kind: record
-            value: visual-communication:DEC-042#1
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#10
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#3
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#4
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#6
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-042#9
-          reason: "DEC-070 supersedes DEC-042, the record of the grades, the bar, the bounds, the verdict and the hold. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
             value: visual-communication:DEC-062#1
           reason: "DEC-062's top line overturns its point 4 and what it says of a calibration, the hold and grades. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
         - anchor:
@@ -1170,14 +1086,6 @@ answers:
             kind: record
             value: visual-communication:DEC-063#1
           reason: "DEC-063's top line overturns what it says of grades and a calibration. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-065#1
-          reason: "DEC-070 supersedes DEC-065, so no hold remains for a change to the code to lapse. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
-        - anchor:
-            kind: record
-            value: visual-communication:DEC-065#2
-          reason: "DEC-070 supersedes DEC-065, so no hold remains for a change to the code to lapse. DEC-070 leaves this page as it stands, its passages on the grades, the bar, the verdict, the hold and the calibration among them, and #3477 brings it to DEC-070."
         - anchor:
             kind: record
             value: visual-communication:DEC-066#2
