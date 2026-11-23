@@ -40,7 +40,7 @@ from packaging.version import InvalidVersion, Version
 from project_kit.install import LATEST_TAG
 from project_kit.manifest import BackboneManifest
 from project_kit.migrations import public_version
-from project_kit.router import DISTRIBUTION_GIT_URL
+from project_kit.router import DISTRIBUTION_GIT_URL, pinned_command
 from project_kit.versioning import is_candidate_version
 
 
@@ -65,7 +65,7 @@ def first_hop(candidate: str) -> str:
     candidate's own upgrade, run through the router's bypass, fetched from the
     distribution URL compiled into the tool at the candidate's tag (ADR-089 point
     8). Typing the bypass is the operator's consent."""
-    return f"PKIT_NO_ROUTE=1 uvx --from {DISTRIBUTION_GIT_URL}@v{candidate} project-kit upgrade"
+    return f"PKIT_NO_ROUTE=1 {pinned_command(candidate)} upgrade"
 
 
 def way_in_notes(candidate: str) -> str:

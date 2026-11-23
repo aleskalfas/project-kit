@@ -5667,7 +5667,7 @@ def pin(version: str | None, force: bool) -> None:
     `withdrawn/v<candidate>` marks, is warned of, and the pin goes on (ADR-092
     point 4).
 
-    Once the directive exists, the pkit router re-execs `uvx project-kit@<pin>` so
+    Once the directive exists, the pkit router re-execs `uvx --from …@v<pin> pkit` so
     the pinned version serves every command; a global-tool upgrade no longer moves
     this project. Raise the pin later with `pkit upgrade`; remove it with
     `pkit unpin`.
