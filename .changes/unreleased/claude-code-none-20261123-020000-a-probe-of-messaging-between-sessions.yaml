@@ -1,0 +1,8 @@
+component: claude-code
+kind: none
+body: >
+  Internal. The adapter ships `probe-messaging.py`, a script a person runs
+  to measure what Claude Code's messaging between sessions does, as
+  project-management DEC-081 asks before its build rests anything on it. It
+  starts real sessions and refuses inside an agent's run. Nothing the adapter
+  runs on an adopter's behalf changes.
