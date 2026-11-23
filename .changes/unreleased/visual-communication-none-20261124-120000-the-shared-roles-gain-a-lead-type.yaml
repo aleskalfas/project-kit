@@ -1,0 +1,14 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-072 decides which roles the foundations' shared roles gain from what
+  rebuilt presentations lacked (#3488). They gain `type.lead`, for running text
+  set larger than the body, defaulting to `type.body`, so no brand owes it a
+  value and none breaks, and the deck's lead token comes to default to it. It
+  names a size of running text, not a page's lead. A display type, an emphasis
+  type and a second accent are not added: each waits until the person calls a
+  rebuild's stand-in for it short of shipping, or a project asks for it, since
+  a shared role is cheap to add and costly to remove, and only the larger
+  running text held a page back. The role, the deck's token, the neutral
+  brand's values and the capability's pages follow in a slice under #3149. No
+  surface moves here.
