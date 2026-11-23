@@ -804,7 +804,7 @@ The owner is the assignee paired with an instance number. So a clone claims only
 
 **Two clones can claim one issue in the same instant.** GitHub has no atomic claim, so a claim reads the issue again after writing. Where a lower-numbered instance claimed too, the higher one withdraws its claim. `start-work` then stops before the move with exit code 2, as it does where its claim finds another instance's claim made after the clash guard passed. This catches a clash rather than preventing it: a clone whose re-read came first keeps its claim, and both claims stay on the issue.
 
-**In a project with a topology of seats** ([project-management:DEC-059-topology-of-seats]), a clone takes part by holding a seat, and its instance number is the seat's. A clone in a planner's seat files with no owner, so its work enters the shared pool, and every other seat claims what it files.
+**In a project with a topology of seats** ([project-management:DEC-059-topology-of-seats]), a clone takes part by holding a seat, and its instance number is the seat's. A clone in a planner's seat files with no owner, so its work enters the shared pool, and every other seat claims what it files. A lead files with no owner the work it leaves to its workers, with `create-issue --for-workers`, so the work becomes ready for them, and claims only what it files for itself to build ([project-management:DEC-081-delegation-between-seats] point 3). `--for-workers` from a worker's seat, or from no seat, is refused before anything is filed.
 
 **A claim counts only after the current take of the seat its stamp names,** and only while the clone the stamp names holds that seat. A clone's take of a seat is the claim, on the seat's state issue, that made the clone the seat's holder. GitHub numbers the comments of every issue from one sequence, so a claim made after the take has the higher id. A seat's release thus frees its clone's work for good, with no write to the issues, even where the same clone takes the seat again.
 
@@ -961,7 +961,7 @@ A ready Task is one of two kinds:
 - **An open Task in Backlog with no owner,** whose `## Dependencies` section names no open issue
 - **A Task In Progress whose claim no longer counts,** in a project with a topology, since the seat that claimed it was released. No claim lapses yet
 
-**This clone's own Tasks.** A Task in Backlog that this clone's instance owns is this clone's own work, outside the pool, as a lead owns what it files. Such a Task comes first where its `## Dependencies` section names no open issue and it falls in the seat's scope.
+**This clone's own Tasks.** A Task in Backlog that this clone's instance owns is this clone's own work, outside the pool, as a lead owns what it files for itself to build. Such a Task comes first where its `## Dependencies` section names no open issue and it falls in the seat's scope.
 
 **The pools.** Where the topology declares pools of workers, `next-task` reads the open milestones once and maps each `Pool:` line to its pool. It keeps only a Task whose native milestone is an open milestone of a pool the seat serves, this clone's own Tasks among them. The seat's scope then narrows what its pools hold, and a seat that names no pool takes nothing. Where no pool is declared, it reads no milestone ([project-management:DEC-061-pools-of-workers] points 5 and 8).
 

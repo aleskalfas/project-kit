@@ -31,8 +31,9 @@ that clone holds that seat, and only where the clone made it after its current
 take of the seat, judged when it is read. So a seat's release frees its clone's
 claims for good, with no write, even where the same clone takes the seat again
 (point 5). A planner's seat files with no owner, so its work enters the shared
-pool, and every other seat claims at filing; a worker claims at ``start-work``
-(point 7). Renewal, lapse and parking
+pool, and a lead's seat files with no owner the work it leaves to its workers
+([project-management:DEC-081-delegation-between-seats] point 3). Every other
+filing claims at filing; a worker claims at ``start-work`` (point 7). Renewal, lapse and parking
 are not built yet. The reading carries the pools the topology declares, and
 the seat the pools it serves ([project-management:DEC-061-pools-of-workers]
 point 1). Where this code cannot read the topology in full, the reading
@@ -277,8 +278,16 @@ class Clone:
     @property
     def files_unowned(self) -> bool:
         """A planner files with no owner, so its work enters the shared pool
-        (DEC-059 point 7). Every other seat owns what it files."""
+        (DEC-059 point 7). Every other seat owns what it files, save what a lead
+        leaves to its workers (:attr:`files_for_workers`)."""
         return self.seat is not None and self.seat.role == PLANNER
+
+    @property
+    def files_for_workers(self) -> bool:
+        """A lead files with no owner the work it leaves to its workers, so the
+        work becomes ready for them, and owns what it files for itself to build
+        (DEC-081 point 3). Which is which is the lead's to say at each filing."""
+        return self.seat is not None and self.seat.role == LEAD
 
     def named(self) -> str:
         """How a line names this clone: its instance, and its seat where it holds one."""
@@ -732,15 +741,24 @@ def _read_settings(capability_root: Path) -> dict[str, Any] | None:
 # ---- the plan lines a dry run and a summary print ----------------------
 
 
-def claim_plan(clone: Clone, assignee: str | None = None, *, filing: bool = False) -> str:
+def claim_plan(
+    clone: Clone, assignee: str | None = None, *, filing: bool = False, for_workers: bool = False
+) -> str:
     """What a claim will do, for a pre-flight summary. ``assignee`` is the
     account an issue being filed is assigned to, where it is known, and
-    ``filing`` says the claim is the one at filing. Where pkit cannot tell this
-    clone's account, :func:`claim` claims nothing, and the plan says why (#3162)."""
+    ``filing`` says the claim is the one at filing. ``for_workers`` says a
+    lead's seat files the issue for its workers (DEC-081 point 3). Where pkit
+    cannot tell this clone's account, :func:`claim` claims nothing, and the plan
+    says why (#3162)."""
     if filing and clone.files_unowned:
         return (
             f"not claimed: {clone.named()} is a planner's seat, which files with no owner, "
             "so the issue enters the shared pool"
+        )
+    if filing and for_workers and clone.files_for_workers:
+        return (
+            f"not claimed: {clone.named()} is a lead's seat, which files with no owner the work "
+            "it leaves to its workers, so the issue becomes ready for them"
         )
     if clone.reads_only:
         return f"not claimed: {_reads_only_clause()}"
@@ -753,11 +771,29 @@ def claim_plan(clone: Clone, assignee: str | None = None, *, filing: bool = Fals
     return f"claimed for {clone.named()} ({clone.substrate} substrate)"
 
 
-def claims_at_filing(clone: Clone, assignee: str | None) -> bool:
+def claims_at_filing(clone: Clone, assignee: str | None, *, for_workers: bool = False) -> bool:
     """Whether ``create-issue`` claims what it files: for this clone's own
-    account, and not from a planner's seat (DEC-035 points 3 and 5, DEC-059
-    point 7)."""
+    account, not from a planner's seat, and not what a lead's seat files for its
+    workers (DEC-035 points 3 and 5, DEC-059 point 7, DEC-081 point 3)."""
+    if for_workers and clone.files_for_workers:
+        return False
     return assignee == clone.login and not clone.files_unowned and not clone.reads_only
+
+
+def for_workers_refusal(clone: Clone | None) -> str | None:
+    """Why this clone may not file for its workers, or None where it may: only a
+    lead's seat leaves work to its workers so, and a planner's seat files all its
+    work with no owner already (DEC-059 point 7, DEC-081 point 3)."""
+    if clone is not None and (clone.files_for_workers or clone.files_unowned):
+        return None
+    if clone is None or clone.seat is None:
+        held = "this clone holds no seat of a topology"
+    else:
+        held = f"{clone.named()} is a {clone.seat.role}'s seat"
+    return (
+        f"--for-workers files with no owner the work a lead's seat leaves to its workers, "
+        f"and {held}"
+    )
 
 
 def release_plan(clone: Clone, *, when: str = "on close") -> str:

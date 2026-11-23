@@ -84,6 +84,11 @@ claim that fails is a warning, and the issue stays filed. With no id set,
 nothing of this runs. In a project with a topology of seats, a clone in a
 planner's seat files with no owner, so the issue enters the shared pool, and a
 clone in any other seat claims what it files for its seat (DEC-059 point 7). A
+clone in a lead's seat files with no owner, under `--for-workers`, the work it
+leaves to its workers, so the work becomes ready for them, and claims only what
+it files for itself to build ([project-management:DEC-081-delegation-between-seats]
+point 3). A planner's seat files so without it. `--for-workers` from any other
+seat, or from no seat, is refused before anything is written. A
 clone that took a seat confirms it on the seat's state issue before anything is
 written, and the command refuses where it cannot (DEC-059 point 6).
 
@@ -120,7 +125,8 @@ Exit codes:
      the state and answered with no single-select Status field, or no option
      for the state the issue is filed into (nothing filed)
   2  usage error / validation refusal / an assignee refused, as a bot's account
-     or one GitHub did not confirm as a user's (DEC-079 point 1)
+     or one GitHub did not confirm as a user's (DEC-079 point 1) / --for-workers
+     from a clone that holds neither a lead's nor a planner's seat (nothing filed)
   3  gh failure (auth, network, repo not found, ...), or the board the filing
      adds the issue to did not answer (nothing filed)
   4  issue created, but --from-report link failed, and every write the filing
@@ -265,6 +271,16 @@ def main() -> int:
             "Assignee GitHub login. Defaults to the filer: the user's account the "
             "credential acts as, or, under a credential that names no user's account, "
             "the person PM_INVOKER_LOGIN names (DEC-076 point 3)."
+        ),
+    )
+    parser.add_argument(
+        "--for-workers",
+        action="store_true",
+        help=(
+            "From a lead's seat, file with no owner the work the lead leaves to its "
+            "workers, so it becomes ready for them; without it, a lead's seat claims "
+            "what it files (DEC-081 point 3). A planner's seat files so without it; "
+            "refused from any other seat."
         ),
     )
     parser.add_argument(
@@ -876,8 +892,16 @@ def main() -> int:
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("create-issue", None, exc)
+    if args.for_workers:
+        refusal = instance_claims.for_workers_refusal(clone)
+        if refusal is not None:
+            print(f"[refused] create-issue: {refusal}; nothing was filed.", file=sys.stderr)
+            return 2
     if clone is not None and not clone.quiet:
-        print(f"  ownership:  {instance_claims.claim_plan(clone, assignee, filing=True)}")
+        plan = instance_claims.claim_plan(
+            clone, assignee, filing=True, for_workers=args.for_workers
+        )
+        print(f"  ownership:  {plan}")
     if args.from_report is not None:
         print(
             f"  from-report: #{args.from_report}  "
@@ -986,9 +1010,12 @@ def main() -> int:
                 file=sys.stderr,
             )
         # Claim the filed issue for this clone (DEC-035 point 3). An issue
-        # filed for another person is not this clone's (DEC-035 point 5), and
-        # a planner's seat files with no owner (DEC-059 point 7).
-        if clone is not None and instance_claims.claims_at_filing(clone, assignee):
+        # filed for another person is not this clone's (DEC-035 point 5), a
+        # planner's seat files with no owner (DEC-059 point 7), and so does a
+        # lead's, for its workers (DEC-081 point 3).
+        if clone is not None and instance_claims.claims_at_filing(
+            clone, assignee, for_workers=args.for_workers
+        ):
             instance_claims.say(instance_claims.claim(new_issue_number, clone, config))
     containment = axis_labels.containment_mode(substrate_map)
     if (
