@@ -30,7 +30,9 @@ that key whose author may write, and folds them (:func:`fold`): the first claim
 on a free state holds, another clone's claim on a held state is void, and stays
 void after a release. The fold names the holder's take too: the id of the
 comment whose claim made it the holder, which a caller passes on to judge a
-claim made elsewhere against it. A read that finds the description's marker
+claim made elsewhere against it. Beside the holder, it names the session the
+holder last recorded as the one that runs a seat's loop, which the release
+clears (DEC-081 point 4, DEC-084 point 1). A read that finds the description's marker
 gone restores it, the one write a read makes. :func:`list_open` asks the one read of issues
 (``_lib/issue_list``) for the state issues it left out of a listing of open
 issues, and :func:`find` reads, in number order, those whose description's
@@ -49,7 +51,10 @@ Each change is one comment, built by the audit-log facility and wearing DEC-052'
 frame. A claim is a read, the claim's comment and a read again that finds who
 holds the state, and the claimant writes nothing more. A release frees the state
 its clone holds. A release by force frees whatever holds when it lands, and the
-caller checks who may release by force. After each event the seam rewrites the
+caller checks who may release by force. A session's record is written only by
+the clone that holds the state, and only where the record does not already hold
+that session; whether a session may replace another is the caller's to judge
+(DEC-084 point 3). After each event the seam rewrites the
 description's region whole, from the fold of its next read, through the
 provenance seam ([pkit:ADR-037]). A write to a closed state issue reopens it
 first. :func:`create` makes a new one: a title, the description, a lock of its
@@ -64,8 +69,9 @@ What it never reads
 GitHub's search index, the description as the state, a state issue's labels,
 type, parent, assignee, milestone or board fields, GitHub's association of an
 author, a time, an issue of work, the topology, any configuration and the
-clone's runtime file. The caller passes the number, the kind and key, who may
-write, the clone's key and place, and the versions the provenance footer names.
+clone's runtime file, or a process. The caller passes the number, the kind and
+key, who may write, the clone's key and place, a session it records, and the
+versions the provenance footer names.
 
 Failure-posture neutral: every read and write reports its outcome, and the
 caller decides what it means (ADR-071 point 9). A state issue is never an input
@@ -104,11 +110,14 @@ VIEW_END = "<!-- pkit:state-view:end -->"
 #: The kind of the marker's comment in DEC-052's roster.
 MARKER_COMMENT_KIND = "state-marker"
 
-#: The event types of a state issue, the audit-log facility's.
+#: The event types of a state issue, the audit-log facility's. A session's
+#: event records the session that runs a seat's loop (DEC-081 point 4, DEC-084
+#: point 1).
 CLAIM = "state-claim"
 RELEASE = "state-release"
 FORCE_RELEASE = "state-force-release"
-EVENTS = (CLAIM, RELEASE, FORCE_RELEASE)
+SESSION = "state-session"
+EVENTS = (CLAIM, RELEASE, FORCE_RELEASE, SESSION)
 
 #: Access levels GitHub records that count as write access or more.
 WRITE_LEVELS = frozenset({"admin", "maintain", "write"})
@@ -135,6 +144,7 @@ NOTHING = "nothing"
 NOT_HOLDER = "not-holder"
 CREATED = "created"
 FINISHED = "finished"
+RECORDED = "recorded"
 
 _KIND = re.compile(r"[a-z][a-z0-9-]*")
 _MARKER = re.compile(r"<!--\s*pkit:state-issue((?:\s+[^\s>]+)*)\s*-->")
@@ -142,6 +152,8 @@ _ISSUE_URL = re.compile(r"/issues/([0-9]{1,9})\s*$")
 # A version is ASCII digits of bounded length, so no marker a hand writes can
 # make the reader fail on it.
 _NUMBER = re.compile(r"[0-9]{1,6}")
+# A process id, as bounded, for the same reason.
+_NUMBER_ID = re.compile(r"[0-9]{1,9}")
 
 #: A ``gh`` runner: takes the argv, returns what ``subprocess.run`` returns.
 Gh = Callable[[list[str]], Any]
@@ -294,9 +306,25 @@ class Holder:
 
 
 @dataclass(frozen=True)
+class Session:
+    """The session that runs a seat's loop, as its event records it (DEC-081
+    point 4, DEC-084 point 1): the name the harness puts on its messages, the
+    machine it runs on, its messaging address in the form the adapter's
+    declaration gives, and its process, by id and the time it started. The
+    address is None where the session could not read it, and the process, or
+    its start time, where the recording command could not. No folder."""
+
+    name: str
+    machine: str
+    address: str | None = None
+    pid: int | None = None
+    started: str | None = None
+
+
+@dataclass(frozen=True)
 class StateEvent:
     """One counted event of a state issue's log. ``void`` marks one that
-    changed nothing."""
+    changed nothing. ``session`` is the session a session's event records."""
 
     comment_id: int
     author: str
@@ -306,6 +334,7 @@ class StateEvent:
     reason: str | None = None
     act: str | None = None
     void: bool = False
+    session: Session | None = None
 
 
 @dataclass(frozen=True)
@@ -315,11 +344,14 @@ class Fold:
 
     ``take`` is the id of the comment whose claim made the holder hold the
     state, its current take, or None where the state is free. A caller orders
-    another issue's comment against it by GitHub's ids (#2182)."""
+    another issue's comment against it by GitHub's ids (#2182). ``session`` is
+    the session the holder last recorded, or None where it recorded none since
+    its take."""
 
     holder: Holder | None
     events: tuple[StateEvent, ...] = ()
     take: int | None = None
+    session: Session | None = None
 
     @property
     def free(self) -> bool:
@@ -334,10 +366,14 @@ def fold(events: Iterable[StateEvent]) -> Fold:
     state is void. A release frees the state where it names the holder's account
     and key, and any other is void. A release by force frees whatever holds when
     it lands. The claim that makes a holder is its take, and a claim by the same
-    clone after a release is a new take. The fold takes no time.
+    clone after a release is a new take. A session's event counts only from the
+    holder's account and key, under its claim, and the latest one counted is the
+    holder's session, which a release clears (DEC-081 point 4). The fold takes
+    no time.
     """
     holder: Holder | None = None
     take: int | None = None
+    session: Session | None = None
     out: list[StateEvent] = []
     for ev in events:
         void = False
@@ -348,18 +384,23 @@ def fold(events: Iterable[StateEvent]) -> Fold:
                 void = True
         elif ev.type == RELEASE:
             if holder is not None and holder.is_clone(ev.author, ev.clone):
-                holder, take = None, None
+                holder, take, session = None, None, None
             else:
                 void = True
         elif ev.type == FORCE_RELEASE:
             if holder is not None:
-                holder, take = None, None
+                holder, take, session = None, None, None
+            else:
+                void = True
+        elif ev.type == SESSION:
+            if holder is not None and holder.is_clone(ev.author, ev.clone) and ev.session:
+                session = ev.session
             else:
                 void = True
         else:
             continue
         out.append(replace(ev, void=void))
-    return Fold(holder, tuple(out), take)
+    return Fold(holder, tuple(out), take, session)
 
 
 # ---- reads (ADR-071 points 2 and 3) ---------------------------------------------
@@ -474,9 +515,26 @@ def _counted(
                 place=ev.get("place") or "",
                 reason=ev.get("reason"),
                 act=ev.act,
+                session=_session_of(ev) if ev.type == SESSION else None,
             )
         )
     return out, None
+
+
+def _session_of(ev: audit_log.Event) -> Session | None:
+    """The session a session's event records, or None where it names no name or
+    no machine. A process id that is not a number reads as none."""
+    name, machine = ev.get("name"), ev.get("machine")
+    if not name or not machine:
+        return None
+    pid = ev.get("pid") or ""
+    return Session(
+        name=name,
+        machine=machine,
+        address=ev.get("address") or None,
+        pid=int(pid) if _NUMBER_ID.fullmatch(pid) else None,
+        started=ev.get("started") or None,
+    )
 
 
 @dataclass(frozen=True)
@@ -611,6 +669,13 @@ def view_text(kind: str, key: str, folded: Fold) -> str:
             f"> **Held** by the account {_code(holder.account)}, clone"
             f" {_code(holder.clone)}, at {audit_log.one_line(holder.place) or 'an unnamed place'}."
         )
+        session = folded.session
+        if session is not None:
+            lines += [
+                ">",
+                f"> Its loop runs in the session {_code(session.name)} on"
+                f" {_code(session.machine)}.",
+            ]
     return "\n".join(lines)
 
 
@@ -826,6 +891,50 @@ def force_release(
     return _post_and_reread(first, ev, clone, run, success=RELEASED, freed=holder)
 
 
+def record_session(
+    number: int,
+    kind: str,
+    key: str,
+    clone: Clone,
+    session: Session,
+    run: StateRun,
+    *,
+    act: str | None = None,
+) -> Outcome:
+    """Record ``session`` as the one that runs the loop of the state ``clone``
+    holds: a read, the session's event, a read again (DEC-081 point 4).
+
+    NOT_HOLDER, with no write, where the first read finds the state free or
+    another clone holding it, since only the holder's event counts. UNCHANGED,
+    with no write, where the holder's record already holds this session, so the
+    log grows only when the session changes. Otherwise RECORDED where the read
+    after finds the session recorded, NOT_HOLDER where the clone no longer
+    holds the state, and LOST where another of its sessions recorded after.
+    Whether the clone may replace the recorded session is the caller's to judge
+    (DEC-084 point 3), and the seam judges no process.
+    """
+    first = read(number, kind, key, run)
+    if first.outcome != READ or first.fold is None:
+        return Outcome(first.outcome, number, cause=first.cause, read=first)
+    holder = first.fold.holder
+    if holder is None or not holder.is_clone(clone.account, clone.key):
+        return Outcome(NOT_HOLDER, number, holder=holder, read=first)
+    if first.fold.session == session:
+        return Outcome(UNCHANGED, number, holder=holder, read=first)
+    ev = audit_log.event(
+        SESSION,
+        key=key,
+        clone=clone.key,
+        name=session.name,
+        machine=session.machine,
+        address=session.address,
+        pid=session.pid,
+        started=session.started,
+        id=act,
+    )
+    return _post_and_reread(first, ev, clone, run, success=RECORDED, recorded=session)
+
+
 def _post_and_reread(
     first: StateRead,
     ev: audit_log.Event,
@@ -834,6 +943,7 @@ def _post_and_reread(
     *,
     success: str,
     freed: Holder | None = None,
+    recorded: Session | None = None,
 ) -> Outcome:
     number = first.number
     if first.open is False:
@@ -855,8 +965,13 @@ def _post_and_reread(
         )
     view = rewrite_view(second, run, previous=first.fold)
     holder = second.fold.holder
+    holds = holder is not None and holder.is_clone(clone.account, clone.key)
     outcome = success
-    if ev.type == CLAIM and not (holder is not None and holder.is_clone(clone.account, clone.key)):
+    if ev.type == CLAIM and not holds:
+        outcome = LOST
+    elif ev.type == SESSION and not holds:
+        outcome = NOT_HOLDER
+    elif ev.type == SESSION and second.fold.session != recorded:
         outcome = LOST
     return Outcome(outcome, number, holder=holder, freed=freed, view=view, read=second)
 

@@ -85,3 +85,14 @@ events:
     summary: >-
       A release by force, with its reason, frees the state whoever holds it. The
       record that adds the state says who may write one.
+  state-session:
+    family: state-issue
+    fields: [key, clone, name, machine, address, pid, started, id]
+    required: [key, clone, name, machine]
+    summary: >-
+      The clone that holds a seat records the session that runs the seat's
+      loop: the name the harness puts on its messages, the machine it runs on,
+      its messaging address and its process, by id and the time it started,
+      each where it could be read, and no folder (project-management DEC-081
+      point 4 and DEC-084 point 1). Only the holder's event counts, the latest
+      counted one is the seat's session, and the seat's release clears it.

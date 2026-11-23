@@ -14,7 +14,10 @@ it names, its scope, whether it is the organizer seat or retired, for a
 worker the seat that directs it (DEC-081 point 3), its state issue and its
 holder. The holder is read from the seat's state issue through
 the state-issue seam (`_lib/state_issues`, ADR-071): an account and a clone's
-key, with where the clone lies, or free. The seat this clone holds is marked.
+key, with where the clone lies, or free. For a held seat it shows the session
+the holder recorded as the one that runs the seat's loop, by its name, machine,
+messaging address and process, or that none is recorded (DEC-081 point 4,
+DEC-084 point 1). The seat this clone holds is marked.
 
 It then names each open state issue of a seat that no seat of the topology
 names, such as one a change closed unmerged left, for a person to close on
@@ -629,7 +632,25 @@ def seat_line(state: topology.SeatState, *, mine: bool) -> str:
     issue = f"#{seat.state_issue}" if seat.state_issue is not None else "no state issue"
     holder = "no state issue named" if seat.state_issue is None else state.said()
     line = f"  {seat.number}. {seat.name} ({', '.join(marks)}), {issue}: {holder}"
+    if state.state == topology.HELD:
+        line += f"; {session_said(state.session)}"
     return line + ("  ← this clone" if mine else "")
+
+
+def session_said(session: state_issues.Session | None) -> str:
+    """The session a held seat recorded as the one that runs its loop, in words a
+    line can carry (DEC-081 point 4), each value escaped as a holder's is."""
+    if session is None:
+        return "no session recorded"
+    shown = topology.shown
+    process = (
+        f"process {session.pid}"
+        + (f" started {shown(session.started)}" if session.started else ", start unread")
+        if session.pid is not None
+        else "no process read"
+    )
+    address = shown(session.address) if session.address else "no messaging address"
+    return f"session {shown(session.name)} on {shown(session.machine)}, {address}, {process}"
 
 
 def stray_state_issues(

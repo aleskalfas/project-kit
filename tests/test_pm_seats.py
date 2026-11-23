@@ -544,6 +544,34 @@ def test_the_listing_shows_each_workers_directing_seat(
     assert "  1. planner (planner, agent project-manager, organizer), #11: free" in out
 
 
+def test_the_listing_shows_the_session_each_held_seat_recorded(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """DEC-081 point 4: `seats` shows each seat's recorded session, and a free
+    seat none, since its release cleared it."""
+    repo = _repo(planner=("me", _key(root)), worker_1=("you", "k7"))
+    session = audit_log.event(
+        si.SESSION,
+        key="planner",
+        clone=_key(root),
+        name="planner",
+        machine="laptop",
+        address="/tmp/cc-socks/41.sock",
+        pid=41,
+        started="Mon Nov 23 15:00:00 2026",
+    )
+    repo.post(11, audit_log.build(session, versions=VERSIONS), author="me")
+    assert _list(root, repo) == 0
+    out = capsys.readouterr().out
+    assert (
+        "#11: held by @me, clone "
+        f"{_key(root)}, at host:/clone; session planner on laptop, /tmp/cc-socks/41.sock, "
+        "process 41 started Mon Nov 23 15:00:00 2026  ← this clone" in out
+    )
+    assert "#12: held by @you, clone k7, at host:/clone; no session recorded" in out
+    assert "#13: free\n" in out
+
+
 def test_the_listing_names_the_state_issues_no_seat_names(
     root: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

@@ -9,8 +9,9 @@ fold of its own:
   * the ownership seam (``_lib/instance_ownership``, [pkit:ADR-041] point 3):
     ``claim``, ``handoff``, ``abandon`` and ``release`` on an issue of work;
   * the state-issue seam (``_lib/state_issues``, [pkit:ADR-071] point 5):
-    ``state-claim``, ``state-release`` and ``state-force-release`` on a state
-    issue ([project-management:DEC-058-state-issues]).
+    ``state-claim``, ``state-release``, ``state-force-release`` and
+    ``state-session`` on a state issue ([project-management:DEC-058-state-issues],
+    [project-management:DEC-084-seat-session-address] point 1).
 
 Each seam names its event types and their payload, here in :data:`EVENT_TYPES`
 and in the capability's ``audit-log`` schema. Neither builds a stamp itself.
@@ -120,6 +121,13 @@ EVENT_TYPES: dict[str, EventType] = {
             ("key", "clone", "place", "reason", "id"),
             ("key", "clone", "place", "reason"),
             "⚠️",
+        ),
+        EventType(
+            "state-session",
+            STATE_ISSUE,
+            ("key", "clone", "name", "machine", "address", "pid", "started", "id"),
+            ("key", "clone", "name", "machine"),
+            "🪑",
         ),
     )
 }
@@ -256,6 +264,11 @@ def _owner_payload(ev: Event) -> str:
 
 
 def _state_payload(ev: Event) -> str:
+    if ev.type == "state-session":
+        return (
+            f"{code(_shown(ev, 'key'))} · clone {code(_shown(ev, 'clone'))}"
+            f" · session {code(_shown(ev, 'name'))} on {code(_shown(ev, 'machine'))}"
+        )
     return (
         f"{code(_shown(ev, 'key'))} · clone {code(_shown(ev, 'clone'))}"
         f" at {_shown(ev, 'place') or 'an unnamed place'}"

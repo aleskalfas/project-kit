@@ -872,14 +872,17 @@ class SeatState:
     """Who holds one seat, as this run read it from the seat's state issue.
 
     ``state`` is HELD, FREE or UNREAD. ``holder`` is the clone that holds it, and
-    ``read`` the read that found it. ``cause`` says why an unread seat was not
-    read: no state issue named, or a read that did not end."""
+    ``read`` the read that found it. ``session`` is the session the holder last
+    recorded as the one that runs the seat's loop (DEC-081 point 4). ``cause``
+    says why an unread seat was not read: no state issue named, or a read that
+    did not end."""
 
     seat: Seat
     state: str
     holder: state_issues.Holder | None = None
     read: state_issues.StateRead | None = None
     cause: str | None = None
+    session: state_issues.Session | None = None
 
     def held_by(self, clone: state_issues.Clone) -> bool:
         """Whether ``clone``, by its account and key, holds the seat."""
@@ -963,7 +966,13 @@ def _seat_state(seat: Seat, found: state_issues.StateRead) -> SeatState:
         cause = found.cause or found.outcome
         return SeatState(seat, UNREAD, read=found, cause=cause)
     holder = found.fold.holder
-    return SeatState(seat, FREE if holder is None else HELD, holder=holder, read=found)
+    return SeatState(
+        seat,
+        FREE if holder is None else HELD,
+        holder=holder,
+        read=found,
+        session=found.fold.session,
+    )
 
 
 def place(capability_root: Path, *, home: Path | None = None) -> str:
