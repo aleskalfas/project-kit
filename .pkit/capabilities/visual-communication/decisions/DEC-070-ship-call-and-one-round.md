@@ -202,7 +202,7 @@ A trigger whose alternative weighs a calibration, a bar or the hold itself takes
   - **the definitions and documents:** the reviewer's and the designer's definitions, the skill that guides building a piece, the capability's README and its pages on files, outputs and checks, and the rule sets' anchors on the passages this record overturns. This change leaves them as they stand, and its pull request says so.
 - **Its changeset.** This change declares in its changeset that it moves no surface of the capability. It owes no migration (COR-010).
 - **Left open:**
-  - **page marks against a project's shipped examples, and a free draft first,** each a record of its own once the test of project-kit#3468 says one should;
+  - **page marks against a project's shipped examples, and a free draft first** (refinement per [visual-communication:DEC-071-sketch-and-rebuild]), each a record of its own once the test of project-kit#3468 says one should;
   - **the principle the tests' model read,** and whether its source is a project's own, beside its examples, or the canon's (DEC-028 point 1);
   - **how a component that carries out merges keeps the ship call the person's** where a merge on a standing authorisation would take a piece to an audience that reads it without a release or a publish, such as the readers of the repository itself. A merge that releases or publishes stays a person's at every level already, and land hands nothing on there (COR-072 point 7). That component's own records decide the rest (COR-072 point 13);
   - **the review at the merge** ([project-kit#2676](https://github.com/aleskalfas/project-kit/issues/2676)), as before.
