@@ -55,7 +55,7 @@ rules:
     origin: {decision: "visual-communication:DEC-069"}
     pkit:
       friction:
-        anchors: {record: ["visual-communication:DEC-004#2", "visual-communication:DEC-021#4", "visual-communication:DEC-021#5", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-030#4", "visual-communication:DEC-042#7", "visual-communication:DEC-046#2", "visual-communication:DEC-046#3", "visual-communication:DEC-069#1", "visual-communication:DEC-069#2", "visual-communication:DEC-069#3", "visual-communication:DEC-069#4", "visual-communication:DEC-069#5", "visual-communication:DEC-069#8"]}
+        anchors: {record: ["visual-communication:DEC-004#2", "visual-communication:DEC-021#4", "visual-communication:DEC-021#5", "visual-communication:DEC-028#3", "visual-communication:DEC-028#4", "visual-communication:DEC-030#4", "visual-communication:DEC-070#4", "visual-communication:DEC-046#2", "visual-communication:DEC-046#3", "visual-communication:DEC-069#1", "visual-communication:DEC-069#2", "visual-communication:DEC-069#3", "visual-communication:DEC-069#4", "visual-communication:DEC-069#5", "visual-communication:DEC-069#8"]}
 ---
 
 # GRAPHIC — how a piece looks
