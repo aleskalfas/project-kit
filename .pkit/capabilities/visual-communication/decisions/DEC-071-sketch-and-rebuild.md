@@ -1,7 +1,7 @@
 ---
 id: DEC-071
 title: A new presentation is first drawn unguided, then rebuilt with the brand and the libraries
-status: proposed
+status: accepted
 date: 2026-11-23
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
