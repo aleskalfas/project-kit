@@ -30,6 +30,7 @@ reads:
     - .pkit/capabilities/visual-communication/decisions/DEC-024-outside-programs-sandbox.md
     - .pkit/capabilities/visual-communication/decisions/DEC-029-piece-brief.md
     - .pkit/capabilities/visual-communication/decisions/DEC-030-design-agents.md
+    - .pkit/capabilities/visual-communication/decisions/DEC-070-ship-call-and-one-round.md
     - .pkit/capabilities/visual-communication/README.md
     - .pkit/capabilities/visual-communication/files.md
     - .pkit/capabilities/visual-communication/components.md
@@ -47,7 +48,7 @@ This is the **visual-communication** capability's skill for whoever draws a piec
 
 `pkit visual new` stamps a piece's first files, from the choices you give it. From then on, you write its `piece.yaml`, its content and its brief, and the commands read them: no command changes its content or what its brief says.
 
-The rule is [visual-communication:DEC-001-visual-communication-discipline]: content and look are data, and renderers only project them. How the files are kept and judged is [visual-communication:DEC-002-files-and-validation], how a lock moves is [visual-communication:DEC-003-change-over-time], and what a component may hold is [visual-communication:DEC-005-engine-and-plugins]. What a piece's brief holds is [visual-communication:DEC-029-piece-brief]. How the designer turns a brief into a piece, and how the reviewer judges drawn pages against faults, rules and the brief, is [visual-communication:DEC-030-design-agents]. How drawn pages are seen is [visual-communication:DEC-015-viewing-step-and-reviewer]. Where a sandbox stops the browser that draws them, [visual-communication:DEC-024-outside-programs-sandbox] says how you go on.
+The rule is [visual-communication:DEC-001-visual-communication-discipline]: content and look are data, and renderers only project them. How the files are kept and judged is [visual-communication:DEC-002-files-and-validation], how a lock moves is [visual-communication:DEC-003-change-over-time], and what a component may hold is [visual-communication:DEC-005-engine-and-plugins]. What a piece's brief holds is [visual-communication:DEC-029-piece-brief]. How the designer turns a brief into a piece, and how the reviewer judges drawn pages against faults, rules and the brief, is [visual-communication:DEC-030-design-agents]. That the person makes the call on whether a piece ships, after the designer's one round of mends, is [visual-communication:DEC-070-ship-call-and-one-round]. How drawn pages are seen is [visual-communication:DEC-015-viewing-step-and-reviewer]. Where a sandbox stops the browser that draws them, [visual-communication:DEC-024-outside-programs-sandbox] says how you go on.
 
 Every command is under [Commands](../../README.md#commands) in the capability's README. Each file is in [The files of the visual work](../../files.md), each finding in [What the check reports](../../checks.md).
 

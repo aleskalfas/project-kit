@@ -10,9 +10,6 @@ shortfalls:
   - at: 7
     issue: "#3468"
     record: visual-communication:DEC-071#1
-  - at: 5
-    issue: "#3468"
-    record: visual-communication:DEC-070#2
 pkit:
   friction:
     anchors:
@@ -76,10 +73,6 @@ pkit:
 3. The system renders the piece, and draws each of its pages as an image, with `pkit visual render` and `pkit visual look`.
 4. A reviewer reads every drawn page, and reports each break of a rule as a finding that names the rule and the page.
 5. The AI agent mends once each fault, each brief finding, each break a rule's text settles, each fact its source contradicts, and each thing the reviewer says a reader cannot make out where the piece is shown, such as a difference told by colour alone. The system draws the piece again, and the reviewer reads every page again.
-
-> [!WARNING]
-> **Not built yet:** the AI agent's loop is not yet one round of mends. [DEC-070 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-070-ship-call-and-one-round.md#2-the-designers-loop-is-one-round) decides that it is, and #3468 tracks it.
-
 6. The developer reads the piece beside its sketch, where it has one, and the reviewer's second report, and decides whether the piece ships.
 
 **Variants:**
