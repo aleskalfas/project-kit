@@ -7,6 +7,10 @@
 #     ln -s mise.dev.toml mise.local.toml
 #     mise trust mise.local.toml
 #
+# mise looks for configuration in parent folders too, so a worktree inside the
+# checkout without a link of its own loads the checkout's, and its tasks run in
+# the checkout, not the worktree.
+#
 # The file is not `mise.toml`, and no commit holds the link, so a copy of the
 # repository that uv downloads, to install pkit or to run a pinned or candidate
 # release, holds no configuration mise loads on its own. Such a copy is never
