@@ -16,6 +16,7 @@ pkit:
         - src/project_kit/remote_refs.py
         - pyproject.toml
         - .changie.yaml
+        - mise.dev.toml
         - .github/workflows/checks.yml
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
@@ -328,11 +329,14 @@ two entries for it.
 ### Authoring a changeset
 
 Contributors use **changie** — a dev-only tool provisioned through `mise`
-(`[tools]` in `mise.toml`) and wrapped by `mise run changeset`:
+(`[tools]` in `mise.dev.toml`) and wrapped by `mise run changeset`:
 
 ```
 mise run changeset        # or: changie new
 ```
+
+The task runner's setup is under "Optional task runner" in
+[`CONTRIBUTING.md`, "Running checks"](../../CONTRIBUTING.md#running-checks) <!-- unanchored: names the section that sets the task runner up, and an anchor on a page that anchors this one through others would make a cycle -->.
 
 changie's native `component` / `kind` / `body` fields are exactly the schema
 above, and its `fragmentFileFormat` (`.changie.yaml`) names files
