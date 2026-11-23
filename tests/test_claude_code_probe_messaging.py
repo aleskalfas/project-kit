@@ -7,8 +7,8 @@ Context, and DEC-084, Implications; #3461).
 - the probe agent withholds neither messaging tool, and each folder's settings make it the
   session's agent and register the hook on every event the probe reads;
 - the scratch folder holds a clone with a linked worktree, another clone whose shell runs in
-  the sandbox with the probe's outside copy excluded, a folder for each other session, and the
-  inbound cases' settings;
+  the sandbox, a call allowed to leave it for the probe's outside copy, a folder for each other
+  session, and the inbound cases' settings;
 - the hook appends each event less the transcripts' paths, prints nothing and never fails; the
   scan names variables, never a value but the inbox's path and the session's id, and reads the
   session's process; the check tells a running process from an ended one;
@@ -231,7 +231,8 @@ def test_the_scratch_folder_holds_a_clone_with_a_linked_worktree(
     assert (other / ".git").is_dir()
     sandbox = json.loads((other / ".claude" / "settings.json").read_text())["sandbox"]
     assert sandbox["enabled"] is True
-    assert sandbox["excludedCommands"] == [f"python3 {tmp_path / 'probe-outside.py'}"]
+    assert sandbox["allowUnsandboxedCommands"] is True
+    assert "excludedCommands" not in sandbox
     for case in probe_module.INBOUND_CASES:
         written = json.loads(
             (tmp_path / f"inbound-{case.key}" / ".claude" / "settings.json").read_text()
@@ -608,7 +609,9 @@ def test_a_check_says_where_it_ran_and_what_it_could_tell(probe_module: Any) -> 
     where = probe_module.where_checked
     assert where({"copy": "probe-outside.py", "confined": False}) == "a command outside the sandbox"
     assert where({"copy": "probe-messaging.py", "confined": True}) == "a command in the sandbox"
-    assert "though the settings exclude it" in where({"copy": "probe-outside.py", "confined": True})
+    assert "though the session was asked to run it outside" in where(
+        {"copy": "probe-outside.py", "confined": True}
+    )
     liveness = probe_module.liveness_reading
     unread = {"start": None, "start_unread": "operation not permitted", "signal": "not permitted"}
     assert liveness(unread, live=True).startswith("cannot tell")
@@ -862,7 +865,9 @@ def test_the_address_part_walks_each_step_to_the_results(
     shown = capsys.readouterr().out
     assert probe.steps == len(probe_module.ADDRESS_STEPS)
     assert f"cd {probe.root / 'other'} && claude --name pkit-probe-b" in shown
-    assert f"python3 {probe.root / 'probe-outside.py'} --check-process {probe.root} 41" in shown
+    outside_call = f"(2, outside the sandbox) python3 {probe.root / 'probe-outside.py'}"
+    assert f"{outside_call} --check-process {probe.root} 41" in shown
+    assert "dangerouslyDisableSandbox set to true" in shown
     text = probe.out.read_text()
     assert "the session reads its name through the listing's first line" in text
     assert "| 9. A second session's address | holds: the two sessions sent" in text

@@ -74,10 +74,15 @@ SCAN_FLAG = "--scan-env"
 #: The shell's entry: whether a process another session recorded runs, as seen from here.
 CHECK_FLAG = "--check-process"
 
-#: A second copy of this script, which the sandboxed session's settings exclude from its
-#: sandbox, so one check runs inside the sandbox and one outside, as the methodology's command
-#: runs on macOS (ADR-014 point 2).
+#: A second copy of this script, which the sandboxed session runs with the sandbox disabled for
+#: that one call, so one check runs inside the sandbox and one outside, as the methodology's
+#: command runs on macOS (ADR-014 point 2). The harness measured took no command out of the
+#: sandbox through `excludedCommands`, so the copy leaves it through the call's own escape.
 OUTSIDE_COPY = "probe-outside.py"
+
+#: How a session runs one shell command outside its sandbox: the Bash tool's own escape, which
+#: holds while the session's settings allow unsandboxed commands.
+ESCAPE = "dangerouslyDisableSandbox"
 
 HARNESS = "claude"
 
@@ -504,15 +509,16 @@ def folder_settings(root: Path, inbound: str | None = None) -> dict[str, Any]:
 
 
 def sandboxed_settings(root: Path) -> dict[str, Any]:
-    """Another clone's settings: a probe folder's, its shell in the sandbox, and the outside
-    copy of the probe excluded from it, as the methodology's command is on macOS. The sandbox
-    does not fail closed, since each check reports whether it ran confined."""
+    """Another clone's settings: a probe folder's, its shell in the sandbox, and a call allowed
+    to leave the sandbox through its own escape, so the outside copy of the probe runs where the
+    methodology's command runs on macOS. The sandbox does not fail closed, since each check
+    reports whether it ran confined."""
     settings = folder_settings(root)
     settings["sandbox"] = {
         "enabled": True,
         "failIfUnavailable": False,
         "autoAllowBashIfSandboxed": True,
-        "excludedCommands": [f"python3 {root / OUTSIDE_COPY}"],
+        "allowUnsandboxedCommands": True,
     }
     return settings
 
@@ -1182,14 +1188,14 @@ def subagent_address_reading(
 
 def where_checked(check: Mapping[str, Any]) -> str:
     """Where a check ran, from what it found of its confinement and the copy that ran it."""
-    excluded = check.get("copy") == OUTSIDE_COPY
+    outside = check.get("copy") == OUTSIDE_COPY
     if check.get("confined") is True:
         return "a command in the sandbox" + (
-            ", though the settings exclude it from the sandbox" if excluded else ""
+            ", though the session was asked to run it outside the sandbox" if outside else ""
         )
     if check.get("confined") is False:
         return "a command outside the sandbox" + (
-            "" if excluded else ", though its session's sandbox is on"
+            "" if outside else ", though its session's sandbox is on"
         )
     return "a command that could not tell whether it ran in the sandbox"
 
@@ -2387,7 +2393,9 @@ STEP_SUBAGENTS_SEND = (
 )
 STEP_CHECKS = (
     "Probe step {n}. Run each of these shell commands, each as a call of its own, one after "
-    "the other, and do nothing else. {commands}"
+    "the other, and do nothing else. Run each one marked outside the sandbox with the sandbox "
+    "disabled for that call, through the Bash tool's " + ESCAPE + " set to true, and every "
+    "other one as it is. {commands}"
 )
 
 #: The marks of the address part's messages.
@@ -2564,13 +2572,19 @@ def run_checks(probe: Probe, labels: tuple[str, ...]) -> list[dict[str, Any]]:
     if not targets:
         return []
     commands = [
-        check_command(probe.root, copy, int(scan["claude_pid"]), str(scan["process_start"]))
+        (
+            copy,
+            check_command(probe.root, copy, int(scan["claude_pid"]), str(scan["process_start"])),
+        )
         for _, scan in targets
         for copy in (COPY, OUTSIDE_COPY)
     ]
     folder = probe.path(OTHER)
     mark = probe.log.mark()
-    numbered = " ".join(f"({index}) {command}" for index, command in enumerate(commands, 1))
+    numbered = " ".join(
+        f"({index}{', outside the sandbox' if copy == OUTSIDE_COPY else ''}) {command}"
+        for index, (copy, command) in enumerate(commands, 1)
+    )
     type_in(SESSION_B, STEP_CHECKS.format(n=probe.steps, commands=numbered))
     probe.wait(f"{SESSION_B} has run all {len(commands)}")
     return shell_printed(probe.log.since(mark, folder), "probe_check")
