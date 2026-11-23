@@ -1,0 +1,23 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  A worker's seat in the topology may name the seat that directs it, by
+  `directed_by`: one planner's or lead's seat, not retired (DEC-081 point 3).
+  `check-topology` refuses the key on a planner's or a lead's seat, and on a
+  worker's seat a name the topology does not hold, a retired seat, the seat
+  itself or another worker's seat. `pkit pm seats` shows each worker's
+  directing seat, or `directed by no seat`. Add the key only once every
+  clone that may take a seat runs this release: an older one reads a
+  topology that holds it as one it cannot read in full, and takes nothing.
+  `pkit pm next-task --task N` takes the Task a directive names, and only
+  where it is among the Tasks the run would offer the clone: ready, in its
+  seat's scope, in its pools where the topology declares them, and neither
+  assigned to another account nor held by another instance (DEC-081 point
+  6). Otherwise, or where another instance claims it first, it starts
+  nothing and exits 6, saying why. `pkit pm create-issue --for-workers`,
+  from a lead's seat, files with no owner the work the lead leaves to its
+  workers, so it becomes ready for them, and claims none of it at creation
+  (DEC-081 point 3); from a worker's seat, or from no seat, it is refused
+  before anything is filed.
