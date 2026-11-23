@@ -68,7 +68,6 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/roles.schema.json
         - .pkit/capabilities/visual-communication/schemas/notation.schema.json
         - .pkit/capabilities/visual-communication/schemas/review.schema.json
-        - .pkit/capabilities/visual-communication/schemas/calibration.schema.json
         - .pkit/capabilities/visual-communication/libraries/foundations/library.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/roles.yaml
         - .pkit/capabilities/visual-communication/libraries/foundations/components/figure.yaml
@@ -93,7 +92,6 @@ pkit:
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/library.yaml
         - tests/fixtures/visual-communication/libraries/test-notation/1.0.0/notation.yaml
         - tests/fixtures/visual-communication/libraries/test-parts/1.0.0/roles.yaml
-        - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
         - .pkit/capabilities/visual-communication/schemas/config.yaml
       record:
         - visual-communication:DEC-001#3

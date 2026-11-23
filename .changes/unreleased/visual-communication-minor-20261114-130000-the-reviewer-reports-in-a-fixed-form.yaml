@@ -1,0 +1,17 @@
+component: visual-communication
+kind: minor
+body: >
+  The graphic-design reviewer's report opens with a document of a fixed form,
+  held by the new schema `visual-communication:review` (#3152, #3476). It
+  holds each finding, a fault, a rule finding, a brief finding or a note, on a
+  page or for the piece, with its evidence and the rules it cites; whether a
+  rule finding is a settled break or a finding for a person; whether a finding
+  is a thing a reader cannot make out where the piece is shown; the marks the
+  review alone sets, where only a tool the engine lacks, or only the asker's
+  words, would clear a finding; what it read before writing its findings and
+  what it read after; and the full name of the model it ran on. It holds no
+  grade and no verdict. The reviewer writes its findings before it reads the
+  brief's file and its report of the reading before. A loop keeps each
+  round's report as the reviewer wrote it, in the clone's local
+  `reviews/<piece>/` folder: whole in `round-<n>.md`, and its document alone
+  in `round-<n>.yaml`, which no validation checks.

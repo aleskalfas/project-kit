@@ -30,7 +30,6 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/intent.py
         - .pkit/capabilities/visual-communication/scripts/new.py
         - .pkit/capabilities/visual-communication/scripts/prune.py
-        - .pkit/capabilities/visual-communication/scripts/verdict.py
         - .pkit/capabilities/visual-communication/scripts/_lib/files.py
         - .pkit/capabilities/visual-communication/scripts/_lib/copies.py
         - .pkit/capabilities/visual-communication/scripts/_lib/stamping.py
@@ -55,7 +54,6 @@ pkit:
         - .pkit/capabilities/visual-communication/releases/starter/releases.yaml
         - .pkit/capabilities/visual-communication/design-knowledge/README.md
         - .pkit/capabilities/visual-communication/schemas/review.schema.json
-        - .pkit/capabilities/visual-communication/schemas/calibration.schema.json
       record:
         - visual-communication:DEC-001#1
         - visual-communication:DEC-001#3

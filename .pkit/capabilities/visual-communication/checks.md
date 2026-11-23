@@ -43,7 +43,6 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/plugins/pdf_declaration.py
         - .pkit/capabilities/visual-communication/schemas/findings.schema.json
         - .pkit/capabilities/visual-communication/schemas/defs.schema.json
-        - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
         - .pkit/capabilities/visual-communication/scripts/_lib/boxes.py
         - .pkit/capabilities/visual-communication/scripts/_lib/scene_checks.py
       record:

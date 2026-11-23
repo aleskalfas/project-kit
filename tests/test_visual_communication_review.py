@@ -1,13 +1,16 @@
-"""The reviewer's report: the document it opens its grades with (visual-communication
-DEC-042 points 1 and 4, #3152).
+"""The reviewer's report: the document it opens its report with (visual-communication
+DEC-070 point 5, #3152).
 
 Held here:
 
-- **its schema**: a grade in one of four words for each rule, on a page or for the piece,
-  with its evidence; the marks the review alone sets, a need or the asker's; what it read
-  before grading and after; the full name of the model it ran on; strict in every mapping,
-  the methodology's container kept free in each; and no bar, no value and no number but the
-  format's and the round's;
+- **its schema**: each finding, a fault, a rule finding, a brief finding or a note, on a
+  page or for the piece, with its evidence; a rule finding cites one rule at least and is
+  labelled settled or for a person, and no other kind carries a label; a brief finding and
+  a note cite no rule; each finding says whether it is a thing a reader cannot make out;
+  the marks the review alone sets, a need or the asker's; what it read before writing its
+  findings and after; the full name of the model it ran on; strict in every mapping, the
+  methodology's container kept free in each; and no grade, no bar, no verdict and no
+  number but the format's and the round's;
 - **its words**: the reference instance writes each value the schema gives as words as a
   folded block scalar, which parses words that hold `: ` or open with a quoted phrase, as
   the reviewer's body asks (#3391);
@@ -16,8 +19,7 @@ Held here:
   says what it looked at, then gives its findings;
 - **where the reports are kept**: the agent's body, the pages of the capability and the
   schema name one folder, in the clone's local folder, which keeps each round's report
-  whole, as the reviewer wrote it, and beside it its document alone (DEC-042 points 4
-  and 6).
+  whole, as the reviewer wrote it, and beside it its document alone.
 
 The schema is read through the capability's own `files.shape_problems`, in the test's own
 process (`tests/in_process.py`).
@@ -49,6 +51,10 @@ KEPT_FOLDER = "project/local/reviews/<piece>/"
 KEPT_REPORT = f"{KEPT_FOLDER}round-<n>.md"
 KEPT_DOCUMENT = f"{KEPT_FOLDER}round-<n>.yaml"
 
+#: The four kinds of finding (DEC-030 point 6), and the two labels of a rule finding.
+KINDS = ("fault", "rule", "brief", "note")
+LABELS = ("settled", "for-a-person")
+
 
 def instance() -> dict[str, Any]:
     return reading.read_yaml(SCHEMAS / "review.yaml")
@@ -56,6 +62,19 @@ def instance() -> dict[str, Any]:
 
 def refused(data: Any) -> list[str]:
     return files.shape_problems(data, "review")
+
+
+def finding(kind: str = "rule", **fields: Any) -> dict[str, Any]:
+    """The least a finding of `kind` holds, then `fields`."""
+    least: dict[str, Any] = {
+        "kind": kind,
+        "on": {"page": "cover"},
+        "reader-cannot-make-out": False,
+        "evidence": "The lead does not answer the title.",
+    }
+    if kind == "rule":
+        least |= {"rules": ["RS-COMM-001"], "label": "for-a-person"}
+    return {**least, **fields}
 
 
 def minimal(**fields: Any) -> dict[str, Any]:
@@ -66,15 +85,8 @@ def minimal(**fields: Any) -> dict[str, Any]:
         round=1,
         model={"name": "a-model-1.0"},
         **{
-            "read-before-grading": [{"kind": "images", "what": "Every image."}],
-            "grades": [
-                {
-                    "rule": "RS-COMM-001",
-                    "on": {"page": "cover"},
-                    "grade": "professional",
-                    "evidence": "The lead answers the title.",
-                }
-            ],
+            "read-before-findings": [{"kind": "images", "what": "Every image."}],
+            "findings": [finding()],
             **fields,
         },
     )
@@ -87,102 +99,138 @@ def test_the_reference_instance_holds_and_shows_each_part_of_a_report() -> None:
     data = instance()
     assert refused(data) == []
     assert data["model"].keys() == {"name", "effort"}
-    assert {read["kind"] for read in data["read-after-grading"]} == {
+    assert {read["kind"] for read in data["read-after-findings"]} == {
         "brief-file",
         "earlier-reports",
     }
-    grades = data["grades"]
-    assert {grade["grade"] for grade in grades} >= {"competent", "professional"}
-    assert any("page" in grade["on"] for grade in grades)
-    assert any("piece" in grade["on"] for grade in grades)
-    assert any("mark" in grade for grade in grades)
-    assert any("since-last-round" in grade for grade in grades)
-    assert data["not-graded"]
+    found = data["findings"]
+    assert {each["kind"] for each in found} == set(KINDS)
+    assert {each["label"] for each in found if each["kind"] == "rule"} == set(LABELS)
+    assert {each["reader-cannot-make-out"] for each in found} == {True, False}
+    assert any(len(each.get("rules", ())) > 1 for each in found)
+    assert any(each["kind"] == "fault" and each.get("rules") for each in found)
+    assert any("page" in each["on"] for each in found)
+    assert any("piece" in each["on"] for each in found)
+    assert any("mark" in each for each in found)
 
 
 def test_a_report_of_what_it_must_hold_alone_holds() -> None:
     assert refused(minimal()) == []
 
 
-@pytest.mark.parametrize("field", ["piece", "round", "model", "read-before-grading", "grades"])
+def test_a_report_that_found_nothing_holds() -> None:
+    assert refused(minimal(findings=[])) == []
+
+
+@pytest.mark.parametrize("field", ["piece", "round", "model", "read-before-findings", "findings"])
 def test_a_report_without_one_of_its_required_parts_is_refused(field: str) -> None:
     data = minimal()
     del data[field]
     assert refused(data)
 
 
-@pytest.mark.parametrize("word", ["below competent", "competent", "professional", "excellent"])
-def test_each_of_the_four_grades_holds(word: str) -> None:
-    data = minimal()
-    data["grades"][0]["grade"] = word
-    assert refused(data) == []
+@pytest.mark.parametrize("kind", KINDS)
+def test_each_of_the_four_kinds_of_finding_holds(kind: str) -> None:
+    assert refused(minimal(findings=[finding(kind)])) == []
 
 
-@pytest.mark.parametrize("word", ["fail", "pass", "good", "Professional", "below-competent", 3])
-def test_no_other_grade_holds(word: Any) -> None:
+@pytest.mark.parametrize("kind", ["grade", "verdict", "Fault", "rule-finding", 3])
+def test_no_other_kind_of_finding_holds(kind: Any) -> None:
     data = minimal()
-    data["grades"][0]["grade"] = word
+    data["findings"][0]["kind"] = kind
     assert refused(data)
 
 
-def test_a_grade_is_of_a_page_or_of_the_piece_and_never_of_both_or_neither() -> None:
+@pytest.mark.parametrize("label", LABELS)
+def test_a_rule_finding_is_settled_or_for_a_person(label: str) -> None:
+    assert refused(minimal(findings=[finding(label=label)])) == []
+
+
+@pytest.mark.parametrize("label", ["informs", "binds", "for a person", "professional", True])
+def test_no_other_label_holds(label: Any) -> None:
+    assert refused(minimal(findings=[finding(label=label)]))
+
+
+@pytest.mark.parametrize("field", ["rules", "label"])
+def test_a_rule_finding_cites_a_rule_and_carries_its_label(field: str) -> None:
+    data = minimal()
+    del data["findings"][0][field]
+    assert refused(data)
+    assert refused(minimal(findings=[finding(rules=[])]))
+
+
+@pytest.mark.parametrize("kind", ["fault", "brief", "note"])
+def test_only_a_rule_finding_carries_a_label(kind: str) -> None:
+    assert refused(minimal(findings=[finding(kind, label="settled")]))
+
+
+def test_a_fault_cites_the_rule_that_names_its_defect_or_none() -> None:
+    assert refused(minimal(findings=[finding("fault", rules=["RS-GRAPHIC-002"])])) == []
+    assert refused(minimal(findings=[finding("fault")])) == []
+
+
+@pytest.mark.parametrize("kind", ["brief", "note"])
+def test_a_brief_finding_and_a_note_cite_no_rule(kind: str) -> None:
+    assert refused(minimal(findings=[finding(kind, rules=["RS-COMM-001"])]))
+
+
+def test_one_observation_that_fails_several_rules_is_one_finding_that_cites_each() -> None:
+    cites = finding(rules=["RS-GRAPHIC-001", "RS-GRAPHIC-007"])
+    assert refused(minimal(findings=[cites])) == []
+    twice = finding(rules=["RS-GRAPHIC-001", "RS-GRAPHIC-001"])
+    assert refused(minimal(findings=[twice]))
+
+
+def test_each_finding_says_whether_a_reader_cannot_make_it_out() -> None:
+    for kind in KINDS:
+        for value in (True, False):
+            data = minimal(findings=[finding(kind, **{"reader-cannot-make-out": value})])
+            assert refused(data) == [], (kind, value)
+        data = minimal(findings=[finding(kind)])
+        del data["findings"][0]["reader-cannot-make-out"]
+        assert refused(data), kind
+    for value in ("yes", 1, None):
+        data = minimal()
+        data["findings"][0]["reader-cannot-make-out"] = value
+        assert refused(data), value
+
+
+def test_a_finding_is_of_a_page_or_of_the_piece_and_never_of_both_or_neither() -> None:
     for place in ({"piece": True}, {"page": "layers"}):
-        data = minimal()
-        data["grades"][0]["on"] = place
-        assert refused(data) == []
+        assert refused(minimal(findings=[finding(on=place)])) == []
     for place in ({}, {"page": "layers", "piece": True}, {"piece": False}, {"slide": "a"}):
-        data = minimal()
-        data["grades"][0]["on"] = place
-        assert refused(data), place
+        assert refused(minimal(findings=[finding(on=place)])), place
 
 
 @pytest.mark.parametrize("rule", ["comm-001", "RS-COMM-1", "RS-COMM-0001", "COMM@1", ""])
 def test_a_rule_is_named_by_its_id(rule: str) -> None:
-    data = minimal()
-    data["grades"][0]["rule"] = rule
-    assert refused(data)
+    assert refused(minimal(findings=[finding(rules=[rule])]))
 
 
 @pytest.mark.parametrize("rule", ["RS-COMM-001", "RS-A11Y-001", "RS-X-1000"])
 def test_any_id_the_rule_set_grammar_gives_holds(rule: str) -> None:
     """A project's own set may carry a digit in its name, and a set may pass its thousandth rule:
-    the review grades any rule it reads, so the report takes any id the core's grammar gives."""
-    graded = minimal()
-    graded["grades"][0]["rule"] = rule
-    assert refused(graded) == []
-    left_out = minimal(
-        **{"not-graded": [{"rule": rule, "on": {"piece": True}, "why": "It judges each page."}]}
-    )
-    assert refused(left_out) == []
+    the review cites any rule it reads, so the report takes any id the core's grammar gives."""
+    assert refused(minimal(findings=[finding(rules=[rule])])) == []
 
 
-def test_a_grade_holds_its_evidence() -> None:
+def test_a_finding_holds_its_evidence() -> None:
     data = minimal()
-    del data["grades"][0]["evidence"]
+    del data["findings"][0]["evidence"]
     assert refused(data)
-    data["grades"][0]["evidence"] = "  "
+    data["findings"][0]["evidence"] = "  "
     assert refused(data)
 
 
 def test_a_mark_is_a_need_or_the_askers_and_names_what_it_asks_for() -> None:
-    for kind in ("need", "asker"):
-        data = minimal()
-        data["grades"][0]["mark"] = {"kind": kind, "names": "What it needs."}
-        assert refused(data) == []
+    for kind in KINDS:
+        for mark in ("need", "asker"):
+            data = minimal(findings=[finding(kind, mark={"kind": mark, "names": "What it needs."})])
+            assert refused(data) == [], (kind, mark)
     data = minimal()
-    data["grades"][0]["mark"] = {"kind": "waived", "names": "Why."}
+    data["findings"][0]["mark"] = {"kind": "waived", "names": "Why."}
     assert refused(data)
-    data["grades"][0]["mark"] = {"kind": "need"}
-    assert refused(data)
-
-
-def test_a_grade_that_differs_from_the_round_before_says_what_it_was_and_why() -> None:
-    data = minimal()
-    data["grades"][0]["since-last-round"] = {"was": "competent", "why": "The figure now shows it."}
-    assert refused(data) == []
-    del data["grades"][0]["since-last-round"]["why"]
-    assert refused(data)
-    data["grades"][0]["since-last-round"] = {"was": "fine", "why": "Why."}
+    data["findings"][0]["mark"] = {"kind": "need"}
     assert refused(data)
 
 
@@ -205,7 +253,7 @@ def test_the_model_holds_its_full_name_and_its_effort_only_where_the_harness_has
 
 def test_what_was_read_is_named_by_a_kind_the_schema_lists() -> None:
     data = minimal()
-    data["read-before-grading"] = [
+    data["read-before-findings"] = [
         {"kind": kind, "what": "Something."}
         for kind in (
             "images",
@@ -222,36 +270,32 @@ def test_what_was_read_is_named_by_a_kind_the_schema_lists() -> None:
         )
     ]
     assert refused(data) == []
-    data["read-before-grading"] = [{"kind": "hunch", "what": "Something."}]
+    data["read-before-findings"] = [{"kind": "hunch", "what": "Something."}]
     assert refused(data)
-    data["read-before-grading"] = []
-    assert refused(data)
-
-
-def test_a_rule_not_graded_names_the_place_and_why() -> None:
-    data = minimal(
-        **{"not-graded": [{"rule": "RS-COMM-003", "on": {"piece": True}, "why": "One page."}]}
-    )
-    assert refused(data) == []
-    data = minimal(**{"not-graded": [{"rule": "RS-COMM-003", "on": {"piece": True}}]})
+    data["read-before-findings"] = []
     assert refused(data)
 
 
 def test_the_binding_and_each_mapping_refuse_what_they_do_not_name_but_the_container() -> None:
-    data = minimal()
-    data["bar"] = {"at-least": "professional"}
-    assert refused(data)
-    data = minimal()
-    data["verdict"] = "pass"
-    assert refused(data)
+    for key, value in (
+        ("bar", {"at-least": "professional"}),
+        ("verdict", "pass"),
+        ("grades", [{"rule": "RS-COMM-001", "grade": "professional"}]),
+        ("not-graded", []),
+        ("read-before-grading", [{"kind": "images", "what": "Every image."}]),
+    ):
+        data = minimal()
+        data[key] = value
+        assert refused(data), key
     data = minimal()
     data["pkit"] = {"anything": 1}
-    data["grades"][0]["pkit"] = {"anything": 1}
+    data["findings"][0]["pkit"] = {"anything": 1}
     data["model"]["pkit"] = {"anything": 1}
     assert refused(data) == []
-    data = minimal()
-    data["grades"][0]["score"] = 3
-    assert refused(data)
+    for key, value in (("grade", "professional"), ("score", 3), ("other-cause", "The frame.")):
+        data = minimal()
+        data["findings"][0][key] = value
+        assert refused(data), key
     assert refused({**minimal(), "pkit_schema": "visual-communication:brief"})
 
 
@@ -267,11 +311,24 @@ def _leaves(schema: Any) -> Iterator[Any]:
             yield from _leaves(value)
 
 
-def test_nothing_in_it_holds_a_bar_or_a_number_but_the_formats_and_the_rounds() -> None:
+def _names(schema: Any) -> Iterator[str]:
+    """Each property and definition `schema` names, anywhere within it."""
+    if isinstance(schema, dict):
+        for key in ("properties", "$defs"):
+            yield from schema.get(key, {})
+        for value in schema.values():
+            yield from _names(value)
+    elif isinstance(schema, list):
+        for value in schema:
+            yield from _names(value)
+
+
+def test_nothing_in_it_holds_a_grade_a_bar_or_a_number_but_the_formats_and_the_rounds() -> None:
     schema = json.loads((SCHEMAS / "review.schema.json").read_text(encoding="utf-8"))
     numbers = [leaf for leaf in _leaves(schema) if leaf.get("type") in ("number", "integer")]
     assert numbers == [schema["properties"]["schema_version"], schema["properties"]["round"]]
-    assert "bar" not in schema["properties"]
+    named = set(_names(schema))
+    assert not {name for name in named if re.search("grade|bar|verdict", name)}, named
 
 
 # --- the reviewer's body ------------------------------------------------------------------------
@@ -295,13 +352,6 @@ def grades_section() -> str:
 def rule_ids(path: str) -> list[str]:
     text = (RULE_SETS / path).read_text(encoding="utf-8")
     return sorted(set(re.findall(r"^## (RS-[A-Z]+-\d{3}) ", text, flags=re.MULTILINE)))
-
-
-def test_the_body_gives_each_grade_in_the_words_the_schema_holds() -> None:
-    section = grades_section()
-    schema = json.loads((SCHEMAS / "review.schema.json").read_text(encoding="utf-8"))
-    for word in schema["$defs"]["grade-word"]["enum"]:
-        assert f"*{word}*" in section, word
 
 
 def test_the_body_places_each_rule_the_capability_ships_in_one_list() -> None:
@@ -378,7 +428,7 @@ def test_the_body_reads_the_whole_reports_of_earlier_rounds_and_keeps_the_docume
 def test_the_reference_instance_reads_the_whole_report_of_the_round_before() -> None:
     earlier = [
         read["what"]
-        for read in instance()["read-after-grading"]
+        for read in instance()["read-after-findings"]
         if read["kind"] == "earlier-reports"
     ]
     assert earlier and all("round-1.md" in what for what in earlier)
@@ -426,7 +476,7 @@ def test_the_reference_instance_writes_each_value_in_words_as_a_block_scalar() -
     scalar, and the reference instance shows that form for every one (#3391)."""
     schema = json.loads((SCHEMAS / "review.schema.json").read_text(encoding="utf-8"))
     keys = words_keys(schema)
-    assert keys == {"name", "effort", "what", "names", "evidence", "other-cause", "why"}
+    assert keys == {"name", "effort", "what", "names", "evidence"}
     data = YAML().load((SCHEMAS / "review.yaml").read_text(encoding="utf-8"))
     written = list(written_in_words(data, keys))
     assert {key for key, _ in written} == keys

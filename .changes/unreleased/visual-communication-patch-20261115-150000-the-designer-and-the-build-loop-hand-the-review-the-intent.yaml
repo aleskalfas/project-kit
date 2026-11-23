@@ -5,6 +5,7 @@ custom:
 body: >
   The graphic designer, and the skill's build loop, hand the graphic-design
   reviewer what `pkit visual intent <piece>` prints with the images and the
-  piece, so the reviewer grades against the brief's goals, relations and
-  takeaways before it reads the brief's file. Each says that where no intent is
-  handed, the reviewer grades without it and its report says so (#3297).
+  piece, so the reviewer judges each page against the brief's goals,
+  relations and takeaways before it reads the brief's file. Each says that
+  where no intent is handed, the reviewer judges without it and its report
+  says so (#3297).

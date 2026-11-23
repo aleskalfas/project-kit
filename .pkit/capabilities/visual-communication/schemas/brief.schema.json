@@ -84,7 +84,7 @@
           "minItems": 1
         },
         "drafts": {
-          "description": "The makers' record of drafts (DEC-042 point 7): for each lead, title or takeaway of this page, or of the piece, that the designer drafted and the asker has not seen, an entry with a digest of its text, never the text. The designer records a draft as it writes it, and clears it once the asker has seen it. A text whose digest no longer matches, or that the record lists nothing for, is the asker's.",
+          "description": "The makers' record of drafts (DEC-070 point 4): for each lead, title or takeaway of this page, or of the piece, that the designer drafted and the asker has not seen, an entry with a digest of its text, never the text. The designer records a draft as it writes it, and clears it once the asker has seen it. A text whose digest no longer matches, or that the record lists nothing for, is the asker's.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/draft"
@@ -94,7 +94,7 @@
       }
     },
     "draft": {
-      "description": "One draft of the record: the kind of its text, the language of its text, and the digest `pkit visual draft` gives. It holds no text, and the page is the part it lies in (DEC-042 point 7).",
+      "description": "One draft of the record: the kind of its text, the language of its text, and the digest `pkit visual draft` gives. It holds no text, and the page is the part it lies in (DEC-070 point 4).",
       "type": "object",
       "required": [
         "kind",

@@ -58,13 +58,8 @@ pkit:
         - .pkit/capabilities/visual-communication/schemas/values.schema.json
         - .pkit/capabilities/visual-communication/schemas/values-2.schema.json
         - .pkit/capabilities/visual-communication/schemas/review.schema.json
-        - .pkit/capabilities/visual-communication/schemas/calibration.schema.json
         - .pkit/capabilities/visual-communication/schemas/look-report.schema.json
-        - .pkit/capabilities/visual-communication/scripts/verdict.py
-        - .pkit/capabilities/visual-communication/scripts/_lib/verdicts.py
         - .pkit/capabilities/visual-communication/scripts/_lib/reading.py
-        - .pkit/capabilities/visual-communication/scripts/_lib/calibration.py
-        - .pkit/capabilities/visual-communication/scripts/_lib/bar.py
         - tests/fixtures/visual-communication/libraries/tests/1.0.0/components/stamp.yaml
         - .pkit/capabilities/visual-communication/scripts/_lib/scene_checks.py
       record:

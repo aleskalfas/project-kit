@@ -9,11 +9,11 @@
 # ]
 # ///
 """visual-communication capability — intent: what a piece's brief hands the review first
-(DEC-042 point 4).
+(DEC-070 point 5).
 
 It prints the goals, relations and takeaways of the piece and of each page its brief speaks
-of, and none of the reasons. DEC-042 point 4 has the review grade each page against them, and
-read the brief's file only once its grades are written. A part that states none is named as
+of, and none of the reasons. DEC-070 point 5 has the review judge each page against them, and
+read the brief's file only once its findings are written. A part that states none is named as
 stating none.
 
 It reads the piece's `piece.yaml` and its brief, and needs no lock, no drawing and no network.
