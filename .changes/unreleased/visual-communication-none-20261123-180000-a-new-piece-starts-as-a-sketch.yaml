@@ -1,14 +1,16 @@
 component: visual-communication
 kind: none
 body: >
-  DEC-071 proposes how the designer starts a new piece, or a whole piece
-  redesigned (#3482): a sketch of every page, drawn outside the engine by a
-  fresh session the designer starts, from the piece's words, its takeaways
-  and where it is shown alone, with no method, no library and no brand. The
-  designer rebuilds the sketch at once by its method, with the piece's brand
-  and the project's libraries, draws the nearest that keeps the meaning of a
-  part they cannot carry, and reports that part as a need on what lacks it.
-  DEC-070's one round then runs on the rebuilt piece, and the person sees the
-  sketch beside it at the ship call. It is a design-ahead record: the
-  designer's definition, the build skill, the capability's pages and UC-111
-  follow in slices under #3468 once it is accepted. No surface moves here.
+  DEC-071 proposes how the designer starts a new presentation, or one
+  redesigned whole (#3482): a sketch of every page, drawn outside the engine
+  by a session of its own, from the piece's words, its takeaways and where it
+  is shown alone, with no method, no library and no brand, kept in the agent
+  workspace. The designer rebuilds the sketch at once by its method, with the
+  piece's brand and the project's libraries, draws the nearest that keeps the
+  meaning of a part they cannot carry, and sends the lack to its owner as a
+  request or a need. DEC-070's one round then runs on the rebuilt piece, and
+  the person sees the sketch beside it at the ship call. Other kinds of work
+  keep the designer's method unless the person asks for a sketch. It
+  overturns DEC-030 in part and, once accepted, revises UC-111 in its change.
+  The sketch session's and the designer's definitions, the build skill and
+  the capability's pages follow in slices under #3468. No surface moves here.
