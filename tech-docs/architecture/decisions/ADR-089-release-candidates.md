@@ -108,7 +108,7 @@ On 10 November 2026 he chose no second, "final" input ([his answer on #2223](htt
 - **The first hop, from a final release whose pkit has no `--pre`,** is the candidate's own upgrade, through the router's bypass, fetched from the distribution URL compiled into the tool (ADR-063 point 1) at the candidate's tag:
 
   ```
-  PKIT_NO_ROUTE=1 uvx --from <distribution URL>@v<candidate> project-kit upgrade
+  PKIT_NO_ROUTE=1 uvx --from <distribution URL>@v<candidate> pkit upgrade
   ```
 
   `<candidate>` is the candidate's version in PEP 440's normal form, such as `3.0.0rc1`. The command runs the candidate's code in its own process, and moves the project, pinned (point 7).
