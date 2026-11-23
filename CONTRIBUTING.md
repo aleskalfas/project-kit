@@ -30,6 +30,8 @@ pkit:
         - .pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers
         - .pkit/capabilities/doc-examples/README.md
         - .pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings
+        - .pkit/cli/README.md#version
+        - .pkit/cli/README.md#standard-flags
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/decisions/README.md#writing-a-record
