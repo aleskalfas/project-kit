@@ -1,7 +1,7 @@
 ---
 id: DEC-070
 title: The person makes the ship call on a piece, and the designer's loop is one round of mends
-status: proposed
+status: accepted
 date: 2026-11-23
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 supersedes:
