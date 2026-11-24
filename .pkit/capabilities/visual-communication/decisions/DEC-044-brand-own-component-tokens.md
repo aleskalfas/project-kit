@@ -1,7 +1,7 @@
 ---
 id: DEC-044
 title: A brand gives its own components' tokens their values, and a base opens them to the brands built on it
-status: proposed
+status: accepted
 date: 2026-11-14
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
