@@ -189,7 +189,10 @@ Its keys:
 
 How it is read:
 
-- **One declaration.** The backbone reads the one registered adapter's that ships one. Where none does, where more than one does, or where it cannot be read, no command finds its session.
+- **One declaration.** The backbone reads the one registered adapter's that ships one. No command finds its session in these cases:
+  - no registered adapter ships one
+  - more than one does
+  - the declaration cannot be read
 - **What a command gets from it.** `pkit harness session` gives the session's process and its address, each only where its checks pass ([the CLI reference](../cli/README.md#harness-session---reply-address---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 - **A guard, not a boundary.** The declaration lies in the checkout, which a sandboxed command can write. Rewritten, it could name another process as the session's, or a platform never measured. So it loosens a guard.
 
