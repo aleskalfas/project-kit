@@ -1,0 +1,24 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The backbone alone reads whether a process a part of the methodology
+  recorded still runs (ADR-103). `pkit recorded-process read --json` takes
+  `{"names": [...]}` on standard input and answers each `running`, `ended` or
+  `cannot-tell`, with the reading that told: `ended` only where the command
+  runs in the recorded process space and could see the process, or the
+  recorded space belongs to an earlier boot of a machine whose identity names
+  one machine. A name of another space or machine, a read that fails and a
+  command that cannot read its own space whole, as one inside the macOS
+  sandbox cannot, answer `cannot-tell`. `pkit recorded-process compare
+  --json` answers whether two names name one process. `pkit harness session
+  [--reply <address>]... --json` gives the session whose shell runs the
+  command, as the registered adapter declares it in a new `session.yaml`
+  (ADR-100 point 9): its process, by a name that holds its process space,
+  derived for the repository from its `origin` remote, its id and the start
+  time the operating system fixed, and its messaging address, each only once
+  a null signal finds that process here (ADR-103 point 5). A name is read on
+  macOS and Linux. The core declares a new harness requirement,
+  `session-messaging-address`, which project-management DEC-084's check of a
+  message rests on. The CLI and adapters references say so.

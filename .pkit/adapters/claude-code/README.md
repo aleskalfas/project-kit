@@ -11,6 +11,7 @@ pkit:
         - .pkit/adapters/claude-code/settings/project/settings.json
         - .pkit/adapters/claude-code/harness-support.yaml
         - .pkit/adapters/claude-code/permission-enforcement.yaml
+        - .pkit/adapters/claude-code/session.yaml
         - .pkit/adapters/claude-code/tool-access.json
         - src/project_kit/visibility.py
         - .pkit/permissions/decide.py
@@ -53,6 +54,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── tool-access.json                   # Claude Code's keys for an agent's tool access, its names' forms, the built-in tools it knows, and the withheld entries it admits
 ├── harness-support.yaml               # how far Claude Code meets each harness requirement the core declares
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
+├── session.yaml                       # how a command finds its Claude Code session, the session's process and its messaging address
 ├── permission-hook.py                 # the PreToolUse enforcement hook (registered by `pkit permissions enable`)
 └── session-start-hook.py              # the start hook: the workspace sentence at each session's and subagent's start, and the install script where no pkit is on the PATH
 ```
@@ -531,6 +533,16 @@ The sessions it starts shorten the deadline of a held message through `CLAUDE_CO
 
 It writes the harness's version and each measurement's result to `results.md` in the scratch folder, or to `--out`: a table of the results, then each measurement's findings and the evidence they rest on. In the file, `<scratch>` stands for the scratch folder and `~` for the home folder, the user's and the machine's names are replaced, and each listing leaves out the rows of sessions outside the probe. Read the results before posting them anywhere, since what the probe replaces is all it knows to replace. The scratch folder keeps the raw evidence as it was, so remove it once done. The results are recorded on [#3461](https://github.com/aleskalfas/project-kit/issues/3461) <!-- unanchored: names the Task that records the results, a pointer and no statement of the system -->.
 
+### The declaration of a session (`session.yaml`)
+
+How a command finds the Claude Code session whose shell runs it, which the backbone reads as data and gives through `pkit harness session` ([the adapters README, "The declaration of a session"](../README.md#the-declaration-of-a-session) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). It rests on what the probe above measured on macOS, with Claude Code 2.1.330 and 2.1.331, recorded on [#3461](https://github.com/aleskalfas/project-kit/issues/3461) <!-- unanchored: names the Task that records the results, a pointer and no statement of the system -->:
+
+- **The session's process** is the one `CLAUDE_PID` names in each command's environment: the process the session's shell runs under, which holds the session's messaging socket and ends when the session ends (DEC-084's Context, measurement 10).
+- **The messaging address** is the path `CLAUDE_CODE_MESSAGING_SOCKET` holds, a local socket named after that process, as `/tmp/cc-socks/<id>.sock`. Each message the session sends carries it as its reply address, `from="uds:<address>"` (measurement 9). The declaration admits only that form, so an address in a user's folder is not given and reaches no tracker.
+- **No platform reads a process by its id alone.** On macOS a start time reads wherever a command reads its process space whole, which a command outside the sandbox does, where the methodology's command runs ([ADR-014](../../../tech-docs/architecture/decisions/ADR-014-macos-sandbox-platform-stance.md) point 2). Inside the sandbox the boot does not read, so every reading there cannot tell, and the id alone would not help (ADR-103's measurements 13 and 16). Linux is not measured.
+
+The address and the process change when the session restarts, `--continue` and `--resume` included, while its name stays.
+
 ### Harness support (`harness-support.yaml`)
 
 The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harness-requirement-declaration.md) point 2): its answer to each requirement in `.pkit/schemas/harness-requirements.yaml`, with the evidence for each. The grades are [the adapters README's](../README.md#harness-requirements), and `pkit harness report` resolves them for a project. In prose:
@@ -545,6 +557,7 @@ The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harnes
   - **The cost.** A session keeps a person who answers its asks. In a turn that something other than a person answers, each ask is refused, and the refusal reads as the person's own. In a turn nobody answers, each ask holds the turn until someone answers it.
   - **The asks** are the permission hook's ("When the hook asks" above).
   - **What the trial saw,** in auto mode. In a turn a message in a chat channel started, the hook's ask was refused at once, and the tool returned `User refused permission to run tool`. In a run with nobody at it, the ask waited in the host's approval inbox, which expires after 24 hours.
+- **A session reads its own messaging address, which its messages carry and no other session holds** (`session-messaging-address`): `at-cost`, for 2.1.330 to 2.1.331, the versions DEC-084's measurements ran on, on macOS. A subagent's message carries its session's address and name, so the address tells one session from another, never a session from its own subagents, and the harness was seen checking an address against the sending process only on a held message. No platform reads a process by its id alone ("The declaration of a session" above).
 
 ### `permission-enforcement.yaml`
 

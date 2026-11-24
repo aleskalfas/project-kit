@@ -146,3 +146,24 @@ requirements:
       on. In a run with nobody at it, the hook's ask waited in the host's
       approval inbox, which expires after 24 hours, and the turn stalled
       until it was answered.
+  session-messaging-address:
+    grade: at-cost
+    cost: >-
+      A subagent's message carries its session's address and name, so the
+      address tells one session from another, never a session from its own
+      subagents. The harness was seen checking an address against the sending
+      process only on a held message. No platform reads a process by its id
+      alone (`session.yaml`). Measured on macOS only.
+    # The versions DEC-084's measurements ran on: 2.1.330 for its first eight,
+    # 2.1.331 for 9 to 12. Only whoever measures another version widens the
+    # range (COR-047 point 2).
+    harness_versions: ["2.1.330", "2.1.331"]
+    evidence: >-
+      Measured on macOS by the adapter's probe of messaging, `probe-messaging.py`,
+      and recorded on project-kit#3461 (project-management DEC-084's Context).
+      A command in a session's shell reads the session's address in
+      `CLAUDE_CODE_MESSAGING_SOCKET`, and each message the session sends
+      carries it as `from="uds:<address>"`, beside the session's name. Two
+      sessions started under one name each sent under an address of its own
+      (measurement 9), and the address is a socket named after the session's
+      process, which holds it (10).
