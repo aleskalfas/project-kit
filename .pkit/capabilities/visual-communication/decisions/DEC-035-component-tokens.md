@@ -10,9 +10,9 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Context
 
-The record of brands and notations makes the *component token*: a role one component declares for what its parts draw, such as a control's fill, so a brand can style it apart from a shared role. Component tokens lie under one group, `component`, then the component's library and name. Each has a default that aliases a role, never a value, so no brand has to give the token a value ([visual-communication:DEC-004-brands-and-notations] point 7). The record of a library's role defaults decides what a library's own role's default may alias, that a brand reaches a library's own roles and the component tokens of its components only where it names the library, and what a brand exports of each ([visual-communication:DEC-008-library-role-defaults] points 3 to 5).
+The record of brands and notations makes the *component token*: a role one component declares for what its parts draw, such as a control's fill, so a brand can style it apart from a shared role. Component tokens lie under one group, `component`, then the component's library and name. Each has a default that aliases a role, never a value, so no brand has to give the token a value ([visual-communication:DEC-004-brands-and-notations] point 7). The record of a library's role defaults decides what a library's own role's default may alias, which libraries' roles a brand reaches, the component tokens of their components among them, and what a brand exports of each ([visual-communication:DEC-008-library-role-defaults] points 3 to 5; refinement per [visual-communication:DEC-044-brand-own-component-tokens]).
 
-The Task that builds component tokens ([project-kit#2966](https://github.com/aleskalfas/project-kit/issues/2966)) met choices that neither record makes: where a component declares a token, and what follows the component's name in its path; what may read a token, and how; a token's type, and what its default may alias; whether a piece's own component declares tokens; what a release compares; how a brand's tokens under `component.<library>` are judged; and whether a contrast pair may name a component token. A brand may hold components of its own, with their component tokens (DEC-004 point 6), but a brand's check and its release do not judge them yet ([project-kit#2573](https://github.com/aleskalfas/project-kit/issues/2573)).
+The Task that builds component tokens ([project-kit#2966](https://github.com/aleskalfas/project-kit/issues/2966)) met choices that neither record makes: where a component declares a token, and what follows the component's name in its path; what may read a token, and how; a token's type, and what its default may alias; whether a piece's own component declares tokens; what a release compares; how a brand's tokens under `component.<library>` are judged; and whether a contrast pair may name a component token. A brand may hold components of its own, with their component tokens (DEC-004 point 6). The record of a brand's own components' tokens decides what gives those tokens values, and how the check judges a brand's tokens under its own name (refinement per [visual-communication:DEC-044-brand-own-component-tokens]).
 
 ## Decision
 
@@ -29,7 +29,7 @@ The Task that builds component tokens ([project-kit#2966](https://github.com/ale
 - **`component.<library>.<component>.<name>`.** The component chooses the name: one segment, of the shape DEC-004 point 4 gives every name that enters a token path. No part's name enters the path.
 - **A token names what it styles, not a part.** Several of the component's parts may read one token, and parts that must change together read one.
 - **No library takes the name `component`,** as none takes the name of a top group of the shared roles (DEC-004 point 7).
-- **What a base opens.** A base opens a token, or a group of tokens by whole segments of its path, as DEC-004 point 6 has it for any role, whether or not it gives the token a value, as DEC-008 point 4 has it for a library's role. A group opens only the tokens of the libraries the base names (DEC-008 point 4).
+- **What a base opens.** A base opens a token, or a group of tokens by whole segments of its path, as DEC-004 point 6 has it for any role, whether or not it gives the token a value, as DEC-008 point 4 has it for a library's role. A group opens only tokens of the libraries whose roles the base reaches, each only where the base may open it (DEC-008 point 4; refinement per [visual-communication:DEC-044-brand-own-component-tokens] point 2).
 
 ### 3. Only the declaring component reads a token
 
@@ -38,7 +38,7 @@ The Task that builds component tokens ([project-kit#2966](https://github.com/ale
 - **A brand's drawing of a top's layout** is a component of the brand ([visual-communication:DEC-009-layout-defaults] point 2), so it reads none of the top's tokens, and is written in the brand's own values.
 - **Nothing a piece writes names one:** neither content's override, which points a part at another role ([visual-communication:DEC-001-visual-communication-discipline] point 6), nor what a piece writes for a program run while preparing, such as a producer's inputs ([visual-communication:DEC-006-work-outside-the-engine-and-outputs] point 2).
 - **No token stands for a part painted from its instance's colour family** (DEC-001 point 6).
-- **Outside components and pieces, nothing changes.** A brand that names the library may alias a token (DEC-008 point 4). Written code reads the document of resolved values, which holds every token of the libraries locked with the brand ([visual-communication:DEC-005-engine-and-plugins] point 7).
+- **Outside components and pieces, nothing changes.** A brand that reaches the library's roles may alias a token (DEC-008 point 4; refinement per [visual-communication:DEC-044-brand-own-component-tokens] points 2 and 3). Written code reads the document of resolved values, which holds every token of the libraries locked with the brand ([visual-communication:DEC-005-engine-and-plugins] point 7).
 
 ### 4. A token has a declared type and a default
 
@@ -62,10 +62,9 @@ The Task that builds component tokens ([project-kit#2966](https://github.com/ale
 
 ### 7. How a brand's tokens under `component.<library>` are judged
 
-What DEC-008 point 4 says of a brand's token under a library's name, a brand's token under `component.<library>` takes too:
-- **Where the brand names the library,** each token it holds there gives a token of the library's components a value of its type. One that names no token they declare, or is of another type, gives nothing, and is a finding.
-- **Where it names none,** a token there gives the library nothing, and stays private, as a brand's other tokens do (DEC-004 point 5). Where a piece's lock holds the library with the brand, it asks the brand's owner for attention.
-- **Not under its own name.** A brand's token under `component.<its own name>`, where its own components' tokens lie, stays private and with no finding. What gives its own components' tokens values, and how the check judges a brand's tokens under `component.<its own name>`, is left to the change that builds a brand's own components (#2573).
+What DEC-008 point 4 says of a brand's token under a library's name, a brand's token under `component.<library>` takes too, but under its own name, where a token under `component.<its own name>` is judged, and one outside `component` is private and asks nothing until the capability reads a brand's own roles (DEC-008 point 4; refinement per [visual-communication:DEC-044-brand-own-component-tokens] points 1 to 3):
+- **Where the brand reaches the library's roles** (DEC-008 point 4), each token it holds there gives a token of the library's components a value of its type. One that names no token they declare, or is of another type, gives nothing, and is a finding.
+- **Where it does not reach them,** a token there gives the library nothing, and stays private, as a brand's other tokens do (DEC-004 point 5). Where a piece's lock holds the library with the brand, it asks the brand's owner for attention.
 - **No schema refuses a file it accepted.** Only the check's judgement of a brand's tokens changes, as it did for a token under a library's own name (DEC-008 point 8).
 
 ### 8. No contrast pair names a component token
@@ -84,7 +83,7 @@ Each finding below fails validation where it lies in a file the project can corr
   - a component that reads a component token it does not declare
   - an override, or an input a piece writes for a program run while preparing, that names a component token
   - a pair that names a component token
-  - at a lock, a part that reads a token with no value under the brand, where the brand does not name the library (DEC-008 point 9)
+  - at a lock, a part that reads a token with no value under the brand, where the brand does not reach the library's roles (DEC-008 point 9; refinement per [visual-communication:DEC-044-brand-own-component-tokens] point 4)
 - **Asks for attention, never failing:** a token that an experimental component's file reads nowhere, naming the component's owner.
 - **Stated as a fact:** a token that a stable or deprecated component's file reads nowhere, and a token whose default's chain ends at no shared role (point 4).
 
@@ -164,5 +163,5 @@ Each finding below fails validation where it lies in a file the project can corr
   - `checks.md`, Brands, tokens and contrast: point 9's findings on a component's tokens and their defaults and on a brand's tokens under `component.<library>`, and the `open-unknown` row for a token a base opens.
   - `checks.md`, Scenes: point 9's findings on a part that reads a token and on an override.
   - `checks.md`, Produced pictures: point 9's finding on a producer's input.
-- **[project-kit#2573](https://github.com/aleskalfas/project-kit/issues/2573)** decides what point 7 leaves to it.
+- **The record of a brand's own components' tokens** decides what gives those tokens values, and how the check judges a brand's tokens under `component.<its own name>` (refinement per [visual-communication:DEC-044-brand-own-component-tokens]).
 - **Revisit this record** if a component needs one of its tokens to follow another, its tokens need contrast pairs of their own, or a brand's drawing needs a top's tokens.
