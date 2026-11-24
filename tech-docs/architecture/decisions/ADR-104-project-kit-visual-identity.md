@@ -1,8 +1,8 @@
 ---
 id: ADR-104
 title: project-kit keeps its visual identity in libraries of its own, and its brand builds on the foundations with no base
-status: proposed
-date: 2026-11-13
+status: accepted
+date: 2026-11-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
