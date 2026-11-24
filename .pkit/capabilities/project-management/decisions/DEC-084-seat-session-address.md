@@ -15,7 +15,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
   - the message's reply address and sender name are the ones the directing seat recorded;
   - the worker itself is the session its own seat recorded.
 
-  The list of sessions takes no part in the check. Whether a process runs is read by its id and start time wherever they can be read. Where they cannot, as from a sandboxed command, it is read by its id alone, only where a test of the id was measured there to tell a running process from none, as on macOS. Elsewhere no one can tell.
+  The list of sessions takes no part in the check. Whether a process runs is read by the backbone, which answers that it runs, that it has ended, or that no one can tell (refinement per [pkit:ADR-103]).
 - **When a loop records itself.** A loop records itself without asking in three cases: the seat has no recorded session, the recorded process has ended, or the recorded process is the loop's own. Otherwise, and where it cannot tell whether the recorded process runs, it records only on the person's word. So a restart after the old session closed records without asking wherever the old process reads as ended, and a live session is never replaced without the person.
 - **Where anything the check needs cannot be read or compared,** no message counts as a directive, and the tracker carries the work. A loop that cannot read its address, or cannot tell whether its directing seat's process runs, tells the person so, once in each session.
 
@@ -38,7 +38,7 @@ DEC-081 rested this on Claude Code's documentation, and had its build measure wh
 - **Names repeat, addresses do not.** A second session started under a name already in use is listed beside the first. Each of the two sends under a reply address of its own, the messaging address its own shell reads (9).
 - **The address belongs to the session's process.** The messaging address is named after the process the session's shell runs under, and that process holds the address's socket (10).
 - **A subagent sends under its session's address.** A subagent's message, from the foreground or the background, carries the messaging address and the name of the session that started it. The harness wraps the message's text in a frame that names the subagent (11).
-- **Another session's process, from a sandboxed command (12).** A command in the sandbox cannot read another process's start time. A null signal, sent only to test whether a process with an id exists, still tells a running id from a free one: it is not permitted while a process with that id runs, and finds no such process once none does. The copy of the command that the probe meant to run outside the sandbox ran confined too, so what a command outside it reads was not measured. On macOS the methodology's command runs outside the sandbox while the harness's setup excludes it ([pkit:ADR-014] point 2), so a sandboxed command is the exception there.
+- **Another session's process, from a sandboxed command (12).** A command in the sandbox cannot read another process's start time. A null signal, sent only to test whether a process with an id exists, still tells a running id from a free one: it is not permitted while a process with that id runs, and finds no such process once none does. The copy of the command that the probe meant to run outside the sandbox ran confined too. Measured outside it, a command reads another session's process's start time with `ps`, and its null signal is delivered to a running process. On macOS the methodology's command runs outside the sandbox while the harness's setup excludes it ([pkit:ADR-014] point 2), so a sandboxed command is the exception there.
 - **What a session can read of itself:**
   - A command in its shell reads the session's messaging address, in the form a message carries less a prefix. It reads no name.
   - The session's agent reads its own name and short reference from the first line of the listing. The probe's own verdict said otherwise, since it read the listing's structured output as plain text.
@@ -60,15 +60,12 @@ Linux, Windows and sessions under the harness's remote control were not measured
 
 **Terms.**
 - **A session's messaging address** is the address at which the harness delivers messages to a session. The harness also puts it on each message the session sends, as the message's **reply address**. The session can read it for itself, and no other running session holds it.
-- **A session's process** is the process the adapter's declaration names for the session, which ends when the session ends ([pkit:ADR-100] point 9). It is named by its id and the time it started, which tells a live process from an ended one, and, where the start time can be read, from another that later took its id (ADR-100 point 6).
-  - **It runs** where a process with its id runs and started at its time. Read by its id alone (point 2), it runs where a process with its id runs, which may be another that took its id.
-  - **It has ended** where no process with its id runs, or where the one that runs started at another time.
-  - **No one can tell** whether it runs where the adapter's declaration gives no way to read it, the read fails, or the record holds no process.
+- **A session's process** is the process the adapter's declaration names for the session, which ends when the session ends ([pkit:ADR-100] point 9). The backbone names it by its process space, its id and, where it can read it, the time it started, and answers whether it runs, has ended, or whether no one can tell (refinement per [pkit:ADR-103]).
 - Messaging, the listing, a directing seat and a directive are as DEC-081 defines them.
 
 ## Decision
 
-**A seat's state issue records the session that runs the seat's loop by its messaging address and its process, beside its name. A worker counts a message as a directive only where four things hold: the message is meant for its seat, the directing seat's record names its machine and the recorded process runs there, the message's reply address and sender name are the recorded ones, and the worker is its own seat's recorded session. The listing takes no part in the check, and whether a process runs is read as the adapter's declaration says for where the check runs. A loop records itself without asking only where the seat has no recorded session, or the recorded process has ended or is its own. Where anything the check needs cannot be read or compared, no message is a directive, and the tracker carries the work.**
+**A seat's state issue records the session that runs the seat's loop by its messaging address and its process, beside its name. A worker counts a message as a directive only where four things hold: the message is meant for its seat, the directing seat's record names its machine and the recorded process runs there, the message's reply address and sender name are the recorded ones, and the worker is its own seat's recorded session. The listing takes no part in the check, and whether a process runs is read by the backbone (refinement per [pkit:ADR-103]). A loop records itself without asking only where the seat has no recorded session, or the recorded process has ended or is its own. Where anything the check needs cannot be read or compared, no message is a directive, and the tracker carries the work.**
 
 ### 1. The state issue records the session's messaging address and process
 
@@ -77,9 +74,9 @@ Linux, Windows and sessions under the harness's remote control were not measured
   - its process.
 
   It records no folder. The name is the one the session's agent reads for itself, or, where it cannot, the one whoever starts the session gives it (DEC-081 point 4). Either way, it must be the name the harness puts on the session's messages, so whoever gives a name gives the one the session is started under.
-- **The process's start time** is recorded where the recording command can read it. A reader compares by the strongest reading that both its own place and the record allow (point 2), so a record with no start time is read by its process's id alone, where that is permitted, or not at all.
+- **The process's name.** The session's process is recorded by the name the backbone gives it, which holds its process space, its id and, where the backbone can read it, its start time, and which every part but the backbone stores and passes whole (refinement per [pkit:ADR-103]).
 - **One form for an address.** A session reads its messaging address in one form, and a message carries it in another. The adapter's declaration brings both into one form before any comparison (Implications). That form names no user, since every reader of the tracker sees it.
-- **No address to read.** A session that cannot read its messaging address records its name and machine only. Point 2's check cannot pass on any message from that session, nor on any message that session receives. The session tells the person so, once in each session.
+- **No address to read.** A session whose messaging address the backbone does not give, since it cannot be read or does not name the session's process ([pkit:ADR-103] point 5), records its name and machine only (refinement per [pkit:ADR-103]). Point 2's check cannot pass on any message from that session, nor on any message that session receives. The session tells the person so, once in each session.
 - **Who records.** As DEC-081 point 4 says: only a take for the seat's loop records a session, every seat records its own, and the clone that holds the seat writes it under its claim.
 
 ### 2. A message is a directive only where it is meant for the seat and both sessions match their records
@@ -91,12 +88,7 @@ Linux, Windows and sessions under the harness's remote control were not measured
   4. The worker's own messaging address is the one its own seat records.
 
   The worker reads no listing for the check.
-- **Whether the recorded process runs** is read the strongest way the checking command can, from where it runs (Implications):
-  - by its id and start time, wherever they can be read;
-  - where they cannot, by its id alone, only where the adapter's declaration says a null signal was measured there to tell a running id from a free one, on the harness versions measured;
-  - otherwise not at all, and then no one can tell.
-
-  The declaration permits a weaker reading and never imposes one. The Terms say what each reading counts as running and as ended.
+- **Whether the recorded process runs** is read by the backbone, which answers that it runs, that it has ended, or that no one can tell. Where it finds a process with the recorded id and cannot compare its start time, it reads by the id alone only where the adapter's declaration names the platform (refinement per [pkit:ADR-103]).
 - **The check cannot pass** in these cases:
   - the worker's seat names no directing seat;
   - the directing seat is free;
@@ -115,7 +107,7 @@ Linux, Windows and sessions under the harness's remote control were not measured
 - **One rule, at each take for the loop and at each round.** The loop compares its seat's record with its own session. It records itself without asking where:
   - the record holds no session;
   - the recorded process has ended;
-  - the recorded process is its own.
+  - the recorded process is its own, which the backbone tells by comparing the recorded name with the name of the loop's own session's process (refinement per [pkit:ADR-103]).
 
   Otherwise, it records itself only on the person's word, given in its own session. The record is then another live session's, or one the loop cannot tell of, and which of two live loops keeps the seat is the person's to settle (DEC-081 point 4).
 - **Without that word,** the loop runs unrecorded, and tells the person so. It takes its work from the tracker, counts no message as a directive, and sends none. At each later round it applies the rule again, so it records itself once the recorded process reads as ended.
@@ -148,7 +140,7 @@ The check catches the mistakes of sessions that follow the procedure, and the st
 
 The messaging address passes all three. The first two were seen in the sessions' shells and on delivered messages, and the third was measured (9 and 10). A shared address would let the check pass for the wrong session, so this record is reopened on a harness where the third test fails. The name fails the third test, since names repeat and the harness marks a name only as claimed. The folder fails the second, since no message carries it, and the listing does not show it either.
 
-**Why the process.** On the harness measured, an address is named after its process, and a machine reuses process ids. A record left by a loop that ended could match a later session that gets the same id. A session's process, named by its id and start time, tells a live process from an ended one and from another that took its id (ADR-100 point 6). So checking that the recorded process still runs closes that case wherever the start time can be read, without naming a harness. It also tells the loop whether the record belongs to another live session. That case, and a record whose process no one can tell of, are the only ones that need the person.
+**Why the process.** On the harness measured, an address is named after its process, and a machine reuses process ids. A record left by a loop that ended could match a later session that gets the same id. A session's process, named by its process space, its id and its start time, tells a live process from an ended one and from another that took its id. So checking that the recorded process still runs closes that case wherever the start time can be read, without naming a harness (refinement per [pkit:ADR-103]). It also tells the loop whether the record belongs to another live session. That case, and a record whose process no one can tell of, are the only ones that need the person.
 
 **Why the process's id alone, where a signal tells.** On the harness measured, a command in the sandbox cannot read another process's start time (12). Requiring the start time there would fail the check on every message, so no directive would ever count. Where a signal has been measured to tell a running id from a free one, reading by the id alone errs in one direction only:
 - **For the check,** a process that took the recorded id counts as running. A message still passes only from the recorded address under the recorded name, and only a session whose own process holds that id holds that address.
@@ -164,7 +156,7 @@ Where nothing has been measured to tell, as in a sandbox that gives its commands
 
 **Why the worker checks its own address too.** A session the person opens in the worker's clone takes up the worker's seat (DEC-059 point 4), and may share its name. Without this condition, that session would act on a directive meant for the loop, and two sessions of one seat would take Tasks. The worker reads its own seat's record for the check, so the condition costs no further read.
 
-**Why the record is in clear.** The claim on the same issue already says where the clone lies, by its machine and folder ([project-management:DEC-058-state-issues] point 5). A messaging address in a form that names no user, and a process's id and start time, tell a reader of the tracker nothing more. Hiding them would need a key kept on each machine, a new part of the backbone, for nothing a reader learns.
+**Why the record is in clear.** The claim on the same issue already says where the clone lies, by its machine and folder ([project-management:DEC-058-state-issues] point 5). A messaging address in a form that names no user, and a process's name, tell a reader of the tracker nothing more: the name holds the process's id and start time, and its process space in a form derived for the repository that tells no more than the machine the claim names (refinement per [pkit:ADR-103]). Hiding them would need a key kept on each machine, a new part of the backbone, for nothing a reader learns.
 
 **Why failing closed is enough.** A message names only what the tracker holds (DEC-081 point 1). So a refused message costs only the time it would have saved. That holds on a platform where the address cannot be read, and where a worker cannot tell whether another clone's process runs. The notices to the person keep that cost from going unseen.
 
@@ -177,7 +169,7 @@ Where nothing has been measured to tell, as in a sandbox that gives its commands
 - **A token the directing seat records and quotes in each message.** Rejected: every clone reads the state issue, so any session can quote the token. The harness puts the messaging address on each message itself.
 - **Fingerprints keyed by a secret kept on each machine.** Not taken, as "Why the record is in clear" says.
 - **Leave the process's liveness unread wherever its start time cannot be read, even where a null signal was measured to tell.** Rejected: a loop could then never tell a record left by an ended session from a live one's, so it would ask the person at every restart. The record accepts that cost only where nothing measured tells.
-- **Always read the start time from outside the sandbox.** Not taken: where the capability's command runs outside the sandbox, the declaration reads the start time anyway. Opening a way out of the sandbox for this one read buys little beside the address and the name.
+- **Always read the start time from outside the sandbox.** Not taken: where the capability's command runs outside the sandbox, the backbone reads the start time anyway. Opening a way out of the sandbox for this one read buys little beside the address and the name (refinement per [pkit:ADR-103]).
 - **Send to the worker's recorded messaging address.** Not taken: the harness's documentation names no recipient but a session's name or reference.
 - **Ask the person before every replacement.** Rejected: a loop's address changes on each restart, and the person would confirm every restart by hand. It stays the fallback only where no one can tell whether the recorded process runs.
 - **Record again without asking at a process's first round, where the record holds the same conversation.** Rejected: a resumed conversation in a second terminal would take the record from a live loop, and the rule would rest on the agent's memory of its earlier rounds.
@@ -217,8 +209,8 @@ Where nothing has been measured to tell, as in a sandbox that gives its commands
 
   The adapter's answer is bounded to the versions measured: 2.1.330 for measurements 1 to 8, and 2.1.331 for 9 to 12.
 - **The build is [project-kit#3461](https://github.com/aleskalfas/project-kit/issues/3461),** DEC-081's build, which builds this record too.
-  - **What it builds:** the adapter declaration's new facts, the address's form and how a process is told running, the session's event with its new fields, point 2's check, and point 3's rule in the work loop.
+  - **What it builds:** the adapter declaration's new facts, the address's form and the platforms where a process may be read by its id alone, the backbone's reading of a recorded process, the session's event with its new fields, point 2's check, and point 3's rule in the work loop (refinement per [pkit:ADR-103]).
   - **What it measured first** is in the Context (9 to 12). The declaration permits reading a process by its id alone only from where a null signal was measured to tell, and from nowhere else until it is.
-  - **What it still measures:** what a command outside the sandbox reads of another session's process, since measurement 12's copy meant to run outside ran confined.
+  - **What it measured outside the sandbox:** a command there reads another session's process's start time, and its null signal is delivered to a running process (measurement 12).
   - **How it relates to #3462.** #3462 builds DEC-082 and depends on #3461. So #3461 also builds the part of ADR-100 point 9's declaration that names the session's process, where #3462 has not yet brought it.
 - **Acceptance.** This record overturns the accepted DEC-081 in part, refines ADR-071 and ADR-100 in place, and corrects a fact in DEC-081, so accepting it needs the person's sign-off. That sign-off covers the refinements of the two architecture records.

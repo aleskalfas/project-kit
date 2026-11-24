@@ -243,5 +243,5 @@ ADR-100 point 6 names a process by its id and start time. DEC-084 point 2 reads 
   - on Linux, whether the sandbox gives each command a process space of its own;
   - inside the macOS sandbox, whether the process space can be read, and whether the operating system's table gives a start time where `ps` cannot run. Where the space cannot be read there, every reading from inside the sandbox answers *cannot tell*, and DEC-084's check fails closed there. Where the start time can be read there, the id alone is needed nowhere on macOS, and the declaration names no platform for it.
 - **No new harness requirement.** The reading rests on the session's process, which DEC-084's and ADR-100 point 12's requirements already name, and on the operating system.
-- **Acceptance.** This record refines ADR-066, ADR-100, ADR-102 and the capability record DEC-084 in place, and corrects facts in ADR-100 and DEC-084, so accepting it needs the person's sign-off, which covers those refinements.
+- **Acceptance.** This record refines ADR-066, ADR-100, ADR-102 and the capability record DEC-084 in place, and corrects facts in DEC-084, so accepting it needs the person's sign-off, which covers those refinements.
 - **No changeset and no migration.** The record changes nothing an adopter runs until its build, and each build declares its own changes (PRJ-002).
