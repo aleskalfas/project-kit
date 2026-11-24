@@ -1,0 +1,14 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The starter's version being built, 1.1.0, gives its `layers` the option `shade`, its
+  words `steps`, the default, and `plain`. With `steps` each level's place takes a step
+  of an order, spread from the brand's first end at the top to its last at the foot.
+  The levels are now drawn by a new block, `level`, a box on its colour family's fill
+  holding a head and a text, so its fill shows the step; a level that names a concept
+  keeps its concept's colour. Under a brand that gives no ends every level draws alike,
+  as the neutral family's fill. The README's new section "An order's steps" says which
+  parts of the starter's components show a step and which may fall below their contrast
+  on one: a code block's prompts, comments and commands, and a tinted header's links.

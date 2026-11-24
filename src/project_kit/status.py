@@ -103,6 +103,7 @@ def _report_backbone_version(target_root: Path, source_kit: Path) -> None:
     and points at `pkit upgrade --dry-run` for the full delta when behind.
     """
     from project_kit.install import is_self_host
+    from project_kit.migrations import public_version
 
     manifest = read_backbone_manifest(target_root)
     installed = manifest.backbone_version if manifest else ""
@@ -125,7 +126,8 @@ def _report_backbone_version(target_root: Path, source_kit: Path) -> None:
         return
     # No transition runs in the methodology's source repository (ADR-065 point 3).
     transitions = not is_self_host(target_root, source_kit)
-    if source_version and installed != source_version:
+    # Compared as public versions, as a transition compares them (ADR-089 point 5).
+    if source_version and public_version(installed) != public_version(source_version):
         gloss = f"source {source_version} — run `pkit upgrade --dry-run` to preview"
     elif transitions and manifest.transition_incomplete:
         gloss = "the target of an incomplete transition"
@@ -504,11 +506,20 @@ def _report_capabilities(target_root: Path, source_kit: Path) -> None:
     # Mark each installed capability whose origin is not the default, so that an
     # incubated one (COR-031), the project's own source, and an externally-sourced
     # one (COR-041), a copy of another repository's, are each told from a
-    # kit-shipped one.
+    # kit-shipped one. An externally-sourced one names its pin beside the mark
+    # (ADR-040 point 3).
     if installed:
         labelled: list[str] = []
         for name in installed:
-            mark = caps.origin_mark(origins.get(name, caps.KIT_SHIPPED))
+            origin = origins.get(name, caps.KIT_SHIPPED)
+            mark = caps.origin_mark(origin)
+            pin = (
+                caps.read_capability_pin(target_root, name)
+                if origin == caps.EXTERNALLY_SOURCED
+                else None
+            )
+            if pin is not None:
+                mark = f"{mark} from {caps.pin_text(pin)}"
             labelled.append(f"{name} ({mark})" if mark else name)
         installed_value = ", ".join(labelled)
     else:

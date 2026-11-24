@@ -7,14 +7,20 @@ point 5), and `compute_scene`, which computes it from a piece's content and libr
   group says it is a page. Draw order is the tree's order.
 - **Primitives at the leaves:** `box`, `ellipse`, `text`, `line`, `image` and `path`,
   their properties under SVG's names. Colours stay role names; a renderer takes their values
-  from the document of resolved values, so one scene serves every mode of the value axes.
+  from the document of resolved values, so one scene serves every mode of the value axes. A
+  paint may name an order's step instead, by its two roles and its share of the way between
+  them, `step(<first>,<last>,<share>)`, the same in every mode; its value in each mode comes
+  with the scene, among the colours, never from that document (`colour_steps`, DEC-032
+  point 5).
 - **A text** holds its text, its line height, the greatest among the typography roles
   its runs take, its paragraphs of runs, its lines and its measured height. Each run
   holds its text, its typography role and font properties, its paint, the font files
   that measured it (file name and sha256), how it was measured, and the source of each.
   Each line holds its text, its width, its baseline below its top, its paragraph, and
   its spans: each the part of one run of its paragraph that lies on it, with its width
-  (DEC-012 points 4 and 7).
+  (DEC-012 points 4 and 7). Where it stands each line in its width, by its anchor, and
+  whether it fills that width are read here alone (`stands`, `line_left`, `fills_width`),
+  which the checks read: a text's start lies at its left.
 - **A run's sign and ground** (DEC-036 point 3). A run whose text part chooses them holds
   `sign: true` and its `ground`, a role, each with its source. A span holds the sign
   before its text, `sign`: its run's concept's outline, `d` and `fill-rule`, mapped into a
@@ -94,6 +100,7 @@ from _lib import names, signs
 from _lib.env import Env
 from _lib.findings import ATTENTION, FACT, Finding
 from _lib.layout import (
+    CROSS_SIZE,
     DRAWING_MISFIT,
     ENDS,
     ENDS_OF_LINE,
@@ -127,10 +134,45 @@ MARKERS = ("marker-start", "marker-end")
 #: The type of element each kind of part draws, where it is not the kind's own name.
 DRAWN_AS = {"repeat": "group", "sign": "path"}
 
+#: The key of an element whose part names the parts drawn before it that it lies over on
+#: purpose: the trace ids of what they draw (`IDS`), and the library version that holds the
+#: part (`LIBRARY`), where one does (DEC-066 points 1 and 2).
+LIES_OVER = "lies-over"
+IDS = "ids"
+LIBRARY = "library"
+
 
 def length(value: float) -> float:
     """A length as the scene holds it."""
     return fm.rounded(value, PLACES) + 0.0  # no negative zero
+
+
+#: Where a text stands each of its lines in its width, by its `text-anchor`: the share of
+#: the room a line leaves in that width that lies before the line. A text's start lies at
+#: its left, so it stands its lines at its left edge, its centre or its right edge.
+STANDS = {"start": 0.0, "middle": 0.5, "end": 1.0}
+
+
+def stands(text: Mapping[str, Any]) -> float:
+    """The share of `text`'s width at which it stands each of its lines (`STANDS`): 0 at its
+    left edge, 0.5 at its centre, 1 at its right edge. An anchor the scene does not hold is
+    the engine's default, the start."""
+    return STANDS.get(str(text.get("text-anchor", "start")), 0.0)
+
+
+def line_left(text: Mapping[str, Any], line: Mapping[str, Any]) -> float:
+    """How far right of `text`'s left edge its line `line` starts: the share of the room the
+    line leaves in the text's width at which the text stands it (`stands`). A line wider
+    than its text starts left of it where the text stands its lines past the start."""
+    return stands(text) * (float(text.get("width", 0)) - float(line.get("width", 0)))
+
+
+def fills_width(text: Mapping[str, Any]) -> bool:
+    """Whether `text` draws to both edges of its width: only a text of one line whose
+    component gave it no width, which the engine makes as wide as that line, its width's
+    source the engine's. A text given a width breaks its lines short of it, and the lines of
+    a text of more than one end where their words do ("Breaking lines", `components.md`)."""
+    return len(text.get("lines") or []) == 1 and (text.get("sources") or {}).get("width") == ENGINE
 
 
 @dataclass
@@ -274,6 +316,23 @@ def compute_scene(
     )
 
 
+def _lies_over(instance: Instance, parts: Mapping[str, Element]) -> None:
+    """On each element of `instance` whose part names parts under `lies-over`, what it lies
+    over on purpose (DEC-066 point 2): the trace ids of the elements those parts draw here,
+    and the library version that holds the part, `<library>@<version>`, where one does. A
+    named part that draws nothing here adds none, and an element whose named parts draw
+    nothing holds none. It is no property the element draws, so it names no source."""
+    for name, named in instance.component.lies_over.items():
+        drawn = parts.get(name)
+        ids = [parts[each].id for each in named if each in parts]
+        if drawn is None or not ids:
+            continue
+        said: dict[str, Any] = {IDS: ids}
+        if "@" in instance.library:
+            said[LIBRARY] = instance.library
+        drawn.set(LIES_OVER, said)
+
+
 def fixed_pages(top: Instance) -> bool:
     """Whether the pages of the top `top` are fixed pages (DEC-031 point 2): its layouts are
     its pages' forms, and it asks for a height, by a formula or through its physical size,
@@ -338,12 +397,15 @@ class _Emitter:
         if instance.is_page:
             element.set("page", True)
             self.pages.append(instance.trace)
+        parts: dict[str, Element] = {}
         for name, node in instance.nodes.items():
             drawn = self.part(instance, name, node) if node.present else None
             if drawn is not None:
                 element.children.append(drawn)
+                parts[name] = drawn
             elif node.unvalued:
                 self.unvalued[f"{instance.trace}/{name}"] = node.unvalued
+        _lies_over(instance, parts)
         # The pages of a top whose layouts are its pages' forms, each at the top's origin. A
         # page that takes its own height names where that height comes from (DEC-022 point 3).
         for page in instance.pages:
@@ -358,10 +420,15 @@ class _Emitter:
             self._short(instance.trace, size, gets, asks)
         return element
 
-    def _short(self, trace: str, size: str, gets: float, asks: float) -> None:
+    def _short(self, trace: str, size: str, gets: float, asks: float | None) -> None:
+        """A component, or a list, that gets less than it asks for. An item its list sizes
+        by place asks for more than zero across its line, `asks` None (DEC-038 point 5)."""
+        asked = (
+            f"{length(asks)}" if asks is not None else "more than 0, as its list sizes it by place"
+        )
         self.ctx.report(
             "gets-less",
-            f"{trace} gets {length(gets)} px of {size} and asks for {length(asks)}",
+            f"{trace} gets {length(gets)} px of {size} and asks for {asked}",
             where=trace,
         )
 
@@ -714,17 +781,25 @@ class _Emitter:
         element.set("preserveAspectRatio", FIT, ENGINE)
 
     def _items(self, element: Element, instance: Instance, node: Node) -> None:
+        """A list's items, each a group in its frame. An item's size across its line that a
+        `cross-size` gives names what a part's formula names as its source (DEC-038 point
+        6); the engine sets the rest."""
         name, part = node.part.name, node.part
+        sizes = {"width": ENGINE, "height": ENGINE}
+        if instance.sized_by_place(name) is not None:
+            where = f"parts.{name}.{part.operator}.{CROSS_SIZE}"
+            sizes[part.cross] = instance.source(where, part.settings[CROSS_SIZE])
         for item in node.items:
             frame = self.ctx.attempt(
                 lambda i=item: instance.item_frame(name, i.position), (0.0, 0.0, 0.0, 0.0)
             )
-            group = self.group(item, (frame[0], frame[1]), (ENGINE, ENGINE), (ENGINE, ENGINE))
+            group = self.group(
+                item, (frame[0], frame[1]), (ENGINE, ENGINE), (sizes["width"], sizes["height"])
+            )
             element.children.append(group)
         if instance.component.ties(part) is not None:
             return  # each tie lies in the part's whole frame, asking for none
-        cross = "height" if part.main == "width" else "width"
-        for axis, size in (("main", part.main), ("cross", cross)):
+        for axis, size in (("main", part.main), ("cross", part.cross)):
             if size in part.spec:
                 gets = self.ctx.attempt(lambda s=size: instance.get("part", name, s), 0.0)
                 asks = self.ctx.attempt(lambda a=axis: instance.get(a, name).asked, 0.0)

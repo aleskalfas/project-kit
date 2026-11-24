@@ -1,0 +1,12 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The neutral brand's version being built, 1.1.0, gives an order's roles values of its
+  own: greys, the first end the furthest from the page and the last just off it, in
+  light and in dark, and the primary text on every step, which keeps at least 5 to 1 on
+  each end. It adds three greys to its palette for them, tilted toward the accent's blue
+  as its other greys are. So a list given an order's steps, such as the starter's
+  `layers`, shades its places from the first end to the last. Its released version 1.0.0
+  is unchanged.

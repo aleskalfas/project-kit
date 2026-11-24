@@ -87,7 +87,7 @@ class MoveIssueInProcess:
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch, issue: dict[str, Any]) -> None:
         mi = load_move_issue()
-        invoker = SimpleNamespace(github_login="me", email="me@example.com")
+        invoker = SimpleNamespace(github_login="me", email="me@example.com", unresolved_cause=None)
         monkeypatch.setattr(mi, "resolve_capability_root", lambda _arg: CAPABILITY_ROOT)
         monkeypatch.setattr(mi, "_read_members", lambda *_a: [])
         monkeypatch.setattr(mi, "resolve_invoker_identity", lambda config=None: invoker)

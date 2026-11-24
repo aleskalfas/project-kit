@@ -3,6 +3,7 @@
 # requires-python = ">=3.10"
 # dependencies = [
 #   "ruamel.yaml>=0.18",
+#   "pathspec>=0.12",
 # ]
 # ///
 """Project-management capability — review-work (DEC-026 workflow wrapper).
@@ -72,9 +73,10 @@ Side-effects:
   - Flips an existing draft PR to ready via `gh pr ready` if present.
   - Reviewer assignment (v1 ships with simple --reviewer override path;
     full DEC-027 mode resolution lands in Phase D).
-  - Under `--force`, one audit comment on the PR names who gave the override
-    and each refusal it passed, a change check it could not run at the head
-    among them (DEC-046 point 2). Its first lines are the audit template's
+  - Under `--force`, one audit comment on the PR records who gave the
+    override through the account that posts it, and names each refusal it
+    passed, a change check it could not run at the head among them (DEC-046
+    point 2, DEC-078 point 2). Its first lines are the audit template's
     (`_lib.audit.render_audit_comment`), and it goes through `post_audit_once`,
     so a retry of the same override at the same head posts no second one. It
     lands before the PR is made ready, reviewers are requested or the issue
@@ -122,6 +124,8 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
+    accounts,
+    approvals,
     axis_labels,
     bootstrap_gate,
     classification_rules,
@@ -133,6 +137,7 @@ from _lib import (
     issue_branch,
     issue_position,
     pr_head,
+    pr_review,
     pr_validation,
     session_guard,
 )
@@ -277,8 +282,8 @@ def main() -> int:
             "findings (empty required section / checkbox / missing Doc impact / an "
             "updated document with no sentence on what changed in it) or a change "
             "check that cannot be run at its head. It starts no program of the head. "
-            "One audit comment on the PR names who gave the override and each refusal "
-            "it passed. "
+            "One audit comment on the PR names each refusal it passed; the account "
+            "that posts it shows who gave the override. "
             "Drafts stay exempt; you normally fill a draft first (create-draft → "
             "edit-pr → review-work) or use open-pr --body-file."
         ),
@@ -412,7 +417,12 @@ def main() -> int:
     owner_bypass: str | None = None
     try:
         clone = instance_claims.this_clone(
-            capability_root, invoker.github_login, config, dry_run=args.dry_run
+            capability_root,
+            invoker.github_login,
+            config,
+            dry_run=args.dry_run,
+            login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("review-work", args.issue_number, exc)
@@ -424,7 +434,6 @@ def main() -> int:
             verb="review-work",
             flag="--bypass-owner",
             bypass=args.bypass_owner,
-            invoker=invoker,
             dry_run=args.dry_run,
         )
         instance_claims.say_guard(decision)
@@ -489,9 +498,7 @@ def main() -> int:
         opened_url = url
         print(f"  opened ready PR: {url}")
         # The first moment the PR exists, so the one write this comment follows.
-        if not _force_audited(
-            pr_number, findings, "", capability_root, invoker, config, opened_url=url
-        ):
+        if not _force_audited(pr_number, findings, "", capability_root, config, opened_url=url):
             return 3
     elif existing_pr.get("isDraft"):
         # Flip draft → ready — validate the draft's current body first.
@@ -505,9 +512,7 @@ def main() -> int:
         findings = _ready_findings(description.body, classification, capability_root) + sentences
         if not _body_ok(findings, args.force, next_step=_edit_step(args.issue_number, pr_number)):
             return 1
-        if not _force_audited(
-            pr_number, findings, description.head, capability_root, invoker, config
-        ):
+        if not _force_audited(pr_number, findings, description.head, capability_root, config):
             return 3
         if not _gh_pr_ready(pr_number, config):
             return 3
@@ -523,9 +528,7 @@ def main() -> int:
             return EXIT_UNDERIVED
         if not _body_ok(sentences, args.force, next_step=_edit_step(args.issue_number, pr_number)):
             return 1
-        if not _force_audited(
-            pr_number, sentences, description.head, capability_root, invoker, config
-        ):
+        if not _force_audited(pr_number, sentences, description.head, capability_root, config):
             return 3
         print(f"  PR #{pr_number} already ready; idempotent skip")
 
@@ -542,11 +545,16 @@ def main() -> int:
         members = _read_members(capability_root, yaml_loader)
         role = reviewer_role_from_config(config)
         if role:
-            candidates = role_based_reviewers(
-                members,
-                role,
-                exclude_login=invoker.github_login,
+            # Human mode asks no member whose entry names a bot's account or a
+            # reviewer agent's, nor one the comparison cannot tell from the
+            # PR's author (DEC-079 point 3).
+            candidates, passed_over = approvals.askable_reviewers(
+                role_based_reviewers(members, role),
+                _pr_author(existing_pr, invoker, branch, config),
+                pr_review.remote_baseline(config),
             )
+            for line in passed_over:
+                print(f"  [note] not asked for a review: {line}.", file=sys.stderr)
             if candidates:
                 reviewers_to_add = candidates
                 print(
@@ -694,6 +702,27 @@ def _success_line(issue_number: int, workflow: dict) -> str:
     return f"\n[ok] PR ready; #{issue_number} in {review}"
 
 
+def _pr_author(found: dict | None, invoker: Identity, branch: str, config: dict) -> dict | None:
+    """The PR's author, in a form the backbone's comparison takes, or None where
+    it is not known (DEC-079 point 3, "Who is asked").
+
+    A PR found before this run is told by the author GitHub records for it. A
+    PR this run opened is the acting account's, where the reading named one;
+    under a credential whose account it did not name, the PR is found once more
+    to read its author."""
+    if found is None and invoker.github_login:
+        return accounts.entry(invoker.github_login)
+    if found is None:
+        try:
+            found = _find_pr_for_branch(branch, config)
+        except head_programs.TwoOpen:
+            return None
+    author = (found or {}).get("author")
+    if not isinstance(author, dict) or not author.get("login"):
+        return None
+    return accounts.gh_author(author)
+
+
 def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
     proc = gh_run(
         [
@@ -705,7 +734,7 @@ def _find_pr_for_branch(branch: str, config: dict) -> dict | None:
             "--state",
             "all",
             "--json",
-            "number,state,isDraft,headRefName",
+            "number,state,isDraft,headRefName,author",
         ],
         config,
         check=False,
@@ -957,11 +986,9 @@ def _quoted(finding: pr_validation.Finding) -> str:
     return code(_said(finding).replace("<!--", "\\x3c!--"))
 
 
-def _force_audit_body(
-    quoted: list[str], head: str, key: str, capability_root: Path, invoker: Identity
-) -> str:
-    """The audit comment of a `--force`: the template's line, which names who gave
-    the override, then each refusal it passed, `quoted`, below it, where `_lib.audit`
+def _force_audit_body(quoted: list[str], head: str, key: str, capability_root: Path) -> str:
+    """The audit comment of a `--force`: the template's line, then each refusal it
+    passed, `quoted`, below it, where `_lib.audit`
     has a writer add what the template has no field for, then the idempotency `key`.
     `head` is the PR's head, empty for a PR this run opens. The template's reason is
     the run's own words: a head's text in it could fill a placeholder."""
@@ -969,7 +996,7 @@ def _force_audit_body(
     reason = f"`review-work --force` passed each refusal below{at_head}."
     return "\n".join(
         [
-            render_audit_comment(capability_root, invoker, reason),
+            render_audit_comment(capability_root, reason),
             "",
             *(f"- {refusal}" for refusal in quoted),
             "",
@@ -983,7 +1010,6 @@ def _force_audited(
     findings: list[pr_validation.Finding],
     head: str,
     capability_root: Path,
-    invoker: Identity,
     config: dict,
     *,
     opened_url: str | None = None,
@@ -1003,7 +1029,7 @@ def _force_audited(
         "pr",
         pr_number,
         key,
-        _force_audit_body(quoted, head, key, capability_root, invoker),
+        _force_audit_body(quoted, head, key, capability_root),
         config,
         run=gh_run,
         present_note="--force audit comment already present; idempotent skip",

@@ -1,0 +1,17 @@
+component: project-management
+kind: major
+body: >
+  In human mode, `done-work`'s gate counts only a person's approval
+  (DEC-079 point 3). It reads each reviewer and commenter with the type
+  GitHub's REST interface records for the account, and counts no approving
+  review and no `Approved` comment from a bot's account, such as one a
+  workflow posts under its own token, or from an account of a kind unknown.
+  Nor does it count an approving review whose body carries a reviewer
+  agent's verdict marker, in any of its forms, which is how `review-pr`
+  delivers a verdict as a native review. Such an approval is left out of the
+  order of reviews, and the refusal names it, while a request for changes
+  stays in that order whoever made it. No migration finds either case, since
+  neither is state a project holds: a project whose approvals in human mode
+  came from a bot, or from the native review `review-pr` delivers, stops
+  passing the gate there until a person approves. Where the reviews or the
+  comments cannot be read whole, the gate refuses and says why.

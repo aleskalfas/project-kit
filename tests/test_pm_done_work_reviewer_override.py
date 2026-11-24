@@ -396,8 +396,7 @@ def test_redundant_override_audit_records_redundancy(dw, rc, monkeypatch) -> Non
     assert len(result.override_audits) == 1
     audit = result.override_audits[0]
     assert audit.redundant is True
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
-    body = dw._reviewer_override_audit_body(audit, "belt and braces", invoker)
+    body = dw._reviewer_override_audit_body(audit, "belt and braces")
     assert "REDUNDANT" in body
     assert "satisfied-by-override" not in body
     assert "a fresh APPROVED (override redundant)" in body
@@ -430,9 +429,8 @@ def test_all_slots_override_audit_does_not_claim_others_gated(dw, rc, monkeypatc
     )
     assert result.passed is True
     assert len(result.override_audits) == 2
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
     for audit in result.override_audits:
-        body = dw._reviewer_override_audit_body(audit, "panel is broken", invoker)
+        body = dw._reviewer_override_audit_body(audit, "panel is broken")
         assert "still gated" not in body
         assert "Every required reviewer's slot was overridden" in body
         # And it steers to the honest whole-gate tool, like the stderr nudge.
@@ -458,11 +456,9 @@ def test_sole_reviewer_override_audit_says_whole_gate_waived(dw, rc, monkeypatch
         override_reviewers=("reviewer",),
     )
     assert result.passed is True
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
     body = dw._reviewer_override_audit_body(
         result.override_audits[0],
         "false block",
-        invoker,
     )
     assert "ONLY required reviewer" in body
     assert "still gated" not in body
@@ -490,11 +486,9 @@ def test_partial_override_audit_names_the_reviewers_that_gated(dw, rc, monkeypat
         override_reviewers=("design-reviewer",),
     )
     assert result.passed is True
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
     body = dw._reviewer_override_audit_body(
         result.override_audits[0],
         "false block",
-        invoker,
     )
     assert "satisfied-by-override" in body
     assert "still gated it on a genuine APPROVED" in body
@@ -664,17 +658,15 @@ def test_audit_body_renders_the_canonical_dec049_template(dw) -> None:
         block_comment_url="https://example.test/block",
         head="sha1",
     )
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
     body = dw._reviewer_override_audit_body(
         audit,
         "flaky false block",
-        invoker,
         REAL_CAP_ROOT,
     )
     lines = body.split("\n")
     # The canonical marker, first, from the schema template.
     assert lines[0] == audit_lib.AUDIT_MARKER
-    assert lines[1] == "Bypassed by alice <alice@example.test>: flaky false block"
+    assert lines[1] == "Bypassed: flaky false block"
     # Rendered from the shipped schema, not a hardcoded string.
     assert audit_lib.load_audit_template(REAL_CAP_ROOT).startswith(audit_lib.AUDIT_MARKER)
     # The per-reviewer detail DEC-050 requires is still all there.
@@ -695,8 +687,7 @@ def test_audit_body_is_one_comment_per_marker(dw) -> None:
         block_comment_url=None,
         head="sha1",
     )
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
-    body = dw._reviewer_override_audit_body(audit, "r", invoker, REAL_CAP_ROOT)
+    body = dw._reviewer_override_audit_body(audit, "r", REAL_CAP_ROOT)
     assert body.count(audit_lib.AUDIT_MARKER) == 1
 
 
@@ -722,7 +713,6 @@ def test_threaded_comment_list_costs_no_extra_fetch(dw, monkeypatch) -> None:
         )
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
     comments = dw.fetch_comments("pr", 7, {}, run=dw.gh_run)
     assert len(fetches) == 1
     for name in ("a-reviewer", "b-reviewer", "c-reviewer"):
@@ -738,7 +728,6 @@ def test_threaded_comment_list_costs_no_extra_fetch(dw, monkeypatch) -> None:
                 7,
                 audit,
                 "r",
-                invoker,
                 {},
                 comments=comments,
             )
@@ -888,8 +877,7 @@ def test_override_audit_not_matched_by_gate_verdict_reader(dw, av) -> None:
         state="a fresh CHANGES_REQUESTED (an active block)",
         block_comment_url="https://example.test/c/design-reviewer",
     )
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
-    body = dw._reviewer_override_audit_body(audit, "flaky false block", invoker)
+    body = dw._reviewer_override_audit_body(audit, "flaky false block")
 
     # No verdict marker.
     assert av.VERDICT_MARKER not in body
@@ -913,20 +901,19 @@ def test_override_audit_not_matched_by_gate_verdict_reader(dw, av) -> None:
     assert verdicts == []
 
 
-def test_override_audit_records_state_and_operator(dw) -> None:
-    """The audit body records the operator (name + email), reason, overridden
-    reviewer + provenance, state at override time, and block-comment link."""
+def test_override_audit_records_state_and_names_nobody_beside_its_poster(dw) -> None:
+    """The audit body records the reason, overridden reviewer + provenance, state
+    at override time, and block-comment link, and names nobody beside the account
+    that posts it, by name or by email (DEC-078 point 2)."""
     audit = dw._OverrideAudit(
         reviewer="design-reviewer",
         capability="ux-ui-design",
         state="a fresh CHANGES_REQUESTED (an active block)",
         block_comment_url="https://example.test/c/design-reviewer",
     )
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
-    body = dw._reviewer_override_audit_body(audit, "flaky false block", invoker)
-    assert "alice" in body
-    assert "alice@example.test" in body
-    assert "flaky false block" in body
+    body = dw._reviewer_override_audit_body(audit, "flaky false block")
+    assert "Bypassed: flaky false block" in body.splitlines()
+    assert "@" not in body.replace("https://example.test/c/design-reviewer", "")
     assert "design-reviewer" in body
     assert "ux-ui-design" in body
     assert "a fresh CHANGES_REQUESTED" in body
@@ -1123,11 +1110,10 @@ def test_stamp_scan_matches_a_posted_evil_name_stamp(dw, monkeypatch) -> None:
         )
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
-    assert dw._post_reviewer_override_audit(7, audit, "r", invoker, {}) is True
+    assert dw._post_reviewer_override_audit(7, audit, "r", {}) is True
     assert len(posted) == 1
     # The second run finds its own stamp in the first run's body.
-    assert dw._post_reviewer_override_audit(7, audit, "r", invoker, {}) is True
+    assert dw._post_reviewer_override_audit(7, audit, "r", {}) is True
     assert len(posted) == 1
 
 
@@ -1141,8 +1127,7 @@ def test_audit_idempotent_skip_when_own_key_present(dw, monkeypatch) -> None:
         block_comment_url=None,
         head="head1",
     )
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
-    prior = dw._reviewer_override_audit_body(audit, "same reason", invoker)
+    prior = dw._reviewer_override_audit_body(audit, "same reason")
     posted: list = []
 
     def fake_gh_run(args, config, **kwargs):
@@ -1158,7 +1143,7 @@ def test_audit_idempotent_skip_when_own_key_present(dw, monkeypatch) -> None:
         )
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    ok = dw._post_reviewer_override_audit(7, audit, "same reason", invoker, {})
+    ok = dw._post_reviewer_override_audit(7, audit, "same reason", {})
     assert ok is True
     assert posted == []  # no new comment.
 
@@ -1188,8 +1173,7 @@ def test_audit_posts_when_reason_differs(dw, monkeypatch) -> None:
         )
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
-    ok = dw._post_reviewer_override_audit(7, audit, "new reason", invoker, {})
+    ok = dw._post_reviewer_override_audit(7, audit, "new reason", {})
     assert ok is True
     assert len(posted) == 1  # a fresh audit posted.
 
@@ -1216,8 +1200,7 @@ def test_audit_reposts_after_new_commits(dw, monkeypatch) -> None:
         block_comment_url="https://example.test/block",
         head="sha-new",
     )
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
-    prior_body = dw._reviewer_override_audit_body(old_audit, "same reason", invoker)
+    prior_body = dw._reviewer_override_audit_body(old_audit, "same reason")
     posted: list = []
 
     def fake_gh_run(args, config, **kwargs):
@@ -1232,7 +1215,7 @@ def test_audit_reposts_after_new_commits(dw, monkeypatch) -> None:
         )
 
     monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    ok = dw._post_reviewer_override_audit(7, new_audit, "same reason", invoker, {})
+    ok = dw._post_reviewer_override_audit(7, new_audit, "same reason", {})
     assert ok is True
     assert len(posted) == 1, "new HEAD ⇒ a fresh audit, not a stale-record reuse"
     # And the fresh audit carries the CURRENT state, with the block link.
@@ -1253,8 +1236,7 @@ def test_override_ephemeral_not_persisted(dw, rc, monkeypatch) -> None:
         state="a fresh CHANGES_REQUESTED (an active block)",
         block_comment_url="https://example.test/c/design-reviewer",
     )
-    invoker = dw.Identity(github_login="alice", email="alice@example.test")
-    prior_audit_body = dw._reviewer_override_audit_body(audit, "reason", invoker)
+    prior_audit_body = dw._reviewer_override_audit_body(audit, "reason")
     prior_audit_comment = {
         "author": {"login": "alice"},
         "body": prior_audit_body,

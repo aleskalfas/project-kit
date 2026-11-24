@@ -22,6 +22,7 @@ from typing import Any
 
 import pytest
 
+from tests import pm_assignee_lookup
 from tests import pm_issue_branch_support as support
 from tests.adopter_repo import sign_nothing
 
@@ -43,6 +44,13 @@ VERBS = (
 PR_BRANCH = "fix/42-do-the-thing"
 #: Left behind by an earlier attempt. It sorts first, as the stale one did on #1367.
 STALE = "fix/42-a-stopped-attempt"
+
+
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login `start-work` assigns here as a user's
+    account (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
 
 
 @pytest.fixture(scope="module")
@@ -302,9 +310,9 @@ def _pass_gates(monkeypatch: pytest.MonkeyPatch, mod: ModuleType, verb: str) -> 
     monkeypatch.setattr(mod.session_guard, "enforce", lambda **k: True)
     monkeypatch.setattr(mod, "load_adopter_config", lambda _root: {})
     monkeypatch.setattr(mod, "_read_members", lambda *a: [])
-    monkeypatch.setattr(
-        mod, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
-    )
+    # GitHub answers that the credential acts as `me`, a user's account.
+    me = sys.modules["_lib.membership"].Identity(github_login="me", email=None, kind="user")
+    monkeypatch.setattr(mod, "resolve_invoker_identity", lambda **k: me)
     monkeypatch.setattr(
         mod, "check_membership", lambda *a: SimpleNamespace(allowed=True, refusal_message="")
     )

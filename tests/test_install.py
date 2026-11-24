@@ -261,6 +261,97 @@ def test_install_kit_dry_run_writes_nothing(tmp_target: Path) -> None:
     assert not (tmp_target / ".pkit").exists()
 
 
+def _a_candidates_source(tmp_path_factory: pytest.TempPathFactory, candidate: str) -> Path:
+    """A copy of this source whose bundle records the release candidate *candidate*,
+    as a candidate's own pkit carries it."""
+    source = tmp_path_factory.mktemp("candidate") / ".pkit"
+    shutil.copytree(install.find_source_kit(), source, ignore=shutil.ignore_patterns("__pycache__"))
+    (source / "VERSION").write_text(f"{candidate}\n", encoding="utf-8")
+    return source
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+@pytest.mark.parametrize("dry_run", [False, True], ids=["run", "dry-run"])
+def test_an_init_by_a_candidate_refuses_and_writes_nothing(
+    tmp_target: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+    dry_run: bool,
+) -> None:
+    """`pkit init` run by a release candidate refuses, before anything is written and
+    under `--dry-run` too, unless routing is bypassed. Its message names the
+    bypass and the install of the latest release (ADR-089 point 7)."""
+    source = _a_candidates_source(tmp_path_factory, "3.0.0rc1")
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
+    monkeypatch.delenv(router._BYPASS_ENV, raising=False)
+
+    with pytest.raises(click.ClickException) as refused:
+        install.install_kit(tmp_target, dry_run=dry_run)
+
+    message = " ".join(refused.value.message.split())
+    assert "refusing to install pkit 3.0.0rc1" in message
+    assert "`PKIT_NO_ROUTE=1 pkit init`" in message
+    assert "Nothing was written" in message
+    assert not (tmp_target / ".pkit").exists()
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_an_init_by_a_candidate_with_routing_bypassed_pins_the_project_last(
+    tmp_target: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """With routing bypassed, an `init` run by a candidate installs the project and
+    pins it at the candidate, after it records the completion, through the pin's
+    one writer (ADR-089 point 7, ADR-064 point 3)."""
+    from project_kit import manifest
+
+    source = _a_candidates_source(tmp_path_factory, "3.0.0rc1")
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+    completed_at_pin: list[str | None] = []
+    real_write = install.write_version_pin
+
+    def _write(root: Path, version: str | None) -> None:
+        recorded = manifest.read_backbone_manifest(root)
+        completed_at_pin.append(recorded.completed_version if recorded is not None else None)
+        real_write(root, version)
+
+    monkeypatch.setattr(install, "write_version_pin", _write)
+
+    install.install_kit(tmp_target)
+
+    assert router.read_version_pin(tmp_target) == "3.0.0rc1"
+    assert completed_at_pin == ["3.0.0rc1"]
+    assert "pinned       .pkit/version-pin -> 3.0.0rc1" in capsys.readouterr().out
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_an_init_by_a_candidate_dry_run_says_it_would_pin_and_writes_nothing(
+    tmp_target: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    source = _a_candidates_source(tmp_path_factory, "3.0.0rc1")
+    monkeypatch.setattr(install, "find_source_kit", lambda: source)
+    monkeypatch.setenv(router._BYPASS_ENV, "1")
+
+    install.install_kit(tmp_target, dry_run=True)
+
+    assert "would pin    .pkit/version-pin -> 3.0.0rc1" in capsys.readouterr().out
+    assert not (tmp_target / ".pkit").exists()
+
+
+@pytest.mark.usefixtures("stub_adapter_primitives")
+def test_an_init_by_a_release_writes_no_pin(tmp_target: Path) -> None:
+    """A finished `init` by a release writes no pin (ADR-064 point 3)."""
+    install.install_kit(tmp_target)
+
+    assert not router.pin_file_path(tmp_target).exists()
+
+
 @pytest.mark.usefixtures("stub_adapter_primitives")
 def test_install_kit_refuses_a_source_shipping_an_adapter_under_a_reserved_name(
     tmp_target: Path, tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch

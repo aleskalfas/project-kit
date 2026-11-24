@@ -36,7 +36,9 @@ Side-effects, in order:
 Exit codes:
   0  handed off
   1  membership refusal
-  2  usage error / gate failure / gh failure
+  2  usage error / gate failure / gh failure / the account to hand to refused,
+     as a bot's account or one GitHub did not confirm as a user's (DEC-079
+     point 1)
 """
 
 from __future__ import annotations
@@ -52,6 +54,7 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate, session_guard
+from _lib.assignees import refusal as assignee_refusal
 from _lib.audit import audit_key
 
 # The one fetch / scan / post-once wiring every audit writer shares (#902).
@@ -177,6 +180,14 @@ def main() -> int:
     if from_assignee == new_assignee:
         print(f"  #{args.issue_number} is already assigned to @{new_assignee}; no-op.")
         return 0
+
+    # A Task is handed from one person to another, never to a bot's account, and
+    # to a bare login only where GitHub answers that it names a user's account
+    # (DEC-079 point 1).
+    refused = assignee_refusal(new_assignee, invoker, config)
+    if refused:
+        print(f"error: {refused}", file=sys.stderr)
+        return 2
 
     print(f"handoff-issue: #{args.issue_number}")
     print(f"  from:   @{from_assignee}")

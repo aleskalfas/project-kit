@@ -2,9 +2,9 @@
 
 The engine (`formula`, `layout`, `text`, `scene`) knows nothing of the working folder,
 pieces, the library list or the configuration. It reads every component, role, colour
-family, concept, concept's sign, font, produced picture, picture file and picture role
-through an `Env`, which the pipeline builds from the project's files, and which the
-engine's tests stand in for with an in-memory one.
+family, an order's roles, concept, concept's sign, font, produced picture, picture file and
+picture role through an `Env`, which the pipeline builds from the project's files, and
+which the engine's tests stand in for with an in-memory one.
 """
 
 from __future__ import annotations
@@ -73,6 +73,23 @@ class UnvaluedRole(KeyError):
         self.named = named
 
 
+class OrderRoles(Protocol):
+    """An order's roles as the foundations declare them (DEC-032 point 1): the role of its
+    first end, of its last end, and of the text on every step."""
+
+    @property
+    def first(self) -> str: ...
+
+    @property
+    def last(self) -> str: ...
+
+    @property
+    def text(self) -> str: ...
+
+    @property
+    def roles(self) -> tuple[str, str, str]: ...
+
+
 @dataclass(frozen=True)
 class PictureInfo:
     """A produced output of the piece, as its record keeps it (DEC-006 points 2-3).
@@ -135,6 +152,13 @@ class Env(Protocol):
     def family(self, name: str) -> dict[str, str]:
         """A colour family the foundations declare: each member mapped to a colour role
         (DEC-004 point 10). Raises `KeyError` where they declare no such family."""
+        ...
+
+    def order(self) -> OrderRoles | None:
+        """An order's roles, which the foundations declare as data: the engine reads an
+        order's ends from them, never from a role's name (DEC-032 point 1). None where the
+        foundations declare none, as every version before them does, so a place takes no
+        step (DEC-032 point 3)."""
         ...
 
     def concept(self, name: str) -> str | None:

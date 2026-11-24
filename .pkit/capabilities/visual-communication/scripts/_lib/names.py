@@ -47,6 +47,10 @@ PIECE = "piece"
 #: The group of component tokens (DEC-004 point 7).
 COMPONENT = "component"
 
+#: The key under which the foundations declare an order's roles, a name no colour family
+#: takes, so nothing that names a family may name it (DEC-032 points 1 and 6).
+ORDER = "order"
+
 #: Names no library takes: the piece's own word for `use`, and the component tokens' group.
 #: The top groups of the shared roles are reserved too, read from the foundations.
 RESERVED_LIBRARY_NAMES = (PIECE, COMPONENT)

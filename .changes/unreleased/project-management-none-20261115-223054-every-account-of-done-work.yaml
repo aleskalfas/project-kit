@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  done-work's help text and comments, land-work's exit comments, the pm
+  skill's list of land-work's exit codes and the README's "lands the pinned
+  head or nothing" say what the code does: which exit 3s can follow a merge,
+  and that land-work's 2 merged nothing rather than changed nothing (#3282).
+  Documentation only; no command changes.

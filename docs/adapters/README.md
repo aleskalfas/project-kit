@@ -96,7 +96,7 @@ $ pkit sync 2>&1 | tail -n 2
   error        acme: cannot reach the skills folder
 Error: adapter primitive .pkit/adapters/acme/deploy-skills.sh exited with status 1. See the output above for details.
 $ pkit harness report --adapter acme | grep -e "unmet of" -e delegated
-Harness requirements — 6 unmet of 6   (what the project's harness leaves unmet, from its adapter's declaration)
+Harness requirements — 7 unmet of 7   (what the project's harness leaves unmet, from its adapter's declaration)
   indeterminate  delegated-result-complete     —  no declaration: the adapter does not answer this requirement
 $ pkit harness report --adapter acme > /dev/null; echo $?
 1

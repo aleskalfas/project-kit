@@ -15,15 +15,27 @@ the moment it lands, closed mode applies. The addition is asked at a
 terminal, `--yes` authorises it, and off a terminal without `--yes` it is
 refused before the file is written (#2015).
 
+The member list changes under no credential that names no user's account
+(DEC-076 point 2): under an App installation's token, a workflow's own token,
+or a credential GitHub gives no answer for, add-member refuses, in open mode
+as behind a closed gate. A person changes the list under their own credential.
+
+An entry names a user's login as GitHub spells it (DEC-021). A login the
+entry would take that GitHub did not answer for the credential is looked up
+first: GitHub's spelling is written where it names a user's account, a login
+it knows no account by is refused, and where it gives no answer the login is
+written as typed, with a warning.
+
 Per DEC-021. Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/add-member.py
 
 Exit codes:
   0  entry added
   1  membership refusal (closed mode, invoker not a member) / off a terminal
-     without --yes
-  2  usage error (bad args; capability not installed)
-  3  duplicate entry (github_login already present)
+     without --yes / a credential that names no user's account (DEC-076 point 2)
+  2  usage error (bad args; capability not installed; a login GitHub knows
+     no account by)
+  3  duplicate entry (github_login already present, in any letter case)
 """
 
 from __future__ import annotations
@@ -38,11 +50,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, consent, session_guard
+from _lib import accounts, bootstrap_gate, consent, session_guard
 from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
+    USER_TYPE,
     check_membership,
+    look_up_account,
+    member_list_refusal,
     members_path,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -131,6 +146,13 @@ def main() -> int:
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
 
+    # The member list changes only under a credential that names a user's
+    # account, in open mode too (DEC-076 point 2): a person stands behind it.
+    refused = member_list_refusal(invoker, "add-member")
+    if refused is not None:
+        print(refused, file=sys.stderr)
+        return 1
+
     # Resolve the new entry's identity fields.
     if args.me:
         github_login = invoker.github_login or args.github_login
@@ -144,20 +166,34 @@ def main() -> int:
         if sys.stdin.isatty():
             github_login = input("github_login: ").strip()
         if not github_login:
-            print(
-                "error: --github-login is required (or pass --me to self-add).",
-                file=sys.stderr,
-            )
+            or_me = "" if args.me else " (or pass --me to self-add)"
+            print(f"error: --github-login is required{or_me}.", file=sys.stderr)
             return 2
 
-    # Duplicate check.
-    for entry in members:
-        if isinstance(entry, dict) and entry.get("github_login") == github_login:
+    # Duplicate check, as the backbone compares accounts, case and surrounding
+    # whitespace set aside (ADR-094 point 3): GitHub looks an account's name up
+    # so, and the gate matches an entry so.
+    listed = [
+        entry.get("github_login")
+        for entry in members
+        if isinstance(entry, dict) and isinstance(entry.get("github_login"), str)
+    ]
+    found = accounts.fold(accounts.entry(github_login), [accounts.entry(x) for x in listed])
+    for answer, entry in found.among:
+        if answer == accounts.ONE:
             print(
-                f"error: an entry for github_login={github_login!r} already exists in {file_path}.",
+                f"error: an entry for github_login={entry.login!r} already exists in {file_path}.",
                 file=sys.stderr,
             )
             return 3
+
+    # A login GitHub did not answer for the credential is looked up, so the
+    # entry names a user's login as GitHub spells it (DEC-021).
+    answered = args.me and invoker.names_user and github_login == invoker.github_login
+    if not answered:
+        github_login = _as_github_spells_it(github_login, config)
+        if github_login is None:
+            return 2
 
     # added_by: bootstrap when no prior members, else the invoker.
     added_by = "bootstrap" if not members else (invoker.github_login or "unknown")
@@ -177,6 +213,8 @@ def main() -> int:
     print(f"about to add to {file_path}:")
     for k, v in new_entry.items():
         print(f"  {k}: {v}")
+    if args.me and email and email == invoker.email:
+        print("  (the email is git's user.email)")
     stop = consent.authorise(
         "Proceed? [y/N] ",
         yes=args.yes,
@@ -203,6 +241,32 @@ def main() -> int:
             "the author of the PR."
         )
     return 0
+
+
+def _as_github_spells_it(login: str, config: dict) -> str | None:
+    """The login an entry takes for `login`, looked up on GitHub: its
+    spelling where GitHub names a user's account by it, `login` as typed
+    where it names another kind of account or gives no answer, or None, the
+    refusal said, where GitHub knows no account by it."""
+    looked_up = look_up_account(login, config)
+    if looked_up.missing:
+        print(f"error: GitHub knows no account by the login {login!r}.", file=sys.stderr)
+        return None
+    if looked_up.cause:
+        print(
+            f"[warn] GitHub gave no answer for the login {login!r}, since {looked_up.cause}. "
+            "Its spelling is unchecked, and the entry takes it as typed.",
+            file=sys.stderr,
+        )
+        return login
+    if looked_up.account_type != USER_TYPE or not looked_up.login:
+        return login
+    if looked_up.login != login:
+        print(
+            f"[note] GitHub spells the login {looked_up.login!r}, and the entry takes "
+            f"that spelling, not {login!r}."
+        )
+    return looked_up.login
 
 
 def _read_members(file_path: Path, yaml_loader: YAML) -> list[dict]:

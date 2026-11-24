@@ -1,0 +1,1167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "look-report.schema.json",
+  "title": "The viewing step's report — visual-communication capability",
+  "description": "Formal shape of `report.json`, the report `pkit visual look` writes beside its images, in the clone's local folder (DEC-015 points 3 and 5, DEC-062 points 1 and 2): what the images cannot show as the renderer set it, and what the checks found on the scenes the run computed. It takes one form through the SVG renderer and another through the HTML renderer, told apart by the renderer's name. The graphic-design reviewer reads its form, so the form binds as an interface does (DEC-062, Implications), and each report a look writes holds to this schema. Stands alone like `defs.schema.json`: the report names no schema, and no file of the capability's format binds to it.",
+  "type": "object",
+  "required": [
+    "renderer"
+  ],
+  "properties": {
+    "renderer": {
+      "$ref": "#/$defs/renderer"
+    }
+  },
+  "if": {
+    "properties": {
+      "renderer": {
+        "properties": {
+          "name": {
+            "const": "svg"
+          }
+        }
+      }
+    }
+  },
+  "then": {
+    "$ref": "#/$defs/through-svg"
+  },
+  "else": {
+    "$ref": "#/$defs/through-html"
+  },
+  "$defs": {
+    "through-svg": {
+      "description": "The report of a run through the SVG renderer, whose pages resvg draws.",
+      "type": "object",
+      "required": [
+        "piece",
+        "lock",
+        "renderer",
+        "tool",
+        "capability",
+        "reaches",
+        "on-no-image",
+        "images",
+        "dropped",
+        "dropped-not-read",
+        "losses",
+        "drawn-otherwise",
+        "profiles"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "piece": {
+          "$ref": "#/$defs/piece"
+        },
+        "lock": {
+          "$ref": "#/$defs/lock"
+        },
+        "renderer": {
+          "$ref": "#/$defs/renderer",
+          "properties": {
+            "name": {
+              "const": "svg"
+            }
+          }
+        },
+        "tool": {
+          "description": "The tool that drew the pages: resvg, its version, and the version of the resvg-py wheel that holds it.",
+          "type": "object",
+          "required": [
+            "name",
+            "version",
+            "wheel"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "const": "resvg"
+            },
+            "version": {
+              "type": "string"
+            },
+            "wheel": {
+              "type": "string"
+            }
+          }
+        },
+        "capability": {
+          "$ref": "#/$defs/capability"
+        },
+        "reaches": {
+          "$ref": "#/$defs/reaches"
+        },
+        "on-no-image": {
+          "$ref": "#/$defs/on-no-image"
+        },
+        "images": {
+          "description": "Each image drawn, each band of a page among them.",
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/image"
+              },
+              {
+                "description": "Through the SVG renderer, `on-white` is true where the page draws no ground of its own, and no image names a forced palette.",
+                "required": [
+                  "on-white"
+                ],
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "on-browser-ground"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "forced"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "dropped": {
+          "description": "Each text or run the tool drew nothing of, whatever the cause (DEC-015 point 3). Each page is read whole, once.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "language",
+              "key",
+              "page",
+              "element",
+              "text",
+              "whole"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "$ref": "defs.schema.json#/$defs/language"
+              },
+              "key": {
+                "$ref": "defs.schema.json#/$defs/key"
+              },
+              "page": {
+                "$ref": "defs.schema.json#/$defs/trace"
+              },
+              "element": {
+                "$ref": "defs.schema.json#/$defs/trace"
+              },
+              "text": {
+                "type": "string"
+              },
+              "whole": {
+                "description": "True for a whole text, and false for a run lost from a line.",
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "dropped-not-read": {
+          "description": "The causes of a text the page does not show that this read does not reach, so a text a part covers, or the page's edge cuts, is not named in `dropped` (DEC-037 point 1).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "cut",
+              "covered"
+            ]
+          }
+        },
+        "losses": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/loss"
+              },
+              {
+                "not": {
+                  "required": [
+                    "forced"
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "drawn-otherwise": {
+          "description": "Each run measured in more than one family, which resvg may set whole on a line in one of them (DEC-015 point 2).",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "language",
+              "key",
+              "page",
+              "element",
+              "text",
+              "families"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "$ref": "defs.schema.json#/$defs/language"
+              },
+              "key": {
+                "$ref": "defs.schema.json#/$defs/key"
+              },
+              "page": {
+                "$ref": "defs.schema.json#/$defs/trace"
+              },
+              "element": {
+                "$ref": "defs.schema.json#/$defs/trace"
+              },
+              "text": {
+                "type": "string"
+              },
+              "families": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "profiles": {
+          "description": "Each picture a page shows that carries a colour profile, which resvg may draw without it (DEC-025 point 5).",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "language",
+              "key",
+              "page",
+              "element",
+              "picture",
+              "why"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "$ref": "defs.schema.json#/$defs/language"
+              },
+              "key": {
+                "$ref": "defs.schema.json#/$defs/key"
+              },
+              "page": {
+                "$ref": "defs.schema.json#/$defs/trace"
+              },
+              "element": {
+                "$ref": "defs.schema.json#/$defs/trace"
+              },
+              "picture": {
+                "description": "The name of the picture's file.",
+                "type": "string"
+              },
+              "why": {
+                "$ref": "defs.schema.json#/$defs/text"
+              }
+            }
+          }
+        }
+      }
+    },
+    "through-html": {
+      "description": "The report of a run through the HTML renderer, whose page files a browser draws. After a stop, it holds no image, and `stopped` says what stopped the browser (DEC-020 point 8).",
+      "type": "object",
+      "required": [
+        "piece",
+        "lock",
+        "renderer",
+        "tool",
+        "capability",
+        "reaches",
+        "on-no-image",
+        "forced",
+        "stopped",
+        "page-files",
+        "images",
+        "words",
+        "dropped",
+        "losses",
+        "drawn-otherwise",
+        "refused"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "piece": {
+          "$ref": "#/$defs/piece"
+        },
+        "lock": {
+          "$ref": "#/$defs/lock"
+        },
+        "renderer": {
+          "$ref": "#/$defs/renderer",
+          "properties": {
+            "name": {
+              "const": "html"
+            }
+          }
+        },
+        "tool": {
+          "description": "The browser that drew the pages: its name, its version and its program; `null` where it drew none, as after a stop.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "name",
+                "version",
+                "program"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "program": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "capability": {
+          "$ref": "#/$defs/capability"
+        },
+        "reaches": {
+          "$ref": "#/$defs/reaches"
+        },
+        "on-no-image": {
+          "$ref": "#/$defs/on-no-image"
+        },
+        "stands-for": {
+          "description": "That each image stands for the browser that drew it alone, and for no other. Given where a browser drew.",
+          "$ref": "defs.schema.json#/$defs/text"
+        },
+        "forced": {
+          "description": "The forced palettes the run drew, the browser's flag that forced them, the folder of each, and what their images do not show (DEC-027 points 5 and 6); `null` where the run asks for none.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "palettes",
+                "flag",
+                "folders",
+                "does-not-show"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "palettes": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "$ref": "#/$defs/palette"
+                  }
+                },
+                "flag": {
+                  "$ref": "defs.schema.json#/$defs/text"
+                },
+                "folders": {
+                  "description": "The folder of each palette's images, by the palette's name, inside the renderer's folder.",
+                  "type": "object",
+                  "propertyNames": {
+                    "$ref": "#/$defs/palette"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "does-not-show": {
+                  "$ref": "defs.schema.json#/$defs/text"
+                }
+              }
+            }
+          ]
+        },
+        "stopped": {
+          "description": "`null` where the browser drew. After a stop, what stopped it, where the step looked for a browser, the program it started and what that said; whether a sandbox stopped it, whether it ran as root, and whether the start that stopped forced its colours; the ways on in their order, and what an agent does (DEC-020 point 8, DEC-024 points 4 and 6, DEC-027 point 4).",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "what",
+                "looked",
+                "program",
+                "said",
+                "sandbox",
+                "as-root",
+                "forcing",
+                "go-on",
+                "for-an-agent"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "what": {
+                  "$ref": "defs.schema.json#/$defs/text"
+                },
+                "looked": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "program": {
+                  "type": "string"
+                },
+                "said": {
+                  "type": "string"
+                },
+                "sandbox": {
+                  "type": "boolean"
+                },
+                "as-root": {
+                  "type": "boolean"
+                },
+                "forcing": {
+                  "type": "boolean"
+                },
+                "go-on": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "$ref": "defs.schema.json#/$defs/text"
+                  }
+                },
+                "for-an-agent": {
+                  "$ref": "defs.schema.json#/$defs/text"
+                }
+              }
+            }
+          ]
+        },
+        "page-files": {
+          "description": "Each page file, with its language, the key that names it, each key it holds, and its file's name.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "language",
+              "key",
+              "keys",
+              "file"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "$ref": "defs.schema.json#/$defs/language"
+              },
+              "key": {
+                "$ref": "defs.schema.json#/$defs/key"
+              },
+              "keys": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "defs.schema.json#/$defs/key"
+                }
+              },
+              "file": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "images": {
+          "description": "Each image drawn, each band of a page and each forced image among them; none after a stop.",
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/image"
+              },
+              {
+                "description": "Through the HTML renderer, `on-browser-ground` is true where the page draws no ground of its own, and `forced` names the forced palette the image was drawn in, `null` for none.",
+                "required": [
+                  "on-browser-ground",
+                  "forced"
+                ],
+                "not": {
+                  "required": [
+                    "on-white"
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "words": {
+          "description": "Each text whose spans differ between the scene and the page file, in their words, order or number, with each side's spans: the scene's by line, and, for each element of the page file that carries the text's id, its spans by line.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "language",
+              "key",
+              "forced",
+              "page",
+              "element",
+              "scene",
+              "document"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "$ref": "defs.schema.json#/$defs/language"
+              },
+              "key": {
+                "$ref": "defs.schema.json#/$defs/key"
+              },
+              "forced": {
+                "$ref": "#/$defs/forced-in"
+              },
+              "page": {
+                "$ref": "defs.schema.json#/$defs/trace"
+              },
+              "element": {
+                "$ref": "defs.schema.json#/$defs/trace"
+              },
+              "scene": {
+                "$ref": "#/$defs/lines"
+              },
+              "document": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/lines"
+                }
+              }
+            }
+          }
+        },
+        "dropped": {
+          "description": "Each span the page does not show in full, in one entry for each cause, which `why` names (DEC-037 points 1 and 2). A cut or covered entry gives `share`, the share of the span's strong ink its cause loses, and no other entry gives one.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "language",
+              "key",
+              "forced",
+              "page",
+              "element",
+              "text",
+              "why"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "$ref": "defs.schema.json#/$defs/language"
+              },
+              "key": {
+                "$ref": "defs.schema.json#/$defs/key"
+              },
+              "forced": {
+                "$ref": "#/$defs/forced-in"
+              },
+              "page": {
+                "$ref": "defs.schema.json#/$defs/trace"
+              },
+              "element": {
+                "$ref": "defs.schema.json#/$defs/trace"
+              },
+              "text": {
+                "type": "string"
+              },
+              "why": {
+                "enum": [
+                  "no ink",
+                  "off the page",
+                  "cut",
+                  "covered"
+                ]
+              },
+              "share": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "if": {
+              "properties": {
+                "why": {
+                  "enum": [
+                    "cut",
+                    "covered"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "share"
+              ]
+            },
+            "else": {
+              "not": {
+                "required": [
+                  "share"
+                ]
+              }
+            }
+          }
+        },
+        "losses": {
+          "type": "array",
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/loss"
+              },
+              {
+                "required": [
+                  "forced"
+                ]
+              }
+            ]
+          }
+        },
+        "drawn-otherwise": {
+          "description": "Each span drawn otherwise than the engine measured it, as `why` names: in a font of the machine, with each such font, or with no face of its family at its weight in the file, with that family and weight.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "language",
+              "key",
+              "forced",
+              "page",
+              "element",
+              "text",
+              "why"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "$ref": "defs.schema.json#/$defs/language"
+              },
+              "key": {
+                "$ref": "defs.schema.json#/$defs/key"
+              },
+              "forced": {
+                "$ref": "#/$defs/forced-in"
+              },
+              "page": {
+                "$ref": "defs.schema.json#/$defs/trace"
+              },
+              "element": {
+                "$ref": "defs.schema.json#/$defs/trace"
+              },
+              "text": {
+                "type": "string"
+              },
+              "why": {
+                "enum": [
+                  "no face",
+                  "font of the machine"
+                ]
+              },
+              "family": {
+                "type": "string"
+              },
+              "weight": {
+                "type": "string"
+              },
+              "fonts": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "if": {
+              "properties": {
+                "why": {
+                  "const": "no face"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "family",
+                "weight"
+              ],
+              "not": {
+                "required": [
+                  "fonts"
+                ]
+              }
+            },
+            "else": {
+              "required": [
+                "fonts"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "family"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "weight"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "refused": {
+          "description": "Each request the page made, which the browser refused. A page file asks for nothing, so each is a fault of the file.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "language",
+              "key",
+              "forced",
+              "url"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "$ref": "defs.schema.json#/$defs/language"
+              },
+              "key": {
+                "$ref": "defs.schema.json#/$defs/key"
+              },
+              "forced": {
+                "$ref": "#/$defs/forced-in"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "piece": {
+      "description": "The piece's name.",
+      "$ref": "defs.schema.json#/$defs/name"
+    },
+    "lock": {
+      "description": "The lock the scenes were computed and the images drawn under (DEC-015 point 4).",
+      "$ref": "defs.schema.json#/$defs/lock"
+    },
+    "renderer": {
+      "description": "The renderer whose pages the run drew, with its version.",
+      "type": "object",
+      "required": [
+        "name",
+        "version"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "enum": [
+            "svg",
+            "html"
+          ]
+        },
+        "version": {
+          "$ref": "defs.schema.json#/$defs/release"
+        }
+      }
+    },
+    "capability": {
+      "description": "The capability's name and the version that ran the checks, so that whoever reads the report can tell which release drew the findings. No reader reads a check's reach from it (DEC-062 point 2).",
+      "type": "object",
+      "required": [
+        "name",
+        "version"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "const": "visual-communication"
+        },
+        "version": {
+          "$ref": "defs.schema.json#/$defs/release"
+        }
+      }
+    },
+    "reaches": {
+      "description": "The reach of each check that states one, by its id, as the code that ran states it (DEC-062 point 2, DEC-063 point 1).",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "defs.schema.json#/$defs/name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/reach"
+      }
+    },
+    "reach": {
+      "description": "One check's reach: the labels its findings carry, the axes it compares scenes across, whether it is a check of colour, the kinds of place it measures and those it leaves out, and what it states as a fact where it could measure nothing, with each such statement's label.",
+      "type": "object",
+      "required": [
+        "labels",
+        "compares",
+        "colour",
+        "measures",
+        "leaves-out",
+        "states",
+        "statements"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "labels": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "defs.schema.json#/$defs/name"
+          }
+        },
+        "compares": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "languages",
+              "sizes"
+            ]
+          }
+        },
+        "colour": {
+          "type": "boolean"
+        },
+        "measures": {
+          "type": "array",
+          "items": {
+            "$ref": "defs.schema.json#/$defs/text"
+          }
+        },
+        "leaves-out": {
+          "type": "array",
+          "items": {
+            "$ref": "defs.schema.json#/$defs/text"
+          }
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "$ref": "defs.schema.json#/$defs/text"
+          }
+        },
+        "statements": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "defs.schema.json#/$defs/name"
+          }
+        }
+      }
+    },
+    "on-no-image": {
+      "description": "Each finding the run gives to no image drawn, once for each key it holds for, since it lies at a language, a key or a page the run did not draw (DEC-062 point 1).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "finding": {
+      "description": "A finding of a check that runs on a scene, as the report gives it (DEC-062 point 1): the id of its check where that check states a reach, else `null`; its label, level, location and message, as the check gives them; and its language, key and page, each `null` where it holds in every language, at every key or on no page. Its key is a whole key for a finding of a check of colour that names a combination, and a key over the size axes for any other.",
+      "type": "object",
+      "required": [
+        "check",
+        "label",
+        "level",
+        "location",
+        "message",
+        "language",
+        "key",
+        "page"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "check": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "defs.schema.json#/$defs/name"
+            }
+          ]
+        },
+        "label": {
+          "$ref": "defs.schema.json#/$defs/name"
+        },
+        "level": {
+          "enum": [
+            "fails",
+            "attention",
+            "fact"
+          ]
+        },
+        "location": {
+          "description": "Where it lies: its file, and what within it after `#`.",
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "$ref": "defs.schema.json#/$defs/text"
+        },
+        "language": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "defs.schema.json#/$defs/language"
+            }
+          ]
+        },
+        "key": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "defs.schema.json#/$defs/key"
+            }
+          ]
+        },
+        "page": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "defs.schema.json#/$defs/trace"
+            }
+          ]
+        }
+      }
+    },
+    "image": {
+      "description": "One image: one page drawn, or one band of it. Its language, key and page; the page's number, from 1; its band, where it shows one; the image's file and its frames' file, in the renderer's folder; its pixels; whether its page is too wide for its smallest text to read; whether the page draws no ground of its own, by the renderer's own field; and what the checks found on it (DEC-062 points 1 and 2): each finding that holds on it, the id of each check that measured it, and each check that states a reach and did not, with why.",
+      "type": "object",
+      "required": [
+        "language",
+        "key",
+        "page",
+        "number",
+        "image",
+        "frames",
+        "pixels",
+        "findings",
+        "measured-by",
+        "not-measured"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "$ref": "defs.schema.json#/$defs/language"
+        },
+        "key": {
+          "$ref": "defs.schema.json#/$defs/key"
+        },
+        "forced": {
+          "$ref": "#/$defs/forced-in"
+        },
+        "page": {
+          "$ref": "defs.schema.json#/$defs/trace"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "band": {
+          "description": "The band an image shows (DEC-022 point 7): its number from 1, how many the page has, and its top and height in the page's px.",
+          "type": "object",
+          "required": [
+            "number",
+            "of",
+            "top",
+            "height"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "number": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "of": {
+              "type": "integer",
+              "minimum": 2
+            },
+            "top": {
+              "type": "number",
+              "minimum": 0
+            },
+            "height": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "image": {
+          "type": "string",
+          "pattern": "\\.png$"
+        },
+        "frames": {
+          "type": "string",
+          "pattern": "\\.frames\\.json$"
+        },
+        "pixels": {
+          "type": "object",
+          "required": [
+            "width",
+            "height"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "too-wide": {
+          "description": "Given, and true, on each image of a page too wide for its smallest text to read.",
+          "const": true
+        },
+        "on-white": {
+          "description": "Through the SVG renderer: whether the page draws no ground of its own, so its image lies on white.",
+          "type": "boolean"
+        },
+        "on-browser-ground": {
+          "description": "Through the HTML renderer: whether the page draws no ground of its own, so its image lies on the browser's own ground in the mode drawn, or under a forced palette on that palette's ground.",
+          "type": "boolean"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        },
+        "measured-by": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "defs.schema.json#/$defs/name"
+          }
+        },
+        "not-measured": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "check",
+              "why"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "check": {
+                "$ref": "defs.schema.json#/$defs/name"
+              },
+              "why": {
+                "$ref": "defs.schema.json#/$defs/text"
+              }
+            }
+          }
+        }
+      }
+    },
+    "loss": {
+      "description": "A loss the renderer reports, known before it ran or reported as it drew (DEC-005 point 9), on the page it lies on, in the one form every plugin reports, and whether the piece accepts it. Through the HTML renderer it names its forced palette, `null` for none.",
+      "type": "object",
+      "required": [
+        "language",
+        "key",
+        "page",
+        "plugin",
+        "what",
+        "did",
+        "why",
+        "accepted"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "$ref": "defs.schema.json#/$defs/language"
+        },
+        "key": {
+          "$ref": "defs.schema.json#/$defs/key"
+        },
+        "page": {
+          "$ref": "defs.schema.json#/$defs/trace"
+        },
+        "forced": {
+          "$ref": "#/$defs/forced-in"
+        },
+        "plugin": {
+          "$ref": "defs.schema.json#/$defs/loss/properties/plugin"
+        },
+        "what": {
+          "$ref": "defs.schema.json#/$defs/loss/properties/what"
+        },
+        "did": {
+          "$ref": "defs.schema.json#/$defs/loss/properties/did"
+        },
+        "why": {
+          "$ref": "defs.schema.json#/$defs/loss/properties/why"
+        },
+        "accepted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "palette": {
+      "description": "A forced palette the browser gives: `light`, dark text on a light ground, or `dark`, the reverse (DEC-027 point 2).",
+      "enum": [
+        "light",
+        "dark"
+      ]
+    },
+    "forced-in": {
+      "description": "The forced palette an image, or an entry that lies on one, was drawn in; `null` for none.",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/palette"
+        }
+      ]
+    },
+    "lines": {
+      "description": "A text's spans, by line.",
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

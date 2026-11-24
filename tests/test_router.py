@@ -12,12 +12,15 @@ spawned; the routing *decision* is what is under test.
 from __future__ import annotations
 
 import os
+import tomllib
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from project_kit import router
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 class _ExecCalled(Exception):
@@ -255,10 +258,23 @@ def test_is_routed_child_reads_loop_guard(tmp_path: Path) -> None:
 
 def test_pinned_base_is_git_tag_pin(tmp_path: Path) -> None:
     base = router._pinned_base("1.100.0")
-    assert base[0] == "uvx"
-    assert "--from" in base
-    assert f"{router.DISTRIBUTION_GIT_URL}@v1.100.0" in base
-    assert base[-1] == "project-kit"
+    assert base == ["uvx", "--from", f"{router.DISTRIBUTION_GIT_URL}@v1.100.0", "pkit"]
+
+
+def test_the_pinned_base_runs_a_console_script_the_package_declares() -> None:
+    """uv runs from a package only an executable the package provides, and refuses
+    any other as the command, so the command the pinned base names is one of the
+    console scripts `pyproject.toml` declares (#3408)."""
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    assert router._pinned_base("1.100.0")[-1] in pyproject["project"]["scripts"]
+
+
+def test_the_pinned_command_is_the_pinned_base_as_typed() -> None:
+    """A message names the run the router makes, word for word (#3408)."""
+    assert router.pinned_command("1.100.0") == (
+        f"uvx --from {router.DISTRIBUTION_GIT_URL}@v1.100.0 pkit"
+    )
 
 
 # --- Route 1: source checkout → exec the dispatcher ----------------------------
@@ -510,6 +526,28 @@ def test_route2_fallback_to_a_newer_binary_does_not_call_it_older(
     assert "Running 1.139.0 instead" in err
 
 
+def test_route2_fallback_says_when_this_binary_is_older_than_a_candidate_pin(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    no_exec: None,
+    ran_self: list[bool],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A pin may name a release candidate (ADR-089 point 6), and the fallback orders
+    it by PEP 440 as it orders a release."""
+    _make_adopter(tmp_path, "2.0.0rc1")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(router, "running_version", lambda: "1.150.0")
+    _patch_subprocess(monkeypatch, [_FakeCompleted(1)])
+
+    router.main(["status"])
+
+    assert ran_self == [True]
+    err = capsys.readouterr().err
+    assert "pkit 1.150.0 instead, an OLDER pkit than the pin names" in err
+    assert f"{router.DISTRIBUTION_GIT_URL}@v2.0.0rc1" in err
+
+
 def test_route2_fallback_notice_is_said_once_per_command(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -542,10 +580,22 @@ def test_route2_fallback_notice_is_said_once_per_command(
         ("1.9.0", "1.10.0", True),  # numeric, not lexical
         ("1.149", "1.150.0", False),  # not MAJOR.MINOR.PATCH: no order claimed
         ("1.149.0", "main", False),
-        ("1.149.0rc1", "1.150.0", False),
+        # A release candidate, the other form a pin takes, in PEP 440's order
+        ("1.149.0rc1", "1.150.0", True),
+        ("1.150.0", "2.0.0rc1", True),
+        ("2.0.0rc1", "2.0.0", True),  # a candidate sorts below its final release
+        ("2.0.0", "2.0.0rc1", False),
+        ("2.0.0rc1", "2.0.0rc2", True),
+        ("2.0.0rc2", "2.0.0rc10", True),  # numeric, not lexical
+        ("2.0.0rc1", "2.0.0rc1", False),
+        ("2.0.0rc", "2.0.0", False),  # no candidate number: no order claimed
+        ("2.0.0a1", "2.0.0", False),  # another pre-release: no order claimed
+        ("2.0.0-rc.1", "2.0.0", False),
     ],
 )
-def test_is_older_release_orders_only_bare_releases(version: str, than: str, older: bool) -> None:
+def test_is_older_release_orders_releases_and_candidates(
+    version: str, than: str, older: bool
+) -> None:
     assert router._is_older_release(version, than) is older
 
 

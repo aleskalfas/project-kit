@@ -1,0 +1,85 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+# The design systems its job and its form come from (DEC-022 point 4): the GOV.UK Design
+# System's headings, the largest of which names a page, with the lead paragraph under it,
+# and the U.S. Web Design System's intro text under a page's heading.
+about: >-
+  What names a page: its title, after its concept's sign where it has one, and the lead
+  under it that states the page's point, where the content gives one. The title takes a
+  type of its own, the type of a page's title, so a brand that sizes that type draws the
+  page's head apart from every head of the page's parts, a section's among them. The lead
+  stands a small space under the title, so the two read as one head. A line of its text
+  runs no longer than the brand's length of a line. It fills the width it is given, and
+  sets its own inset, so a tinted title's fill reaches the page's edge.
+
+fields:
+  type: object
+  required: [title]
+  properties:
+    title:
+      type: string
+      description: The page's name, in a few words.
+      x-pkit-prose: true
+    lead:
+      type: string
+      description: What the page says, in a sentence.
+      x-pkit-prose: true
+
+options:
+  # What the title lies on: the page's background, or its colour family's fill.
+  fill: [plain, tint]
+
+colour: neutral
+
+values:
+  # The inset from each edge: a large spacing on a wide page, the inset on a phone.
+  margin: {by: ":device", desktop: "=@starter.margin", phone: "=@starter.inset"}
+  inner: "=:width - margin - margin"
+  # How wide the words are: the whole inner width, up to the brand's length of a line.
+  measure: "=min(@size.line, inner)"
+  # The title's row holds the sign and, after it, the title, which is as wide as the lead
+  # less the sign and the gap after it, where the sign is drawn.
+  heading: "=max(sign.height, title.height)"
+  room: "=sign.width + min(sign.width, @space.sign-gap)"
+  # How tall the title's row and the lead are together. The lead stands a small space
+  # under the title, closer than a section's text under its head, so the two read as one
+  # head; a lead not drawn has no height, and no gap stands above it.
+  words: "=heading + min(heading, lead.height, @space.2) + lead.height"
+
+parts:
+  box:
+    box: {fill: {by: fill, plain: background, tint: ":colour.fill"}}
+    width: "=:width"
+    height: "=:height"
+  # The concept's sign, before the title, centred on the title's row, no wider than the
+  # words. It takes the family's text, so it shows the concept's colour on the title's
+  # fill, plain or tinted. A title whose family comes from no concept with a sign draws
+  # none, and the sign then has no size.
+  sign:
+    sign: {fill: ":colour.text"}
+    x: "=margin"
+    y: "=margin + (heading - sign.height) / 2"
+    width: "=min(@starter.sign, measure)"
+    height: "=min(@starter.sign, measure)"
+  title:
+    text:
+      content: title
+      style: starter.type.title
+      fill: {by: fill, plain: text-primary, tint: ":colour.text"}
+    x: "=margin + room"
+    y: "=margin + (heading - title.height) / 2"
+    width: "=measure - room"
+  lead:
+    when: lead
+    text:
+      content: lead
+      style: type.body
+      fill: {by: fill, plain: text-primary, tint: ":colour.text"}
+    x: "=margin"
+    y: "=margin + heading + min(heading, lead.height, @space.2)"
+    width: "=measure"
+
+preferred:
+  height: "=margin + words + margin"

@@ -101,6 +101,13 @@ try:
 except ImportError:  # pragma: no cover
     from _lib import axis_labels  # type: ignore[no-redef]
 
+# The board read seam, which owns every read of the board ([pkit:ADR-096] point
+# 6), the re-read of one card's values among them (`FIELD_REREAD_QUERY`).
+try:
+    import board_fields  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover
+    from _lib import board_fields  # type: ignore[no-redef]
+
 # The gh shell-out helper (adopter host/owner pinned per DEC-023). Imported the
 # same defensive way `substrate_writes` imports it, for the one write this module
 # executes itself: the label write, which ADR-031's non-label seam does not own.
@@ -789,20 +796,14 @@ def _milestone_guarded_fragment(change: PlannedChange, quoted: str, cite: str) -
 
 
 # The GraphQL field-values re-read — the SINGLE source of truth for this query,
-# consumed by BOTH read surfaces so they can never silently desync:
+# kept in the board read seam (`board_fields.FIELD_REREAD_QUERY`) and consumed by
+# BOTH read surfaces so they can never silently desync:
 #   * the emit-script field guard embeds it (`_field_guarded_fragment` below), and
 #   * the `--apply` path's fresh read issues it (`_read_current_field_value` in
-#     back-fill.py imports THIS constant — not a copied literal).
+#     back-fill.py reads THIS name — not a copied literal).
 # Both re-check the board field identically because both read the same string.
 # `--jq` extracts the matching field's optionId-or-text in one bash line.
-FIELD_REREAD_QUERY = (
-    "query($item: ID!) { node(id: $item) { ... on ProjectV2Item { "
-    "fieldValues(first: 50) { nodes { "
-    "... on ProjectV2ItemFieldSingleSelectValue { optionId "
-    "field { ... on ProjectV2FieldCommon { id } } } "
-    "... on ProjectV2ItemFieldTextValue { text "
-    "field { ... on ProjectV2FieldCommon { id } } } } } } } }"
-)
+FIELD_REREAD_QUERY = board_fields.FIELD_REREAD_QUERY
 
 
 def _field_reread_jq(field_id: str) -> str:

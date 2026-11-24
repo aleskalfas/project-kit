@@ -1,0 +1,26 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit release plan --pre` and `apply --pre` plan a release candidate from
+  the commit they run at: the versions it records and the changesets pending
+  in its tree, each version the release moves written with the suffix `rcN`
+  (ADR-092 point 2). They refuse, before anything is written, where the
+  default branch's head, read from the remote, is not in that commit's
+  history, where the working tree differs from it, where the release moves no
+  backbone version, and outside the methodology's source repository. `N` is
+  one past the highest number any candidate tag on the remote carries,
+  whatever its version, and 1 where there is none. The cut refuses where it
+  cannot read the remote's tags (ADR-092 point 3). The cut raises no floor and
+  consumes no changeset, writes the broaden and each declared upper bound as
+  the final release would, and heads its changelog section with the
+  candidate's version. It records its base, the commit it is cut from and the
+  version the backbone and each component record there, in
+  `src/project_kit/candidate_base.json` (ADR-092 point 9). It commits on no
+  branch, and `--tag` tags that commit `v<candidate>`. `--push` is refused,
+  since the tag is pushed only once the wheel built from it is checked.
+  `pkit release publish-notes` reads a candidate's notes at its tag and marks
+  its Release a pre-release, and the changelog lint reads a candidate's
+  heading. The wheel's version reads PEP 440's pre-release form, so a
+  candidate's tree builds. The release and CLI references say so.

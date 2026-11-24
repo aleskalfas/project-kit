@@ -3,10 +3,22 @@ schema_version: 1
 
 status: experimental
 about: >-
-  What rests on what: levels stacked one on another, the top first, each as wide as the
-  stack, drawn by the card. To the right of the stack, notes may stand that hold across
-  the levels, sharing the stack's height. Ties join a note or a level to another, each
-  drawn by the connector.
+  What rests on what: levels stacked one on another, the top first, drawn by the level. As
+  a stack, each level is as wide as the stack; as steps, each is a step narrower than the
+  one under it, centred on it, so the levels narrow to the top. Each level is shaded by
+  its place, from the order's first end at the top to its last at the foot, unless the
+  content asks for none. To the right of the stack, to its left or on both sides, a column
+  of notes may stand that hold across the levels, sharing the stack's height. Ties join a
+  note or a level to another, each drawn by the connector, and end at a level's drawn
+  edge.
+
+options:
+  # The levels as a stack of one width, or as steps that narrow to the top.
+  shape: [stack, steps]
+  # Each level shaded by its place in the order, a step between the order's two ends, or
+  # none, so each level takes its own colour family (DEC-032 point 3). The steps are the
+  # default, since layers' point is an order: each level rests on those under it.
+  shade: [steps, plain]
 
 fields:
   type: object
@@ -21,18 +33,24 @@ fields:
       type: object
       description: >-
         The component that draws each level that names none, with words for its options:
-        the card unless the content names another.
+        the level unless the content names another.
     notes:
       type: array
       description: >-
         What holds across the levels, to the right of the stack, each with the fields of
         the component that draws it.
       items: {type: object}
+    left-notes:
+      type: array
+      description: >-
+        What holds across the levels, to the left of the stack, each with the fields of
+        the component that draws it.
+      items: {type: object}
     note:
       type: object
       description: >-
-        The component that draws each note that names none, with words for its options:
-        the card unless the content names another.
+        The component that draws each note of either side that names none, with words for
+        its options: the card unless the content names another.
     ties:
       type: array
       description: >-
@@ -48,14 +66,28 @@ fields:
 lists:
   levels: {component: level}
   notes: {component: note}
+  left-notes: {component: note}
   ties: {component: tie, ends: [from, to]}
 
 values:
-  # How wide the notes stand: a third of the width, less the gap beside them.
+  # How wide a column of notes stands: a third of the width, less the gap beside it. With
+  # a column on each side, each keeps that width, and the stack takes what is left.
   aside: "=(:width - @starter.gap) / 3"
 
 parts:
-  # Without notes the stack takes the whole width: a part not drawn has no width.
+  # A column of notes on either side. Two notes whose ties would cross in one column, as
+  # one tied to the first and third levels and another to the second, stand on two sides,
+  # where their ties cross nowhere. Each note of a column shares the stack's height with
+  # the others, so a note alone in its column spans the stack, and each of its ties leaves
+  # it toward the stack. Without notes the stack takes the whole width: a part not drawn
+  # has no width.
+  left-notes:
+    when: left-notes
+    repeat: left-notes
+    draw: starter/card
+    width: "=aside"
+    height: "=levels.height"
+    column: {gap: "=@starter.gap", sizes: equal, align-items: stretch}
   notes:
     when: notes
     repeat: notes
@@ -64,11 +96,25 @@ parts:
     width: "=aside"
     height: "=levels.height"
     column: {gap: "=@starter.gap", sizes: equal, align-items: stretch}
+  # As steps, each level is one step narrower than the one under it, a step being the
+  # stack's width over twice the number of levels: the last is as wide as the stack, and
+  # the first half of it and one step, so the top stays wider than half the stack. With
+  # `shade: steps`, each level's place takes a step of the order, spread from its first end
+  # at the top to its last at the foot over the levels drawn, and its default component,
+  # the level, shows the step in its fill (DEC-032 points 3 and 4). A level that names a
+  # concept keeps its concept's colour.
   levels:
     repeat: levels
-    draw: starter/card
-    width: "=:width - notes.width - min(notes.width, @starter.gap)"
-    column: {gap: "=@starter.gap", align-items: stretch}
+    draw: starter/level
+    colour: {by: shade, steps: ":steps", plain: null}
+    x: "=left-notes.width + min(left-notes.width, @starter.gap)"
+    width: >-
+      =:width - left-notes.width - min(left-notes.width, @starter.gap) - notes.width
+      - min(notes.width, @starter.gap)
+    column:
+      gap: "=@starter.gap"
+      align-items: {by: shape, stack: stretch, steps: center}
+      cross-size: {by: shape, stack: null, steps: "=levels.width * (:places + :place) / (2 * :places)"}
   # Drawn last, over the levels and the notes.
   ties:
     repeat: ties

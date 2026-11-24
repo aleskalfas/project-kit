@@ -1,0 +1,9 @@
+component: project-management
+kind: none
+body: >
+  The README says that where the identity is unresolved, `move-issue` and
+  `close-issue` hand the engine no actor, and the engine takes none by default.
+  So the engine refuses a move through the gate on Done, and the issue still
+  moves, but the move is left out of the journal, with a warning.
+  `_lib/move_journal.py`'s docstring no longer says the engine applies a
+  default of its own.

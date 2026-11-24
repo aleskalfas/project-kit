@@ -544,7 +544,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-local-component — local component
 
-**Example:** A talk needs a pyramid of layers whose widths step down, which no library holds. It is made inside the talk, for the talk's slides only.
+**Example:** A talk needs rings around one centre, which no library holds. It is made inside the talk, for the talk's slides only.
 
 **Distinctions:**
 

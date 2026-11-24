@@ -15,7 +15,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import changesets, cli, release, session_guard, versioning
+from project_kit import changesets, release, versioning
 from project_kit.cli import main
 from project_kit.manifest import read_backbone_manifest
 from project_kit.migrations import parse_version_tuple
@@ -226,20 +226,24 @@ def test_apply_deletes_consumed_changesets(tmp_path: Path) -> None:
     assert remaining == []
 
 
-def test_apply_cuts_tag_on_backbone_bump(tmp_path: Path) -> None:
+@pytest.mark.parametrize("pending", ["minor", "none"], ids=["a-release", "nothing-to-release"])
+def test_apply_refuses_to_tag_a_final_release_and_writes_nothing(
+    pending: str, tmp_path: Path
+) -> None:
+    """The release commit does not exist yet: a final release is tagged once its
+    release PR merges, by `pkit version tag` (ADR-092 point 6)."""
     source_kit = _make_kit(tmp_path)
-    _add(source_kit, "backbone", "minor", "x", "a.yaml")
+    _add(source_kit, "backbone", pending, "x", "a.yaml")
     plan = release.compute_release(source_kit)
-    release.apply_release(source_kit, plan, tag=True)
+    with pytest.raises(click.ClickException, match=r"refusing `--tag`.*`pkit version tag --push`"):
+        release.apply_release(source_kit, plan, tag=True)
 
-    result = subprocess.run(
-        ["git", "tag", "-l", "v1.6.0"],
-        capture_output=True,
-        text=True,
-        cwd=source_kit.parent,
-        check=True,
+    assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
+    assert list(changesets.unreleased_dir(tmp_path).glob("*.yaml"))
+    tags = subprocess.run(
+        ["git", "tag", "-l"], capture_output=True, text=True, cwd=tmp_path, check=True
     )
-    assert result.stdout.strip() == "v1.6.0"
+    assert tags.stdout == ""
 
 
 def test_apply_does_not_tag_by_default(tmp_path: Path) -> None:
@@ -263,73 +267,39 @@ def test_apply_empty_plan_is_noop(tmp_path: Path) -> None:
     source_kit = _make_kit(tmp_path)
     plan = release.compute_release(source_kit)
     assert plan.is_empty
-    release.apply_release(source_kit, plan, tag=True)  # must not raise
+    release.apply_release(source_kit, plan)  # must not raise
     assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
 
 
-# --- The cross-repository guard on a pushed tag (#1254) -------------------------
-
-
-@pytest.fixture
-def applied(monkeypatch: pytest.MonkeyPatch) -> list[str | None]:
-    """`apply_release` stubbed: how each run's clearance passed, None for a
-    run that pushes nothing and so carries none."""
-    runs: list[str | None] = []
-
-    def apply(
-        source_kit: Path,
-        plan: release.ReleasePlan,
-        *,
-        clearance: session_guard.Clearance | None,
-        **_: object,
-    ) -> None:
-        runs.append(clearance.passed if clearance is not None else None)
-
-    monkeypatch.setattr(cli, "apply_release", apply)
-    return runs
-
-
-def test_apply_pushing_a_tag_from_another_repository_is_refused_before_anything_is_written(
-    tmp_path: Path, tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """`--tag --push` changes the hosting service: in another repository than
-    the session's, with no terminal and no flag, the guard refuses at the
-    entry — no version, changelog or changeset is touched, and nothing pushed."""
-    source_kit = _make_kit(tmp_path)
-    _add(source_kit, "backbone", "minor", "x", "a.yaml")
-    sessions.rooted_elsewhere(tmp_path_factory.mktemp("session"), monkeypatch)
-    monkeypatch.chdir(tmp_path)
-    result = CliRunner().invoke(main, ["release", "apply", "--tag", "--push", "--yes"])
-    assert result.exit_code == 1
-    assert "the cross-repository guard refused" in result.stderr
-    assert "Nothing was written or pushed" in result.stderr
-    assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
-    assert list(changesets.unreleased_dir(tmp_path).glob("*.yaml"))
+# --- `--tag` refused for a final release (ADR-092 point 6) ------------------------
 
 
 @pytest.mark.parametrize(
-    ("args", "passed"),
-    [
-        (["--tag", "--push", "--allow-foreign-repo"], "flag"),
-        (["--tag"], None),
-    ],
-    ids=["pushed-with-the-flag", "tagged-only-locally"],
+    "args",
+    [["--tag"], ["--tag", "--push"], ["--tag", "--push", "--allow-foreign-repo"]],
+    ids=["tag", "tag-and-push", "tag-push-and-the-flag"],
 )
-def test_apply_from_another_repository_goes_with_the_flag_or_without_a_push(
+def test_apply_with_tag_is_refused_before_the_guard_and_anything_is_written(
     args: list[str],
-    passed: str | None,
     tmp_path: Path,
     tmp_path_factory: pytest.TempPathFactory,
     monkeypatch: pytest.MonkeyPatch,
-    applied: list[str | None],
 ) -> None:
+    """`--tag` is refused at the entry, naming `pkit version tag` after the merge:
+    nobody is asked to confirm a push that will not be made, no version, changelog
+    or changeset is touched, and nothing is tagged."""
     source_kit = _make_kit(tmp_path)
     _add(source_kit, "backbone", "minor", "x", "a.yaml")
     sessions.rooted_elsewhere(tmp_path_factory.mktemp("session"), monkeypatch)
     monkeypatch.chdir(tmp_path)
     result = CliRunner().invoke(main, ["release", "apply", *args, "--yes"])
-    assert result.exit_code == 0, result.output
-    assert applied == [passed]
+    assert result.exit_code == 1
+    assert "refusing `--tag`" in result.stderr
+    assert "once its release PR merges, by `pkit version tag --push`" in result.stderr
+    assert "Nothing was written" in result.stderr
+    assert "cross-repository guard" not in result.stderr
+    assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
+    assert list(changesets.unreleased_dir(tmp_path).glob("*.yaml"))
 
 
 def test_apply_refuses_a_piped_yes_and_writes_nothing(
@@ -359,15 +329,6 @@ def test_apply_at_a_terminal_writes_on_a_yes(
     assert result.exit_code == 0, result.output
     assert "Write these versions and consume the changesets?" in result.output
     assert (source_kit / "VERSION").read_text().strip() == "1.6.0"
-
-
-def test_apply_pushing_a_tag_without_the_guards_clearance_writes_nothing(tmp_path: Path) -> None:
-    source_kit = _make_kit(tmp_path)
-    _add(source_kit, "backbone", "minor", "x", "a.yaml")
-    plan = release.compute_release(source_kit)
-    with pytest.raises(TypeError, match="needs a clearance"):
-        release.apply_release(source_kit, plan, tag=True, push=True)
-    assert (source_kit / "VERSION").read_text().strip() == "1.5.0"
 
 
 def test_render_changelog_keys_component_only_release_by_date(tmp_path: Path) -> None:

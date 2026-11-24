@@ -39,7 +39,9 @@ Steps:
     A seat that names no pool takes nothing. Where no pool is declared, no
     milestone is read, and every seat takes from the one shared pool.
   - One listing of the open issues of work (`_lib/issue_list`), which leaves
-    state issues out. The ready Tasks are ranked from it.
+    state issues out. The ready Tasks are ranked from it. Where pkit cannot
+    tell which account is acting, every Task with an assignee is left out, as
+    `start-work` would refuse it, and a note says so, and why (#3162).
   - Where the substrate map binds the state to the board, each Task's state is
     its card's Status (DEC-062 point 5), read for every card at once and joined
     to the listing by the issue's node id (`_lib/board_status`). A Task whose
@@ -61,7 +63,8 @@ Exit codes:
   2  usage error / a clone that holds no seat, or a planner's seat / this
      clone's seat could not be confirmed / the listing reached its limit, so
      an open dependency could be missed / this code cannot read the topology
-     in full (DEC-061 point 9)
+     in full (DEC-061 point 9) / no person is named whose Tasks these are
+     (DEC-076 point 3)
   3  the open issues, or where pools are declared the open milestones, could
      not be read, or where the board carries the state the board's Status, or
      a ready Task's owner could not be read and no other Task was free
@@ -162,9 +165,24 @@ def main() -> int:
     if not passage:
         return 1
 
+    # Whose Tasks these are: the user's account GitHub answered, or, under a
+    # credential that names no user's account, the person the agent works for
+    # (DEC-076 point 3). Without one, start-work refuses, so nothing is taken.
+    person = invoker.person
+    if person is None:
+        print(f"[refused] next-task: {invoker.no_person()}.", file=sys.stderr)
+        return 2
+
     # The seat is confirmed on its state issue before the pool is read.
     try:
-        taker = task_pool.taker(capability_root, invoker.github_login, config, dry_run=args.dry_run)
+        taker = task_pool.taker(
+            capability_root,
+            invoker.github_login,
+            config,
+            dry_run=args.dry_run,
+            login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
+        )
     except instance_claims.Unconfirmed as exc:
         instance_claims.say_unconfirmed("next-task", None, exc)
         return 2
@@ -229,7 +247,7 @@ def main() -> int:
     ready = task_pool.candidates(
         listing.rows or (),
         open_numbers=_numbers(listing),
-        login=invoker.github_login,
+        login=person,
         scope=taker.scope,
         takes_over=taker.takes_over,
         readers=readers,
@@ -237,7 +255,7 @@ def main() -> int:
     )
     for number, why in task_pool.unplaced(
         listing.rows or (),
-        login=invoker.github_login,
+        login=person,
         scope=taker.scope,
         readers=readers,
         milestones=milestones,

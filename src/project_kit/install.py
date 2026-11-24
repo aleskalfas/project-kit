@@ -35,8 +35,10 @@ from project_kit.router import (
     is_routed_child,
     is_source_checkout,
     looks_like_pkit_install,
+    pin_file_path,
     source_dispatcher,
     source_dispatcher_missing,
+    write_version_pin,
 )
 
 # Settings-file template seeded into adopter projects when no
@@ -664,7 +666,15 @@ def install_kit(target_root: Path, dry_run: bool = False, refuse_proposals: bool
     tree, or if the target is the source itself (project-kit
     self-hosts). With `refuse_proposals`, the explicit flag, it writes the
     key that turns the landing check's refusal on (ADR-081 point 5).
+
+    Run by a release candidate, it refuses unless routing is bypassed, and pins
+    the project it installs at the candidate, last of its writes (ADR-089 point
+    7, ADR-064 point 3). The candidate's upgrade through the bypass finishes such
+    an install cut short.
     """
+    from project_kit.candidates import is_candidate, refuse_init
+    from project_kit.manifest import read_kit_version
+
     source_kit = find_source_kit()
     ctx = InstallContext(target_root=target_root, source_kit=source_kit, dry_run=dry_run)
 
@@ -673,6 +683,8 @@ def install_kit(target_root: Path, dry_run: bool = False, refuse_proposals: bool
     _refuse_if_target_is_source(ctx)
     _refuse_reserved_adapter_names(ctx)
     _refuse_shared_component_names(ctx)
+    version = read_kit_version(source_kit)
+    refuse_init(version, target_root, bypassed=is_route_bypassed(os.environ))
 
     click.echo(f"Installing project-kit into {target_root}")
     click.echo(f"  source: {source_kit}")
@@ -713,8 +725,24 @@ def install_kit(target_root: Path, dry_run: bool = False, refuse_proposals: bool
     ensure_agent_workspace(ctx)
     provision_query_commands(ctx)
     _record_install_completion(ctx)
+    if is_candidate(version):
+        _pin_the_candidate(ctx, version)
     _print_next_steps(ctx, settings_backed_up=settings_backed_up, pkit_found=pkit_on_path())
     warn_if_session_elsewhere(target_root, command="init")
+
+
+def _pin_the_candidate(ctx: InstallContext, version: str) -> None:
+    """Pin the project that an `init` run by the release candidate *version*
+    installed, at that candidate, after the completion. A project on a candidate
+    always stays pinned, so the router keeps it on the candidate's code whatever
+    pkit is installed (ADR-089 point 7, ADR-064 point 3). The write goes through
+    the pin's one writer, `router.write_version_pin`."""
+    pin_path = pin_file_path(ctx.target_root).relative_to(ctx.target_root)
+    if ctx.dry_run:
+        click.echo(f"  {'would pin':<12} {pin_path} -> {version} (a release candidate's install)")
+        return
+    write_version_pin(ctx.target_root, version)
+    click.echo(f"  {'pinned':<12} {pin_path} -> {version} (a release candidate's install)")
 
 
 def ensure_agent_workspace(ctx: InstallContext) -> None:

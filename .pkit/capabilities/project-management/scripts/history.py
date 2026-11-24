@@ -58,7 +58,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, state_timeline
+from _lib import axis_carriage, axis_labels, bootstrap_gate, move_journal, state_timeline
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import resolve_capability_root
 
@@ -165,11 +165,7 @@ def _report_drift_not_enabled() -> None:
 
 def _read_journal(issue_number: int) -> EngineJournal | None:
     """Read the subject's journal via `pkit process status … --json` (the read
-    seam homed in the binary, ADR-020). None on any failure.
-
-    `journal_logging.enabled` says whether the project keeps a journal; a
-    status payload without it comes from an engine that predates the setting
-    and always kept one."""
+    seam homed in the binary, ADR-020). None on any failure."""
     try:
         proc = subprocess.run(
             [
@@ -193,15 +189,18 @@ def _read_journal(issue_number: int) -> EngineJournal | None:
         data = json.loads(proc.stdout)
     except json.JSONDecodeError:
         return None
-    if not isinstance(data, dict):
+    return _read_journal_from(data)
+
+
+def _read_journal_from(status: object) -> EngineJournal | None:
+    """The journal a status payload carries, read as `move_journal.Journal.of` reads
+    it: `journal_logging.enabled` says whether the project keeps a journal, a payload
+    without it comes from an engine that predates the setting and always kept one,
+    and one without its journal is none pm can read (ADR-097 point 3)."""
+    journal = move_journal.Journal.of(status)
+    if journal is None:
         return None
-    logging = data.get("journal_logging")
-    enabled = logging.get("enabled", True) if isinstance(logging, dict) else True
-    journal = data.get("journal")
-    return EngineJournal(
-        enabled=bool(enabled),
-        entries=journal if isinstance(journal, list) else [],
-    )
+    return EngineJournal(enabled=journal.kept, entries=list(journal.entries))
 
 
 def _render_entry(entry: dict) -> str:

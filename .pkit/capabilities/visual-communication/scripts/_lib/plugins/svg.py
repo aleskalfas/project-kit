@@ -27,7 +27,10 @@ a rule, and a rule for each other key (DEC-018 point 1):
 - **An arrowhead for each paint a rule can change**: one for each end and each role a line's
   stroke takes, its triangle marked with that role as a fill, so the rule that repaints the
   role repaints it. A line whose role has no colour in the first key keeps its markers,
-  which paint nothing there.
+  which paint nothing there. A step of an order is marked by its name as a role is, and its
+  value in each key comes with the scene among that key's colours (DEC-032 point 5). Its
+  arrowhead's id names it `--_step-<n>`, numbered in the order the page first draws one,
+  since a step's own name holds what no id takes.
 - **A picture** the keys show alike is drawn once. One that another key shows otherwise, or
   not at all, is drawn once for each picture it shows, each marked `data-shown-in` with the
   keys it shows in, and each the first key does not show hidden by `display="none"`. A rule
@@ -50,6 +53,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from _lib import colour_steps
 from _lib.canvas import ENDS, Canvas, colour_text, css_string, find, number, unshown
 from _lib.plugins import seam
 from _lib.plugins.css import name_of
@@ -148,6 +152,9 @@ class Switching(Canvas):
         # defines, by its id, with its end and its role.
         self._painted: set[tuple[str, str]] = set()
         self._heads: dict[str, tuple[str, str]] = {}
+        # The name each step of an order a line's stroke takes is known by in the ids of its
+        # arrowheads, numbered in the order the page first draws one (`_named`).
+        self._steps: dict[str, str] = {}
         # Whether the page draws a picture that some key shows otherwise.
         self._apart = False
 
@@ -181,6 +188,7 @@ class Switching(Canvas):
     def page(self, element: Mapping[str, Any]) -> str:
         self._painted = set()
         self._heads = {}
+        self._steps = {}
         self._apart = False
         return super().page(element)
 
@@ -218,11 +226,22 @@ class Switching(Canvas):
         found = []
         for which in ENDS:
             if element.get(f"marker-{which}") == "arrow":
-                marker = f"pkit-arrow-{which}{name_of(role)}"
+                marker = f"pkit-arrow-{which}{self._named(role)}"
                 self._heads[marker] = (which, role)
                 self._painted.add(("fill", role))
                 found.append((f"marker-{which}", f"url(#{marker})"))
         return found
+
+    def _named(self, paint: str) -> str:
+        """A paint's name in the id of an arrowhead: a colour role's in the CSS writer's
+        spelling (`css.name_of`), and a step's of an order `--_step-<n>`, numbered in the
+        order the page first draws one, since a step's own name holds what no id takes. A
+        role's spelling never holds `_`, so no role's name takes a step's."""
+        if not colour_steps.is_step(paint):
+            return name_of(paint)
+        if paint not in self._steps:
+            self._steps[paint] = f"--_step-{len(self._steps) + 1}"
+        return self._steps[paint]
 
     def _arrow_markers(self) -> str:
         """The arrowheads the page draws, in the order of their ids, each painted as the first

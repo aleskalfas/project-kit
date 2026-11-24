@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  A release candidate is withdrawn by a tag of its own, `withdrawn/v<candidate>`,
+  pushed on its commit (ADR-092 point 4). `pkit upgrade --pre` passes a
+  withdrawn candidate by and takes the newest release left, and `pkit pin
+  <candidate>` warns where it names one, then pins it all the same. `pkit
+  version untag` refuses a candidate's tag, `v<X.Y.Z>rc<N>`, and deletes
+  nothing, here or on `origin`, naming the withdrawal tag instead; an alpha or
+  beta tag goes as before. A candidate's notes, published by `pkit release
+  publish-notes`, end with how to try it: `pkit pin <candidate>`, or the first
+  hop where `pkit pin` refuses a candidate. `pkit upgrade`'s lookups of the
+  latest release, and of the newest under `--pre`, read only the tags whose full
+  reference is `refs/tags/v…`, so a tag under a folder, such as a withdrawal,
+  names no install. The CLI reference and the release README say so.

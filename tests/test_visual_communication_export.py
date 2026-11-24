@@ -156,7 +156,7 @@ def test_each_run_takes_the_next_number_and_records_it(tmp_path: Path) -> None:
     recorded = second["recorded"]
     assert (recorded["state"], recorded["renderers"], recorded["used-stale"]) == (
         "draft",
-        {"svg": "1.4.0"},
+        {"svg": "1.5.0"},
         [],
     )
     assert "time: '" in (root / RECORD).read_text(encoding="utf-8")
@@ -1091,7 +1091,7 @@ def test_svg_and_pdf_are_exported_under_one_number(tmp_path: Path) -> None:
     ]
     assert exported(root) == sorted([*svgs, *PDF_FILES])
     [version] = reading.read_yaml(root / RECORD)["versions"]
-    assert version["recorded"]["renderers"] == {"pdf": "1.6.0", "svg": "1.4.0"}
+    assert version["recorded"]["renderers"] == {"pdf": "1.6.0", "svg": "1.5.0"}
 
 
 def test_the_same_scene_gives_the_same_pdf_under_each_number(tmp_path: Path) -> None:

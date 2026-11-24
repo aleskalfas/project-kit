@@ -1,17 +1,25 @@
 """The branch and the description of the release pull request (#2862).
 
-The release-pr workflow (`.github/workflows/release-pr.yml`) runs `pkit release
-plan --json`, then this script for the open release pull requests it replaces,
-and for the branch it pushes the release to. On that branch it runs `pkit
-release apply --yes`, and this script again for the trailer line `apply`
+The release-pr workflow (`.github/workflows/release-pr.yml`) first runs this
+script for the tags whose notes an earlier run left unpublished. It runs `pkit
+release plan --json`, then this script for the open release pull requests it
+replaces, and for the branch it pushes the release to. On that branch it runs
+`pkit release apply --yes`, and this script again for the trailer line `apply`
 printed and for the pull request's description, before it pushes:
 
+    uv run python scripts/release_pr.py unpublished --tags <ls-remote> --releases <tags>
     uv run python scripts/release_pr.py open --prs <open pull requests> --head <commit>
     uv run python scripts/release_pr.py branch --version <version> --run-id <run id>
     uv run python scripts/release_pr.py trailer --apply-output <what apply printed>
     uv run python scripts/release_pr.py body --plan <plan> --branch <branch> \\
         --repository-url <url> --trailer <line>
 
+- **The notes left unpublished** (ADR-092 point 5). A release's or a candidate's
+  tag on `origin` with no GitHub Release lacks its notes: the run that pushed it
+  stopped before it published them. The script names the version of each such
+  tag, oldest first, and the workflow publishes their notes before anything
+  else. A tag below the oldest tag that has a Release predates the notes, which
+  no run left, so the script passes it by.
 - **The open release pull requests** (ADR-092 point 6, the way on). A release
   pull request whose body's trailer line names the default branch's head, the
   commit this run plans from, is the one a person reviews, so the run opens no
@@ -50,6 +58,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from collections.abc import Collection, Mapping
@@ -217,6 +226,42 @@ def pull_request_body(
     return short
 
 
+# --- The notes an earlier run left unpublished --------------------------------
+
+#: A release's or a candidate's tag, by its full reference on `origin`:
+#: `refs/tags/v<X.Y.Z>`, or `refs/tags/v<X.Y.Z>rc<N>` (ADR-089 point 9).
+_RELEASE_TAG_RE = re.compile(r"refs/tags/v((\d+)\.(\d+)\.(\d+)(?:rc(\d+))?)")
+
+
+def unpublished(ls_remote_output: str, released: Collection[str]) -> list[str]:
+    """The version of each release or candidate tag `git ls-remote --tags` lists, one
+    `<object id>\\t<ref>` a line, with no Release: its tag is none of `released`,
+    the tags the Releases are on. Oldest first in PEP 440's order, so each
+    candidate comes before the release of its version.
+
+    A tag below the oldest listed tag that has a Release predates the notes, so
+    it is passed by: no run left its notes unpublished."""
+    versions: dict[str, tuple[int, ...]] = {}
+    for line in ls_remote_output.split("\n"):
+        _, tab, ref = line.removesuffix("\r").partition("\t")
+        match = _RELEASE_TAG_RE.fullmatch(ref) if tab else None
+        if match is None:
+            continue
+        major, minor, patch, number = match.group(2, 3, 4, 5)
+        final = (1, 0) if number is None else (0, int(number))
+        versions[match.group(1)] = (int(major), int(minor), int(patch), *final)
+    published = [key for version, key in versions.items() if f"v{version}" in released]
+    oldest = min(published, default=None)
+    return sorted(
+        (
+            version
+            for version, key in versions.items()
+            if f"v{version}" not in released and (oldest is None or key > oldest)
+        ),
+        key=versions.__getitem__,
+    )
+
+
 # --- The trailer line, and the open release pull requests -------------------
 
 
@@ -316,9 +361,21 @@ def main(argv: list[str] | None = None) -> int:
         "--prs", required=True, type=Path, help="`gh pr list --json number,headRefName,body`."
     )
     opened.add_argument("--head", required=True, help="The commit this run plans from.")
+    left = commands.add_parser(
+        "unpublished",
+        help="Print the version of each release or candidate tag with no Release, a line each.",
+    )
+    left.add_argument("--tags", required=True, type=Path, help=f"`git ls-remote --tags {REMOTE}`.")
+    left.add_argument(
+        "--releases", required=True, type=Path, help="The tag of each Release, a line each."
+    )
     args = parser.parse_args(argv)
     try:
-        if args.command == "branch":
+        if args.command == "unpublished":
+            released = set(_read_text(args.releases, "the Releases' tags").split())
+            for version in unpublished(_read_text(args.tags, "the tags"), released):
+                print(version)
+        elif args.command == "branch":
             print(release_branch(args.version, args.run_id, remote_branches(Path.cwd())))
         elif args.command == "trailer":
             print(

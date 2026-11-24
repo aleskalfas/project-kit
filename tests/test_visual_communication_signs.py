@@ -5,6 +5,7 @@ sign part a component places, the path the scene holds, and how each renderer dr
 - **An outline** is read from SVG's path data whole, every command absolute or relative,
   and held as moves, lines, cubic curves and closes, which the engine maps into a frame by
   its square, whole, centred and as large as the frame allows. What is no outline is said.
+  Path data fills a point as SVG fills it, by its rule.
 - **The foundations** declare each shape by its name; another library declares none.
 - **A notation** holds each concept's icon, or maps it to a shape. Its sign is its icon,
   else its shape. A sign that cannot be read is a finding in the notation, and the concept
@@ -39,11 +40,12 @@ from tests.visual_engine import FakeEnv, block, codes, draw, frame, layout, top
 outlines, tokens, notations, files, checks, seam = load(
     "visual-communication", "outlines", "tokens", "notations", "files", "checks", "plugins.seam"
 )
-svg_declaration, html_declaration, pdf_declaration = load(
+svg_declaration, html_declaration, pdf_declaration, html = load(
     "visual-communication",
     "plugins.svg_declaration",
     "plugins.html_declaration",
     "plugins.pdf_declaration",
+    "plugins.html",
 )
 
 
@@ -118,6 +120,37 @@ def test_what_is_no_outline_is_said(raw: Any, said: str) -> None:
     problem = outlines.read_outline(raw)
     assert isinstance(problem, str)
     assert said in problem
+
+
+SQUARE = "M0 0H10V10H0Z"
+CIRCLE = "M0 5A5 5 0 0 1 10 5A5 5 0 0 1 0 5Z"
+
+
+@pytest.mark.parametrize(
+    ("d", "fill_rule", "point", "filled"),
+    [
+        (SQUARE, "nonzero", (5, 5), True),
+        (SQUARE, "nonzero", (15, 5), False),
+        ("M0 0H10V10H0", "nonzero", (5, 5), True),  # a part with no close fills as closed
+        (f"{SQUARE} M2 2H8V8H2Z", "nonzero", (5, 5), True),  # wound twice the same way
+        (f"{SQUARE} M2 2H8V8H2Z", "evenodd", (5, 5), False),
+        (f"{SQUARE} M2 2V8H8V2Z", "nonzero", (5, 5), False),  # wound back the other way
+        (f"{SQUARE} M2 2V8H8V2Z", "nonzero", (1, 5), True),
+        (CIRCLE, "nonzero", (5, 5), True),
+        (CIRCLE, "nonzero", (8.5, 8.5), True),
+        (CIRCLE, "nonzero", (9, 9), False),  # inside its frame, outside the circle
+        ("M0 0", "nonzero", (0, 0), False),  # a move alone draws nothing
+    ],
+)
+def test_path_data_fills_a_point_as_svg_fills_it_by_its_rule(
+    d: str, fill_rule: str, point: tuple[float, float], filled: bool
+) -> None:
+    assert outlines.fills(d, fill_rule, point) is filled
+
+
+def test_path_data_svg_does_not_read_is_refused_rather_than_filled() -> None:
+    with pytest.raises(ValueError, match="no path data SVG reads"):
+        outlines.fills("M 0 0 X 1 1", "nonzero", (0, 0))
 
 
 def test_an_outline_is_fitted_by_its_square_whole_centred_and_as_large_as_its_frame_allows() -> (
@@ -476,7 +509,7 @@ def test_each_renderer_declares_the_path_and_every_property_the_scene_holds() ->
     for declaration in (svg_declaration, html_declaration, pdf_declaration):
         drawn = declaration.DECLARATION
         assert set(drawn["draws"]["path"]) == held
-        assert drawn["seam"] == seam.SEAM_VERSION == 8
+        assert drawn["seam"] == seam.SEAM_VERSION == 9
         assert checks.losses(scene(PATH, EVEN_ODD), drawn) == []
 
 
@@ -509,19 +542,34 @@ def test_the_pdf_renderer_draws_a_path_from_its_outline_filled_by_its_rule() -> 
 
 def test_the_html_page_draws_a_path_in_a_layer_and_forced_colours_reach_its_paints() -> None:
     """A path is a shape like any other: it lies in a layer, holds no text, and under forced
-    colours its fill takes the ground, with an edge where it has no stroke, and its stroke
-    the text colour, as the declaration names (DEC-036 points 4 and 5)."""
+    colours its fill takes the ground, with an edge inside it where it has no stroke, and its
+    stroke the text colour, as the declaration names (DEC-036 points 4 and 5, DEC-039 point
+    4). The path with no stroke is a clipped shape, its geometry held once, which the `use`
+    draws and the clip's `use` takes, by its fill rule."""
     root = ElementTree.fromstring(draw_html(scene(EVEN_ODD, PATH)).document)
 
     [layer] = marked(root, "layer")
-    drawn = [node for node in layer.iter() if node.tag.endswith("path")]
-    assert [node.get("data-id") for node in drawn] == ["figure/ring", "figure/sign"]
-    assert (drawn[0].get("fill-rule"), drawn[0].get("fill")) == ("evenodd", "var(--surface)")
+    drawn = [node for node in layer if "data-id" in node.attrib]
+    assert [(node.tag, node.get("data-id")) for node in drawn] == [
+        ("use", "figure/ring"),
+        ("path", "figure/sign"),
+    ]
+    assert (drawn[0].get("href"), drawn[0].get("fill")) == ("#pkit-shape-1", "var(--surface)")
+    [geometry] = [node for node in layer.iter() if node.get("id") == "pkit-shape-1"]
+    assert geometry.get("fill-rule") == "evenodd"
+    [clip] = [node for node in layer.iter() if node.get("id") == "pkit-clip-1"]
+    assert [(node.tag, node.get("href"), node.get("clip-rule")) for node in clip] == [
+        ("use", "#pkit-shape-1", "evenodd")
+    ]
     assert drawn[1].get("stroke") == "var(--border)"
     assert marked(root, "text") == []
     assert forced(root) == (
         "[data-layer] [stroke]{stroke:CanvasText}"
         "marker path{fill:CanvasText}"
         '[data-layer] [fill="var(--surface)"]{fill:Canvas}'
-        '[data-layer] [fill="var(--surface)"]:not([stroke]){stroke:CanvasText;stroke-width:1px}'
+        '[data-layer] rect[fill="var(--surface)"]:not([stroke]),'
+        '[data-layer] ellipse[fill="var(--surface)"]:not([stroke]){fill:CanvasText}'
+        f"{html.FORCED_SHEET}"
+        "[data-clip]{stroke:CanvasText;stroke-width:2px}"
+        '[data-clip="1"]{clip-path:url(#pkit-clip-1)}'
     )

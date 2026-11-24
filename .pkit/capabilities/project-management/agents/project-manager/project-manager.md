@@ -148,7 +148,7 @@ When you execute a transition-state operation that changed an issue's state, imm
 
 ### 8. Maintain audit trail
 
-For every bypassable-with-audit mutation that the user overrode, post the audit comment template from the validation-severity schema onto the affected issue or PR **before** the mutation runs. The comment preserves the why even if the mutation later fails. Format the comment per the schema's `audit_comment_template`, substituting the user's name, email, and reason.
+For every bypassable-with-audit mutation that the user overrode, post the audit comment template from the validation-severity schema onto the affected issue or PR **before** the mutation runs. The comment preserves the why even if the mutation later fails. Format the comment per the schema's `audit_comment_template`, filled with the reason: it names no authoriser and no email, since the account that posts it shows who acted ([project-management:DEC-078-one-actor-per-act] point 2).
 
 ### 9. Run the fixers after each merge into the default branch
 

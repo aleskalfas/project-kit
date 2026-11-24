@@ -39,8 +39,10 @@ from typing import Any
 #: engine mapped into its frame (visual-communication DEC-036 points 1 and 7). 8 since a
 #: scene's line holds each run's sign and ground with the run's piece, and the room the
 #: engine gave them, which a renderer that sets runs at its own widths leaves too
-#: (visual-communication DEC-036 points 3 and 7).
-SEAM_VERSION = 8
+#: (visual-communication DEC-036 points 3 and 7). 9 since a paint may name a step of an
+#: order, whose value in each combination comes with the scene among its colours, by that
+#: name (visual-communication DEC-032 point 5).
+SEAM_VERSION = 9
 
 RENDERER = "renderer"
 PRODUCER = "producer"

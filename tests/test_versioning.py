@@ -125,7 +125,8 @@ import subprocess as _subprocess  # noqa: E402 — keep tag tests grouped here
 def tmp_kit_in_git(tmp_path: Path) -> Path:
     """A minimal kit inside a fresh git repo (so `git tag` has a HEAD to tag)."""
     repo = tmp_path
-    _subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    # On `main`, the default branch `tag_version` reads (COR-054 point 1).
+    _subprocess.run(["git", "init", "-q", "--initial-branch=main"], cwd=repo, check=True)
     _subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo, check=True)
     _subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
     sign_nothing(repo)  # its commits and the tags `tag_version` makes
@@ -151,6 +152,20 @@ def _cleared(repo: Path) -> session_guard.Clearance:
     return cleared
 
 
+def _with_origin(repo: Path, bare_remote: Path) -> None:
+    """`bare_remote` as `repo`'s `origin`, holding its `main`: the default branch
+    `tag_version` reads once a remote exists (COR-054 point 2)."""
+    _subprocess.run(["git", "init", "--bare", "-q", str(bare_remote)], check=True)
+    _subprocess.run(["git", "remote", "add", "origin", str(bare_remote)], cwd=repo, check=True)
+    _subprocess.run(["git", "push", "-q", "origin", "main"], cwd=repo, check=True)
+
+
+def _commit_version(source_kit: Path, version: str) -> None:
+    """`.pkit/VERSION` set to `version` and committed on `main`, as a release would."""
+    (source_kit / "VERSION").write_text(f"{version}\n", encoding="utf-8")
+    _subprocess.run(["git", "commit", "-q", "-am", f"chore: {version}"], cwd=source_kit, check=True)
+
+
 def test_tag_version_creates_annotated_tag(tmp_kit_in_git: Path) -> None:
     tag = versioning.tag_version(tmp_kit_in_git, push=False)
     assert tag == "v1.0.0"
@@ -174,8 +189,8 @@ def test_tag_version_refuses_when_version_file_missing(tmp_path: Path) -> None:
 
 
 def test_tag_version_refuses_invalid_semver(tmp_kit_in_git: Path) -> None:
-    (tmp_kit_in_git / "VERSION").write_text("not-a-version\n", encoding="utf-8")
-    with pytest.raises(click.ClickException, match="not valid PEP 440"):
+    _commit_version(tmp_kit_in_git, "not-a-version")
+    with pytest.raises(click.ClickException, match="which is no final release version"):
         versioning.tag_version(tmp_kit_in_git)
 
 
@@ -205,8 +220,7 @@ def test_tag_version_push_invokes_git_push(
     """
     repo = tmp_kit_in_git.parent
     bare_remote = repo.parent / "remote.git"
-    _subprocess.run(["git", "init", "--bare", "-q", str(bare_remote)], check=True)
-    _subprocess.run(["git", "remote", "add", "origin", str(bare_remote)], cwd=repo, check=True)
+    _with_origin(repo, bare_remote)
 
     versioning.tag_version(tmp_kit_in_git, push=True, clearance=_cleared(repo))
 
@@ -258,8 +272,7 @@ def test_untag_version_push_deletes_remote_tag(
     # repo.parent — that's the shared pytest session tmp root and would
     # collide with the bare remote created in test_tag_version_push).
     bare_remote = tmp_path_factory.mktemp("untag-remote") / "remote.git"
-    _subprocess.run(["git", "init", "--bare", "-q", str(bare_remote)], check=True)
-    _subprocess.run(["git", "remote", "add", "origin", str(bare_remote)], cwd=repo, check=True)
+    _with_origin(repo, bare_remote)
 
     versioning.tag_version(tmp_kit_in_git, push=True, clearance=_cleared(repo))
     # Sanity check: tag is on the remote.
@@ -312,10 +325,7 @@ def pushable(
     """The kit `pkit version` acts on, its `origin` a bare repository a push
     reaches without a network: (source kit, bare remote)."""
     bare_remote = tmp_path_factory.mktemp("guarded-remote") / "remote.git"
-    _subprocess.run(["git", "init", "--bare", "-q", str(bare_remote)], check=True)
-    _subprocess.run(
-        ["git", "remote", "add", "origin", str(bare_remote)], cwd=tmp_kit_in_git.parent, check=True
-    )
+    _with_origin(tmp_kit_in_git.parent, bare_remote)
     monkeypatch.setattr(cli, "_target_kit", lambda: tmp_kit_in_git)
     return tmp_kit_in_git, bare_remote
 
@@ -422,21 +432,48 @@ def test_a_push_without_the_guards_clearance_is_not_made(function: Any, pushable
     assert _remote_tags(bare_remote) == ""
 
 
-def test_untag_version_accepts_prerelease_tag(tmp_kit_in_git: Path) -> None:
-    """Pre-release versions (e.g., `v1.2.0rc1`) are valid tag forms per PRJ-004."""
-    (tmp_kit_in_git / "VERSION").write_text("1.2.0rc1\n", encoding="utf-8")
-    versioning.tag_version(tmp_kit_in_git)
-    versioning.untag_version(tmp_kit_in_git)
+def _tagged_with_git(source_kit: Path, version: str) -> str:
+    """`.pkit/VERSION` set to `version`, and its tag made with git alone, so the
+    test holds whatever `pkit version tag` takes."""
+    (source_kit / "VERSION").write_text(f"{version}\n", encoding="utf-8")
+    tag = f"v{version}"
+    _subprocess.run(["git", "tag", "-a", tag, "-m", tag], cwd=source_kit.parent, check=True)
+    return tag
 
-    repo = tmp_kit_in_git.parent
-    result = _subprocess.run(
-        ["git", "tag", "-l", "v1.2.0rc1"],
-        capture_output=True,
-        text=True,
-        cwd=repo,
-        check=True,
+
+def test_untag_version_takes_an_alpha_or_beta_tag(tmp_kit_in_git: Path) -> None:
+    """A pre-release tag that names no candidate, such as `v1.2.0a1`, goes as before."""
+    tag = _tagged_with_git(tmp_kit_in_git, "1.2.0a1")
+    versioning.untag_version(tmp_kit_in_git)
+    assert tag not in _local_tags(tmp_kit_in_git.parent)
+
+
+def test_untag_version_refuses_a_candidates_tag(tmp_kit_in_git: Path) -> None:
+    """A candidate's tag is never moved or deleted (ADR-092 point 4): the refusal
+    names the withdrawal tag in its place, and the tag stays."""
+    tag = _tagged_with_git(tmp_kit_in_git, "1.2.0rc1")
+    with pytest.raises(click.ClickException, match="release candidate's tag") as refused:
+        versioning.untag_version(tmp_kit_in_git)
+    assert "withdrawn/v1.2.0rc1" in refused.value.message
+    assert tag in _local_tags(tmp_kit_in_git.parent)
+
+
+def test_untag_push_refuses_a_candidates_tag_on_the_remote_too(
+    pushable: tuple[Path, Path],
+) -> None:
+    """`--push` deletes nothing either: the candidate's tag stays here and on `origin`."""
+    source_kit, bare_remote = pushable
+    tag = _tagged_with_git(source_kit, "1.2.0rc1")
+    _subprocess.run(
+        ["git", "push", "-q", "origin", tag], cwd=source_kit.parent, check=True, capture_output=True
     )
-    assert result.stdout.strip() == ""
+
+    refused = CliRunner().invoke(cli.main, ["version", "untag", "--push"])
+
+    assert refused.exit_code == 1
+    assert "never moved or deleted" in refused.output
+    assert tag in _local_tags(source_kit.parent)
+    assert f"refs/tags/{tag}" in _remote_tags(bare_remote)
 
 
 # --- unbump_version tests -----------------------------------------------
@@ -503,7 +540,7 @@ def test_unbump_version_reverts_patch(tmp_kit_in_git_with_component: Path) -> No
 def test_unbump_version_refuses_while_tag_exists(tmp_kit_in_git_with_component: Path) -> None:
     """Ordering: must `untag` before `unbump`."""
     versioning.bump_version(tmp_kit_in_git_with_component, "minor")
-    versioning.tag_version(tmp_kit_in_git_with_component)
+    _subprocess.run(["git", "tag", "v0.6.0"], cwd=tmp_kit_in_git_with_component, check=True)
 
     with pytest.raises(click.ClickException, match="still exists locally"):
         versioning.unbump_version(tmp_kit_in_git_with_component)
@@ -647,11 +684,12 @@ def test_promote_version_does_not_broaden(tmp_kit: Path) -> None:
     assert 'requires_backbone: ">=0.1.0,<0.6.0"' in pkg
 
 
-def test_tag_version_accepts_prerelease(tmp_kit_in_git: Path) -> None:
-    """`v1.2.0rc1` is a valid tag form per PRJ-004."""
-    (tmp_kit_in_git / "VERSION").write_text("1.2.0rc1\n", encoding="utf-8")
-    tag = versioning.tag_version(tmp_kit_in_git)
-    assert tag == "v1.2.0rc1"
+def test_tag_version_refuses_a_prerelease(tmp_kit_in_git: Path) -> None:
+    """`pkit version tag` tags final releases only: a candidate's tag stays on the
+    commit its cut made (ADR-092 point 6)."""
+    _commit_version(tmp_kit_in_git, "1.2.0rc1")
+    with pytest.raises(click.ClickException, match="which is no final release version"):
+        versioning.tag_version(tmp_kit_in_git)
 
 
 def test_bump_version_from_prerelease_strips_suffix(tmp_kit: Path) -> None:

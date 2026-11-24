@@ -41,6 +41,7 @@ pkit:
         - project-management:DEC-059#9
         - project-management:DEC-014
         - project-management:DEC-026
+        - project-management:DEC-021
         - project-management:DEC-012
         - COR-017
         - COR-021

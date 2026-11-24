@@ -1,0 +1,17 @@
+pkit_schema: visual-communication:piece
+schema_version: 1
+top: foundations/deck
+brand: neutral
+languages: [en]
+audience: "Developers new to the platform."
+shown: "Projected in a room, handed out as a PDF, and opened as a web page."
+explains: true
+exports: []
+state: draft
+modes:
+  colour-scheme: [light, dark]
+  device: [projector]
+lock:
+  foundations: 1.2.0
+  neutral: 1.1.0
+  starter: 1.1.0

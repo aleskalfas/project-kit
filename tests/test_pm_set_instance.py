@@ -184,8 +184,22 @@ def _backbone(tip: str | None = "c0ffee") -> Any:
     def run(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
         document = {
             "schema_version": 1,
-            "default_branch": {"name": "main", "ref": "origin/main", "commit": tip},
-            "base": {"ref": "origin/main", "tip": tip, "fork": tip},
+            "default_branch": {
+                "name": "main",
+                "source": "default",
+                "ref": "origin/main",
+                "commit": tip,
+                "resolved": "remote" if tip else None,
+                "problem": None,
+                "unborn": False,
+            },
+            "base": {
+                "ref": "origin/main",
+                "tip": tip,
+                "fork": tip,
+                "resolved": "remote" if tip else None,
+                "problem": None,
+            },
         }
         return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
 

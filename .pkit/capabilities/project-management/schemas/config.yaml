@@ -90,7 +90,7 @@ has_projects_v2_board: false
 #     granted: [living-docs:page]
 #
 # milestone_categories:               # per DEC-016 — declare before filing one
-#   milestone:
+#   milestone:                        #   written by add-milestone-category
 #     title_format: "Milestone {n}: {name}"
 #     close_trigger_default: content-based
 #     description: "Outcome bundle of related EPICs."
@@ -110,6 +110,10 @@ has_projects_v2_board: false
 #   floors:                           # per DEC-032 — the diff-property floors (#1178)
 #     not_code:                       #   paths that satisfy no touches-code floor; absent = [".changes/**"]
 #       - ".changes/**"
+#
+# sync_board:                         # per DEC-072 — the board sync's settings
+#   adds_with_no_terminal: false      #   true lets a run with no terminal add cards where
+#                                     #   the board holds the state; off by default
 #
 # mesh_peers:                         # per DEC-022
 #   - github://owner/repo

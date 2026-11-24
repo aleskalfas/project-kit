@@ -1,0 +1,110 @@
+{
+ "draws": 500,
+ "seed": 3397,
+ "review spread": {
+  "below competent": 12,
+  "competent": 80,
+  "professional": 801,
+  "excellent": 7
+ },
+ "between runs": {
+  "differing": 37,
+  "pairs": 385,
+  "rate per grade": 0.04926549242382927
+ },
+ "judges": {
+  "judge-1": {
+   "spread": {
+    "below competent": 41,
+    "competent": 51,
+    "professional": 87,
+    "excellent": 5
+   },
+   "pairs": 142,
+   "pairs by page": {
+    "1": 31,
+    "2": 40,
+    "3": 37,
+    "4": 34
+   }
+  },
+  "judge-2": {
+   "spread": {
+    "below competent": 21,
+    "competent": 34,
+    "professional": 39,
+    "excellent": 73
+   },
+   "pairs": 131,
+   "pairs by page": {
+    "1": 31,
+    "2": 36,
+    "3": 33,
+    "4": 31
+   }
+  }
+ },
+ "methods": {
+  "counting": {
+   "review-like": {
+    "kept": 0.5986153846153847,
+    "tied": 0.30433699633699635,
+    "inverted": 0.09704761904761905
+   },
+   "as the judges": {
+    "kept": 0.9778095238095238,
+    "tied": 0.009794871794871795,
+    "inverted": 0.012395604395604396
+   }
+  },
+  "counting-weak": {
+   "review-like": {
+    "kept": 0.5407912087912088,
+    "tied": 0.39579487179487177,
+    "inverted": 0.06341391941391941
+   },
+   "as the judges": {
+    "kept": 0.9132014652014652,
+    "tied": 0.07480586080586081,
+    "inverted": 0.011992673992673992
+   }
+  },
+  "lowest": {
+   "review-like": {
+    "kept": 0.5110842490842491,
+    "tied": 0.4288131868131868,
+    "inverted": 0.0601025641025641
+   },
+   "as the judges": {
+    "kept": 0.8351648351648352,
+    "tied": 0.1605787545787546,
+    "inverted": 0.004256410256410256
+   }
+  },
+  "average": {
+   "review-like": {
+    "kept": 0.6012087912087912,
+    "tied": 0.30554578754578754,
+    "inverted": 0.09324542124542125
+   },
+   "as the judges": {
+    "kept": 0.9791355311355311,
+    "tied": 0.015135531135531136,
+    "inverted": 0.005728937728937729
+   }
+  },
+  "lowest-then-average": {
+   "review-like": {
+    "kept": 0.6183956043956044,
+    "tied": 0.2814725274725275,
+    "inverted": 0.10013186813186813
+   },
+   "as the judges": {
+    "kept": 0.9803003663003663,
+    "tied": 0.01052014652014652,
+    "inverted": 0.009179487179487179
+   }
+  }
+ },
+ "chosen": "lowest"
+}

@@ -29,7 +29,6 @@ import pytest
 from tests.pm_lifecycle_world import (
     AUDIT_MARKER,
     AUTHORED_BODY,
-    INVOKER,
     REASON,
     Tracker,
     World,
@@ -124,8 +123,7 @@ def _comments(world: World, number: int) -> list[str]:
 def _provenance(moves: str, cause: str | None = None) -> str:
     """The provenance comment a governed move through `moves` gets, naming
     `cause` when another move caused it."""
-    actor = INVOKER.github_login
-    comment = f"{AUDIT_MARKER}\n{actor} moved {moves} (governed by pkit) — pkit {VERSION}"
+    comment = f"{AUDIT_MARKER}\nMoved {moves} (governed by pkit) — pkit {VERSION}"
     return f"{comment}\n{cause}" if cause else comment
 
 

@@ -1,0 +1,14 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  `pkit version tag` now tags the commit a final release landed: the newest
+  commit at or before HEAD on the default branch's first-parent history that
+  changed `.pkit/VERSION`, named by the version that commit records, so a push
+  that carries more than the release still tags the release's own commit. It
+  refuses, tagging nothing, where HEAD is off that history, where that commit
+  records no final release version, where the tag exists locally or, with
+  `--push`, on `origin`, and where a shallow clone's history stops at that
+  commit. `pkit release apply --tag` is refused before anything is written,
+  naming `pkit version tag` after the merge.

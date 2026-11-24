@@ -29,7 +29,6 @@ so does the fake `gh` it calls.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import shutil
 import subprocess
@@ -50,7 +49,7 @@ from _lib import body_parent_ref  # noqa: E402
 
 from project_kit.process import CascadeResolution, ProcessEngine, load_definition  # noqa: E402
 from tests.in_process import start_in_process  # noqa: E402
-from tests.pm_lifecycle_world import fake_gh_in_process  # noqa: E402
+from tests.pm_lifecycle_world import fake_gh_in_process, load_script  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -188,12 +187,7 @@ def _create_issue_body() -> str:
     """The body `create-issue --type task --parent 5 --milestone 7` files: the
     shipped Task template with the parent-ref line `create-issue` builds, which
     is the `Milestone:` ref whenever a milestone is given."""
-    spec = importlib.util.spec_from_file_location(
-        "pm_create_issue_native_child_under_test", CAP_SCRIPTS / "create-issue.py"
-    )
-    assert spec is not None and spec.loader is not None
-    create_issue = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(create_issue)
+    create_issue = load_script("create-issue.py", "pm_create_issue_native_child_under_test")
     types = YAML(typ="safe").load((CAP_SRC / "schemas" / "issue-types.yaml").read_text())
     line = create_issue._parent_ref_line(
         types["types"]["task"],

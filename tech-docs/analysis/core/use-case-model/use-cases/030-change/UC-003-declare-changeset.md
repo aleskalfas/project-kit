@@ -24,6 +24,7 @@ pkit:
         - PRJ-002#D2
         - PRJ-002#D4
         - COR-054#4
+        - ADR-089#3
       artefact:
         - ACT-developer
         - ACT-ci-pipeline
@@ -72,7 +73,8 @@ pkit:
 - **6c.** A changeset declares a floor or an upper bound for a component the change neither touches nor moves. The guard fails, and no escape hatch waives it ([PRJ-002 D4](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)).
 - **6d.** The change edits the [range](../../../glossary.md#term-range--range) of an existing `requires_capabilities` entry, other than to correct one that excludes the version the tree carries. The guard fails, and no escape hatch waives it (`release.py`).
 - **6e.** The change is only what `pkit release apply` writes, with the answers those writes need in files the change adds. The guard reads it as a [release pull request](../../../glossary.md#term-release-pull-request--release-pull-request), and exempts it from the surface check. Where the change edits or removes an [answer file](../../../glossary.md#term-answer-file--answer-file), the guard does not exempt the change.
-- **7a.** The pull request carries the `skip-changeset` label. The CI pipeline passes it to the guard as `PKIT_CHANGESET_SKIP`, which skips the surface check. The guard still checks floors, bounds and range edits.
+- **6f.** In the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), the committed change records a pre-release version, as where it took in a [release candidate](../../../glossary.md#term-release-candidate--release-candidate)'s commit. The guard fails, naming each such version, and no escape hatch waives it ([ADR-089 point 3](../../../../../architecture/decisions/ADR-089-release-candidates.md#3-the-final-release-is-cut-from-the-last-candidates-source-commit-and-the-default-branch-holds-release-versions-alone)). A release candidate's own commit, the one its tag names, passes.
+- **7a.** The pull request carries the `skip-changeset` label. The CI pipeline passes it to the guard as `PKIT_CHANGESET_SKIP`, which skips the surface check. The guard still checks floors, bounds, range edits and pre-release versions.
 - **7b.** The pull request reaches a merge queue. The guard does not run on the queue's merge, which carries no labels, since it judged the pull request's diff already.
 
 **Postconditions:** For the [backbone](../../../glossary.md#term-backbone--backbone) and each [component](../../../glossary.md#term-component--component) whose [surface](../../../glossary.md#term-surface--surface) the [change](../../../glossary.md#term-change--change) moves, a [changeset](../../../glossary.md#term-changeset--changeset) in the change names it and its [bump segment](../../../glossary.md#term-bump-segment--bump-segment). Each waits under `.changes/unreleased/` for the next [release step](../../../glossary.md#term-release-step--release-step).

@@ -54,8 +54,8 @@ HOLDS_MODES = {
 DECLARATION = {
     "name": "svg",
     "kind": "renderer",
-    "version": "1.4.0",
-    "seam": 8,
+    "version": "1.5.0",
+    "seam": 9,
     "module": "svg",
     "about": (
         "An SVG file for each page, language and combination of modes, or, as `svg-modes`, "
