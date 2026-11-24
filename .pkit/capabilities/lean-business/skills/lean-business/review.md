@@ -21,17 +21,17 @@ Read it to the person whole before you ask anything else.
 
 ## 2. The winning variant
 
-Where the cycle explored several variants, the person names the one that did best. Ask them first, and say which you think did, and why, once they have answered or when they ask. Where it explored one, that one is the winner, and you need not ask. The review decides nothing for the others (DEC-003 point 4).
+Where the cycle explored several variants, the person names the one that did best. Say which you think did, and why, and ask them to name it. Where it explored one, that one is the winner, and you need not ask. The review decides nothing for the others (DEC-003 point 4).
 
 ## 3. The decision
 
-Explain the three, for the winning variant, and ask which the person takes:
+Explain the three, for the winning variant:
 
 - **Persevere:** its model goes on into the next cycle, as the method has it where the objective was met. Persevering where it was missed draws a warning, and stays the person's call: a near miss with a clear cause may justify it.
 - **Pivot:** its model changes, on an insight that could reach the objective in one more cycle. A pivot names at least one decided experiment as its evidence, of any variant the cycle explored. A pivot without evidence is a guess.
 - **Pause:** the work on the idea stops for now, at a dead end or out of resources. The idea's record stays whole, and it can be taken up again.
 
-Persevering and pivoting need a winner neither shelved nor split. Ending an idea is not a decision of the review: it is shelving its variants (`outcome.md`). Give your own lean once the person has answered, or when they ask.
+Persevering and pivoting need a winner neither shelved nor split. Ending an idea is not a decision of the review: it is shelving its variants (`outcome.md`). Say which you recommend, and why, and ask which the person takes.
 
 ## 4. Record it
 
@@ -60,7 +60,7 @@ The window of `meal-plan--first` ends on 19 April 2027, moved twenty days by the
 - **Grocers:** 0 paying, of the 2 planned. The first offer was spoiled by the suspension, and the second, in February, failed.
 - **The suspension:** 8 to 27 January, for family matters, recorded on 28 January.
 
-You ask which variant did best, and the person names households. You ask what they decide for it. They want to pivot toward employers, in their words "Parents will not pay alone, but their employers will". Asked for your view, you say the pivot rests on two employers so far, a thin base, and that persevering on the missed objective would draw a warning. They keep the pivot. You run the command without the flag, show them its question, and on their confirmation run:
+You say households did best, since two of its three experiments passed and it reached 26 of its 40 households, where the grocers reached none. The person names households. For it, you recommend a pivot toward employers, on the evidence of the employers page and the price page, while saying that it rests on two employers so far, a thin base. Persevering on the missed objective would draw a warning. The person takes the pivot, in their words "Parents will not pay alone, but their employers will". You run the command without the flag, show them its question, and on their confirmation run:
 
 ```
 pkit lean review-cycle meal-plan--first --reached 26 --reached 0 --winning meal-plan--households --decision pivot --reasons "Parents will not pay alone, but their employers will" --evidence meal-plan--parent-interviews --evidence meal-plan--price-page --evidence meal-plan--employers-page --person-decided

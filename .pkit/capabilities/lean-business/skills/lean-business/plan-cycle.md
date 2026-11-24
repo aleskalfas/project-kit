@@ -13,13 +13,13 @@ A *cycle* is the window in which the experiments on one or more shortlisted vari
 
 The window is the cycle's time box. It is sized now, to the time the person can give, and never extended once it starts (DEC-003 point 4).
 
-- **Ask** how many hours a week they can give, whether any absence is already known, and how long they want the window to be.
-- **Say what bears on the length,** once they have answered or when they ask. Ninety days suits someone working on it most days. A person giving evenings and weekends may need longer. A known absence is sized into the window now.
+- **Ask** how many hours a week they can give, and whether any absence is already known.
+- **Suggest a length, and say what bears on it.** Ninety days suits someone working on it most days. A person giving evenings and weekends may need longer. A known absence is sized into the window now. Recommend one, and ask how long they want the window to be.
 - **Say what happens at its end.** Time that runs out goes to the review, which may persevere into another cycle on the same key results. Only an absence life brings later is recorded as a suspension (`suspend.md`).
 
 ## 2. Draft the plan
 
-Ask the person for each part, and offer a draft of your own for a part only once they have given theirs, or when they ask:
+Offer a draft of each part, with your recommendation where you see more than one way, and ask the person for each. They take it, change it, or give their own:
 
 - **The variants** the cycle explores: shortlisted, one or several.
 - **The start:** a day not yet reached, so the plan can still change. Experiments can be declared from the day it is planned.
@@ -51,7 +51,7 @@ The cycle starts running on its first day, with nobody acting, and reaches its r
 
 ## Example
 
-You ask how much time the person can give, and how long they want the window. Eight hours a week, mostly evenings, no absence known, and 120 days, since 90 would leave them little room. You ask for the key results. They take the whole first stage of each variant, 40 households back for a second planned week and 2 grocers paying for a trial month, since each stage was sized to a few months. Nobody has been reached yet, so the constraint is acquisition. They word the objective, and the plan stands. You show the command's question, and on their confirmation run:
+You ask how much time the person can give. Eight hours a week, mostly evenings, and no absence known. You suggest 120 days, since 90 would leave them little room in evenings alone, and they take it. You draft the key results as the whole first stage of each variant, 40 households back for a second planned week and 2 grocers paying for a trial month, since each stage was sized to a few months, and they take them. Nobody has been reached yet, so you draft the constraint as acquisition. You draft an objective, and they reword it in their own words. The plan stands. You show the command's question, and on their confirmation run:
 
 ```
 pkit lean plan-cycle meal-plan--first --variant households --variant grocers --start 2026-12-01 --days 120 --objective "Show that households come back for planned weeks, and that grocers pay to be in them" --key-result households:retention:40 --key-result grocers:revenue:2 --constraint-step acquisition --constraint-evidence "No household or grocer has been reached yet" --person-decided

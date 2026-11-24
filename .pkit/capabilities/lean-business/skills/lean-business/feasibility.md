@@ -28,7 +28,7 @@ Help the person see what the first stage asks:
 Then take the verdict as the dispatcher's "Asking a judgement" says:
 
 1. Set out what you found.
-2. Ask the person's verdict, yes or no, with a sentence of why in their words. Give your own lean once they have answered, or when they ask.
+2. Offer a yes and a no, each with a sentence of why drafted from what you found, and say which you recommend, and why. Ask the person's verdict. They take one, change its sentence, or give their own.
 3. Run the command with their answer and their note, first without the flag, showing them its question, and on their confirmation with it:
 
    ```
@@ -45,7 +45,7 @@ The estimate of `meal-plan--households` gives 25 active households in the first 
 pkit lean set-traction meal-plan--households --multiplier 10 --first-stage-metric retention --first-stage-target 40
 ```
 
-You ask where 40 such households would come from. The person names the two groups and the newsletter at their workplace, and can give eight hours a week. You ask for their verdict. They answer yes, in their words "the two groups and the newsletter can bring forty households to try it". You confirm it through the command's question, and run:
+You ask where 40 such households would come from. The person names the two groups and the newsletter at their workplace, and can give eight hours a week. You offer two verdicts. A yes: "The two groups can bring forty households to try it". Or a no for now: "Eight hours a week may not reach forty households in a few months". You recommend the yes, since the two groups alone hold some sixty parents. The person takes the yes, and adds the newsletter to its sentence: "the two groups and the newsletter can bring forty households to try it". You confirm it through the command's question, and run:
 
 ```
 pkit lean judge meal-plan--households feasibility yes --note "The two groups and the newsletter can bring forty households to try it" --person-decided

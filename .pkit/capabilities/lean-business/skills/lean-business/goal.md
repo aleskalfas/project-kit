@@ -10,11 +10,13 @@ A first goal creates the idea's folder. So for a new idea, the location, who may
 
 ## 2. Ask for the goal
 
-The goal is the person's own measure of success, so ask for each part of it, and propose none, the span included. Help them reach it with questions such as:
+The goal is the person's own measure of success. So first ask what the business would have to give them, with questions such as:
 
 - **The amount:** what yearly revenue would make this worth leaving other work for, or worth keeping up beside it?
 - **The span:** in how many years would they need to see it?
 - **The currency:** which currency do they think in? It is the unit of every sum the idea holds, and no sum is converted.
+
+Then offer goals built from what they told you, each an amount, a span and their currency, with what each asks of the business, and recommend one, as the dispatcher's "Asking a judgement" says. They take one, change it, or give their own.
 
 A goal is counted as revenue that recurs. A one-off price is spread over a customer's life when its inputs are given (`viability.md`), so the goal stays one figure for every kind of model.
 
@@ -38,7 +40,7 @@ The goal changes only while none of the idea's cycles is planned, running or sus
 
 ## Example
 
-The person starts `meal-plan`, the location, its privacy and its id settled. You ask what yearly revenue would make the service worth their evenings for the next years, in how many years, and in which currency. They answer 240,000 EUR a year, within three years. You run the command with those figures and without the flag, and show them the question it prints. They confirm, and you run:
+The person starts `meal-plan`, the location, its privacy and its id settled. You ask what the service would have to give them to be worth their evenings for the next years, in how many years, and in which currency. They want it to pay for leaving their job and for two people to work with them, within three years, and they think in EUR. You offer three goals: 120,000 EUR a year within three years, enough for them alone; 240,000 EUR a year within three years, enough for them and two others; and 240,000 EUR a year within five, a slower climb to the same team. You recommend the second, since it is what they described. They take it. You run the command with those figures and without the flag, and show them the question it prints. They confirm, and you run:
 
 ```
 pkit lean set-goal meal-plan --revenue 240000 --per year --currency EUR --years 3 --person-decided
