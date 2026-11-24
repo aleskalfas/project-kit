@@ -55,7 +55,7 @@ So the seat's working tree stays where the seat left it, and no reviewer works w
 - **Made, recorded and removed by the run command,** as it does a confined run's clone (ADR-066 point 7):
   - It lies in a folder of the backbone's that only the person's account writes, outside every working tree and outside the per-user temp folder. So it lies outside the default reach of every other session's and run's sandboxed commands (ADR-095 point 2, "Not where a sandboxed command writes by default").
   - Where the run command cannot write such a folder, as from inside a sandbox on Linux, it refuses the run (ADR-066 point 7, "Where it cannot"). The review command then refuses the review, and names a review started at the person's own terminal as the way out.
-  - The run command removes the clone once the reviewer's run ends, whatever its verdict. It removes a clone a killed review left only once the process its record names has ended, told by its id and start time (ADR-100 point 6).
+  - The run command removes the clone once the reviewer's run ends, whatever its verdict. It removes a clone a killed review left only once the process its record names reads as ended, and keeps it where the backbone cannot tell (refinement per [ADR-103](ADR-103-process-liveness-reading.md)).
 - **What it holds.**
   - A git folder of its own, with no hook, sharing no object with the seat's repository.
   - One remote, at the address the code host gives for the pull request's base repository. It takes the name of the remote the default branch resolves through ([COR-054](../../../.pkit/decisions/core/COR-054-default-branch.md)), with that remote's default-branch reference set. Its push address is one no push can use.
