@@ -1,0 +1,14 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  The neutral brand's version being built, 1.1.0, gives the lead type a step
+  above its body at every size, in the body's family and weight: 20 px on a
+  desktop, a tablet and a phone, and 30 px on a projector, where it was the
+  deck's lead (#3497). It drops its own values for the deck's lead token, so a
+  slide's lead, the cover's subtitle, the starter's lead under a page's title
+  and any text a piece's own component sets in the lead type take one type. A
+  piece that names no size now draws such a text at 20 px rather than at the
+  body's 16, a change of look. On a projector it keeps its 30 px. Its released
+  version 1.0.0 is unchanged.
