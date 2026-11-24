@@ -58,7 +58,7 @@ The command writes `state: draft`, and no `lock`: the first render writes it. Ad
 `pkit visual new <piece>` writes the piece's folder, `pieces/<piece>/`, from your choices. For the piece `first-talk`:
 
 ```
-pkit visual new first-talk --top foundations/deck --brand neutral --language en --audience "New members of the team, who have not seen the project yet." --shown "On a screen, at the team's weekly meeting." --medium room --explains --export pdf --mode colour-scheme=light,dark
+pkit visual new first-talk --top foundations/deck --brand neutral --language en --audience "New members of the team, who have not seen the project yet." --shown "On a screen seen from across the room, at the team's weekly meeting." --medium room --explains --export pdf --mode colour-scheme=light,dark
 ```
 
 | Field | Flag |
@@ -83,7 +83,7 @@ top: foundations/deck
 brand: neutral
 languages: [en]
 audience: "New members of the team, who have not seen the project yet."
-shown: "On a screen, at the team's weekly meeting."
+shown: "On a screen seen from across the room, at the team's weekly meeting."
 media: [room]
 explains: true
 exports: [pdf]
