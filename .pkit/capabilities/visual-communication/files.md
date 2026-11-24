@@ -202,6 +202,7 @@ pkit:
         - visual-communication:DEC-072
         - visual-communication:DEC-055#1
         - visual-communication:DEC-055#2
+        - visual-communication:DEC-055#7
         - visual-communication:DEC-055#8
         - ADR-057#2
       artefact:

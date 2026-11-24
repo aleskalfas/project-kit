@@ -153,6 +153,7 @@ pkit:
         - visual-communication:DEC-067#6
         - visual-communication:DEC-067#7
         - visual-communication:DEC-055#1
+        - visual-communication:DEC-055#3
         - visual-communication:DEC-055#4
         - visual-communication:DEC-055#6
         - visual-communication:DEC-055#7

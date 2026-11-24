@@ -127,8 +127,11 @@ pkit:
         - visual-communication:DEC-066#3
         - visual-communication:DEC-055#2
         - visual-communication:DEC-055#3
+        - visual-communication:DEC-055#4
+        - visual-communication:DEC-055#6
         - visual-communication:DEC-055#7
         - visual-communication:DEC-055#8
+        - visual-communication:DEC-055#10
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -602,7 +605,7 @@ physical-size: {width: 594, height: 841}
 
 ### A smallest text size
 
-A top declares the smallest text size of each medium its pages are made for under `smallest-text`, by the medium's word: `screen`, a screen at hand; `room`, a screen read from across a room; `paper`, a printed page (DEC-055 points 1 to 3). A piece names the media it is shown in under `media` ([`piece.yaml`](files.md#pieceyaml)), and a check fails a text drawn smaller than the smallest size of a medium that shows it ([What the check reports](checks.md#scenes)). A deck shown on a laptop and in a room:
+A top declares the smallest text size of each medium its pages are made for under `smallest-text`, by the medium's word: `screen`, a screen at hand; `room`, a screen read from across a room; `paper`, a printed page (DEC-055 points 1 to 3). A piece names the media it is shown in under `media` ([`piece.yaml`](files.md#pieceyaml)), and a check fails a text drawn smaller than the smallest size of a medium that shows it (DEC-055 points 4 and 6; [What the check reports](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->). A deck shown on a laptop and in a room:
 
 ```yaml
 smallest-text:
@@ -612,11 +615,11 @@ smallest-text:
 
 - **A fixed length,** a positive number of px, serves a medium that shows the top's pages at their own size, as a screen at hand shows a web page. On paper, a page with no physical size prints at the px its renderer declares, so a fixed length names a printed size there.
 - **A share of the page,** a formula that gives a length and reads only numbers and the size of the page a run lies on, `:page-width` and `:page-height`, serves a medium that fills what shows it with the page, as a room's screen shows a slide. The smallest size then follows the page's size, whatever width a brand gives the page. No other formula reads those two names, and this one reads neither `:width` nor `:height`, since a page another component places in a slot is not the size the top gets.
-- **A page's height, only where it asks for one.** A page asks for a height where it gets the height its top asks for, as a deck's slides do, or where the component that draws it declares a physical size or asks for a height by a formula that reads none of its parts. A page as tall as its content, as a site's page or a figure is, asks for none, so a share of its height would grow with the text it is held to. A share that reads `:page-height` there gives no smallest size at that page, and is reported where the scene is computed ([What the check reports](checks.md#scenes)).
+- **A page's height, only where it asks for one.** A page asks for a height where it gets the height its top asks for, as a deck's slides do, or where the component that draws it declares a physical size or asks for a height by a formula that reads none of its parts. A page as tall as its content, as a site's page or a figure is, asks for none, so a share of its height would grow with the text it is held to. A share that reads `:page-height` there gives no smallest size at that page, and is reported where the scene is computed ([What the check reports](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 - **The top's alone,** as its physical size is. No brand gives it a value, no role or component token holds it, and a brand's drawing declares none. Only the piece's top is read for it: a top placed in a slot, or as a page of another top, is shown in the piece's media.
 - **A value, never a switch,** so neither content nor a size chooses its own smallest size.
 - **`paper` takes a share on a top with a physical size,** whose brand's width sets the scale its pages print at, so a fixed length would name no printed size.
-- **A medium it declares nothing for** has no smallest size under that top, and no text is measured in it: the check states so as a fact.
+- **A medium it declares nothing for** has no smallest size under that top, and no text is measured in it: the check states so as a fact (DEC-055 point 10; [What the check reports](checks.md#scenes) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 - **Each value names its source** in a comment beside it, with the measure the source states and how it became a font size ([The foundations](files.md#the-foundations)).
 
 ## Formulas
