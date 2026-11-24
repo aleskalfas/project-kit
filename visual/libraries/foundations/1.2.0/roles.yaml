@@ -69,6 +69,11 @@ roles:
   # from the heads of the page's parts: a brand that gives it no value sets a page's title
   # as a heading (DEC-004 point 7).
   type.title: {type: typography, default: '{type.heading}'}
+  # The type of running text read before the body, such as a page's opening paragraph or
+  # the line under a slide's title, so a brand can set it apart from the body: a brand that
+  # gives it no value sets it as the body, so it still reads as running text (DEC-004 point
+  # 7, DEC-072 point 1).
+  type.lead: {type: typography, default: '{type.body}'}
   picture.logo: {type: picture}
 
 # The shared axes (DEC-004 point 2). The colour scheme and the contrast change colours
