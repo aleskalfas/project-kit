@@ -525,9 +525,9 @@ answers:
       - 20261123T010957Z-208ac0f1.yaml
       - 20261123T024437Z-f21e64c7.yaml
     revalidated:
-      at: 2026-11-23T23:12:00Z
+      at: 2026-11-24T00:35:40Z
       outcome: unchanged
-      unchanged-because: Running checks changes only its task runner paragraph, which now names the uv commands the mise tasks wrapped, and the development install's steps, which now name uv tool install and pkit --version where they named mise tasks; a fresh clone still gets ready with one pkit sync, and the CLI still installs at a release by its tag, so the needs this actor draws from the section stand.
+      unchanged-because: Running checks now holds no mise task runner, and its development install names uv tool install and pkit --version where it named mise tasks; read with it, ADR-039 still has route 2 run a project at its pin through uvx and D2 fall back to the installed CLI with a loud warning, naming the console script pkit where it named the package. So the actor still puts the CLI on the machine at a release by its tag, runs each project at its pin and is told plainly of a fallback, and gets a fresh clone ready with one pkit sync, and CONTRIBUTING.md still calls whoever holds the repository's settings the operator, so its needs, activities and note stand.
   - artefact: tech-docs/coding-conventions.md
     read:
       - 20261105T100241Z-2ce909e8.yaml
@@ -551,6 +551,6 @@ answers:
       - 20261123T010957Z-208ac0f1.yaml
       - 20261123T024437Z-f21e64c7.yaml
     revalidated:
-      at: 2026-11-23T23:12:05Z
+      at: 2026-11-24T00:35:41Z
       outcome: unchanged
-      unchanged-because: Running checks changes only its task runner paragraph, which now names the uv commands the mise tasks wrapped, and the development install's steps; it still says how to run the checks, and its paragraph Lint and format and its bullet Suppressions, which this page points to, are as they were.
+      unchanged-because: Running checks drops its optional mise task runner paragraph, and its development install now names uv tool install and pkit --version where it named mise tasks; it still says how to run the checks, and its paragraph Lint and format and its bullet Suppressions, which this page points to, are as they were.
