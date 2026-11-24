@@ -85,7 +85,7 @@ The points:
 - **What the backbone's run command does:**
   - it refuses inside a run (point 8)
   - it makes, checks and removes a confined run's clone (point 7), and makes, checks and keeps a working run's for its caller (refinement per [ADR-073](ADR-073-builder-runs.md) point 1)
-  - it makes, records and removes a reviewer's clone, and the folder that holds its run's rules, removing a clone a killed review left only once the process its record names has ended (refinement per [ADR-102](ADR-102-reviews-in-own-clone.md))
+  - it makes, records and removes a reviewer's clone, and the folder that holds its run's rules, removing a clone a killed review left only once the process its record names reads as ended, and keeping it where the backbone cannot tell (refinement per [ADR-102](ADR-102-reviews-in-own-clone.md) and [ADR-103](ADR-103-process-liveness-reading.md))
   - it reads the run's rules from the clone, and projects them through the shared decision core (ADR-003). For a working run it reads them, the hook, the model, the definition and the runner itself from the default branch's head the caller names, never from the clone (refinement per [ADR-073](ADR-073-builder-runs.md) point 2)
   - it judges which allowed commands the platform requires outside the sandbox, by ADR-027's test (point 6)
   - it runs the runner a confined run's clone registers, from the clone's root. For an unconfined run whose folder is a project's root, such as a review's in the person's checkout or a drift command's clone, the backbone runs the runner that project registers, from that folder. For any other folder, the runner of the project the command runs in.
@@ -118,7 +118,7 @@ The points:
 - the calls the harness refused, where it reports them
 - for a confined run, the run's files as untrusted data, the check's verdict (point 7), and each command the run ran outside the sandbox (point 6)
 - for a working run, its kept clone, the check's verdict, the harness session's id, and its progress in the file the caller named (refinement per [ADR-073](ADR-073-builder-runs.md) points 1, 5 and 7)
-- for a working run, as the run starts, the path of its progress file, which the run command writes in the run's settings folder under the name the caller gives, and, while the run runs, each process the runner starts, the harness and each check's, by its id and start time, each held until the caller has written it into the build's state and lets it go, the run command letting it go only once the caller does, and ending it where the caller's end of the pipe closes (refinement per [ADR-100](ADR-100-runs-in-seat-clone.md))
+- for a working run, as the run starts, the path of its progress file, which the run command writes in the run's settings folder under the name the caller gives, and, while the run runs, each process the runner starts, the harness and each check's, by the name the run command gives it from the id the runner reports, each held until the caller has written it into the build's state and lets it go, the run command letting it go only once the caller does, and ending it where the caller's end of the pipe closes (refinement per [ADR-100](ADR-100-runs-in-seat-clone.md) and [ADR-103](ADR-103-process-liveness-reading.md))
 
 **A run is refused before it starts when:**
 - the marker of a run is set (point 8), or no runner is found, or more than one (point 1)
@@ -225,7 +225,7 @@ DEC-056 point 5 reads the run's rules as denies, and this record keeps that read
 - **Git is read as hostile.** The check runs git with the clone's own configuration ignored. Any error of git's is a breach, so the check fails closed.
 - **A breach** comes back with what changed, and the caller sets the run's files aside.
 - **A check, not a boundary.** It finds a breach after it happened, and only inside the clone. There, only an excluded command can write outside the workspace. Outside the clone, an excluded command's writes go unseen (point 11).
-- **Then the files, then the removal.** The run command copies the run's files from the workspace to the folder the caller named. It copies regular files only, follows no symbolic link, refuses a file with more than one link, and bounds the total size. It refuses any entry whose name a file system may treat as `.git`, compared without regard to case, as git's own guard compares it. It never copies the temp folder. Then it removes the clone, and each confined run first removes any clone a killed run left behind.
+- **Then the files, then the removal.** The run command copies the run's files from the workspace to the folder the caller named. It copies regular files only, follows no symbolic link, refuses a file with more than one link, and bounds the total size. It refuses any entry whose name a file system may treat as `.git`, compared without regard to case, as git's own guard compares it. It never copies the temp folder. Then it removes the clone. Each confined run first removes any clone a killed run left behind, once the process that made it reads as ended, and keeps it where the backbone cannot tell (refinement per [ADR-103](ADR-103-process-liveness-reading.md)).
 
 ### 8. A run is a leaf
 
