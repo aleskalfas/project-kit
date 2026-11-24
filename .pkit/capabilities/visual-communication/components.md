@@ -13,6 +13,7 @@ pkit:
         - .pkit/capabilities/visual-communication/scripts/_lib/formula.py
         - .pkit/capabilities/visual-communication/scripts/_lib/layout.py
         - .pkit/capabilities/visual-communication/scripts/_lib/scene.py
+        - .pkit/capabilities/visual-communication/scripts/_lib/boxes.py
         - .pkit/capabilities/visual-communication/scripts/_lib/canvas.py
         - .pkit/capabilities/visual-communication/scripts/_lib/text.py
         - .pkit/capabilities/visual-communication/scripts/_lib/env.py
@@ -94,6 +95,7 @@ pkit:
         - visual-communication:DEC-032#5
         - visual-communication:DEC-032#6
         - visual-communication:DEC-032#7
+        - visual-communication:DEC-032#8
         - visual-communication:DEC-034#1
         - visual-communication:DEC-034#2
         - visual-communication:DEC-034#3
@@ -119,6 +121,10 @@ pkit:
         - visual-communication:DEC-038#5
         - visual-communication:DEC-038#6
         - visual-communication:DEC-038#7
+        - visual-communication:DEC-046#3
+        - visual-communication:DEC-066#1
+        - visual-communication:DEC-066#2
+        - visual-communication:DEC-066#3
       artefact:
         - .pkit/capabilities/visual-communication/files.md#what-the-location-holds
         - .pkit/capabilities/visual-communication/files.md#shapes
@@ -265,6 +271,7 @@ An option takes a value from what the component declares, never a free number or
 - **An instance's family** is the family its concept maps to, where the content names one as `concept: <notation>/<concept>` ([content files](files.md#content-files)). Else it is the family, or the step of an order, that the `repeat` part that draws it as an item gives its place ([Repeating over a list](#repeating-over-a-list-row-and-column)), else its component's `colour`, else the family of the component that places it. A state with a `colour` then replaces it. A concept the piece's notations do not hold is reported, and the instance takes its family as if it named none.
 - **An order's steps** (DEC-032 points 3 and 4). Under a word of an option, a pattern may give the places of a list colour steps instead of a family. Place k of the n places the list draws takes the colour (k − 1) / (n − 1) of the way from the order's first end to its last, and a list of one place the first end. Every item drawn counts, one that names its own component included, and an item left out counts for nothing. The foundations declare which roles are the ends and which the text on every step ([`roles.yaml`](files.md#rolesyaml)). A step paints as a family: `:colour.fill` and `:colour.line` paint with the step's colour, and `:colour.text` with the order's text. An item's concept, and a state with a `colour`, still come before its step, and an item passes its step on to what sits in it, as it would a family. Under foundations that declare no ends, a place takes no step, its item takes its family as if the pattern gave none, and the piece's check states it at the lock.
 - **How the engine spreads a step.** In Oklab, along the straight line between the two ends, each end's components multiplied by its alpha before the spread and divided by the step's alpha after, as CSS Color 4 interpolates. A step that falls outside sRGB, the range format 1 gives every colour in, comes back by CSS Color 4's gamut mapping: its lightness and hue stay, and its chroma is lowered until clipping it moves it by less than a difference anyone sees. The first and the last share are the ends exactly as given. Every step between is computed in one fixed order, and each component and its alpha are rounded to 1/10 000, half away from zero, as the scene's lengths are rounded, so the same ends give the same step on every machine. The engine spreads each combination's own ends: a step's value differs by mode, and its name does not ([What a scene holds](#what-a-scene-holds)).
+- **What shows a step, and what may fail on one** (DEC-032 point 8). A step shows where a part paints its family's fill, or its family's line where that lies on another fill than the step. A mark painted from its family's line over its own fill, such as an edge round a box on `:colour.fill`, lies in the step's colour on the step, so it shows nothing there. A part that takes its family from its own component, such as a tag that declares one, keeps it inside a stepped item. A step may lie far in lightness from every family's fill, so two kinds of part may fall below their contrast on one, measured as drawn (*checks*, `contrast-drawn`): a part painted with a role from outside its family over the step, such as a text in `text-secondary` on `:colour.fill`, and a part painted in the order's text, `:colour.text`, over a fill from outside its family, such as a card's text on the surface. A pattern's owner audits the library's own item components for both before a release that makes the steps its default; an item component of another library is caught at the draft's next render, as any change of look is. The starter's audit is in its README, under [*An order's steps*](libraries/starter/README.md#an-orders-steps) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->.
 - **Only a place takes a step** (DEC-032 point 6). A component's `colour`, a state's and a `repeat` part's family never name `order`, the key the foundations declare the order's roles under, nor one of those roles. No part of a library's component paints with an order's role by its name, which a brand tunes for steps alone. A piece's own component, and content's `override`, may point a part at one, such as a legend's swatch of the first end. Each is found when the component is read (*checks*).
 - **A run's family.** A run of a field of runs that names a concept takes that concept's family, before its instance's own. A run that names none takes its instance's family. A state with a `colour` replaces the family of each run of the instance too, a run's concept included (DEC-012 point 3).
 - **A paint `:colour.<member>`** paints with the role the foundations map that member of the instance's family to, or, for a run, of the run's family. Where the instance has no family, its family is none the foundations declare, or the family has no such member, the part paints nothing there, and is reported.
@@ -311,6 +318,25 @@ parts:
 
 - **Places and sizes** are formulas that give a length, in the component's own frame. A missing `x` or `y` is zero.
 - **`when`** draws the part only while a condition holds. It names a field, and holds while the content fills it: the field is not missing, empty text, an empty list or an empty mapping. A field of runs is filled where one of its runs holds text. Or it is `{<option>: [<word>, ...]}`, and holds while the option takes one of the words. Or it is a switch on a size, or, in a drawing of a layout, on `:as`, each branch `true`, `false` or a `when` of the two forms above ([Switches](#switches)). A part not drawn has zero size, at its place, so a formula that reads its frame holds.
+- **`lies-over`** names the parts that this one lies over on purpose, such as a badge over a card's box, as a list: `lies-over: [box]` (DEC-066 point 1). Any part may take it, wherever parts are written: a component's `parts`, a layout's drawing and a brand's drawing. It names parts written before it in the same `parts`, and so drawn before it, since the check of overlaps compares only the parts one group holds directly. So it names no part inside a component a part places, and no item of a list: a part that places a component, holds a slot or repeats over a list is named whole. It speaks of the parts' boxes, as the check does, not of what is drawn in them. It takes no switch: wherever the two parts overlap, under any option, at any size and in any language, the overlap is meant. Where they do not overlap, or where the check does not compare them, as where one is a line or holds the other, it changes nothing.
+- **What `lies-over` refuses,** when the component is read: a name that is no part of the same `parts`, the part's own name, the name of a part written after it, and a name written a second time. Each is a finding (*checks*, `lies-over-refused`), and says nothing: at a pair no other writing names, the check asks for attention, as at any pair no one named. A name's first writing names its part.
+- **What `lies-over` gives.** Where a library version the project's list marks released, and whose folder still holds what was released, names a pair so, validation states their overlap as a fact (*checks*, `box-overlap-meant`), which asks no one to act. For a copy of a library the capability ships, the list's hash must also be the one the capability records for that version. Anywhere else, as in a piece's own component or in a version not yet released, the word gives the check nothing: validation asks for attention at the pair, `box-overlap`, as at any pair no one named. The word never reaches the review, save the message of a refusal. The viewing step's report gives every overlap as `box-overlap`, with nothing of the word in its message, and the reviewer judges each on the image (DEC-066 point 2). The check of edges that nearly line up compares a pair named so as it compares any two siblings (DEC-066 point 3).
+
+Written for this page, a card whose badge lies over the right edge of the card's box on purpose, and over nothing else. Where a long title pushes the badge down over another part, that overlap still asks for attention:
+
+```yaml
+parts:
+  box:
+    box: {fill: surface, stroke: line}
+    width: "=:width - @space.3"
+    height: "=:height"
+  badge:
+    lies-over: [box]
+    box: {fill: accent}
+    x: "=box.right - @space.3"
+    width: "=@space.4"
+    height: "=@space.4"
+```
 
 The figure draws its caption only when the content gives one:
 
@@ -667,7 +693,7 @@ A primitive's properties lie in its own mapping, under SVG's names.
 ### Placing a component: `use` and `slot`
 
 - **`use: <library>/<component>`** places that component. `fields` maps each of its fields to a field of this component, whose content it passes on. `options` gives each of its options a word, or a switch on an option of this component.
-- **A component never places itself,** directly or through others. The engine reports the chain of components.
+- **A component never places itself,** directly or through others, except over the items of its content, which end. The engine reports the chain of components.
 - **`slot: <field>`** places the component the content gives in that field: `{use: <library>/<component>}`, with that component's fields and options beside `use`. Where the field is empty, the slot is not drawn.
 
 ### Repeating over a list: `row` and `column`
@@ -686,6 +712,8 @@ parts:
     colour: {by: shade, plain: blue, steps: ":steps"}
     row: {gap: "=@space.2", sizes: equal}
 ```
+
+In the starter, `layers` gives its levels' places `colour: {by: shade, steps: ":steps", plain: null}`. What it draws by default is in the starter's README, under [*An order's steps*](libraries/starter/README.md#an-orders-steps) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->.
 
 The part's *layout operator*, `row` or `column`, lays the items along a line, across or down. Its settings take the names of CSS flexible layout:
 
@@ -839,7 +867,7 @@ Which text fills `version` and `date`:
 
 The scene's root holds `piece`, its `lock`, the `language`, the `size-key`, its key over the size axes, `seam` (the version of the seam its plugins read), `pages` (the trace ids of its pages, in order: a top that is a page alone, what a slot of pages places, or each page of a top whose layouts are its pages' forms), `fixed-pages`, `physical-size` and `children`. `fixed-pages` says whether the pages are *fixed pages*: `true` where the top's layouts are its pages' forms and it asks for a height, by a formula or through its physical size, which each page then gets, as a deck's slides do (DEC-031 point 2). A site's pages take their own height, and a page alone and what a slot of pages places are none, so it is `false` for them. So a scene's pages are all fixed pages or none is, and the top's name decides nothing. `physical-size` holds the physical size of the piece's top, `{width, height}` in millimetres as the top declares it, or `null` where it declares none, and every page of the scene takes it ([A physical size](#a-physical-size)). Each element holds its `type`, `group`, a primitive's kind, or `path` for a sign, and its `id`, its trace id. It holds its frame, `x y width height`, relative to its parent, in px, rounded to 1/100 px, half away from zero. Then come its properties, `sources`, where each came from, and on a group its `children`, in drawing order.
 
-A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A line adds `marker-start` and `marker-end` where it draws an arrowhead there. A tie's connector adds these:
+A placed component's group adds `component` (its `use`), `version` (its library's, none for a local component), `options` (the value each option takes) and, on a page, `page: true`. An element whose part names parts under `lies-over` adds `lies-over`, of any type (DEC-066 point 2): `ids`, the trace ids of the elements those parts draw in the scene, in the order the part names them, and `library`, the version that holds the part, as `<library>@<version>`, none for a local component. A part it names that draws nothing in the scene, such as a slot left empty or a part whose `when` does not hold, adds no id, and where none of them draws, the element holds no `lies-over`. It holds no mark of whether that version is released, which is read where a finding is read. It is no property an element draws, so it names no source, and no renderer declares it or reports a loss of it, as of an element's `type`, `id`, `sources` and `children`. A top whose layouts are its pages' forms holds no `page`. Its group holds its pages, each a group with `page: true`, whose `component` is the top's where its layout's drawing draws it, else the one the page names. A `repeat` part is a group too, holding its items. A `box`, an `ellipse` and a `line` add their paints and lengths, and a line its ends. A line adds `marker-start` and `marker-end` where it draws an arrowhead there. A tie's connector adds these:
 
 - **`rx`:** the radius of its turns, as its part gives it, where it gives one. A renderer fits each turn to its legs ([Ties and connectors](#ties-and-connectors)).
 - **`points`:** where its route turns, every point of it, its ends first and last. A connector whose route does not turn holds no `points`, and keeps its ends as `x1 y1 x2 y2`.

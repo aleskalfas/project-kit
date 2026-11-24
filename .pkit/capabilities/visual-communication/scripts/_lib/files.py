@@ -49,6 +49,7 @@ KINDS = (
     "findings",
     "exports",
     "code",
+    "review",
 )
 
 SCHEMA_FIELD = "pkit_schema"

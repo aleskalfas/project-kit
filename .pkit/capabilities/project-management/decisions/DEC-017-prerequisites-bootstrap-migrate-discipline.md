@@ -28,14 +28,14 @@ The capability ships **three programmatic scripts** under `scripts/`, each with 
 
 **Discipline.** Read-only. Compares the adopter's GitHub state and project-side configuration against the capability's schemas and reports gaps. Exits non-zero on any failure; zero when no check fails — every check passed, was legitimately skipped, or reported a non-blocking warning.
 
-**Hard-gate role.** The pm composite skill's dispatcher makes "Step 0: run pre-check" the first step of every operation. The operation refuses to proceed on any failure. The gate is **programmatic**, not the agent's interpretation of the output — the script's exit code is the contract.
+**Hard-gate role.** The pm composite skill's dispatcher makes "Step 0: run pre-check" the first step of every operation. The operation refuses to proceed on any failure. The gate is **programmatic**, not the agent's interpretation of the output — the script's exit code is the contract. Where no check fails, the first step shows the person each warning pre-check reports, and the operation goes on; a caller that reads one check's outcome reads it by the check's key in the machine-readable report (refinement per [project-management:DEC-074-board-check-warns]).
 
 **Checks at v0.2.0** (the version this DEC lands in):
 
 1. `git` and `gh` are invocable; versions captured for diagnostics.
 2. `gh auth status` returns valid for the target host.
 3. The repository (`gh repo view`) is accessible and matches the expected owner/name.
-4. Projects v2 board (conditional on adopter config declaring one): `gh project view` resolves the declared board id.
+4. Projects v2 board (conditional on adopter config declaring one): `gh project view` resolves the declared board id. Where the board does not answer, the check warns and fails nothing; a configuration that declares a board and gives no value its schema admits as a board number fails (refinement per [project-management:DEC-074-board-check-warns]).
 5. Required labels exist: every value in [project-management:DEC-012-classification-axes]'s `type` axis as a `type:<value>` label. In label-fallback mode (no board): also `priority:<value>` and `workstream:<value>` per the configured value sets.
 6. Default branch (`gh api repos/:owner/:repo`) matches the project's declared default branch — the backbone's, declared once for every reader; the capability keeps no setting of its own for it (refinement per COR-054).
 7. The project-side adopter config file is present, parses, and declares every required field.
@@ -98,7 +98,7 @@ The scripts cite local capability DECs and schema entries in their output messag
 
 **Why explicit invocation of migrate (not auto-chained from upgrade).** `pkit capabilities upgrade project-management` swaps the file-system state of the capability. `migrate` mutates external GitHub state. The two are different surfaces with different blast radius. Auto-chaining means an `upgrade` could rename labels and re-tag issues without the adopter reading the migration plan; that's the opposite of the user's "honest sync with hard gates" requirement.
 
-**Why migrate refuses on pre-check failure.** Drift in basic prerequisites — missing labels, wrong default branch, board configuration mismatch — breaks the assumptions migrate's plan computation relies on. A migration that "renames `type:maintenance` to `type:chore`" assumes `type:maintenance` exists and behaves like a `type:*` axis label; if the adopter is in a state where `type:maintenance` was manually deleted (and several issues are mislabelled), the migration is dangerous to attempt. Pre-check passing is the precondition for migrate's safety.
+**Why migrate refuses on pre-check failure.** Drift in basic prerequisites, missing labels among it, breaks the assumptions migrate's plan computation relies on. A migration that "renames `type:maintenance` to `type:chore`" assumes `type:maintenance` exists and behaves like a `type:*` axis label; if the adopter is in a state where `type:maintenance` was manually deleted (and several issues are mislabelled), the migration is dangerous to attempt. Pre-check passing is the precondition for migrate's safety.
 
 **Why label-only primitives at v0.2.0.** No actual migration has happened yet — v0.2.0 is the *first* version shipping the framework. Adding board-field, marker-format, or body-shape primitives speculatively violates COR-007's pattern-extraction discipline. Primitives crystallise when real migrations need them.
 

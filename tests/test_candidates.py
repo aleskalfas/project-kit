@@ -63,7 +63,7 @@ def test_the_first_hop_is_the_candidates_own_upgrade_through_the_bypass() -> Non
     """The first hop fetches the candidate from the distribution URL at its tag, and
     runs its upgrade with routing bypassed (ADR-089 point 8)."""
     assert candidates.first_hop("3.0.0rc1") == (
-        f"PKIT_NO_ROUTE=1 uvx --from {router.DISTRIBUTION_GIT_URL}@v3.0.0rc1 project-kit upgrade"
+        f"PKIT_NO_ROUTE=1 uvx --from {router.DISTRIBUTION_GIT_URL}@v3.0.0rc1 pkit upgrade"
     )
 
 

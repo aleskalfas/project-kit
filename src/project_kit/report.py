@@ -31,6 +31,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
+from project_kit import acting_account
 from project_kit.environment import collect_environment, render_environment_block
 
 #: The distribution's fixed report target (`owner/repo`). Set by whoever ships this
@@ -850,20 +851,23 @@ def _summarize(issue: dict) -> ReportSummary:
     )
 
 
-def current_login() -> str | None:
-    """The authenticated `gh` user's login, or None if it can't be determined.
-    Public because the send path names it as the posting identity before every
-    confirm (#662 — the browser-identity misattribution guard)."""
-    data = _gh_json(["gh", "api", "user"])
-    if isinstance(data, dict) and isinstance(data.get("login"), str):
-        return data["login"]
-    return None
+def posting_account() -> acting_account.Reading:
+    """The account a report posts as, and whose reports the listing lists: the
+    acting account, read once in the run (ADR-094 point 6). The send path
+    names it before every confirm (#662 — the browser-identity
+    misattribution guard), and posts nothing where it names none."""
+    return acting_account.read()
 
 
-def list_my_reports(target: str, target_root: Path | None = None) -> list[ReportSummary] | None:
-    """The invoker's reports on `target`, newest first — both those they
-    **authored** and those **attributed** to them (filed on their behalf via
-    `--on-behalf-of`, carrying a `Reported for @login` marker). Membership
+def list_my_reports(
+    target: str, target_root: Path | None = None, *, account: str
+) -> list[ReportSummary] | None:
+    """`account`'s reports on `target`, newest first — both those it
+    **authored** and those **attributed** to it (filed on its behalf via
+    `--on-behalf-of`, carrying a `Reported for @login` marker). `account` is
+    the acting account in the one spelling (ADR-094 point 6); the listing by
+    author names it as the service's search does, a bot's as `app/<name>`
+    (`acting_account.search_name`). Membership
     requires positive provenance (`is_report`, #681) — the classifier's
     prefix/legacy fallbacks no longer sweep in every ordinary prefix-titled
     issue the invoker authored — **unioned** with any issue a local
@@ -879,7 +883,7 @@ def list_my_reports(target: str, target_root: Path | None = None) -> list[Report
             "--repo",
             target,
             "--author",
-            "@me",
+            acting_account.search_name(account),
             "--state",
             "all",
             "--limit",
@@ -896,8 +900,7 @@ def list_my_reports(target: str, target_root: Path | None = None) -> list[Report
             s = _summarize(issue)
             by_number[s.number] = s
 
-    login = current_login()
-    if login:
+    if account:
         attr = _gh_json(
             [
                 "gh",
@@ -906,7 +909,7 @@ def list_my_reports(target: str, target_root: Path | None = None) -> list[Report
                 "--repo",
                 target,
                 "--search",
-                f'in:body "Reported for @{login}"',
+                f'in:body "Reported for @{account}"',
                 "--state",
                 "all",
                 "--limit",
@@ -937,10 +940,10 @@ def list_my_reports(target: str, target_root: Path | None = None) -> list[Report
 
 
 def list_my_reports_tree(
-    target: str, target_root: Path | None = None
+    target: str, target_root: Path | None = None, *, account: str
 ) -> list[tuple[ReportSummary, dict[int, TrackedFix]]] | None:
     """Like `list_my_reports` (same membership rule + locally-reported union,
-    #681), but each report is paired with its `## Tracked by` fixes resolved
+    #681, by `account`), but each report is paired with its `## Tracked by` fixes resolved
     to `TrackedFix` (state + title + url, #664) — for the `--tree` view. One
     extra read per tracked issue; bounded by a personal report list. None on
     the initial gh failure."""
@@ -952,7 +955,7 @@ def list_my_reports_tree(
             "--repo",
             target,
             "--author",
-            "@me",
+            acting_account.search_name(account),
             "--state",
             "all",
             "--limit",

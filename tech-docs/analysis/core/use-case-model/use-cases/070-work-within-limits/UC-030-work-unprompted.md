@@ -40,6 +40,8 @@ pkit:
         - .pkit/permissions/profiles/autonomous.yaml
         - .pkit/adapters/README.md
         - .pkit/adapters/claude-code/permission-hook.py
+        - .pkit/adapters/claude-code/settings/core/settings.json
+        - .pkit/schemas/privilege-catalog.yaml
       record:
         - COR-028#1
         - COR-028#2
@@ -64,6 +66,9 @@ pkit:
         - ADR-029#2
         - COR-004
         - ADR-034#1
+        - ADR-095#3
+        - ADR-095#4
+        - ADR-099#1
       artefact:
         - ACT-operator
         - ACT-ai-agent
@@ -154,8 +159,11 @@ pkit:
 - **10c.** A glob, an assignment that changes the program's configuration, or git configuration a command sets, such as `git -c`, may hide a command a deny names. So the code defers `git push origin --forc[e]` whatever the grants allow ([ADR-025 point 2](../../../../../architecture/decisions/ADR-025-segment-conservative-bash-allow.md#2-inherited-fail-closed-on-uncertainty-adr-004-decision-point-4-non-negotiable)). Where the deny is a guardrail, Claude Code's permission hook asks the operator rather than defers, outside auto and bypass mode ([ADR-025 point 7](../../../../../architecture/decisions/ADR-025-segment-conservative-bash-allow.md#7-the-hook-asks-where-a-guardrail-may-hide)). The code denies the forms [ADR-025 point 5](../../../../../architecture/decisions/ADR-025-segment-conservative-bash-allow.md#5-the-deny-side-remains-porous) lists, such as `git push -uf`.
 - **10d.** The command holds a redirection that duplicates or closes a file descriptor, such as `2>&1`, or discards output to `/dev/null`, such as `>/dev/null`. The code removes such a redirection first, and decides what is left as it would decide that command typed alone ([ADR-025 point 2](../../../../../architecture/decisions/ADR-025-segment-conservative-bash-allow.md#2-inherited-fail-closed-on-uncertainty-adr-004-decision-point-4-non-negotiable)). A deny binds on a program behind the redirection too. A lookalike such as `2>&1t`, which zsh reads as a write to a file, makes the code defer the call.
 - **10e.** The command runs another through a runner the code reads, such as `xargs`, find's `-exec` or `sh -c`. The code matches each deny on the command the runner runs too, so it denies `find . -exec rm -rf {} +` in every mode ([ADR-025 point 5](../../../../../architecture/decisions/ADR-025-segment-conservative-bash-allow.md#5-the-deny-side-remains-porous)). Where it cannot read what the runner runs, such as behind `env -S`, every guardrail may bind, and the code defers as in 10c. A [grant](../../../glossary.md#term-grant--grant) still matches the runner as written.
+- **10f.** The command changes what judges later calls, such as `pkit permissions apply` or `uv tool upgrade`. Whatever the grants allow, the permission hook asks the operator before it in every mode ([ADR-095 point 3](../../../../../architecture/decisions/ADR-095-hook-out-of-reach.md#3-the-hook-allows-no-more-than-its-bound-a-model-out-of-a-sandboxed-commands-reach)). Claude Code's settings ask before its plain form too, where the hook does not run ([ADR-095 point 4](../../../../../architecture/decisions/ADR-095-hook-out-of-reach.md#4-the-hooks-own-verdicts-and-the-native-locks-beside-them-hold-in-every-state)).
+- **10g.** The command names a folder where the hook puts no ask before a file tool's write, as `pkit permissions folders name` does. The code denies it outright, since only the operator takes that step, from a terminal of their own ([ADR-099 point 1](../../../../../architecture/decisions/ADR-099-named-folders-under-copy.md#1-an-agents-call-that-names-a-folder-is-denied)).
+- **10h.** The command asks to run outside the sandbox. The permission hook asks the operator before it in every mode, whatever the grants allow ([ADR-095 point 4](../../../../../architecture/decisions/ADR-095-hook-out-of-reach.md#4-the-hooks-own-verdicts-and-the-native-locks-beside-them-hold-in-every-state)).
 
-**Postconditions:** The agents run each granted command, and each single command inside the [sandbox](../../../glossary.md#term-sandbox--sandbox), with nobody asked. The [system](../../../glossary.md#term-system--system) has verified the [permission code](../../../glossary.md#term-permission-code--permission-code)'s verdicts, and that no command in the sandbox may read the four credential paths. The operator knows where the confinement does not hold.
+**Postconditions:** The agents run each granted command, and each single command inside the [sandbox](../../../glossary.md#term-sandbox--sandbox), with nobody asked, save the commands 10f to 10h name. The [system](../../../glossary.md#term-system--system) has verified the [permission code](../../../glossary.md#term-permission-code--permission-code)'s verdicts, and that no command in the sandbox may read the four credential paths. The operator knows where the confinement does not hold.
 
 **Minimal guarantees:**
 

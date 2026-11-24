@@ -1,0 +1,156 @@
+answers:
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T145230Z-c78b596e.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T163411Z-b652b29d.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261114T220627Z-1363207d.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T222004Z-7a8ddb3a.yaml
+      - 20261118T093416Z-ae3913ed.yaml
+      - 20261118T191220Z-3b107524.yaml
+    revalidated:
+      at: 2026-11-23T22:20:39Z
+      outcome: unchanged
+      unchanged-because: Rule 5 of the project rules is rewritten to say only what project-kit adds to the visual-communication capability's one round (#3478); this use case cites only project rule 2, which the change leaves as it is.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-004-check-before-push.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T170342Z-a3aeb099.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261113T155900Z-499e23c9.yaml
+      - 20261114T220627Z-1363207d.yaml
+      - 20261115T233327Z-1dd181fa.yaml
+      - 20261115T235027Z-ae2f6a42.yaml
+    revalidated:
+      at: 2026-11-23T22:22:03Z
+      outcome: unchanged
+      unchanged-because: "Judged with the answers made apart in 20261115T233327Z-1dd181fa and 20261115T235027Z-ae2f6a42: the use case lists REQ-019 and states nothing of when a friction reading document's schema version rises or of a module's document-version comment, so REQ-019's rewritten measure and ADR-097's comments leave its steps true. This change rewrites only project rule 5, to say what project-kit adds to the visual-communication capability's one round (#3478), and the use case cites only project rule 2, which stays as it is."
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261027T190640Z-271e6d40.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T191319Z-d75fc556.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T125151Z-7bd0e141.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T144400Z-08ab3124.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T001533Z-56aed0a4.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T004535Z-7b0f01ce.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T014227Z-338d7992.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T203336Z-317aab12.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T140535Z-dad8bdc7.yaml
+      - 20261113T162107Z-5e55cd43.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261114T220627Z-1363207d.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261116T110629Z-7871f194.yaml
+      - 20261116T234025Z-ff90f250.yaml
+      - 20261117T001525Z-e0e74889.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T191220Z-3b107524.yaml
+      - 20261119T013318Z-c0734647.yaml
+      - 20261123T001151Z-75d67d5f.yaml
+      - 20261123T010957Z-208ac0f1.yaml
+      - 20261123T024437Z-f21e64c7.yaml
+    revalidated:
+      at: 2026-11-23T22:22:48Z
+      outcome: unchanged
+      unchanged-because: "Judged with the answers made apart in 20261123T001151Z-75d67d5f and 20261123T024437Z-f21e64c7: the guide names no uvx run that takes the package as its command, and its optional task runner has a contributor link mise.dev.toml as mise.local.toml and trust it, as the second's update wrote. This change rewrites only project rule 5, to say what project-kit adds to the visual-communication capability's one round (#3478), and the guide cites only project rule 2, which stays as it is. The deferral on ADR-039 stands until #3412 rewrites the paragraph."
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-039
+          reason: "ADR-039 now serves the permission commands that report the hook's verdict or its model, realize, make the hook's copy, turn the hook on or off or name a folder from the installed release wherever the machine holds one, whatever the checkout or its pin say, and the guide has a source checkout run its working tree for every command; #3412 builds it and rewrites the paragraph."

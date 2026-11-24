@@ -234,6 +234,7 @@ def test_nothing_in_it_fixes_a_look_or_a_brands_value() -> None:
     assert {ref for ref in refs if not ref.startswith("#/")} == {
         "defs.schema.json#/$defs/text",
         "defs.schema.json#/$defs/id",
+        "defs.schema.json#/$defs/language",
     }
     numbers = [leaf for leaf in _leaves(schema) if leaf.get("type") in ("number", "integer")]
     assert numbers == [schema["properties"]["schema_version"]]

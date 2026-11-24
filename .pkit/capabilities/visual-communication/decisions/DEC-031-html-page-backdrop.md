@@ -95,7 +95,7 @@ The rules it added:
 - **Each image is one page,** or one band of it ([visual-communication:DEC-022-web-site-and-parts] point 7), cut to the page as DEC-020 point 5 has it. The keyline and the backdrop lie outside every image.
 - **The step holds a page at its own size.** Its window is as wide as the widest page, with the gutter on each side. It takes the gutter from the renderer's declaration, as it takes the file's marks, and widens the window for every file. So it needs no knowledge of which pages are fixed. A window too narrow for a page stops the run, since the page would not measure its size.
 - **Pixels may round otherwise.** The gutter moves a page's place in the window. At a device scale that is not whole, that changes how its pixels round, as a second page's place does already. Images promise nothing about pixels ([visual-communication:DEC-015-viewing-step-and-reviewer] point 6).
-- **The reads hold.** The check for dropped text paints its own ground over the page and the backdrop, and compares a band of the page with itself. Its first read's planted page needs no keyline, since no read looks outside a page (DEC-020 points 6 and 7).
+- **The reads hold.** The check for dropped text paints its own ground over the page and the backdrop, and compares a band of the page with itself. The planted file's pages, which its first read reads, need no keyline, since the read past a page's edge paints its own ground there and hides the keyline (DEC-020 points 6 and 7; refinement per [visual-communication:DEC-037-text-the-page-hides] point 3).
 - **The reviewer meets no keyline or backdrop.** They are the renderer's, the same around every fixed page, and nothing a piece holds changes them.
 - **What reads them instead.** A test on the file covers each page's keyline, the backdrop, the floor of point 3 from the declared shares, the rules for more contrast and forced colours, a keyline that takes no room on screen, and the keyline in print (refinement per [visual-communication:DEC-026-html-page-print] points 3 and 7). A person judges their look in a browser, as DEC-020 point 5 leaves a reader's settings to a person.
 
@@ -153,7 +153,7 @@ The rules it added:
   - DEC-015 point 5, "The ground", since a page still lies on the browser's own ground inside its keyline.
   - DEC-015 point 6, since images promise nothing about pixels.
   - DEC-020 point 5, since an image still shows one page, cut to the page.
-  - DEC-020 point 7, since no read looks outside a page, so the planted page needs no keyline.
+  - DEC-020 point 7, since the read past a page's edge paints its own ground there and hides the keyline, so the planted file's pages need no keyline (refinement per [visual-communication:DEC-037-text-the-page-hides] point 3).
   - DEC-021 point 8 and DEC-023 point 5, since no rule switches the layout by the window's width.
   - DEC-022 points 1 and 3, since a site asks for no height, so none of its pages is a fixed page.
   - DEC-022 point 7, since bands cut a page as before.

@@ -15,8 +15,8 @@ from typing import Any, cast
 
 import pytest
 
+from tests import in_process, pull_request_backbone
 from tests import pm_issue_branch_support as issue_branch_support
-from tests import pull_request_backbone
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "done-work.py"
@@ -66,24 +66,67 @@ def _mark_bootstrapped(cap_root: Path) -> None:
     )
 
 
-def _stub_pr_view(reviews, comments, author_login: str | None = "author"):
-    """`author_login=None` stands for a PR whose author GitHub returns as null."""
+def _stub_pr_view(reviews, comments, author_login: str | None = "author", *, failing=()):
+    """`author_login=None` stands for a PR whose author GitHub returns as null.
+
+    The gate reads the author from `gh pr view`, and the reviews and comments
+    from GitHub's REST interface, each author with its type (DEC-079 point 3).
+    A review is given as its `state`, with its reviewer's `login` (a person,
+    `reviewer`, by default), `type` (`User` by default) and `body`. A comment
+    is given as gh writes it, `{"author": {"login": ...}, "body": ...}`, with
+    an optional `type` in its author (`User` by default). `failing` names the
+    reads that fail: `reviews` or `comments`.
+    """
 
     def fake_gh_run(args, config, **kwargs):
         import subprocess
 
-        return subprocess.CompletedProcess(
-            args=args,
-            returncode=0,
-            stdout=json.dumps(
+        def done(stdout: str, returncode: int = 0) -> subprocess.CompletedProcess:
+            return subprocess.CompletedProcess(
+                args=args, returncode=returncode, stdout=stdout, stderr="HTTP 502"
+            )
+
+        if args[1:3] == ["pr", "view"]:
+            # As gh writes a user's account: its login, its node id and no bot flag.
+            author = (
+                None
+                if author_login is None
+                else {"login": author_login, "id": "U_kgDOAAAAAQ", "is_bot": False}
+            )
+            return done(json.dumps({"author": author}))
+        path = next(a for a in args if a.startswith("repos/"))
+        if "/reviews" in path:
+            if "reviews" in failing:
+                return done("", 1)
+            lines = [
+                json.dumps(
+                    {
+                        "login": r.get("login", "reviewer"),
+                        "type": r.get("type", "User"),
+                        "state": r["state"],
+                        "body": r.get("body", ""),
+                    }
+                )
+                for r in reviews
+            ]
+            return done("\n".join(lines))
+        if "/comments" in path:
+            if "comments" in failing:
+                return done("", 1)
+            entries = [
                 {
-                    "author": None if author_login is None else {"login": author_login},
-                    "reviews": reviews,
-                    "comments": comments,
+                    "id": n,
+                    "user": {
+                        "login": (c.get("author") or {}).get("login"),
+                        "type": (c.get("author") or {}).get("type", "User"),
+                    },
+                    "created_at": "2026-11-18T00:00:00Z",
+                    "body": c.get("body", ""),
                 }
-            ),
-            stderr="",
-        )
+                for n, c in enumerate(comments, start=1)
+            ]
+            return done(json.dumps(entries))
+        raise AssertionError(f"unexpected gh call: {args}")
 
     return fake_gh_run
 
@@ -281,6 +324,266 @@ def test_gate_refuses_when_nothing_qualifies(dw, monkeypatch) -> None:
     result = dw._check_approval_gate(99, {}, None, {})
     assert result.passed is False
     assert "approval gate not satisfied" in result.refusal_message
+
+
+# ---- only a person's approval counts in human mode (DEC-079 point 3) ----
+
+_HEAD = "a" * 40
+_BASE = "b" * 40
+
+
+def _refused_for(dw, monkeypatch, reviews=(), comments=(), **kwargs):
+    monkeypatch.setattr(dw, "gh_run", _stub_pr_view(list(reviews), list(comments), **kwargs))
+    result = dw._check_approval_gate(99, {}, None, {})
+    assert result.passed is False
+    return result.refusal_message
+
+
+def test_gate_counts_no_approving_review_from_a_bots_account(dw, monkeypatch) -> None:
+    message = _refused_for(
+        dw, monkeypatch, reviews=[{"state": "APPROVED", "login": "robot[bot]", "type": "Bot"}]
+    )
+    assert "latest state: none" in message
+    assert (
+        "          → Left out, as no person's approval: an APPROVED review by @robot[bot]: "
+        "a bot's account approves nothing as a person."
+    ) in message.splitlines()
+
+
+def test_gate_counts_no_approving_review_from_an_account_of_a_kind_unknown(dw, monkeypatch) -> None:
+    """A bot the service gives with no `[bot]` suffix is of a kind unknown."""
+    message = _refused_for(
+        dw, monkeypatch, reviews=[{"state": "APPROVED", "login": "Copilot", "type": "Bot"}]
+    )
+    assert "an APPROVED review by @Copilot: its account is of a kind unknown" in message
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        "<!-- pkit-verdict -->",
+        f"<!-- pkit-verdict sha={_HEAD} -->",
+        f"<!-- pkit-verdict sha={_HEAD} base={_BASE} -->",
+    ],
+    ids=["bare", "sha", "sha-and-base"],
+)
+def test_gate_counts_no_approving_review_that_carries_the_verdict_marker(
+    dw, monkeypatch, marker
+) -> None:
+    """`review-pr` delivers a verdict as a native review whose body is the
+    stamped verdict comment; in human mode it approves nothing, whoever posted
+    it, in each of the marker's forms."""
+    body = f"Reviewer agent (local, pm-reviewer): APPROVED\n\nLooks fine.\n\n{marker}\n"
+    message = _refused_for(dw, monkeypatch, reviews=[{"state": "APPROVED", "body": body}])
+    assert (
+        "an APPROVED review by @reviewer: it carries a reviewer agent's verdict marker"
+    ) in message
+
+
+def test_an_approval_that_does_not_count_clears_no_request_for_changes(dw, monkeypatch) -> None:
+    """Left out of the order of reviews, a bot's approval clears nothing."""
+    message = _refused_for(
+        dw,
+        monkeypatch,
+        reviews=[
+            {"state": "CHANGES_REQUESTED"},
+            {"state": "APPROVED", "login": "robot[bot]", "type": "Bot"},
+        ],
+    )
+    assert "latest state: CHANGES_REQUESTED" in message
+
+
+def test_a_bots_request_for_changes_holds_the_review_path(dw, monkeypatch) -> None:
+    message = _refused_for(
+        dw,
+        monkeypatch,
+        reviews=[
+            {"state": "APPROVED"},
+            {"state": "CHANGES_REQUESTED", "login": "robot[bot]", "type": "Bot"},
+        ],
+    )
+    assert "latest state: CHANGES_REQUESTED" in message
+
+
+def test_the_native_request_for_changes_review_pr_delivers_holds_until_a_person_approves(
+    dw, monkeypatch
+) -> None:
+    """The request for changes `review-pr` delivers stands in the order of
+    reviews as any review's does: no approving review passes until a person
+    approves after it."""
+    verdict = (
+        "Reviewer agent (local, pm-reviewer): CHANGES_REQUESTED\n\n"
+        f"<!-- pkit-verdict sha={_HEAD} base={_BASE} -->\n"
+    )
+    held = [{"state": "APPROVED"}, {"state": "CHANGES_REQUESTED", "body": verdict}]
+    message = _refused_for(dw, monkeypatch, reviews=held)
+    assert "latest state: CHANGES_REQUESTED" in message
+
+    monkeypatch.setattr(
+        dw, "gh_run", _stub_pr_view([*held, {"state": "APPROVED", "login": "carol"}], [])
+    )
+    assert dw._check_approval_gate(99, {}, None, {}).passed is True
+
+
+def test_a_persons_approval_after_a_bots_request_for_changes_passes(dw, monkeypatch) -> None:
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(
+            [
+                {"state": "CHANGES_REQUESTED", "login": "robot[bot]", "type": "Bot"},
+                {"state": "APPROVED"},
+            ],
+            [],
+        ),
+    )
+    assert dw._check_approval_gate(99, {}, None, {}).passed is True
+
+
+@pytest.mark.parametrize(
+    ("login", "kind", "reason"),
+    [
+        ("robot[bot]", "Bot", "a bot's account approves nothing as a person"),
+        ("Copilot", "Bot", "its account is of a kind unknown, so it approves nothing"),
+        ("acme", "Organization", "its account is of a kind unknown, so it approves nothing"),
+    ],
+    ids=["bot", "bot-with-no-suffix", "organization"],
+)
+def test_gate_counts_no_approved_comment_from_an_account_that_is_no_users(
+    dw, monkeypatch, login, kind, reason
+) -> None:
+    message = _refused_for(
+        dw,
+        monkeypatch,
+        comments=[{"author": {"login": login, "type": kind}, "body": "Approved"}],
+    )
+    assert f"an `Approved` comment by @{login}: {reason}." in message
+
+
+def test_an_earlier_persons_approved_comment_still_counts_past_a_bots(dw, monkeypatch) -> None:
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(
+            [],
+            [
+                {"author": {"login": "carol"}, "body": "Approved"},
+                {"author": {"login": "robot[bot]", "type": "Bot"}, "body": "Approved"},
+            ],
+        ),
+    )
+    result = dw._check_approval_gate(99, {}, None, {})
+    assert result.passed is True
+    assert result.passed_via == "`Approved` comment from @carol"
+
+
+def _registering(*entries: str) -> dict:
+    """A configuration that registers each of `entries` as a reviewer agent's account."""
+    return {"review": {"agents": {"remote_registered": [{"github_login": e} for e in entries]}}}
+
+
+def test_gate_counts_no_approval_from_an_account_registered_as_a_reviewer_agents(
+    dw, monkeypatch
+) -> None:
+    """Registering the account says its approval is an agent's (DEC-079 point 3)."""
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view(
+            [{"state": "APPROVED", "login": "Agent-Account"}],
+            [{"author": {"login": "agent-account"}, "body": "Approved, looks fine"}],
+        ),
+    )
+    result = dw._check_approval_gate(99, {}, None, _registering("agent-account"))
+    assert result.passed is False
+    lines = result.refusal_message.splitlines()
+    assert (
+        "          → Left out, as no person's approval: an APPROVED review by @Agent-Account: "
+        "it is an account the project registers as a reviewer agent's "
+        "(review.agents.remote_registered)."
+    ) in lines
+    assert any("an `Approved` comment by @agent-account: it is an account" in x for x in lines)
+
+
+def test_a_registered_entry_with_no_spelling_stops_every_approval_and_is_named(
+    dw, monkeypatch
+) -> None:
+    monkeypatch.setattr(dw, "gh_run", _stub_pr_view([{"state": "APPROVED", "login": "carol"}], []))
+    result = dw._check_approval_gate(99, {}, None, _registering("@bot"))
+    assert result.passed is False
+    message = result.refusal_message
+    assert "→ The entry `@bot` of review.agents.remote_registered names no account" in message
+    assert "no approval counts as a person's until it is mended" in message
+
+
+def test_an_approval_from_the_author_in_other_letters_is_the_authors_own(dw, monkeypatch) -> None:
+    """The backbone's comparison sets the case of ASCII letters aside (ADR-094 point 3)."""
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view([], [{"author": {"login": "Author"}, "body": "Approved"}], "author"),
+    )
+    assert dw._check_approval_gate(99, {}, None, {}).passed is False
+
+
+def test_a_persons_approval_beside_a_registered_agent_passes(dw, monkeypatch) -> None:
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        _stub_pr_view([{"state": "APPROVED", "login": "carol"}], []),
+    )
+    result = dw._check_approval_gate(99, {}, None, _registering("agent-account[bot]"))
+    assert result.passed is True
+
+
+# ---- who human mode asks for a review (DEC-079 point 3, "Who is asked") ----
+
+
+def test_human_mode_asks_no_bot_no_reviewer_agent_and_not_the_author(dw) -> None:
+    asked, passed = dw.approvals.askable_reviewers(
+        ["alice", "robot[bot]", "app/helper", "Agent-Account", "Author", "carol"],
+        dw.approvals.accounts.gh_author({"login": "author", "id": "U_1", "is_bot": False}),
+        ["agent-account"],
+    )
+    assert asked == ["alice", "carol"]
+    assert passed == [
+        "@robot[bot]: the entry names a bot's account, which reviews as no person",
+        "@app/helper: the entry names a bot's account, which reviews as no person",
+        "@Agent-Account: the entry names an account registered as a reviewer agent's "
+        "(review.agents.remote_registered)",
+        "@Author: it is the PR's author",
+    ]
+
+
+def test_human_mode_asks_no_member_while_a_registered_entry_has_no_spelling(dw) -> None:
+    asked, passed = dw.approvals.askable_reviewers(
+        ["alice"], dw.approvals.accounts.entry("author"), ["@bot"]
+    )
+    assert asked == []
+    assert passed == [
+        "@alice: the entry `@bot` of review.agents.remote_registered names no account, so no "
+        "member can be told from a reviewer agent's until it is mended"
+    ]
+
+
+def test_human_mode_asks_no_member_where_the_author_is_not_known(dw) -> None:
+    asked, passed = dw.approvals.askable_reviewers(["alice"], None, [])
+    assert asked == []
+    assert passed == ["@alice: the PR's author is not known, so the member cannot be told from it"]
+
+
+@pytest.mark.parametrize("failing", ["reviews", "comments"])
+def test_gate_refuses_where_the_approvals_cannot_be_read_whole(dw, monkeypatch, failing) -> None:
+    """A read cut short could miss the request for changes that holds, so the
+    gate judges no part of the approvals."""
+    message = _refused_for(
+        dw,
+        monkeypatch,
+        reviews=[{"state": "APPROVED"}],
+        comments=[{"author": {"login": "carol"}, "body": "Approved"}],
+        failing=(failing,),
+    )
+    assert f"The PR's {failing} could not be read whole: HTTP 502." in message
 
 
 def test_gate_handles_gh_failure(dw, monkeypatch) -> None:
@@ -885,12 +1188,72 @@ def test_a_yes_at_the_terminal_merges_the_head_the_question_names(dw, monkeypatc
     assert calls["merge_head"] == "sha-gate"
 
 
+@pytest.mark.parametrize(
+    "hold",
+    [
+        pytest.param({"turns_on": True}, id="turns-it-on"),
+        pytest.param({"unread": "the host did not answer"}, id="could-not-be-read"),
+    ],
+)
+@pytest.mark.parametrize("terminal", [False, True], ids=["off-a-terminal", "at-a-terminal"])
+def test_yes_does_not_merge_a_change_that_turns_on_the_syncs_switch(
+    dw, monkeypatch, capsys, hold, terminal
+) -> None:
+    """An authorisation given up front does not cover a change that turns on the
+    sync's switch, nor one whose effect on it could not be read: the merge waits
+    for the person, who is told what turning it on means (DEC-072 point 3)."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw, "_switch_hold", lambda *a, **kw: dw.sync_switch.Hold(**hold))
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: terminal, raising=False)
+
+    run = dw.run(["42", "--yes"])
+
+    assert (run.kind, run.exit_code) == (dw.DECLINED, 2)
+    assert calls["merged"] is False
+    assert "lets `pkit pm sync-board` add the missing cards with nobody at a terminal" in (
+        run.reason
+    )
+    assert "runs `pkit pm done-work 42` at a terminal" in run.reason
+
+
+def test_the_persons_yes_at_a_terminal_merges_a_change_that_turns_on_the_switch(
+    dw, monkeypatch, capsys
+) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw, "_switch_hold", lambda *a, **kw: dw.sync_switch.Hold(turns_on=True))
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    monkeypatch.setattr("builtins.input", lambda prompt="": "y")
+
+    run = dw.run(["42"])
+
+    assert (run.kind, run.exit_code) == (dw.MERGED, 0)
+    assert calls["merged"] is True
+    assert "This change turns on `sync_board.adds_with_no_terminal`." in capsys.readouterr().out
+
+
+def test_the_hold_reads_the_head_and_base_the_merge_is_for(dw, monkeypatch) -> None:
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    _no_terminal(monkeypatch)
+    read: list[tuple[str, str]] = []
+
+    def hold(head, base, capability_root, config):
+        read.append((head, base))
+        return dw.sync_switch.NOT_HELD
+
+    monkeypatch.setattr(dw, "_switch_hold", hold)
+
+    run = dw.run(["42", "--yes"])
+
+    assert run.kind == dw.MERGED
+    assert read and read[0][0] == "sha-head"
+
+
 def test_a_step_after_the_merge_failing_is_owed_not_refused(dw, monkeypatch) -> None:
     """The merge stands; what failed after it is owed to a re-run."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     monkeypatch.setattr(dw, "_invoke_move_issue", lambda *a, **k: 1)
     run = dw.run(["42", "--yes"])
-    assert (run.kind, run.exit_code) == (dw.FOLLOW_UP_OWED, 1)
+    assert (run.kind, run.exit_code) == (dw.FOLLOW_UP_OWED, dw.EXIT_MERGED_MOVE_OWED)
     assert run.reason.startswith("[warn] PR merged but move-issue exited 1")
     assert calls["merged"] is True
 
@@ -992,18 +1355,17 @@ def test_ci_gate_refuses_failing_and_pending(dw) -> None:
 
 
 def test_done_work_ci_bypass_audit_body_follows_template(dw) -> None:
-    """done-work's CI-bypass audit follows the schema template + its own stamp."""
-    identity = dw.Identity(github_login="octocat", email="octo@example.com")
+    """done-work's CI-bypass audit follows the schema template + its own stamp,
+    and names no authoriser beside its poster, and no email (DEC-078 point 2)."""
     key = dw._bypass_audit_key(dw.CI_BYPASS_AUDIT_WRITER, "advisory guard", "sha1")
     body = dw._ci_bypass_audit_body(
-        identity,
         "advisory guard on a decision-only PR",
         ("guard (FAILURE)",),
         key,
     )
     assert body.startswith(dw.CI_BYPASS_AUDIT_MARKER)
     assert body.splitlines()[-1] == key
-    assert "Bypassed by octocat <octo@example.com>: " in body
+    assert "Bypassed: advisory guard on a decision-only PR" in body
     assert "guard (FAILURE)" in body
 
 
@@ -1013,8 +1375,7 @@ def test_done_work_post_ci_bypass_audit_idempotent(dw, monkeypatch) -> None:
 
     captured: list[list[str]] = []
     key = dw._bypass_audit_key(dw.CI_BYPASS_AUDIT_WRITER, "override", "sha1")
-    identity = dw.Identity(github_login="octocat", email="octo@example.com")
-    prior = dw._ci_bypass_audit_body(identity, "override", ("x (FAILURE)",), key, "sha1")
+    prior = dw._ci_bypass_audit_body("override", ("x (FAILURE)",), key, "sha1")
 
     def fake_gh_run(args, config, **kwargs):
         captured.append(list(args))
@@ -1042,7 +1403,6 @@ def test_done_work_post_ci_bypass_audit_idempotent(dw, monkeypatch) -> None:
     ok = dw._post_ci_bypass_audit(
         496,
         "override",
-        identity,
         ("x (FAILURE)",),
         {},
         head="sha1",
@@ -1126,7 +1486,9 @@ def _wire_main_seams(
     monkeypatch.setattr(
         dw,
         "resolve_invoker_identity",
-        lambda config=None: dw.Identity(github_login="octocat", email="o@e.com"),
+        lambda config=None: sys.modules["_lib.membership"].Identity(
+            github_login="octocat", email="o@e.com"
+        ),
     )
     monkeypatch.setattr(
         dw,
@@ -1138,6 +1500,9 @@ def _wire_main_seams(
         )(),
     )
     monkeypatch.setattr(dw.session_guard, "enforce", lambda **kw: True)
+    # The hold on a change that turns on the sync's switch reads the host; this
+    # wiring's change turns nothing on (its hold: `tests/test_pm_sync_switch.py`).
+    monkeypatch.setattr(dw, "_switch_hold", lambda *a, **kw: dw.sync_switch.NOT_HELD)
     # This file targets done-work's approval / CI / checkbox gates, not the
     # #747 prerequisite gate (covered in test_pm_bootstrap_gate*.py); the fake
     # capability root above has no tree to stamp, so neutralise it here — the
@@ -1188,7 +1553,6 @@ def _wire_main_seams(
         pr_number,
         audit,
         reason,
-        invoker,
         config,
         **kwargs,
     ):
@@ -1219,7 +1583,7 @@ def _wire_main_seams(
 
     monkeypatch.setattr(dw, "_gh_get_required_checks", _stub_required)
 
-    def _stub_ci_audit(pr_number, reason, invoker, checks, config, *, head=""):
+    def _stub_ci_audit(pr_number, reason, checks, config, *, head=""):
         calls["ci_audit"] = True
         calls["ci_audit_head"] = head
         calls["ci_audit_checks"] = checks
@@ -2258,7 +2622,7 @@ def test_a_branch_kept_on_github_keeps_the_local_one_and_says_so(dw, monkeypatch
 
 
 def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
-    """A move-issue failure is reported and returned, but does not skip the
+    """A move-issue failure is reported and owed, but does not skip the
     branch cleanup — the two are independent after the merge."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
 
@@ -2268,7 +2632,7 @@ def test_cleanup_still_runs_when_move_issue_fails(dw, monkeypatch, capsys):
 
     monkeypatch.setattr(dw, "_invoke_move_issue", failing_move)
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
-    assert rc == 1
+    assert rc == dw.EXIT_MERGED_MOVE_OWED == 5
     assert "[warn] PR merged but move-issue exited 1" in capsys.readouterr().err
     assert [kind for kind, _ in calls["order"]] == [
         "merged",
@@ -2416,8 +2780,8 @@ def test_a_failed_close_warns_with_the_rerun_and_the_rest_still_run(
     capsys,
 ):
     """The merge is durable: one close failing is reported with its re-run, the
-    other closing issues are still closed, cleanup runs, and the exit is the
-    failure's."""
+    other closing issues are still closed, cleanup runs, and the exit says a
+    close is owed, not the close's own code (#3207)."""
     calls = _wire_main_seams(
         dw,
         monkeypatch,
@@ -2432,7 +2796,7 @@ def test_a_failed_close_warns_with_the_rerun_and_the_rest_still_run(
 
     monkeypatch.setattr(dw, "_invoke_close_issue", flaky_close)
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
-    assert rc == 3
+    assert rc == dw.EXIT_MERGED_CLOSE_OWED == 6
     err = capsys.readouterr().err
     assert "close-issue exited 3 for #42" in err
     assert "`close-issue 42 --mode pr-merge --pr 496`" in err
@@ -2519,6 +2883,9 @@ if args[:2] == ["issue", "view"]:
     sys.exit(0)
 if args[:2] == ["pr", "view"]:
     print(json.dumps(state["pr"]))
+    sys.exit(0)
+if args[:2] == ["api", "user"]:
+    print("octocat\\tUser")
     sys.exit(0)
 if args[:1] == ["api"]:
     print("octocat")
@@ -2894,6 +3261,9 @@ if args[:1] == ["api"] and args[1].startswith("repos/{owner}/{repo}/issues/"):
             sys.exit(1)
         print(json.dumps(dict(issue, number=int(number), state=issue["state"].lower())))
         sys.exit(0)
+if args[:2] == ["api", "user"]:
+    print("octocat\\tUser")
+    sys.exit(0)
 if args[:1] == ["api"]:
     print("octocat")
 sys.exit(0)
@@ -2902,10 +3272,13 @@ sys.exit(0)
 # The process engine as a project without it sees it: its position read is
 # unavailable (move-issue then reads the position itself, from the same `gh`),
 # and it accepts every move it is handed.
-_FAKE_PKIT = """\
+_FAKE_PKIT = (
+    in_process.ACCOUNT_COMMANDS_SCRIPT
+    + """\
 import sys
 sys.exit(1 if sys.argv[1:3] == ["process", "status"] else 0)
 """
+)
 
 
 @dataclass(frozen=True)
@@ -4228,3 +4601,104 @@ def test_a_later_run_closes_and_cascades_with_the_real_verbs(
     assert "[cascade] parents to check for eligibility: #7" in run.out
     assert "[warn]" not in run.err
     assert not any(c[:2] == ["pr", "merge"] for c in run.calls)
+
+
+# ---- a step after the merge that fails (#3207) -----------------------------
+#
+# The merge cannot be undone (DEC-026), so a step after it that fails is owed,
+# never refused. The run exits with the code that names the step, whatever the
+# step's own code, and never with 1, 2 or 3, which end a run that runs no step
+# after a merge. The same holds however the merge was made: by this run, by
+# the queue this run waited for, or found made by an earlier one. The failing
+# step exits 3 here, the code of a failed merge; the tests above have it exit
+# 1 and 2.
+
+
+def _merged_by_the_run(
+    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, Any]:
+    return _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+
+
+def _merged_by_the_queue(
+    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, Any]:
+    return _wire_queue(dw, tmp_path, monkeypatch, queue=[_QUEUE_MERGED]).calls
+
+
+def _found_merged(
+    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, Any]:
+    issues = {42: _CLOSED_BY_THE_MERGE, 43: _CLOSED_BEFORE}
+    return _wire_second_run(dw, tmp_path, monkeypatch, issues=issues).calls
+
+
+_MERGES = {
+    "merged-by-the-run": _merged_by_the_run,
+    "merged-by-the-queue": _merged_by_the_queue,
+    "found-merged": _found_merged,
+}
+
+
+@pytest.mark.parametrize("merge", list(_MERGES))
+@pytest.mark.parametrize(
+    ("failing", "owed", "warning"),
+    [
+        ("_invoke_move_issue", "EXIT_MERGED_MOVE_OWED", "[warn] PR merged but move-issue exited"),
+        (
+            "_invoke_close_issue",
+            "EXIT_MERGED_CLOSE_OWED",
+            "[warn] PR merged but close-issue exited",
+        ),
+    ],
+    ids=["move-to-done", "close"],
+)
+def test_a_step_after_the_merge_that_fails_exits_with_the_step_owed(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    merge: str,
+    failing: str,
+    owed: str,
+    warning: str,
+) -> None:
+    calls = _MERGES[merge](dw, tmp_path, monkeypatch)
+    monkeypatch.setattr(dw, failing, lambda *args, **kwargs: 3)
+    ended = dw.run(["42", "--yes"])
+    assert (ended.kind, ended.exit_code) == (dw.FOLLOW_UP_OWED, getattr(dw, owed))
+    assert ended.exit_code not in (1, 2, 3)
+    assert ended.reason.startswith(f"{warning} 3")
+    # The other step and the clean-up ran all the same.
+    assert calls["moved"] or failing == "_invoke_move_issue"
+    assert calls["closed"] or failing == "_invoke_close_issue"
+    assert ("remote_delete", "sha-head") in calls["order"]
+
+
+def test_a_failed_move_and_a_failed_close_exit_with_the_move_owed(
+    dw: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The code names the first step owed, and the warnings name each."""
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw, "_invoke_move_issue", lambda *args, **kwargs: 2)
+    monkeypatch.setattr(dw, "_invoke_close_issue", lambda *args, **kwargs: 3)
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == dw.EXIT_MERGED_MOVE_OWED
+    err = capsys.readouterr().err
+    assert "`move-issue 42 --to done`" in err
+    assert "`close-issue 42 --mode pr-merge --pr 496`" in err
+
+
+def test_a_failed_move_ahead_of_the_move_to_done_on_a_merged_pr_is_owed(
+    dw: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Completing a PR that had merged, the move ahead of the move to Done
+    (#1162) is a step after the merge too."""
+    _wire_second_run(dw, tmp_path, monkeypatch, issues={42: _open_issue("")})
+    monkeypatch.setattr(dw, "_invoke_move_issue", lambda *args, **kwargs: 3)
+    monkeypatch.setattr(
+        dw,
+        "_lead_in_to_done",
+        lambda issue, root, loader: dw._LeadIn(from_state="in-progress", to_state="review"),
+    )
+    ended = dw.run(["42", "--yes"])
+    assert (ended.kind, ended.exit_code) == (dw.FOLLOW_UP_OWED, dw.EXIT_MERGED_MOVE_OWED)
+    assert ended.reason.startswith("error: move-issue exited 3 moving #42 in-progress → review")

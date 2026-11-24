@@ -30,6 +30,8 @@ pkit:
       path:
         - .pkit/capabilities/project-management/scripts/land-work.py
         - .pkit/capabilities/project-management/scripts/fix-drift.py
+        - .pkit/capabilities/project-management/scripts/_lib/pr_merge.py
+        - .pkit/capabilities/project-management/scripts/_lib/merge_queue.py
         - .pkit/capabilities/project-management/skills/pm/transition-state.md
       record:
         - project-management:DEC-013
@@ -121,15 +123,16 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no build command exists, so the worker makes the merge and settles the findings in its own session. DEC-063 point 1 decides that only a recorded build adds a commit to the Task's branch, and #2287 tracks it.
 
+- **6b.** The default branch merges through a merge queue, and the pull request's head moves after the backbone queued the pull request. The queue may merge the later head, as `UC-062` variants 14b to 14d describe ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md) and `pr_merge.py`). Where the queue merges that head, the use case ends with only the minimal guarantees holding.
 - **7a.** A person's run of `fix-drift` in the same [clone](../../../glossary.md#term-clone--clone) holds the clone's lock. The worker's run starts no [fixer](../../../glossary.md#term-fixer--fixer) and writes nothing, so it takes no lock and lists what went stale ([DEC-056 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#4-the-run-is-bounded)).
 
 **Postconditions:** The worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) merged at the [head](../../../../core/glossary.md#term-head--head) the [merge gate](../../../glossary.md#term-merge-gate--merge-gate) judged, after the other agents' changes, and the pull request's [Task](../../../glossary.md#term-task--task) is in Done.
 
 **Minimal guarantees:**
 
-- Nothing merges at a [head](../../../../core/glossary.md#term-head--head) nobody authorised ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). The one exception is a later head whose every edit since lies in the [answer files](../../../../core/glossary.md#term-answer-file--answer-file) the [change](../../../../core/glossary.md#term-change--change) adds. A clean merge of the [base](../../../../core/glossary.md#term-base--base) counts as no edit there.
+- Nothing merges at a [head](../../../../core/glossary.md#term-head--head) nobody authorised ([DEC-055 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)). One exception is a later head whose every edit since lies in the [answer files](../../../../core/glossary.md#term-answer-file--answer-file) the [change](../../../../core/glossary.md#term-change--change) adds. A clean merge of the [base](../../../../core/glossary.md#term-base--base) counts as no edit there. The other is a later head that a merge queue merges, as variant 6b describes ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 - Nothing merges that the [change check](../../../../core/glossary.md#term-change-check--change-check) fails on, merged with the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) as it stands just before the merge ([DEC-055 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#6-the-merge-as-it-would-land)).
-- The merge counts a [verdict](../../../glossary.md#term-verdict--verdict) only where it stands for the head the merge lands. A merge of the base without a conflict keeps every verdict ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
+- The merge counts a [verdict](../../../glossary.md#term-verdict--verdict) only where it stands for the head the merge lands. The one exception is a later head that a merge queue merges (DEC-026). A merge of the base without a conflict keeps every verdict ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 - No two runs of the [fixers](../../../glossary.md#term-fixer--fixer) start at once in one [clone](../../../glossary.md#term-clone--clone), since the clone's lock holds back a second run (`fix-drift.py`).
 
 ## Open for the design

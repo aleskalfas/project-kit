@@ -87,4 +87,4 @@ pkit:
 **Minimal guarantees:**
 
 - The [whole-repository check](../../glossary.md#term-whole-repository-check--whole-repository-check) derives the [debt](../../glossary.md#term-debt--debt) that a stopped path leaves from git at each run, never from a ledger ([COR-050 point 9](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger) and `friction_repository.py`).
-- The landing merges nothing but the [head](../../glossary.md#term-head--head) the developer names ([ADR-061 point 5](../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#5-the-command-makes-requests-and-reports-facts-the-caller-decides)).
+- Each merge or enqueue the landing sends is pinned to the [head](../../glossary.md#term-head--head) the developer names. Where a merge queue merges the [pull request](../../glossary.md#term-pull-request--pull-request) at another head first, the landing says so ([ADR-061 point 5](../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#5-the-command-makes-requests-and-reports-facts-the-caller-decides)).

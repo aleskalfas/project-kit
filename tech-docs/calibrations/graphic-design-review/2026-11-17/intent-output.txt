@@ -1,0 +1,14 @@
+{
+  "piece": "ladder-scratch",
+  "intent": {
+    "piece": {
+      "goals": [
+        "A four-page deck that introduces an online board-game platform to developers new to it."
+      ]
+    },
+    "pages": {}
+  }
+}
+
+the piece:
+  goal: A four-page deck that introduces an online board-game platform to developers new to it.

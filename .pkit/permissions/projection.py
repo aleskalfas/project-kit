@@ -382,3 +382,85 @@ def _owners(allowed_ids: list[str], privileges: dict[str, Any]) -> list[str]:
         entry = privileges.get(pid) or {}
         owners += [pid] * len(_parts(entry.get("recognize") or {}))
     return owners
+
+
+# ---- the native locks beside the core's locked commands (ADR-095, ADR-099) ---
+#
+# The decision core judges the commands the catalog's `locks` name with no
+# model, but the hook fails open where it cannot start, so the settings every
+# project receives carry native rules beside it, which the harness weighs
+# whatever a hook returns (ADR-095 point 4, ADR-099 point 1). A native rule
+# names only the plain form: the command's words, with a wildcard where a
+# runner's call writes its options, a version or a source.
+
+#: The toolchain's runners a native rule names the methodology's command
+#: through, beside `pkit` itself: `uvx`, `uv tool run` and its hidden name.
+_LOCK_RUNNERS = ("uvx", "uv tool run", "uv tool uvx")
+#: How a runner's call names the methodology for the naming deny: the package
+#: as the command, or `pkit` after the source option, spaced or after `=`
+#: (ADR-099 point 1, "The runners' options").
+_LOCK_SPELLINGS = ("project-kit", "--from project-kit pkit", "--from=project-kit pkit")
+#: The harness's tools a shell call's rule names, each in the same shape.
+_LOCK_TOOLS = ("Bash", "PowerShell")
+
+
+def _ask_forms(words: str) -> list[str]:
+    """The native rules an ask lock's form takes: under `pkit`, and under each
+    runner with a wildcard before and after the package, beside its exact twin,
+    since a trailing ` *` matches the bare form only where it is a rule's only
+    wildcard (ADR-095 point 4)."""
+    rules = [f"pkit {words} *"]
+    for runner in _LOCK_RUNNERS:
+        rules += [f"{runner} *project-kit* {words} *", f"{runner} *project-kit* {words}"]
+    return rules
+
+
+def _deny_forms(words: str) -> list[str]:
+    """The native rules a deny lock's form takes: under `pkit`, and under each
+    runner and spelling with a wildcard for the runner's options alone, none
+    after the package, the options rule beside its exact twin and the rule with
+    no options (ADR-099 point 1)."""
+    rules = [f"pkit {words} *"]
+    for runner in _LOCK_RUNNERS:
+        for spelling in _LOCK_SPELLINGS:
+            rules += [
+                f"{runner} * {spelling} {words} *",
+                f"{runner} * {spelling} {words}",
+                f"{runner} {spelling} {words} *",
+            ]
+    return rules
+
+
+def _installer_forms(matcher: dict[str, Any]) -> list[str]:
+    """The native rules an installer's matcher takes: its group and subcommand,
+    with each word or name its conditions give anywhere after them, or with
+    any words and none."""
+    base = "uv " + " ".join(str(word) for word in matcher["installer"])
+    needles = list(matcher.get("word_any") or []) + list(matcher.get("text_any") or [])
+    return [f"{base} *{needle}*" for needle in needles] or [f"{base} *", base]
+
+
+def native_locks(catalog: dict[str, Any]) -> dict[str, list[str]]:
+    """The native rules beside the core's locks, in Claude Code's settings
+    shape: `{"ask": [...], "deny": [...]}`, each rule named for the shell tool
+    and the PowerShell tool alike, sorted. An `ask` lock renders asks and a
+    `deny` lock denies. The settings every project receives carry these, which
+    a test holds to the catalog."""
+    out: dict[str, list[str]] = {"ask": [], "deny": []}
+    locks = catalog.get("locks")
+    for spec in (locks if isinstance(locks, dict) else {}).values():
+        if not isinstance(spec, dict):
+            continue
+        side = "deny" if spec.get("verdict") == "deny" else "ask"
+        for matcher in spec.get("recognize") or []:
+            if not isinstance(matcher, dict):
+                continue
+            rules: list[str] = []
+            form = matcher.get("methodology")
+            if isinstance(form, list) and form:
+                words = " ".join(str(word) for word in form)
+                rules += _deny_forms(words) if side == "deny" else _ask_forms(words)
+            if isinstance(matcher.get("installer"), list):
+                rules += _installer_forms(matcher)
+            out[side] += [f"{tool}({rule})" for tool in _LOCK_TOOLS for rule in rules]
+    return {side: sorted(set(rules)) for side, rules in out.items()}

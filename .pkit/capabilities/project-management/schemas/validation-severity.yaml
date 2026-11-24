@@ -55,15 +55,18 @@ severities:
       On violation without bypass: the operation aborts like a
       hard-reject. With `--bypass "<reason>"` (or the configured
       override syntax) carrying a non-empty reason, the agent posts
-      the audit-comment template (filled with name, email, reason)
-      onto the affected issue or PR and then runs the mutation. The
-      comment lands first so the trail survives partial failure.
+      the audit-comment template (filled with the reason) onto the
+      affected issue or PR and then runs the mutation. The comment
+      lands first so the trail survives partial failure. It names no
+      authoriser beside the account that posts it, and no email: that
+      account is the act's actor, and the service shows it beside the
+      comment (project-management DEC-078 point 2).
     bypassable: true
     aborts_operation: true
     override_syntax: '--bypass "<reason>"'
     audit_comment_template: |
       <!-- pkit-audit -->
-      Bypassed by <name> <<email>>: <reason>
+      Bypassed: <reason>
     examples:
       - "Merging without an APPROVED review or `Approved` comment"
       - "Force-pushing a feature branch after a human review landed"

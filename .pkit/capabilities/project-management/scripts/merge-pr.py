@@ -147,7 +147,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, merge_queue, pr_merge, session_guard
+from _lib import bootstrap_gate, merge_queue, pr_merge, session_guard, sync_switch
 from _lib.audit import bypass_audit_key, render_ci_bypass_audit_body
 
 # DEC-007's checkbox close-gate — the ONE implementation (`_lib.checkbox_gate`),
@@ -160,7 +160,6 @@ from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.hooks import fire_hooks
 from _lib.membership import (
     CAPABILITY_NAME,
-    Identity,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -249,7 +248,9 @@ def main() -> int:
         action="store_true",
         help=(
             "The authorisation to merge. Without it, merge-pr asks at a terminal, and off "
-            "one it refuses (exit 2) once its gates have run, merging nothing."
+            "one it refuses (exit 2) once its gates have run, merging nothing. It does not "
+            "cover a change that turns on `sync_board.adds_with_no_terminal`, which is merged "
+            "only on the person's yes at a terminal (DEC-072 point 3)."
         ),
     )
     session_guard.add_override_argument(parser)
@@ -457,6 +458,16 @@ def main() -> int:
     # point 3): `--yes`, or a yes to a question naming the head the merge is
     # pinned to. Off a terminal with no `--yes`, nobody can be asked (#1760).
     named = f"PR #{args.pr_number} at {head[:7] or 'unknown'}"
+    # A change that turns on the sync's switch is held until the person
+    # authorises this merge themselves, at a terminal: an authorisation given up
+    # front does not cover it, and the person is told what turning it on means
+    # ([project-management:DEC-072-sync-gives-missing-cards] point 3).
+    switch = _switch_hold(head, str(pr.get("baseRefName") or ""), capability_root, config)
+    if switch.held:
+        if args.yes or not sys.stdin.isatty():
+            print(switch.refusal(named, f"pkit pm merge-pr {args.pr_number}"), file=sys.stderr)
+            return 2
+        print(switch.said())
     if not args.yes:
         if not sys.stdin.isatty():
             print(
@@ -484,7 +495,6 @@ def main() -> int:
         if not _post_ci_bypass_audit(
             args.pr_number,
             args.bypass_ci.strip(),
-            invoker,
             ci_gate.failing_checks,
             config,
             head=head,
@@ -898,7 +908,6 @@ def _ci_bypass_audit_key(reason: str, head: str) -> str:
 
 
 def _ci_bypass_audit_body(
-    invoker: Identity,
     reason: str,
     failing_checks: tuple[str, ...],
     key: str,
@@ -908,7 +917,6 @@ def _ci_bypass_audit_body(
     (`_lib.audit.render_ci_bypass_audit_body`) under this script's kind marker."""
     return render_ci_bypass_audit_body(
         CI_BYPASS_AUDIT_MARKER,
-        invoker,
         reason,
         failing_checks,
         head,
@@ -919,7 +927,6 @@ def _ci_bypass_audit_body(
 def _post_ci_bypass_audit(
     pr_number: int,
     reason: str,
-    invoker: Identity,
     failing_checks: tuple[str, ...],
     config: dict,
     *,
@@ -936,7 +943,7 @@ def _post_ci_bypass_audit(
         "pr",
         pr_number,
         key,
-        _ci_bypass_audit_body(invoker, reason, failing_checks, key, head),
+        _ci_bypass_audit_body(reason, failing_checks, key, head),
         config,
         run=gh_run,
         present_note="ci-bypass audit comment already present; idempotent skip",
@@ -945,6 +952,12 @@ def _post_ci_bypass_audit(
 
 
 # ---- gh wrappers ----------------------------------------------------
+
+
+def _switch_hold(head: str, base: str, capability_root: Path, config: dict) -> sync_switch.Hold:
+    """Whether merging ``head`` into ``base`` turns on the sync's switch, read
+    from the host, which holds both whether or not this clone does."""
+    return sync_switch.on_host(head, base, capability_root, config)
 
 
 def _gh_get_pr(pr_number: int, config: dict) -> dict | None:

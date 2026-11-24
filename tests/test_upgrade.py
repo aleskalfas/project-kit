@@ -2090,7 +2090,7 @@ def test_upgrade_under_the_routers_fallback_refuses_before_it_writes(
         f"could not fetch, so this run is pkit {_this_pkit()}, not the pin."
     ) in message
     assert "Reconnect and run `pkit upgrade` again" in message
-    assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{pin} project-kit upgrade`" in message
+    assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{pin} pkit upgrade`" in message
     assert "uv tool install" not in message
     assert "SSH" not in message
     assert "`pkit unpin`, then `pkit upgrade`" in message
@@ -2333,7 +2333,7 @@ def test_upgrade_refuses_content_newer_than_this_pkit_and_writes_nothing(
     message = excinfo.value.message
     assert f"refusing to run `pkit upgrade`: this pkit is {_this_pkit()}" in message
     assert f"content ({_NEWER}, in .pkit/manifest.yaml)" in message
-    assert f"{router.DISTRIBUTION_GIT_URL}@v{_NEWER} project-kit upgrade" in message
+    assert f"{router.DISTRIBUTION_GIT_URL}@v{_NEWER} pkit upgrade" in message
     assert _tree_bytes(installed_target) == before
 
 

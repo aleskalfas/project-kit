@@ -120,7 +120,7 @@ The schemas are the source of truth. Don't paraphrase rules from prose; read the
 Every validation in every operation is tagged with a severity token read from the relevant schema entry. Three classes exist, defined by the validation-severity schema:
 
 - **`hard-reject`** — refuse the operation; surface the failed rule and the failing input; end. No `--bypass` form.
-- **`bypassable-with-audit`** — refuse by default. With `--bypass "<reason>"` carrying a non-empty reason, post the audit comment template from the validation-severity schema on the affected issue or PR (filled with name + email + reason) **before** the mutation runs, then run the mutation.
+- **`bypassable-with-audit`** — refuse by default. With `--bypass "<reason>"` carrying a non-empty reason, post the audit comment template from the validation-severity schema on the affected issue or PR (filled with the reason) **before** the mutation runs, then run the mutation. The comment names no authoriser beside the account that posts it, and no email ([project-management:DEC-078-one-actor-per-act] point 2).
 - **`warning`** — emit the one-line warning, complete the operation, move on.
 
 Operations never aggregate severities silently — every triggered rule produces its own response. Hard rejects abort early; bypassable rules wait for the user; warnings emit but proceed.

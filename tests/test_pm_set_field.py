@@ -333,7 +333,7 @@ def _board_state(sf, **overrides):
             },
         ),
         board_ref="Projects-v2 board #7",
-        membership_remediation="gh project item-add 7 --owner an-org --url URL",
+        membership_remediation="`pkit pm sync-board 42` adds its card",
     )
     defaults.update(overrides)
     return sf.BoardState(**defaults)
@@ -374,8 +374,9 @@ def test_plan_board_fields_matches_field_and_option_case_insensitively(sf) -> No
 
 def test_plan_board_fields_missing_card_refuses_with_the_add_command(sf) -> None:
     """Board membership is a post-creation step, so the card may be absent. The
-    decided behaviour is REFUSE with the exact remediation — adding the card is a
-    membership decision this verb does not make silently — never a no-op."""
+    decided behaviour is REFUSE, naming the sync run for the issue — adding the
+    card is a membership decision this verb does not make silently — never a
+    no-op (DEC-072 point 4)."""
     results, writes = sf._plan_board_fields(
         board_axes={"priority": "High"},
         state=_board_state(sf, item_id=None),
@@ -385,7 +386,7 @@ def test_plan_board_fields_missing_card_refuses_with_the_add_command(sf) -> None
     refusal = results[0]
     assert refusal.ok is False and refusal.changed is False
     assert "NO CARD" in refusal.message
-    assert "gh project item-add 7 --owner an-org --url URL" in refusal.message
+    assert "Add the card, then re-run: `pkit pm sync-board 42` adds its card." in refusal.message
     assert "NOT SET" in refusal.message
 
 
@@ -935,35 +936,30 @@ def _stub_board_reads(
     sf,
     monkeypatch,
     *,
-    project=None,
     fields_read=None,
     item=None,
     owners: list | None = None,
 ) -> None:
-    """Stub the three reads; ``owners`` collects the owner each board read names."""
+    """Stub the two reads, the board's own and the card's; ``owners`` collects
+    the owner each read names."""
     bf = sf.board_fields
     seen = owners if owners is not None else []
-    monkeypatch.setattr(
-        bf,
-        "read_project_node_id",
-        lambda config, owner=None, gh_call=None: (
-            seen.append(owner) or project or bf.ProjectLookup(ok=True, node_id="PVT_board7")
-        ),
-    )
     monkeypatch.setattr(
         bf,
         "read_fields",
         lambda config, owner=None, gh_call=None: (
             seen.append(owner)
             or fields_read
-            or bf.BoardFieldsRead(ok=True, fields=({"id": "F", "name": "Priority"},))
+            or bf.BoardFieldsRead(
+                ok=True, fields=({"id": "F", "name": "Priority"},), project_id="PVT_board7"
+            )
         ),
     )
     monkeypatch.setattr(
         bf,
         "resolve_item_id",
-        lambda config, issue_node_id, project_node_id, gh_call=None: (
-            item or bf.ItemLookup(ok=True, item_id="PVTI_card42")
+        lambda config, issue_node_id, project_node_id, owner=None, gh_call=None: (
+            seen.append(owner) or item or bf.ItemLookup(ok=True, item_id="PVTI_card42")
         ),
     )
 
@@ -977,6 +973,8 @@ _BOARD_ISSUE = {"id": "I_issue42", "url": "https://github.com/an-org/r/issues/42
 
 
 def test_read_board_state_gathers_the_three_ids(sf, monkeypatch) -> None:
+    """The board's node comes from its own read, the one that gives its fields:
+    no read of the board stands apart from the answer it is counted on."""
     _stub_board_reads(sf, monkeypatch)
     state = sf._read_board_state(_BOARD_CONFIG, issue=_BOARD_ISSUE, issue_number=42)
     assert state.error is None
@@ -986,13 +984,29 @@ def test_read_board_state_gathers_the_three_ids(sf, monkeypatch) -> None:
     assert state.board_ref == "Projects-v2 board #7"
 
 
-def test_read_board_state_composes_the_exact_item_add_remediation(sf, monkeypatch) -> None:
-    """The missing-card refusal is only actionable if the command is runnable as
-    printed — board number, owner and issue URL all resolved."""
+def test_read_board_state_names_the_sync_run_for_the_issue(sf, monkeypatch) -> None:
+    """The missing card's remedy is the sync, run for the issue, which gives an
+    open issue its card in every project with a board (DEC-072 point 4)."""
     _stub_board_reads(sf, monkeypatch)
     state = sf._read_board_state(_BOARD_CONFIG, issue=_BOARD_ISSUE, issue_number=42)
+    assert state.membership_remediation == "`pkit pm sync-board 42` adds its card"
+
+
+def test_where_the_board_holds_the_state_the_remedy_says_who_sets_its_status(
+    sf, monkeypatch
+) -> None:
+    """Where the board holds the state, the sync adds the card only at a terminal
+    or with the project's switch on, and its Status is then set on the board,
+    since the card the sync adds carries none (DEC-072 point 4)."""
+    _stub_board_reads(sf, monkeypatch)
+    substrate_map = sf.axis_labels.SubstrateMap(axes={"state": {"board": True}})
+    state = sf._read_board_state(
+        _BOARD_CONFIG, issue=_BOARD_ISSUE, issue_number=42, substrate_map=substrate_map
+    )
     assert state.membership_remediation == (
-        "gh project item-add 7 --owner an-org --url https://github.com/an-org/r/issues/42"
+        "`pkit pm sync-board 42` adds its card, only in a run at a terminal or with the "
+        "project's switch `sync_board.adds_with_no_terminal` on, and its Status is then set "
+        "on the board, since the card the sync adds carries none"
     )
 
 
@@ -1012,7 +1026,6 @@ def test_read_board_state_without_a_default_owner_reads_the_issues_owners_board(
 
     assert state.error is None
     assert owners == [owner, owner]
-    assert f"--owner {owner} " in state.membership_remediation
 
 
 def test_read_board_state_surfaces_a_read_failure_verbatim(sf, monkeypatch) -> None:
@@ -1283,8 +1296,8 @@ def test_main_takes_a_workstream_the_file_holds_beyond_the_legacy_key(
 def test_main_missing_card_refuses_nonzero_and_writes_nothing(
     sf, tmp_path, monkeypatch, capsys
 ) -> None:
-    """The membership race: no card on the board ⇒ refusal with the `item-add`
-    remediation, non-zero exit, and NO write of any kind. Never a silent no-op."""
+    """The membership race: no card on the board ⇒ refusal naming the sync run
+    for the issue, non-zero exit, and NO write of any kind. Never a silent no-op."""
     root = _stage_capability_root(tmp_path, has_board=True)
     captured = _run_main(
         sf,
@@ -1300,7 +1313,7 @@ def test_main_missing_card_refuses_nonzero_and_writes_nothing(
     assert captured["board"] == [] and captured["labels"] == []
     assert "[refused] priority:" in out
     assert "[ok] priority:" not in out
-    assert "gh project item-add 7" in out
+    assert "`pkit pm sync-board 42` adds its card" in out
     assert "all fields already set" not in out
     assert "remain unset" in out
 
@@ -1504,6 +1517,79 @@ def test_main_mixed_axes_applies_label_refuses_unresolvable_board(
     assert "applied kind, title" in out
     assert "REFUSED priority" in out
     assert "all fields already set" not in out
+
+
+_UNANSWERED = (
+    "board #7 of an-org did not answer: HTTP 502: Bad Gateway (a credential the board "
+    "answers, or a later try)"
+)
+
+
+def test_main_board_that_did_not_answer_takes_the_broken_tools_code(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """A board that did not answer is no refusal for what it answered: nothing is
+    known of it, so the call takes the broken tool's code, and says so in the
+    seam's words ([pkit:ADR-096] point 4)."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--priority", "High"],
+        issue=_TASK_ISSUE,
+        board_state=_board_state(sf, error=_UNANSWERED, item_id=None, fields=()),
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 3
+    assert captured["board"] == [] and captured["labels"] == []
+    assert "[error] priority: Projects-v2 board #7 did not answer" in out
+    assert _UNANSWERED in out
+    assert "[refused]" not in out
+    assert "remain unset" in out
+
+
+def test_main_mixed_axes_where_the_board_did_not_answer_is_no_refusal(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """The label half is written, and the board did not answer for the other: the
+    call takes the broken tool's code, never a refusal's once it wrote an axis,
+    and names what it wrote and what the board did not answer for. A run again
+    sets the same label, which makes nothing a second time."""
+    root = _stage_capability_root(tmp_path, has_board=True)
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--kind", "bug", "--priority", "High"],
+        issue=_TASK_ISSUE,
+        board_state=_board_state(sf, error=_UNANSWERED, item_id=None, fields=()),
+    )
+    out = capsys.readouterr().out
+
+    assert captured["rc"] == 3
+    assert captured["labels"] == [(["type:bug"], [])]
+    assert "[partial]" in out
+    assert "applied kind, title" in out
+    assert "the board did not answer for priority" in out
+    assert "REFUSED" not in out
+
+
+def test_main_dry_run_where_the_board_did_not_answer_takes_the_same_code(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    root = _stage_capability_root(tmp_path, has_board=True)
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--kind", "bug", "--priority", "High", "--dry-run"],
+        issue=_TASK_ISSUE,
+        board_state=_board_state(sf, error=_UNANSWERED, item_id=None, fields=()),
+    )
+    assert captured["rc"] == 3
+    assert captured["labels"] == [] and captured["board"] == []
 
 
 def test_main_mixed_axes_both_substrates_applied_is_a_clean_success(

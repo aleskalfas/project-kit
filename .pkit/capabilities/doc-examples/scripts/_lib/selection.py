@@ -10,6 +10,11 @@ would stop the run before any command runs, so that the run, which reads them th
 
 It runs no command of the project's: a setup step, a placeholder's command and a
 page's commands run only in the program outside the CLI (point 11).
+
+The backbone's answer is read by its keys (ADR-097 point 3). A key the selection
+reads that is missing, null where the CLI reference does not print it null, or of
+another type, and an artefact's kind or a place's source it does not know, are an
+answer it cannot tell the pages from: `Unreadable`, never a default.
 """
 
 from __future__ import annotations
@@ -25,6 +30,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from _lib import document_keys as keys
+
 #: This capability's name, as installed under `.pkit/capabilities/`.
 CAPABILITY = "doc-examples"
 #: The project configuration, relative to the project root.
@@ -35,6 +42,10 @@ DEFAULT_TYPE = "living-docs:page"
 ARTEFACTS = ("pkit", "friction", "artefacts", "--json")
 #: The version of that document this module reads.
 ARTEFACTS_VERSION = 1
+#: What an artefact is in that document, a whole document or an entry of a collection
+#: file, and who declares a place there: the project, the backbone or a capability.
+WHOLE, KINDS = "document", ("document", "entry")
+PROJECT, CAPABILITY_SOURCE = "project", "capability:"
 #: The version of the pages document this module writes, which the run reads.
 SCHEMA_VERSION = 1
 
@@ -249,11 +260,18 @@ def read_artefacts(root: Path, run: Runner = subprocess.run) -> Mapping[str, Any
             f"`{shown}` exited {done.returncode} without its document"
             + (f": {said[-1]}" if said else "")
         )
-    if document.get("schema_version") != ARTEFACTS_VERSION or "types" not in document:
+    return artefacts_of(document)
+
+
+def artefacts_of(document: Mapping[str, Any]) -> Mapping[str, Any]:
+    """`document`, the backbone's answer, where it is of the version this module reads
+    and lists every declared type. Raises Unreadable otherwise."""
+    version = document.get("schema_version")
+    if type(version) is not int or version != ARTEFACTS_VERSION or "types" not in document:
         raise Unreadable(
-            f"`{shown}` answered no document of schema_version {ARTEFACTS_VERSION} with "
-            "every declared type; this capability reads types (COR-056 point 6), so the "
-            "backbone needs upgrading"
+            f"`{' '.join(ARTEFACTS)}` answered no document of schema_version "
+            f"{ARTEFACTS_VERSION} with every declared type; this capability reads types "
+            "(COR-056 point 6), so the backbone needs upgrading"
         )
     return document
 
@@ -270,12 +288,23 @@ class Pages:
 
 def select(config: Config, document: Mapping[str, Any]) -> Pages:
     """The pages: the documents of the types the configuration names, or of living-docs'
-    page type when it names none and living-docs declares it (point 3)."""
-    declared = set(_mapping(document.get("types")))
+    page type when it names none and living-docs declares it (point 3). Raises
+    Unreadable for an answer it cannot tell the pages from at a key it reads."""
+    try:
+        return _select(config, document)
+    except keys.Untold as exc:
+        raise Unreadable(
+            f"`{' '.join(ARTEFACTS)}` answered a document this capability cannot read: {exc}"
+        ) from exc
+
+
+def _select(config: Config, document: Mapping[str, Any]) -> Pages:
+    declared = set(keys.mapping(document, "types", ""))
     project_types = {
-        place.get("type")
-        for place in _mappings(document.get("places"))
-        if place.get("source") == "project" and isinstance(place.get("type"), str)
+        given
+        for where, place in keys.objects(document, "places", "")
+        if _source(place, where) == PROJECT
+        and (given := keys.text_or_null(place, "type", where)) is not None
     }
     if config.types is None:
         if DEFAULT_TYPE not in declared:
@@ -321,31 +350,34 @@ def select(config: Config, document: Mapping[str, Any]) -> Pages:
         return Pages(types=types, problems=tuple(problems))
     paths = sorted(
         {
-            str(artefact.get("path"))
-            for artefact in _mappings(document.get("artefacts"))
-            if artefact.get("kind") == "document" and set(_types_of(artefact)) & set(types)
+            keys.text(artefact, "path", where)
+            for where, artefact in keys.objects(document, "artefacts", "")
+            if keys.one_of(artefact, "kind", where, KINDS) == WHOLE
+            and set(_types_of(artefact, where)) & set(types)
         }
     )
     return Pages(types=types, paths=tuple(paths))
 
 
-def _types_of(artefact: Mapping[str, Any]) -> list[str]:
+def _source(place: Mapping[str, Any], where: str) -> str:
+    """Who declares a place: `project`, `backbone` or `capability:<name>`."""
+    source = keys.text(place, "source", where)
+    if source in (PROJECT, "backbone") or (
+        source.startswith(CAPABILITY_SOURCE) and len(source) > len(CAPABILITY_SOURCE)
+    ):
+        return source
+    raise keys.Untold(f"`{where}.source` is {source!r}, a source this reading does not know")
+
+
+def _types_of(artefact: Mapping[str, Any], where: str) -> list[str]:
     """The type an artefact takes, or each it counts as while a tie stands."""
-    if isinstance(artefact.get("type"), str):
-        return [artefact["type"]]
+    given = keys.text_or_null(artefact, "type", where)
+    if given is not None:
+        return [given]
     return [
-        tied["type"]
-        for tied in _mappings(artefact.get("type_conflict"))
-        if isinstance(tied.get("type"), str)
+        keys.text(tied, "type", inner)
+        for inner, tied in keys.objects(artefact, "type_conflict", where)
     ]
-
-
-def _mapping(value: Any) -> Mapping[str, Any]:
-    return value if isinstance(value, Mapping) else {}
-
-
-def _mappings(value: Any) -> list[Mapping[str, Any]]:
-    return [item for item in value if isinstance(item, Mapping)] if isinstance(value, list) else []
 
 
 def document(root: Path, config: Config, pages: Pages) -> dict[str, Any]:

@@ -33,18 +33,23 @@ An artefact the checks did not judge is refused, never read: `unreachable` (a
 point beyond a shallow clone), `unresolved` (an anchor of it cannot be
 resolved, so whether what it denotes changed cannot be told), and any state
 this reading does not know, which a later backbone may add — read as not
-judged, never as current (the CLI README, "Friction checks").
+judged, never as current (the CLI README, "Friction checks"). An anchor in a state
+this reading does not know is kept with that state, which the classification reads
+as not judged (`_lib/resolve.py`). The explanation is read by its keys (ADR-097
+point 3): a key the reading needs that is missing, null where the CLI reference
+prints no null, or of another type is a document it cannot read, never a default.
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from _lib import backbone
+from _lib import document_keys as keys
 from _lib.model import Unreadable
 from _lib.resolve import DEAD, Anchor, Commit
 
@@ -82,8 +87,34 @@ class _Files:
 
 def read(root: Path, artefact: str) -> Reading:
     """The evidence on `artefact`. Raises Unreadable when the backbone cannot explain it."""
-    document = backbone.explain(root, artefact)
-    state = _text(document.get("state")) or "unknown"
+    return reading_of(
+        backbone.explain(root, artefact),
+        artefact,
+        lambda *path: _read_path(root, *path),
+    )
+
+
+#: How a changed path anchor is read against the files it stood on (`_read_path`, less
+#: the root): a test stands it in.
+PathReader = Callable[[Anchor, "_Files", tuple[str, ...], str, str], Anchor]
+
+
+def reading_of(document: Mapping[str, Any], artefact: str, read_path: PathReader) -> Reading:
+    """The explanation of `artefact`, `pkit friction explain --json`, as its evidence,
+    each changed path anchor read through `read_path`. Raises Unreadable for an
+    artefact the checks did not judge, and for a key the reading needs that the
+    document gives missing, null or of another type."""
+    try:
+        return _reading(document, artefact, read_path)
+    except keys.Untold as exc:
+        raise Unreadable(
+            f"`pkit friction explain {artefact} --json` answered a document this capability "
+            f"cannot read: {exc}"
+        ) from exc
+
+
+def _reading(document: Mapping[str, Any], artefact: str, read_path: PathReader) -> Reading:
+    state = keys.text(document, "state", "")
     if state == "unreachable":
         raise Unreadable(
             f"{artefact}'s revalidation point lies beyond this shallow clone's history: "
@@ -101,34 +132,38 @@ def read(root: Path, artefact: str) -> Reading:
             f"capability does not read: it is not judged, never current — `pkit friction "
             f"explain {artefact}` says why"
         )
-    location = _text(document.get("location")) or artefact
-    point = _text(_mapping(document.get("revalidation_point")).get("commit"))
-    head = _text(_mapping(document.get("head")).get("commit"))
-    commits = _commits_by_anchor(document.get("findings"))
-    quotes = _quotes(_text(document.get("body")) or "")
+    location = keys.text(document, "location", "") or artefact
+    point = _commit(document, "revalidation_point")
+    head = _commit(document, "head")
+    commits = _commits_by_anchor(document)
+    quotes = _quotes(keys.text(document, "body", ""))
     anchors: list[Anchor] = []
-    for entry in _mappings(document.get("anchors")):
-        kind, value = _text(entry.get("kind")), _text(entry.get("value"))
-        if kind is None or value is None:
-            continue
+    for where, entry in keys.objects(document, "anchors", ""):
+        kind, value = keys.text(entry, "kind", where), keys.text(entry, "value", where)
         anchor = Anchor(
             kind=kind,
             value=value,
-            state=_text(entry.get("state")) or "unknown",
+            state=keys.text(entry, "state", where),
             commits=commits.get((kind, value), ()),
         )
-        files = _files(entry.get("files"))
+        files = _files(keys.mapping_or_null(entry, "files", where), f"{where}.files")
         if anchor.changed and kind == "path" and files is not None and point is not None:
-            anchor = _read_path(root, anchor, files, quotes, point, head or "HEAD")
+            anchor = read_path(anchor, files, quotes, point, head or "HEAD")
         anchors.append(anchor)
     return Reading(
-        artefact=_text(document.get("artefact")) or artefact,
+        artefact=keys.text(document, "artefact", "") or artefact,
         location=location,
         state=state,
         head=head,
         point=point,
         anchors=tuple(anchors),
     )
+
+
+def _commit(document: Mapping[str, Any], key: str) -> str | None:
+    """The commit of the object at `key`, `None` where the document prints it null."""
+    found = keys.mapping_or_null(document, key, "")
+    return None if found is None else _text(keys.text(found, "commit", key))
 
 
 def _read_path(
@@ -190,52 +225,40 @@ def _quotes(body: str) -> tuple[str, ...]:
     )
 
 
-def _files(value: Any) -> _Files | None:
+def _files(files: Mapping[str, Any] | None, where: str) -> _Files | None:
     """A path anchor's `files`, or `None` for another kind, or when there is no
     revalidation point to read them at."""
-    files = _mapping(value)
-    at_point = files.get("point")
-    if not isinstance(at_point, list):
+    if files is None or keys.value(files, "point", where) is None:
         return None
     return _Files(
-        point=_paths(at_point),
-        head=_paths(files.get("head")),
-        excluded=frozenset(_paths(files.get("excluded"))),
+        point=_paths(keys.texts(files, "point", where)),
+        head=_paths(keys.texts(files, "head", where)),
+        excluded=frozenset(_paths(keys.texts(files, "excluded", where))),
     )
 
 
-def _commits_by_anchor(findings: Any) -> dict[tuple[str, str], tuple[Commit, ...]]:
+def _commits_by_anchor(document: Mapping[str, Any]) -> dict[tuple[str, str], tuple[Commit, ...]]:
     """The commits behind each anchor's findings, each once, in the order the findings
     give them — each finding's oldest first — with every path behind them it touched."""
     found: dict[tuple[str, str], dict[str, Commit]] = {}
-    for finding in _mappings(findings):
-        anchor = _mapping(finding.get("anchor"))
-        kind, value = _text(anchor.get("kind")), _text(anchor.get("value"))
-        if kind is None or value is None:
+    for where, finding in keys.objects(document, "findings", ""):
+        anchor = keys.mapping_or_null(finding, "anchor", where)
+        if anchor is None:
             continue
-        seen = found.setdefault((kind, value), {})
-        for commit in _mappings(finding.get("commits")):
-            sha = _text(commit.get("commit"))
-            if sha is None:
-                continue
-            paths = _paths(commit.get("paths"))
+        on = f"{where}.anchor"
+        seen = found.setdefault((keys.text(anchor, "kind", on), keys.text(anchor, "value", on)), {})
+        for inner, commit in keys.objects(finding, "commits", where):
+            sha = keys.text(commit, "commit", inner)
+            paths = _paths(keys.texts(commit, "paths", inner))
             earlier = seen.get(sha)
             if earlier is not None:
                 paths = tuple(sorted({*earlier.paths, *paths}))
-            seen[sha] = Commit(sha, _text(commit.get("change")) or "", paths)
+            seen[sha] = Commit(sha, keys.text(commit, "change", inner), paths)
     return {key: tuple(commits.values()) for key, commits in found.items()}
 
 
-def _mapping(value: Any) -> Mapping[str, Any]:
-    return value if isinstance(value, Mapping) else {}
-
-
-def _mappings(value: Any) -> Sequence[Mapping[str, Any]]:
-    return [item for item in value if isinstance(item, Mapping)] if isinstance(value, list) else []
-
-
-def _paths(value: Any) -> tuple[str, ...]:
-    return tuple(item for item in value if _text(item)) if isinstance(value, list) else ()
+def _paths(value: Sequence[str]) -> tuple[str, ...]:
+    return tuple(item for item in value if item)
 
 
 def _text(value: Any) -> str | None:

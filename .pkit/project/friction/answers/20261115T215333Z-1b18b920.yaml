@@ -1,0 +1,1339 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-developer.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261102T130728Z-1bf556b1.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261111T084307Z-31fa735e.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:53:33Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. ACT-developer rests on point 3 for the backbone's landing of pull requests being provisional, which stands, and says nothing of a second hosting service or of the command's documents, so it holds."
+  - artefact: tech-docs/analysis/demo-recording/use-case-model/use-cases/010-record-demos/UC-035-record-demo.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T205735Z-53dde51c.yaml
+      - 20261105T234807Z-9035c0e0.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:03Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-035 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/evidence/use-case-model/use-cases/010-ground-claims/UC-036-ground-claim.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:06Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-036 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/living-docs/requirements/constraints/REQ-025-never-fetch-source.md
+    read:
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:08Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. REQ-025 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/living-docs/requirements/functional/REQ-022-agent-proposes-only.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261031T183549Z-5d506662.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T153532Z-b0471fdf.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:11Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. REQ-022 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/living-docs/requirements/functional/REQ-024-checks-where-rule-binds.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:14Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. REQ-024 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/living-docs/requirements/quality/REQ-023-refused-stamp-writes-nothing.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261031T003946Z-045a5765.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:17Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. REQ-023 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/020-write/UC-046-review-page-as-reader.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T215558Z-fb9e6aef.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:19Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-046 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/030-keep-current/UC-045-propose-page-fix.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:22Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-045 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/020-write/UC-044-write-page.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T201506Z-00d0d16c.yaml
+      - 20261109T222216Z-7e079af4.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+    revalidated:
+      at: 2026-11-15T21:54:25Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-044 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/living-docs/use-case-model/journeys/JRN-015-publish-page-for-reader.md
+    read:
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261103T031311Z-415182b4.yaml
+      - 20261104T113710Z-f8ec2bbd.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T160710Z-99925b10.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T062530Z-14ec06c9.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:28Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. JRN-015 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-041-gates-before-writing.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T233254Z-07e46ecd.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+    revalidated:
+      at: 2026-11-15T21:54:31Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. REQ-041 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+    revalidated:
+      at: 2026-11-15T21:54:35Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. REQ-042 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T180458Z-4e13664f.yaml
+    revalidated:
+      at: 2026-11-15T21:54:38Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-085 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T005305Z-e801f465.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+    revalidated:
+      at: 2026-11-15T21:54:41Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-060 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T113546Z-35debc4d.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+    revalidated:
+      at: 2026-11-15T21:54:43Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-061 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T234348Z-1f64d843.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+    revalidated:
+      at: 2026-11-15T21:54:46Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. JRN-012 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T234149Z-c266fc95.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:49Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. REQ-050 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-051-id-names-one-artefact.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261107T155747Z-06175c8e.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:51Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. REQ-051 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-052-record-only-with-something-to-say.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:54Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. REQ-052 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - 20261026T092719Z-4bac6ad1.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:57Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. REQ-053 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/010-describe/UC-074-free-uncited-ids.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:54:59Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-074 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/010-describe/UC-071-describe-existing-project.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+    revalidated:
+      at: 2026-11-15T21:55:02Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-071 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/020-revalidate/UC-072-revise-before-change.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T153939Z-90260b80.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+    revalidated:
+      at: 2026-11-15T21:55:05Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-072 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/020-revalidate/UC-073-revalidate-after-change.md
+    read:
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+    revalidated:
+      at: 2026-11-15T21:55:07Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-073 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-081-decide-unasked-answers.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T131549Z-52c0b26a.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T145230Z-c78b596e.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:55:10Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-081 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-080-check-answers.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T012936Z-26005889.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T223323Z-d168f4f5.yaml
+      - 20261108T231918Z-ee80c064.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:55:13Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-080 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/020-review/UC-112-review-code.md
+    read:
+      - 20261111T221925Z-a0e54751.yaml
+      - 20261113T015341Z-df578670.yaml
+    revalidated:
+      at: 2026-11-15T21:55:15Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-112 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/010-build/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T145723Z-19f805b0.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T220319Z-137ac832.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T214007Z-cbabcdd3.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261107T194026Z-d540372c.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T095138Z-4bf93c42.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T145230Z-c78b596e.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T163411Z-b652b29d.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261114T220627Z-1363207d.yaml
+    revalidated:
+      at: 2026-11-15T21:55:18Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-001 anchors point 3 as a record behind its actor, the developer, whose change lands through the backbone's command on GitHub alone, which stands. It says nothing of a second hosting service or of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T162755Z-424e83da.yaml
+      - 20261112T170257Z-9f91acd4.yaml
+      - 20261112T171918Z-7f8cd174.yaml
+      - 20261112T181419Z-045fe687.yaml
+      - 20261113T074852Z-8d5346ed.yaml
+      - 20261113T081544Z-f47f0ca0.yaml
+      - 20261113T101850Z-ab407b6c.yaml
+      - 20261113T134717Z-36e0821f.yaml
+      - 20261113T155900Z-499e23c9.yaml
+      - 20261113T162107Z-5e55cd43.yaml
+      - 20261113T181005Z-1533807d.yaml
+      - 20261113T194116Z-20533165.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T204916Z-dab01a07.yaml
+      - 20261113T221124Z-bd48f436.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+    revalidated:
+      at: 2026-11-15T21:55:29Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-034 rests on point 3 for its precondition, a repository hosted on GitHub that gh reaches, which stands. Its steps decide on what the system does, and it names no document's vocabulary and no second hosting service, so it holds."
+  - artefact: tech-docs/analysis/project-management/requirements/constraints/REQ-040-github-and-gh.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261115T101625Z-39c9fced.yaml
+    revalidated:
+      at: 2026-11-15T21:55:32Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the backbone command's documents, and GitHub's leave them only as a declared break that raises the schema_version. REQ-040 rests on point 3 for project-management working on GitHub alone through an authenticated gh, which point 3 still decides, and names no second service and none of the command's documents, so it holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+    revalidated:
+      at: 2026-11-15T21:55:35Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 changes only ADR-061 point 3's revisit clause: a second hosting service brings keys and values of its own to the command's documents, and GitHub's leave them only as a declared break that raises the schema_version. UC-082 anchors point 3 for the reviewed change that lands the topology on the default branch as core:UC-034 describes, through the backbone's command on GitHub alone, which stands. It names no second hosting service and none of that command's documents, so it holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T142151Z-09f16c62.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+    revalidated:
+      at: 2026-11-15T21:55:46Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 refines ADR-061 points 3 and 7: the hosting-service command's documents keep their version for a field, or a value of a field's set, added, raise it as a declared breaking change of the backbone, with no migration, for one removed, and no field or value comes to mean anything else; a second hosting service's vocabulary comes as keys and values added. UC-062 has the backbone merge the pull request pinned to its head and delete its branch, as core:UC-034 describes, on GitHub alone, and states no rule for the command's documents or their versions, so it holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+    revalidated:
+      at: 2026-11-15T21:55:48Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 refines ADR-061 points 3 and 7: the hosting-service command's documents keep their version for a field, or a value of a field's set, added, raise it as a declared breaking change of the backbone, with no migration, for one removed, and no field or value comes to mean anything else; a second hosting service's vocabulary comes as keys and values added. UC-089 has the backbone merge a pull request pinned to its head, through the merge queue where the default branch has one, and states no rule for the command's documents or their versions, so it holds."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-batch-plan
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T101625Z-39c9fced.yaml
+    revalidated:
+      at: 2026-11-15T21:55:58Z
+      outcome: unchanged
+      unchanged-because: ADR-097 refines DEC-054 point 5 so that, over a partly checked set, the plan names a filler in a state the agent does not know, or a document with no fillers key, beside a filler that did not answer. The term defines a batch plan as the outline of issues for one intent, each with its parent and use-case entries, approved whole before any is filed, and names no state of the point, so it holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-use-case-entry
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-15T21:56:01Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 refines only the second condition of DEC-054 point 1's inert policy: no finding is drawn from an id the point lacks unless the point resolved with its fillers listed and each taken or passed over. The term defines an entry by its id, title and status, which point 1 gives as before, and names no inert policy, so it holds."
+  - artefact: tech-docs/analysis/project-management/domain-model/050-batch-planning.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+    revalidated:
+      at: 2026-11-15T21:56:05Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 refines DEC-054 points 1, 3 and 5: the use cases' point reads as wholly answered only where its fillers are listed and each is taken or passed over, any other resolution reads as partly checked, and the plan names what made it so. The view gives a use-case entry's attributes and a batch plan's rows, relations and states, and states no reading of the point's outcome or of a filler's state, so it holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planner.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+    revalidated:
+      at: 2026-11-15T21:56:08Z
+      outcome: unchanged
+      unchanged-because: ADR-097 refines DEC-054 point 5 so that, over a partly checked set, the plan names a filler in a state the agent does not know, or a document with no fillers key, beside a filler that did not answer. The planner's need, to plan an intent against the project's use cases and approve the batch plan before anything is filed, names no state of the point, so it holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planning-agent.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T101625Z-39c9fced.yaml
+    revalidated:
+      at: 2026-11-15T21:56:10Z
+      outcome: unchanged
+      unchanged-because: ADR-097 refines DEC-054 points 1, 3 and 5 on which resolutions of the use cases' point read as wholly answered and which as partly checked. The actor reads the project's use cases where the project keeps them, and states no reading of the point's outcome or of a filler's state, so it holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+    revalidated:
+      at: 2026-11-15T21:56:13Z
+      outcome: unchanged
+      unchanged-because: "ADR-097 refines DEC-054 point 5 so that, over a partly checked set, the plan names a filler in a state the agent does not know, or a document with no fillers key, beside a filler that did not answer. UC-083 reads the use cases as UC-063 steps 2 and 3 describe and states no reading of its own, so it holds; UC-063 is deferred to the build for #3291, which brings that reading."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-054#1
+          reason: "ADR-097 refines DEC-054 point 1: no finding is drawn from an id the point lacks unless the point resolved with its fillers listed and each taken or passed over. Variant 8b warns of a cited id the point does not hold without naming the resolution it reads, and the capability draws that warning wherever no filler is inert until the build for #3291 narrows it, so the use case is revalidated with that build."
+        - anchor:
+            kind: record
+            value: project-management:DEC-054#3
+          reason: "ADR-097 refines DEC-054 point 3: a resolved point is partly checked where a filler's state is neither taken nor passed over, or the document has no fillers key, and wholly answered only where its fillers are listed and each is taken or passed over. Variant 3c has only part of the point resolve where a source gave nothing, as the capability's reading does until the build for #3291 changes it, and the use case gains the wider reading with that build."
+        - anchor:
+            kind: record
+            value: project-management:DEC-054#5
+          reason: "ADR-097 refines DEC-054 point 5: over a partly checked set the plan names the filler that did not answer or is in a state the agent does not know, or says that the document has no fillers key. Variant 3c names only the source that gave nothing, as the batch-planning step does until the build for #3291 changes it, and the use case gains the wider naming with that build."
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T193339Z-5bd2a791.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T160032Z-7fd436db.yaml
+      - 20261112T163245Z-ea50e1b3.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261113T221227Z-8ea6b98a.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T113546Z-35debc4d.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T201738Z-88b7102c.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "ADR-097 refines DEC-054 points 1, 3 and 5: the use cases' point is wholly answered only where its fillers are listed and each is taken or passed over, and a filler in any other state, or a document without fillers, makes it partly checked, over which the plan names that filler or the missing key. The section on use cases reads Empty as every filler answered and Partly checked as a filler that did not answer, as the capability reads the point until the build for #3291 changes it, and the README gains the wider reading with that build."
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261102T140915Z-ee6e244c.yaml
+      - 20261103T004204Z-4b1185ae.yaml
+      - 20261103T180550Z-b6e8db77.yaml
+      - 20261103T183525Z-1aa84fc0.yaml
+      - 20261103T221653Z-e4168d96.yaml
+      - 20261104T121552Z-b67de55f.yaml
+      - 20261104T172329Z-94c162f9.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T154009Z-68d0c9da.yaml
+      - 20261105T160121Z-275b654a.yaml
+      - 20261105T213244Z-562b4fb1.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T224232Z-29552d89.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T013502Z-01dc9885.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T124703Z-4b574535.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T132436Z-bef131f7.yaml
+      - 20261107T133108Z-17cb8a79.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261107T140617Z-031c2bd1.yaml
+      - 20261107T140742Z-639faa56.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T155622Z-bc519fef.yaml
+      - 20261107T170711Z-36640b86.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261107T182709Z-672f266b.yaml
+      - 20261107T221657Z-71211da2.yaml
+      - 20261108T055244Z-ede1d0ee.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261108T204123Z-cdef7772.yaml
+      - 20261108T204125Z-61e9c43a.yaml
+      - 20261108T205058Z-0587751c.yaml
+      - 20261108T213611Z-4add4b4b.yaml
+      - 20261108T214259Z-302a0194.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261108T220354Z-86ba06bd.yaml
+      - 20261108T220940Z-0b404379.yaml
+      - 20261108T221648Z-ac7a1532.yaml
+      - 20261108T222133Z-197756ee.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T224213Z-b22c8186.yaml
+      - 20261108T224219Z-be2d9a25.yaml
+      - 20261108T224418Z-a4df0e26.yaml
+      - 20261108T225114Z-4db535f7.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261108T231902Z-3d2033fe.yaml
+      - 20261108T231929Z-eb90ad27.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261108T234215Z-1c73fee4.yaml
+      - 20261109T001211Z-6b0d7860.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T003739Z-1282ec53.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T005438Z-7c9426ae.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T074250Z-22d93049.yaml
+      - 20261109T075620Z-bee9e107.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T102842Z-19c5fb4f.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T111933Z-cf8cf3aa.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261109T201011Z-bd16eac8.yaml
+      - 20261109T223833Z-3afa7580.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T150420Z-3caaee28.yaml
+      - 20261111T205239Z-c97bba2e.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T103254Z-8c80b62f.yaml
+      - 20261112T123303Z-7c4eb2ad.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T134741Z-2c56fd6c.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T142932Z-280780ce.yaml
+      - 20261112T153532Z-b0471fdf.yaml
+      - 20261112T162755Z-424e83da.yaml
+      - 20261112T163411Z-b652b29d.yaml
+      - 20261112T171918Z-7f8cd174.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T074852Z-8d5346ed.yaml
+      - 20261113T081544Z-f47f0ca0.yaml
+      - 20261113T101850Z-ab407b6c.yaml
+      - 20261113T105452Z-38d663c9.yaml
+      - 20261113T115124Z-962884b7.yaml
+      - 20261113T120150Z-6de35706.yaml
+      - 20261113T124415Z-a30c5036.yaml
+      - 20261113T134717Z-36e0821f.yaml
+      - 20261113T140535Z-dad8bdc7.yaml
+      - 20261113T153853Z-24a570f8.yaml
+      - 20261113T155900Z-499e23c9.yaml
+      - 20261113T162107Z-5e55cd43.yaml
+      - 20261113T181005Z-1533807d.yaml
+      - 20261113T194116Z-20533165.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T204916Z-dab01a07.yaml
+      - 20261113T221124Z-bd48f436.yaml
+      - 20261113T221406Z-017933f3.yaml
+      - 20261114T161247Z-20eda554.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-061
+          reason: "ADR-097 refines ADR-061 points 3 and 7: the hosting-service command's documents keep their version for a field, or a value of a field's set, added, raise it as a declared breaking change of the backbone, with no migration, for one removed, and no field or value comes to mean anything else; a second hosting service's vocabulary comes as keys and values added. The pull-request section gives each document's version and has a reader refuse one it does not know, and states no rule for when the version rises, which the CLI reference's statement of ADR-097's rule brings under #3292, when the section is read again."
+        - anchor:
+            kind: record
+            value: ADR-081#8
+          reason: "ADR-097 refines ADR-081 point 8: the landing check's document raises its version when one of its own keys, or a value of one of its sets, goes, never for one added, and no key or value comes to mean anything else. The landing check's section raises it when a key a reader relies on changes its meaning or goes, as the friction checks' reading documents' section does for theirs. The CLI reference comes to agree with ADR-097 under #3292."

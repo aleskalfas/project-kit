@@ -100,6 +100,7 @@ def _entry(
     kept: list[tuple[tuple[str, str], str | None]] | None = None,
     changed: list[tuple[str, str]] | None = None,
     put_back: bool = False,
+    file: str | None = None,
 ) -> dict[str, Any]:
     """One entry of the change check's `answers`, as `--json` gives it."""
     return {
@@ -117,15 +118,20 @@ def _entry(
         "new": new,
         "put_back": put_back,
         "changed": [{"kind": kind, "value": value} for kind, value in (changed or [])],
+        "file": file,
     }
 
 
 def _document(*answers: dict[str, Any], unreadable: list[str] | None = None) -> dict[str, Any]:
+    """The change check's answer, as `--json` gives it, with each key the module reads."""
     return {
         "schema_version": 1,
         "check": "change",
+        "failed": False,
         "base": {"ref": "origin/main", "commit": MERGE_BASE, "tip": MERGE_BASE, "outdated": False},
+        "findings": [],
         "answers": list(answers),
+        "answered_apart_at_tip": [],
         "unreadable": unreadable or [],
     }
 
@@ -883,6 +889,56 @@ def test_a_document_the_list_cannot_be_read_from_is_unreadable(
     assert isinstance(found, fa._NoDocument) and why in found.why and not found.elsewhere
 
 
+@pytest.mark.parametrize(
+    ("document", "why"),
+    [
+        ({**_document(), "schema_version": True}, "answered schema_version True; this reads 1"),
+        ({k: v for k, v in _document().items() if k != "failed"}, "`failed` is missing"),
+        (
+            {**_document(), "base": {**_document()["base"], "outdated": None}},
+            "`base.outdated` is null, not true or false",
+        ),
+        (
+            _document({**_entry("docs/guide.md", "updated"), "answer": "a-new-answer"}),
+            "`answers[0].answer` is 'a-new-answer', a value this reading does not know",
+        ),
+        (
+            _document(
+                {k: v for k, v in _entry("docs/guide.md", "deferred").items() if k != "kept"}
+            ),
+            "`answers[0].kept` is missing",
+        ),
+        (
+            {**_document(), "refused": {"kind": "a-new-refusal"}},
+            "`refused.kind` is 'a-new-refusal', a value this reading does not know",
+        ),
+    ],
+    ids=["version-true", "no-failed", "null-outdated", "unknown-answer", "no-kept", "refusal"],
+)
+def test_a_check_read_by_its_keys_is_no_document_where_a_key_cannot_be_read(
+    fa: ModuleType, document: dict[str, Any], why: str
+) -> None:
+    """A missing key, an unexplained null, a value of a set the module does not know
+    and a version it does not read are each no document, never a check that did not
+    fail, an empty list or an answer of another kind (ADR-097 point 3)."""
+    found = fa.check_of(document, "`pkit friction check`")
+    assert isinstance(found, fa._NoDocument) and why in found.why and not found.elsewhere
+
+
+def test_a_check_without_its_version_reads_as_version_1(fa: ModuleType) -> None:
+    """The check gained `schema_version` after it first shipped (the CLI reference)."""
+    document = {k: v for k, v in _document().items() if k != "schema_version"}
+    assert fa.check_of(document, "`pkit friction check`") == document
+
+
+def test_a_kept_deferral_with_no_anchor_is_told_without_one(fa: ModuleType) -> None:
+    entry = {
+        **_entry("docs/guide.md", "updated"),
+        "kept": [{"anchor": None, "reason": "until #12"}],
+    }
+    assert fa.left_out(_document(entry)) == ['Left out of date: docs/guide.md: "until #12"']
+
+
 def test_enforcing_modes_exit_1_still_carries_the_document(
     fa: ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -890,10 +946,10 @@ def test_enforcing_modes_exit_1_still_carries_the_document(
 
     def run(argv: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
         seen.append(argv)
-        return subprocess.CompletedProcess(argv, 1, '{"schema_version": 1, "answers": []}', "")
+        return subprocess.CompletedProcess(argv, 1, json.dumps(_document()), "")
 
     monkeypatch.setattr(fa.subprocess, "run", run)
-    assert fa._run_check(HEAD, "integration/7-x", cwd=None) == {"schema_version": 1, "answers": []}
+    assert fa._run_check(HEAD, "integration/7-x", cwd=None) == _document()
     assert seen == [
         [
             "pkit",
@@ -917,7 +973,8 @@ def test_the_answers_as_the_gate_reads_them_name_no_head_and_fetch_nothing(
     no `--head`, so the backbone reads HEAD and `$PKIT_CHECK_HEAD` itself, routing off,
     and nothing fetched first. Enforcing mode's exit 1 still carries the answers."""
     seen: list[tuple[list[str], str | None]] = []
-    document = {"schema_version": 1, "answers": [{"location": "docs/guide.md"}]}
+    entry = _entry("docs/guide.md", "updated")
+    document = _document(entry)
 
     def run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         seen.append((argv, kwargs["env"].get("PKIT_NO_ROUTE")))
@@ -925,7 +982,7 @@ def test_the_answers_as_the_gate_reads_them_name_no_head_and_fetch_nothing(
 
     monkeypatch.setattr(fa.subprocess, "run", run)
     found = fa.written("origin/main")
-    assert (found.problem, found.answers) == (None, ({"location": "docs/guide.md"},))
+    assert (found.problem, found.answers) == (None, (entry,))
     assert seen == [(["pkit", "friction", "check", "--json", "--base", "origin/main"], "1")]
 
 
@@ -955,7 +1012,7 @@ def test_the_check_runs_unrouted_with_the_base_named_whatever_the_environment(
 
     def run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         seen.append((argv, kwargs.get("cwd"), kwargs["env"].get("PKIT_NO_ROUTE")))
-        return subprocess.CompletedProcess(argv, 0, '{"schema_version": 1, "answers": []}', "")
+        return subprocess.CompletedProcess(argv, 0, json.dumps(_document()), "")
 
     monkeypatch.setattr(fa.subprocess, "run", run)
     fa._run_check(HEAD, "main", cwd=None)
@@ -1795,8 +1852,7 @@ def _merge_check_runs(
                 "refused": {"kind": fa.RESOLVER_ELSEWHERE},
             }
             return subprocess.CompletedProcess(argv, 1, json.dumps(document), "Error: refused\n")
-        document = {"schema_version": 1, "failed": False, "findings": [], "answers": []}
-        return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
+        return subprocess.CompletedProcess(argv, 0, json.dumps(_document()), "")
 
     monkeypatch.setattr(fa.subprocess, "run", run)
     return seen

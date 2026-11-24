@@ -95,7 +95,7 @@ def mandatory_state() -> dict:
     }
 
 
-def _make_issue(*, body: str, labels=None, assignees=None, project_items=None) -> dict:
+def _make_issue(*, body: str, labels=None, assignees=None) -> dict:
     return {
         "title": "[Task] Install the Claude Code CLI inside the sandbox",
         "body": body,
@@ -104,8 +104,16 @@ def _make_issue(*, body: str, labels=None, assignees=None, project_items=None) -
             for label in (labels or ["type:feature", "priority:Medium", "workstream:cli"])
         ],
         "assignees": assignees if assignees is not None else [{"login": "alice"}],
-        **({"projectItems": project_items} if project_items is not None else {}),
     }
+
+
+def _card(vi, item_id: str | None):
+    """A membership reader whose board answered, with the issue's card or none."""
+    return lambda config, issue: vi.board_fields.ItemLookup(ok=True, item_id=item_id)
+
+
+def _no_call(config, issue):
+    raise AssertionError("a project with no board makes no membership call")
 
 
 def _labels_of(findings):
@@ -162,11 +170,10 @@ def test_validate_uses_schema_severity_for_missing_assignee(
 def test_board_membership_drift_warning_for_board_adopter(
     vi, issue_types, titles, body_format, board_config, mandatory_state
 ) -> None:
-    """Open board-mode issue with empty projectItems → warning drift."""
+    """The board answered with no card for the issue → warning drift."""
     issue = _make_issue(
         body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature"],
-        project_items=[],
     )
     findings = vi._validate_issue(
         issue=issue,
@@ -175,6 +182,7 @@ def test_board_membership_drift_warning_for_board_adopter(
         body_format=body_format,
         config=board_config,
         mandatory_state=mandatory_state,
+        membership=_card(vi, None),
     )
     board_findings = [f for f in findings if f.label == "board_membership.missing"]
     assert len(board_findings) == 1
@@ -184,10 +192,9 @@ def test_board_membership_drift_warning_for_board_adopter(
 def test_board_membership_skipped_for_label_substrate(
     vi, issue_types, titles, body_format, label_fallback_config, mandatory_state
 ) -> None:
-    """Label-fallback adopters never trigger board-membership findings."""
+    """Label-fallback adopters never trigger board-membership findings, nor a call."""
     issue = _make_issue(
         body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
-        project_items=[],
     )
     findings = vi._validate_issue(
         issue=issue,
@@ -196,18 +203,18 @@ def test_board_membership_skipped_for_label_substrate(
         body_format=body_format,
         config=label_fallback_config,
         mandatory_state=mandatory_state,
+        membership=_no_call,
     )
     assert "board_membership.missing" not in _labels_of(findings)
 
 
-def test_board_membership_skipped_when_projectitems_absent(
+def test_board_membership_skipped_without_a_reader(
     vi, issue_types, titles, body_format, board_config, mandatory_state
 ) -> None:
-    """Without projectItems in the gh response, we don't fabricate a finding."""
+    """Without a membership reader, the check reads nothing and fabricates no finding."""
     issue = _make_issue(
         body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature"],
-        project_items=None,  # omitted entirely
     )
     findings = vi._validate_issue(
         issue=issue,
@@ -218,16 +225,16 @@ def test_board_membership_skipped_when_projectitems_absent(
         mandatory_state=mandatory_state,
     )
     assert "board_membership.missing" not in _labels_of(findings)
+    assert "board_membership.unverified" not in _labels_of(findings)
 
 
 def test_board_membership_no_finding_when_present(
     vi, issue_types, titles, body_format, board_config, mandatory_state
 ) -> None:
-    """projectItems with at least one entry → no drift."""
+    """A card on the configured board → no drift."""
     issue = _make_issue(
         body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature"],
-        project_items=[{"id": "PVTI_xyz"}],
     )
     findings = vi._validate_issue(
         issue=issue,
@@ -236,6 +243,7 @@ def test_board_membership_no_finding_when_present(
         body_format=body_format,
         config=board_config,
         mandatory_state=mandatory_state,
+        membership=_card(vi, "PVTI_xyz"),
     )
     assert "board_membership.missing" not in _labels_of(findings)
 

@@ -1,0 +1,12 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  The report `pkit visual look` writes beside its images, `report.json`, has a
+  schema (#3353): `schemas/look-report.schema.json` names every key the report
+  carries and its type, in its form through the SVG renderer and in its form
+  through the HTML renderer, which the renderer's name tells apart. The
+  graphic-design reviewer reads that form, so it binds as an interface does
+  (visual-communication DEC-062). The report itself is unchanged: it gains no
+  key, and names no schema of its own.

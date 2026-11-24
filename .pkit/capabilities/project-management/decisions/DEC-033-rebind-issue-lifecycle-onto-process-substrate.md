@@ -36,7 +36,7 @@ pm ships read-only detector/gate commands (lifting `move-issue`'s inference: bra
 
 ### D5 — Delegate to the engine
 
-`move-issue` and the verb-subject wrappers delegate the state-machine mechanics (position / validation / journal) to `pkit process`; pm retains its domain side-effects (branch/PR creation, assignment, cascade, closure).
+`move-issue` and the verb-subject wrappers delegate the state-machine mechanics (position / validation / journal) to `pkit process`; pm retains its domain side-effects (branch/PR creation, assignment, cascade, closure). A move whose actor the commands do not know is handed to the engine with no actor, and the capability runs only on an engine that takes no actor of its own (DEC-078 point 3) (refinement per [project-management:DEC-078-one-actor-per-act]).
 
 ### D6 — Migration (warn-on-override only)
 

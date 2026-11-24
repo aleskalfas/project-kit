@@ -15,9 +15,18 @@ branch + setting the assignee. Per DEC-026:
 Gates per DEC-026:
   - Current user is a team member (DEC-021); open-mode degrades to no-op.
   - Issue not assigned to someone else (hard refusal points at handoff-issue).
-    Where pkit cannot tell which account is acting, every assignee counts as
-    someone else, and the refusal says pkit cannot tell, and why, pointing at
-    no handoff (#3162).
+    "Someone else" is told apart from the person whose work this is, as the
+    backbone compares accounts (ADR-094 point 3): the user's account GitHub
+    answers the credential acts as, or, under a credential that names no
+    user's account, the person the agent works for, `PM_INVOKER_LOGIN`
+    (DEC-076 points 3 and 4). Where neither names a person, start-work
+    refuses, saying why and how the session names one.
+  - Under a credential that names no user's account (DEC-076 points 4 and 6):
+    in a project with a topology, start-work refuses, since such a clone holds
+    no seat that builds; under an unresolved identity, a clone that holds an
+    instance id refuses, and is run again once GitHub answers. Otherwise the
+    clone claims nothing, and the clash guard reads the owner for it, whatever
+    id it holds.
   - Issue's current state can move to In Progress per workflow.yaml (or is
     already there). Checked before any mutation, so a refused move leaves no
     branch or assignee behind (#942). From Todo, move to Backlog first. The
@@ -47,8 +56,8 @@ Gates per DEC-026:
 Side-effects:
   - Creates branch `<type>/<N>-<kebab-slug>` (type from issue's type:*
     label; slug from the issue title).
-  - Sets assignee to the current invoker. Where pkit cannot tell which account
-    is acting, it writes none, and says so, and why (#3162).
+  - Sets the assignee to the person whose work this is, where the issue has
+    none (DEC-076 point 4), confirmed as any assignee is (DEC-079 point 1).
   - With an instance id set (`set-instance`, DEC-035 point 1), claims the
     issue for this clone once the assignee is set, where no instance owns it
     (DEC-035 point 3), through `_lib/instance_claims`. The claim re-reads the
@@ -79,7 +88,11 @@ Exit codes:
      instance claimed the issue in the same instant and keeps it, or claimed
      it first, so this clone did not move the issue / the clash guard refused
      an issue another instance owns / this clone's seat could not be confirmed
-     / this code cannot read the topology in full (DEC-061 point 9)
+     / this code cannot read the topology in full (DEC-061 point 9) / the
+     account it would assign refused, as a bot's account or one GitHub did not
+     confirm as a user's (DEC-079 point 1) / no person is named whose work this
+     is, or, under a credential that names no user's account, the project has
+     a topology (DEC-076 points 3 and 6)
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -96,6 +109,7 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
+    accounts,
     axis_labels,
     bootstrap_gate,
     classification_rules,
@@ -108,12 +122,12 @@ from _lib import (
     session_guard,
 )
 from _lib import lifecycle_inference as infer
+from _lib.assignees import refusal as assignee_refusal
 from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
     Identity,
     check_membership,
-    format_unresolved,
     resolve_capability_root,
     resolve_invoker_identity,
 )
@@ -200,14 +214,23 @@ def main() -> int:
     if issue is None:
         return 2
 
-    # Gate: not assigned to someone else. Where the account acting cannot be
-    # told, every assignee counts as another, and the refusal says why (#3162).
+    # Whose work this is: the user's account GitHub answered, or, under a
+    # credential that names no user's account, the person the agent works for.
+    # Without one, start-work refuses (DEC-076 point 3).
+    person = invoker.person
+    if person is None:
+        print(
+            f"[refused] start-work #{args.issue_number}: {invoker.no_person()}. "
+            "Nothing was written.",
+            file=sys.stderr,
+        )
+        return 2
+
+    # Gate: not assigned to someone else, told apart from the person as the
+    # backbone compares accounts; one it cannot tell apart counts as another.
     assignees = issue.get("assignees") or []
-    other_assignees = [
-        a.get("login")
-        for a in assignees
-        if isinstance(a, dict) and a.get("login") and a.get("login") != invoker.github_login
-    ]
+    logins = [a.get("login") for a in assignees if isinstance(a, dict) and a.get("login")]
+    other_assignees, already_assigned = _others(logins, person)
     if other_assignees:
         print(_assigned_refusal(args.issue_number, other_assignees, invoker), file=sys.stderr)
         return 2
@@ -306,6 +329,7 @@ def main() -> int:
             config,
             dry_run=args.dry_run,
             login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         instance_claims.say_unconfirmed("start-work", args.issue_number, exc)
@@ -318,8 +342,20 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
+    # Under a credential that names no user's account, a clone in a project
+    # with a topology starts no Task: it holds no seat that builds, and a Task
+    # it started would stand In Progress with no claim that counts (DEC-076
+    # point 6).
+    if clone is not None and clone.holders is not None and not invoker.names_user:
+        print(
+            f"[refused] start-work #{args.issue_number}: the project has a topology of "
+            "seats, and a clone under a credential that names no user's account holds no "
+            "seat that builds, so it starts no Task (DEC-076 point 6). Nothing was written.",
+            file=sys.stderr,
+        )
+        return 2
     # The take's own check of the Task's pool: a warning, never a gate (DEC-061 point 5).
-    if clone is not None:
+    if clone is not None and not clone.reads_only:
         for line in pools.check_take(issue, clone, config):
             print(f"[warn] start-work #{args.issue_number}: {line}", file=sys.stderr)
 
@@ -334,7 +370,6 @@ def main() -> int:
             verb="start-work",
             flag="--bypass",
             bypass=args.bypass,
-            invoker=invoker,
             dry_run=args.dry_run,
         )
         instance_claims.say_guard(decision)
@@ -343,22 +378,29 @@ def main() -> int:
         if decision.bypassed:
             owner_bypass = args.bypass
 
-    # Where the account acting cannot be told, no assignee is written (#3162).
-    unassigned = None if invoker.github_login else format_unresolved(invoker.unresolved_cause)
-    assignee = invoker.github_login or f"none: {unassigned}"
+    # The person this run would assign names a person: never a bot's account,
+    # and a bare login only where GitHub answers that it names a user's account
+    # (DEC-079 point 1). Asked before anything is written.
+    assignee = person if not already_assigned else f"{person} (already assigned)"
+    if not already_assigned:
+        refused = assignee_refusal(person, invoker, config)
+        if refused:
+            print(f"error: {refused}", file=sys.stderr)
+            return 2
     print(f"start-work: #{args.issue_number}")
     print(f"  branch:    {branch_name}")
     print(f"  base:      {base}")
     print(f"  assignee:  {assignee}")
     if clone is not None and owner_bypass is not None:
         print("  ownership: not claimed, since --bypass starts the work unclaimed")
-    elif clone is not None:
-        # A clone whose account cannot be told claims nothing, and its plan says why.
-        where = ", where no instance owns it" if unassigned is None else ""
+    elif clone is not None and not clone.quiet:
+        # A clone that claims nothing says why in its plan.
+        claims = clone.login is not None and not clone.reads_only
+        where = ", where no instance owns it" if claims else ""
         print(f"  ownership: {instance_claims.claim_plan(clone)}{where}")
 
     if args.dry_run:
-        assigning = " set assignee," if unassigned is None else ""
+        assigning = "" if already_assigned else " set assignee,"
         print(
             f"(dry-run: would create branch off {base},{assigning} and call move-issue --to "
             "in-progress.)"
@@ -381,19 +423,11 @@ def main() -> int:
     else:
         print(f"  branch {branch_name!r} already in repo; skipping creation")
 
-    # Set assignee. "Written" means this run added it: an invoker who was
+    # Set assignee. "Written" means this run added it: a person who was
     # already assigned is not something this run left behind.
-    already_assigned = any(
-        isinstance(a, dict) and a.get("login") == invoker.github_login for a in assignees
-    )
     assignee_written = False
-    if unassigned is not None:
-        print(
-            f"[warn] start-work #{args.issue_number} is left with no assignee: {unassigned}.",
-            file=sys.stderr,
-        )
-    elif invoker.github_login and not already_assigned:
-        if _set_assignee(args.issue_number, invoker.github_login, config):
+    if not already_assigned:
+        if _set_assignee(args.issue_number, person, config):
             assignee_written = True
         else:
             print(
@@ -448,7 +482,7 @@ def main() -> int:
                     args.issue_number,
                     branch_name=branch_name if branch_created else None,
                     base=base,
-                    assignee=invoker.github_login if assignee_written else None,
+                    assignee=person if assignee_written else None,
                 ),
                 nothing_left="This run created no branch and wrote no assignee.",
                 reuses="the branch",
@@ -471,21 +505,37 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(issue_number, config, fields=fields)
 
 
+def _others(logins: list[str], person: str) -> tuple[list[str], bool]:
+    """The assignees ``logins`` that are someone other than ``person``, and
+    whether ``person`` is among them. Each is compared with the person as the
+    backbone compares accounts, in one call (ADR-094 point 3): an assignee from
+    the issue's assignees, a field of users' accounts, against the person as a
+    value pkit holds. Only *one account* is the person; an assignee the
+    comparison cannot tell apart counts as someone else, which refuses."""
+    if not logins:
+        return [], False
+    asked = accounts.ask(
+        pairs=[(accounts.users_field(login), accounts.entry(person)) for login in logins]
+    )
+    answers = zip(logins, asked.pairs, strict=True)
+    others = [login for login, answer in answers if answer != accounts.ONE]
+    return others, len(others) < len(logins)
+
+
 def _assigned_refusal(issue_number: int, others: list[str], invoker: Identity) -> str:
     """The refusal of an issue assigned to ``others``, accounts other than the
-    one acting, pointing at `handoff-issue` (DEC-026). Where pkit cannot tell
-    which account is acting, it names no assignee someone else and points at
-    no handoff, which could not tell either: it says so, and why (#3162)."""
+    person whose work this is, pointing at `handoff-issue` (DEC-026). Under a
+    credential that names no user's account, it names the person the agent
+    works for, against whom it compared (DEC-076 point 4)."""
     named = ", ".join(f"@{login}" for login in others)
-    if invoker.github_login:
-        return (
-            f"error: issue #{issue_number} is assigned to {named}. "
-            f"Use `handoff-issue {issue_number}` to take ownership."
-        )
+    against = (
+        ""
+        if invoker.names_user
+        else f", not to @{invoker.person}, the person the agent works for (DEC-076 point 4)"
+    )
     return (
-        f"error: issue #{issue_number} is assigned to {named}, and "
-        f"{format_unresolved(invoker.unresolved_cause)}, so whether that is another "
-        "account cannot be told. Nothing was written."
+        f"error: issue #{issue_number} is assigned to {named}{against}. "
+        f"Use `handoff-issue {issue_number}` to take ownership."
     )
 
 

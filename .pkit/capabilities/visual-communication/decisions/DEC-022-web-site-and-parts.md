@@ -192,7 +192,7 @@ A page alone, such as the figure, can be placed in a slide, and a site cannot. S
   - **A brand's drawing of a site's layout** says its page's height in its own file. How is decided by [visual-communication:DEC-034-brand-drawings] point 2.
   - **A logo in a header that follows the brand** is the brand's value of the picture role `picture.logo`, which the shared header shows ([visual-communication:DEC-025-picture-files] point 4).
   - **A page shorter than a screen,** and where a screen's first view ends.
-  - **A brand's or a local part past a page's edge,** which only the reviewer sees until a finding covers it.
+  - **A brand's or a local part past a page's edge,** which only the reviewer sees until a finding covers it. A text past it is named as cut (refinement per [visual-communication:DEC-037-text-the-page-hides] point 1).
   - **The starter's older patterns, which follow no size,** and squash in a phone's main part. Each follows a size in a change of its own.
   - **A portal larger than one piece holds well,** such as a site whose pages lie in files of their own.
   - **A hover, a focus or a pressed state,** and a link between pages, wait for a need.

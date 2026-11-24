@@ -1542,10 +1542,14 @@ class IssueCorpus:
     ``complete`` is the honest signal the consumers lacked: each of them fetched
     its own corpus with a different ceiling and only one noticed when it struck
     one, so the same seam answered with four different notions of completeness.
+    ``state_issues`` holds the number of each state issue the read left out of
+    ``rows`` (DEC-058 point 3), by which a command tells a number it was named
+    from one no issue of work holds.
     """
 
     rows: tuple[dict[str, Any], ...]
     complete: bool
+    state_issues: frozenset[int] = frozenset()
 
     @property
     def bodies(self) -> dict[int, str]:
@@ -1614,7 +1618,12 @@ def fetch_issue_corpus(
     # filtering: a dropped non-dict row or state issue would otherwise make a
     # struck ceiling read as complete. Measured against the limit actually
     # requested, so a renderer's lowered limit is judged against its own ask.
-    return IssueCorpus(rows=rows, complete=listing.returned < limit)
+    left_out = frozenset(
+        row["number"]
+        for row in listing.state_rows
+        if isinstance(row, dict) and isinstance(row.get("number"), int)
+    )
+    return IssueCorpus(rows=rows, complete=listing.returned < limit, state_issues=left_out)
 
 
 def resolve_children(

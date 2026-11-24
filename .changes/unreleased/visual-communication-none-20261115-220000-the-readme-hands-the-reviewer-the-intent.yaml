@@ -1,0 +1,8 @@
+component: visual-communication
+kind: none
+body: >
+  The README's steps for using the graphic-design reviewer have the person
+  print the brief's intent with `pkit visual intent <piece>` and hand it to
+  the reviewer, and say that without it the reviewer judges without one and
+  says so in its report (#3283). Documentation only; no command or agent
+  changes.
