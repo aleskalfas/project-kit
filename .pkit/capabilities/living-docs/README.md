@@ -204,7 +204,7 @@ value:
 
 **What it reads.** It declares that it reads history, `reads: [history]` on its `commands:` entry, so `pkit validate` and `pkit status` name the commit it read HEAD at. It reads no base: the base a pull request is compared with bounds the work-tracking check's diff, never this command.
 
-**Its pages alone.** The command hands the check its pages, and the check judges no other artefact. Each page is judged exactly as the whole check judges it. The check's measures stay the whole repository's, so the uncovered surface is read whole ([the CLI reference, "friction check --all"](../../cli/README.md#friction-check---all---json)).
+**Its pages alone.** The command hands the check its pages, and the check judges no other artefact. Each page is judged by the whole check's one judgement of an artefact, under the conditions the CLI reference gives. The check's measures stay the whole repository's, so the uncovered surface is read whole ([the CLI reference, "friction check --all"](../../cli/README.md#friction-check---all---json)).
 
 **Whether it blocks.** The work-tracking capability decides whether `friction` obligations block. With project-management they are advisory until `doc_check.sources.friction: enforcing` is set. A repository with no commit yet owes nothing.
 
