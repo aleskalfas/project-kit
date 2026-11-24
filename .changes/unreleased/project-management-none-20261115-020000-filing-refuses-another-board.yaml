@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  DEC-070, accepted with this change (#3205), decides that where the
+  substrate map binds the state to the board, filing refuses a board option
+  naming a board other than the configured one, and DEC-019 is partially
+  superseded for that override alone. The filing command is unchanged until
+  the change that builds the refusal (#3254), so no surface moves.

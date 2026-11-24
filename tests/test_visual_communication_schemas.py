@@ -54,7 +54,13 @@ def exports_with_copy(**fields: Any) -> dict[str, Any]:
 def test_each_kind_has_its_pair_and_the_shared_definitions_and_the_document_stand_alone() -> None:
     names = {path.name for path in SCHEMAS.iterdir()}
     wanted = {f"{kind}{suffix}" for kind in files.KINDS for suffix in (".yaml", ".schema.json")}
-    alone = {"defs.schema.json", "values.schema.json", "values-2.schema.json", ".gitkeep"}
+    alone = {
+        "defs.schema.json",
+        "values.schema.json",
+        "values-2.schema.json",
+        "look-report.schema.json",
+        ".gitkeep",
+    }
     assert names == wanted | alone
 
 
@@ -350,6 +356,19 @@ def test_the_configuration_takes_the_path_of_a_browser(browser: str) -> None:
 @pytest.mark.parametrize("browser", ["", 3, None, ["chrome"]])
 def test_the_configuration_refuses_a_browser_that_names_no_path(browser: object) -> None:
     assert refused({**instance("config"), "browser": browser}, "config") != []
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("bar", {"covers": ["COMM@2"], "at-least": "professional"}),
+        ("bounds", {"to-the-bar": 5, "polish": 2}),
+    ],
+)
+def test_the_configuration_holds_no_bar_and_no_bounds_of_the_loop(key: str, value: object) -> None:
+    """The person makes the ship call, so no bar ends the designer's loop and no bounds count
+    its rounds (DEC-070 points 1 and 2)."""
+    assert refused({**instance("config"), key: value}, "config") != []
 
 
 @pytest.mark.parametrize(

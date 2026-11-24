@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "judge.schema.json",
+  "title": "An outside judge's grades of one deck version, graded alone (project-kit#3397)",
+  "description": "The document an outside judge writes for one deck version, graded alone in a session that saw no other version (plan.md, section 2). Its grades take the review document's form, so `analyse.py` reads them as it reads a review's, and adds `words`: the rule's own words behind a grade, which a grade below professional must give for a per-rule reference to rest on it. A grade below professional without them stands for the bar, and for no per-rule reference.",
+  "type": "object",
+  "required": ["judge", "folder", "model", "read", "grades"],
+  "additionalProperties": false,
+  "properties": {
+    "judge": {
+      "description": "Which judge, as the plan names it: `judge-1` or `judge-2`.",
+      "type": "string",
+      "pattern": "^judge-[1-9][0-9]*$"
+    },
+    "folder": {
+      "description": "The code of the folder graded, as the folder's name gives it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "description": "The model the judge ran on, by its full name.",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "effort": {"type": "string"}
+      }
+    },
+    "read": {
+      "description": "What the judge read before it graded, by kind, and what exactly.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["kind", "what"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": {"enum": ["images", "piece", "intent", "rule-sets", "schema"]},
+          "what": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "grades": {
+      "description": "A grade for each rule of COMM and GRAPHIC on each page that takes one, and once for the piece for a rule that judges the pages together.",
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/grade"}
+    },
+    "not-graded": {
+      "description": "Each rule that takes no grade on a page, or for the piece, with the passage of the rule's text that leaves it out.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rule", "on", "why"],
+        "additionalProperties": false,
+        "properties": {
+          "rule": {"$ref": "#/$defs/rule-id"},
+          "on": {"$ref": "#/$defs/place"},
+          "why": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "rule-id": {
+      "type": "string",
+      "pattern": "^RS-[A-Z][A-Z0-9]*-(?:[0-9]{3}|[1-9][0-9]{3,})$"
+    },
+    "place": {
+      "description": "A page, by the id `handed.md` gives it, or the piece as a whole.",
+      "type": "object",
+      "additionalProperties": false,
+      "oneOf": [
+        {"required": ["page"], "not": {"required": ["piece"]}},
+        {"required": ["piece"], "not": {"required": ["page"]}}
+      ],
+      "properties": {
+        "page": {"type": "string", "minLength": 1},
+        "piece": {"const": true}
+      }
+    },
+    "grade": {
+      "type": "object",
+      "required": ["rule", "on", "grade", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "rule": {"$ref": "#/$defs/rule-id"},
+        "on": {"$ref": "#/$defs/place"},
+        "grade": {"enum": ["below competent", "competent", "professional", "excellent"]},
+        "evidence": {"type": "string", "minLength": 1},
+        "words": {
+          "description": "On a grade below professional: each passage of the rule's text, word for word, that the page breaks. A per-rule reference rests on the grade only where every passage is the rule's own words.",
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

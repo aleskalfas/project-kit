@@ -395,7 +395,7 @@ def test_a_concept_left_to_its_colour_asks_once_for_each_version_naming_its_owne
             "parts",
             "lab@1.0.0",
             "the owner of `lab`",
-            {"component": "lab/card"},
+            {"component": "lab/card", "place": "top/items[store]"},
         )
     ]
     [missing] = found
@@ -433,7 +433,7 @@ def test_a_run_painted_from_its_concepts_family_with_no_sign_for_its_style_asks_
         "attention",
         "parts.says.text",
         "the owner of `lab`",
-        {"component": "lab/top"},
+        {"component": "lab/top", "place": "top/says"},
     )
     assert found.message == (
         "top/says: the run says#1 names the concept `sys/store`, and the text `says` paints it "

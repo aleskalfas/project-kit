@@ -1900,6 +1900,865 @@ def targets_path_scoped(
         return False
 
 
+# ---- the core's own verdicts: the locked commands (ADR-095, ADR-099) --------
+#
+# Some commands change what judges every later call: those that realize the
+# model, turn the hook on or off, widen the sandbox, upgrade the backbone, or
+# have the installer write a folder the protection guards; and the command that
+# names a folder where the hook puts no ask. The catalog's `locks` name them,
+# and the core judges a shell call it reads as one of them with no model: the
+# interlock's ask, which holds in every mode, on the first, and a deny on the
+# second (ADR-095 points 3 and 4, ADR-099 point 1). Only the backbone's catalog
+# declares a lock, as only it declares a guardrail (ADR-021 point 3).
+#
+# Its reading is not the denies'. A guardrail's readings err toward the deny;
+# this one errs away from a mention, since a commit message or a pull request's
+# body that names such a command must meet nothing. One scan tracks quotes and
+# backslashes as the shell does, sets a comment and a heredoc's body aside, and
+# splits only at separators outside quotes; a substitution is read as a call,
+# one level deep; a command is found at each place the harness's documented
+# matching finds a subcommand (ADR-095 point 3, "How a call is read"). On any
+# doubt it gives no verdict of its own, and the native rule beside it stands.
+# Nothing here changes a verdict of `decide()`.
+
+#: The methodology's own command, and the package a toolchain's runner names
+#: for it (ADR-095 point 3).
+_METHODOLOGY_COMMAND = "pkit"
+_METHODOLOGY_PACKAGE = "project-kit"
+#: The options of the methodology's top-level command group, in `_RUNNERS`'
+#: five parts: `--color` takes a value, `--version` and `--help` take none.
+#: A test holds them to the command group's own.
+_METHODOLOGY_OPTIONS = ("", "", "", frozenset({"version", "help"}), frozenset({"color"}))
+# The option tables are kept as `_RUNNERS`' are, one table to a few lines.
+# fmt: off
+#: The options of uv's runner, `uvx` and `uv tool run`, as uv 0.13 reads them,
+#: in `_RUNNERS`' five parts.
+_TOOL_RUN_OPTIONS = (
+    "UnqvhV", "wcbifPCp", "",
+    frozenset({
+        "isolated", "no-env-file", "lfs", "no-index", "upgrade", "no-sources", "reinstall",
+        "compile-bytecode", "no-build-isolation", "no-build", "no-binary",
+        "require-build-hashes", "no-require-build-hashes", "no-cache", "refresh",
+        "managed-python", "no-managed-python", "no-python-downloads", "quiet", "verbose",
+        "system-certs", "native-tls", "offline", "no-progress", "no-config", "help",
+        "version", "preview", "no-preview",
+    }),
+    frozenset({
+        "from", "with", "with-editable", "with-requirements", "constraints",
+        "build-constraints", "overrides", "env-file", "python-platform", "torch-backend",
+        "index", "default-index", "index-url", "extra-index-url", "find-links",
+        "index-strategy", "keyring-provider", "upgrade-package", "upgrade-group",
+        "resolution", "prerelease", "prerelease-package", "fork-strategy", "exclude-newer",
+        "exclude-newer-package", "no-sources-package", "reinstall-package", "link-mode",
+        "config-setting", "config-settings-package", "no-build-isolation-package",
+        "no-build-package", "no-binary-package", "cache-dir", "refresh-package", "python",
+        "color", "allow-insecure-host", "directory", "project", "config-file",
+        "python-preference", "preview-features",
+    }),
+)
+#: uv's global options, which it reads before its subcommand and between a
+#: group, such as `tool`, and the subcommand after it.
+_UV_GLOBAL_OPTIONS = (
+    "qvhVn", "", "",
+    frozenset({
+        "quiet", "verbose", "system-certs", "native-tls", "offline", "no-progress",
+        "no-config", "help", "version", "no-cache", "managed-python", "no-managed-python",
+        "no-python-downloads", "preview", "no-preview",
+    }),
+    frozenset({
+        "color", "allow-insecure-host", "directory", "project", "config-file", "cache-dir",
+        "python-preference", "preview-features",
+    }),
+)
+#: The names uv accepts for its runner under `uv tool`: `run`, and the hidden
+#: `uvx` (ADR-095 point 3).
+_TOOL_RUNNERS = frozenset({"run", "uvx"})
+#: The groups of uv's subcommands a lock of the installer's names.
+_INSTALLER_GROUPS = frozenset({"tool", "python", "pip", "self"})
+#: The words after which the shell runs a command in the same piece: those
+#: that open a compound command or one of its bodies.
+_COMMAND_OPENERS = frozenset({
+    "if", "then", "elif", "else", "do", "while", "until", "!", "{", "coproc",
+})
+#: The words that open or close a compound command with no command of their
+#: own after them in the same piece: a `case`'s subject, a loop's list.
+_NO_COMMAND = frozenset({
+    "case", "for", "select", "foreach", "function", "esac", "done", "fi", "}", "[[", "]]",
+})
+#: The wrappers the harness strips before it matches that `_RUNNERS` does not
+#: read, each with its options in `_RUNNERS`' five parts.
+_STRIPPED_WRAPPERS = {
+    "stdbuf": ("", "ioe", "", frozenset(), frozenset({"input", "output", "error"})),
+    "noglob": ("", "", "", frozenset(), frozenset()),
+    "builtin": ("", "", "", frozenset(), frozenset()),
+}
+#: The separators the scan splits at, the longest first.
+_SCAN_SEPARATORS = ("&&", "||", "|&", ";;&", ";;", ";&", "|", ";", "&", "\n")
+#: The constructs PowerShell reads otherwise than the POSIX shell, each of
+#: which puts a PowerShell call in doubt: a backtick, a here-string's opener,
+#: a block comment's opener, the stop-parsing token, and a typographic quote,
+#: U+2018 to U+201E.
+_POWERSHELL_DOUBTS = re.compile("[`\\u2018-\\u201e]|@'|@\"|<#|--%")
+#: A plain run of a word's characters, to read a keyword at a word's start.
+_PLAIN_WORD = re.compile(r"[^\s;&|()<>'\"\\$`]+")
+#: A redirection's operator at a word's start, as written; where the word is
+#: the operator alone, its target is the next word.
+_REDIRECTION_WORD = re.compile(r"^(?:[0-9]*(?:<<<|<<-?|>>|>\||<>|>&|<&|>|<)|&>>?)")
+#: The placeholder a scanned piece holds where a substitution stood.
+_SUBSTITUTED = "\0"
+#: The harness's tools that run a command, and the reading each takes.
+_SHELL_TOOLS = {"Bash": "bash", "PowerShell": "powershell", "Monitor": "monitor"}
+# fmt: on
+
+
+class _Scanned:
+    """What one scan of a shell call, or of a substitution in it, finds: the
+    pieces between the separators, each heredoc's body with the piece whose
+    command it is fed to, and each substitution, scanned again as a call."""
+
+    def __init__(self) -> None:
+        self.end = 0
+        self.pieces: list[str] = []
+        self.heredocs: list[tuple[int, str, bool]] = []
+        self.calls: list[_Scanned] = []
+
+
+def _heredoc_opener(text: str, at: int) -> tuple[str, bool, bool, int] | None:
+    """The heredoc whose opener `<<` ends at `at`: its delimiter with its quotes
+    removed, whether any part of it was quoted, whether `<<-` strips its body's
+    leading tabs, and where the opener ends. None where no delimiter follows, or
+    one the shell expands."""
+    strip_tabs = text.startswith("-", at)
+    index = at + 1 if strip_tabs else at
+    while index < len(text) and text[index] in " \t":
+        index += 1
+    start = index
+    delimiter: list[str] = []
+    quoted = False
+    while index < len(text) and text[index] not in " \t\n;&|<>()":
+        char = text[index]
+        if char in "'\"":
+            close = text.find(char, index + 1)
+            if close < 0:
+                return None
+            delimiter.append(text[index + 1 : close])
+            quoted = True
+            index = close + 1
+            continue
+        if char == "\\" and index + 1 < len(text):
+            delimiter.append(text[index + 1])
+            quoted = True
+            index += 2
+            continue
+        if char in "$`":
+            return None
+        delimiter.append(char)
+        index += 1
+    if index == start:
+        return None
+    return "".join(delimiter), quoted, strip_tabs, index
+
+
+def _heredoc_body(text: str, at: int, delimiter: str, strip_tabs: bool) -> tuple[str, int] | None:
+    """A heredoc's body from the line that starts at `at` up to its terminator
+    line, and where the line after the terminator starts. None where no line
+    ends the body."""
+    line_start = at
+    while line_start <= len(text):
+        newline = text.find("\n", line_start)
+        line_end = len(text) if newline < 0 else newline
+        line = text[line_start:line_end]
+        if (line.lstrip("\t") if strip_tabs else line) == delimiter:
+            return text[at:line_start], line_end + 1 if newline >= 0 else line_end
+        if newline < 0:
+            return None
+        line_start = newline + 1
+    return None
+
+
+def _arithmetic_end(text: str, at: int) -> int | None:
+    """Where an arithmetic expansion or command whose `((` ends at `at` closes,
+    just past its `))`. None where it does not close, or holds a substitution,
+    which the scan cannot read there."""
+    depth = 0
+    index = at
+    while index < len(text):
+        char = text[index]
+        if char == "`" or (text.startswith("$(", index) and not text.startswith("$((", index)):
+            return None
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            if depth == 0:
+                return index + 2 if text.startswith("))", index) else None
+            depth -= 1
+        index += 1
+    return None
+
+
+def _substitution(text: str, at: int, powershell: bool, depth: int, out: _Scanned) -> int | None:
+    """Read the substitution that opens at `at`, if one does: `$(…)`, a
+    backtick pair, a process substitution `<(…)` or `>(…)`, or an arithmetic
+    expansion `$((…))`. Each but the last is scanned as a call of its own and
+    added to `out`. Returns where it ends, 0 where none opens at `at`, or None
+    on a doubt: a substitution inside a substitution, or one that does not
+    close."""
+    if text.startswith("$((", at):
+        return _arithmetic_end(text, at + 3)
+    if text.startswith(("$(", "<(", ">("), at):
+        if depth >= 1:
+            return None
+        inner = _scan(text, at + 2, ")", powershell, depth + 1)
+        if inner is None:
+            return None
+        out.calls.append(inner)
+        return inner.end
+    if text.startswith("`", at):
+        if depth >= 1:
+            return None
+        index = at + 1
+        content: list[str] = []
+        while index < len(text) and text[index] != "`":
+            if text[index] == "\\" and index + 1 < len(text) and text[index + 1] in "`\\$":
+                content.append(text[index + 1])
+                index += 2
+                continue
+            content.append(text[index])
+            index += 1
+        if index >= len(text):
+            return None
+        inner = _scan("".join(content), 0, None, powershell, depth + 1)
+        if inner is None:
+            return None
+        out.calls.append(inner)
+        return index + 1
+    return 0
+
+
+def _scan(
+    text: str, start: int, closer: str | None, powershell: bool, depth: int, body: bool = False
+) -> _Scanned | None:
+    """One left-to-right scan of a shell call from `start`, or of a substitution
+    up to the `closer` that ends it (ADR-095 point 3, "How a call is read").
+
+    It tracks quotes, and reads a backslash as the POSIX shell does: outside
+    quotes it escapes the next character, inside double quotes only `$`, a
+    backtick, `"`, a backslash and a line's end, inside single quotes nothing.
+    In a PowerShell call a backslash is an ordinary character. It counts a
+    heredoc's opener only outside quotes, or inside a substitution that double
+    quotes hold, and sets the body aside up to its terminator line; a
+    here-string's `<<<` and a shift in arithmetic open none. A `#` at a word's
+    start outside quotes sets the rest of its line aside. It splits the rest
+    at the separators outside quotes, and at a subshell's parentheses and a
+    `case` arm's pattern. A `body` is a heredoc's behind an unquoted delimiter:
+    only its substitutions are read, as inside double quotes.
+
+    None on a doubt: a `$'` quote, a quote or substitution that does not close,
+    a substitution inside one, or a heredoc whose terminator line it cannot
+    find."""
+    out = _Scanned()
+    piece: list[str] = []
+    quote = '"' if body else None
+    pending: list[tuple[str, bool, bool, int]] = []
+    parens = 0
+    cases = 0
+    word_start = True
+    at_command = True
+    index = start
+    while index < len(text):
+        char = text[index]
+        if quote == "'":
+            piece.append(char)
+            index += 1
+            if char == "'":
+                if powershell and text.startswith("'", index):
+                    return None
+                quote = None
+            continue
+        if quote == '"':
+            if char == "\\" and not powershell and index + 1 < len(text):
+                if text[index + 1] in '$`"\\\n':
+                    piece.append(text[index : index + 2])
+                    index += 2
+                    continue
+            elif char == '"' and not body:
+                quote = None
+            elif char in "$`":
+                end = _substitution(text, index, powershell, depth, out)
+                if end is None:
+                    return None
+                if end:
+                    piece.append(_SUBSTITUTED)
+                    index = end
+                    continue
+            piece.append(char)
+            index += 1
+            continue
+        if char == "\\" and not powershell:
+            if text.startswith("\n", index + 1):
+                index += 2
+                continue
+            piece.append(text[index : index + 2])
+            index += 2
+            word_start = at_command = False
+            continue
+        if char in "'\"":
+            quote = char
+            piece.append(char)
+            index += 1
+            word_start = at_command = False
+            continue
+        if text.startswith("$'", index):
+            return None
+        if char in "$`" or text.startswith(("<(", ">("), index):
+            end = _substitution(text, index, powershell, depth, out)
+            if end is None:
+                return None
+            if end:
+                piece.append(_SUBSTITUTED)
+                index = end
+                word_start = at_command = False
+                continue
+        if text.startswith("<<<", index):
+            piece.append("<<<")
+            index += 3
+            word_start = at_command = False
+            continue
+        if text.startswith("<<", index):
+            opened = _heredoc_opener(text, index + 2)
+            if opened is None:
+                return None
+            delimiter, quoted, strip_tabs, end = opened
+            pending.append((delimiter, quoted, strip_tabs, len(out.pieces)))
+            piece.append(text[index:end])
+            index = end
+            word_start = at_command = False
+            continue
+        if char == "#" and word_start:
+            while index < len(text) and text[index] != "\n":
+                index += 1
+            continue
+        if char == "(" and word_start and text.startswith("((", index):
+            end = _arithmetic_end(text, index + 2)
+            if end is None:
+                return None
+            piece.append(text[index:end])
+            index = end
+            word_start = at_command = False
+            continue
+        if char in "()":
+            out.pieces.append("".join(piece))
+            piece = []
+            if char == "(":
+                parens += 1
+            elif cases and not parens:
+                pass  # a `case` arm's pattern ends: its command follows
+            elif closer == ")" and not parens:
+                if pending:
+                    return None
+                out.end = index + 1
+                return out
+            else:
+                parens -= 1
+            index += 1
+            word_start = at_command = True
+            continue
+        separator = next((sep for sep in _SCAN_SEPARATORS if text.startswith(sep, index)), None)
+        if separator is not None and separator[0] in "&|":
+            # `>&`, `<&`, `&>` and `>|` redirect; they separate nothing.
+            if text[index - 1 : index] in ("<", ">") or text.startswith("&>", index):
+                separator = None
+        if separator is not None:
+            out.pieces.append("".join(piece))
+            piece = []
+            index += len(separator)
+            word_start = at_command = True
+            if separator == "\n":
+                for delimiter, quoted, strip_tabs, owner in pending:
+                    found = _heredoc_body(text, index, delimiter, strip_tabs)
+                    if found is None:
+                        return None
+                    heredoc, index = found
+                    out.heredocs.append((owner, heredoc, quoted))
+                    if not quoted:
+                        inner = _scan(heredoc, 0, None, powershell, depth, body=True)
+                        if inner is None:
+                            return None
+                        out.calls.extend(inner.calls)
+                pending = []
+            continue
+        if char in " \t":
+            piece.append(char)
+            index += 1
+            word_start = True
+            continue
+        if word_start:
+            word = _PLAIN_WORD.match(text, index)
+            if word is not None:
+                found_word = word.group()
+                if at_command and found_word == "case":
+                    cases += 1
+                elif at_command and found_word == "esac" and cases:
+                    cases -= 1
+                at_command = found_word in _COMMAND_OPENERS
+                piece.append(found_word)
+                index = word.end()
+                word_start = False
+                continue
+        piece.append(char)
+        index += 1
+        word_start = at_command = False
+    if (quote is not None and not body) or closer is not None or pending:
+        return None
+    out.pieces.append("".join(piece))
+    out.end = len(text)
+    return out
+
+
+def _reading_words(text: str, powershell: bool) -> list[tuple[str, str]] | None:
+    """`_words()` for the lock's reading: a PowerShell call reads a backslash as
+    an ordinary character, a newline inside a piece parts words, and each word
+    as written is given without the whitespace around it."""
+    lexer = shlex.shlex(text, posix=True)
+    lexer.whitespace = " \t\n"
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    if powershell:
+        lexer.escape = ""
+    words: list[tuple[str, str]] = []
+    start = 0
+    try:
+        while True:
+            word = lexer.get_token()
+            if word is None:
+                return words
+            end = lexer.instream.tell()
+            words.append((text[start:end].strip(" \t\n"), word))
+            start = end
+    except ValueError:
+        return None
+
+
+def _without_redirections(words: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """The words of a command without its redirections, each with its target:
+    in its word, or the next word where the operator stands alone. A quoted
+    word is no redirection, as written."""
+    kept: list[tuple[str, str]] = []
+    skip = False
+    for text, word in words:
+        if skip:
+            skip = False
+            continue
+        operator = _REDIRECTION_WORD.match(text)
+        if operator is None:
+            kept.append((text, word))
+            continue
+        skip = operator.end() == len(text)
+    return kept
+
+
+def _reads_standard_input(name: str, rest: list[tuple[str, str]]) -> bool:
+    """Does the shell `name`, given the words after it, read its script from
+    standard input: no `-c` and no script operand, or `-s`?"""
+    _, short_values, _, long_values = _SHELL_OPTIONS[name]
+    index = 0
+    while index < len(rest):
+        word = rest[index][1]
+        if word in ("-", "--"):
+            return index + 1 >= len(rest)
+        if word.startswith("--"):
+            index += 2 if word[2:] in long_values else 1
+            continue
+        if len(word) > 1 and word[0] in "-+":
+            if word[0] == "-" and "c" in word[1:]:
+                return False
+            if "s" in word[1:]:
+                return True
+            index += 1 + sum(1 for char in word[1:] if char in short_values)
+            continue
+        return False
+    return True
+
+
+def _read_command(
+    words: list[tuple[str, str]],
+    bodies: list[str],
+    powershell: bool,
+    depth: int,
+    commands: list[list[tuple[str, str]]],
+    unread: list[list[tuple[str, str]]],
+) -> bool:
+    """Add to `commands` each command a piece's words run, past the words that
+    open a compound command, the assignments and redirections before it, the
+    wrappers the harness strips and the runners the core reads (ADR-025 point
+    5). A shell's `-c` script, and a heredoc's body fed to a shell that reads
+    standard input, are read as calls one level deep. A runner whose command
+    the core cannot read goes to `unread`, as does a command whose program a
+    substitution or an expansion names; the substitution itself is read as a
+    call (`_read_scanned`). False on a doubt in a script it reads."""
+    pending = [words]
+    hops = 0
+    while pending:
+        current = pending.pop()
+        hops += 1
+        if hops > _RUNNER_HOPS:
+            unread.append(current)
+            continue
+        skipped = 0
+        while skipped < len(current):
+            text, word = current[skipped]
+            if not (_ENVVAR.match(text) or (word in _COMMAND_OPENERS and text == word)):
+                break
+            skipped += 1
+        current = current[skipped:]
+        if not current:
+            continue
+        program_text, program = current[0]
+        if _SUBSTITUTED in program_text or _expands(program_text):
+            unread.append(current)
+            continue
+        name = _program_name(program)
+        rest = current[1:]
+        if name in _NO_COMMAND:
+            continue
+        if name in _STRIPPED_WRAPPERS:
+            start = _skip_options(rest, _STRIPPED_WRAPPERS[name])
+            if start is None:
+                unread.append(current)
+            elif rest[start:]:
+                pending.append(rest[start:])
+            continue
+        if name in _SHELLS:
+            cannot_read, script = _shell_script(name, rest)
+            scripts = [script] if script is not None else []
+            if script is None and not cannot_read and _reads_standard_input(name, rest):
+                scripts = bodies
+            if cannot_read or (scripts and depth >= 1):
+                unread.append(current)
+                continue
+            for inner in scripts:
+                found = _called_commands(inner, powershell, depth + 1)
+                if found is None:
+                    return False
+                commands.extend(found[0])
+                unread.extend(found[1])
+            continue
+        if name in _RUNNERS or name in ("find", "uv"):
+            behind, _, cannot_read = _runner_commands(name, rest)
+            if cannot_read and name != "uv":
+                unread.append(current)
+                continue
+            pending.extend(command for command in behind if command)
+            if name != "uv":
+                continue
+        commands.append(current)
+    return True
+
+
+def _read_scanned(
+    scanned: _Scanned,
+    powershell: bool,
+    depth: int,
+    commands: list[list[tuple[str, str]]],
+    unread: list[list[tuple[str, str]]],
+) -> bool:
+    """Read each piece and each substitution a scan found (`_read_command`).
+    False on a doubt."""
+    for index, piece in enumerate(scanned.pieces):
+        words = _reading_words(piece, powershell)
+        if words is None:
+            return False
+        words = _without_redirections(words)
+        if not words:
+            continue
+        bodies = [body for owner, body, _ in scanned.heredocs if owner == index]
+        if not _read_command(words, bodies, powershell, depth, commands, unread):
+            return False
+    for call in scanned.calls:
+        if not _read_scanned(call, powershell, depth + 1, commands, unread):
+            return False
+    return True
+
+
+def _called_commands(
+    command: str, powershell: bool, depth: int = 0
+) -> tuple[list[list[tuple[str, str]]], list[list[tuple[str, str]]]] | None:
+    """The commands a shell call runs, as the lock's reading finds them, each a
+    list of (its text as written, the word the shell passes on); and the
+    commands of runners whose own command the core cannot read. None where the
+    call is in doubt, on which the core gives no verdict of its own."""
+    if powershell and _POWERSHELL_DOUBTS.search(command):
+        return None
+    scanned = _scan(command, 0, None, powershell, depth)
+    if scanned is None:
+        return None
+    commands: list[list[tuple[str, str]]] = []
+    unread: list[list[tuple[str, str]]] = []
+    if not _read_scanned(scanned, powershell, depth, commands, unread):
+        return None
+    return commands, unread
+
+
+def _package_name(word: str) -> str:
+    """A package name as the installer compares them: in lower case, each run
+    of `-`, `_` and `.` read as one `-`, any version or extras after it cut."""
+    bare = re.split(r"[@=<>!~\[;]", word, maxsplit=1)[0]
+    return re.sub(r"[-_.]+", "-", bare).lower()
+
+
+def _runner_target(rest: list[tuple[str, str]]) -> tuple[list[tuple[str, str]] | None, bool]:
+    """The words after the methodology's command where a toolchain runner's
+    words, `rest`, run it: past the runner's options and a `--` that ends
+    them, the package named as the command, or `pkit` named after a source
+    option. None where they run something else; and whether the runner's
+    options keep the core from reading what it runs."""
+    start = _skip_options(rest, _TOOL_RUN_OPTIONS)
+    if start is None:
+        return None, True
+    if start >= len(rest):
+        return None, False
+    sourced = any(word == "--from" or word.startswith("--from=") for _, word in rest[:start])
+    text, command = rest[start]
+    if _expands(text):
+        return None, True
+    if _package_name(command) == _METHODOLOGY_PACKAGE or (
+        command == _METHODOLOGY_COMMAND and sourced
+    ):
+        return rest[start + 1 :], False
+    return None, False
+
+
+def _methodology_form(words: list[tuple[str, str]]) -> tuple[list[str] | None, bool]:
+    """The words of the methodology's command that a command runs, past its
+    own options and a `--` that ends them, read under `pkit` and through the
+    toolchain's runners, `uvx`, `uv tool run` and `uv tool uvx`, past uv's
+    global options (ADR-095 point 3). None where the command is none of these;
+    and whether a runner's options keep the core from reading it."""
+    name = _program_name(words[0][1])
+    rest = words[1:]
+    if name == _METHODOLOGY_COMMAND:
+        after: list[tuple[str, str]] | None = rest
+    elif name == "uvx":
+        after, unread = _runner_target(rest)
+        if after is None:
+            return None, unread
+    elif name == "uv":
+        group = _skip_options(rest, _UV_GLOBAL_OPTIONS)
+        if group is None or group >= len(rest) or rest[group][1] != "tool":
+            return None, False
+        tail = rest[group + 1 :]
+        runner = _skip_options(tail, _UV_GLOBAL_OPTIONS)
+        if runner is None or runner >= len(tail) or tail[runner][1] not in _TOOL_RUNNERS:
+            return None, False
+        after, unread = _runner_target(tail[runner + 1 :])
+        if after is None:
+            return None, unread
+    else:
+        return None, False
+    start = _skip_options(after, _METHODOLOGY_OPTIONS)
+    if start is None:
+        return None, False
+    return [word for _, word in after[start:]], False
+
+
+def _installer_form(
+    words: list[tuple[str, str]],
+) -> tuple[str, str, list[str], list[str]] | None:
+    """For a call of the installer, `uv`, the group and the subcommand it runs,
+    past uv's global options before and between them; the words after the
+    subcommand; and every word after `uv`. None for any other command."""
+    if _program_name(words[0][1]) != "uv":
+        return None
+    rest = words[1:]
+    group = _skip_options(rest, _UV_GLOBAL_OPTIONS)
+    if group is None or group >= len(rest) or rest[group][1] not in _INSTALLER_GROUPS:
+        return None
+    tail = rest[group + 1 :]
+    sub = _skip_options(tail, _UV_GLOBAL_OPTIONS)
+    if sub is None or sub >= len(tail):
+        return None
+    return rest[group][1], tail[sub][1], [w for _, w in tail[sub + 1 :]], [w for _, w in rest]
+
+
+def _named(matcher: dict[str, Any], tail: list[str], every: list[str]) -> bool:
+    """Do an installer's words meet a lock matcher's conditions: a word after
+    the subcommand that `word_any` names, or a word of the call that holds a
+    package name `text_any` names? With neither, every call meets them."""
+    words = matcher.get("word_any") or []
+    texts = [_package_name(text) for text in matcher.get("text_any") or []]
+    if not words and not texts:
+        return True
+    if any(word in words for word in tail):
+        return True
+    normalized = [re.sub(r"[-_.]+", "-", word).lower() for word in every]
+    return any(text in word for text in texts for word in normalized)
+
+
+def _lock_matches(spec: dict[str, Any], words: list[tuple[str, str]]) -> bool:
+    """Does one command a call runs meet a lock's recognizer: the
+    methodology's command with the lock's form as its leading words, or the
+    installer's group and subcommand with the lock's conditions?"""
+    for matcher in spec.get("recognize") or []:
+        if not isinstance(matcher, dict):
+            continue
+        form = matcher.get("methodology")
+        if isinstance(form, list) and form:
+            found, _ = _methodology_form(words)
+            if found is not None and found[: len(form)] == form:
+                return True
+        command = matcher.get("installer")
+        if isinstance(command, list) and len(command) == 2:
+            installer = _installer_form(words)
+            if installer is not None and list(installer[:2]) == command:
+                if _named(matcher, installer[2], installer[3]):
+                    return True
+    return False
+
+
+def _in_order(needles: list[str], words: list[str]) -> bool:
+    """Do `needles` stand among `words` in their order, not necessarily
+    together?"""
+    found = iter(words)
+    return all(any(word == needle for word in found) for needle in needles)
+
+
+def _not_ruled_out(spec: dict[str, Any], words: list[tuple[str, str]]) -> bool:
+    """May a runner whose command the core cannot read run the lock's
+    command? Where the runner's words hold the lock's words in their order,
+    and a word naming the methodology or the installer."""
+    values = [word for _, word in words]
+    names = {_program_name(word) for word in values} | {_package_name(word) for word in values}
+    for matcher in spec.get("recognize") or []:
+        if not isinstance(matcher, dict):
+            continue
+        form = matcher.get("methodology")
+        if (
+            isinstance(form, list)
+            and names & {_METHODOLOGY_COMMAND, _METHODOLOGY_PACKAGE}
+            and _in_order(form, values)
+        ):
+            return True
+        command = matcher.get("installer")
+        if isinstance(command, list) and "uv" in names and _in_order(command, values):
+            if _named(matcher, values, values):
+                return True
+    return False
+
+
+def catalog_locks(catalog: dict[str, Any]) -> dict[str, Any]:
+    """The locks a catalog declares, each a map: `description`, `verdict` (`ask`
+    or `deny`), `recognize`, and, for a deny, the `line` a person runs."""
+    locks = catalog.get("locks")
+    return locks if isinstance(locks, dict) else {}
+
+
+def own_verdict(
+    catalog: dict[str, Any], tool: str, command: str
+) -> tuple[str, str | None, str, list[str]]:
+    """The core's verdict, with no model, on a shell call of `tool` ("bash",
+    "powershell" or "monitor"): (verdict, kind, reason, the locks it names).
+
+    - `deny`, kind "deny": the call runs a command a deny lock names, such as
+      naming a folder where the hook puts no ask (ADR-099 point 1).
+    - `ask`, kind "interlock": it runs a command an ask lock names. The
+      adapter puts it in every mode (ADR-095 point 3).
+    - `abstain`, kind "runner": a runner runs a command the core cannot read,
+      which may be one a lock names: ADR-025 point 7's verdict, which the
+      adapter asks on, meeting the session's mode.
+    - `abstain`, kind "doubt": the reading cannot tell what the call runs, so
+      the core gives no verdict of its own and the native rule stands.
+    - `abstain`, kind None: the call runs no locked command.
+
+    The core never reads the mode, so the verdict is the same in every one.
+    A deny is stricter than an ask, which is stricter than the runner's."""
+    locks = catalog_locks(catalog)
+    if not locks:
+        return "abstain", None, "the catalog declares no lock", []
+    read = _called_commands(command, tool == "powershell")
+    if read is None:
+        return (
+            "abstain",
+            "doubt",
+            (
+                "the permission code cannot read what this shell call runs, so it gives "
+                "no verdict of its own on the locked commands; the native rules stand"
+            ),
+            [],
+        )
+    commands, unread = read
+    met = {
+        name
+        for name, spec in locks.items()
+        if isinstance(spec, dict) and any(_lock_matches(spec, words) for words in commands)
+    }
+    denied = sorted(name for name in met if locks[name].get("verdict") == "deny")
+    asked = sorted(name for name in met if name not in denied)
+    if denied:
+        lines = [locks[name].get("line") for name in denied if locks[name].get("line")]
+        given = f": `{'`, `'.join(lines)}`" if lines else ""
+        return (
+            "deny",
+            "deny",
+            (
+                f"denied in every mode: {_described(locks, denied)} is a person's gesture, "
+                f"which no agent's call makes. The person runs it from a terminal of their "
+                f"own, outside the harness{given} (ADR-099 point 1)"
+            ),
+            denied,
+        )
+    if asked:
+        return (
+            "ask",
+            "interlock",
+            (
+                f"the interlock asks in every mode before {_described(locks, asked)}, which "
+                f"changes what judges every later call: confirm it only where you meant it, "
+                f"or run it from a terminal of your own, outside the harness (ADR-095 point 3)"
+            ),
+            asked,
+        )
+    hidden = sorted(
+        name
+        for name, spec in locks.items()
+        if isinstance(spec, dict) and any(_not_ruled_out(spec, words) for words in unread)
+    )
+    if hidden:
+        return (
+            "abstain",
+            "runner",
+            (
+                f"a runner runs a command the permission code cannot read, which may be "
+                f"{_described(locks, hidden)}: confirm the command (ADR-025 point 7)"
+            ),
+            hidden,
+        )
+    return "abstain", None, "the call runs no locked command", []
+
+
+def _described(locks: dict[str, Any], names: list[str]) -> str:
+    """The locks' descriptions, joined for a reason."""
+    return "; ".join(str(locks[name].get("description") or name) for name in names)
+
+
+def hook_own_verdict(
+    catalog: dict[str, Any], payload: dict[str, Any]
+) -> tuple[str, str | None, str, list[str]]:
+    """`own_verdict` for a PreToolUse payload of a tool that runs a command:
+    the shell tool, the PowerShell tool or the tool that monitors a command
+    (ADR-095 point 3, "A shell call"). Fails open: a fault, or a call of
+    another tool, gives no verdict of its own."""
+    try:
+        tool = _SHELL_TOOLS.get(str(payload.get("tool_name")))
+        if tool is None:
+            return "abstain", None, "not a shell call", []
+        command = payload["tool_input"]["command"]
+        if not isinstance(command, str):
+            raise TypeError("the shell call's command is not text")
+        return own_verdict(catalog, tool, command)
+    except Exception as exc:
+        return "abstain", None, f"fault in the locked commands' check → no verdict: {exc!r}", []
+
+
 # ---- thin loaders ----------------------------------------------------------
 
 # ---- stdlib YAML-subset fallback -------------------------------------------
@@ -2280,7 +3139,7 @@ def _capability_fragment_catalog(
     privilege ids → spec (each stamped ``provenance: capability:<name>`` for the
     reporting surface), and a list of human-readable rejection reasons.
 
-    Three merge constraints (ADR-021), enforced here *before* the catalog
+    Four merge constraints (ADR-021), enforced here *before* the catalog
     reaches ``guardrail_denies`` or ``decide``:
 
     - **Capability-scoped ids.** A fragment id is rewritten to ``<cap>:<name>``
@@ -2293,6 +3152,9 @@ def _capability_fragment_catalog(
     - **Guardrail-forbidding.** A fragment privilege carrying ``guardrail:
       true`` is rejected (dropped), so a capability can never install a deny
       that applies to every adopter by default.
+    - **Lock-forbidding.** A fragment's ``locks`` are never merged, and each is
+      named as rejected: a lock's verdict holds in every mode on every adopter
+      (ADR-095 point 3).
 
     A rejected entry contributes NOTHING to the merged catalog rather than
     aborting the load: the backbone catalog stays intact, and the capability's
@@ -2330,6 +3192,13 @@ def _capability_fragment_catalog(
         if not _exists(frag_path):
             continue
         doc = load_yaml(frag_path)
+        # A lock's verdict holds in every mode on every adopter, so only the
+        # backbone's catalog declares one (ADR-095 point 3, ADR-021 point 3):
+        # a fragment's locks are never merged, and are named as rejected.
+        for raw_id in doc.get("locks") or {}:
+            rejections.append(
+                f"{name}:{raw_id}: a capability fragment may not declare a lock (rejected)"
+            )
         for raw_id, spec in (doc.get("privileges", {}) or {}).items():
             if not isinstance(spec, dict):
                 continue

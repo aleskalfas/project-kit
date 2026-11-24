@@ -1091,18 +1091,21 @@ PM_BRANCH: Any = _load_lib(PM, "_lib.default_branch")
 SA_BACKBONE: Any = _load_lib(SA, "_lib.backbone")
 
 
-def _answering(name: str | None, source: str = "default", stderr: str = "") -> Any:
-    """A runner standing in for `pkit repository base --json`: `None` answers nothing."""
+def _answering(name: str | None, source: str = db.DEFAULTED, stderr: str = "") -> Any:
+    """A runner standing in for `pkit repository base --json`, answering the document the
+    backbone prints, every key in it, for the local branch `name`: `None` answers
+    nothing."""
 
     def run(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
         assert argv[: len(PM_BRANCH.ARGV)] == list(PM_BRANCH.ARGV)
         if name is None:
             return subprocess.CompletedProcess(argv, 1, "", "Error: no")
-        document = {
-            "schema_version": 1,
-            "default_branch": {"name": name, "source": source, "ref": name, "commit": "c"},
-            "base": {"ref": name, "tip": "c", "fork": "c", "problem": None},
-        }
+        local = db.RESOLVED_LOCAL
+        document = db.Settled(
+            db.DefaultBranch(name, source, name, "c", local, None),
+            db.Base(name, db.DEFAULT_BRANCH, "c", "c", False, local, None),
+            db.Head("c", unborn=False, problem=None),
+        ).as_json()
         return subprocess.CompletedProcess(argv, 0, json.dumps(document), stderr)
 
     return run
@@ -1177,7 +1180,10 @@ def _exiting(code: int, stdout: str, stderr: str = "") -> Any:
             _exiting(2, "", "Usage: pkit\nError: No such command 'repository'.\n"),
             "the installed backbone predates it — upgrade it",
         ),
-        (_exiting(0, '{"schema_version": 1}'), "names no default"),
+        (
+            _exiting(0, '{"schema_version": 1}'),
+            "pm cannot read its answer: `default_branch` is missing",
+        ),
         (_exiting(0, '{"schema_version": 2}'), "it answered schema_version 2; pm reads 1"),
     ],
     ids=["no-pkit", "timeout", "failed", "older-backbone", "no-answer", "another-version"],

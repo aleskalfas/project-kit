@@ -1,0 +1,21 @@
+answers:
+  - artefact: .pkit/capabilities/visual-communication/rule-sets/graphic.md#RS-GRAPHIC-004
+    read:
+      - 20261110T222245Z-de38af02.yaml
+      - 20261116T070049Z-7ae3a863.yaml
+      - 20261116T074044Z-8e03e0ad.yaml
+      - 20261117T151447Z-4fdb6bb7.yaml
+      - 20261117T220612Z-0fadabcc.yaml
+      - 20261117T230944Z-ea5534a7.yaml
+      - 20261117T233319Z-3a9371f2.yaml
+      - 20261118T000833Z-07083705.yaml
+      - 20261118T064951Z-406480e4.yaml
+      - 20261118T081311Z-aa82c06c.yaml
+      - 20261118T090008Z-8e0399b0.yaml
+      - 20261118T095535Z-f3213536.yaml
+      - 20261118T151418Z-1c7ba67d.yaml
+      - 20261118T155438Z-9fc7118b.yaml
+    revalidated:
+      at: 2026-11-18T17:27:08Z
+      outcome: unchanged
+      unchanged-because: Judged against RS-GRAPHIC-007 as this change leaves it at its eleventh round, with DEC-066's answer on this rule, which found DEC-046 point 2 untouched by its top line. RS-GRAPHIC-007's sentences on which parts of an item keep a concept's colour on a page whose point is an order, and on a concept's own mark, are as they were, so this rule's pointer beside an order lands where it did. The change gives that rule's strongest difference to what the point is about, to the action a page asks, or to what a page's job needs most, where that part lies outside the head, and, where it lies in the head, has no part of the rest take a stronger difference than the head, in place of that sentence; it says what a difference is, takes a page with no single point from RS-GRAPHIC-001 as it takes the head, the action and the rest, weighs each section of a page of sections as a page of its own, with its heading, and the lead under it where it has one, as its head, leaves out the frame as RS-GRAPHIC-003 defines it, and leaves to RS-GRAPHIC-001 whether the three stand above the rest in rank. None of these reaches one meaning keeping one look, a library's component for its job or a new message's own picture, which this rule states.

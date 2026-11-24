@@ -571,8 +571,10 @@ def _local(what: str, name: str) -> str:
 
 # --- the reading command (point 5) -----------------------------------------------------------
 
-#: The version of the reading's document (`Settled.as_json`); raised when a key a
-#: reader relies on changes its meaning or goes, never for a key added.
+#: The version of the reading's document (`Settled.as_json`). It rises only when one
+#: of the document's own keys, or a value of one of its sets, goes, a break the
+#: changeset declares at `major`; never for a key or a value added. No key or value
+#: comes to mean anything else, in place or by coming back (ADR-097 points 4 and 5).
 SCHEMA_VERSION = 1
 
 

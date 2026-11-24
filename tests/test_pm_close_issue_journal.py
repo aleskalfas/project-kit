@@ -351,15 +351,15 @@ def test_a_close_the_workflow_does_not_declare_for_the_type_is_not_recorded(
     # The workflow declares Review → Done for a Task alone: no container enters
     # Review. The engine does not read a transition's `applies_to`, so it would
     # record the move for a container whose label was set to Review by hand;
-    # close-issue does not hand it over, and says so.
+    # close-issue does not hand it over, and says so. A won't-do close makes
+    # it, since a container's cascade-eligibility close refuses to start
+    # anywhere but In Progress (#3248).
     number = _container_in_progress(world)
     labels = world.tracker.issues[number]["labels"]
     labels[labels.index("state:in-progress")] = "state:review"
     capsys.readouterr()
 
-    rc, calls = _engine_calls_during(
-        world, lambda: world.close(number, "--mode", "cascade-eligibility-close")
-    )
+    rc, calls = _engine_calls_during(world, lambda: world.close(number, "--reason", WONT_DO_REASON))
 
     closed = capsys.readouterr()
     assert rc == 0
@@ -369,10 +369,32 @@ def test_a_close_the_workflow_does_not_declare_for_the_type_is_not_recorded(
         "declared in workflow.yaml for 'feature'. "
     ) in closed.err
     assert f"`pkit pm history {number} --check-drift` will show the gap" in closed.err
-    assert f"[ok] closed #{number} (cascade-eligibility, completed)." in closed.out
+    assert f"[ok] closed #{number} (wont-do)." in closed.out
     assert world.views(number) == ("done", "done")
     assert world.moves(number) == _LEVEL
     assert world.history(number) == 3
+
+
+def test_a_containers_cascade_close_from_review_is_refused_and_records_nothing(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """DEC-006's table starts a container's cascade-eligibility close at In
+    Progress, so one whose label was set to Review by hand is refused before
+    anything is written, and the engine is asked nothing (#3248)."""
+    number = _container_in_progress(world)
+    labels = world.tracker.issues[number]["labels"]
+    labels[labels.index("state:in-progress")] = "state:review"
+    capsys.readouterr()
+
+    rc, calls = _engine_calls_during(
+        world, lambda: world.close(number, "--mode", "cascade-eligibility-close")
+    )
+
+    assert rc == 1
+    assert calls == []
+    assert "the container stands in Review" in capsys.readouterr().err
+    assert world.tracker.issues[number]["state"] == "OPEN"
+    assert world.moves(number) == _LEVEL
 
 
 # --- journal logging off ------------------------------------------------------

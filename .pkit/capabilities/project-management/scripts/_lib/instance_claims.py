@@ -97,6 +97,26 @@ another account's clone wrote. The move back from In Progress refuses on it,
 before it writes, so an issue never waits in Backlog or Todo still claimed
 (DEC-006, DEC-035 point 4).
 
+**An account pkit cannot tell** (#3162). Where the account acting could not be
+resolved, the clone carries why, the identity's ``unresolved_cause``. Each line
+that claims nothing, or keeps or refuses on a claim that may be this clone's
+own, says pkit cannot tell, and why, through ``membership.format_unresolved``.
+What each function writes, and decides, is as before.
+
+**A credential that names no user's account** (DEC-076 point 4). Under an
+App installation's token, a workflow's own token, or a credential GitHub gives
+no answer for, a clone takes no part in instance ownership on issues of work,
+whatever id it holds: none of its claims would count, since a claim counts
+only from the assignee's account (DEC-043 point 3), and a label it wrote would
+read as a claim of the person's own clone of its number. So :func:`this_clone`
+gives such a clone as one that only reads (``Clone.reads_only``): it claims
+nothing and releases nothing, and the clash guard reads the owner for it,
+refusing a Task any instance owns. Under an unresolved identity, a clone that
+holds an instance id, or took a seat, refuses instead, since a second run, once
+GitHub answers, tells whether its claim would count (:class:`Unconfirmed`).
+In a project with a topology, such a clone holds no seat that builds (DEC-076
+point 6); a planner's seat it took stands, and files with no owner.
+
 **The mirror.** In ``comment`` mode each claim and release regenerates the owner
 mirror from the fold, before the provenance footer, through
 ``provenance.stamp`` (ADR-037). The mirror is derived, so a failed write of it is
@@ -129,6 +149,7 @@ from _lib.instance_identity import (
     read_instance_id,
     read_seat_hint,
 )
+from _lib.membership import format_unresolved
 
 #: The adopter's substrate selector, in the marker's own schema home (DEC-043
 #: point 2), relative to the capability root.
@@ -201,6 +222,28 @@ class Topology:
 
 
 @dataclass(frozen=True)
+class Credential:
+    """What instance ownership reads of the credential (DEC-076 point 4):
+    whether GitHub answered that it acts as a user's account, and, where it did
+    not, whether GitHub gave no answer at all, an unresolved identity."""
+
+    names_user: bool = True
+    unresolved: bool = False
+
+
+def credential_of(invoker: Any) -> Credential:
+    """The credential an identity (``membership.Identity``) was resolved under."""
+    return Credential(
+        names_user=bool(getattr(invoker, "names_user", True)),
+        unresolved=bool(getattr(invoker, "unresolved", False)),
+    )
+
+
+#: The number a clone that only reads carries: no instance has it.
+NO_INSTANCE = 0
+
+
+@dataclass(frozen=True)
 class Clone:
     """This clone, as instance ownership sees it: its instance number, the
     substrate the adopter selected, its GitHub account and its capability root
@@ -220,6 +263,16 @@ class Clone:
     #: Why a command that takes refuses, where this code cannot read the
     #: topology in full (DEC-061 point 9), or None.
     refusal: str | None = None
+    #: Why ``login`` could not be resolved, where it could not (#3162).
+    login_cause: str | None = None
+    #: A clone under a credential that names no user's account, which takes no
+    #: part in instance ownership on issues of work: it claims and releases
+    #: nothing, and the clash guard reads the owner for it (DEC-076 point 4).
+    reads_only: bool = False
+    #: A clone that only reads, holds no instance id or seat, and lies in a
+    #: project with no topology: it says nothing of instance ownership, which
+    #: the project may not use, and only its clash guard acts.
+    quiet: bool = False
 
     @property
     def files_unowned(self) -> bool:
@@ -229,6 +282,8 @@ class Clone:
 
     def named(self) -> str:
         """How a line names this clone: its instance, and its seat where it holds one."""
+        if self.reads_only and self.seat is None:
+            return "a clone under a credential that names no user's account"
         if self.seat is None:
             return f"instance {self.instance}"
         return f"seat {self.seat.name}, instance {self.instance}"
@@ -280,8 +335,10 @@ class Unreleasable:
 
 def say(result: Result) -> None:
     """Print a result: its line on standard output, or on standard error where
-    it is a warning, and each note on standard error."""
-    print(result.line, file=sys.stderr if result.warning else sys.stdout)
+    it is a warning, and each note on standard error. A quiet clone's result
+    has no line, and prints none."""
+    if result.line:
+        print(result.line, file=sys.stderr if result.warning else sys.stdout)
     for note in result.notes:
         print(note, file=sys.stderr)
 
@@ -315,6 +372,8 @@ def this_clone(
     config: dict | None = None,
     *,
     dry_run: bool = False,
+    login_cause: str | None = None,
+    credential: Credential | None = None,
 ) -> Clone | None:
     """This clone, or ``None`` when it takes no part in instance ownership.
 
@@ -325,13 +384,87 @@ def this_clone(
     the seat's (DEC-059 point 6). Otherwise an instance id must be set, and the
     substrate selector is read only then. Raises :class:`Unconfirmed` where the
     clone took a seat and the seat cannot be confirmed; ``dry_run`` releases no
-    retired seat (:func:`confirm_seat`)."""
+    retired seat (:func:`confirm_seat`). ``login_cause`` is why ``login`` could
+    not be resolved, where it could not (#3162).
+
+    ``credential`` is what the identity was resolved under. Where it names no
+    user's account, the clone only reads, whatever id it holds, and under an
+    unresolved identity a clone that holds an id or took a seat raises
+    :class:`Unconfirmed` (DEC-076 point 4, :func:`no_user_clone`)."""
+    if credential is not None and not credential.names_user:
+        return no_user_clone(
+            capability_root,
+            login,
+            config or {},
+            credential,
+            dry_run=dry_run,
+            login_cause=login_cause,
+        )
     if read_instance_id(capability_root) is None and read_seat_hint(capability_root) is None:
         return None
-    reading = read_topology(capability_root, config or {}, login=login, dry_run=dry_run)
+    reading = read_topology(
+        capability_root, config or {}, login=login, login_cause=login_cause, dry_run=dry_run
+    )
     if reading is not None:
         return seat_clone(reading, capability_root, login)
-    return numbered_clone(capability_root, login)
+    return numbered_clone(capability_root, login, login_cause)
+
+
+def no_user_clone(
+    capability_root: Path,
+    login: str | None,
+    config: dict,
+    credential: Credential,
+    *,
+    dry_run: bool = False,
+    login_cause: str | None = None,
+) -> Clone:
+    """This clone under a credential that names no user's account (DEC-076
+    points 4 and 6): one that only reads, whatever id it holds.
+
+    Under an unresolved identity, a clone that holds an instance id, or took a
+    seat, raises :class:`Unconfirmed`: it means to claim what it acts on, and
+    whether its claim would count cannot be told until GitHub answers. In a
+    project with a topology, a seat the clone took is confirmed as any is, and
+    only a planner's seat stands; the clone that only reads carries each seat's
+    holder, so the clash guard judges claims as a seat's clone does."""
+    holds = read_instance_id(capability_root) is not None
+    hint = read_seat_hint(capability_root)
+    if credential.unresolved and (holds or hint is not None):
+        what = "took a seat" if hint is not None else "holds an instance id"
+        raise Unconfirmed(
+            f"{format_unresolved(login_cause)}, and this clone {what}. Under an unresolved "
+            "identity a clone that means to claim acts as no instance, since whether its "
+            "claim would count cannot be told; run this again once GitHub answers "
+            "(DEC-076 point 4)."
+        )
+    reading = read_topology(
+        capability_root, config, login=login, login_cause=login_cause, dry_run=dry_run
+    )
+    if reading is not None and reading.seat is not None:
+        if reading.seat.role != PLANNER:
+            raise Unconfirmed(
+                f"this clone holds the seat {reading.seat.name}, a {reading.seat.role}'s, and "
+                "a clone under a credential that names no user's account holds no seat that "
+                "builds, since none of its claims on a Task would count (DEC-076 point 6). "
+                "Release the seat (`pkit pm release-seat`)."
+            )
+        clone = seat_clone(reading, capability_root, login)
+        if clone is not None:
+            return clone
+    substrate = ownership.resolve_substrate(_read_settings(capability_root))
+    return Clone(
+        NO_INSTANCE,
+        substrate,
+        None,
+        capability_root,
+        holders=reading.holders if reading is not None else None,
+        pools=reading.pools if reading is not None else None,
+        refusal=reading.refusal if reading is not None else None,
+        login_cause=login_cause,
+        reads_only=True,
+        quiet=reading is None and not holds and hint is None,
+    )
 
 
 def seat_clone(reading: Topology, capability_root: Path, login: str | None) -> Clone | None:
@@ -354,15 +487,18 @@ def seat_clone(reading: Topology, capability_root: Path, login: str | None) -> C
     )
 
 
-def numbered_clone(capability_root: Path, login: str | None) -> Clone | None:
+def numbered_clone(
+    capability_root: Path, login: str | None, login_cause: str | None = None
+) -> Clone | None:
     """This clone in a project with no topology: the instance number typed into
     it, or ``None`` where none is (DEC-035). The substrate selector is read only
-    where a number is typed."""
+    where a number is typed. ``login_cause`` is why ``login`` could not be
+    resolved, where it could not (#3162)."""
     instance = read_instance_id(capability_root)
     if instance is None:
         return None
     substrate = ownership.resolve_substrate(_read_settings(capability_root))
-    return Clone(instance, substrate, login, capability_root)
+    return Clone(instance, substrate, login, capability_root, login_cause=login_cause)
 
 
 def read_topology(
@@ -370,6 +506,7 @@ def read_topology(
     config: dict,
     *,
     login: str | None = None,
+    login_cause: str | None = None,
     dry_run: bool = False,
 ) -> Topology | None:
     """This run's reading of the project's topology, or ``None`` where the
@@ -383,7 +520,8 @@ def read_topology(
     a clone that took a seat cannot confirm it, and :class:`Unconfirmed` is
     raised (DEC-059 point 1). A clone that took none keeps the number typed into
     it, or acts as no instance where none is, with a note, since no topology was
-    read to refuse it.
+    read to refuse it. ``login_cause`` is why ``login`` could not be resolved,
+    where it could not (#3162).
 
     A note names the commit of the default branch the topology was read at,
     before the seat is confirmed, and once in a run: a command that another
@@ -414,7 +552,7 @@ def read_topology(
     where = topology.name_once(snap.topology)
     if where is not None:
         print(f"[note] ownership: this clone read the topology of {where}.", file=sys.stderr)
-    seat = confirm_seat(snap, capability_root, dry_run=dry_run)
+    seat = confirm_seat(snap, capability_root, dry_run=dry_run, login_cause=login_cause)
     return Topology(
         seat,
         SeatHolders(snap),
@@ -434,7 +572,11 @@ def _snapshot(capability_root: Path, config: dict, login: str | None) -> topolog
 
 
 def confirm_seat(
-    snapshot: topology.Snapshot, capability_root: Path, *, dry_run: bool = False
+    snapshot: topology.Snapshot,
+    capability_root: Path,
+    *,
+    dry_run: bool = False,
+    login_cause: str | None = None,
 ) -> Seat | None:
     """This clone's seat, confirmed on the seat's state issue by the clone's key,
     with the scope the topology gives it (point 7), or ``None`` where the clone
@@ -447,7 +589,8 @@ def confirm_seat(
     as its clone would release it, and the clone then holds no seat (point 5). A
     dry run says so and releases nothing. Raises :class:`Unconfirmed` where the
     seat is gone from the topology, its state issue cannot be read, or another
-    clone, or none, holds it."""
+    clone, or none, holds it, and where the clone keeps no key, or pkit cannot
+    tell its account, which ``login_cause`` says why (#3162)."""
     hint = read_seat_hint(capability_root)
     if hint is None:
         instance = read_instance_id(capability_root)
@@ -460,9 +603,9 @@ def confirm_seat(
             )
         return None
     if not (snapshot.clone.account and snapshot.clone.key):
-        lacks = "GitHub account could not be resolved" if snapshot.clone.key else "keeps no key"
+        lacks = format_unresolved(login_cause) if snapshot.clone.key else "it keeps no key"
         raise Unconfirmed(
-            f"this clone took the seat {hint}, and its {lacks}, so its seat cannot be "
+            f"this clone took the seat {hint}, and {lacks}, so its seat cannot be "
             "confirmed on the seat's state issue."
         )
     state = snapshot.state(hint)
@@ -592,12 +735,17 @@ def _read_settings(capability_root: Path) -> dict[str, Any] | None:
 def claim_plan(clone: Clone, assignee: str | None = None, *, filing: bool = False) -> str:
     """What a claim will do, for a pre-flight summary. ``assignee`` is the
     account an issue being filed is assigned to, where it is known, and
-    ``filing`` says the claim is the one at filing."""
+    ``filing`` says the claim is the one at filing. Where pkit cannot tell this
+    clone's account, :func:`claim` claims nothing, and the plan says why (#3162)."""
     if filing and clone.files_unowned:
         return (
             f"not claimed: {clone.named()} is a planner's seat, which files with no owner, "
             "so the issue enters the shared pool"
         )
+    if clone.reads_only:
+        return f"not claimed: {_reads_only_clause()}"
+    if not clone.login:
+        return f"not claimed: {format_unresolved(clone.login_cause)}"
     if assignee is not None and assignee != clone.login:
         return (
             f"not claimed: assigned to @{assignee}, not to this clone's account ({clone.named()})"
@@ -609,12 +757,14 @@ def claims_at_filing(clone: Clone, assignee: str | None) -> bool:
     """Whether ``create-issue`` claims what it files: for this clone's own
     account, and not from a planner's seat (DEC-035 points 3 and 5, DEC-059
     point 7)."""
-    return assignee == clone.login and not clone.files_unowned
+    return assignee == clone.login and not clone.files_unowned and not clone.reads_only
 
 
 def release_plan(clone: Clone, *, when: str = "on close") -> str:
     """What a release will do, for a pre-flight summary. ``when`` says what
     releases: the close, or the move back from In Progress (DEC-006)."""
+    if clone.reads_only:
+        return f"not released: {_reads_only_clause()}"
     return f"released {when} (this clone is {clone.named()}, {clone.substrate} substrate)"
 
 
@@ -632,12 +782,13 @@ def claim(issue_number: int, clone: Clone, config: dict, *, run: Run | None = No
     happened."""
     gh = run or _runner(config)
     n = issue_number
+    if clone.reads_only:
+        why = _reads_only_clause()
+        line = "" if clone.quiet else f"[note] ownership: #{n} is not claimed: {why}."
+        return Result(NOT_CLAIMED, line)
     if not clone.login:
-        return Result(
-            NOT_CLAIMED,
-            f"[note] ownership: #{n} is not claimed: this clone's GitHub account "
-            "could not be resolved.",
-        )
+        cannot_tell = format_unresolved(clone.login_cause)
+        return Result(NOT_CLAIMED, f"[note] ownership: #{n} is not claimed: {cannot_tell}.")
     issue = _read(gh, n)
     if issue is None:
         return Result(FAILED, f"[warn] ownership: #{n} could not be read, so it is not claimed.")
@@ -787,7 +938,6 @@ def guard(
     verb: str,
     flag: str,
     bypass: str | None,
-    invoker: Any,
     dry_run: bool = False,
     run: Run | None = None,
 ) -> Guard:
@@ -800,10 +950,14 @@ def guard(
     counts (ADR-041 point 5). An issue that cannot be read refuses too, since
     whose it is cannot be told. A bypass posts its audit comment before the
     command writes, once however many commands of one act post it, and a dry run
-    posts none. ``flag`` is the command's spelling of the bypass (DEC-046)."""
+    posts none. ``flag`` is the command's spelling of the bypass (DEC-046).
+    Where pkit cannot tell this clone's account, an instance of this clone's
+    number may be its own, and the refusal says pkit cannot tell, and why
+    (#3162); the audit comment a bypass posts is worded as before."""
     gh = run or _runner(config)
     n = issue_number
     issue = _read(gh, n)
+    cannot_tell = ""
     if issue is None:
         why = f"#{n} could not be read, so whose it is cannot be told"
     else:
@@ -817,15 +971,17 @@ def guard(
             return Guard(PASSED)
         whose = f" of @{account}" if account and account != clone.login else ""
         why = f"#{n} is owned by {_owner(resolution, first)}{whose}"
+        if whose and not clone.login and first == clone.instance:
+            cannot_tell = f", and {format_unresolved(clone.login_cause)}"
     me = clone.named()
     reason = (bypass or "").strip()
     if not reason:
         return Guard(
             REFUSED,
-            f"[refused] {verb} #{n}: {why}, and this clone is {me}. The clash guard refuses "
-            "an ordinary command on another instance's issue (DEC-035 point 6). Leave it to "
-            f'its owner, or pass {flag} "<reason>" to act anyway: the reason is posted on '
-            "the issue as an audit comment.",
+            f"[refused] {verb} #{n}: {why}{cannot_tell}, and this clone is {me}. The clash "
+            "guard refuses an ordinary command on another instance's issue (DEC-035 point 6). "
+            f'Leave it to its owner, or pass {flag} "<reason>" to act anyway: the reason is '
+            "posted on the issue as an audit comment.",
         )
     if dry_run:
         return Guard(
@@ -833,7 +989,7 @@ def guard(
         )
     key = audit.audit_key(GUARD_AUDIT_WRITER, str(n), why, me, reason)
     body = (
-        f"{audit.render_audit_comment(clone.capability_root, invoker, reason)}\n\n"
+        f"{audit.render_audit_comment(clone.capability_root, reason)}\n\n"
         f"The clash guard was bypassed: {why}, and this clone, {me}, acted on it "
         f"(DEC-035 point 6).\n\n{key}"
     )
@@ -895,9 +1051,14 @@ def release(
     project with a topology the log's claims are judged against the seats'
     holders, as the claim and the guard judge them: a claim that counts, or one
     that cannot be judged, is released, and a void claim is no owner to release.
-    In ``comment`` mode it then regenerates the owner mirror."""
+    In ``comment`` mode it then regenerates the owner mirror. A clone that only
+    reads releases nothing (DEC-076 point 4)."""
     gh = run or _runner(config)
     n = issue_number
+    if clone.reads_only:
+        why = _reads_only_clause()
+        line = "" if clone.quiet else f"[note] ownership: #{n} is not released: {why}."
+        return Result(NOT_RELEASED, line)
     issue = _read(gh, n)
     if issue is None:
         return Result(FAILED, f"[warn] ownership: #{n} could not be read, so it is not released.")
@@ -944,13 +1105,16 @@ def release(
             notes=tuple(notes),
         )
     if kept:
-        return Result(
-            NOT_RELEASED,
-            f"[note] ownership: #{n} is owned by @{account}'s "
-            + ", ".join(f"instance {i}" for i in kept)
-            + ", and only that account's clone can release it.",
-            notes=tuple(notes),
-        )
+        owned = f"#{n} is owned by @{account}'s " + ", ".join(f"instance {i}" for i in kept)
+        if clone.login:
+            line = f"[note] ownership: {owned}, and only that account's clone can release it."
+        else:
+            # That account may be this clone's, which pkit cannot tell (#3162).
+            line = (
+                f"[note] ownership: {owned}, which only that account's clone can release, "
+                f"and {format_unresolved(clone.login_cause)}."
+            )
+        return Result(NOT_RELEASED, line, notes=tuple(notes))
     instances = ", ".join(f"instance {i}" for i in sorted(set(released)))
     return Result(RELEASED, f"[ok] ownership: #{n} released ({instances}).", notes=tuple(notes))
 
@@ -989,21 +1153,29 @@ def cannot_release(
     me = clone.login if clone is not None else login
     account = me if me in assignees else (assignees[0] if assignees else None)
     whose = f" of @{account}" if account else ""
-    if clone is not None:
+    if clone is not None and not clone.reads_only:
         logged = _logged(issue, account, clone.holders)
         if not logged.claimants or account == clone.login:
             return None
+        # That account may be this clone's, which pkit cannot tell (#3162).
+        cannot_tell = "" if clone.login else f", and {format_unresolved(clone.login_cause)}"
         return Unreleasable(
             f"#{n} is owned by {_named(logged)}{whose}, a claim on the comment log that only "
-            f"a clone of @{account} can release (DEC-043 point 3)",
+            f"a clone of @{account} can release (DEC-043 point 3){cannot_tell}",
             f"run this from a clone of @{account}, or once that account's clone released it",
         )
     owned = _owned_with_no_clone(issue, account, capability_root, config, login)
     if not owned:
         return None
+    why = (
+        "a clone under a credential that names no user's account takes no part in instance "
+        "ownership, so it releases no claim (DEC-076 point 4)"
+        if clone is not None
+        else "this clone takes no part in instance ownership, so it releases no claim "
+        "(DEC-035 point 1)"
+    )
     return Unreleasable(
-        f"#{n} is owned by {owned}{whose}, and this clone takes no part in instance "
-        "ownership, so it releases no claim (DEC-035 point 1)",
+        f"#{n} is owned by {owned}{whose}, and {why}",
         "run this from the owner's clone, or once the owner released it",
     )
 
@@ -1060,6 +1232,14 @@ def _owned_with_no_clone(
 
 
 # ---- shared steps -------------------------------------------------------------
+
+
+def _reads_only_clause() -> str:
+    """Why a clone that only reads claims and releases nothing (DEC-076 point 4)."""
+    return (
+        "a clone under a credential that names no user's account takes no part in "
+        "instance ownership, since none of its claims would count (DEC-076 point 4)"
+    )
 
 
 def _owner(resolution: ownership.OwnershipResolution, instance: int) -> str:

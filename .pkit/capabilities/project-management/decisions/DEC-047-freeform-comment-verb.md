@@ -84,8 +84,9 @@ comment *can* affect is a gate the engine drives off comment text — so the ver
 refuses a body whose first line would be parsed as a DEC-028 reviewer verdict
 (`Reviewer agent[ (local, …)]: APPROVED|CHANGES_REQUESTED`, which `done-work`'s
 agent-mode gate-checker reads), a human-mode `Approved`-prefix approval (which
-`done-work` counts from a non-author), or an audit-trail template (DEC-014's
-`Bypassed by …` / the `Approved by bypass:` line). This is what keeps "a
+`done-work` counts from a non-author), or an audit-trail template (the
+bypass's line of the audit-comment template, as the validation-severity schema
+holds it, or the `Approved by bypass:` line). This is what keeps "a
 comment mutates no state" *true*: a freeform note that could be counted as an
 approval or a verdict would, in effect, mutate the merge gate. Refusal is a
 plain usage error (reword the first line), not a DEC-014 severity finding.

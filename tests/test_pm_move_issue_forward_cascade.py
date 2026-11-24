@@ -1337,7 +1337,7 @@ def test_the_line_done_work_prints_when_the_move_to_done_fails_finishes_the_casc
         config={},
     )
 
-    assert run.exit_code == 3
+    assert (run.kind, run.exit_code) == (dw.FOLLOW_UP_OWED, dw.EXIT_MERGED_MOVE_OWED)
     assert world.labels(task) == ["type:task", "state:done"]  # close-issue wrote it
     assert world.moves(feature) == world.moves(epic) == []
     line = f"re-run `move-issue {task} --to done` to complete the lifecycle transition"

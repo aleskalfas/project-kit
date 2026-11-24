@@ -1,8 +1,8 @@
 ---
 rule-set: OPS
 loaded: true
-budget: 2300
-version: 6.0.0
+budget: 2335
+version: 7.0.0
 rules:
   RS-OPS-001:
     status: accepted
@@ -15,7 +15,7 @@ rules:
     origin: {decision: COR-066}
     pkit:
       friction:
-        anchors: {record: [COR-066]}
+        anchors: {record: [COR-066, "COR-072#5", "COR-072#6"]}
   RS-OPS-003:
     status: accepted
     origin: {decision: COR-005}
@@ -48,7 +48,7 @@ rules:
         anchors: {record: [COR-010]}
   RS-OPS-008:
     status: accepted
-    origin: {date: 2026-06-13, by: "Aleš Kalfas", why: "A destructive operation cannot be undone, so each one waits for the person's own confirmation, given for that operation alone (since the methodology's first release)."}
+    origin: {date: 2026-11-17, by: "Aleš Kalfas", why: "A destructive operation cannot be undone, so each one waits for the person's own confirmation, given for that operation alone (since the methodology's first release). Removing what an agent made itself, where a check shows nothing is lost, undoes no one's work, and asking before each one stopped the work for a question with nothing at stake. So such a removal needs no confirmation (project-kit#3393)."}
     pkit:
       friction:
         unanchored-because: "A rule about what an agent asks before an operation that cannot be undone; no record or file carries it out."
@@ -123,7 +123,7 @@ rules:
     origin: {decision: COR-050}
     pkit:
       friction:
-        anchors: {record: [COR-050, COR-062, COR-064]}
+        anchors: {record: [COR-050, COR-062, COR-064, "COR-072#4", "COR-072#8"]}
   RS-OPS-021:
     status: accepted
     origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "A step that fails for a cause outside the work may pass on a second try, and failing twice means the cause is not passing, so an agent retries once and then stops and reports (project-kit#1648)."}
@@ -141,7 +141,7 @@ rules:
     origin: {decision: COR-065}
     pkit:
       friction:
-        anchors: {record: ["COR-065#3", "COR-065#1", "COR-064#6", "COR-066#1"]}
+        anchors: {record: ["COR-065#3", "COR-065#1", "COR-064#6", "COR-066#1", "COR-072#6"]}
   RS-OPS-024:
     status: accepted
     origin: {date: 2026-10-29, by: "Aleš Kalfas", why: "A rule a project chooses to bind on its own files sits in an ordinary rule set and binds whoever writes them, so a session follows the rules the rule-set reviewer judges its change by, and this rule adds none (project-kit#2274)."}
@@ -162,7 +162,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### RS-OPS-002 — The acceptance gate
 
-**The acceptance gate.** Act only on accepted decisions and rules: a proposed one binds nothing, so no code, document or record may rest on it. A person accepts a proposal within the change that proposes it, and an agent writes `accepted` only once that person has. Until then the work resting on it waits and the change does not land, and a change built on it lands no earlier than the change that proposes it. Before the change is authorised to reach the default branch, the person who authorises it sees each record and rule the change makes accepted, shown by the component that carries out merges or, without one, by the change's author; an edit made after the acceptance is accepted only through that list (COR-066 points 1 and 3).
+**The acceptance gate.** Act only on accepted decisions and rules: a proposed one binds nothing, so no code, document or record may rest on it. A person accepts a proposal within the change that proposes it, or the delegate does where COR-072 lets it, and an agent writes `accepted` only once either has. Until then the work resting on it waits and the change does not land, and a change built on it lands no earlier than the change that proposes it. Before the change is authorised to reach the default branch, save on a standing authorisation COR-072 lets, the person who authorises it sees each record and rule the change makes accepted, shown by the component that carries out merges or, without one, by the change's author; an edit made after the acceptance is accepted only through that list, or by the delegate accepting again what it accepted (COR-066 points 1 and 3).
 
 ### RS-OPS-003 — Author core-shipped artifacts through the paired skill or `pkit new`
 
@@ -188,7 +188,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### RS-OPS-008 — Pause and confirm before destructive operations
 
-**Pause and confirm before destructive operations,** such as `git reset --hard`, `git push --force`, `rm -rf`, deleting files outside `project/`, dropping tables or killing processes. Each needs the user's explicit confirmation, even where the task seemed to authorise it, and a confirmation covers that operation alone.
+**Pause and confirm before destructive operations,** such as `git reset --hard`, `git push --force`, `rm -rf`, deleting what others made, dropping tables or killing processes. Each needs the user's explicit confirmation for it alone, even where the task seemed to authorise it. Removing what you made yourself needs none where a check shows nothing is lost: a branch whose tip a merge into the default branch took; that branch's worktree, by an unforced `git worktree remove`, once its agent workspace holds nothing others wrote; a process you started, by its id; or your scratch file, by its path.
 
 ### RS-OPS-009 — Conventional commits, one logical unit each
 
@@ -242,7 +242,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### RS-OPS-020 — A reviewer checks the answers a change owes
 
-**A reviewer checks the answers your change owes, and a person, or the delegate they named, decides any other answer on an artefact.** Write the answers `pkit friction check` asks of your change, without asking the person to accept them, and commit them with it, a new answer file among them (COR-062 point 1). Where the check flags a revalidation of yours as replacing others answered apart, make its reason judge their combined state (COR-062 point 7). A reviewer other than you checks them, from the check's own list, never a list you composed (COR-050 point 3). Name an open follow-up in each deferral or `deferred` revisit entry, and say in one sentence what changed in each artefact you revalidated as `updated`, in the pull request or, on a direct commit, to the person you work for. The person who authorises the merge is told these sentences and what is left out of date, until which follow-up, as information. Committing straight to the default branch, have the reviewer, where the project chose one, check before you commit, and tell the person you work for before the commit. Write any other answer, on an artefact or a link's target, or every reason for having no anchors, only once a person accepted it word for word, or the delegate the default branch's configuration names (`friction.delegate`) decided it. The reviewer checks these too, whoever decided them, and blocks the merge, or the direct commit, on an answer or an `updated` sentence that does not hold. Where you can ask neither the person nor the delegate, return the commands and run none (COR-064; the agents README, "Friction writers").
+**A reviewer checks the answers your change owes, and a person, or the delegate they named, decides any other answer on an artefact.** Write the answers `pkit friction check` asks of your change, without asking the person to accept them, and commit them with it, a new answer file among them (COR-062 point 1). Where the check flags a revalidation of yours as replacing others answered apart, make its reason judge their combined state (COR-062 point 7). A reviewer other than you checks them, from the check's own list, never a list you composed (COR-050 point 3). Name an open follow-up in each deferral or `deferred` revisit entry, and say in one sentence what changed in each artefact you revalidated as `updated`, in the pull request or, on a direct commit, to the person you work for. The person who authorises the merge is told these sentences and what is left out of date, until which follow-up, as information. Committing straight to the default branch, have the reviewer, where the project chose one, check before you commit, and tell the person you work for before the commit. Write any other answer, on an artefact or a link's target, or every reason for having no anchors, only once a person accepted it word for word, or the delegate the default branch's configuration names decided it where COR-072 hands it the answer. The reviewer checks these too, whoever decided them, and blocks the merge, or the direct commit, on an answer or an `updated` sentence that does not hold. Where you can ask neither the person nor the delegate, return the commands and run none (COR-064; the agents README, "Friction writers").
 
 ## When a step fails
 
@@ -258,7 +258,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### RS-OPS-023 — A choice later work builds on starts with its record
 
-**Before you make a choice that later work will build on, draft the record that decides it, and let no work rest on the choice until a person accepts the record (COR-065 point 3).** Such choices include a library, an interface or format others use, a convention and a boundary between parts. A change to what an accepted record decides needs a record too. Where your project received that record from elsewhere, follow it in your own files, or propose the change where the record is kept. An accepted rule whose origin states the choice serves as its record. A choice that binds nothing beyond its own change, such as a name or an order inside it, needs no record. Nor does a choice an accepted record already makes. Where you and the person who authorises the merge disagree, that person decides.
+**Before you make a choice that later work will build on, draft the record that decides it, and let no work rest on the choice until the record is accepted (COR-065 point 3).** Such choices include a library, an interface or format others use, a convention and a boundary between parts. A change to what an accepted record decides needs a record too. Where your project received that record from elsewhere, follow it in your own files, or propose the change where the record is kept. An accepted rule whose origin states the choice serves as its record. A choice that binds nothing beyond its own change, such as a name or an order inside it, needs no record. Nor does a choice an accepted record already makes. Where you and the person who authorises the merge disagree, that person decides.
 
 ### RS-OPS-024 — Follow the rule sets' rules on what your change owns
 

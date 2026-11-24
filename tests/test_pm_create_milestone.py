@@ -195,8 +195,18 @@ def test_existing_with_title_is_case_sensitive(cm, monkeypatch) -> None:
 # --- titles.yaml's `milestone` check at filing (#803) -----------------
 
 
-def _run_dry(cm, tmp_path, monkeypatch, *, title_format: str, name: str) -> int:
-    """Run main() --dry-run against a staged tree carrying the shipped titles.yaml."""
+def _run_dry(
+    cm,
+    tmp_path,
+    monkeypatch,
+    *,
+    title_format: str = "R{n} {name}",
+    name: str = "first",
+    config: str | None = None,
+) -> int:
+    """Run main() --dry-run for the category `release` against a staged tree
+    carrying the shipped titles.yaml. The configuration declares `release` with
+    `title_format`, unless `config` gives its text."""
     from types import SimpleNamespace
 
     root = tmp_path / "project-management"
@@ -204,13 +214,14 @@ def _run_dry(cm, tmp_path, monkeypatch, *, title_format: str, name: str) -> int:
     (root / "project").mkdir(parents=True)
     shipped = SCRIPT_PATH.parent.parent / "schemas" / "titles.yaml"
     (root / "schemas" / "titles.yaml").write_text(shipped.read_text("utf-8"), "utf-8")
-    (root / "project" / "config.yaml").write_text(
-        "milestone_categories:\n"
-        "  release:\n"
-        f"    title_format: '{title_format}'\n"
-        "    close_trigger_default: content-based\n",
-        "utf-8",
-    )
+    if config is None:
+        config = (
+            "milestone_categories:\n"
+            "  release:\n"
+            f"    title_format: '{title_format}'\n"
+            "    close_trigger_default: content-based\n"
+        )
+    (root / "project" / "config.yaml").write_text(config, "utf-8")
     monkeypatch.setattr(cm, "resolve_capability_root", lambda _explicit: root)
     monkeypatch.setattr(cm.bootstrap_gate, "enforce", lambda *a, **k: True)
     monkeypatch.setattr(cm.session_guard, "enforce", lambda **k: True)
@@ -239,3 +250,68 @@ def test_a_named_milestone_title_draws_no_warning(cm, tmp_path, monkeypatch, cap
 
     assert rc == 0
     assert "title." not in capsys.readouterr().err
+
+
+# --- a category not declared: the refusal names the command (#3160) -----------
+
+
+def test_with_no_category_declared_the_refusal_names_the_command(
+    cm, tmp_path, monkeypatch, capsys
+) -> None:
+    rc = _run_dry(cm, tmp_path, monkeypatch, config="schema_version: 1\n")
+
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "no milestone categories declared" in err
+    assert (
+        "pkit pm add-milestone-category release --title-format "
+        "'<a format with {n} and {name}>' --close-trigger <date-based|content-based|either>"
+    ) in err
+
+
+def test_a_category_not_declared_is_refused_with_the_command(
+    cm, tmp_path, monkeypatch, capsys
+) -> None:
+    config = (
+        "milestone_categories:\n"
+        "  phase:\n"
+        "    title_format: 'Phase {n}: {name}'\n"
+        "    close_trigger_default: date-based\n"
+    )
+    rc = _run_dry(cm, tmp_path, monkeypatch, config=config)
+
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "Declared categories: phase." in err
+    assert "pkit pm add-milestone-category release --title-format" in err
+
+
+@pytest.mark.parametrize(
+    "title_format", ["R{n} {name} {owner}", "R{n} {name} {0}", "R{n} {name} }"]
+)
+def test_a_format_with_a_placeholder_it_cannot_fill_is_refused(
+    cm, tmp_path, monkeypatch, capsys, title_format
+) -> None:
+    rc = _run_dry(cm, tmp_path, monkeypatch, title_format=title_format)
+
+    assert rc == 2
+    assert "other than {n} and {name}" in capsys.readouterr().err
+
+
+def test_a_category_add_milestone_category_declares_is_filed_in(
+    cm, tmp_path, monkeypatch, capsys
+) -> None:
+    from _lib import milestone_categories
+
+    config = tmp_path / "declared.yaml"
+    config.write_text("schema_version: 1\n", "utf-8")
+    milestone_categories.declare(
+        config, "release", milestone_categories.entry("R{n}: {name}", "either", "Releases.")
+    )
+
+    rc = _run_dry(cm, tmp_path, monkeypatch, config=config.read_text("utf-8"), name="Polish")
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "title:         R3: Polish" in out
+    assert "close_trigger: either" in out

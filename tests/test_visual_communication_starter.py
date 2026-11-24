@@ -6,7 +6,8 @@ component's reference renders, under the test brand, pass the check and draw eac
 each option and of each field of runs (DEC-007 point 3). The header's, on three axes, is
 previewed by `pkit visual render` and checked by `pkit visual check` in each of its twelve
 combinations, with nothing failing (DEC-005 point 6). A run that reads a colour family
-lies on that family's fill (`components.md`, *Values, states and colour*). A connector's
+lies on that family's fill, and one in an order's text on a step of the order
+(`components.md`, *Values, states and colour*). A connector's
 line reaches 3:1 against what it lies on in every mode, and crosses no item but its ends;
 a strong run keeps the body's size and line height. The README names what the components
 declare. A network's ties reach, by key path, the items its groups draw (DEC-011 point 3);
@@ -18,7 +19,11 @@ each has, each clear of a top bar. Each component that paints from its family pl
 sign part, which its reference renders draw within it and clear of its words, a
 connector's halfway along its line; a run painted from its family draws its concept's
 sign; and a legend's entries draw their concepts' families and signs beside the labels
-content gives (DEC-036 points 2, 3 and 6).
+content gives (DEC-036 points 2, 3 and 6). A column of notes of `layers` stands on its side
+of the stack, as tall as it; a note's ties leave it toward the stack and cross no other tie
+on a page of the reference renders; a tie from a note in a column of two to a level far
+below it leaves by the note's foot, as the README keeps; and a connector's weight gives its
+line the width of its role.
 
 The reference renders are the pieces under `tests/fixtures/visual-communication/starter/`,
 one for each component, drawn in English and in German. Run in this process
@@ -52,15 +57,18 @@ from tests.visual_communication_project import (
     project,
     taken,
     version_folder,
+    write,
     write_list,
+    yaml_text,
 )
 
-add, render, check, checks, keys, pl, reading, tokens, svg = load(
+add, render, check, checks, colour_steps, keys, pl, reading, tokens, svg = load(
     "visual-communication",
     "add.py",
     "render.py",
     "check.py",
     "checks",
+    "colour_steps",
     "keys",
     "pipeline",
     "reading",
@@ -373,7 +381,8 @@ def on_each_foundations(
 
 
 #: The shared roles the foundations being built add to their release 1.0.0, each by the role
-#: its default aliases (DEC-004 point 7, DEC-032 point 1, DEC-036 point 3).
+#: its default aliases (DEC-004 point 7, DEC-032 point 1, DEC-036 point 3), the type of a
+#: page's title among them (DEC-008 point 2).
 ADDED_ROLES = {
     "size.site": "size.slide",
     "size.line": "size.figure",
@@ -383,6 +392,7 @@ ADDED_ROLES = {
     "family.order.first": "family.neutral.fill",
     "family.order.last": "family.neutral.fill",
     "family.order.text": "family.neutral.text",
+    "type.title": "type.heading",
 }
 
 #: The tokens the deck of the foundations being built declares, each by the shared type its
@@ -453,15 +463,15 @@ def test_each_reference_render_draws_on_the_foundations_being_built_as_on_their_
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The foundations being built add the size axis `device`, the roles `size.site`,
-    `size.line`, those of a run's sign and ground and an order's, and their deck's tokens to
-    their release 1.0.0, and the test brand 1.0.0 gives no size (DEC-021 points 2 and 9, DEC-022
-    point 3, DEC-035 point 4, DEC-036 point 3). Their deck places its lead and its visual
-    otherwise, which the comparison takes back (`DECK_PLACES`). So each reference piece of
-    a component the starter's release holds, drawn with that release, draws on them as on
-    their release, byte for byte: each preview, but for the foundations' version they name,
-    and its values, but for the roles and the tokens they add. The starter being built
-    reads roles their release does not declare, and its web parts name the sizes, which
-    that release does not declare either."""
+    `size.line`, those of a run's sign and ground and an order's, the type of a page's title,
+    and their deck's tokens to their release 1.0.0, and the test brand 1.0.0 gives no size
+    (DEC-021 points 2 and 9, DEC-022 point 3, DEC-035 point 4, DEC-036 point 3). Their deck
+    places its lead and its visual otherwise, which the comparison takes back
+    (`DECK_PLACES`). So each reference piece of a component the starter's release holds,
+    drawn with that release, draws on them as on their release, byte for byte: each preview,
+    but for the foundations' version they name, and its values, but for the roles and the
+    tokens they add. The starter being built reads roles their release does not declare,
+    and its web parts name the sizes, which that release does not declare either."""
     importable(monkeypatch, svg)
     root = reference_location(project(tmp_path))
     hold_shipped(root, "foundations", version="1.0.0")
@@ -488,6 +498,20 @@ UNSIGNED = [
 ]
 
 
+#: The labels of the checks of boxes (DEC-046 point 3, DEC-067). They ask the reviewer for
+#: attention on places of the reference pieces, such as a text whose insets at the top and
+#: the bottom of its card's box differ by 1.6 px, and fail nothing.
+BOX_LABELS = ("near-alignment", "near-alignment-between-groups", "box-overlap")
+
+#: The labels the tests of the reference pieces' checks read apart from the rest.
+APART = ("component-experimental", *SIGN_LABELS, *BOX_LABELS)
+
+
+def box_levels(judged: Iterable[tuple[Any, str]]) -> set[str]:
+    """The levels of the calls of the checks of boxes among a check's findings, `judged`."""
+    return {level for finding, level in judged if finding.code in BOX_LABELS}
+
+
 def on_signs(judged: Iterable[tuple[Any, str]]) -> list[tuple[str, str, str, str, str]]:
     """The calls for attention on concepts' signs among a check's findings, `judged`, as
     `UNSIGNED` gives each."""
@@ -504,17 +528,18 @@ def test_every_reference_piece_passes_the_check_under_the_test_brand(location: P
     """The test brand's newest version, the one the check of a version alone reads (DEC-019),
     states, once, that it gives `picture.logo` no value, and no piece states it (DEC-025
     point 9): a header draws with no logo. Beside it, the pieces ask for attention on the
-    concepts that map no sign."""
+    concepts that map no sign, and on the places the checks of boxes name."""
     report = checks.check(location)
     found = [
         (level, finding.code, finding.file, finding.where)
         for finding, level in report.judged
-        if finding.code != "component-experimental" and finding.code not in SIGN_LABELS
+        if finding.code not in APART
     ]
     assert found == [
         ("fact", "picture-role-unvalued", "visual/libraries/test-brand/1.1.0/", "picture.logo")
     ]
     assert on_signs(report.judged) == UNSIGNED
+    assert box_levels(report.judged) <= {"attention"}
     assert not report.failed()
     assert report.summary == [
         f"{len(COMPONENTS)} piece(s) in `visual`: the scenes of 0 read from their findings "
@@ -742,11 +767,25 @@ def frames(
         yield from frames(child, left, top)
 
 
+#: The text on every step of an order, which the foundations declare (DEC-032 point 1).
+ORDER_TEXT = read(FOUNDATIONS / "roles.yaml")["order"]["text"]
+
+
+def holds_its_text(fill: str, text: str) -> bool:
+    """Whether a box of `fill` is the ground a run in the paint `text` lies on: its family's
+    fill, or, for the order's text, a step of the order (DEC-032 point 4)."""
+    if text == ORDER_TEXT:
+        return colour_steps.is_step(fill)
+    family = FAMILY_TEXT.match(text)
+    return family is not None and fill == f"family.{family.group(1)}.fill"
+
+
 @pytest.mark.parametrize("language", LANGUAGES)
 def test_a_text_in_a_familys_text_lies_on_that_familys_fill(
     scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
 ) -> None:
-    checked = 0
+    """And a text in the order's text on a step: the levels of layers take one each."""
+    checked = on_steps = 0
     for (piece, lang), scene in scenes.items():
         if lang != language:
             continue
@@ -758,19 +797,19 @@ def test_a_text_in_a_familys_text_lies_on_that_familys_fill(
                     boxes.append((element.get("fill", ""), frame))
                 for paragraph in element.get("paragraphs", []):
                     for run in paragraph:
-                        family = FAMILY_TEXT.match(run["fill"])
-                        if family is None:
+                        if FAMILY_TEXT.match(run["fill"]) is None:
                             continue
                         checked += 1
+                        on_steps += run["fill"] == ORDER_TEXT
                         assert any(
-                            fill == f"family.{family.group(1)}.fill"
+                            holds_its_text(fill, run["fill"])
                             and under[0] <= frame[0]
                             and under[1] <= frame[1]
                             and frame[2] <= under[2]
                             and frame[3] <= under[3]
                             for fill, under in boxes
                         ), (piece, element["id"], run["text"])
-    assert checked > 0
+    assert checked > on_steps > 0
 
 
 #: Every combination of the modes of the foundations' value axes, which every brand has
@@ -1473,3 +1512,251 @@ def test_a_legends_entries_draw_their_concepts_family_and_sign_beside_the_label_
         assert drawn[f"{held}/label"]["text"] == entry["label"]
         assert (f"{held}/sign" in drawn) is has_sign, entry["id"]
     assert any(NOTATION[e["concept"].removeprefix("test-notation/")][1] for e in entries)
+
+
+# --- the notes of layers, their ties and the connector's weight -------------------------------
+
+#: The lists of notes `layers` draws, each with the side of the stack it stands on and the
+#: side of a note that faces the stack.
+NOTE_SIDES = {"left-notes": ("left", "right"), "notes": ("right", "left")}
+#: Each side of a frame, with the side that faces it across a gap.
+FACING = {"left": "right", "right": "left", "top": "bottom", "bottom": "top"}
+
+
+def list_of(trace_id: str) -> str:
+    """The list whose item is the element `trace_id`: its last step's name, before the
+    item's id."""
+    return trace_id.rpartition("/")[2].partition("[")[0]
+
+
+def note_ties(
+    scene: Mapping[str, Any],
+) -> Iterator[tuple[Mapping[str, Any], list[Point], str, Mapping[str, Any], Mapping[str, Any]]]:
+    """Each tie a `layers` of `scene` draws between one of its notes and one of its levels:
+    the tie, the points of its route on its page, the list of its note, and where it meets
+    the note and the level, each the end's element and the side it meets."""
+    drawn = by_id(scene)
+    for page in [each for each in elements(scene) if each.get("page")]:
+        for line, route, _ in connector_lines(page):
+            met = {end: line["attached"][end] for end in ("start", "end")}
+            lists = {end: list_of(str(attached["id"])) for end, attached in met.items()}
+            notes = [end for end, listed in lists.items() if listed in NOTE_SIDES]
+            levels = [end for end, listed in lists.items() if listed == "levels"]
+            if len(notes) != 1 or len(levels) != 1:
+                continue
+            owner = drawn[ancestors(str(met[notes[0]]["id"]))[-1]]
+            if owner.get("component") != "starter/layers":
+                continue
+            tie = drawn[str(line["id"]).rpartition("/")[0]]
+            yield tie, route, lists[notes[0]], met[notes[0]], met[levels[0]]
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_notes_tie_leaves_it_toward_the_stack_and_meets_its_level_on_the_side_facing_it(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """A note of `notes` stands to the right of the stack, and one of `left-notes` to its
+    left. The reference renders tie a note only to the levels beside it, or from a note
+    alone in its column, so each tie leaves its note by the side that faces the stack, and
+    meets its level on the side that faces the note, straight where its route is. Notes on
+    both sides are tied."""
+    sides = set()
+    for (_, lang), scene in scenes.items():
+        if lang != language:
+            continue
+        for tie, route, listed, note, level in note_ties(scene):
+            facing = NOTE_SIDES[listed][1]
+            assert note["side"] == facing, (tie["id"], note)
+            assert level["side"] == FACING[facing], (tie["id"], level)
+            if tie["options"]["route"] == "straight":
+                assert len(route) == 2, tie["id"]
+            sides.add(listed)
+    assert sides == set(NOTE_SIDES)
+
+
+def turn(origin: Point, towards: Point, point: Point) -> float:
+    """Which way `point` lies from the line that runs from `origin` to `towards`: above
+    zero to its left, below zero to its right, and zero on it."""
+    return (towards[0] - origin[0]) * (point[1] - origin[1]) - (towards[1] - origin[1]) * (
+        point[0] - origin[0]
+    )
+
+
+def cross(one: tuple[Point, Point], other: tuple[Point, Point]) -> bool:
+    """Whether two straight stretches cross each other, each at a point short of its ends."""
+    (a, b), (c, d) = one, other
+    return turn(c, d, a) * turn(c, d, b) < 0 and turn(a, b, c) * turn(a, b, d) < 0
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_no_two_ties_of_a_layers_reference_page_cross(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]], language: str
+) -> None:
+    """On each page of the layers' reference renders, no two ties cross. On the page of
+    leaders, a note tied to the first and the third levels stands on one side of the stack
+    and a note tied to the second on the other, where in one column their ties would cross
+    in every order of the notes (the starter's README, `layers`)."""
+    pages = [each for each in elements(scenes[("layers", language)]) if each.get("page")]
+    forks = 0
+    for page in pages:
+        routes = [route for _, route, _ in connector_lines(page)]
+        for one, other in itertools.combinations(routes, 2):
+            for first in itertools.pairwise(one):
+                for second in itertools.pairwise(other):
+                    assert not cross(first, second), (page["id"], first, second)
+        ties = list(note_ties({"children": [page]}))
+        notes = [str(note["id"]) for _, _, _, note, _ in ties]
+        forks += any(notes.count(each) > 1 for each in notes)
+    assert forks > 0
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_each_column_of_notes_stands_on_its_side_of_the_stack_as_tall_as_it(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]],
+    projects: Mapping[str, Any],
+    language: str,
+) -> None:
+    """`left-notes` stands at the pattern's left edge and `notes` at its right, each a third
+    of the width less the gap, a gap from the stack and as tall as it, and the stack takes
+    the rest of the width. A page of the reference renders draws both columns."""
+    gap = float(projects["layers"].env.role("starter.gap")["value"])
+    both = 0
+    for element in elements(scenes[("layers", language)]):
+        if element.get("component") != "starter/layers":
+            continue
+        parts = {str(child["id"]).rpartition("/")[2]: child for child in element["children"]}
+        stack, aside = parts["levels"], (element["width"] - gap) / 3
+        left, right = parts.get("left-notes"), parts.get("notes")
+        start = left["width"] + gap if left is not None else 0.0
+        end = element["width"] - (right["width"] + gap if right is not None else 0.0)
+        assert stack["x"] == pytest.approx(start, abs=ROUNDING), element["id"]
+        assert stack["x"] + stack["width"] == pytest.approx(end, abs=ROUNDING), element["id"]
+        for column, x in ((left, 0.0), (right, element["width"] - aside)):
+            if column is None:
+                continue
+            assert column["x"] == pytest.approx(x, abs=ROUNDING), column["id"]
+            assert column["width"] == pytest.approx(aside, abs=ROUNDING), column["id"]
+            assert (column["y"], column["height"]) == (stack["y"], stack["height"]), column["id"]
+        both += left is not None and right is not None
+    assert both > 0
+
+
+#: A piece of `layers` that ties a note to a level beside it and to one far below it, in a
+#: column of two notes, and ties a note alone in its column to the top level and the foot.
+COLUMNS = bound(
+    "content",
+    slides=[
+        {
+            "id": slide,
+            "layout": "slide",
+            "title": title,
+            "visual": {
+                "use": "starter/layers",
+                "levels": [{"id": f"level-{place}", "head": f"Level {place}"} for place in "1234"],
+                listed: notes,
+                "ties": [
+                    {"id": tie, "from": {"item": f"{listed}[{note}]"}, "to": {"item": level}}
+                    for tie, note, level in ties
+                ],
+            },
+        }
+        for slide, title, listed, notes, ties in (
+            (
+                "column",
+                "Two notes in one column",
+                "notes",
+                [{"id": "upper", "head": "Upper"}, {"id": "lower", "head": "Lower"}],
+                [
+                    ("beside", "upper", "levels[level-1]"),
+                    ("below", "upper", "levels[level-4]"),
+                    ("lower-beside", "lower", "levels[level-3]"),
+                ],
+            ),
+            (
+                "alone",
+                "A note alone in its column",
+                "left-notes",
+                [{"id": "only", "head": "Only"}],
+                [("top", "only", "levels[level-1]"), ("foot", "only", "levels[level-4]")],
+            ),
+        )
+    ],
+)
+#: The side each tie of `COLUMNS` leaves its note by, and the side it meets its level on.
+KEPT_SIDES = {
+    "column": {
+        "beside": ("left", "right"),
+        "below": ("bottom", "top"),
+        "lower-beside": ("left", "right"),
+    },
+    "alone": {"top": ("right", "left"), "foot": ("right", "left")},
+}
+
+
+@pytest.fixture(scope="module")
+def columns_of_notes(location: Path, tmp_path_factory: pytest.TempPathFactory) -> Mapping[str, Any]:
+    """`COLUMNS` drawn as a piece beside the reference pieces, with the layers' piece's
+    settings, in English: its scene at the default size."""
+    root = tmp_path_factory.mktemp("columns-of-notes") / "project"
+    shutil.copytree(location, root)
+    folder = root / "visual" / "pieces" / "columns"
+    shutil.copytree(
+        root / "visual" / "pieces" / "layers", folder, ignore=shutil.ignore_patterns("__pycache__")
+    )
+    for language in LANGUAGES:
+        write(folder / f"content.{language}.yaml", yaml_text(COLUMNS))
+    piece = pl.read_piece(root, "visual", "columns")
+    drawn = pl.Project(piece, piece.lock, pl.Held(root, "visual"))
+    for language, result in drawn.scenes(facts=drawn.piece.stand_ins):
+        assert result.findings == [], result.findings
+        if language == "en" and result.scene.size_key == keys.DEFAULT_KEY:
+            return result.scene.to_dict()
+    raise AssertionError("no scene at the default size")
+
+
+def test_a_notes_tie_to_a_level_not_beside_it_leaves_by_its_foot_as_the_readme_keeps(
+    columns_of_notes: Mapping[str, Any],
+) -> None:
+    """The connector tool leaves each end by the side that faces the other, across where
+    the two lie farther apart across than down. So a tie from a note in a column of two to
+    a level far below it leaves by the note's foot, toward the note under it, and the
+    tie to the level beside it leaves toward the stack. A note alone in its column spans
+    the stack, so each of its ties leaves toward the stack. The starter's README names the
+    first as kept, under `layers`."""
+    found: dict[str, dict[str, tuple[str, str]]] = {}
+    for tie, _, _, note, level in note_ties(columns_of_notes):
+        slide = str(tie["id"]).split("/")[1].removeprefix("slides[").removesuffix("]")
+        found.setdefault(slide, {})[str(tie["id"]).rpartition("[")[2].rstrip("]")] = (
+            note["side"],
+            level["side"],
+        )
+    assert found == KEPT_SIDES
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_a_connectors_weight_gives_its_line_the_width_of_its_role(
+    scenes: Mapping[tuple[str, str], Mapping[str, Any]],
+    projects: Mapping[str, Any],
+    language: str,
+) -> None:
+    """A `thick` connector's line is as wide as `starter.connector`, and a `thin` one's as
+    `starter.leader`, an edge's width at its default, so a leader drawn thin reads lighter
+    than a link. The reference renders draw both."""
+    env = projects["connector"].env
+    widths = {
+        "thick": float(env.role("starter.connector")["value"]),
+        "thin": float(env.role("starter.leader")["value"]),
+    }
+    assert widths["thin"] < widths["thick"]
+    weights = set()
+    for (_, lang), scene in scenes.items():
+        if lang != language:
+            continue
+        for element in elements(scene):
+            if element.get("component") != "starter/connector":
+                continue
+            word = element["options"]["weight"]
+            [line] = [child for child in element["children"] if child["type"] == "line"]
+            assert line["stroke-width"] == widths[word], element["id"]
+            weights.add(word)
+    assert weights == set(widths)

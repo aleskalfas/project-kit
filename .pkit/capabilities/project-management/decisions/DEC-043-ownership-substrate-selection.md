@@ -82,9 +82,15 @@ atomic, so the substrate faithfully preserves DEC-035's guarantees:
 - **Same-instant coexistence and the lowest-wins tie-break hold as written** — two clones each
   post their own event, the re-read sees both, the higher instance backs off. No whole-object
   race, because no clone writes another clone's object.
-- **Authenticity rides `author.login`** — a marker is trusted only if authored by the expected
-  assignee account; a pasted forgery from another account is ignored. (This is *stronger* than
-  the label substrate, where a label carries no actor.)
+- **Authenticity rides `author.login`** — a marker is trusted only where its author and the
+  assignee are one account: the same login and the same kind, each read from a surface that
+  gives the kind, the case of ASCII letters and surrounding whitespace set aside, as
+  [pkit:ADR-094] point 3 compares them. It is never trusted from a bot's account, even where
+  the bot is the assignee. A marker from another account is ignored, as a forgery is.
+  One whose author the comparison cannot tell from the assignee, for want of a kind, is a claim
+  the ownership fold cannot judge, which no consumer treats as free (refinement per
+  [project-management:DEC-079-bots-are-no-person]). (This is *stronger* than the label
+  substrate, where a label carries no actor.)
 - **History is preserved** — handoffs between a person's clones and abandonments of control are
   first-class log entries, not just current state. The log aligns with, and does not duplicate,
   the handoff audit comment [project-management:DEC-026-work-ownership-lifecycle] already posts.

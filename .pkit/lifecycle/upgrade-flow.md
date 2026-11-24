@@ -6,6 +6,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/upgrade.py
+        - src/project_kit/cli.py
         - src/project_kit/candidates.py
         - src/project_kit/sync.py
         - src/project_kit/install.py
@@ -25,7 +26,7 @@ pkit:
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - hatch_build.py
         - tests/test_area_name_clash.py
-      record: [COR-001, COR-010, COR-011, COR-015, COR-017, COR-030, COR-031, COR-041, "COR-053#6", "COR-059#5", "COR-059#6", "COR-059#7", "COR-059#8", "COR-059#9", "COR-062#11", "COR-070#3", ADR-033, ADR-039, ADR-049, ADR-059, ADR-064, ADR-065, ADR-076, "ADR-089#1", "ADR-089#4", "ADR-089#5", "ADR-089#6", "ADR-089#7", "ADR-089#8", "ADR-092#7", "ADR-092#9"]
+      record: [COR-001, COR-010, COR-011, COR-015, COR-017, COR-030, COR-031, COR-041, "COR-053#6", "COR-059#5", "COR-059#6", "COR-059#7", "COR-059#8", "COR-059#9", "COR-062#11", "COR-070#3", ADR-033, ADR-039, ADR-049, ADR-059, ADR-064, ADR-065, ADR-076, "ADR-089#1", "ADR-089#4", "ADR-089#5", "ADR-089#6", "ADR-089#7", "ADR-089#8", "ADR-092#7", "ADR-092#9", "ADR-092#4"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/manifest.md#where-a-capabilitys-manifest-lives
@@ -69,7 +70,7 @@ The upgrade command transitions an adopter project to a target backbone version.
    - **A component its bundle ships older:** an adapter or a capability the running pkit's bundle ships older than the version the project records refuses the transition. The refusal names the component, both versions, and a pkit whose bundle ships that version or newer. No flag overrides it.
    - **A clash of area names:** a project's own area at `.pkit/lifecycle/` refuses the transition ("A clash of area names", below). No flag overrides it.
    - **A file that is not the capabilities' rules index:** a file at `.pkit/rules/capabilities.md` <!-- unanchored: names the file the step reads or writes, not its content --> whose first line is not the backbone's marker refuses the transition ("The capabilities' rules index", below). No flag overrides it.
-   - **Compatibility resolution:** each installed component's post-upgrade `requires_backbone` must admit the target. It is read from the bundle where the bundle ships the component, and from the installed copy where it does not. Conflicts are surfaced so the adopter can address them: upgrade specific components, pin the backbone, or remove an incompatible component.
+   - **Compatibility resolution:** each installed component's post-upgrade `requires_backbone` must admit the target. It is read from the bundle where the bundle ships the component, and from the installed copy where it does not. An externally-sourced capability's range is read from its installed copy alone, since it is never read as shipped, whatever the bundle ships by its name. Conflicts are surfaced so the adopter can address them: upgrade specific components, pin the backbone, or remove an incompatible component.
    - **The dependency gates** run over the set the transition would leave ("The dependency gates", below).
    - **The collision flow** asks about each new naming collision, or refuses ("A new collision", below).
 2. **The target is recorded.** `backbone_version` becomes the target, by an edit of its own line, before anything else is written ([`manifest.md`, "Backbone manifest"](manifest.md#backbone-manifest-projectpkitmanifestyaml)). `completed_version` keeps its value or stays missing. Each capability manifest still at its root then moves under its `project/` ([`manifest.md`, "Where a capability's manifest lives"](manifest.md#where-a-capabilitys-manifest-lives)). Each skip chosen in step 1 is recorded there, and each project artefact an override chose to replace is removed.
@@ -262,6 +263,7 @@ The comparison vouches for content only under a tagged install, the one the CLI 
   - `completed_version` differs from `backbone_version`, or is missing
   - the pin is newer than the running pkit
 - **`capabilities install` and `capabilities upgrade` call it in both directions too,** at their entry, before they read or write anything ([`component-registry.md`, "Install pre-flight checks"](component-registry.md#install-pre-flight-checks)). Each copies the capability the running pkit's bundle ships. So each stops in sync's states, with sync's remedies, the command named as the operator would run it again.
+  - **`capabilities install --from`** calls it too, in each release that offers that install. It copies a capability it fetched from another repository, and gates and deploys it with the running pkit's code against the backbone the project records. Whether this release offers that install is in [the CLI reference, "Capabilities — two ways in"](../cli/README.md#capabilities--two-ways-in) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->.
   - **So every shipped file a project holds comes from the release its backbone records,** wherever a version names one content. A version names one content under a tagged install, the one the CLI README recommends ("Installing pkit on PATH").
   - **`capabilities register`** copies nothing and does not call the guard.
 - **`upgrade` calls it in the older direction only,** before it writes anything. It refuses a running pkit older than the newest of `backbone_version`, `completed_version` and the pin. It calls the propagation step, never the sync command, so the sync command's guard never stops it.
@@ -293,7 +295,8 @@ A project moves onto a release candidate only when someone asks, and such a move
   - a run with routing bypassed (`PKIT_NO_ROUTE`), as a raise and the first hop run
   - a pin that names the candidate, in PEP 440's normal form, `X.Y.ZrcN`
 - **Where the guard runs:** among upgrade's own checks. It follows the refusal of a move off a candidate (below), the tool update and the hand-over of `--pre`. It comes before the older direction of sync's guard. Under its pin's code, an upgrade moves only to its pin or hands over through the bypass, so it never meets the guard.
-- **`--pre`** moves the project to the newest release, candidates included. Its lookup reads candidate tags beside release tags, from the source the tool update reads. Where the newest is a final release, `--pre` hands over to none. In a project on a candidate, `--pre` targets that candidate instead (below).
+- **`--pre`** moves the project to the newest release, candidates included, whatever branch a candidate was cut from. Its lookup reads candidate tags beside release tags, from the source the tool update reads. Where the newest is a final release, `--pre` hands over to none. In a project on a candidate, `--pre` targets that candidate instead (below).
+- **A withdrawn candidate,** one whose withdrawal tag `withdrawn/v<candidate>` the source holds, is passed by: `--pre` takes the newest release left. A pin that names a withdrawn candidate is warned of, and still asks for it. [The CLI reference's `upgrade`](../cli/README.md#upgrade) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> says how the lookup of `--pre` reads each tag.
 - **The hand-over of `--pre`.** Where the newest is a candidate above the running pkit, the upgrade hands over to the candidate's own upgrade through the bypass. A pinned project's routed child makes it in place of its hand-over to the latest release. Any other upgrade makes it after the tool update, which installs no candidate, even under `--pre`.
 - **A plain `pkit upgrade`** never moves a project onto a candidate its pin does not name.
 - **A move to a candidate always pins,** and `--no-pin` is refused on it before anything is written.
@@ -301,7 +304,7 @@ A project moves onto a release candidate only when someone asks, and such a move
 - **The first hop,** from a final release whose pkit has no `--pre`, is the candidate's own upgrade through the router's bypass. It runs the candidate's code in its own process, and moves the project, pinned:
 
   ```
-  PKIT_NO_ROUTE=1 uvx --from <distribution URL>@v<candidate> project-kit upgrade
+  PKIT_NO_ROUTE=1 uvx --from <distribution URL>@v<candidate> pkit upgrade
   ```
 
 - **A move onto a candidate cut short** goes on with the command that started it, run again, or with `pkit upgrade --pre`. Either hands over to the candidate, whose upgrade finishes the move from the recorded states ("Two recorded states, and an interrupted upgrade", above). No other release finishes it (below).
@@ -344,6 +347,8 @@ Instead, "upgrade" for an incubated capability **re-applies deploy from the in-r
 Sync's guard runs at the command's entry, before the origin is read. So this re-deploy stops under another pkit too, as `pkit sync`'s re-deploy of it does. A `kit-shipped` capability's upgrade path is the transition of one capability above.
 
 In the methodology's source repository, run by its own code, a `kit-shipped` capability's kit source *is* its subtree. So its upgrade re-applies deploy in place the same way: the deploy primitives re-run and its query commands are provisioned. Nothing is copied, no receipt is restamped and no migration is run. It is sync's self-host path for one capability.
+
+An `externally-sourced` capability moves by its pin, never as shipped (COR-041). `pkit capabilities upgrade` refuses it and writes nothing, since moving a pin is not built yet. `pkit upgrade` leaves it, and sync keeps its copy at its pin ([the lifecycle README, "The externally-sourced origin: match the pin"](README.md#the-externally-sourced-origin-match-the-pin) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->).
 
 For capabilities, a **direction-split dependency check (COR-030)** runs before collision detection:
 

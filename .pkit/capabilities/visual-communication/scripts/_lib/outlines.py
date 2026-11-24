@@ -20,11 +20,16 @@ that draws ends with a close, and every point it draws, a curve's whole sweep in
 lies within its square. `Outline.form` is what two outlines are compared by: fitted into
 one square, two that draw alike are one outline, whatever their squares.
 
+`fills` says whether path data, filled by its rule, fills a point, as SVG fills a path: the
+check of contrast as drawn reads a path's fill under a text or a sign by it (DEC-004 point
+8).
+
 Knows nothing of files, notations, the foundations or the scene.
 """
 
 from __future__ import annotations
 
+import functools
 import math
 import re
 from collections.abc import Mapping
@@ -51,6 +56,11 @@ STRAY = 0.001
 
 #: The side of the square two outlines are fitted into to be compared (`Outline.form`).
 FORM = 100.0
+
+#: How many chords a cubic curve is taken as where `fills` judges a point: on a quarter of a
+#: circle, as an arc is read, they stray from it by less than a three-thousandth of its
+#: radius.
+CHORDS = 32
 
 #: The finding on an icon or a shape that is no closed outline within its square, wherever
 #: it lies, and its fix (DEC-036 point 8).
@@ -120,6 +130,16 @@ def read_outline(raw: object) -> Outline | str:
     except _Unreadable as exc:
         return f"has a `d` that is no path data SVG reads: {exc}"
     return Outline(segments=segments, fill_rule=fill_rule, square=float(square))
+
+
+def fills(data: str, fill_rule: str, point: tuple[float, float]) -> bool:
+    """Whether path data `data`, filled by `fill_rule`, fills `point`, as SVG fills a path:
+    each part of it as closed, by `evenodd` where the rule says so and else by `nonzero`,
+    and each cubic curve as `CHORDS` chords. Raises ValueError where `data` is no path data
+    SVG reads."""
+    px, py = point
+    winding = sum(_winding(ring, px, py) for ring in _rings(data))
+    return winding % 2 == 1 if fill_rule == "evenodd" else winding != 0
 
 
 def _number(value: float) -> str:
@@ -423,8 +443,49 @@ def _turns(p0: float, p1: float, p2: float, p3: float) -> list[float]:
     else:
         found = b * b - 4 * a * c
         roots = [(-b + sign * math.sqrt(found)) / (2 * a) for sign in (1, -1)] if found >= 0 else []
-    return [
-        (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t**2 * p2 + t**3 * p3
-        for t in roots
-        if 0 < t < 1
-    ]
+    return [_cubic(t, p0, p1, p2, p3) for t in roots if 0 < t < 1]
+
+
+def _cubic(t: float, p0: float, p1: float, p2: float, p3: float) -> float:
+    """A cubic curve from `p0` to `p3` along one axis, at `t` from 0 to 1."""
+    return (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t**2 * p2 + t**3 * p3
+
+
+# --- filling a point ----------------------------------------------------------------------------
+
+
+@functools.lru_cache(maxsize=256)
+def _rings(data: str) -> tuple[tuple[tuple[float, float], ...], ...]:
+    """The points of each part path data draws, in order, its curves as their chords: a
+    ring, which closes back to its first point as a fill does. Raises ValueError where
+    `data` is no path data SVG reads."""
+    try:
+        segments = _segments(data)
+    except _Unreadable as exc:
+        raise ValueError(f"no path data SVG reads: {exc}") from exc
+    rings: list[tuple[tuple[float, float], ...]] = []
+    ring: list[tuple[float, float]] = []
+    for command, points in segments:
+        if command == "M":
+            if ring:
+                rings.append(tuple(ring))
+            ring = [(points[0], points[1])]
+        elif command == "L":
+            ring.append((points[0], points[1]))
+        elif command == "C":
+            (x0, y0), xs, ys = ring[-1], points[0::2], points[1::2]
+            steps = (step / CHORDS for step in range(1, CHORDS + 1))
+            ring.extend((_cubic(t, x0, *xs), _cubic(t, y0, *ys)) for t in steps)
+    if ring:
+        rings.append(tuple(ring))
+    return tuple(rings)
+
+
+def _winding(ring: tuple[tuple[float, float], ...], px: float, py: float) -> int:
+    """How many times `ring` winds round the point `px py`: each edge that crosses the
+    point's row to its right counts one way downward and the other upward."""
+    winding = 0
+    for (x0, y0), (x1, y1) in zip(ring, (*ring[1:], ring[0]), strict=True):
+        if (y0 <= py) != (y1 <= py) and x0 + (py - y0) * (x1 - x0) / (y1 - y0) > px:
+            winding += 1 if y1 > y0 else -1
+    return winding

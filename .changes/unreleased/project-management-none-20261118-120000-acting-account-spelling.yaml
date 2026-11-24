@@ -1,0 +1,24 @@
+component: project-management
+kind: none
+body: >
+  Design-ahead: the architecture record ADR-094, accepted, refines the
+  capability's records in place for the backbone's one reading of the acting
+  account and its one spelling of accounts. DEC-021's identity resolution
+  reads the service's login through that reading, once in a run, and the gate
+  matches a value with a member's entry only where the two are one account,
+  case and surrounding whitespace set aside; a member's github_login, and a
+  value that stands for an account, is written in the one spelling, an App's
+  as <name>[bot], gh's app/<name> naming <name>[bot], and a string no login
+  holds matching nothing; add-member writes each entry in that spelling from
+  the login and type GitHub answers, and writes none for an account of another
+  kind; and the closed-mode refusal names each entry or value that explains
+  it. DEC-028's remote path counts a verdict only where its author, read with
+  its kind, is one account with the registered entry and another than the pull
+  request's author, its example registers an App as <name>[bot], and its
+  refusal names a bare entry that a bot's verdict author agrees with. DEC-058
+  point 4 counts a state issue's comment behind a closed gate only where its
+  author is one account with a member's entry, and leaves the read incomplete
+  where a missing kind or an entry with no spelling leaves that in doubt. No
+  behaviour changes until the records are built; the build that moves the
+  remote reviewer's match onto the backbone's comparison declares its break
+  and ships its migration.
