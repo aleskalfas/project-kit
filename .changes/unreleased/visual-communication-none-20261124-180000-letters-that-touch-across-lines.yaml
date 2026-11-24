@@ -1,0 +1,7 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-053, proposed, decides that the check names a text whose letters touch
+  across its lines, as the engine sets them, and that the engine keeps the
+  brand's line step (#3232). It is a design-ahead record: the check that
+  builds it ships the surface. No surface moves here.
