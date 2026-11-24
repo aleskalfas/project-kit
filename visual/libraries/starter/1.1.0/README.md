@@ -53,6 +53,7 @@ pkit:
         - visual-communication:DEC-038#1
         - visual-communication:DEC-038#3
         - visual-communication:DEC-038#6
+        - visual-communication:DEC-043#6
         - visual-communication:DEC-068#3
         - visual-communication:DEC-068#4
         - visual-communication:DEC-069#3
@@ -68,6 +69,7 @@ pkit:
         - .pkit/capabilities/visual-communication/files.md#the-neutral-brand
         - .pkit/capabilities/visual-communication/checks.md#scenes
         - .pkit/capabilities/visual-communication/components.md#primitives
+        - .pkit/capabilities/visual-communication/components.md#references
         - .pkit/capabilities/visual-communication/components.md#ties-and-connectors
         - .pkit/capabilities/visual-communication/outputs.md#produced-pictures
 ---
@@ -219,9 +221,10 @@ A block draws one item of a pattern, or stands alone where content places it.
   - `route`: `straight`, the default, or `corners`.
   - `arrow`, where its arrowheads stand: `end`, the default, `start`, `both` or `none`.
   - `weight`: `thick`, the default, as wide as a line drawn on its own, or `thin`, as wide as an edge. Drawn `thin`, a leader reads lighter than the `thick` links between the items its note explains, so the page's notes stand behind what they explain. An arrowhead is as long as five widths of its line (the capability's `components.md`, under *Primitives*), so a `thin` line's would be too small to read.
+- **Its sign** stands on the line, halfway along the stretch its tie alone runs, which it reads as `own-center` and `own-middle` (the capability's `components.md`, under *References*). Where a pattern's ties share a trunk, the engine keeps that stretch clear, so a sign says nothing of another tie, and draws the ties spread where the sign would not fit there (visual-communication DEC-043 point 6). On a tie that shares no trunk, the sign stands halfway along the whole line.
 - **What it keeps, and why:** the connector tool, not the connector, sets where a tie meets its ends and where it turns (the capability's `components.md`, under *Ties and connectors*). No component chooses either, so the starter keeps both:
   - **The side it leaves by.** A tie leaves each end's frame by the side that faces the other end: the left or the right where the two frames lie farther apart across than down, else the top or the bottom. So it may leave an item by its top or its foot toward another item that stands there, and run over it. Each pattern's entry says what follows for its ties.
-  - **Where it turns.** With corners, it turns twice, halfway between its ends. So ties with corners that share one gap turn at its middle, and where their turns overlap, they lie on each other and read as one line. Draw ties that share a gap `straight`, the default.
+  - **Where it turns.** With corners, it turns twice, halfway between its ends, unless it branches off a trunk its pattern declares (visual-communication DEC-043). So ties with corners that share one gap turn at its middle, and where their turns overlap, they lie on each other and read as one line. Draw ties that share a gap `straight`, the default.
 
 ## The web parts, by their job on a page
 
@@ -387,7 +390,7 @@ A concept that a piece shows by its colour shows a sign beside it too, so colour
 | `field` | in the box, before the text |
 | `header`, `title` | before the title |
 | `section` | before the head |
-| `connector` | on the line, halfway along it |
+| `connector` | on the line, halfway along the stretch its tie alone runs: halfway along the line, where its tie shares no trunk |
 
 - **Its size** is the starter's own role `starter.sign`, the side of a square the sign fills whole. A web part's or a web block's sign is no wider than the room it gets: a header's than the room inside its insets, a title's than its words, a section's than its text, a field's than the field, and a button's than its label.
 - **Its paint** is its family's text, the member a brand makes legible, since a sign, as a connector's line, needs a contrast of 3 to 1 against what it lies on (visual-communication DEC-036 point 8). A state changes its paint, never its sign.

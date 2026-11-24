@@ -1,5 +1,5 @@
 """The formula and reference grammar, with dimensions (visual-communication DEC-005 points 1, 3,
-DEC-038 point 2).
+DEC-038 point 2, DEC-043 point 6).
 
 A *formula* is a string that starts with `=` and computes one number. It holds:
 
@@ -15,10 +15,12 @@ A *formula* is a string that starts with `=` and computes one number. It holds:
   its list draws (`PLACE_NAMES`);
 - a value of the component, by its name alone: `gap`;
 - a *path*: a part, then each exposed part below it, one name a step, then the
-  measure of the frame it reads, one of `x y width height right bottom center
-  middle`. The last segment is always the measure, so a part named `width` is still
-  read as `width.x`. A step into a list follows the list's part as `<list>:first`,
-  `<list>:last` or `<list>[<id>]`. A picture's exposed point reads as a part of zero
+  measure it reads: of the frame, one of `x y width height right bottom center middle`,
+  or, of a line, `own-center` or `own-middle`, across and down, the point halfway along
+  the stretch of its route that it alone runs (`OWN_MEASURES`, DEC-043 point 6). The last
+  segment is always the measure, so a part named `width` is still read as `width.x`. A
+  step into a list follows the list's part as `<list>:first`, `<list>:last` or
+  `<list>[<id>]`. A picture's exposed point reads as a part of zero
   size: `<part>.<point>.x`. A path may start with `{<option>}`, the path an option
   gives when it names an item, or an item's point: `={at}.x + @space.2`.
 
@@ -39,8 +41,16 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from functools import lru_cache
 
-#: The measures a path may end in.
-MEASURES = ("x", "y", "width", "height", "right", "bottom", "center", "middle")
+#: The measures a path may end in: those of a frame, then those of a line's own stretch.
+MEASURES = (
+    "x", "y", "width", "height", "right", "bottom", "center", "middle", "own-center", "own-middle"
+)  # fmt: skip
+
+#: The measures of a line alone, across and down: the point halfway along the stretch of its
+#: route that it alone runs, which another tie's line shares none of (DEC-043 point 6). Each
+#: reads, of a line that shares no stretch, what `center` and `middle` read. Whoever reads a
+#: formula refuses them on what is no line.
+OWN_MEASURES = {"own-center": "center", "own-middle": "middle"}
 
 #: The engine's names, without their mark.
 ENGINE_NAMES = ("width", "height", "index", "count", "place", "places")

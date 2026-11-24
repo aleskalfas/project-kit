@@ -173,9 +173,12 @@ A part's place is `x` and `y` (zero if absent), its
 size `width` and `height`, each a formula. A line has `x1 y1 x2 y2`; or, in a component
 that takes ends, `connect: straight` or `connect: corners`, the connector tool, which
 runs from its start to its end, straight or with corners, never around anything, and
-spreads the ends that meet one side of an item evenly (DEC-005 point 2). A connector's
-`rx`, a length, is the radius its turns are drawn round at, and a line of its own ends,
-which turns nowhere, takes none. A line's
+spreads the ends that meet one side of an item evenly (DEC-005 point 2). A part that
+repeats over a list of ties may name one of its end fields under `trunk`: the ties that
+meet one side of an item there and draw alike then meet it at one point, branching off
+one trunk where they can be drawn clear, else spread (DEC-043, `Instance._anchors`, with
+the geometry in `trunks`). A connector's `rx`, a length, is the radius its turns are
+drawn round at, and a line of its own ends, which turns nowhere, takes none. A line's
 `marker-start` and `marker-end` are `none`, the default, or `arrow`. A text's height is
 its measured text's, and its width, where none is given, its widest paragraph's. An
 image's height, where none is given, keeps its picture's proportions, a produced output's
@@ -246,6 +249,7 @@ that brand's own finding says what it owes, and the part takes none.
 
 from __future__ import annotations
 
+import contextlib
 import itertools
 import math
 import re
@@ -253,7 +257,7 @@ from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any, TypeVar
 
-from _lib import colour_steps, names
+from _lib import colour_steps, names, trunks
 from _lib import formula as fm
 from _lib.env import (
     Env,
@@ -290,7 +294,7 @@ PART_KEYS: Mapping[str, tuple[str, ...]] = {
     "sign": ("x", "y", "width", "height"),
     "use": ("x", "y", "width", "height", "fields", "options"),
     "slot": ("x", "y", "width", "height"),
-    "repeat": ("x", "y", "width", "height", "draw", "colour", "row", "column"),
+    "repeat": ("x", "y", "width", "height", "draw", "colour", "row", "column", "trunk"),
 }
 
 #: The keys of a part that hold a formula: a place, a size or a line's end.
@@ -461,6 +465,19 @@ ENDS = ("start", "end")
 #: The keys of an end's value: the item, by its key path, and perhaps its point (DEC-011
 #: point 2).
 END_KEYS = ("item", "point")
+
+#: The key by which a part over a list of ties names the end field at which the ties that
+#: meet one side of an item share a trunk (DEC-043 point 1).
+TRUNK = "trunk"
+
+#: The findings on ties that share a trunk (DEC-043 point 7), each stated as a fact but the
+#: last: a group drawn spread, since it cannot be drawn clear; ties that meet one side of
+#: an item at their trunk end and form no group; and a part a tie's component places
+#: otherwise than by its line's own stretch that stands on a stretch its tie shares, or
+#: centred on another tie's line.
+TRUNK_SPREAD = "trunk-spread"
+TRUNK_UNGROUPED = "trunk-ungrouped"
+TRUNK_PART = "trunk-part"
 
 #: The sides of a frame an end of a connector meets.
 SIDES = ("left", "right", "top", "bottom")
@@ -1127,6 +1144,10 @@ class Component:
         # The parts each part names under `lies-over` that it lies over, by its name, each
         # name it gives that names none refused (DEC-066 point 1).
         self.lies_over: dict[str, tuple[str, ...]] = {}
+        # The end at which the ties each part over a list of ties draws share a trunk, by the
+        # part's name, as `start` or `end`, where its `trunk` names one of its list's end
+        # fields (DEC-043 point 1).
+        self.trunks: dict[str, str] = {}
         self.colour: str | None = data.get("colour")
         self.values = self._mapping(data, "values")
         self.preferred = self._mapping(data, "preferred")
@@ -1816,6 +1837,8 @@ class Component:
         if "colour" in part.spec:
             self._read_place_colour(part)
         operators = [name for name in OPERATORS if name in part.spec]
+        if TRUNK in part.spec:
+            self._read_trunk(part)
         if isinstance(listed, str) and listed in self._tie_lists:
             for name in operators:
                 self._shape(
@@ -1856,6 +1879,37 @@ class Component:
             )
         if CROSS_SIZE in settings:
             self._read_cross_size(part)
+
+    def _read_trunk(self, part: Part) -> None:
+        """The end field of its list at which the ties a part draws share a trunk (DEC-043
+        point 1): a name, never a switch, of one of the two end fields of the list of ties it
+        repeats over, as the versions it is read with declare them. A drawing's list takes its
+        top's end fields, so it is judged with the top it is read with. Where it names none,
+        or the part repeats over no list of ties, it is refused, and the ties spread."""
+        where, given = f"parts.{part.name}.{TRUNK}", part.spec[TRUNK]
+        declared, listed = self.ties(part), part.spec.get("repeat")
+        if declared is None or declared.ends is None:
+            if listed not in self._tie_lists:  # a list's malformed ends are refused already
+                self._shape(
+                    where,
+                    f"the part `{part.name}` declares `{TRUNK}`, and repeats over no list of "
+                    "ties: only ties share a trunk",
+                )
+        elif not isinstance(given, str):
+            self._shape(
+                where,
+                f"the part `{part.name}` takes the name of one of its list's end fields under "
+                f"`{TRUNK}`, never a switch",
+            )
+        elif given not in declared.ends:
+            fields = " and ".join(f"`{name}`" for name in declared.ends)
+            self._shape(
+                where,
+                f"the part `{part.name}` shares a trunk at `{given}`, which is neither of its "
+                f"list's end fields, {fields}: name one of them",
+            )
+        else:
+            self.trunks[part.name] = ENDS[declared.ends.index(given)]
 
     def _read_cross_size(self, part: Part) -> None:
         """What a `cross-size` may not do, judged for each set of the options, the size axes
@@ -2722,7 +2776,31 @@ class Component:
 
     def _unreachable(self, ref: fm.Reference) -> str | None:
         """Why a formula of this component may not read `ref`, as far as reading the
-        component alone tells; the rest is found when the scene is computed."""
+        component alone tells; the rest is found when the scene is computed. A measure of a
+        line's own stretch reads only a line (DEC-043 point 7)."""
+        problem = self._out_of_reach(ref)
+        if problem is None and isinstance(ref, fm.Path) and ref.measure in fm.OWN_MEASURES:
+            return self._no_line(ref)
+        return problem
+
+    def _no_line(self, ref: fm.Path) -> str | None:
+        """Why `ref`, which reads a measure of a line's own stretch, reads no line, as far as
+        reading the component alone tells: it reads an end, or the item or the point an
+        option gives, or names a part of its own that is no line, or an item of a list. What
+        a step below an item or a placed component reaches is found when the scene is
+        computed."""
+        said = f"reads `{ref}`: `{ref.measure}` is a measure of a line, and"
+        if ref.option is not None:
+            return None if ref.steps else f"{said} `{{{ref.option}}}` gives no line"
+        first = ref.steps[0]
+        part = self.parts.get(first.name)
+        if part is None or len(ref.steps) > 1:
+            return None
+        if first.item is not None:
+            return f"{said} `{first}` is an item of a list"
+        return f"{said} `{first.name}` is a {part.kind}" if part.kind != "line" else None
+
+    def _out_of_reach(self, ref: fm.Reference) -> str | None:
         if isinstance(ref, fm.Value):
             return None if ref.name in self.values else f"names no value `{ref.name}`"
         if not isinstance(ref, fm.Path):
@@ -2964,6 +3042,9 @@ class Context:
         self._order_read = False
         self._concepts: dict[str, str | UnknownConcept | None] = {}
         self._signs: dict[str, Outline | None] = {}
+        # Each part a tie's component places on a stretch its tie shares, reported once, by
+        # the component, its library's version and the part (DEC-043 point 7).
+        self.trunk_parts: set[tuple[str, str, str]] = set()
 
     def fact(self, word: str) -> str:
         """The text of the fact `word`, one of `FACTS`."""
@@ -3465,6 +3546,10 @@ class Instance:
         self.arranged: dict[str, str] = {}
         self.chain = chain or (component.use,)
         self.cells: dict[tuple[str, ...], Any] = {}
+        # Whether the groups of the ties it draws are being judged, and, where it is a tie
+        # of one, the round's routes its parts are computed from (DEC-043 point 5).
+        self._judging = False
+        self._round: _Round | None = None
         self.nodes: dict[str, Node] = {}
         self.options: dict[str, Any] = {}
         self.option_sources: dict[str, str] = {}
@@ -4558,6 +4643,8 @@ class Instance:
         if kind == "end":
             return self._end_frame(name)
         if kind == "anchors":
+            if self._judging:
+                raise Fault()  # its groups are being judged (`_aside`)
             return self._anchors()
         if kind == "route":
             return self._route(name)
@@ -5151,24 +5238,49 @@ class Instance:
         dx, dy = (pattern.get("part", self.part_name, axis) for axis in ("x", "y"))
         return x - dx, y - dy, width, height
 
-    def _anchors(self) -> dict[tuple[int, str], Anchor]:
+    def _anchors(self) -> Meetings:
         """Where each tie this instance draws meets each of its ends, in this instance's
-        frame, by the tie and the end: the connector tool's (DEC-005 point 2). A tie leaves
-        an end's frame on the side that faces its other end: across, where the two frames
-        lie further apart across than down, else down. The ties that meet one side of one
-        item spread evenly along it, ordered by where their other ends' centres lie along
-        it, then in the order of their lists. A tie ends at a point an end names. A tie
-        whose ends cannot be computed has no anchors, and its finding is recorded."""
-        frames: dict[Instance, dict[str, tuple[float, float, float, float]]] = {}
+        frame, by the tie and the end, and how each tie of a group drawn as declared runs
+        along its trunk: the connector tool's (DEC-005 point 2, DEC-043). A tie leaves an
+        end's frame on the side that faces its other end: across, where the two frames lie
+        further apart across than down, else down. The ends that meet one side of one item
+        spread evenly along it (`_meet`), and a tie ends at a point an end names. A tie whose
+        ends cannot be computed has no anchors, and its finding is recorded. Where a part
+        declares a trunk end, its ties that meet one side of an item there form a group
+        where they may (`_groups`), and the groups are judged together, in rounds
+        (`_judged`)."""
+        frames: dict[Instance, dict[str, Frame]] = {}
         for node in self.nodes.values():
             if node.present and self.component.ties(node.part) is not None:
                 for tie in node.items:
                     ends = self.ctx.attempt(lambda t=tie: _shifted(self, t), None)
                     if ends is not None:
                         frames[tie] = ends
+        groups = self._groups(frames)
+        if not groups:
+            return Meetings(self._meet(frames, []))
+        self._judging = True
+        try:
+            return self._judged(frames, groups)
+        finally:
+            self._judging = False
+
+    def _meet(
+        self, frames: Mapping[Instance, Mapping[str, Frame]], groups: Sequence[_Group]
+    ) -> dict[tuple[int, str], Anchor]:
+        """Where each tie of `frames` meets each of its ends, with `groups` drawn as declared.
+        The ends that meet one side of one item spread evenly along it, ordered by where
+        their other ends' centres lie along it, then by the ties' order (DEC-005 point 2). A
+        group counts as one end among them, placed by the middle of the range its ties'
+        other ends' centres cover, then by its first tie, and each of its ties meets the side
+        at that one point (DEC-043 point 2)."""
+        grouped = {(id(tie), group.which): group for group in groups for tie in group.ties}
+        order: dict[int, int] = {}
+        reached: dict[int, list[float]] = {}
         anchors: dict[tuple[int, str], Anchor] = {}
-        sides: dict[tuple[int, str], list[tuple[float, int, Instance, str]]] = {}
-        for order, (tie, ends) in enumerate(frames.items()):
+        sides: dict[tuple[int, str], list[tuple[float, int, list[tuple[Instance, str]]]]] = {}
+        for place, (tie, ends) in enumerate(frames.items()):
+            order[id(tie)] = place
             across = _across(ends["start"], ends["end"])
             for which, other in zip(ENDS, reversed(ENDS), strict=True):
                 if tie.ends[which].point is not None:
@@ -5177,45 +5289,613 @@ class Instance:
                 side = _side(ends[which], ends[other], across)
                 ox, oy, ow, oh = ends[other]
                 along = oy + oh / 2 if side in ("left", "right") else ox + ow / 2
+                group = grouped.get((id(tie), which))
+                if group is not None:
+                    reached.setdefault(id(group), []).append(along)
+                    continue
                 key = (id(tie.ends[which].item), side)
-                sides.setdefault(key, []).append((along, order, tie, which))
+                sides.setdefault(key, []).append((along, place, [(tie, which)]))
+        for group in groups:
+            alongs = reached[id(group)]
+            middle = (min(alongs) + max(alongs)) / 2
+            meeting = [(tie, group.which) for tie in group.ties]
+            sides.setdefault(group.key, []).append((middle, order[id(group.ties[0])], meeting))
         for (_, side), members in sides.items():
             members.sort(key=lambda member: (member[0], member[1]))
-            for place, (_, _, tie, which) in enumerate(members, start=1):
+            for place, (_, _, meeting) in enumerate(members, start=1):
+                tie, which = meeting[0]
                 x, y, width, height = frames[tie][which]
                 share = place / (len(members) + 1)
                 if side in ("left", "right"):
                     at = (x if side == "left" else x + width, y + height * share)
                 else:
                     at = (x + width * share, y if side == "top" else y + height)
-                anchors[(id(tie), which)] = Anchor(at[0], at[1], side)
+                for each, end in meeting:
+                    anchors[(id(each), end)] = Anchor(at[0], at[1], side)
         return anchors
+
+    def _groups(self, frames: Mapping[Instance, Mapping[str, Frame]]) -> list[_Group]:
+        """The groups of ties that may share a trunk (DEC-043 point 2): for each part that
+        declares a trunk end, the ties of its list that meet one side of one item there, two
+        or more, where none reads a line's frame or own stretch, all draw alike and each
+        draws with corners. A tie whose trunk end names a point meets no side. Where the ties
+        of one side form no group, each meets the side at a point of its own, and the fact
+        is stated, unless all of them are straight and alike (`_ungrouped`)."""
+        found: list[_Group] = []
+        for name, node in self.nodes.items():
+            which = self.component.trunks.get(name)
+            if which is None or not node.present:
+                continue
+            other = ENDS[1 - ENDS.index(which)]
+            sides: dict[tuple[int, str], list[Instance]] = {}
+            for tie in node.items:
+                ends = frames.get(tie)
+                if ends is None or tie.ends[which].point is not None:
+                    continue
+                side = _side(ends[which], ends[other], _across(ends["start"], ends["end"]))
+                sides.setdefault((id(tie.ends[which].item), side), []).append(tie)
+            for key, ties in sides.items():
+                if len(ties) < 2:
+                    continue
+                forms, why = _ungrouped(ties)
+                if forms:
+                    found.append(_Group(name, which, key, ties))
+                elif why is not None:
+                    self._state(TRUNK_UNGROUPED, ties, which, key[1], why)
+        return found
+
+    def _judged(
+        self, frames: Mapping[Instance, Mapping[str, Frame]], groups: list[_Group]
+    ) -> Meetings:
+        """The meetings with each group drawn as declared that can be drawn clear, and every
+        other group spread, judged together, in rounds (DEC-043 point 5). Each round meets
+        the ends with the groups still standing and lays each group's trunk and branches
+        (`_lay`). Where a group has no room or a branch's middle leg is too short, its routes
+        cannot be drawn, so each such group is drawn spread and the next round begins.
+        Otherwise the round finds each group two of whose ties cross or that adds a crossing
+        (`_crossed`), and each a part of whose ties placed by the measures does not fit
+        (`_unfit`). Each group found is drawn spread, its fact stated, and judged no more,
+        and the next round judges the rest anew, until a round finds none. The spread
+        routes, every group spread, are the same in every round."""
+        lines = {id(tie): tie._line() for tie in frames}
+        spread = self._meet(frames, [])
+        spread_routes = {id(tie): self._held_routes(tie, spread, None) for tie in frames}
+        standing = list(groups)
+        while True:
+            anchors = self._meet(frames, standing)
+            branchings: dict[int, Branching] = {}
+            failed: dict[int, _Unclear] = {}
+            for group in standing:
+                laid = self._lay(group, anchors, lines)
+                if isinstance(laid, _Unclear):
+                    failed[id(group)] = laid
+                else:
+                    branchings.update(laid)
+            if not failed:
+                routes = {
+                    id(tie): self._held_routes(tie, anchors, branchings.get(id(tie)))
+                    for tie in frames
+                }
+                declared = _Declared(anchors, branchings, routes, spread_routes, lines)
+                self._crossed(declared, standing, failed)
+                for group in standing:
+                    unfit = None if id(group) in failed else self._unfit(group, anchors, branchings)
+                    if unfit is not None:
+                        failed[id(group)] = unfit
+            if not failed:
+                break
+            for group in standing:
+                if id(group) in failed:
+                    side = group.key[1]
+                    self._state(TRUNK_SPREAD, group.ties, group.which, side, failed[id(group)])
+            standing = [group for group in standing if id(group) not in failed]
+        mates = {
+            id(tie): tuple(other for other in group.ties if other is not tie)
+            for group in standing
+            for tie in group.ties
+        }
+        return Meetings(anchors, branchings, mates)
+
+    def _lay(
+        self,
+        group: _Group,
+        anchors: Mapping[tuple[int, str], Anchor],
+        lines: Mapping[int, _Line | None],
+    ) -> dict[int, Branching] | _Unclear:
+        """How the ties of a group run from its point (DEC-043 points 2 and 3), by the tie:
+        the one that reaches least far, the first in the ties' order where two reach as far,
+        is the trunk, and runs as any connector with corners does; each other is a branch,
+        which leaves the trunk's first leg at its junction (`trunks.junctions`), the
+        farthest-reaching nearest the item. Why the group cannot be drawn clear instead,
+        where it has no room or a branch's middle leg is shorter than the least leg."""
+        which = group.which
+        other = ENDS[1 - ENDS.index(which)]
+        point = anchors[(id(group.ties[0]), which)]
+        way = WAYS[group.key[1]]
+        across = group.key[1] in ("left", "right")
+        order = {id(tie): place for place, tie in enumerate(group.ties)}
+
+        def reach(tie: Instance) -> float:
+            far = anchors[(id(tie), other)]
+            return abs(far.y - point.y) if across else abs(far.x - point.x)
+
+        trunk = min(group.ties, key=lambda tie: (reach(tie), order[id(tie)]))
+        branches = sorted(
+            (tie for tie in group.ties if tie is not trunk),
+            key=lambda tie: (-reach(tie), order[id(tie)]),
+        )
+        drawn = [line for line in (lines[id(tie)] for tie in group.ties) if line is not None]
+        radius = max(line.radius for line in drawn)
+        stroke = max(line.width for line in drawn)
+        least_leg, least_gap = max(2 * radius, 2 * stroke), max(radius, 2 * stroke)
+        head = max(line.heads[which] for line in drawn)
+        ends = anchors[(id(trunk), "start")], anchors[(id(trunk), "end")]
+        course = _connector(*ends, (0.0, 0.0), True, None)
+        first = (course if which == "start" else course[::-1])[1]
+        leg = (first[0] - point.x) * way[0] + (first[1] - point.y) * way[1]
+        limits = []
+        for tie in branches:
+            far, line = anchors[(id(tie), other)], lines[id(tie)]
+            reaches = (far.x - point.x) * way[0] + (far.y - point.y) * way[1]
+            limits.append(reaches - least_leg - (line.heads[other] if line is not None else 0.0))
+        places = trunks.junctions(head + least_leg, leg - least_gap, least_gap, limits, leg)
+        mend = "move the items the ties join, in the content, so the branches have room"
+        if places is None:
+            count = f"{len(branches)} branch{'es' if len(branches) > 1 else ''}"
+            return _Unclear(
+                f"its trunk's first leg, {_said(leg)} px long, has no room for {count} to "
+                f"leave it, each with legs of at least {_said(least_leg)} px beside its turns "
+                f"and {_said(least_gap)} px from the next",
+                mend,
+            )
+        for tie in branches:
+            if reach(tie) < least_leg - trunks.EXACT:
+                return _Unclear(
+                    f"the branch `{tie.trace}` would run a middle leg {_said(reach(tie))} px "
+                    f"long, shorter than its least leg, {_said(least_leg)} px",
+                    mend,
+                )
+        found: dict[int, Branching] = {}
+        start = (point.x, point.y)
+        for tie, place in zip(branches, places, strict=True):
+            junction = (point.x + way[0] * place, point.y + way[1] * place)
+            found[id(tie)] = Branching(which, start, junction, branch=True)
+        last = (point.x + way[0] * places[-1], point.y + way[1] * places[-1])
+        found[id(trunk)] = Branching(which, start, last, branch=False)
+        return found
+
+    def _held_routes(
+        self,
+        tie: Instance,
+        anchors: Mapping[tuple[int, str], Anchor],
+        branching: Branching | None,
+    ) -> list[list[Point]]:
+        """The routes a tie's connector parts draw, each route once, as the scene would hold
+        them, in the tie's frame, then moved into this instance's frame; none where its ends
+        have no anchors."""
+        start, end = anchors.get((id(tie), "start")), anchors.get((id(tie), "end"))
+        if start is None or end is None:
+            return []
+        dx, dy = (self.get("part", tie.part_name, axis) for axis in ("x", "y"))
+        routes: list[list[Point]] = []
+        for name in tie.connectors():
+            route = trunks.held_route(tie.course(name, start, end, (dx, dy), branching))
+            moved = [(x + dx, y + dy) for x, y in route]
+            if moved not in routes:
+                routes.append(moved)
+        return routes
+
+    def _crossed(
+        self, declared: _Declared, standing: Sequence[_Group], failed: dict[int, _Unclear]
+    ) -> None:
+        """Adds to `failed` each standing group two of whose ties cross, and each that adds a
+        crossing (DEC-043 point 5), judged between every two ties of every list this
+        instance draws. Two ties of one group cross where they meet past the stretch they
+        share, but at the junction where one leaves the other (`_shared_meetings`). Any other
+        two that meet in the declared routes add their crossing where the spread routes have
+        them meet nowhere, meet fewer times, or only pass across where the declared routes
+        have them run side by side. It is added by each group on a side either of the two
+        meets."""
+        group_of = {id(tie): group for group in standing for tie in group.ties}
+        on_side: dict[tuple[int, str], list[_Group]] = {}
+        for group in standing:
+            on_side.setdefault(group.key, []).append(group)
+        mend = "move the items the ties join, in the content, so no tie crosses another"
+        ties = [tie for tie in self._drawn_ties() if declared.routes.get(id(tie))]
+        for first, second in itertools.combinations(ties, 2):
+            ours, theirs = declared.routes[id(first)], declared.routes[id(second)]
+            gap = max(
+                _least_gap(declared.lines[id(first)], ours),
+                _least_gap(declared.lines[id(second)], theirs),
+            )
+            named = f"`{first.trace}` and `{second.trace}`"
+            group = group_of.get(id(first))
+            if group is not None and group is group_of.get(id(second)):
+                if sum(self._shared_meetings(first, second, declared, gap)):
+                    failed.setdefault(id(group), _Unclear(f"its ties {named} would cross", mend))
+                continue
+            meet = trunks.meetings(ours, theirs, gap, trunks.common_ends(ours, theirs))
+            if not sum(meet):
+                continue
+            before = declared.spread[id(first)], declared.spread[id(second)]
+            was = trunks.meetings(*before, gap, trunks.common_ends(*before))
+            if sum(was) >= sum(meet) and (was[1] or not meet[1]):
+                continue
+            unclear = _Unclear(f"it would add a crossing of the ties {named}", mend)
+            for tie in (first, second):
+                for which in ENDS:
+                    anchor = declared.anchors.get((id(tie), which))
+                    if anchor is not None and anchor.side is not None:
+                        key = (id(tie.ends[which].item), anchor.side)
+                        for each in on_side.get(key, []):
+                            failed.setdefault(id(each), unclear)
+
+    def _drawn_ties(self) -> list[Instance]:
+        """Every tie this instance draws, in the ties' order."""
+        return [
+            tie
+            for node in self.nodes.values()
+            if node.present and self.component.ties(node.part) is not None
+            for tie in node.items
+        ]
+
+    def _shared_meetings(
+        self, first: Instance, second: Instance, declared: _Declared, gap: float
+    ) -> tuple[int, int]:
+        """How often two ties of one group meet past the stretch they share, from the group's
+        point to where the first of them leaves the trunk's first leg: that stretch, and the
+        junction where one leaves the other, are no crossing (DEC-043 point 5)."""
+        one, other = declared.branchings[id(first)], declared.branchings[id(second)]
+        dx, dy = (self.get("part", first.part_name, axis) for axis in ("x", "y"))
+
+        def held(point: Point) -> Point:
+            return trunks.held(point[0] - dx) + dx, trunks.held(point[1] - dy) + dy
+
+        start = held(one.point)
+        leaves = min(
+            held(one.leaves),
+            held(other.leaves),
+            key=lambda at: math.hypot(at[0] - start[0], at[1] - start[1]),
+        )
+        by = math.hypot(leaves[0] - start[0], leaves[1] - start[1])
+        from_start = one.which == "start"
+        ours = [trunks.trimmed(route, by, from_start) for route in declared.routes[id(first)]]
+        theirs = [trunks.trimmed(route, by, from_start) for route in declared.routes[id(second)]]
+        return trunks.meetings(ours, theirs, gap, (leaves, *trunks.common_ends(ours, theirs)))
+
+    def _unfit(
+        self,
+        group: _Group,
+        anchors: Mapping[tuple[int, str], Anchor],
+        branchings: Mapping[int, Branching],
+    ) -> _Unclear | None:
+        """Why a part that a tie of the group places by the measures, centred halfway along
+        its line's own stretch, does not fit there in this round (DEC-043 point 6): any part
+        of its frame lies on the stretch its tie shares, or its centre on the line of another
+        tie of the group. The parts' frames are computed aside, from the round's routes
+        (`Instance.parts_in`), and move nothing. None where every such part fits."""
+        dx, dy = (self.get("part", group.ties[0].part_name, axis) for axis in ("x", "y"))
+        rounds: dict[int, _Round] = {}
+        for tie in group.ties:
+            start, end = anchors[(id(tie), "start")], anchors[(id(tie), "end")]
+            branching = branchings[id(tie)]
+            courses = {
+                name: tie.course(name, start, end, (dx, dy), branching) for name in tie.connectors()
+            }
+            rounds[id(tie)] = _Round(courses, branching)
+        with self._aside():
+            drawn = {id(tie): tie.parts_in(rounds[id(tie)]) for tie in group.ties}
+        for tie in group.ties:
+            mates = [mate for mate in group.ties if mate is not tie]
+            others = [
+                _Other(mate.trace, rounds[id(mate)].held((dx, dy)).every(), _width(mate._line()))
+                for mate in mates
+            ]
+            held = rounds[id(tie)].held((dx, dy))
+            for name, frame in drawn[id(tie)].items():
+                if not held.by_measures(frame):
+                    continue
+                same = [drawn[id(mate)].get(name) for mate in mates]
+                why = _misplaced(frame, held, others, same)
+                if why is not None:
+                    use = tie.component.use
+                    return _Unclear(
+                        f"the part `{name}` of `{tie.trace}`, which `{use}` places halfway along "
+                        f"its line's own stretch, does not fit there: it {why}",
+                        f"give the part `{name}` of `{use}` room on the stretch its tie alone "
+                        "runs, or move the items the ties join, in the content",
+                    )
+        return None
+
+    @contextlib.contextmanager
+    def _aside(self) -> Iterator[None]:
+        """Computes cells aside, while a group is judged: every cell computed meanwhile in
+        this instance or below it is forgotten after, with every finding and loop it met,
+        so a round moves nothing (DEC-043 point 6). A request for this instance's ties'
+        meetings meanwhile fails (`_judging`)."""
+        ctx, kept = self.ctx, [(each, dict(each.cells)) for each in (self, *self.below())]
+        state = ctx.active, ctx.stack, ctx.findings, ctx._seen
+        ctx.active, ctx.stack, ctx.findings, ctx._seen = set(), [], [], set(ctx._seen)
+        try:
+            yield
+        finally:
+            for each, cells in kept:
+                each.cells = cells
+            ctx.active, ctx.stack, ctx.findings, ctx._seen = state
+
+    def _state(
+        self, code: str, ties: Sequence[Instance], which: str, side: str, why: _Unclear
+    ) -> None:
+        """States, as a fact, a group drawn spread, or ties that meet one side of an item at
+        their trunk end and form no group, and why (DEC-043 point 7). It lies in the content,
+        at the first of the ties in the ties' order, and names what would let them share a
+        trunk."""
+        first = ties[0]
+        declared = first.tie
+        field_name = declared.ends[ENDS.index(which)] if declared and declared.ends else which
+        named = ", ".join(f"`{tie.trace}`" for tie in ties)
+        what = (
+            "are drawn spread along it, sharing no trunk"
+            if code == TRUNK_SPREAD
+            else "form no group, so share no trunk"
+        )
+        message = (
+            f"{first.trace}: the ties {named} meet the {side} side of "
+            f"`{first.ends[which].item.trace}` at their end `{field_name}`, and {what}: "
+            f"{why.said}"
+        )
+        where = first.content_path if first.content_path is not None else first.trace
+        self.ctx.add(Finding(code, STATED, message, where=where, fix=f"to share one, {why.mend}"))
 
     def _route(self, name: str) -> list[tuple[float, float]]:
         """The points of the connector the line part `name` draws, in this tie's frame, from
         its start to its end: straight, or with corners, leaving and meeting each end
-        square to its side, never around anything (DEC-005 point 2). Raises `Fault`."""
+        square to its side, never around anything (DEC-005 point 2), a branch's off its
+        trunk (DEC-043 point 2). While its group is judged, the round's (`parts_in`).
+        Raises `Fault`."""
+        if self._round is not None:
+            return list(self._round.routes[name])
         pattern = self.parent
         if pattern is None or self.tie is None:
             raise Fault()
         found = pattern.get("anchors", "")
-        start, end = (found.get((id(self), which)) for which in ENDS)
+        start, end = (found.anchors.get((id(self), which)) for which in ENDS)
         if start is None or end is None:
             raise Fault()  # recorded where its ends were computed
-        dx, dy = (pattern.get("part", self.part_name, axis) for axis in ("x", "y"))
-        (sx, sy), (ex, ey) = (start.x - dx, start.y - dy), (end.x - dx, end.y - dy)
+        shift = (pattern.get("part", self.part_name, "x"), pattern.get("part", self.part_name, "y"))
+        return self.course(name, start, end, shift, found.branchings.get(id(self)))
+
+    def course(
+        self,
+        name: str,
+        start: Anchor,
+        end: Anchor,
+        shift: tuple[float, float],
+        branching: Branching | None,
+    ) -> list[Point]:
+        """The route of this tie's connector part `name` between two anchors, in its
+        pattern's frame less `shift`: straight, or with corners, as its `connect` says, a
+        branch's off its trunk where `branching` makes it one (`_connector`)."""
         spec = self.nodes[name].part.spec
-        if self.word(f"parts.{name}.connect", spec["connect"], "straight") == "straight":
-            return [(sx, sy), (ex, ey)]
-        sides = {start.side, end.side} - {None}
-        across = bool(sides & {"left", "right"}) if sides else abs(ex - sx) >= abs(ey - sy)
-        if across and abs(ey - sy) > TOLERANCE:
-            middle = (sx + ex) / 2
-            return [(sx, sy), (middle, sy), (middle, ey), (ex, ey)]
-        if not across and abs(ex - sx) > TOLERANCE:
-            middle = (sy + ey) / 2
-            return [(sx, sy), (sx, middle), (ex, middle), (ex, ey)]
-        return [(sx, sy), (ex, ey)]
+        corners = self.word(f"parts.{name}.connect", spec["connect"], "straight") != "straight"
+        return _connector(start, end, shift, corners, branching if corners else None)
+
+    def connectors(self) -> list[str]:
+        """The connector parts this tie draws, in its component's order."""
+        return [name for name, node in self.nodes.items() if node.present and _connects(node)]
+
+    def straight(self) -> list[str]:
+        """The connector parts this tie draws straight."""
+        return [
+            name
+            for name in self.connectors()
+            if self.word(f"parts.{name}.connect", self.nodes[name].part.spec["connect"], "straight")
+            == "straight"
+        ]
+
+    def _line(self) -> _Line | None:
+        """What this tie's connector parts draw, as the junctions read it (DEC-043 points 2
+        and 3): the greatest radius and stroke width among them, and at each end the longest
+        arrowhead, `trunks.HEAD` stroke widths long. None where a radius or a stroke width
+        reads a line's frame or own stretch (`line_read`), which no group reads."""
+        if self.line_read() is not None:
+            return None
+        radius, width, heads = 0.0, 0.0, dict.fromkeys(ENDS, 0.0)
+        for name in self.connectors():
+            props = self.nodes[name].part.props
+            stroke = self._length(name, "stroke-width", 1.0)
+            radius, width = max(radius, self._length(name, "rx", 0.0)), max(width, stroke)
+            for which, marker in zip(ENDS, MARKERS, strict=True):
+                where = f"parts.{name}.line.{marker}"
+                if marker in props and self.word(where, props[marker], "none") == "arrow":
+                    heads[which] = max(heads[which], trunks.HEAD * stroke)
+        return _Line(radius, width, heads)
+
+    def _length(self, name: str, prop: str, default: float) -> float:
+        """A length a connector part gives, as the scene holds it; `default`, as a renderer
+        draws it, where it gives none."""
+        props = self.nodes[name].part.props
+        if prop not in props:
+            return default
+        where = f"parts.{name}.line.{prop}"
+        return trunks.held(self.ctx.attempt(lambda: self.number(where, props[prop]), 0.0))
+
+    def line_read(self) -> tuple[str, str] | None:
+        """The key path and the text of a formula that reads the frame or the own stretch of
+        a line the connector tool draws, which a connector part of this tie reads in its
+        radius or its stroke width, directly, through a named value, or through another
+        part's place or size, as its formulas show (DEC-043 point 2); None where none does.
+        An arrowhead is a word, which reads no line."""
+        for name in self.connectors():
+            props = self.nodes[name].part.props
+            for prop in LENGTHS:
+                if prop in props:
+                    found = self._reads_line(f"parts.{name}.line.{prop}", props[prop], set())
+                    if found is not None:
+                        return found
+        return None
+
+    def _reads_line(self, where: str, raw: Any, seen: set[str]) -> tuple[str, str] | None:
+        chosen, value, _ = self.pick(where, raw)
+        formula = self.component.formulas.get(chosen)
+        if chosen in seen or formula is None:
+            return None
+        seen.add(chosen)
+        for ref in formula.references():
+            found = None
+            if isinstance(ref, fm.Value) and ref.name in self.component.values:
+                found = self._reads_line(
+                    f"values.{ref.name}", self.component.values[ref.name], seen
+                )
+            elif isinstance(ref, fm.Path) and ref.option is None and ref.steps:
+                node = self.nodes.get(ref.steps[0].name)
+                if node is not None and _connects(node):
+                    return chosen, str(value)
+                part = node.part if node is not None else None
+                if part is not None and len(ref.steps) == 1:
+                    for key in GEOMETRY:
+                        if found is None and key in part.spec and key in PART_KEYS[part.kind]:
+                            found = self._reads_line(
+                                f"parts.{part.name}.{key}", part.spec[key], seen
+                            )
+            if found is not None:
+                return found
+        return None
+
+    def look(self) -> dict[str, Any]:
+        """How this tie draws, as ties that draw alike share it (DEC-043 point 2), by what
+        it is: its component, its options and its state; its connector parts' stroke widths
+        and arrowheads; and each part's paints, as the scene holds them, a role or a step of
+        an order. Read only where no radius or stroke width reads a line's frame."""
+        paints: dict[str, str | None] = {}
+        for name, node in self.nodes.items():
+            if node.present and node.part.kind in PAINTED:
+                for prop in ("fill", "stroke"):
+                    paint = self.ctx.attempt(lambda n=name, p=prop: self.paint(n, p), (None, ""))
+                    paints[f"{name}.{prop}"] = paint[0]
+        connectors = self.connectors()
+        arrowheads = [
+            [
+                self.word(
+                    f"parts.{name}.line.{marker}", self.nodes[name].part.props.get(marker), "none"
+                )
+                for marker in MARKERS
+            ]
+            for name in connectors
+        ]
+        return {
+            "component": self.component.use,
+            "options": sorted(self.options.items()),
+            "state": self.given.get("state"),
+            "stroke width": [self._length(name, "stroke-width", 1.0) for name in connectors],
+            "arrowheads": arrowheads,
+            "paints": paints,
+        }
+
+    def parts_in(self, overlay: _Round) -> dict[str, Frame]:
+        """The frame of each part but its connectors that this tie draws, in its own frame,
+        with its routes and its line's own stretch the round's, `overlay` (DEC-043 point 6).
+        Its pattern computes them aside (`_aside`). A part whose frame cannot be computed,
+        or has no area, is left out."""
+        self._round = overlay
+        try:
+            found = {
+                name: self._frame(name) for name, node in self.nodes.items() if not _connects(node)
+            }
+        finally:
+            self._round = None
+        return {name: frame for name, frame in found.items() if frame is not None}
+
+    def _frame(self, name: str) -> Frame | None:
+        """A drawn part's frame, in this instance's frame; None where it is not drawn, cannot
+        be computed or has no area."""
+        node = self.nodes[name]
+        if not node.present:
+            return None
+        try:
+            x, y, width, height = (self.get("part", name, key) for key in FRAME)
+        except Fault:
+            return None
+        return (x, y, width, height) if width > TOLERANCE and height > TOLERANCE else None
+
+    def _own_shift(self, name: str) -> tuple[float, float]:
+        """How far the point halfway along the own stretch of the line `name` lies from the
+        centre of its frame, across and down (DEC-043 point 6): none where the line shares no
+        stretch, as a line that is no tie's connector, or a tie's in no group drawn as
+        declared, so `own-center` and `own-middle` read what `center` and `middle` read.
+        Raises `Fault`."""
+        node, pattern = self.nodes[name], self.parent
+        if not _connects(node) or self.tie is None or pattern is None:
+            return 0.0, 0.0
+        if self._round is not None:
+            branching: Branching | None = self._round.branching
+        else:
+            branching = pattern.get("anchors", "").branchings.get(id(self))
+        if branching is None:
+            return 0.0, 0.0
+        shift = (pattern.get("part", self.part_name, "x"), pattern.get("part", self.part_name, "y"))
+        x, y = _Round({name: self.get("route", name)}, branching).held(shift).own(name)
+        width, height = (self.get("part", name, size) for size in ("width", "height"))
+        centre = (
+            self.get("part", name, "x") + 0.5 * width,
+            self.get("part", name, "y") + 0.5 * height,
+        )
+        return x - centre[0], y - centre[1]
+
+    def shared_parts(self) -> list[tuple[str, str]]:
+        """Each part but its connectors that this tie's component places otherwise than by
+        the measures, and that stands where DEC-043 point 6 bars it, its group drawn as
+        declared: on the stretch its tie shares, or centred on another tie's line, by its
+        name, with why. None where the tie shares no trunk, or its ties' meetings were never
+        computed. Raises `Fault`."""
+        pattern = self.parent
+        meetings = pattern.cells.get(("anchors", "")) if pattern is not None else None
+        if pattern is None or not isinstance(meetings, Meetings):
+            return []
+        branching = meetings.branchings.get(id(self))
+        if branching is None:
+            return []
+        shift = (pattern.get("part", self.part_name, "x"), pattern.get("part", self.part_name, "y"))
+        routes = {name: self.get("route", name) for name in self.connectors()}
+        held = _Round(routes, branching).held(shift)
+        mates = meetings.mates.get(id(self), ())
+        others = [
+            _Other(
+                mate.trace,
+                [trunks.held_route(mate.get("route", name)) for name in mate.connectors()],
+                _width(mate._line()),
+            )
+            for mate in mates
+        ]
+        found = []
+        for name, node in self.nodes.items():
+            frame = None if _connects(node) else self._frame(name)
+            if frame is None or held.by_measures(frame):
+                continue
+            same = [mate._frame(name) if name in mate.nodes else None for mate in mates]
+            why = _misplaced(frame, held, others, same)
+            if why is not None:
+                found.append((name, why))
+        return found
+
+    def report_shared_parts(self) -> None:
+        """Reports each part `shared_parts` finds, in this tie's component, once in each
+        scene for each version of it, naming the first tie that shows it (DEC-043 point
+        7)."""
+        for name, why in self.ctx.attempt(self.shared_parts, []):
+            key = (self.component.use, self.library, name)
+            if key in self.ctx.trunk_parts:
+                continue
+            self.ctx.trunk_parts.add(key)
+            self.ctx.report(
+                TRUNK_PART,
+                f"{self.trace}/{name}: `{self.component.use}` places its part `{name}` otherwise "
+                f"than halfway along its line's own stretch, and where its tie shares a trunk, "
+                f"it {why}: place it by its line's `own-center` and `own-middle`, which the "
+                "engine keeps clear, or off the stretch its tie shares",
+                where=f"parts.{name}",
+                use=self.component.use,
+            )
 
     def attached(self, name: str) -> dict[str, dict[str, str]]:
         """Which element each end of this tie's connector meets, and where: the trace id of
@@ -5225,7 +5905,7 @@ class Instance:
         pattern = self.parent
         if pattern is None:
             raise Fault()
-        found = pattern.get("anchors", "")
+        found = pattern.get("anchors", "").anchors
         out = {}
         for which in ENDS:
             end, anchor = self.ends[which], found.get((id(self), which))
@@ -5239,6 +5919,8 @@ class Instance:
 
     def measure(self, path: fm.Path) -> float:
         """A path's measure in this instance's frame. Raises `_Missing` and `Fault`."""
+        if path.measure in fm.OWN_MEASURES:
+            return self._own_measure(path)
         if path.option in ENDS and self.component.takes_ends:
             if self.tie is None:
                 raise _Missing(f"it is given no `{{{path.option}}}`, since it is drawn as no tie")
@@ -5260,6 +5942,50 @@ class Instance:
             return place
         share = 1.0 if path.measure in ("right", "bottom") else 0.5
         return place + share * self._extent(steps, axis)
+
+    def _own_measure(self, path: fm.Path) -> float:
+        """`own-center` or `own-middle` of a line: the point halfway along the stretch of its
+        route that it alone runs (DEC-043 point 6). Of a line that shares no stretch, which
+        is every line but a tie's connector in a group drawn as declared, what `center` and
+        `middle` read. Of what is no line, refused, as a reference it may not reach: one the
+        component alone shows was refused when it was read (`Component._no_line`). Raises
+        `_Missing` and `Fault`."""
+        measure = fm.OWN_MEASURES[path.measure]
+        base = self.measure(fm.Path(path.option, path.steps, measure))
+        steps = (self._option_steps(path.option) if path.option else []) + list(path.steps)
+        kind = self._kind_of(steps)
+        if kind is not None and kind != "line":
+            message = (
+                f"{self.trace}: {self.component.use} reads `{path}`: `{path.measure}` is a "
+                f"measure of a line, and it reaches a {kind}"
+            )
+            raise self._fail("formula-reach", message)
+        if len(steps) != 1:
+            return base
+        across, down = self._own_shift(steps[0].name)
+        return base + (across if measure == "center" else down)
+
+    def _kind_of(self, steps: Sequence[fm.Step]) -> str | None:
+        """The kind of what a path's steps reach: a part's, `item` for an item of a list,
+        `point` for a picture's exposed point; None where nothing is drawn there. Raises
+        `_Missing`."""
+        first, rest = steps[0], list(steps[1:])
+        node = self.nodes[first.name]
+        if node.part.kind == "repeat" and first.item is not None:
+            if not rest:
+                return "item"
+            return node.items[self._item(node, first)]._exposed_kind(rest)
+        if not rest:
+            return node.part.kind
+        if not node.present:
+            return None
+        if node.child is not None:
+            return node.child._exposed_kind(rest)
+        return "point"
+
+    def _exposed_kind(self, steps: Sequence[fm.Step]) -> str | None:
+        _, point = self._exposer(list(steps))
+        return "point" if point is not None else self._kind_of(steps)
 
     def _option_steps(self, name: str) -> list[fm.Step]:
         chosen = self.options.get(name)
@@ -5469,7 +6195,288 @@ def _pictured(item: Instance) -> bool:
     )
 
 
-def _shifted(pattern: Instance, tie: Instance) -> dict[str, tuple[float, float, float, float]]:
+#: A frame, `x y width height`, and a point, across and down.
+Frame = tuple[float, float, float, float]
+Point = trunks.Point
+
+#: The measures of a frame, in order.
+FRAME = ("x", "y", "width", "height")
+
+#: A line's arrowheads, at its start and at its end.
+MARKERS = ("marker-start", "marker-end")
+
+#: The way each side of an item faces, across and down: the way a tie leaves it there.
+WAYS = {"left": (-1.0, 0.0), "right": (1.0, 0.0), "top": (0.0, -1.0), "bottom": (0.0, 1.0)}
+
+#: The kinds of part that take paints, which ties that draw alike share (DEC-043 point 2).
+PAINTED = ("box", "ellipse", "line", "sign", "text")
+
+
+@dataclass(frozen=True)
+class Branching:
+    """How a tie of a group drawn as declared runs along its trunk (DEC-043 points 2 and 3),
+    in its pattern's frame: its trunk end, `start` or `end`; the group's point; where the
+    stretch it shares ends, a branch's junction, where it leaves the trunk's first leg, or
+    the trunk's group's last junction; and whether it is a branch."""
+
+    which: str
+    point: Point
+    leaves: Point
+    branch: bool
+
+
+@dataclass(frozen=True)
+class Meetings:
+    """Where the ties an instance draws meet their ends, by the tie and the end (`Anchor`),
+    and, by the tie, how each tie of a group drawn as declared runs along its trunk, and the
+    group's other ties (DEC-043 point 2)."""
+
+    anchors: Mapping[tuple[int, str], Anchor]
+    branchings: Mapping[int, Branching] = field(default_factory=dict)
+    mates: Mapping[int, tuple[Instance, ...]] = field(default_factory=dict)
+
+
+@dataclass(eq=False)
+class _Group:
+    """The ties of one list that meet one side of one item at their trunk end, as the part
+    `part` draws them: the end, the item and the side, and the ties, in the ties' order."""
+
+    part: str
+    which: str
+    key: tuple[int, str]
+    ties: list[Instance]
+
+
+@dataclass(frozen=True)
+class _Unclear:
+    """Why ties share no trunk, as a fact states it, and what would let them."""
+
+    said: str
+    mend: str
+
+
+@dataclass(frozen=True)
+class _Line:
+    """What a tie's connector parts draw, as the junctions read it (`Instance._line`)."""
+
+    radius: float
+    width: float
+    heads: Mapping[str, float]
+
+
+@dataclass(frozen=True)
+class _Declared:
+    """One round's declared routes, as the scene would hold them, in the pattern's frame, by
+    the tie, with the meetings and the branchings they come from, beside the spread routes
+    and what each tie draws (DEC-043 point 5)."""
+
+    anchors: Mapping[tuple[int, str], Anchor]
+    branchings: Mapping[int, Branching]
+    routes: Mapping[int, list[list[Point]]]
+    spread: Mapping[int, list[list[Point]]]
+    lines: Mapping[int, _Line | None]
+
+
+@dataclass(frozen=True)
+class _Other:
+    """Another tie of a group, as a part's centre keeps off it: its trace, its routes as the
+    scene holds them, and its stroke width."""
+
+    trace: str
+    routes: list[list[Point]]
+    width: float
+
+
+@dataclass(frozen=True)
+class _Round:
+    """A tie's routes in its own frame, by its connector part, and how it runs along its
+    trunk, in a round or as drawn."""
+
+    routes: Mapping[str, Sequence[Point]]
+    branching: Branching
+
+    def held(self, shift: tuple[float, float]) -> _Held:
+        """The routes as the scene holds them, with where the stretch they share ends, its
+        pattern's frame less `shift`."""
+        leaves = self.branching.leaves
+        since = (trunks.held(leaves[0] - shift[0]), trunks.held(leaves[1] - shift[1]))
+        routes = {name: trunks.held_route(route) for name, route in self.routes.items()}
+        return _Held(routes, since, self.branching.which == "start")
+
+
+@dataclass(frozen=True)
+class _Held:
+    """A tie's routes as the scene holds them, by its connector part, and the point where the
+    stretch they share ends, which they share from their first point where `from_start`,
+    else up to their last (DEC-043 point 6)."""
+
+    routes: Mapping[str, list[Point]]
+    since: Point
+    from_start: bool
+
+    def every(self) -> list[list[Point]]:
+        """Its routes, each once."""
+        found: list[list[Point]] = []
+        for route in self.routes.values():
+            if route not in found:
+                found.append(route)
+        return found
+
+    def own(self, name: str) -> Point:
+        """The point halfway along the own stretch of the line `name`."""
+        return trunks.own_point(self.routes[name], self.since, self.from_start)
+
+    def by_measures(self, frame: Frame) -> bool:
+        """Whether a frame's centre lies at the point halfway along a line's own stretch."""
+        centre = (frame[0] + frame[2] / 2, frame[1] + frame[3] / 2)
+        return any(
+            math.hypot(centre[0] - x, centre[1] - y) <= trunks.NEAR
+            for x, y in (self.own(name) for name in self.routes)
+        )
+
+
+def _connects(node: Node) -> bool:
+    """Whether a part is a connector, a line the connector tool draws."""
+    return node.part.kind == "line" and "connect" in node.part.spec
+
+
+def _connector(
+    start: Anchor,
+    end: Anchor,
+    shift: tuple[float, float],
+    corners: bool,
+    branching: Branching | None,
+) -> list[Point]:
+    """The points of a connector between two anchors, in their frame less `shift`: straight,
+    or with corners, leaving and meeting each end square to its side, turning halfway
+    between its ends (DEC-005 point 2). A branch runs along its trunk's first leg to its
+    junction, turns there, runs its middle leg to the level of its other end, and turns once
+    more into its last leg (DEC-043 point 2)."""
+    dx, dy = shift
+    (sx, sy), (ex, ey) = (start.x - dx, start.y - dy), (end.x - dx, end.y - dy)
+    if not corners:
+        return [(sx, sy), (ex, ey)]
+    if branching is not None and branching.branch:
+        jx, jy = branching.leaves[0] - dx, branching.leaves[1] - dy
+        across = (start if branching.which == "start" else end).side in ("left", "right")
+        if branching.which == "start":
+            return [(sx, sy), (jx, jy), (jx, ey) if across else (ex, jy), (ex, ey)]
+        return [(sx, sy), (jx, sy) if across else (sx, jy), (jx, jy), (ex, ey)]
+    sides = {start.side, end.side} - {None}
+    across = bool(sides & {"left", "right"}) if sides else abs(ex - sx) >= abs(ey - sy)
+    if across and abs(ey - sy) > TOLERANCE:
+        middle = (sx + ex) / 2
+        return [(sx, sy), (middle, sy), (middle, ey), (ex, ey)]
+    if not across and abs(ex - sx) > TOLERANCE:
+        middle = (sy + ey) / 2
+        return [(sx, sy), (sx, middle), (ex, middle), (ex, ey)]
+    return [(sx, sy), (ex, ey)]
+
+
+def _said(value: float) -> str:
+    """A length in a message, as the scene holds it."""
+    return f"{trunks.held(value):g}"
+
+
+def _width(line: _Line | None) -> float:
+    return line.width if line is not None else 0.0
+
+
+def _least_gap(line: _Line | None, routes: Sequence[Sequence[Point]]) -> float:
+    """A tie's least gap (DEC-043 point 3): its radius, none where it turns nowhere, and
+    never less than twice its stroke width. None is known of a tie whose radius or stroke
+    width reads a line's frame (`Instance._line`), so its least gap is none."""
+    if line is None:
+        return 0.0
+    turns = any(len(route) > 2 for route in routes)
+    return max(line.radius if turns else 0.0, 2 * line.width)
+
+
+def _ungrouped(ties: Sequence[Instance]) -> tuple[bool, _Unclear | None]:
+    """Whether ties that meet one side of an item at their trunk end form a group (DEC-043
+    point 2), and, where they do not, why, as the fact states it: one reads a line's frame
+    or own stretch in its radius or its stroke width, two draw otherwise, or a connector part
+    is straight beside one with corners. Where all of them are straight and alike, they
+    form none, and nothing is said."""
+    for tie in ties:
+        found = tie.line_read()
+        if found is not None:
+            where, text = found
+            use = tie.component.use
+            return False, _Unclear(
+                f"`{use}` draws the line of `{tie.trace}` by the formula `{text}`, at `{where}`, "
+                "which reads a line's frame or own stretch, as the junctions would read it",
+                f"change that formula of `{use}`, or move the lock to versions whose formula "
+                "reads no line",
+            )
+    first, looks = ties[0], [tie.look() for tie in ties]
+    for tie, look in zip(ties[1:], looks[1:], strict=True):
+        differs = _differs(looks[0], look)
+        if differs is not None:
+            return False, _Unclear(
+                f"`{tie.trace}` draws otherwise than `{first.trace}`, by its {differs}",
+                "draw them alike, giving them one component, options, state and concept in the "
+                "content",
+            )
+    straight, connectors = first.straight(), first.connectors()
+    if len(straight) == len(connectors):
+        return False, None
+    if straight:
+        use = first.component.use
+        return False, _Unclear(
+            f"`{use}` draws its part `{straight[0]}` straight, beside one with corners",
+            f"draw every connector part of `{use}` with corners, or move the lock to versions "
+            "that do",
+        )
+    return True, None
+
+
+def _differs(first: Mapping[str, Any], second: Mapping[str, Any]) -> str | None:
+    """What two ties' looks (`Instance.look`) differ by, in words; None where they are one."""
+    for what, value in first.items():
+        if second[what] == value:
+            continue
+        if what == "paints":
+            named = next(key for key in value if value.get(key) != second[what].get(key))
+            return f"paint `{named}`"
+        return what
+    return None
+
+
+def _misplaced(
+    frame: Frame, held: _Held, others: Sequence[_Other], same: Sequence[Frame | None]
+) -> str | None:
+    """Why a part of a tie, at `frame` in the tie's frame, stands where DEC-043 point 6 bars
+    it, with the tie's routes as the scene holds them, `held`, and the group's other ties:
+    any part of the frame lies on the stretch its tie shares, or its centre within half a
+    stroke width of another tie's leg. A part whose frame holds its tie's meeting point with
+    an end is left out where each other tie of the group draws the same part there, its
+    frame in `same`. None where it stands where the rule allows."""
+    frame = (
+        trunks.held(frame[0]),
+        trunks.held(frame[1]),
+        trunks.held(frame[2]),
+        trunks.held(frame[3]),
+    )
+    ends = [route[at] for route in held.every() for at in (0, -1)]
+    if any(trunks.holds(frame, point) for point in ends) and all(
+        other is not None
+        and all(abs(trunks.held(a) - b) <= trunks.NEAR for a, b in zip(other, frame, strict=True))
+        for other in same
+    ):
+        return None
+    for route in held.every():
+        if trunks.frame_meets(frame, trunks.shared_stretch(route, held.since, held.from_start)):
+            return "stands on the stretch its tie shares"
+    centre = (frame[0] + frame[2] / 2, frame[1] + frame[3] / 2)
+    for other in others:
+        for route in other.routes:
+            if any(trunks.distance(centre, leg) <= other.width / 2 for leg in trunks.legs(route)):
+                return f"is centred on the line of `{other.trace}`"
+    return None
+
+
+def _shifted(pattern: Instance, tie: Instance) -> dict[str, Frame]:
     """The frames of both ends of `tie` in its pattern's frame. Raises `Fault`."""
     dx, dy = (pattern.get("part", tie.part_name, axis) for axis in ("x", "y"))
     frames = {}
