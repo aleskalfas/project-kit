@@ -204,8 +204,11 @@ def test_the_fold_names_the_comment_of_the_holders_take() -> None:
     assert si.fold([*held, _ev(si.RELEASE, "me", "a", 4)]).take is None
 
 
-LOOP = si.Session("planner", "laptop", "/tmp/cc-socks/41.sock", 41, "Mon Nov 23 15:00:00 2026")
-LATER = si.Session("planner", "laptop", "/tmp/cc-socks/42.sock", 42, "Mon Nov 23 16:00:00 2026")
+#: Process names as the backbone gives them, stored and passed whole (ADR-103 point 2).
+P41 = "p1:aaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbb:-:41:1795515261.273034"
+P42 = "p1:aaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbb:-:42:1795518861.000001"
+LOOP = si.Session("planner", "laptop", "/tmp/cc-socks/41.sock", P41)
+LATER = si.Session("planner", "laptop", "/tmp/cc-socks/42.sock", P42)
 
 
 def _session(author: str, clone: str, n: int, session: si.Session = LOOP) -> si.StateEvent:
@@ -253,11 +256,7 @@ def test_a_sessions_record_round_trips_through_the_log_and_the_region_shows_it()
     assert out.outcome == si.RECORDED and _some(_some(out.read).fold).session == LOOP
     ev = _some(audit_log.parse(repo.bodies(5)[-1]))
     assert ev.type == si.SESSION and ev.get("place") is None
-    assert (ev.get("address"), ev.get("pid"), ev.get("started")) == (
-        LOOP.address,
-        "41",
-        LOOP.started,
-    )
+    assert (ev.get("address"), ev.get("process")) == (LOOP.address, LOOP.process)
     assert "Its loop runs in the session `planner` on `laptop`." in issue.body
 
 

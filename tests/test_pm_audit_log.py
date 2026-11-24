@@ -138,7 +138,7 @@ def test_the_families_name_each_seams_types() -> None:
 
 def test_a_sessions_event_names_the_session_and_no_folder() -> None:
     ev = audit_log.event(
-        "state-session", key="worker-1", clone="k", name="worker-1", machine="box", pid=41
+        "state-session", key="worker-1", clone="k", name="worker-1", machine="box", process="p"
     )
     line = audit_log.render(ev)
     assert line == "🪑 state-session — `worker-1` · clone `k` · session `worker-1` on `box`"

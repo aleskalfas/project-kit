@@ -2,6 +2,7 @@ component: project-management
 kind: minor
 custom:
   category: Added
+requires_backbone: release
 body: >
   A worker's seat in the topology may name the seat that directs it, by
   `directed_by`: one planner's or lead's seat, not retired (DEC-081 point 3).
@@ -12,7 +13,18 @@ body: >
   session its holder recorded as running the seat's loop, by its name,
   machine, messaging address and process, or `no session recorded`. A seat's
   state issue reads a new event, `state-session`, that records that session
-  (DEC-081 point 4, DEC-084 point 1). Add the key only once every
+  (DEC-081 point 4, DEC-084 point 1), its process by the name the backbone's
+  `pkit harness session` gives it, stored whole. `pkit pm take-seat --loop
+  --session-name <name>` (or `$PKIT_SESSION_NAME`) records it once the clone
+  holds the seat: without asking where the seat records no session, or the
+  backbone reads the recorded process as ended or as this session's own;
+  otherwise only on the person's word, at a terminal or with `--yes`, the
+  loop running unrecorded without it (DEC-084 point 3). A new verb, `pkit pm
+  check-message`, reads a message's reply address, sender name and the seat
+  it names as JSON on standard input, and says whether it is a directive,
+  information, or cannot be checked (DEC-084 points 2 and 4). The capability
+  reads no process itself: each reading comes from the backbone's
+  `recorded-process` commands, which this release's backbone brings. Add the key only once every
   clone that may take a seat runs this release: an older one reads a
   topology that holds it as one it cannot read in full, and takes nothing.
   `pkit pm next-task --task N` takes the Task a directive names, and only

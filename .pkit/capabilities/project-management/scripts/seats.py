@@ -643,12 +643,7 @@ def session_said(session: state_issues.Session | None) -> str:
     if session is None:
         return "no session recorded"
     shown = topology.shown
-    process = (
-        f"process {session.pid}"
-        + (f" started {shown(session.started)}" if session.started else ", start unread")
-        if session.pid is not None
-        else "no process read"
-    )
+    process = f"process {shown(session.process)}" if session.process else "no process"
     address = shown(session.address) if session.address else "no messaging address"
     return f"session {shown(session.name)} on {shown(session.machine)}, {address}, {process}"
 

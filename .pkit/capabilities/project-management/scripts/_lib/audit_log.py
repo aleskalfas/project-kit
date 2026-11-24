@@ -125,7 +125,7 @@ EVENT_TYPES: dict[str, EventType] = {
         EventType(
             "state-session",
             STATE_ISSUE,
-            ("key", "clone", "name", "machine", "address", "pid", "started", "id"),
+            ("key", "clone", "name", "machine", "address", "process", "id"),
             ("key", "clone", "name", "machine"),
             "🪑",
         ),

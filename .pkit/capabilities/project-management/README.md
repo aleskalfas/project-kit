@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
         - .pkit/capabilities/project-management/package.yaml
         - .pkit/capabilities/project-management/rule-sets/pm.md
-      record: [COR-008, COR-017, ADR-076, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, COR-070, ADR-004, ADR-016, ADR-019, "ADR-025#5", ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066, ADR-096, ADR-097, ADR-098]
+      record: [COR-008, COR-017, ADR-076, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, COR-070, ADR-004, ADR-016, ADR-019, "ADR-025#5", ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066, ADR-096, ADR-097, ADR-098, ADR-103]
       artefact:
         - .pkit/decisions/README.md#checking-a-changes-numbering
 ---
@@ -903,6 +903,7 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 - **One seat for each clone.** A clone that holds a seat takes it up again, as a new session in the clone does, since the key outlives every session. It takes no second seat, and releases a retired seat it holds first
 - **No seat is taken** where the default branch cannot be resolved, where a seat names no state issue or its state issue cannot be read, or where another clone holds the seat
 - **Code that cannot read the topology in full takes no seat.** It exits 2, and says what it did not understand ("Code that cannot read the topology in full" below)
+- **A take for the seat's loop,** `--loop`, also records the session that runs the loop ("The session that runs a seat's loop" below). A take without it records nothing, so a session the person opens in the clone to look at something takes up the seat and messages nobody as it
 
 **Releasing a seat.** A seat stays taken until it is released: the tolerant mode is the only one built, so no seat is freed for its clone's silence. `pkit pm release-seat` releases the seat this clone holds, and the clone then forgets it. `pkit pm release-seat <name> --force --reason "<why>"` releases a seat whoever holds it, and the seat's state issue logs the reason.
 
@@ -910,7 +911,7 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 - **What a release frees:** every claim that the seat's clone made as that seat stops counting, with no write to those issues. A dead clone's Tasks in Backlog and In Progress are then free for another clone to take. A clone that takes the seat again, the same clone included, revives none of those claims
 - **What a release leaves in Review:** a Task in Review waits on its reviewers and a person, so no worker takes it up ([project-management:DEC-059-topology-of-seats] point 9). `seats` names each such Task with its pull request, and the person lands it or hands it over to a worker
 
-**Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition, its scope and its pools, and for each worker that is not retired the seat that directs it, or `directed by no seat`. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub. Where the topology declares pools, it shows each pool's open milestones too ("Pools of workers" below).
+**Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition, its scope and its pools, and for each worker that is not retired the seat that directs it, or `directed by no seat`. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, with the session its holder recorded as the one that runs its loop, or `no session recorded`, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub. Where the topology declares pools, it shows each pool's open milestones too ("Pools of workers" below).
 
 **The Tasks in Review a released seat left.** Last, `seats` names each Task in Review whose claim stopped counting because its seat was released, by its clone or by force. It lists them under the seat and the clone that made the claim, each with the open pull request from the Task's branch, `<type>/<N>-<slug>`:
 
@@ -924,6 +925,32 @@ Tasks in Review that a released seat left, each for a person to land or to hand 
 - **Not listed:** a Task in Review that a claim still holds, or whose claim cannot be judged since its seat's state issue could not be read. A Task In Progress whose seat was released is not listed either, since `next-task` offers it
 - **What it reads:** the comments of each Task in Review, once some seat's state issue logs a release, and the open pull requests in one listing, once a Task is found. It writes nothing to them
 - **Exit 3** where a Task's comments or the open pull requests could not be read, as where a seat's state issue or the open issues could not be. The listing says which
+
+**The session that runs a seat's loop.** `pkit pm take-seat --loop --session-name <name>` records on the seat's state issue the session that runs its loop, once the clone holds the seat ([project-management:DEC-081-delegation-between-seats] point 4, [project-management:DEC-084-seat-session-address] point 1). `PKIT_SESSION_NAME` in the session's environment stands in for `--session-name`. The record holds:
+
+- **the session's name:** the one the harness puts on its messages, which its agent reads from the first line of the listing of sessions, or which whoever starts the session gives it. Every reader of the tracker sees it, so give a name fit to post, such as the seat's
+- **its machine,** by the name a claim's place gives it, and no folder
+- **its messaging address and its process,** as the backbone's [`harness session`](../../cli/README.md#harness-session---reply-address---json) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle --> gives them for the harness session whose shell runs the command. The capability stores the process's name whole and reads no process itself. A session whose address the backbone does not give records its name and machine only. Then no message to or from it counts as a directive, and the command says so
+
+**When a loop records itself** ([project-management:DEC-084-seat-session-address] point 3). At each take for the loop, and at each round of the loop, the same rule applies:
+
+- **without asking,** where the seat records no session, or the backbone reads the recorded process as ended, or answers that it is this session's own process ([`recorded-process`](../../cli/README.md#recorded-process-commands) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->)
+- **only on the person's word,** given in this session, otherwise: at a terminal, or with `--yes`. The record is then another live session's, or one no one can tell of, and which of two live loops keeps the seat is the person's to settle. An agent passes `--yes` only on the person's word in its own session, never on a message's or a Task's
+- **without that word,** the loop runs unrecorded, and is told so. It takes its work from the tracker, counts no message as a directive and sends none, and asks again at its next round
+- **a record that already holds the session** posts nothing, so the seat's log grows by one comment only when its session changes. Only the holding clone's record counts, and the seat's release clears it
+
+**Checking a message.** `pkit pm check-message` says whether a message this session received is a directive, information, or cannot be checked, with why ([project-management:DEC-084-seat-session-address] points 2 and 4). The agent gives it what the message carries, as JSON on standard input:
+
+```
+{"reply_address": "uds:/tmp/cc-socks/41.sock", "sender_name": "planner", "seat": "worker-1"}
+```
+
+The command reads the rest itself, and reads no listing of sessions. It reads the seat this clone took, and the seat the message must come from: a worker's directing seat, or, for a directing seat, the worker whose record holds the message's sender name. It reads both records, this session's address and the message's reply address in that address's form, and whether the sender's recorded process runs here, from the backbone. It prints one line, `[directive]`, `[information]` or `[cannot-check]`, and why, and exits 0.
+
+- **A directive,** or a worker's report, only where all hold: the message names this seat; the sender's record names this machine, and its recorded process runs; the reply address and the sender name are the recorded ones; and this session is its own seat's recorded session
+- **Information** where the message itself fails one of those, such as a reply address or a sender name that is not the recorded one, or another seat named
+- **Cannot be checked** where anything the check needs cannot be read: no directing seat, a free or unrecorded sender, another machine, a process no one can tell of or that does not run, no reply address, a session that is not its seat's recorded one, or no messaging. No message is then a directive, and the tracker carries the work
+- **A guard, not a boundary.** It catches the mistakes of sessions that follow the procedure, such as a second session in a clone that shares the seat's name, and stops no one who means to pass as another
 
 **The commit read.** Each command that reads the topology names the commit of the default branch that the command read. A clone that has not fetched the default branch thus shows which commit the clone last fetched.
 

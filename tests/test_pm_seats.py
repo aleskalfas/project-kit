@@ -557,8 +557,7 @@ def test_the_listing_shows_the_session_each_held_seat_recorded(
         name="planner",
         machine="laptop",
         address="/tmp/cc-socks/41.sock",
-        pid=41,
-        started="Mon Nov 23 15:00:00 2026",
+        process="p1:aaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbb:-:41:1795515261.273034",
     )
     repo.post(11, audit_log.build(session, versions=VERSIONS), author="me")
     assert _list(root, repo) == 0
@@ -566,7 +565,7 @@ def test_the_listing_shows_the_session_each_held_seat_recorded(
     assert (
         "#11: held by @me, clone "
         f"{_key(root)}, at host:/clone; session planner on laptop, /tmp/cc-socks/41.sock, "
-        "process 41 started Mon Nov 23 15:00:00 2026  ← this clone" in out
+        "process p1:aaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbb:-:41:1795515261.273034  ← this clone" in out
     )
     assert "#12: held by @you, clone k7, at host:/clone; no session recorded" in out
     assert "#13: free\n" in out

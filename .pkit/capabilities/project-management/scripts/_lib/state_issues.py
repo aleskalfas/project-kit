@@ -152,8 +152,6 @@ _ISSUE_URL = re.compile(r"/issues/([0-9]{1,9})\s*$")
 # A version is ASCII digits of bounded length, so no marker a hand writes can
 # make the reader fail on it.
 _NUMBER = re.compile(r"[0-9]{1,6}")
-# A process id, as bounded, for the same reason.
-_NUMBER_ID = re.compile(r"[0-9]{1,9}")
 
 #: A ``gh`` runner: takes the argv, returns what ``subprocess.run`` returns.
 Gh = Callable[[list[str]], Any]
@@ -310,15 +308,14 @@ class Session:
     """The session that runs a seat's loop, as its event records it (DEC-081
     point 4, DEC-084 point 1): the name the harness puts on its messages, the
     machine it runs on, its messaging address in the form the adapter's
-    declaration gives, and its process, by id and the time it started. The
-    address is None where the session could not read it, and the process, or
-    its start time, where the recording command could not. No folder."""
+    declaration gives, and its process, by the name the backbone gives it, which
+    this seam stores and passes whole ([pkit:ADR-103] point 2). The address and
+    the process are None where the session recorded none. No folder."""
 
     name: str
     machine: str
     address: str | None = None
-    pid: int | None = None
-    started: str | None = None
+    process: str | None = None
 
 
 @dataclass(frozen=True)
@@ -523,17 +520,15 @@ def _counted(
 
 def _session_of(ev: audit_log.Event) -> Session | None:
     """The session a session's event records, or None where it names no name or
-    no machine. A process id that is not a number reads as none."""
+    no machine."""
     name, machine = ev.get("name"), ev.get("machine")
     if not name or not machine:
         return None
-    pid = ev.get("pid") or ""
     return Session(
         name=name,
         machine=machine,
         address=ev.get("address") or None,
-        pid=int(pid) if _NUMBER_ID.fullmatch(pid) else None,
-        started=ev.get("started") or None,
+        process=ev.get("process") or None,
     )
 
 
@@ -928,8 +923,7 @@ def record_session(
         name=session.name,
         machine=session.machine,
         address=session.address,
-        pid=session.pid,
-        started=session.started,
+        process=session.process,
         id=act,
     )
     return _post_and_reread(first, ev, clone, run, success=RECORDED, recorded=session)

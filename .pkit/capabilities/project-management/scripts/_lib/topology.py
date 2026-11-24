@@ -975,21 +975,26 @@ def _seat_state(seat: Seat, found: state_issues.StateRead) -> SeatState:
     )
 
 
+def machine() -> str:
+    """The machine this command runs on, by the name a claim's place and a seat's
+    recorded session give it (DEC-058 point 5, DEC-081 point 4)."""
+    try:
+        return socket.gethostname() or "an unnamed machine"
+    except OSError:
+        return "an unnamed machine"
+
+
 def place(capability_root: Path, *, home: Path | None = None) -> str:
     """Where this clone lies, in words a person reads: its machine and its folder
     (DEC-058 point 5). A folder under the home folder is written from `~`, so
     the claim, which a public repository shows to anyone, names no user."""
-    try:
-        machine = socket.gethostname() or "an unnamed machine"
-    except OSError:
-        machine = "an unnamed machine"
     folder = repo_root(capability_root).resolve()
     try:
         base = (home if home is not None else Path.home()).resolve()
         shown_folder = f"~/{folder.relative_to(base).as_posix()}"
     except (RuntimeError, ValueError, OSError):
         shown_folder = folder.as_posix()
-    return f"{machine}:{shown_folder}"
+    return f"{machine()}:{shown_folder}"
 
 
 def snapshot(
