@@ -81,7 +81,9 @@ ROLES: dict[str, Any] = {
     },
 }
 # The deck's title and lead, to which the test brand gives no value, so each takes the
-# shared type its default aliases, the type the deck drew it in before (DEC-035 point 4).
+# shared type its default aliases (DEC-035 point 4): the title the heading, and the lead the
+# lead type, which the test brand gives none either, so it takes the body (DEC-072 point 3).
+# Each is the type the deck drew it in before.
 ROLES["component.foundations.deck.title"] = ROLES["type.heading"]
 ROLES["component.foundations.deck.lead"] = ROLES["type.body"]
 
