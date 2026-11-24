@@ -1,7 +1,7 @@
 ---
 id: DEC-072
 title: The shared roles gain a lead type
-status: proposed
+status: accepted
 date: 2026-11-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
