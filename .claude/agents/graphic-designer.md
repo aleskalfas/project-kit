@@ -1,7 +1,7 @@
 ---
 # managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync
 # pkit-definition: capability:visual-communication
-# pkit-digest: sha256:2bfc0d9857fb693aa3fd736eb741483cccba7e72f4d9638efc13fd37d0ae4c72
+# pkit-digest: sha256:6fa0efd4638f438847feea09e45aa9c88b4524f28fc5660d6bf9efd6e9f57d20
 # pkit-tool-access: tools: ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "Agent"]
 name: graphic-designer
 description: Designs a piece of visual work from its brief, naming the content's
@@ -150,7 +150,7 @@ Where the folder is the source, you may change a version being built by "Where t
 
 ### The brief comes from whoever asked
 
-What the piece is for is the asker's: the brief's goals and relations, and, in the piece's own file, who it is for, where it is shown and whether it explains. Write them from what whoever asked for the piece says ([visual-communication:DEC-029-piece-brief] point 4). Show them to that person, or return them to whoever dispatched you, before you design against them. Write the reasons yourself, as you design.
+What the piece is for is the asker's: the brief's goals and relations, and, in the piece's own file, who it is for, where it is shown, in words under `shown` and by its media under `media`, and whether it explains. Write them from what whoever asked for the piece says ([visual-communication:DEC-029-piece-brief] point 4). Show them to that person, or return them to whoever dispatched you, before you design against them. Write the reasons yourself, as you design.
 
 Take the piece's facts from what you are given, or from the sources in the repository the piece names. Guess none.
 
