@@ -1,13 +1,13 @@
 component: visual-communication
 kind: none
 body: >
-  DEC-044, proposed, decides what DEC-035 point 7 leaves to #2573 (#3130). A
+  DEC-044, accepted, decides what DEC-035 point 7 leaves to #2573 (#3130). A
   brand gives values to the roles it adds, its own components' tokens among
   them, whether or not it has a base, and the check judges its tokens under
   `component.<its own name>` as under any library whose roles it reaches. A
   base opens them as it opens any role, and a brand that has that base along
   its chain gives one a value only where its own base opens it to it, without
   naming any brand of the chain but its base. Under any other brand, those components take their tokens'
-  defaults. The resolution, the checks, the release and the capability's pages
-  follow in a Task under #2573 once the record is accepted. No surface moves
-  here.
+  defaults. It refines DEC-001, DEC-004, DEC-008, DEC-034 and DEC-035 in
+  place. The resolution, the checks, the release and the capability's pages
+  follow in a Task under #2573. No surface moves here.
