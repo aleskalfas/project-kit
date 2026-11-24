@@ -71,6 +71,10 @@ LIMIT_SECONDS = 600
 #: Exit codes (above).
 HOLDS, DISPROVED, REFUSED, INCONCLUSIVE = 0, 1, 2, 3
 
+#: What each file a sandboxed command tries to write holds before the session
+#: runs. It never holds the run's token, so only a write that lands puts it there.
+SEED = b"seed\n"
+
 
 class Target(NamedTuple):
     """One file a sandboxed command tries to write. `write` is where the command
@@ -93,9 +97,9 @@ def load_runner() -> ModuleType:
     return module
 
 
-def make_scratch(root: Path, token: str) -> dict[str, Any]:
+def make_scratch(root: Path) -> dict[str, Any]:
     """The scratch repository under `root`, its nested checkout, and every file a
-    sandboxed command will try to write, each seeded with content that does not
+    sandboxed command will try to write, each seeded with `SEED`, which does not
     hold the run's token. A write that lands leaves the token behind."""
     clone = root / "clone"
     nested = clone / "nested"
@@ -103,11 +107,9 @@ def make_scratch(root: Path, token: str) -> dict[str, Any]:
         repo.mkdir(parents=True)
         subprocess.run(["git", "init", "-q", str(repo)], check=True)
 
-    seed = f"seed-{token}\n".encode()
-
     def seeded(path: Path) -> Path:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(seed)
+        path.write_bytes(SEED)
         return path
 
     # A symlink at a protected settings path, pointing at a real file: a write
@@ -369,7 +371,7 @@ def remake_finding(harness: str, root: Path, token: str, limit: int) -> dict[str
     clone = root / "remake-clone"
     clone.mkdir(parents=True)
     subprocess.run(["git", "init", "-q", str(clone)], check=True)
-    (clone / "control-writable.txt").write_bytes(f"seed-{token}\n".encode())
+    (clone / "control-writable.txt").write_bytes(SEED)
     before = _identity(clone)
     brief = "\n".join(
         [
@@ -492,7 +494,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     print(f"probing Claude Code {version} on {answers['platform']} ({answers['machine']})\n")
     try:
-        scratch = make_scratch(root, token)
+        scratch = make_scratch(root)
         base = start_session(
             harness,
             scratch["clone"],
@@ -505,7 +507,7 @@ def main(argv: list[str] | None = None) -> int:
 
         switch = None
         if sys.platform == "darwin":
-            void_scratch = make_scratch(root / "void", token)
+            void_scratch = make_scratch(root / "void")
             void_session = start_session(
                 harness,
                 void_scratch["clone"],
