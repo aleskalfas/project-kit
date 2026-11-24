@@ -305,7 +305,7 @@ A project whose version pin names 1.150.0 runs each command under `uvx` at 1.150
 **Relations:**
 
 - In a checkout of the methodology's source repository, it runs that checkout's own code ([ADR-039 point 1](../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#1-source-checkout--exec-the-in-tree-dispatcher)).
-- Where the project's version pin names another version than the installed CLI's, it runs the command at the pinned release ([ADR-039 point 2](../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#2-project-pins-a-version--me--re-exec-uvx-project-kitpin)).
+- Where the project's version pin names another version than the installed CLI's, it runs the command at the pinned release ([ADR-039 point 2](../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#2-project-pins-a-version--me--re-exec-pkit-at-the-pin-through-uvx)).
 - Where the project names no version pin, or one that matches, it runs the installed CLI ([ADR-039 point 3](../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#3-match-or-no-pin--run-self)).
 
 **States:** None.

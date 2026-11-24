@@ -327,11 +327,11 @@ two entries for it.
 
 ### Authoring a changeset
 
-Contributors use **changie** — a dev-only tool provisioned through `mise`
-(`[tools]` in `mise.toml`) and wrapped by `mise run changeset`:
+A contributor writes a changeset by hand, or with **changie**, a dev-only tool
+installed however they choose:
 
 ```
-mise run changeset        # or: changie new
+changie new
 ```
 
 changie's native `component` / `kind` / `body` fields are exactly the schema
@@ -339,8 +339,8 @@ above, and its `fragmentFileFormat` (`.changie.yaml`) names files
 `<component>-<kind>-<timestamp>-<random>.yaml` — the random suffix makes
 **parallel PRs collision-free**. Its `custom:` prompts write the optional
 `category`, `pr` and `requires_backbone` fields (the last a free string —
-`release` or a shipped `X.Y.Z` — which the lint checks). A changeset is equally
-hand-writable: drop a YAML file with the three keys into `.changes/unreleased/`.
+`release` or a shipped `X.Y.Z` — which the lint checks). To write one by hand,
+drop a YAML file with the three keys into `.changes/unreleased/`.
 
 ### changie is adopter-invisible
 

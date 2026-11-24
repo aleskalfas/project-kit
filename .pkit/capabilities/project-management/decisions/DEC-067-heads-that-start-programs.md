@@ -6,6 +6,8 @@ date: 2026-11-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [project-management:DEC-078-one-actor-per-act].** Under every credential, the comment a head named at a terminal leaves names the commit and the command, and no person as having named the head: the account that posts it is the act's actor. Overturned: point 4's "and who named it", in its bullet "What it leaves". The rest stands.
+
 **In plain terms:** some commands of this capability run the change check from a checkout of a pull request's head. That starts programs the head holds, under the account of whoever runs the command. These commands do so only for a head on the base's own repository that holds none of a sandboxed build's commits. A person at a terminal can also name a head for one run.
 
 Any other head, such as a fork's, starts nothing, and no flag changes that. Where the check needs such a program, the command asks the person at its terminal. With nobody there, nothing merges through it.
@@ -60,7 +62,7 @@ Unless a person names it (point 4), no temporary checkout of the head or of its 
 
 ### 4. A person at a terminal can name a head for one run
 
-At a terminal, the command shows the head's commit and the repository it comes from. It says the head's programs would start under the person's account, and that reading the head's diff needs no checkout. The person answers by typing the commit's short id.
+At a terminal, the command shows the head's commit and the repository it comes from. It says the head's programs would start under the person's account, and under a credential that names no user's account, that they would start under the credential the session holds, which acts as no person's account (refinement per [project-management:DEC-076-app-credentials]). It says too that reading the head's diff needs no checkout. The person answers by typing the commit's short id.
 
 - **What the word covers.** That one run of that command: the commit named, its merge with the base, and the reviewers the run starts. Another run, or a later head, asks again.
 - **What gives it.** Only that answer. No flag, no run authorised up front and no run off a terminal gives it.
@@ -70,7 +72,7 @@ At a terminal, the command shows the head's commit and the repository it comes f
 
 ### 5. A reviewer of such a head is told to start nothing
 
-A local reviewer runs unconfined in the person's checkout ([pkit:ADR-066] point 10). The backbone's refusal tells it to run from a checkout at the head. So a reviewer of a head from elsewhere could start what this record withholds.
+A local reviewer runs unconfined in the checkout the review command runs in, or, in a seat's clone, in a clone of its own ([pkit:ADR-066] point 10, [pkit:ADR-102] point 2). The backbone's refusal tells it to run from a checkout at the head. So a reviewer of a head from elsewhere could start what this record withholds.
 
 - **The brief says what the head may do.** For a head from elsewhere that nobody named, it tells the reviewer to start nothing of the head and to check it out nowhere. That holds whatever the refusal advises. It outranks the agents README and a reviewer's definition, which allow a reproduction.
 - **A check it cannot run stays what its own rule makes it.** The reviewer of the answers blocks, since they would go unchecked.

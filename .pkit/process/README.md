@@ -18,7 +18,7 @@ pkit:
         - src/project_kit/command_runner.py
         - src/project_kit/visibility.py
         - .pkit/migrations/backbone/1.150.0/001-keep-process-journal-logging.sh
-      record: [COR-023, COR-032, COR-033, COR-034, COR-035, COR-036, COR-038, COR-042, COR-044, COR-048, COR-053, "project-management:DEC-049", "ADR-009#7", ADR-020, ADR-051, "ADR-057#5", ADR-062]
+      record: [COR-023, COR-032, COR-033, COR-034, COR-035, COR-036, COR-038, COR-042, COR-044, COR-048, COR-053, "project-management:DEC-049", "ADR-009#7", ADR-020, ADR-051, "ADR-057#5", ADR-062, ADR-098]
       artefact:
         - .pkit/process/shape.md
         - .pkit/process/engine.md
@@ -40,6 +40,7 @@ pkit:
         - .pkit/cli/README.md#regenerating-a-capabilitys-depends-on-list
         - .pkit/cli/README.md#validate
         - .pkit/cli/README.md#configuration-file
+        - .pkit/cli/README.md#account-commands
 ---
 
 # Process
@@ -100,8 +101,13 @@ Every transition gate reduces to one of two forms ([COR-033](../decisions/core/C
 
 An actor's own assertion that a gate passed is never enough. A gate that rests on judgment must leave a trace that another authority made and a check can confirm, or validation is theatre.
 
-- **What the engine compares.** For an authorisation artefact, the engine compares the `produced_by` its predicate reports with the actor the caller names ("The predicate runner" below). It confirms neither.
+- **What the engine compares.** For an authorisation artefact, the engine compares the `produced_by` its predicate reports with the actor the caller names ("The predicate runner" below). It confirms neither. It sets aside case, as Unicode's case folding does, and surrounding whitespace. So two names that differ only in those are one authority.
 - **So the gate holds** only where the predicate reads a trace the actor cannot write, and the caller names the actor truthfully.
+- **The actor is the caller's.** The caller names the actor, and the binding's predicates report each producer, in the binding's terms. So the engine compares like with like.
+  - **A binding of accounts** gives both in the one spelling that `pkit account read` prints ([the CLI reference, "Account commands"](../cli/README.md#account-commands)).
+  - **A binding whose authorities are no accounts,** such as a sign-off by a name in a file, names them in its own terms.
+  - **None is taken by default.** The engine asks no service for the actor, and no fixed value stands for one nobody named. With none named, a gate whose authorisation exists and names its producer is not judged. The gate then refuses the move ([the engine page, "The operations"](engine.md#the-operations)).
+  - **By hand,** a person names the actor as the binding's reference says, such as an account as `pkit account read` prints it ([the CLI reference, "Account commands"](../cli/README.md#account-commands)). The engine takes the person's word, so a misspelt actor is a false one.
 
 ## Layout
 
@@ -205,7 +211,11 @@ The engine reads one JSON object from standard output, and reads it by the kind 
 
 - **An `inferred` detection, and a `deterministic` gate:** the engine uses the predicate's `result`. So it does for every other predicate that answers `{result, reason}`: an entry guard, an invariant's `check`, a `resume_when`, and a cascade's `membership`.
 - **A `classified` detection:** the engine reads `{state, reason}` by the rules in [the shape page's "Detection modes"](shape.md#detection-modes-core), and ignores any `result`. It is the one reading of `state`, and it applies to position resolution alone.
-- **An `authorisation-artifact` gate:** the engine reads `{exists, produced_by}`, and computes the gate's result itself. The gate passes when `exists` is true, and `produced_by` is a string, not empty or blank, that differs from the actor. A `produced_by` missing, null, empty, blank or not a string names no producer: the gate stays shut, and its reason says so. The engine enforces this cross-authority rule, and ignores any `result` the predicate supplies, so a predicate cannot override it.
+- **An `authorisation-artifact` gate:** the engine reads `{exists, produced_by}`, and computes the gate's result itself.
+  - **It passes** when `exists` is true, an actor is named, and `produced_by` is a string, not empty or blank, that differs from the actor. The comparison sets aside case and surrounding whitespace ("Gate-checkability" above).
+  - **It stays shut** where `produced_by` is missing, null, empty, blank or not a string, since such a value names no producer. Its reason says so.
+  - **It is not judged** where `exists` is true and `produced_by` names a producer, but the caller named no actor. The gate is then indeterminate, and refuses the move.
+  - **The engine enforces this cross-authority rule,** and ignores any `result` the predicate supplies, so a predicate cannot override it.
 - **How `result` and `exists` are read:** by their truth value. `false`, `null`, `0`, an empty string and an empty list or object read as false. Any other value reads as true, the string `"false"` included, so answer with JSON's `true` and `false`.
 
 Predicates must be read-only. `status` runs them live, so a predicate that changes anything is a bug with side-effects.
@@ -343,7 +353,7 @@ pkit config set process.journal.committed true --yes
 
 Each line of a journal is one JSON object: a move's entry, or a wait's.
 
-- **A move's entry** holds `ts`, `subject`, `to`, `trigger` and `actor`, and adds these keys:
+- **A move's entry** holds `ts`, `subject`, `to`, `trigger` and `actor`. Its `actor` is the actor the caller named, and is empty where the caller named none. It adds these keys:
   - **`from`:** where the origin is known.
   - **`gate_result`:** `pass` or `fail`, where the move has a gate.
   - **`severity`:** where the transition names one.

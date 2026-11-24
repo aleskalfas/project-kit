@@ -2,7 +2,7 @@
 (visual-communication DEC-002 points 3, 4, 6 and 7, DEC-003 point 9, DEC-004 points 8, 9
 and 11, DEC-005 points 7, 9, 13 and 14, DEC-006 point 8, DEC-008 points 1 and 9, DEC-010
 points 1, 2 and 9, DEC-013 points 5 and 6, DEC-017 points 4 to 7, DEC-018 points 1, 2, 4
-and 5, DEC-019 point 8, DEC-030 point 5, DEC-042 point 3).
+and 5, DEC-019 point 8, DEC-030 point 5).
 
 **File-level findings, every run:**
 
@@ -10,9 +10,6 @@ and 5, DEC-019 point 8, DEC-030 point 5, DEC-042 point 3).
   name, and of the configuration: a file that names no schema, or another one, fails (a
   file at another format number the core's data validation reports, so this check does
   not repeat it);
-- the project's bar, against the rule sets the review grades: a bar that covers what the
-  review does not grade, or at a major other than the one the project pins for the set, or
-  the set's own where it pins none, fails (`bar.findings`, DEC-042 point 3);
 - without a piece named, the designer's grant, read from the agents overlay as the deploy
   reads it, against the location the configuration records: a path inside the
   methodology's folder fails, and so does a grant that does not cover the location
@@ -133,6 +130,14 @@ the list. A released version whose folder no longer matches what was released is
 project's to restore, so a finding in it fails (DEC-002 point 7, DEC-003 point 9, DEC-013
 point 6).
 
+**An overlap's label** is computed when a finding is read too, in validation alone: an
+overlap the part on top names under `lies-over` is the fact `box-overlap-meant` where the
+version that holds that word is released and still as it was released, and, for a copy of a
+library the capability ships, listed with the hash the capability records for that version;
+elsewhere it is `box-overlap`, as at a pair no one named (DEC-066 point 2). Validation and the
+viewing step read every finding through one reading (`Reading`), which gives the viewing step
+every overlap as `box-overlap`.
+
 In the findings record, a finding's file is relative to the piece's folder, or, where it
 lies in a library version, to that version's folder, so the record stays true when the
 location moves or the piece is copied. The check gives every file relative to the project
@@ -151,7 +156,6 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Protocol
 
 from _lib import (
-    bar,
     boxes,
     briefs,
     code,
@@ -166,6 +170,7 @@ from _lib import (
     layout,
     location,
     names,
+    outlines,
     records,
     signs,
     tokens,
@@ -212,7 +217,7 @@ from _lib.libraries import (
 from _lib.plugins import seam
 from _lib.reading import ReadError, read_yaml, sha256
 from _lib.root import CONFIG, SHIPPED
-from _lib.scene import SceneResult
+from _lib.scene import SceneResult, line_left
 from _lib.scene_checks import SIZES, Found, Reach, SceneCheck
 from _lib.shipped import read as read_shipped
 
@@ -289,8 +294,9 @@ HANDED_OUT_FILE_MISSING = "handed-out-file-missing"
 HANDED_OUT_FILE_CHANGED = "handed-out-file-changed"
 EXPORTS_UNREADABLE = "exports-unreadable"
 
-#: The properties of a scene element that are no property it draws.
-_STRUCTURE = ("type", "id", "sources", "children")
+#: The properties of a scene element that are no property it draws: beside its structure,
+#: the parts its part says it lies over on purpose (DEC-066 point 2).
+_STRUCTURE = ("type", "id", "sources", "children", boxes.LIES_OVER)
 
 _CONTENT_FILE = re.compile(r"^content\.(?P<language>[^.]+)\.yaml$")
 
@@ -359,10 +365,9 @@ def _config_findings(root: Path) -> list[Finding]:
     except ReadError as exc:
         return [Finding("file-unreadable", FAILS, str(exc), file=CONFIG)]
     problem = _binding(data, "config")
-    bound = (
-        [Finding("binding", FAILS, f"the configuration {problem}", file=CONFIG)] if problem else []
-    )
-    return bound + bar.findings(root, data)
+    if problem is None:
+        return []
+    return [Finding("binding", FAILS, f"the configuration {problem}", file=CONFIG)]
 
 
 def _binding(data: Any, kind: str) -> str | None:
@@ -424,6 +429,72 @@ def _grant_fix(given: grant.Grant, recorded: str) -> str:
     )
 
 
+class Reading:
+    """How each finding reads where it lies, worked out each time it is read and never
+    stored: validation's reading, and the viewing step's (DEC-002 point 7, DEC-066 point 2).
+
+    - **Its level** (`findings.as_read`), by whether the version the finding lies in is
+      released and still as it was released, and whether it is a copy of a library the
+      capability ships.
+    - **An overlap's label, in validation alone.** An overlap the part on top names under
+      `lies-over` reads as the fact `box-overlap-meant` where the version that holds the word
+      reads as released (`word_given`), and as `box-overlap` elsewhere. The viewing step
+      reads every overlap as `box-overlap`, with the message of any overlap.
+    """
+
+    def __init__(self, held: Held) -> None:
+        self.held = held
+        self._held_as: dict[tuple[str, Version], tuple[bool, bool]] = {}
+
+    def read(self, finding: Finding, *, validation: bool) -> tuple[Finding, str]:
+        """`finding` as it reads, with its level there: in validation where `validation`,
+        else in the viewing step."""
+        if validation and finding.lies_over_in and self.word_given(finding.lies_over_in):
+            finding = boxes.meant(finding)
+        name, _, text = finding.library.partition("@")
+        try:
+            version = Version.parse(text)
+        except ValueError:
+            return as_read(finding, False)
+        released, shipped = self._as_released(name, version)
+        return as_read(finding, released, shipped=shipped)
+
+    def word_given(self, library: str) -> bool:
+        """Whether the version `library` (`<name>@<version>`), which holds an overlap's word,
+        reads as released (DEC-066 point 2): the list marks it released, its folder still
+        matches the list's hash, and, for a copy of a library the capability ships, that hash
+        is the one the capability records for that version (`copies.Compared.restored`). A
+        version from another repository reads as one of the project's own library does."""
+        name, _, text = library.partition("@")
+        try:
+            version = Version.parse(text)
+        except ValueError:
+            return False
+        if not self.held.released(name, version) or self.held.hash_changes(name, version):
+            return False
+        return self.held.source(name) != SHIPPED_SOURCE or library in self.compared.restored
+
+    def _as_released(self, name: str, version: Version) -> tuple[bool, bool]:
+        """Whether the list marks a version released and its folder is still as it was
+        released; and whether it is a copy of a library the list names from the source
+        `shipped`, other than a released copy whose folder no longer matches. A copy that no
+        longer matches is the project's to restore (DEC-002 point 7, DEC-003 point 9). Any
+        other copy of a library the capability ships only whoever maintains the capability
+        corrects (DEC-013 point 6)."""
+        key = (name, version)
+        if key not in self._held_as:
+            released = self.held.released(name, version)
+            changed = released and bool(self.held.hash_changes(name, version))
+            shipped = self.held.source(name) == SHIPPED_SOURCE and not changed
+            self._held_as[key] = (released and not changed, shipped)
+        return self._held_as[key]
+
+    @cached_property
+    def compared(self) -> copies.Compared:
+        """Each copy of a library the capability ships, against what it ships."""
+        return copies.compare(self.held)
+
+
 class _Run:
     """One run of the check over a location."""
 
@@ -439,41 +510,20 @@ class _Run:
         self.reported: set[tuple[str, str, str, str, str]] = set()
         self.named: set[str] = set()
         self.notations: set[str] = set()
-        self.held_as: dict[tuple[str, Version], tuple[bool, bool]] = {}
+        self.reading = Reading(self.held)
         self.counts = {"pieces": 0, "read": 0, "computed": 0, "unchecked": 0, "final": 0}
 
     def add(self, finding: Finding) -> None:
         self.found.append(finding)
 
     def judged(self, finding: Finding) -> tuple[Finding, str]:
-        """A finding as it reads where it lies, with its level there."""
-        name, _, text = finding.library.partition("@")
-        try:
-            version = Version.parse(text)
-        except ValueError:
-            return as_read(finding, False)
-        released, shipped = self._as_released(name, version)
-        return as_read(finding, released, shipped=shipped)
+        """A finding as validation reads it where it lies, with its level there."""
+        return self.reading.read(finding, validation=True)
 
-    def _as_released(self, name: str, version: Version) -> tuple[bool, bool]:
-        """Whether the list marks a version released and its folder is still as it was
-        released; and whether it is a copy of a library the list names from the source
-        `shipped`, other than a released copy whose folder no longer matches. A copy that no
-        longer matches is the project's to restore (DEC-002 point 7, DEC-003 point 9). Any
-        other copy of a library the capability ships only whoever maintains the capability
-        corrects (DEC-013 point 6)."""
-        key = (name, version)
-        if key not in self.held_as:
-            released = self.held.released(name, version)
-            changed = released and bool(self.held.hash_changes(name, version))
-            shipped = self.held.source(name) == SHIPPED_SOURCE and not changed
-            self.held_as[key] = (released and not changed, shipped)
-        return self.held_as[key]
-
-    @cached_property
+    @property
     def compared(self) -> copies.Compared:
         """Each copy of a library the capability ships, against what it ships."""
-        return copies.compare(self.held)
+        return self.reading.compared
 
     def summary(self, only: str | None) -> list[str]:
         c = self.counts
@@ -2587,7 +2637,13 @@ def _stored(entry: Mapping[str, Any]) -> Finding:
         fix=str(entry.get("fix", "")),
         library=str(entry.get("library", "")),
         who=str(entry.get("who", "")),
+        lies_over_in=str(entry.get(LIES_OVER_IN, "")),
     )
+
+
+#: The field of a findings record's entry that names the version holding an overlap's word
+#: (`Finding.lies_over_in`, DEC-066 point 2).
+LIES_OVER_IN = "lies-over-in"
 
 
 def record_entry(finding: Finding) -> dict[str, Any]:
@@ -2603,6 +2659,8 @@ def record_entry(finding: Finding) -> dict[str, Any]:
     for name in ("fix", "library", "who"):
         if getattr(finding, name):
             entry[name] = getattr(finding, name)
+    if finding.lies_over_in:
+        entry[LIES_OVER_IN] = finding.lies_over_in
     return entry
 
 
@@ -2673,9 +2731,7 @@ CONTENT_HIDDEN = SceneCheck(
 #: The check of contrast as drawn, a check of colour, with its reach, since the reviewer
 #: reads its silence (DEC-004 point 8, DEC-012 point 3, DEC-036 points 3 and 8, DEC-063 point
 #: 1). Its findings each name the combination they hold for, but one on a sign that paints
-#: nothing, which holds for every combination. It reads no path as a fill, and leaves out a
-#: whole text where one span of it lies over a picture: two departures from DEC-004 point 8,
-#: each stated as a clause until its fix.
+#: nothing, which holds for every combination.
 CONTRAST = SceneCheck(
     "contrast as drawn",
     colour=True,
@@ -2691,27 +2747,25 @@ CONTRAST = SceneCheck(
             "other marks: a sign part, which holds where its fill or its stroke reaches that "
             "level, and fails where it paints neither; and a run's sign, in the run's paint, "
             "with its span where the same fills lie under both (DEC-036 point 8)",
-            "as the fills under a point, each box or ellipse with a fill drawn before the text "
-            "or the sign that holds the point, a translucent one laid over the one under it, "
-            "and a run's ground over them (DEC-004 point 8, DEC-036 point 3)",
+            "as the fills under a point, each box, ellipse or path with a fill drawn before the "
+            "text or the sign that holds the point, a path holding it where its outline fills "
+            "it by its fill rule, a translucent one laid over the one under it, and a run's "
+            "ground over them (DEC-004 point 8, DEC-036 point 3)",
         ),
         leaves_out=(
-            "a span or a sign over a picture, where no box or ellipse with a fill is drawn "
-            "over the picture under its middle, which a reviewer judges (DEC-004 point 8)",
-            "every other span of a text one span of which lies so over a picture, though "
-            "DEC-004 point 8 has them measured: a departure, until its fix (DEC-004 point 8)",
-            "a span or a sign over nothing, under whose middle no box or ellipse with a fill "
-            "is drawn, and whose run draws no ground (DEC-063 point 1)",
+            "a span or a sign over a picture, where no box, ellipse or path with a fill is "
+            "drawn over the picture under its middle, and whose run draws no ground, which a "
+            "reviewer judges (DEC-004 point 8)",
+            "a span or a sign over nothing, under whose middle no box, ellipse or path with a "
+            "fill is drawn, and whose run draws no ground (DEC-063 point 1)",
             "a span or a sign painted with a colour role the brand lacks, or over a fill "
             "painted with one, which `unknown-colour` reports (DEC-063 point 1)",
             "a combination in which a run's paint, or every paint of a sign, has no colour, "
             "so it draws nothing there (DEC-063 point 1)",
             "a combination in which none of the fills under the middle of a span or a sign "
-            "that have a colour there is opaque, of the nine boxes and ellipses with a fill "
-            "drawn last before it under that middle, and the run's ground (DEC-063 point 1)",
-            "a fill a path draws under a span or a sign, which it reads as drawing nothing "
-            "there, though DEC-004 point 8 has a text measured against the fill under it: a "
-            "departure, until its fix (DEC-004 point 8)",
+            "that have a colour there is opaque, of the nine boxes, ellipses and paths with a "
+            "fill drawn last before it under that middle, and the run's ground "
+            "(DEC-063 point 1)",
             "the fills under a span or a sign elsewhere than under its middle (DEC-063 point 1)",
             "a text with no line, and a path with no outline, neither of which draws "
             "anything (DEC-063 point 1)",
@@ -3314,12 +3368,13 @@ def drawn_contrast(
     run is measured at WCAG's level for its size and weight, in its own paint. A sign is
     measured at WCAG's level for other marks: a sign part's path holds where its fill or its
     stroke reaches it, and a run's sign in the run's paint (`_sign_contrast`). The fill
-    under a run's span of a line, or under a sign, is that of the last box or ellipse drawn
-    before it that holds the span's or the sign's middle; a translucent one is laid over the
-    one under it. A text or a sign over a picture is not measured, nor one with nothing
-    under it. A fill with no colour in a combination draws nothing there, so what lies
-    under it shows; a paint of a run or a sign with none there draws nothing to measure
-    there, and the renderer reports the loss."""
+    under a run's span of a line, or under a sign, is that of the last box, ellipse or path
+    drawn before it that holds the span's or the sign's middle, a path where its outline
+    fills it; a translucent one is laid over the one under it. A span or a sign over a
+    picture is not measured, nor one with nothing under it, and a text's other spans are.
+    A fill with no colour in a combination draws nothing there, so what lies under it
+    shows; a paint of a run or a sign with none there draws nothing to measure there, and
+    the renderer reports the loss."""
     found = []
     for page in _pages(scene):
         painted: list[tuple[Mapping[str, Any], float, float]] = []
@@ -3331,6 +3386,7 @@ def drawn_contrast(
                 found.extend(_text_contrast(element, x, y, painted, colours, keys))
             elif kind == "path" and element.get("d"):
                 found.extend(_sign_contrast(element, x, y, painted, colours, keys))
+                painted.append((element, x, y))  # its fill lies under what is drawn after it
     return found
 
 
@@ -3342,7 +3398,7 @@ def _text_contrast(
     colours: Mapping[str, Mapping[str, Any]],
     keys: Sequence[str],
 ) -> list[Finding]:
-    left, width = x + float(text["x"]), float(text["width"])
+    left = x + float(text["x"])
     step = float(text["line-height"])
     paragraphs = text.get("paragraphs") or [[{}]]
     # Each look of a run and the fills under its spans, in the order first met, and each
@@ -3351,10 +3407,8 @@ def _text_contrast(
     looks: list[tuple[Any, ...]] = []
     for index, line in enumerate(text["lines"]):
         runs = paragraphs[line.get("paragraph", 0)] or [{}]
-        drawn = float(line.get("width", 0))
-        at = {"middle": left + (width - drawn) / 2, "end": left + width - drawn}.get(
-            str(text.get("text-anchor")), left
-        )
+        # Where the text stands the line in its width is the scene's to say (`line_left`).
+        at = left + line_left(text, line)
         top = y + float(text["y"]) + index * step
         middle = top + step / 2
         # A line with no span is measured at its start, in its paragraph's first run.
@@ -3376,10 +3430,10 @@ def _text_contrast(
                 stack = [*(stack or []), str(run["ground"])]
                 if sign is not None:
                     marked = [*(marked or []), str(run["ground"])]
-            if stack is None:
-                return []  # over a picture: a reviewer judges it
             at += span_width + float(ground.get("end", 0))
             look = (run.get("fill"), run.get("font-size"), run.get("font-weight"), stack)
+            # A span over a picture, None, is a reviewer's to judge, and one over nothing is
+            # not measured: either way the text's other spans are.
             if stack and look not in looks:
                 looks.append(look)
                 measured.append((run, stack, False))
@@ -3453,7 +3507,8 @@ def _sign_contrast(
     """A sign part's path measured against the fills under its middle, in each combination
     `keys` names, at WCAG's level for other marks: it holds where its fill or its stroke
     reaches that level (DEC-036 point 8). One that paints neither shows nothing, which
-    fails as well. One over a picture is not measured, nor one with nothing under it."""
+    fails as well. One over a picture is not measured, nor one with nothing under it. The
+    paths drawn before it are among those fills, and it among those of what follows."""
     width, height = float(path.get("width", 0)), float(path.get("height", 0))
     middle = (x + float(path.get("x", 0)) + width / 2, y + float(path.get("y", 0)) + height / 2)
     stack = _under(middle, painted)
@@ -3552,9 +3607,15 @@ def _ground(stack: Sequence[Mapping[str, Any]]) -> Mapping[str, Any] | None:
 
 
 def _holds(element: Mapping[str, Any], x: float, y: float, point: tuple[float, float]) -> bool:
+    """Whether `element`, drawn in a parent whose origin lies at `x y`, covers `point`: a
+    box or an image by its frame, an ellipse by the ellipse its frame bounds, and a path by
+    its outline and the rule that fills it, whose numbers lie in its parent's frame."""
     left, top = x + float(element.get("x", 0)), y + float(element.get("y", 0))
     width, height = float(element.get("width", 0)), float(element.get("height", 0))
     px, py = point
+    if element.get("type") == "path":
+        rule = str(element.get("fill-rule") or "nonzero")
+        return outlines.fills(str(element["d"]), rule, (px - x, py - y))
     if element.get("type") == "ellipse":
         if width <= 0 or height <= 0:
             return False

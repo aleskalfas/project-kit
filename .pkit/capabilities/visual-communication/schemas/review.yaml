@@ -1,16 +1,29 @@
-# A round's review report, the document `graphic-design-reviewer` opens its grades with
-# (visual-communication DEC-042 points 1 and 4, DEC-015 point 7): a grade in words for each
-# rule it read, on each page it takes one and once for the piece where it takes one, with
-# its evidence; the marks it alone sets; what it had read when it wrote its grades, and what
-# it read after; and the full name of the model it ran on, with its effort where the harness
-# has one. A command gives the verdict from this document and the project's bar. The
-# reviewer writes its report as its reply, and whoever dispatched it keeps the report as
-# written in `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/`,
-# local to the clone: whole in `round-<n>.md`, and this document alone in
-# `round-<n>.yaml`.
+# A review's report, the document `graphic-design-reviewer` opens its report with
+# (visual-communication DEC-070 point 5, DEC-015 point 7): each finding it gives, a fault, a
+# rule finding, a brief finding or a note (DEC-030 point 6), on a page or the piece, with
+# its evidence; on a rule finding, each rule it cites with its label, a settled break or a
+# finding for a person; on a fault and a rule finding, whether it is a thing a reader cannot
+# make out; the marks it alone sets; what it had read when it wrote its findings, and what
+# it read after; and the full name of the model it ran on, with its effort where the
+# harness has one. It holds no grade and no verdict: the findings inform the person's ship
+# call (DEC-070 point 1). The reviewer writes its report as its reply, and whoever
+# dispatched it keeps the report whole, as written, in
+# `.pkit/capabilities/visual-communication/project/local/reviews/<piece>/reading-<n>.md`,
+# local to the clone.
 #
-# The body below is the reference instance: a second round, one of whose grades differs
-# from the round before.
+# The body below is the reference instance: the reading after a round's mends, which read
+# its report of the first reading once its findings were written. A fault cites the rule
+# whose words name its defect, with no label, and takes no rule finding of its own. One
+# observation fails the words of two rules, and is one finding that cites each, each with
+# its label. A difference told by colour alone is a thing a reader cannot make out. One
+# finding only the asker's words would clear carries the review's mark. A brief finding and
+# a note cite no rule, and are never a thing a reader cannot make out. It shows some
+# findings of some pages, to show the form, and is no whole review.
+#
+# Each value in words is written as a folded block scalar, `>-` after its key and its words
+# on the lines below, which parses words that hold `: `, quote marks, a ` #` or a
+# backslash. The evidence of `RS-GRAPHIC-006` holds `: `, and opens with a quoted phrase
+# and goes on after it. Written plain, a value that does either does not parse.
 
 pkit_schema: visual-communication:review
 schema_version: 1
@@ -18,60 +31,104 @@ schema_version: 1
 # --- reference instance -------------------------------------------------
 
 piece: deck
-round: 2
 model:
-  name: example-model-1.0
-  effort: high
-read-before-grading:
+  name: >-
+    example-model-1.0
+  effort: >-
+    high
+read-before-findings:
   - kind: images
-    what: Every image of the run, each band of each page, and the forced images.
+    what: >-
+      Every image of the run, each band of each page, and the forced images.
   - kind: frames
-    what: The frames beside each image.
+    what: >-
+      The frames beside each image.
   - kind: report
-    what: report.json of the run.
+    what: >-
+      report.json of the run.
   - kind: piece
-    what: piece.yaml, the content of each language, and the brand it names.
+    what: >-
+      piece.yaml, the content of each language, and the brand it names.
   - kind: intent
-    what: The goals, relations and takeaways the dispatcher handed over, without their reasons.
+    what: >-
+      The goals, relations and takeaways the dispatcher handed over, without their reasons.
   - kind: rule-sets
-    what: The rule sets the capability ships, each from its file.
+    what: >-
+      The rule sets the capability ships, each from its file.
   - kind: design-knowledge
-    what: The index, and the topics the pages needed.
-read-after-grading:
+    what: >-
+      The index, and the topics the pages needed.
+read-after-findings:
   - kind: brief-file
-    what: brief.yaml, for its reasons.
+    what: >-
+      brief.yaml, for its reasons.
   - kind: earlier-reports
-    what: round-1.md, the whole report of round 1, as it was written.
-grades:
-  - rule: RS-COMM-001
+    what: >-
+      reading-1.md, the whole report of the reading before, as it was written.
+findings:
+  - kind: fault
     on:
       page: layers
-    grade: professional
-    evidence: The lead answers the title, and the stepped figure shows the answer.
-  - rule: RS-GRAPHIC-001
+    rules:
+      - rule: RS-GRAPHIC-002
+    reader-cannot-make-out: false
+    evidence: >-
+      Alignment, at deck/slides[layers]/body/levels[middle]: the middle level's left edge
+      stands to the right of the top's and the base's, which share one edge.
+  - kind: rule
     on:
       page: layers
-    grade: competent
-    evidence: The eye enters at the footer's mark before it reaches the top level.
-    other-cause: The page's frame, which the library draws, carries the mark.
-    since-last-round:
-      was: below competent
-      why: The mark is smaller than in the round before, so it no longer outranks the figure.
-  - rule: RS-GRAPHIC-005
+    rules:
+      - rule: RS-GRAPHIC-001
+        label: for-a-person
+      - rule: RS-GRAPHIC-007
+        label: for-a-person
+    reader-cannot-make-out: false
+    evidence: >-
+      The strongest difference on the page goes to the note on the levels, not to the
+      stepped figure the point is about, so the figure does not stand above the rest.
+  - kind: rule
     on:
       page: layers
-    grade: competent
-    evidence: The top level's text is too fine for a projector.
+    rules:
+      - rule: RS-GRAPHIC-003
+        label: for-a-person
+    reader-cannot-make-out: false
+    evidence: >-
+      The mark in the footer, a part of the page's frame, pulls the reader's eye from the
+      stepped figure.
+  - kind: rule
+    on:
+      page: plan
+    rules:
+      - rule: RS-GRAPHIC-006
+        label: settled
+    reader-cannot-make-out: true
+    evidence: >-
+      "Whatever a colour tells apart is also told by a label, an icon, a shape or a line
+      style": the phases done and the phase to come are told apart by their colour alone.
+  - kind: rule
+    on:
+      page: plan
+    rules:
+      - rule: RS-COMM-001
+        label: for-a-person
+    reader-cannot-make-out: false
     mark:
-      kind: need
-      names: A size of the library's text that reads at a projector's distance.
-  - rule: RS-COMM-003
+      kind: asker
+      names: >-
+        The title and the lead of the page plan, which the asker has seen.
+    evidence: >-
+      The lead lists the plan's three phases, and does not say what the title opens.
+  - kind: brief
+    on:
+      page: layers
+    evidence: >-
+      The relation that the base carries the two levels above it: the figure draws the
+      levels as steps of one stair, and nothing shows the base carrying them.
+  - kind: note
     on:
       piece: true
-    grade: professional
-    evidence: Each lead follows from the one before it.
-not-graded:
-  - rule: RS-COMM-001
-    on:
-      page: cover
-    why: A page whose layout has no lead is not judged by this rule.
+    evidence: >-
+      A doubt: the page plan may read as following from the page layers only by a step the
+      deck leaves to its reader, why the layers need a plan.

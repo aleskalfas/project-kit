@@ -6,6 +6,8 @@ date: 2026-10-28
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [DEC-082](DEC-082-pace-of-subagents.md).** Whenever a Task's work frees a slot of a seat, the ready Tasks of its pools rank nearest that Task first: those of its Feature, then its EPIC, then its Milestone, then the rest, by priority within each. Overturned: point 5's "the Tasks rank as there", where a Task's work freed the slot, so far as it ranks them by priority alone. Priority alone orders them where no Task's work freed the slot. The rest stands.
+
 **In plain terms:** a project's topology may declare **pools of workers**. Each seat that builds names the pools it serves. A person puts a line of work into a pool by marking its Milestone with the pool's name, and a worker chooses its next Task only from ready Tasks whose Milestone is in one of its pools. So several planners can each run a line of work, and a person decides how many workers each line gets. Starting or finishing a line changes no committed configuration. Where the topology declares no pool, every seat takes from the one shared pool of [project-management:DEC-059-topology-of-seats]. And every topology, with pools or without, now grants nothing to code that cannot read it in full, which changes DEC-059 point 1.
 
 ## Context
@@ -56,7 +58,7 @@ A Task's Milestone is its native Milestone field ([project-management:DEC-005-li
 
 Where the topology declares pools, a seat that builds chooses a ready Task only where the Task's Milestone is an open Milestone of a pool it serves. A ready Task is what DEC-059 point 7 says, and the Tasks rank as there. The seat's scope then narrows what its pools hold.
 
-- **What the pools bound.** They bound what a seat takes of its own choosing, its next ready Task. A person who directs a seat to a particular Task makes that choice, and the seat takes it. The take makes its own check of the Task's pool against the seat's pools, and warns of a Task outside them: a warning, never a gate ([project-management:DEC-045-named-per-user-instances] point 5).
+- **What the pools bound.** They bound what a seat takes of its own choosing, its next ready Task. A person who directs a seat to a particular Task makes that choice, and the seat takes it. A directive from a worker's directing seat picks among what its pools and scope hold, never outside them, and directing a seat to a Task outside them stays the person's word (refinement per [project-management:DEC-081-delegation-between-seats]). The take makes its own check of the Task's pool against the seat's pools, and warns of a Task outside them: a warning, never a gate ([project-management:DEC-045-named-per-user-instances] point 5).
 - **The seat's own Tasks.** The pools hold back a Task in Backlog that the seat owns, such as one whose Milestone moved to another pool, and the listing of seats warns of it (point 10). A Task In Progress whose Milestone moved to another pool stays its holder's to finish.
 
 The expected owner of a Task is the seat that alone may take it, by its pools and then its scope. It replaces DEC-059 point 7's expected owner, as "What this overturns, and what stands" says.

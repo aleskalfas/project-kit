@@ -10,15 +10,6 @@
 #   family it finds (visual-communication DEC-020 point 7). A path that starts `~/` lies
 #   in the home folder, and a relative one below the repository's top. Absent, the step
 #   looks where Chrome and Chromium install themselves.
-# - `bar` — the bar the designer's loop runs to (DEC-042 point 3): `covers`, the rule sets
-#   or single rules it covers, each with its set's major, such as `[COMM@1, GRAPHIC@2]`,
-#   and `at-least`, the grade each page and the piece must reach, `professional` or
-#   `excellent`. A project keeps one bar. The capability ships none, and its check fails
-#   a bar that covers what the review does not grade or whose major differs from the one
-#   the project pins for the set, or the set's own where it pins none.
-# - `bounds` — the rounds the loop may run (DEC-042 point 6), beside the bar: `to-the-bar`,
-#   the most rounds to the bar, and `polish`, the most rounds of polish. Absent, the
-#   schema's default holds: 5 rounds to the bar and 2 of polish.
 #
 # A file of the capability's format names its schema at its top (DEC-002 point 3); no
 # path binds it. The body below is the reference instance: valid, the schema's self-test.
@@ -29,7 +20,3 @@ schema_version: 1
 # --- reference instance -------------------------------------------------
 
 location: visual
-
-bounds:
-  to-the-bar: 5
-  polish: 2

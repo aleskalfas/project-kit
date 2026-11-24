@@ -160,7 +160,6 @@ from _lib.gh import gh_get_issue, gh_run, load_adopter_config
 from _lib.hooks import fire_hooks
 from _lib.membership import (
     CAPABILITY_NAME,
-    Identity,
     check_membership,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -496,7 +495,6 @@ def main() -> int:
         if not _post_ci_bypass_audit(
             args.pr_number,
             args.bypass_ci.strip(),
-            invoker,
             ci_gate.failing_checks,
             config,
             head=head,
@@ -910,7 +908,6 @@ def _ci_bypass_audit_key(reason: str, head: str) -> str:
 
 
 def _ci_bypass_audit_body(
-    invoker: Identity,
     reason: str,
     failing_checks: tuple[str, ...],
     key: str,
@@ -920,7 +917,6 @@ def _ci_bypass_audit_body(
     (`_lib.audit.render_ci_bypass_audit_body`) under this script's kind marker."""
     return render_ci_bypass_audit_body(
         CI_BYPASS_AUDIT_MARKER,
-        invoker,
         reason,
         failing_checks,
         head,
@@ -931,7 +927,6 @@ def _ci_bypass_audit_body(
 def _post_ci_bypass_audit(
     pr_number: int,
     reason: str,
-    invoker: Identity,
     failing_checks: tuple[str, ...],
     config: dict,
     *,
@@ -948,7 +943,7 @@ def _post_ci_bypass_audit(
         "pr",
         pr_number,
         key,
-        _ci_bypass_audit_body(invoker, reason, failing_checks, key, head),
+        _ci_bypass_audit_body(reason, failing_checks, key, head),
         config,
         run=gh_run,
         present_note="ci-bypass audit comment already present; idempotent skip",

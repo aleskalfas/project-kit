@@ -8,7 +8,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 > **Partially superseded by [visual-communication:DEC-032-ordered-colour-steps].** Overturned: in the Rationale's paragraph "Why the form rule narrows a reason, and leaves the model", the sentence "A change to how the engine resolves colour would rest on a judgement the engine cannot make: what a page's point is", and that the model stays, in its heading and its last sentence. Also overturned: the rejected alternative "The order's colour in the engine's model". The rule's narrowing of the principle stands, as does the rest, and those passages stay as they stood.
 
-**In plain terms:** the capability ships its view of good visual communication as two rule sets. `COMM` asks whether a piece says the right thing, and `GRAPHIC` whether it looks right. Each rule is taken from the established principles of its field, and this record names its source, or, for `RS-GRAPHIC-008`, on running text, [visual-communication:DEC-046-faults-lower-grades] does (refinement per that record, point 7), so no project writes them again. A project adds its own rules on top. `COMM` judges only a piece that explains, and `GRAPHIC` every piece. Each rule says apart what can be judged from the content's text and what only the drawn page shows. The rules bind on a piece only once its content is something rules bind on. Until then they guide whoever designs or judges a piece. One rule, on how a page's differences show, narrows a reason the founding record gives for colour.
+**In plain terms:** the capability ships its view of good visual communication as two rule sets. `COMM` asks whether a piece says the right thing, and `GRAPHIC` whether it looks right. Each rule is taken from the established principles of its field, and this record names its source, or, for `RS-GRAPHIC-008`, on running text, [visual-communication:DEC-046-faults-lower-grades] does (refinement per that record, point 7), and, for `RS-GRAPHIC-009`, on leaders, [visual-communication:DEC-069-leaders-and-layers] does (refinement per that record, point 8), so no project writes them again. A project adds its own rules on top. `COMM` judges only a piece that explains, and `GRAPHIC` every piece. Each rule says apart what can be judged from the content's text and what only the drawn page shows. The rules bind on a piece only once its content is something rules bind on. Until then they guide whoever designs or judges a piece. One rule, on how a page's differences show, narrows a reason the founding record gives for colour.
 
 ## Context
 
@@ -22,11 +22,11 @@ A piece's content is a plain data file, and rules bind only on artefacts. Making
 
 ## Decision
 
-**The capability ships the principles of visual communication as two method rule sets. `COMM` judges whether a piece says the right thing, and `GRAPHIC` whether it looks right. Each rule is taken from the established canon of its field, and this record names its source, or, for `RS-GRAPHIC-008`, on running text, [visual-communication:DEC-046-faults-lower-grades] does (refinement per that record, point 7). `COMM` judges only a piece that explains, and `GRAPHIC` every piece. Each rule says apart what the content's text shows and what only the drawn page shows. The sets bind on nothing until a piece's content is an artefact.**
+**The capability ships the principles of visual communication as two method rule sets. `COMM` judges whether a piece says the right thing, and `GRAPHIC` whether it looks right. Each rule is taken from the established canon of its field, and this record names its source, or, for `RS-GRAPHIC-008`, on running text, [visual-communication:DEC-046-faults-lower-grades] does (refinement per that record, point 7), and, for `RS-GRAPHIC-009`, on leaders, [visual-communication:DEC-069-leaders-and-layers] does (refinement per that record, point 8). `COMM` judges only a piece that explains, and `GRAPHIC` every piece. Each rule says apart what the content's text shows and what only the drawn page shows. The sets bind on nothing until a piece's content is an artefact.**
 
 ### 1. The rules are the canon's, and a project adds its own
 
-The shipped rules are known principles of good design, which no project wants the opposite of. Each is taken from a source this record names, or, for `RS-GRAPHIC-008`, from one [visual-communication:DEC-046-faults-lower-grades] names (refinement per that record, point 7). A talk or a project that shows a rule at work confirms it, and is never its source. A project adds its own rules on top, in a set of its own that inherits these (COR-051 point 7).
+The shipped rules are known principles of good design, which no project wants the opposite of. Each is taken from a source this record names, or, for `RS-GRAPHIC-008`, from one [visual-communication:DEC-046-faults-lower-grades] names (refinement per that record, point 7), or, for `RS-GRAPHIC-009`, from one [visual-communication:DEC-069-leaders-and-layers] names (refinement per that record, point 8). A talk or a project that shows a rule at work confirms it, and is never its source. A project adds its own rules on top, in a set of its own that inherits these (COR-051 point 7).
 
 What the sets leave to others:
 - **The look** is the libraries': a brand's values, a component's form and a notation's concepts.
@@ -56,7 +56,7 @@ The line is data visualisation's own, between explanatory and exploratory work (
 
 Each rule names two parts:
 - **From the text:** what can be judged from the content's text alone, such as whether a lead answers its title.
-- **On the drawn page:** what only the page as drawn shows, such as whether the eye finds the point first.
+- **On the drawn page:** what only the page as drawn shows, such as whether a page's focal point stands above the rest, as `RS-GRAPHIC-001` asks (refinement per [visual-communication:DEC-068-focal-point-in-the-content] point 1).
 
 A part may be empty, where the rule needs only the text or only the drawing. A reviewer that reads only the text then knows which part it can judge, and which needs the drawn pages. How a review at the merge treats the part only the drawing shows is that review's question ([project-kit#2676](https://github.com/aleskalfas/project-kit/issues/2676)).
 
@@ -64,16 +64,16 @@ A part may be empty, where the rule needs only the text or only the drawing. A r
 
 - **Method sets, with no scope.** Both are method rule sets of the capability, which take no scope (COR-051 point 2). Their rules bind only on an artefact, and only through a set of the project's own that inherits them.
 - **Not before a piece's content is an artefact.** Until then, an accepted rule of these sets binds on no piece.
-- **Read from the sets.** Whoever designs or judges a piece by these rules reads them from the sets, never from a copy in an agent's instructions. While they bind nothing, they guide, and bind no one. Which agents take them up is the record of the capability's agents' ([project-kit#2584](https://github.com/aleskalfas/project-kit/issues/2584)). A project's bar may end the designer's loop by the grades the review gives on these rules, where points 9 and 10 of [visual-communication:DEC-042-grades-bar-and-loop] let it, which binds them on no artefact (refinement per that record, point 8).
+- **Read from the sets.** Whoever designs or judges a piece by these rules reads them from the sets, never from a copy in an agent's instructions. While they bind nothing, they guide, and bind no one. Which agents take them up is the record of the capability's agents' ([project-kit#2584](https://github.com/aleskalfas/project-kit/issues/2584)).
 - **A break informs.** While a rule binds nothing, a break of it that an agent reports is a finding that informs, which holds nothing. The rule-set reviewer treats a break of a rule that binds nothing the same way (COR-057 point 1, "Rules that bind nothing").
 - **Not a loaded set.** The capability's one loaded set is `VIS` (COR-070 point 1). A loaded set binds on a session's work, with no opt-out, and no reviewer of a change reads it.
 
 ### 6. A page makes one point, and the pages tell the story in order
 
 These rules judge what a piece says, page by page and across its pages.
-- **`RS-COMM-001`, a page makes one point, and shows it.** Sources: Michael Alley's assertion-evidence approach (*The Craft of Scientific Presentations*); Barbara Minto's vertical logic, each part supporting the one above it (*The Pyramid Principle*).
+- **`RS-COMM-001`, a page makes one point, and shows it.** Sources: Michael Alley's assertion-evidence approach (*The Craft of Scientific Presentations*); Barbara Minto's vertical logic, each part supporting the one above it (*The Pyramid Principle*). [visual-communication:DEC-068-focal-point-in-the-content], the rule's origin, gives the reasons for what a page's title and its lead are, for the pages it judges, and for what it says of a page whose title states its point (refinement per that record, points 4, 7 and 10).
 - **`RS-COMM-002`, the big picture comes first.** Sources: Barbara Minto's pyramid principle, the answer before its arguments and their detail; Ben Shneiderman's "overview first, zoom and filter, then details on demand". For something new to the audience: David Ausubel's advance organisers, "the most important single factor influencing learning is what the learner already knows"; Dedre Gentner's structure-mapping theory of analogy (1983).
-- **`RS-COMM-003`, the pages tell the story in order.** Source: Barbara Minto's horizontal logic, where the headings alone, in order, carry the argument.
+- **`RS-COMM-003`, the pages tell the story in order.** Sources: Barbara Minto's horizontal logic, where the headings alone, in order, carry the argument; Nancy Duarte's shape of a story, between what is and what could be (*Resonate*). [visual-communication:DEC-068-focal-point-in-the-content], the rule's origin, gives the reasons for the orders it names, for the pages it reads, and for where a page placed by its kind stands (refinement per that record, point 7).
 
 ### 7. The words fit the audience, and each fact names its source
 
@@ -81,16 +81,16 @@ These rules judge how a piece says it.
 - **`RS-COMM-004`, the words fit the audience.** Sources: audience analysis, the first rule of rhetoric and of technical writing; ISO 24495-1 (2023), plain language. A concrete limit, such as the words in a sentence, is a project's taste (point 1).
 - **`RS-COMM-005`, each fact names its source.** Sources: Edward Tufte's principles of analytical design, "thoroughly describe the evidence" (*Beautiful Evidence*); attribution in journalism.
 
-### 8. The eye finds the point first, and sees what belongs together
+### 8. What shows the point stands out, and what belongs together is seen as one
 
-These rules judge what a reader sees first, and what as one.
-- **`RS-GRAPHIC-001`, one focal point.** Sources: visual hierarchy, and the designer's squint test. `COMM` asks whether a page says its point, and this rule whether the eye finds it first.
+These rules judge what stands out on a page, and what is seen as one (refinement per [visual-communication:DEC-068-focal-point-in-the-content] point 1).
+- **`RS-GRAPHIC-001`, one focal point.** Sources: visual hierarchy, and the designer's squint test; Adam Wathan and Steve Schoger's primary, secondary and tertiary actions (*Refactoring UI*). `COMM` asks whether a page says its point, and this rule whether the page's head, its focal point and the action it asks stand above the rest. [visual-communication:DEC-068-focal-point-in-the-content], the rule's origin, gives the reasons for that, and for the source it adds (refinement per that record, points 1 to 4).
 - **`RS-GRAPHIC-002`, what belongs together is grouped and lined up.** Sources: the Gestalt principles of proximity and connection; Robin Williams' proximity and alignment (*The Non-Designer's Design Book*). Lining parts up to a page's grid is mostly the layouts' work, so the rule's judgement is mostly which parts belong together. Whether parts that belong together were given a shared line is the rule's too, and whether parts given one lie on it is the reviewer's fault of alignment, which cites the rule (refinement per [visual-communication:DEC-046-faults-lower-grades] point 3).
 
 ### 9. Nothing extra, and one meaning one look
 
 These rules judge what a page holds.
-- **`RS-GRAPHIC-003`, nothing extra.** Sources: Edward Tufte's chartjunk; Richard Mayer's coherence principle. The rule speaks of a page's job, not its message, so it fits a piece that does not explain too, such as a board's empty areas.
+- **`RS-GRAPHIC-003`, nothing extra.** Sources: Edward Tufte's chartjunk; Richard Mayer's coherence principle. The rule speaks of a page's job, not its message, so it fits a piece that does not explain too, such as a board's empty areas. [visual-communication:DEC-068-focal-point-in-the-content], the rule's origin, gives the reasons for what it says of decoration, a piece's mark and the page's frame (refinement per that record, points 4 and 6).
 - **`RS-GRAPHIC-004`, the same meaning looks the same.** Sources: Robin Williams' repetition; Jakob Nielsen's "consistency and standards"; design systems. The rule leaves a new message free of the picture of the one before, so consistency never costs a page its own message.
 
 ### 10. Everyone can read it, where it is shown
@@ -103,7 +103,9 @@ These rules judge who can read a page.
 
 **`RS-GRAPHIC-007`** judges a page's differences against its content's: a difference added, or one dropped. A picture fails that adds a difference the content lacks, such as five unrelated hues on one chain. So does one that drops a difference the content has, such as equal bars for a narrowing.
 
-Sources: Jock Mackinlay's expressiveness and effectiveness (*Automating the Design of Graphical Presentations of Relational Information*, 1986); Jacques Bertin's visual variables (*Sémiologie graphique*, 1967). Expressiveness asks that a picture show all the facts and no others. Effectiveness gives the most important fact the variable the eye reads best. Bertin's hue is selective, never ordered: the eye splits items of five hues into five groups.
+Sources: Jock Mackinlay's expressiveness and effectiveness (*Automating the Design of Graphical Presentations of Relational Information*, 1986); Jacques Bertin's visual variables (*Sémiologie graphique*, 1967); Richard Mayer's signalling principle (*Multimedia Learning*). Expressiveness asks that a picture show all the facts and no others. Effectiveness gives the most important fact the variable the eye reads best. Bertin's hue is selective, never ordered: the eye splits items of five hues into five groups.
+
+[visual-communication:DEC-068-focal-point-in-the-content], the rule's origin, gives the reasons for what it says of a difference and of where the strongest goes, and for the source it adds (refinement per that record, point 5).
 
 **What it narrows.** The founding record says that a colour says what a thing is, not where it sits (DEC-001, "Why options are declared, and colour follows meaning"). On a page whose point is an order, the order is what the page says. There the parts of the items that show the order do not take each concept's hue: they share one colour, or step in one shade. Each concept keeps its colour on a mark of its own, such as its icon.
 
@@ -113,7 +115,7 @@ Sources: Jock Mackinlay's expressiveness and effectiveness (*Automating the Desi
 
 **Why the canon, and not a project's taste.** No project wants a page without a point, or a colour only some readers can tell apart. A principle that holds for every audience is know-how the capability carries, as its founding record says (DEC-001 point 1). A project's taste, such as a word limit, holds for its own audience alone, so it stays the project's (COR-014).
 
-**Why the reasons live in a record.** Each rule rests on a source and a judgement longer than a line, and a record holds such a reason (COR-051 point 5). An origin in the decider's own words would read, to an adopter, as one person's say. The canon behind it would then have no home. A point per group of rules lets each rule anchor to its reason, so a change to the reason flags the rule. The record gives each rule's id, title, sources and reason, or, for `RS-GRAPHIC-008`, [visual-communication:DEC-046-faults-lower-grades] does, and the rule's statement is its set's.
+**Why the reasons live in a record.** Each rule rests on a source and a judgement longer than a line, and a record holds such a reason (COR-051 point 5). An origin in the decider's own words would read, to an adopter, as one person's say. The canon behind it would then have no home. A point per group of rules lets each rule anchor to its reason, so a change to the reason flags the rule. This record gives each rule's id, title and sources, but `RS-GRAPHIC-008`'s, which [visual-communication:DEC-046-faults-lower-grades] gives, and `RS-GRAPHIC-009`'s, which [visual-communication:DEC-069-leaders-and-layers] gives. The record a rule names as its origin gives its reasons, with the records it cites, and the rule's statement is its set's (refinement per [visual-communication:DEC-068-focal-point-in-the-content] point 8).
 
 **Why two sets.** A finding that names its kind of failure tells its reader what to mend. One set would mix "the lead does not answer the title" with "the title is too small to read".
 
@@ -130,13 +132,13 @@ Sources: Jock Mackinlay's expressiveness and effectiveness (*Automating the Desi
 **Why the form rule has a point of its own.** It overlaps others: one focal point already fails five equal bars, and colour never alone already asks for a second sign of a kind. Its test of a difference added or dropped is its own, and no other rule asks it. A point of its own lets a change to that test flag this rule alone.
 
 **Why the form rule's wording.**
-- **What a reader takes for meaning,** not every difference: a page's grid and its type sizes differ everywhere, and mean nothing.
-- **Emphasis where the page's point needs it,** or its job on a page with no single point.
+- **What a reader takes for meaning,** not every difference: a page's grid and its type sizes differ everywhere, and mean nothing. A reader takes a difference for meaning where it sets apart parts the content gives as alike (refinement per [visual-communication:DEC-068-focal-point-in-the-content] point 5).
+- **Emphasis where the page's point, or the action the page asks, needs it,** or its job on a page with no single point, and the strongest difference to what the point is about or to that action, or to what that job needs most (refinement per [visual-communication:DEC-068-focal-point-in-the-content] point 5).
 - **Kinds never by hue alone,** as `RS-GRAPHIC-006` asks, and by a line style too, as that rule allows.
 - **An order by more than shade,** since steps of one shade collapse under high contrast and forced colours. Position, size, numbering and arrows carry an order too.
 - **A quantity by the most exact variable the page allows:** position or length first, angle or area where neither serves, as Mackinlay ranks them.
 - **The concept's colour kept on a mark,** so an item still says what it is (`RS-GRAPHIC-004`), while the parts that show the order show it.
-- **The frame left out,** since a title bar and a footer are the same on every page. A picture made elsewhere, such as a screenshot, holds differences the piece cannot change.
+- **The frame left out,** as `RS-GRAPHIC-003` defines it, since its differences carry none of the content's (refinement per [visual-communication:DEC-068-focal-point-in-the-content] point 4). A picture made elsewhere, such as a screenshot, holds differences the piece cannot change.
 
 **Why the form rule narrows a reason, and leaves the model.** The model already lets content point a part at another role, so a piece can meet the rule today. A change to how the engine resolves colour would rest on a judgement the engine cannot make: what a page's point is. So the rule narrows the principle behind the model, and the model stays.
 
@@ -157,7 +159,7 @@ Sources: Jock Mackinlay's expressiveness and effectiveness (*Automating the Desi
 
 ## Implications
 
-- **The capability ships two method rule sets** in its rule-sets folder, `COMM` and `GRAPHIC`. Each rule cites this record as its origin, but `RS-GRAPHIC-008`, whose origin is [visual-communication:DEC-046-faults-lower-grades] (refinement per that record, point 7), and anchors to the points it rests on. The rules are accepted with this record. In a project that installs the capability, both names join the names of its rule sets, which are unique (COR-051 point 3).
+- **The capability ships two method rule sets** in its rule-sets folder, `COMM` and `GRAPHIC`. Each rule cites as its origin this record, or the record that gives the reasons for its words, and anchors to the points it rests on (refinement per [visual-communication:DEC-046-faults-lower-grades] point 7 and [visual-communication:DEC-068-focal-point-in-the-content] point 8). Each rule is accepted with the record it cites as its origin (refinement per [visual-communication:DEC-068-focal-point-in-the-content] point 8). In a project that installs the capability, both names join the names of its rule sets, which are unique (COR-051 point 3).
 - **Edits to accepted records,** made once this record is accepted, in the change that proposes it (COR-066 point 5):
   - **The founding record's Rationale,** "Why options are declared, and colour follows meaning." Its sentence that a colour says what a thing is, not where it sits, gains its limit: on a page whose point is an order, the parts that show the order show the order, and each concept keeps its colour on a mark of its own (refinement per this record, point 11).
   - **The founding record's Implications.** Its list of what is left to later records no longer names the rules of good visual communication with their reasons (refinement per this record).

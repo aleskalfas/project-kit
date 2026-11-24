@@ -1,4 +1,4 @@
-"""`pkit visual intent <piece>` (visual-communication DEC-042 point 4, #3223).
+"""`pkit visual intent <piece>` (visual-communication DEC-070 point 5, #3223).
 
 Held here:
 

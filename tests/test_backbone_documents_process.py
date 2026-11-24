@@ -218,6 +218,7 @@ PROCESS_STATUS = Contract(
                 "legal_moves[].trigger": "str",
                 "legal_moves[].allowed": "bool",
                 "legal_moves[].indeterminate": "bool",
+                "legal_moves[].needs_actor": "bool",
                 "legal_moves[].reason": "str",
                 "legal_moves[].stderr_tail": "str|null",
                 "legal_moves[].why": "str|null",

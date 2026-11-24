@@ -54,7 +54,13 @@ def exports_with_copy(**fields: Any) -> dict[str, Any]:
 def test_each_kind_has_its_pair_and_the_shared_definitions_and_the_document_stand_alone() -> None:
     names = {path.name for path in SCHEMAS.iterdir()}
     wanted = {f"{kind}{suffix}" for kind in files.KINDS for suffix in (".yaml", ".schema.json")}
-    alone = {"defs.schema.json", "values.schema.json", "values-2.schema.json", ".gitkeep"}
+    alone = {
+        "defs.schema.json",
+        "values.schema.json",
+        "values-2.schema.json",
+        "look-report.schema.json",
+        ".gitkeep",
+    }
     assert names == wanted | alone
 
 
@@ -353,72 +359,16 @@ def test_the_configuration_refuses_a_browser_that_names_no_path(browser: object)
 
 
 @pytest.mark.parametrize(
-    "bar",
+    ("key", "value"),
     [
-        {"covers": ["COMM@1", "GRAPHIC@2"], "at-least": "professional"},
-        {"covers": ["RS-COMM-003@1"], "at-least": "excellent"},
+        ("bar", {"covers": ["COMM@2"], "at-least": "professional"}),
+        ("bounds", {"to-the-bar": 5, "polish": 2}),
     ],
 )
-def test_the_configuration_takes_a_bar(bar: object) -> None:
-    assert refused({**instance("config"), "bar": bar}, "config") == []
-
-
-@pytest.mark.parametrize(
-    "bar",
-    [
-        {"covers": ["COMM@1"], "at-least": "competent"},
-        {"covers": ["COMM@1"], "at-least": "below competent"},
-        {"covers": ["COMM@1"], "at-least": "good"},
-        {"covers": ["COMM@1"]},
-        {"at-least": "professional"},
-        {"covers": [], "at-least": "professional"},
-        {"covers": ["COMM@1", "COMM@1"], "at-least": "professional"},
-        {"covers": ["COMM"], "at-least": "professional"},
-        {"covers": ["comm@1"], "at-least": "professional"},
-        {"covers": ["COMM@01"], "at-least": "professional"},
-        {"covers": ["RS-COMM@1"], "at-least": "professional"},
-        {"covers": "COMM@1", "at-least": "professional"},
-        {"covers": ["COMM@1"], "at-least": "professional", "rounds": 3},
-        [{"covers": ["COMM@1"], "at-least": "professional"}],
-        "professional",
-        None,
-    ],
-)
-def test_the_configuration_refuses_another_shape_of_bar_or_a_grade_below_professional(
-    bar: object,
-) -> None:
-    assert refused({**instance("config"), "bar": bar}, "config") != []
-
-
-def test_the_bounds_default_in_the_schema_is_five_rounds_to_the_bar_and_two_of_polish() -> None:
-    schema = json.loads((SCHEMAS / "config.schema.json").read_text(encoding="utf-8"))
-    bounds = schema["properties"]["bounds"]
-    assert bounds["default"] == {"to-the-bar": 5, "polish": 2}
-    assert bounds["properties"]["to-the-bar"]["default"] == 5
-    assert bounds["properties"]["polish"]["default"] == 2
-
-
-def test_the_bounds_are_no_part_of_the_bar() -> None:
-    bar = {"covers": ["COMM@1"], "at-least": "professional", "to-the-bar": 5}
-    assert refused({**instance("config"), "bar": bar}, "config") != []
-    assert refused({**instance("config"), "bounds": {"to-the-bar": 3, "polish": 0}}, "config") == []
-
-
-@pytest.mark.parametrize(
-    "bounds",
-    [
-        {"to-the-bar": 0},
-        {"to-the-bar": -1},
-        {"polish": -1},
-        {"polish": 1.5},
-        {"to-the-bar": "5"},
-        {"rounds": 5},
-        5,
-        None,
-    ],
-)
-def test_the_configuration_refuses_bounds_of_another_shape(bounds: object) -> None:
-    assert refused({**instance("config"), "bounds": bounds}, "config") != []
+def test_the_configuration_holds_no_bar_and_no_bounds_of_the_loop(key: str, value: object) -> None:
+    """The person makes the ship call, so no bar ends the designer's loop and no bounds count
+    its rounds (DEC-070 points 1 and 2)."""
+    assert refused({**instance("config"), key: value}, "config") != []
 
 
 @pytest.mark.parametrize(
