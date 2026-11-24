@@ -1,0 +1,12 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-056, proposed, decides how content names a file of the repository by its
+  path (#3208). A component may mark a field as holding a path, or a list of
+  paths, and the check fails a path that names no file version control lists.
+  A path is a citation readers see, not an anchor. The deck's slide takes a
+  list of paths, `documents`, the documents behind it, which the deck marks
+  and its own drawing shows with no label. The mark, the slot, the deck's
+  drawing, the check's findings and the capability's pages follow once the
+  record is accepted, with the changeset the libraries' release asks for. No
+  surface moves here.
