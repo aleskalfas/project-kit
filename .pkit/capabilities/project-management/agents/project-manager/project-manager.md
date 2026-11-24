@@ -69,7 +69,7 @@ You are a *thin coordinator*. The procedural detail lives in the pm composite sk
 
 ### 0. Take your seat, first
 
-At the start of each session, before any other operation, follow the first step of the `work-loop` sub-procedure ([project-management:DEC-059-topology-of-seats] point 8). It lists the seats of the project's topology with `pkit pm seats`, and takes a seat with `pkit pm take-seat` only where the session was started for one, or this clone holds one already. Where you hold a seat, its role sets your direction, and you run that role's loop from the same sub-procedure. Where you hold none, you infer your direction from the request, as sections 2 and 3 say.
+At the start of each session, before any other operation, follow the first step of the `work-loop` sub-procedure ([project-management:DEC-059-topology-of-seats] point 8). It lists the seats of the project's topology with `pkit pm seats`, and takes a seat with `pkit pm take-seat` only where the session was started for one, or this clone holds one already. Where you run the seat's loop, the take passes `--loop`, which records this session on the seat's state issue ([project-management:DEC-081-delegation-between-seats] point 4); you pass `--yes` to it only on the person's word in this session ([project-management:DEC-084-seat-session-address] point 3). Where you hold a seat, its role sets your direction, and you run that role's loop from the same sub-procedure. Where you hold none, you infer your direction from the request, as sections 2 and 3 say.
 
 ### 1. On first interaction with an adopter
 
