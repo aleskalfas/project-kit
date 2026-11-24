@@ -17,9 +17,14 @@ checkout's among them. It then reads, from outside the session, whether each
 file changed, so the verdict rests on the file system, not on the agent's word.
 
 For each fact it prints what it found, under a header that gives the harness
-release and the platform. Where a fact needs the person themselves, such as a
-terminal in an editor, it tells the person what to do and records their answer.
-Facts it cannot check black box are left out, and named in the report on #3429.
+release and the platform. Where a fact needs the person in an interactive
+session, it makes a further folder for it, whose settings turn the sandbox on,
+deny `git reset --hard` and log each call a hook is given, and names the
+commands the person types in a session started there. Each acts only in that
+folder and leaves what it found there, which the probe reads, so the person
+copies nothing, save the lines a session showed where the file system cannot
+tell what stopped a command. Facts it cannot check black box are left out, and
+named in the report on #3429.
 
 Exit: 0 the precondition holds, 1 it is disproved (a settings file in or above
 the working folder was reached, so a later record supersedes ADR-095 whole),
@@ -38,10 +43,12 @@ import json
 import os
 import platform
 import secrets
+import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from types import ModuleType
 from typing import Any, NamedTuple
@@ -74,6 +81,25 @@ HOLDS, DISPROVED, REFUSED, INCONCLUSIVE = 0, 1, 2, 3
 #: What each file a sandboxed command tries to write holds before the session
 #: runs. It never holds the run's token, so only a write that lands puts it there.
 SEED = b"seed\n"
+
+#: The marks a shell-mode command's process and a multiplexer's session may
+#: carry: the session anchor, the harness's mark, and a child session's mark.
+MARKS = ("CLAUDE_PROJECT_DIR", "CLAUDECODE", "CLAUDE_CODE_CHILD_SESSION")
+
+#: The command the person types in shell mode, and the native deny on it that
+#: the terminal folder's settings carry.
+RESET = "git reset --hard"
+RESET_DENY = f"Bash({RESET}:*)"
+
+#: What the terminal folder's tracked file holds committed, and the change the
+#: probe leaves in it, which only a reset that ran discards.
+COMMITTED, UNCOMMITTED = "committed\n", "uncommitted\n"
+
+#: The line the stand-in hook writes after each call it logs.
+CALL_END = "--- pkit probe: end of call ---"
+
+#: How long the probe waits for a multiplexer's session to write its marks.
+MULTIPLEXER_WAIT_SECONDS = 10
 
 
 class Target(NamedTuple):
@@ -405,55 +431,414 @@ def _identity(path: Path) -> tuple[int, int] | None:
     return (info.st_dev, info.st_ino)
 
 
-def ask_person(answers: dict[str, Any]) -> None:
-    """The facts no session can show, which the person reads from their own
-    terminal. The probe tells them what to run and records what they paste."""
-    print("\n--- facts that need you at a terminal ---")
-    print("Answer each, or press Enter on an empty line to skip it.\n")
-    questions = [
-        (
+class Terminal(NamedTuple):
+    """The folder the person starts an interactive session in, and the files in
+    it the probe reads afterwards."""
+
+    folder: Path
+    marks: Path  # the script that writes the marks its process carries
+    multiplexer: Path  # the script that starts a multiplexer's session
+    hook_log: Path  # each call the stand-in hook was given
+    tracked: Path  # the committed file a reset that runs restores
+
+    def marks_file(self, where: str) -> Path:
+        return self.folder / f"marks-{where}.txt"
+
+
+def make_terminal(root: Path, token: str) -> Terminal:
+    """The folder for the facts a person shows from an interactive session: a
+    repository whose one tracked file carries a change only a reset discards,
+    whose settings turn the sandbox on, deny `RESET`, and register a hook that
+    logs each call it is given and decides nothing, a stand-in for the
+    permission hook; and the scripts the person runs there in shell mode, each
+    of which writes what it finds into the folder for the probe to read."""
+    folder = root / "terminal"
+    folder.mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(folder)], check=True)
+    tracked = folder / "tracked.txt"
+    tracked.write_text(COMMITTED, encoding="utf-8")
+    # A throwaway repository outside every working tree: its one commit needs
+    # no identity or key of the person's, and runs none of their hooks.
+    git = [
+        "git",
+        "-C",
+        str(folder),
+        "-c",
+        "user.name=pkit probe",
+        "-c",
+        "user.email=probe@example.invalid",
+        "-c",
+        "commit.gpgsign=false",
+    ]
+    subprocess.run([*git, "add", "tracked.txt"], check=True)
+    subprocess.run([*git, "commit", "-q", "--no-verify", "-m", "the probe's commit"], check=True)
+    tracked.write_text(UNCOMMITTED, encoding="utf-8")
+
+    terminal = Terminal(
+        folder=folder,
+        marks=folder / "marks.sh",
+        multiplexer=folder / "multiplexer.sh",
+        hook_log=folder / "hook-calls.log",
+        tracked=tracked,
+    )
+    hook = folder / ".claude" / "hooks" / "log-call.sh"
+    hook.parent.mkdir(parents=True)
+    for path, text in (
+        (terminal.marks, marks_script(folder)),
+        (terminal.multiplexer, multiplexer_script(folder, terminal.marks, f"pkit-probe-{token}")),
+        (hook, hook_script(terminal.hook_log)),
+    ):
+        path.write_text(text, encoding="utf-8")
+    settings = {
+        "permissions": {"deny": [RESET_DENY]},
+        "sandbox": {"enabled": True, "failIfUnavailable": True, "autoAllowBashIfSandboxed": True},
+        "hooks": {
+            "PreToolUse": [
+                {
+                    "matcher": "*",
+                    "hooks": [{"type": "command", "command": f"sh {shlex.quote(str(hook))}"}],
+                }
+            ]
+        },
+    }
+    (folder / ".claude" / "settings.json").write_text(
+        json.dumps(settings, indent=2) + "\n", encoding="utf-8"
+    )
+    return terminal
+
+
+def marks_script(folder: Path) -> str:
+    """A script that writes which of `MARKS` its process carries, each on a line
+    of its own, so one unset is told from one set and empty, into the file its
+    argument names in `folder`."""
+    report = [
+        f'  if [ -n "${{{name}+set}}" ]; then printf \'%s=%s\\n\' {name} "${name}"; '
+        f"else printf '%s unset\\n' {name}; fi"
+        for name in MARKS
+    ]
+    return "\n".join(
+        [
+            "#!/bin/sh",
+            "# Writes which of the harness's marks this process carries, one line each:",
+            "# NAME=value where set, nothing after the = where set and empty, NAME unset",
+            "# where not.",
+            'case "$1" in shell-mode|multiplexer) ;; *) exit 2 ;; esac',
+            f'out={shlex.quote(str(folder))}/marks-"$1".txt',
+            "{",
+            *report,
+            '} > "$out"',
+            "",
+        ]
+    )
+
+
+def multiplexer_script(folder: Path, marks: Path, session: str) -> str:
+    """A script that starts, from the shell it runs in, a detached multiplexer
+    session named `session`, whose one command runs the marks script; and
+    writes which multiplexer it used, whether tmux's server ran already, and
+    whether the session started."""
+    quoted = shlex.quote(str(folder))
+    inner = shlex.quote(f"sh {shlex.quote(str(marks))} multiplexer")
+    return "\n".join(
+        [
+            "#!/bin/sh",
+            "# Starts, from the shell it runs in, a detached multiplexer session whose one",
+            "# command writes the marks that session carries.",
+            f"out={quoted}/multiplexer.txt",
+            f"errors={quoted}/multiplexer-errors.txt",
+            f"inner={inner}",
+            "if command -v tmux >/dev/null 2>&1; then",
+            "  if tmux list-sessions >/dev/null 2>&1; then running=yes; else running=no; fi",
+            '  printf \'multiplexer=tmux\\nserver_already_running=%s\\n\' "$running" > "$out"',
+            f'  if tmux new-session -d -s {session} "$inner" 2> "$errors"; then started=yes; '
+            "else started=no; fi",
+            "elif command -v screen >/dev/null 2>&1; then",
+            "  # Each screen session is a process of its own, with no server shared.",
+            "  printf 'multiplexer=screen\\nserver_already_running=none\\n' > \"$out\"",
+            f'  if screen -dmS {session} sh -c "$inner" 2> "$errors"; then started=yes; '
+            "else started=no; fi",
+            "else",
+            "  printf 'multiplexer=none\\n' > \"$out\"",
+            "  started=no",
+            "fi",
+            'printf \'started=%s\\n\' "$started" >> "$out"',
+            "",
+        ]
+    )
+
+
+def hook_script(log: Path) -> str:
+    """The stand-in for the permission hook: it appends each call it is given to
+    `log`, ending each with `CALL_END`, and decides nothing."""
+    return "\n".join(
+        [
+            "#!/bin/sh",
+            "# The probe's stand-in for the permission hook: it logs each call it is",
+            "# given, and decides nothing.",
+            f"log={shlex.quote(str(log))}",
+            'cat >> "$log"',
+            f"printf '\\n%s\\n' {shlex.quote(CALL_END)} >> \"$log\"",
+            "",
+        ]
+    )
+
+
+def read_marks(path: Path) -> dict[str, str | None] | None:
+    """What the marks script wrote: each mark's value, `""` where it was set and
+    empty, None where it was unset. None where the script wrote no file."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    marks: dict[str, str | None] = {}
+    for line in text.splitlines():
+        for name in MARKS:
+            if line.startswith(name + "="):
+                marks[name] = line[len(name) + 1 :]
+            elif line == f"{name} unset":
+                marks[name] = None
+    return marks
+
+
+def describe_marks(marks: dict[str, str | None]) -> str:
+    """Each mark apart, unset told from set and empty."""
+    parts: list[str] = []
+    for name in MARKS:
+        if name not in marks:
+            parts.append(f"{name} not reported")
+        elif marks[name] is None:
+            parts.append(f"{name} unset")
+        elif marks[name] == "":
+            parts.append(f"{name} set and empty")
+        else:
+            parts.append(f"{name}={marks[name]!r}")
+    return ", ".join(parts)
+
+
+def read_calls(log: Path) -> list[dict[str, Any]]:
+    """Each call the stand-in hook was given, oldest first: its tool and, for a
+    shell call, its command."""
+    try:
+        text = log.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    calls: list[dict[str, Any]] = []
+    for chunk in text.split(CALL_END):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        try:
+            given = json.loads(chunk)
+        except ValueError:
+            calls.append({"tool": None, "command": None, "raw": chunk})
+            continue
+        given = given if isinstance(given, dict) else {}
+        tool_input = given.get("tool_input")
+        command = tool_input.get("command") if isinstance(tool_input, dict) else None
+        calls.append({"tool": given.get("tool_name"), "command": command})
+    return calls
+
+
+def reset_ran(tracked: Path) -> bool | None:
+    """Whether a reset discarded the probe's change: True where the tracked file
+    holds its committed content again, False where the change is still there,
+    None where it holds anything else or is gone."""
+    try:
+        text = tracked.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    return {COMMITTED: True, UNCOMMITTED: False}.get(text)
+
+
+class Step(NamedTuple):
+    """One thing the person does in the interactive session, as printed."""
+
+    key: str
+    lines: list[str]
+
+
+def terminal_steps(terminal: Terminal) -> list[Step]:
+    """What the person does, each command exactly as they type it. Every command
+    acts only in the probe's folder, wherever it is typed."""
+    folder = shlex.quote(str(terminal.folder))
+    return [
+        Step(
+            "start",
+            [
+                "1. In another terminal, start a session in the probe's folder, and trust the",
+                "   folder when it asks:",
+                f"     cd {folder} && claude",
+                "   Then type this at the session's prompt, so the probe sees that the folder's",
+                "   settings are live (their stand-in hook logs the call):",
+                "     Run `git status` with your Bash tool, and nothing else.",
+            ],
+        ),
+        Step(
             "shell-mode-marks",
             [
-                "In an interactive `claude` session with the sandbox on, enter shell mode with the",
-                "`!` prefix and run:",
-                "  printenv CLAUDE_PROJECT_DIR CLAUDECODE CLAUDE_CODE_CHILD_SESSION; echo rc=$?",
-                "Paste its output. (Which marks a shell-mode command's process carries — ADR-095",
-                "point 6, the gestures' test of the mark.)",
+                "2. At that session's prompt, type this line, whose leading `!` runs it in shell",
+                "   mode:",
+                f"     !sh {shlex.quote(str(terminal.marks))} shell-mode",
+                "   It writes which marks its process carries into the probe's folder.",
             ],
         ),
-        (
+        Step(
             "shell-mode-seen",
             [
-                "In that same shell mode, in a project whose settings carry the native deny",
-                "`Bash(git reset --hard:*)`, type `git reset --hard` and report whether it was",
-                "refused or ran. (Whether the hook and the native rules see a shell-mode command.)",
+                "3. At that session's prompt, type exactly this line, in shell mode:",
+                f"     !cd {folder} && {RESET}",
+                "   It acts only in the probe's folder, where it discards a change the probe left",
+                f"   for it. The folder's settings deny `{RESET_DENY}`, which the harness's",
+                "   documentation has match a subcommand after `&&`. The probe reads whether it",
+                "   ran.",
             ],
         ),
-        (
+        Step(
             "multiplexer-marks",
             [
-                "Start a terminal multiplexer (tmux or screen) FROM a `claude` shell, then run:",
-                "  printenv CLAUDE_PROJECT_DIR CLAUDECODE CLAUDE_CODE_CHILD_SESSION; echo rc=$?",
-                "Paste its output, and say whether the multiplexer's server was already running.",
+                "4. At that session's prompt, type this line, in shell mode:",
+                f"     !sh {shlex.quote(str(terminal.multiplexer))}",
+                "   It starts a detached tmux session (screen where there is no tmux), whose one",
+                "   command writes the marks that session carries. Then close the session.",
             ],
         ),
     ]
-    for key, prompt in questions:
-        print("\n".join(prompt))
-        print("(End your answer with a line containing only a dot.)")
-        lines: list[str] = []
-        while True:
-            try:
-                line = input()
-            except EOFError:
-                break
-            if line.strip() == ".":
-                break
-            if line == "" and not lines:
-                break
-            lines.append(line)
-        answers.setdefault("person", {})[key] = "\n".join(lines)
-        print()
+
+
+def wait_for_step() -> bool | None:
+    """Whether the person did the step: True on Enter, False on `skip`, None on
+    the end of input, which stops the person's part."""
+    print("   Press Enter here once it has run, or type skip.")
+    try:
+        answer = input()
+    except EOFError:
+        return None
+    return answer.strip().lower() != "skip"
+
+
+def read_paste() -> str:
+    """Lines the person pastes, up to a line holding only a dot."""
+    lines: list[str] = []
+    while True:
+        try:
+            line = input()
+        except EOFError:
+            break
+        if line.strip() == ".":
+            break
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def ask_person(terminal: Terminal, answers: dict[str, Any]) -> None:
+    """The facts only an interactive session shows. The person types the commands
+    the probe names, in a session started in the probe's folder, and the probe
+    reads what each left there, so the person copies nothing, save the lines
+    the session showed where the file system cannot tell what stopped a reset."""
+    found: dict[str, Any] = {"folder": str(terminal.folder)}
+    answers["terminal"] = found
+    print("\n--- facts that need you at a terminal ---")
+    print("The probe made a folder for them, outside every working tree. Its settings turn the")
+    print(f"sandbox on, deny `{RESET_DENY}`, and register a hook that logs each call it is given:")
+    print(f"  {terminal.folder}")
+    print("Type each command below in a session started there, never in a project of your own.\n")
+    for step in terminal_steps(terminal):
+        print("\n".join(step.lines))
+        before = len(read_calls(terminal.hook_log))
+        done = wait_for_step()
+        if done is None:
+            print("  (no more input: the rest of the steps were skipped)")
+            return
+        if not done:
+            found[step.key] = {"skipped": True}
+            print("  => skipped\n")
+            continue
+        calls = read_calls(terminal.hook_log)[before:]
+        result = read_step(step.key, terminal, calls, found)
+        found[step.key] = result
+        print(f"  => {result['line']}\n")
+
+
+def read_step(
+    key: str, terminal: Terminal, calls: list[dict[str, Any]], found: dict[str, Any]
+) -> dict[str, Any]:
+    """What one step left in the probe's folder. `calls` are those the stand-in
+    hook was given while the step ran."""
+    hook_live = bool(found.get("start", {}).get("hook_live"))
+    seen = "the hook was given a call while it ran" if calls else "the hook was given no call"
+    if key == "start":
+        live = any(call["tool"] == "Bash" for call in calls)
+        line = (
+            "the folder's settings are live: the hook was given the agent's shell call"
+            if live
+            else "the hook was given no shell call, so the folder's settings were not read "
+            "(was the folder trusted?); what shell mode shows below is inconclusive"
+        )
+        return {"hook_live": live, "calls": calls, "line": line}
+    if key == "shell-mode-marks":
+        marks = read_marks(terminal.marks_file("shell-mode"))
+        line = (
+            "a shell-mode command's process carries: " + describe_marks(marks)
+            if marks is not None
+            else "the marks script wrote nothing, so the command did not run"
+        )
+        return {"marks": marks, "calls": calls, "line": f"{line}; {seen}"}
+    if key == "shell-mode-seen":
+        ran = reset_ran(terminal.tracked)
+        result: dict[str, Any] = {"ran": ran, "calls": calls, "hook_live": hook_live}
+        if ran:
+            line = f"a shell-mode `{RESET}` ran past the native deny `{RESET_DENY}`; {seen}"
+        elif ran is None:
+            line = "the tracked file holds neither its commit nor the change; read it by hand"
+        else:
+            print("   The change is still there, so something stopped the command. Copy the")
+            print(f"   lines the session printed right under your `!cd ... && {RESET}` line,")
+            print("   up to its next prompt, and nothing Claude wrote after them. Paste them here,")
+            print("   then end with a line holding only a dot.")
+            result["shown"] = read_paste()
+            line = f"a shell-mode `{RESET}` did not run (what the session showed is kept); {seen}"
+        if not hook_live:
+            line += " — inconclusive, since the folder's settings were not seen live"
+        result["line"] = line
+        return result
+    return read_multiplexer(terminal, calls)
+
+
+def read_multiplexer(terminal: Terminal, calls: list[dict[str, Any]]) -> dict[str, Any]:
+    """What the multiplexer script left: which multiplexer, whether its server
+    ran already, and the marks its session carries, which it writes a moment
+    after the script returns."""
+    try:
+        written = (terminal.folder / "multiplexer.txt").read_text(encoding="utf-8")
+    except OSError:
+        return {"calls": calls, "line": "the multiplexer script wrote nothing, so it did not run"}
+    started = said(written, ("multiplexer", "server_already_running", "started"))
+    marks = None
+    deadline = time.monotonic() + MULTIPLEXER_WAIT_SECONDS
+    while started.get("started") == "yes":
+        marks = read_marks(terminal.marks_file("multiplexer"))
+        if marks is not None or time.monotonic() > deadline:
+            break
+        time.sleep(0.5)
+    try:
+        errors = (terminal.folder / "multiplexer-errors.txt").read_text(encoding="utf-8").strip()
+    except OSError:
+        errors = ""
+    which = started.get("multiplexer", "none")
+    if which == "none":
+        line = "no tmux or screen was found, so no multiplexer's session was started"
+    elif started.get("started") != "yes":
+        line = f"{which} did not start a session from the shell: {errors or 'no error shown'}"
+    elif marks is None:
+        line = (
+            f"{which} started a session, but it wrote no marks within {MULTIPLEXER_WAIT_SECONDS} s"
+        )
+    else:
+        server = started.get("server_already_running", "none")
+        ran = {"yes": "already running", "no": "started by this command"}.get(server)
+        where = f" (its server {ran})" if ran else ""
+        line = f"a {which} session started from shell mode{where} carries: " + describe_marks(marks)
+    return {"multiplexer": started, "marks": marks, "errors": errors, "calls": calls, "line": line}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -542,7 +927,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         if not args.no_person and sys.stdin.isatty():
-            ask_person(answers)
+            ask_person(make_terminal(root, token), answers)
         elif not args.no_person:
             print("\n(no terminal: the facts that need you were skipped; run again at a terminal)")
 
