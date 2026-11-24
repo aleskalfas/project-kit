@@ -6,16 +6,13 @@ actor: core:ACT-developer
 other-actors:
   - core:ACT-ai-agent
 requirements: []
-shortfalls:
-  - at: 7
-    issue: "#3468"
-    record: visual-communication:DEC-071#1
 pkit:
   friction:
     anchors:
       path:
         - .pkit/capabilities/visual-communication/agents/graphic-design-reviewer.md
         - .pkit/capabilities/visual-communication/agents/graphic-designer.md
+        - .pkit/capabilities/visual-communication/agents/graphic-sketcher.md
         - .pkit/capabilities/visual-communication/scripts/look.py
         - .pkit/capabilities/visual-communication/scripts/render.py
         - .pkit/capabilities/visual-communication/skills/visual-author/build-loop.md
@@ -64,12 +61,8 @@ pkit:
 **Main path:**
 
 1. The developer asks the AI agent for a piece. The developer says who the piece is for, where it is shown, and whether it explains.
-7. For a presentation, the AI agent has a session of its own draw a sketch of every page, outside the engine. The session has only the developer's words, the takeaways and where the piece is shown. It has no method, no library and no brand.
-
-> [!WARNING]
-> **Not built yet:** the AI agent starts no session to draw a sketch, and designs every piece in the engine from the start. [DEC-071 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-071-sketch-and-rebuild.md#1-a-new-presentation-starts-with-a-sketch-which-the-sketch-session-draws) decides that a new presentation starts with a sketch, and #3468 tracks it.
-
-2. The AI agent designs the piece by the rules of visual communication: what each page says, and how it looks. For a presentation, it rebuilds the sketch as the piece by its method, with the brand and the libraries. Where they cannot carry a part, it draws the nearest that keeps the part's meaning. It writes what each page must show into the piece's brief, and the reason for each choice of its design.
+7. For a presentation, the AI agent has a session of its own draw a sketch of every page, outside the engine. The session has only the developer's words, the takeaways and where the piece is shown. It has no method, no design knowledge, no library and no brand.
+2. The AI agent designs the piece by the rules of visual communication: what each page says, and how it looks. For a presentation, it rebuilds the sketch as the piece by its method, with the brand and the libraries. Where they cannot carry a part, it draws the nearest that keeps the part's meaning, and where nothing near keeps it, it stops on that part and says what is missing. It writes what each page must show into the piece's brief, and the reason for each choice of its design.
 3. The system renders the piece, and draws each of its pages as an image, with `pkit visual render` and `pkit visual look`.
 4. A reviewer reads every drawn page, and reports each break of a rule as a finding that names the rule and the page.
 5. The AI agent mends once each fault, each brief finding, each break a rule's text settles, each fact its source contradicts, and each thing the reviewer says a reader cannot make out where the piece is shown, such as a difference told by colour alone. The system draws the piece again, and the reviewer reads every page again.
@@ -104,7 +97,7 @@ What the developer needs here that no accepted record decides yet:
 - **The goal:** the maintainer decided on 31 October, in planning the capability (#2423), that these rules are no project's taste but known principles of good design. In his words as the planning recorded them, nobody wants the opposite, and no adopter should have to write them again. So the capability ships them, each with its source, and adopters add their own on top. The goal rests on the capability carrying its view of good visual communication as rules a reviewer judges ([DEC-001 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#1-what-the-capability-is-for)).
 - **The steps and the guarantees:**
   - **Step 1:** a piece declares who it is for, where it is shown and whether it explains ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)).
-  - **Step 7:** a new presentation, or one redesigned whole, starts with a sketch of every page. A session the designer starts draws it outside the engine, from only the piece's words, its takeaways and where it is shown. The session has no method, no design knowledge, no library and no brand ([DEC-071 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-071-sketch-and-rebuild.md#1-a-new-presentation-starts-with-a-sketch-which-the-sketch-session-draws)). The sketch draws the words as given, with the takeaways the asker's text states ([DEC-071 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-071-sketch-and-rebuild.md#2-the-sketch-draws-the-pieces-words-as-given-and-the-rebuild-puts-them-in-the-content)). It is kept in the agent workspace, and never committed ([DEC-071 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-071-sketch-and-rebuild.md#3-the-sketch-is-kept-in-the-agent-workspace-never-committed)).
+  - **Step 7:** a new presentation, or one redesigned whole, starts with a sketch of every page. A session the designer starts draws it outside the engine, from only the piece's words, its takeaways and where it is shown. The session has no method, no design knowledge, no library and no brand ([DEC-071 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-071-sketch-and-rebuild.md#1-a-new-presentation-starts-with-a-sketch-which-the-sketch-session-draws)). The session's agent is `graphic-sketcher` (`.pkit/capabilities/visual-communication/agents/graphic-sketcher.md`). The sketch draws the words as given, with the takeaways the asker's text states ([DEC-071 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-071-sketch-and-rebuild.md#2-the-sketch-draws-the-pieces-words-as-given-and-the-rebuild-puts-them-in-the-content)). It is kept in the agent workspace, and never committed ([DEC-071 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-071-sketch-and-rebuild.md#3-the-sketch-is-kept-in-the-agent-workspace-never-committed)).
   - **Variants 7a and 7b:** the person may have the designer skip the sketch on any piece. A piece of another kind of work starts with a sketch only on the person's word (DEC-071 point 1).
   - **Step 2:** the capability's designer turns a piece's brief into a piece. It writes the brief's goals and relations from what whoever asked for the piece says, and shows them to that person before it designs against them. It writes a reason for each choice as it designs ([DEC-030 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-030-design-agents.md#2-the-designer-turns-a-brief-into-a-piece)). It names the content's structure before it chooses a form, and makes its choices in the order of the brief's aspects ([DEC-030 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-030-design-agents.md#3-the-designers-method)). The agent is `graphic-designer` (`.pkit/capabilities/visual-communication/agents/graphic-designer.md`).
   - **Step 2, for a presentation:** the designer rebuilds the sketch at once as the piece, by its method, with the piece's brand and the project's libraries. The form is the sketch's, which the rebuild keeps unless it bends the content's meaning ([DEC-071 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-071-sketch-and-rebuild.md#4-the-designer-rebuilds-the-sketch-at-once-by-its-method)). Where nothing the designer may use draws a part as the sketch does, the rebuild draws the nearest that keeps the part's meaning. What was lacking goes to its owner, as a request or a need ([DEC-071 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-071-sketch-and-rebuild.md#5-what-the-rebuild-cannot-carry-is-drawn-as-a-stand-in-and-reaches-its-owner)).
