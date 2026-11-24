@@ -25,14 +25,16 @@ values:
   margin: "=@space.4 * 2"
 
 # The types of what a page says first, so a brand can size them for where the deck is
-# shown, such as larger on a projector, apart from the type of the rest of its text. Each
-# defaults to the shared type the deck drew it in before, so a brand that gives neither
-# draws the deck as it did.
+# shown, such as larger on a projector, apart from the type of the rest of its text. The
+# title defaults to the shared type the deck drew it in before, and the lead to the shared
+# type of running text read before the body, itself the body by default (DEC-072 point 3).
+# So a brand that gives none of them draws the deck as it did.
 tokens:
   # A page's title: the cover's and each slide's.
   title: {type: typography, default: '{type.heading}'}
-  # The line under a title: a slide's lead and the cover's subtitle.
-  lead: {type: typography, default: '{type.body}'}
+  # The line under a title: a slide's lead and the cover's subtitle, which takes its look
+  # alone, and still ranks as a heading under the cover's title.
+  lead: {type: typography, default: '{type.lead}'}
 
 # Every page is as large as the deck asks to be.
 preferred:
