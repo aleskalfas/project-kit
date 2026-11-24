@@ -20,10 +20,9 @@ pkit:
         - .github/workflows/friction-report.yml
         - scripts/friction_report_body.py
         - scripts/friction_tracking_issue.py
-        - mise.dev.toml
-        - .gitignore
         - tests/README.md
         - src/project_kit/router.py
+        - src/project_kit/__init__.py
         - .pkit/rules/project.md
       record: [COR-003, COR-004, COR-013, COR-014, COR-050, "COR-062#1", "COR-062#4", "COR-062#7", "COR-062#10", "COR-066#1", "COR-066#5", PRJ-001, PRJ-004, PRJ-009, PRJ-010, PRJ-015, ADR-019, ADR-039, ADR-055, ADR-067, ADR-068, ADR-078, "ADR-080#5", "project-management:DEC-053", "project-management:DEC-065", "software-engineering:DEC-002#1", "living-docs:DEC-002", "doc-examples:DEC-001"]
       artefact:
@@ -31,6 +30,8 @@ pkit:
         - .pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers
         - .pkit/capabilities/doc-examples/README.md
         - .pkit/capabilities/visual-communication/outputs.md#a-pipelines-drawings
+        - .pkit/cli/README.md#version
+        - .pkit/cli/README.md#standard-flags
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/decisions/README.md#writing-a-record
@@ -210,12 +211,10 @@ Name pages to run only those, such as `uv run python .pkit/capabilities/doc-exam
 
 Name pages to check only those, such as `uv run python scripts/page_contents.py README.md`. The script exits 0 when every list is fresh, when no page holds one, or when `--update` wrote every stale list. It exits 1 on any other finding, and 2 when it cannot start.
 
-**Optional task runner.** A [`mise.dev.toml`](mise.dev.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. mise does not load a file by that name on its own, so switch it on once in your checkout, a new clone or one you already have: link it as `mise.local.toml`, which mise loads and the repository ignores, and trust it, with `ln -s mise.dev.toml mise.local.toml && mise trust mise.local.toml`. A git worktree starts without the link, so link it there too before you run its tasks: a worktree inside your checkout without its own link loads the checkout's, and its tasks run in the checkout, not the worktree. The file is not named `mise.toml`, and no commit holds the link, so a copy of the repository that uv downloads, to install pkit or to run a pinned or candidate release, holds no configuration mise loads on its own. Such a copy is never trusted, and where mise refuses a configuration in it, each tool that mise supplies through its shims, such as `git` or `sed`, fails. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
-
 **Installing `pkit` for multi-checkout development — one install, no separate router.** If you work on several project-kit source checkouts *and* adopter projects at once, the single global install picks the right `pkit` automatically per directory: the installed binary is CWD- and pin-aware (per [ADR-039](tech-docs/architecture/decisions/ADR-039-pkit-entry-point-router.md)). Inside any project-kit source checkout it runs **that checkout's working tree** (delegating to its `.pkit/cli/pkit` dispatcher); in an adopter that pins a version different from the running binary it runs that **pinned version** under `uvx`; everywhere else it runs itself. It's a real executable on PATH, so it works in non-interactive agent shells too (a directory-env hook does *not* — testing confirmed mise's `[env]` venv-activation never applies in those shells). There is no separate shim to install and keep on PATH.
 
-1. **Install** — `mise run pkit:pinned-install`, a task of `mise.dev.toml` that runs once you link the file as `mise.local.toml` and trust it (the task runner above), or `uv tool install git+https://github.com/aleskalfas/project-kit.git` directly. Installs/refreshes the global pkit from main's head and puts `pkit` on PATH via `uv tool dir --bin`. That is the development install, which no version vouches for ([PRJ-004](.pkit/decisions/project/PRJ-004-distribution-channel.md)). To run a release outside your checkouts instead, add its tag, `@v<version>`.
-2. **Verify** — `command -v pkit` should resolve to that bin dir; `mise run pkit:which`, another of its tasks, reports the active binary, its version, and what bare `pkit` runs from this checkout (route 1).
+1. **Install** — `uv tool install --force git+https://github.com/aleskalfas/project-kit.git`. Installs/refreshes the global pkit from main's head and puts `pkit` on PATH via `uv tool dir --bin`. That is the development install, which no version vouches for ([PRJ-004](.pkit/decisions/project/PRJ-004-distribution-channel.md)). To run a release outside your checkouts instead, add its tag, `@v<version>`.
+2. **Verify** — `command -v pkit` should resolve to that bin dir, and [`pkit --version`](.pkit/cli/README.md#version) prints the version of what bare `pkit` runs where you are: inside a checkout, the checkout's own `.pkit/VERSION` (route 1).
 
 Routing happens *before* the CLI loads, so the common path (running self, or execing a checkout) stays cheap. An adopter pin that can't be resolved (offline, missing tag, missing auth, no `uvx`) **degrades loudly to running self** — it never hard-fails a routine command. When the binary it runs is older than the pin, the notice says so. `pkit upgrade` refuses a binary older than the project rather than take the project back to it (#1212), and under that degrade it refuses any binary, older or newer, rather than move the pin to a version it did not resolve. `pkit sync` stops under any binary that is not the project's version. Both are set out in [the lifecycle reference's upgrade flow, "Sync's guard"](.pkit/lifecycle/upgrade-flow.md#syncs-guard-no-path-down-and-no-migration-passed-over) ([ADR-065](tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) points 7 to 9). Escape hatches: `PKIT_NO_ROUTE=1` forces in-process execution; `PKIT_ROUTED=1` is the internal loop guard.
 

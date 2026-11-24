@@ -5,11 +5,8 @@ custom:
 body: >
   Installing pkit from a release, or running one as a project's pinned or
   candidate release, works on a machine where mise supplies `git` or `sed`
-  through its shims, unless mise runs in its paranoid mode with `MISE_ENV=dev`
-  set. The release's download no longer holds the `mise.toml` that mise read
-  there and refused as untrusted. The contributors' configuration it holds
-  instead, `mise.dev.toml`, is read only where `MISE_ENV=dev` is set, and mise
-  asks no trust of it outside its paranoid mode. Releases before this one
-  still hold `mise.toml`: on such a machine,
+  through its shims. The release's download holds no mise configuration: the
+  `mise.toml` that mise read there and refused as untrusted is gone. Releases
+  before this one still hold `mise.toml`: on such a machine,
   `mise settings add ignored_config_paths "$HOME/.cache/uv"` lets uv's
   downloads of them work.

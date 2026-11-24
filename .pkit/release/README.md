@@ -16,7 +16,6 @@ pkit:
         - src/project_kit/remote_refs.py
         - pyproject.toml
         - .changie.yaml
-        - mise.dev.toml
         - .github/workflows/checks.yml
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
@@ -328,23 +327,20 @@ two entries for it.
 
 ### Authoring a changeset
 
-Contributors use **changie** — a dev-only tool provisioned through `mise`
-(`[tools]` in `mise.dev.toml`) and wrapped by `mise run changeset`:
+A contributor writes a changeset by hand, or with **changie**, a dev-only tool
+installed however they choose:
 
 ```
-mise run changeset        # or: changie new
+changie new
 ```
-
-The task runner's setup is under "Optional task runner" in
-[`CONTRIBUTING.md`, "Running checks"](../../CONTRIBUTING.md#running-checks) <!-- unanchored: names the section that sets the task runner up, and an anchor on a page that anchors this one through others would make a cycle -->.
 
 changie's native `component` / `kind` / `body` fields are exactly the schema
 above, and its `fragmentFileFormat` (`.changie.yaml`) names files
 `<component>-<kind>-<timestamp>-<random>.yaml` — the random suffix makes
 **parallel PRs collision-free**. Its `custom:` prompts write the optional
 `category`, `pr` and `requires_backbone` fields (the last a free string —
-`release` or a shipped `X.Y.Z` — which the lint checks). A changeset is equally
-hand-writable: drop a YAML file with the three keys into `.changes/unreleased/`.
+`release` or a shipped `X.Y.Z` — which the lint checks). To write one by hand,
+drop a YAML file with the three keys into `.changes/unreleased/`.
 
 ### changie is adopter-invisible
 
