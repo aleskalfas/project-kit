@@ -57,7 +57,7 @@ Until then a person runs these outside the capability, and records what they fou
 - **The skill carries the judgements.** A composite skill, paired with the commands, asks the method's questions in the method's order where it fixes one, such as the desirability review's, and leaves the order free where it is free, such as the first sketch. It explains, proposes and drafts.
 - **The commands hold what data can.** They make and change the records, the content around each judgement as well as the judgement: each entry of a canvas and its links, each input of the estimate and the traction target, each assumption, and each field of a draft experiment has a command that writes it, gives it the ids it needs, and refuses at once what the data shows is wrong. They warn where the method gives only a guideline (DEC-002 point 14).
 - **Four ways in:**
-  - a conversation with an agent through the skill, the main way in, the skill drafting through the commands
+  - a conversation with an agent through the skill, the main way in: the capability's lean coach, or any agent that follows the skill, the skill drafting through the commands (refinement per [lean-business:DEC-004-lean-business-coach])
   - the commands, at a terminal
   - the data files, readable in the repository, where an edit by hand is held by the check as a command's write is (DEC-002 point 14)
   - a view built from the data, later (point 8)

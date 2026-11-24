@@ -111,7 +111,7 @@ What each move needs:
 - **The judgement is the move's authorisation, not its gate.** Each gate is a predicate over the data, which the engine evaluates (COR-033 P4). Whether a person, not an agent, made the judgement is the authorisation's question, and no file an agent can write tells the two apart. So the caller holds the move to the person, and the record claims no checkable trace of another authority for the judgement: the last bullet of this point says what shows it instead.
 - **The caller holds them to the person.** The engine does not enforce a move's authorisation, so the capability's commands do, in the consent forms of the backbone's configuration (COR-048 point 5):
   - at a terminal, the command asks the move's question, and moves only on a yes
-  - off a terminal, it moves only with an explicit flag that says the person decided, which an agent passes only once the person has answered in the session
+  - off a terminal, it moves only with an explicit flag that says the person decided, which an agent passes only once the person has answered in the session, in its own conversation with them (refinement per [lean-business:DEC-004-lean-business-coach])
   - with neither, it moves nothing, and prints the question
   - each judgement records who decided it and when (DEC-002 point 2)
 - **At no delegation level.** This record keeps each of these questions the person's, and places none at a level (COR-072 point 13). So at every level, ask to accept, no agent decides one in the person's place.
