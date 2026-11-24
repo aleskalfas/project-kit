@@ -16,11 +16,17 @@ three layers that the board read-path contract
 
 - *where does the state live* is answered from the map alone, and cannot fail;
 - the board read seam reads the Status and reports what happened;
-- the command decides what a failed or empty read means to it.
+- the command decides what a failed or empty read means to it, within limits
+  every command keeps (refinement per
+  [ADR-096](ADR-096-board-did-not-answer.md)).
 
 The part of the engine that works out an issue's state stays pure: the Status is
 one more input to it, read before it is called. A command reads the cards of the
-issues it acts on and no others, and never takes part of a listing for the whole.
+issues it acts on, and others only to find a sign that the board answered or,
+where it acts on the whole board, to learn from its walk of the board where its
+own repository's open issues stand, and never takes part of a listing for the
+whole (refinement per [ADR-096](ADR-096-board-did-not-answer.md) and
+[project-management:DEC-072](../../../.pkit/capabilities/project-management/decisions/DEC-072-sync-gives-missing-cards.md)).
 
 The board flag carries no axis
 ([project-management:DEC-062](../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md)),
@@ -86,8 +92,12 @@ The architecturally significant pins, each against a plausible alternative:
 **In plain terms:** the state reads from the board's Status field, through the
 same seam as every other board read. Where the state lives is answered from the
 map alone. The command reads the Status, hands it to a pure inference, and
-decides itself what each outcome means. A command reads only the cards of the
-issues it acts on.
+decides itself what each outcome means. A command reads the cards of the issues
+it acts on, and others only to find a sign that the board answered or, where it
+acts on the whole board, to learn from its walk of the board where its own
+repository's open issues stand (refinement per
+[ADR-096](ADR-096-board-did-not-answer.md) and
+[project-management:DEC-072](../../../.pkit/capabilities/project-management/decisions/DEC-072-sync-gives-missing-cards.md)).
 
 ### 1. The state reads from the board's Status field
 
@@ -192,18 +202,26 @@ outcome means. The command decides, at its own boundary, within two limits:
 - **It keeps a broken board apart from a finding.** A board that would not answer
   is reported as that, with what the board said, and never as one of the three
   findings about the issue; a finding is never reported as a broken board. Where
-  a command's exit codes tell a broken tool from a refusal, an unreadable board
-  takes the broken tool's code. ADR-053 point 2 rules this for a gate; this
-  record rules it for every command that reads the state, on the same ground.
-  This refines ADR-053 point 2, its reach.
+  a command's exit codes tell a broken tool from a refusal, a board that will not
+  answer takes the broken tool's code, but in two cases (refinement per
+  [ADR-096](ADR-096-board-did-not-answer.md)). Once the command's act
+  (ADR-096's terms) is made, whole or in part, the command takes no code that, as
+  ADR-096 point 4 has it, reads as the act not made, and keeps the other limits
+  that point sets after the act. A check that reports it at a severity that lets
+  through what the check gates, an issue or an operation, exits as that severity
+  does. ADR-053 point 2 rules this for every command that reads the board, gate
+  or not, a reach this record gives it for the state's readers, on the same
+  ground, and ADR-096 for the rest.
 
 DEC-051 point 6 fixes one posture: a seat choosing work skips, with a warning, a
 Task whose position is undetermined, and takes nothing where the board cannot be
-read. Each other command chooses its own within the limits. For example, a
+read. Each other command chooses its own within the limits, and within those
+ADR-096 point 4 sets for every read and write of the board (refinement per
+[ADR-096](ADR-096-board-did-not-answer.md)). For example, a
 command that moves one issue cannot check the move from a position it does not
 know, so it refuses and names the outcome.
 
-### 6. A command reads the cards of the issues it acts on, and no others
+### 6. A command reads the cards of the issues it acts on, and others only to find a sign that the board answered or, where it acts on the whole board, to learn from its walk where its own repository's open issues stand (refinement per ADR-096 and project-management:DEC-072)
 
 A command acting on one issue reads that issue's card. Where its forward cascade
 walks the hierarchy, it reads each ancestor's card in turn, so its reads are
@@ -217,6 +235,37 @@ bounded by what it lists, not by the board.
 Both reads give one account of which card is an issue's: the issue's card on the
 configured board, found among the issue's own cards, an archived card included.
 
+Beside them, a request that could find an issue with no card carries, for each
+repository whose issues it reads, a fixed page of that repository's issues, the
+most recently created and the open ones most recently updated, whose cards the
+seam reads only to find a sign that the board answered (ADR-096 point 1)
+(refinement per [ADR-096](ADR-096-board-did-not-answer.md)). An issue the
+command acts on that also lies on that page is judged from the command's own
+read of it. A listing read in several batches carries an issue whose card one
+batch found into each batch after it, and into each batch before it that found
+no such sign, made again once after the last. The issue is a sign there only
+where that batch's request shows its card again. No error placed on the page, or
+on an issue so carried, fails the command's read.
+
+A command that acts on the whole board, such as a sync, walks every card on the
+board once, and reads that walk whole, as ADR-096 point 2 requires. It may read
+from that walk, in place of a listing read, the state of each open issue of its
+own repository, whether it acts on the issue or reports it, through the state's
+reader (point 2). The walk is a second account of which card is an issue's, yet
+a whole walk, archived cards included, agrees with the issues' own cards on
+every card the credential reads, on ADR-096's premise that the board leaves no
+card out unsaid, and the credential reads every card of that repository. A
+command that needs only the states or cards of the issues it lists makes a
+listing read, never a walk (refinement per
+[project-management:DEC-072](../../../.pkit/capabilities/project-management/decisions/DEC-072-sync-gives-missing-cards.md)).
+Project-management's board sync, in a run limited to the issues it names, counts
+as a command that acts on the whole board, not as one that needs only the cards
+of the issues it lists: it walks the board to decide whether each named issue
+has a card, since a whole walk decides an absence with no witness, where a
+listing read decides one only with a witness (ADR-096 points 1 and 2;
+refinement per
+[project-management:DEC-077](../../../.pkit/capabilities/project-management/decisions/DEC-077-workflow-gives-missing-card.md)).
+
 A listing read is whole or nothing. A batch that fails makes the board one that
 could not be read, for the whole listing. A listing never takes the issues of a
 failed batch for issues with no card.
@@ -229,10 +278,12 @@ failed batch for issues with no card.
 - **Not where the state lives.** That is the project's choice, in its map
   (DEC-062).
 - **Not what the forward cascade does at an ancestor the read cannot place.**
-  DEC-006 holds that a container is never behind the work under it, and DEC-051
-  point 6 that no command acts on a position it could not read. At such an
-  ancestor the two pull apart, and which gives way is a question for a
-  project-management record, not for this one.
+  DEC-006 holds that no container is to stand behind the work under it, and
+  DEC-051 point 6 that no command acts on a position it could not read. At such
+  an ancestor the two pull apart, and which gives way is a question for a
+  project-management record, not for this one:
+  [project-management:DEC-075](../../../.pkit/capabilities/project-management/decisions/DEC-075-cascade-unread-ancestor.md)
+  decides it.
 - **Not what a card a person moves by hand means.** Whether a card dragged back
   from In Progress is a move back, owing a reason and releasing the owner, is the
   question DEC-006 leaves open. The read says where a card stands, and nothing of
@@ -292,11 +343,24 @@ organisation's board holds the cards of many repositories. A read of every card
 makes a listing's cost grow with the board's history and with other
 repositories' work, and any bound on the pages it reads becomes a size past which
 choosing work takes nothing on every run. A listing is bounded by what the command
-lists. Reading the issues' own cards also gives one account of which card is an
-issue's, for one issue and for many. A read of the whole board is a second
-account, and the two part on a card one counts and the other does not, such as an
-archived one: an issue the move command places would then have no card for a
-seat choosing work.
+lists, and by a fixed page for each repository each of its requests reads, which
+grows with neither the board nor any repository's issues (refinement per
+[ADR-096](ADR-096-board-did-not-answer.md)). Reading the issues' own cards also
+gives one account of which card is an issue's, for one issue and for many. A
+read of the whole board is a second account, and the two part on a card one
+counts and the other does not, such as an archived card a walk leaves out: an
+issue the move command places would then have no card for a seat choosing work.
+Neither the cost nor the second account weighs against a command that acts on
+the whole board, such as a sync, and reads from its walk of the board where its
+own repository's open issues stand. It pays for the walk whatever it reads. And
+its act already rests on the walk, and on ADR-096's premise that the board
+leaves no card out unsaid, under which a whole walk, archived cards included,
+agrees with the issues' own cards on every card of that repository, which the
+credential reads. So reading the positions from the walk adds no read and no
+premise to its run, where a listing read beside the walk would add a second
+read, which can part from the walk on a card added or removed between the two
+(refinement per
+[project-management:DEC-072](../../../.pkit/capabilities/project-management/decisions/DEC-072-sync-gives-missing-cards.md)).
 
 **Why whole or nothing.** A batch silently missing from a listing would make
 every issue in it look as if it had no card. That turns a tooling fault into a
@@ -379,8 +443,9 @@ finding about issues: the mis-attribution ADR-053 point 2 exists to prevent.
   reports what happened and decides nothing. A command handles a failed Status
   write as it handles a failed write of the substrate that carries the state, or,
   where the Status only projects the state, as it handles any projection left
-  behind (DEC-006). Filing handles a failed Status write as it handles every
-  other write after the issue is created: the issue stays filed.
+  behind (DEC-006). Filing handles a failed Status write as ADR-096 point 4 sets
+  for a write after the issue is created: the issue stays filed (refinement per
+  [ADR-096](ADR-096-board-did-not-answer.md)).
 - **No migration is owed by this record.** It renames, removes and restructures
   nothing an adopter holds. The configuration migration that writes each
   project's map is DEC-062 point 6's.

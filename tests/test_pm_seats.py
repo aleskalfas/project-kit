@@ -96,9 +96,17 @@ def _backbone(tip: str | None = TIP, problem: str | None = None) -> Any:
                 "source": "default",
                 "ref": "origin/main",
                 "commit": tip,
+                "resolved": "remote" if tip else None,
+                "problem": problem,
+                "unborn": False,
+            },
+            "base": {
+                "ref": "origin/main",
+                "tip": tip,
+                "fork": tip,
+                "resolved": "remote" if tip else None,
                 "problem": problem,
             },
-            "base": {"ref": "origin/main", "tip": tip, "fork": tip, "problem": problem},
         }
         return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
 
@@ -290,6 +298,72 @@ def test_no_seat_is_taken_where_the_default_branch_declares_no_topology(root: Pa
     assert repo.calls == []
 
 
+#: Why `gh api user` named no account, as the identity carries it (#3162).
+FORBIDDEN = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+
+
+def test_no_seat_is_taken_where_pkit_cannot_tell_the_account_and_it_says_why(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo()
+    assert _take(root, repo, login=None, login_cause=FORBIDDEN) == 1
+    assert repo.calls == []
+    assert capsys.readouterr().err == (
+        f"[refused] take-seat: pkit cannot tell which account is acting, since {FORBIDDEN}, "
+        "so no seat is taken.\n"
+    )
+
+
+# ---- take-seat under a credential that names no user's account (DEC-076 point 6) ----
+
+#: The bot's account an App installation's token acts as, as the reading spells it.
+APP = "robot[bot]"
+
+
+def test_an_apps_clone_takes_a_planners_seat_behind_a_closed_gate_that_names_it(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo()
+    repo.author = APP  # GitHub records the claim as the App's account's
+    rc = _take(root, repo, login=APP, names_user=False, git=_git(members=("me", APP)))
+    assert rc == 0
+    assert instance_identity.read_seat_hint(root) == "planner"
+    assert "this clone took the seat planner" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("asked", [{"name": "worker-1"}, {"role": "worker"}])
+def test_an_apps_clone_takes_no_seat_that_builds(
+    root: Path, capsys: pytest.CaptureFixture[str], asked: dict
+) -> None:
+    repo = _repo()
+    rc = _take(root, repo, login=APP, names_user=False, git=_git(members=("me", APP)), **asked)
+    assert rc == 1
+    assert instance_identity.read_seat_hint(root) is None
+    err = capsys.readouterr().err
+    assert "takes no worker's seat, since none of its claims on a Task would count" in err
+
+
+def test_an_apps_clone_takes_no_seat_behind_an_open_gate(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo()
+    rc = _take(root, repo, login=APP, names_user=False, git=_git(members=()))
+    assert rc == 1
+    assert instance_identity.read_seat_hint(root) is None
+    assert "leave the membership gate open, so this clone takes no seat" in (
+        capsys.readouterr().err
+    )
+
+
+def test_an_apps_clone_takes_no_seat_where_no_member_names_its_account(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo()
+    rc = _take(root, repo, login=APP, names_user=False, git=_git(members=("me", "robot")))
+    assert rc == 1
+    assert "no member the default branch holds names it" in capsys.readouterr().err
+
+
 def test_a_seat_whose_state_issue_is_not_named_or_cannot_be_read_is_not_taken(
     root: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -354,6 +428,24 @@ def test_a_clone_releases_the_seat_it_holds_and_forgets_it(
     assert _holder(repo, 13, "worker-2") is None
     assert instance_identity.read_seat_hint(root) is None
     assert "stops counting, with no write to those issues" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("by_force", [False, True], ids=["own", "by-force"])
+def test_no_seat_is_released_where_pkit_cannot_tell_the_account_and_it_says_why(
+    root: Path, capsys: pytest.CaptureFixture[str], by_force: bool
+) -> None:
+    repo = _repo(worker_2=("me", _key(root)))
+    unresolved = {"login": None, "login_cause": FORBIDDEN}
+    code = (
+        _force(root, repo, "worker-2", **unresolved)
+        if by_force
+        else _release(root, repo, **unresolved)
+    )
+    assert code == 1
+    assert repo.calls == []
+    assert capsys.readouterr().err == (
+        f"[refused] release-seat: pkit cannot tell which account is acting, since {FORBIDDEN}.\n"
+    )
 
 
 def test_a_clone_that_holds_no_seat_releases_nothing(root: Path) -> None:

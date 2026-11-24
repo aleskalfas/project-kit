@@ -13,7 +13,9 @@ PR. Per DEC-021, removal PRs cannot be approved solely by the author
 when removing another member; self-removal is reviewable by any
 other member. The removal is asked at a terminal, `--yes` authorises it, and
 off a terminal without `--yes` it is refused before the file is written
-(#2015).
+(#2015). Under a credential that names no user's account, it refuses, in open
+mode as behind a closed gate, since a person stands behind each change to the
+list (DEC-076 point 2).
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/remove-member.py
@@ -21,7 +23,7 @@ Self-contained via PEP 723; runs via
 Exit codes:
   0  entry removed (or abort acknowledged)
   1  membership refusal (closed mode, invoker not a member) / off a terminal
-     without --yes
+     without --yes / a credential that names no user's account (DEC-076 point 2)
   2  usage error
   3  not found (no entry matches the given github_login)
 """
@@ -42,6 +44,7 @@ from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
+    member_list_refusal,
     members_path,
     resolve_capability_root,
     resolve_invoker_identity,
@@ -113,6 +116,13 @@ def main() -> int:
     # write into a DIFFERENT repo than the session anchor (CLAUDE_PROJECT_DIR);
     # gate that unless the operator confirms the override. Runs before the write.
     if not session_guard.enforce(override=args.allow_foreign_repo):
+        return 1
+
+    # The member list changes only under a credential that names a user's
+    # account, in open mode too (DEC-076 point 2).
+    refused = member_list_refusal(invoker, "remove-member")
+    if refused is not None:
+        print(refused, file=sys.stderr)
         return 1
 
     target = invoker.github_login if args.me else args.github_login

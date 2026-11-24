@@ -86,6 +86,7 @@ from project_kit.install import (
     seed_missing_paths,
 )
 from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
     ORIGIN_KIT_SHIPPED,
     BackboneManifest,
     ComponentManifest,
@@ -114,6 +115,7 @@ from project_kit.router import (
     is_routed_child,
     is_source_checkout,
     pin_file_path,
+    pinned_command,
     read_version_pin,
     run_bypassed,
     running_version,
@@ -137,7 +139,7 @@ from project_kit.sync import (
     report_incubated_capability,
     run_self_host,
 )
-from project_kit.versioning import is_release_version
+from project_kit.versioning import WITHDRAWN_FOLDER, is_release_version, withdrawal_tag
 
 if TYPE_CHECKING:
     from project_kit.capabilities import MandatoryUpstream
@@ -1196,6 +1198,10 @@ def reconcile_pin(target_root: Path, version: str, *, force: bool = False) -> No
       there is no safe downgrade path; nothing is written and no content is
       touched (reverting each upgrade's commit is the rollback route).
 
+    A pin that names a withdrawn release candidate is warned of, and goes on, since
+    whoever names one asked for that candidate (`_warn_if_withdrawn`; ADR-092
+    point 4).
+
     A version-only token is required: branch names, commit shas, any pre-release
     but a release candidate, and build metadata are refused at the boundary,
     because the router's route-2 routes a pin to the tag `v<pin>` as written, and
@@ -1220,12 +1226,14 @@ def reconcile_pin(target_root: Path, version: str, *, force: bool = False) -> No
         raise click.ClickException(_downgrade_refusal(normalized, current))
 
     if order == "equal":
+        _warn_if_withdrawn(normalized)
         freeze_pin(target_root, normalized)
         return
 
     # newer → a raise, which never moves a project on a release candidate to any
     # release but that candidate (ADR-092 point 7).
     refuse_move_off(read_backbone_manifest(target_root), normalized)
+    _warn_if_withdrawn(normalized)
 
     # Reconcile content forward, then flip the pin LAST, so a failed reconcile
     # never advances the pin past content that never landed.
@@ -1234,6 +1242,35 @@ def reconcile_pin(target_root: Path, version: str, *, force: bool = False) -> No
         "content up to the target first."
     )
     _advance_pin_to(target_root, normalized, force=force)
+
+
+def _warn_if_withdrawn(version: str) -> None:
+    """Warn, on standard error, where `version`, the release `pkit pin` names, is a
+    withdrawn release candidate: the distribution source `pkit upgrade --pre` reads
+    lists the tag `withdrawn/v<candidate>` (ADR-092 point 4). The pin goes on.
+    Where that source cannot be read, warn that the withdrawal could not be
+    checked. A final release is looked up for none."""
+    if not is_candidate(version):
+        return
+    listing = _distribution_tags()
+    if listing is None:
+        click.secho(
+            f"warning: could not check whether the release candidate {version} is "
+            f"withdrawn (`git ls-remote {DISTRIBUTION_REMOTE_URL}` failed — offline, "
+            "missing credentials, git unavailable, or timed out). Its Release says so "
+            "where it is.",
+            err=True,
+            fg="yellow",
+        )
+    elif version in _withdrawn_candidates(listing):
+        click.secho(
+            f"warning: the release candidate {version} is withdrawn: the tag "
+            f"{withdrawal_tag(version)} marks it so, and its Release says why (ADR-092 "
+            "point 4). `pkit upgrade --pre` passes it by. This pin names it, so it goes "
+            "on.",
+            err=True,
+            fg="yellow",
+        )
 
 
 # Accepted pin token: a bare MAJOR.MINOR.PATCH semver, or a release candidate in
@@ -1303,7 +1340,7 @@ def reconcile_forward_via_target(
 
     Syncing to a newer version needs that version's code and bundled content,
     which the currently-installed tool does not carry. Bootstrap the target wheel
-    with `uvx project-kit@v<target>` and run its `upgrade` there — under the
+    with `uvx --from …@v<target> pkit` and run its `upgrade` there — under the
     router's PKIT_NO_ROUTE bypass, so the bootstrapped process runs self instead
     of routing back through this project's (older) pin. That upgrade syncs content
     and runs the forward migrations. Raises ClickException on a non-zero exit so
@@ -1326,13 +1363,12 @@ def reconcile_forward_via_target(
         raise click.ClickException(
             f"pkit {target} could not be fetched (offline, a missing tag, a credential the "
             f"server asked for, or uvx unavailable), so its upgrade did not run. The pin was "
-            f"not advanced; re-run where `uvx --from {DISTRIBUTION_GIT_URL}@v{target} "
-            "project-kit --version` resolves."
+            f"not advanced; re-run where `{pinned_command(target)} --version` resolves."
         ) from None
     if returncode != 0:
         raise click.ClickException(
             f"reconciling content forward to {target} failed: the bootstrapped "
-            f"`uvx project-kit@v{target} {' '.join(argv)}` exited {returncode}. The pin was "
+            f"`{pinned_command(target)} {' '.join(argv)}` exited {returncode}. The pin was "
             "not advanced; resolve the error reported above and retry."
         )
 
@@ -1688,6 +1724,12 @@ def refuse_under_routers_fallback(target_root: Path) -> None:
 # `pkit upgrade`. The check is best-effort; a timeout degrades to a warning.
 _LS_REMOTE_TIMEOUT_SECONDS = 5.0
 
+#: How `git ls-remote --tags` lists a release tag's full reference: `refs/tags/v<X.Y.Z>`.
+_RELEASE_TAG_REF_PREFIX = "refs/tags/v"
+
+#: How it lists a candidate's withdrawal tag: `refs/tags/withdrawn/v<candidate>`.
+_WITHDRAWAL_TAG_REF_PREFIX = f"refs/tags/{WITHDRAWN_FOLDER}v"
+
 
 #: Guard env var: set on the re-exec'd child after a self-update, so the child
 #: never attempts a second self-update (defence against a re-exec loop, on top of
@@ -1957,8 +1999,8 @@ def _latest_released_version() -> Version | None:
 def _newest_release_or_candidate() -> Version | None:
     """The lookup of `pkit upgrade --pre`: the highest release tag or release
     candidate tag, from the source `_latest_released_version` reads, with the same
-    failures (ADR-089 point 8). Every other pre-release and dev release is still
-    skipped."""
+    failures (ADR-089 point 8). A withdrawn candidate is passed by (ADR-092 point
+    4), and every other pre-release and dev release is still skipped."""
     return _newest_tagged_version(candidates=True)
 
 
@@ -1966,6 +2008,16 @@ def _newest_tagged_version(*, candidates: bool) -> Version | None:
     """The highest version the distribution source's tags name, release candidates
     among them only where *candidates* is set, or None on any failure of the
     lookup or where no tag names one (`_latest_released_version`)."""
+    listing = _distribution_tags()
+    if listing is None:
+        return None
+    return _max_released_tag(listing, candidates=candidates)
+
+
+def _distribution_tags() -> str | None:
+    """`git ls-remote --tags` of the distribution URL compiled into the tool, the
+    source ADR-063 point 1 reads, or None on any failure: `git` missing, the
+    source unreachable, the time limit reached."""
     try:
         completed = subprocess.run(
             ["git", "ls-remote", "--tags", DISTRIBUTION_REMOTE_URL],
@@ -1979,7 +2031,29 @@ def _newest_tagged_version(*, candidates: bool) -> Version | None:
         return None
     if completed.returncode != 0:
         return None
-    return _max_released_tag(completed.stdout, candidates=candidates)
+    return completed.stdout
+
+
+def _listed_tag_refs(ls_remote_output: str) -> list[str]:
+    """Each full reference `git ls-remote --tags` output lists, one `<sha>\t<ref>` a
+    line, an annotated tag's peel line `<ref>^{}` read as its tag's reference."""
+    return [
+        line.partition("\t")[2].strip().removesuffix("^{}")
+        for line in ls_remote_output.splitlines()
+    ]
+
+
+def _withdrawn_candidates(ls_remote_output: str) -> set[str]:
+    """Each release candidate a withdrawal tag in `git ls-remote --tags` output names,
+    in its normal form: the tags whose full reference is
+    `refs/tags/withdrawn/v<candidate>` (ADR-092 point 4). A tag whose tail alone
+    reads as one names none."""
+    return {
+        version
+        for ref in _listed_tag_refs(ls_remote_output)
+        if ref.startswith(_WITHDRAWAL_TAG_REF_PREFIX)
+        and is_candidate(version := ref.removeprefix(_WITHDRAWAL_TAG_REF_PREFIX))
+    }
 
 
 def _max_released_tag(ls_remote_output: str, *, candidates: bool = False) -> Version | None:
@@ -1987,10 +2061,13 @@ def _max_released_tag(ls_remote_output: str, *, candidates: bool = False) -> Ver
 
     Each line is `<sha>\trefs/tags/<tag>`. Annotated tags also emit a
     dereferenced `<tag>^{}` peel line; the `^{}` suffix is stripped so both
-    resolve to the same version. Only a `v` followed by a release version
-    counts, tested as the release step tests a floor
-    (`versioning.is_release_version`): `major.minor.patch`, no part padded by
-    a leading zero. Every pre-release and dev release is skipped (`v2.0.0rc1`,
+    resolve to the same version. Only a tag whose full reference is
+    `refs/tags/v` followed by a release version counts, tested as the release
+    step tests a floor (`versioning.is_release_version`): `major.minor.patch`,
+    no part padded by a leading zero. The whole reference is matched, never its
+    tail, so a tag under a folder, such as a candidate's withdrawal
+    `withdrawn/v2.0.0rc1`, names no install (ADR-063 point 1 as ADR-092 point 4
+    refines it). Every pre-release and dev release is skipped (`v2.0.0rc1`,
     `v2.0.0.dev1`), even one above the latest release, as is any other tag (a
     non-release tag, a malformed ref). So what the tool step installs and a
     pinned raise writes is a release `pkit pin` accepts. Returns None when no
@@ -1998,17 +2075,20 @@ def _max_released_tag(ls_remote_output: str, *, candidates: bool = False) -> Ver
 
     With *candidates*, a release candidate's tag counts too, in PEP 440's normal
     form, `vX.Y.ZrcN` (`candidates.is_candidate`), and sorts below its final
-    release: the lookup of `pkit upgrade --pre` (ADR-089 point 8). Any other
-    pre-release or dev release is skipped still.
+    release: the lookup of `pkit upgrade --pre` (ADR-089 point 8). A candidate the
+    output also lists a withdrawal tag for, `withdrawn/v<candidate>`, is passed by
+    (`_withdrawn_candidates`; ADR-092 point 4). Any other pre-release or dev
+    release is skipped still.
     """
+    withdrawn: set[str] = _withdrawn_candidates(ls_remote_output) if candidates else set()
     versions: list[Version] = []
-    for line in ls_remote_output.splitlines():
-        ref = line.rpartition("refs/tags/")[2].strip()
-        ref = ref.removesuffix("^{}")
-        if not ref.startswith("v"):
+    for ref in _listed_tag_refs(ls_remote_output):
+        if not ref.startswith(_RELEASE_TAG_REF_PREFIX):
             continue
-        version = ref[1:]
-        if is_release_version(version) or (candidates and is_candidate(version)):
+        version = ref.removeprefix(_RELEASE_TAG_REF_PREFIX)
+        if is_release_version(version) or (
+            candidates and is_candidate(version) and version not in withdrawn
+        ):
             versions.append(Version(version))
     return max(versions) if versions else None
 
@@ -2023,8 +2103,9 @@ def _resolve_compatibility(
 
     For each installed component, reads the `requires_backbone` range from the
     **source** `package.yaml` (the version it becomes after the upgrade's copy),
-    falling back to the installed copy for components the source no longer ships
-    (see `_resolve_package_yaml`). The file is read as the wiring resolver reads
+    falling back to the installed copy for components the source no longer ships,
+    and reading an externally-sourced capability's installed copy alone (see
+    `_resolve_package_yaml`). The file is read as the wiring resolver reads
     a package (`connections.read_package`), so the range is found however it is
     quoted, and compared through the resolver's one relation
     (`connections.range_admits`). Raises `click.ClickException` on conflict so
@@ -2077,6 +2158,10 @@ def _resolve_package_yaml(
     installed copy always lags the target). Falls back to the installed copy for
     a component the source no longer ships — the copy does not reach it, so
     its declared range still governs.
+
+    An externally-sourced capability is read from its installed copy alone: it
+    moves by its pin, and is never read as shipped, whatever the source ships
+    by its name (ADR-065 point 1, COR-041).
     """
     if entry.kind == "adapter":
         rel = Path("adapters") / entry.name / "package.yaml"
@@ -2084,7 +2169,12 @@ def _resolve_package_yaml(
         rel = Path("capabilities") / entry.name / "package.yaml"
     else:
         return None
-    for base in (source_kit, target_root / ".pkit"):
+    bases = (
+        (target_root / ".pkit",)
+        if entry.origin == ORIGIN_EXTERNALLY_SOURCED
+        else (source_kit, target_root / ".pkit")
+    )
+    for base in bases:
         candidate = base / rel
         if candidate.is_file():
             return candidate

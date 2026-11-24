@@ -18,12 +18,22 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests import pm_assignee_lookup
+from tests.pm_board_graphql import FieldsBoard, flag_value, is_seam_read, query_of
+from tests.pm_board_world import LABEL_STATE
 from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with, use
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "create-issue.py"
 )
+
+
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login these tests assign as a user's account;
+    a test of the lookup gives its own answers (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
 
 
 @pytest.fixture(scope="module")
@@ -402,10 +412,15 @@ def _linked(ci):
 
 
 def _file_task(
-    ci, tmp_path, monkeypatch, title: str, extra: tuple[str, ...] = ()
+    ci, tmp_path, monkeypatch, title: str, extra: tuple[str, ...] = (), invoker: object = None
 ) -> tuple[int, list[list[str]]]:
-    """Run create-issue main() for a Task titled ``title``, with ``extra`` options;
-    return (rc, every argv run)."""
+    """Run create-issue main() for a Task titled ``title``, with ``extra`` options,
+    as ``invoker``, by default the user's account `filer-login` GitHub answers the
+    credential acts as; return (rc, every argv run)."""
+    from _lib.membership import Identity
+
+    resolved = invoker or Identity(github_login="filer-login", email=None, kind="user")
+    monkeypatch.setattr(ci, "resolve_invoker_identity", lambda **_k: resolved)
     root = _stage_filing_tree(tmp_path)
     calls: list[list[str]] = []
 
@@ -420,7 +435,6 @@ def _file_task(
             _Proc.stdout = "https://github.com/acme/repo/issues/55\n"
         return _Proc()
 
-    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
     monkeypatch.setattr(ci.subprocess, "run", fake_run)
     monkeypatch.setattr(ci.session_guard, "enforce", lambda **k: True)
     monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _linked(ci))
@@ -458,15 +472,48 @@ _CLEAN_TITLE = "Evidence points are keyed so two providers can report one"
 
 
 def _file_with_instance(
-    ci, tmp_path, monkeypatch, *, instance: int | None, extra: tuple[str, ...] = ()
+    ci,
+    tmp_path,
+    monkeypatch,
+    *,
+    instance: int | None,
+    extra: tuple[str, ...] = (),
+    invoker: object = None,
 ) -> tuple[int, list[list[str]], FakeGitHub]:
     github = FakeGitHub(author="filer-login")
     assignee = extra[extra.index("--assignee") + 1] if "--assignee" in extra else "filer-login"
     github.add(55, assignees=(assignee,))
     clone_with(ci.instance_claims, monkeypatch, instance)
     use(ci.instance_claims, monkeypatch, github)
-    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, extra)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, extra, invoker)
     return rc, calls, github
+
+
+@pytest.mark.parametrize("assignee", ["robot[bot]", "app/robot", "@robot"])
+def test_filing_refuses_an_assignee_that_names_no_users_account_by_its_form(
+    ci, tmp_path, monkeypatch, capsys, assignee
+) -> None:
+    """Refused with no request and nothing filed (DEC-079 point 1)."""
+    asked = pm_assignee_lookup.answer(monkeypatch)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, ("--assignee", assignee))
+    assert rc == 2
+    assert not _issue_created(calls)
+    assert asked == []
+    assert f"error: `{assignee}` names " in capsys.readouterr().err
+
+
+def test_filing_refuses_a_bare_login_github_does_not_answer_as_a_users(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """The service lets its coding agent be assigned by a login with no suffix,
+    so a bare login is looked up."""
+    agent = pm_assignee_lookup.membership.LookedUp(login="Copilot", account_type="Bot")
+    asked = pm_assignee_lookup.answer(monkeypatch, {"Copilot": agent})
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, ("--assignee", "Copilot"))
+    assert rc == 2
+    assert not _issue_created(calls)
+    assert asked == ["Copilot"]
+    assert "`Copilot` names an account of type Bot" in capsys.readouterr().err
 
 
 def test_with_no_instance_id_filing_is_unchanged(ci, tmp_path, monkeypatch, capsys) -> None:
@@ -577,6 +624,110 @@ def test_filing_a_clean_title_raises_no_title_finding(ci, tmp_path, monkeypatch,
     assert rc == 0
     assert _issue_created(calls)
     assert "title." not in capsys.readouterr().err
+
+
+# --- a credential that names no user's account (DEC-076) -------------------------
+#
+# Under a GitHub App installation's token GitHub refuses `gh api user`, and the
+# backbone's reading names a bot's account or none. The default assignee is the
+# person the agent works for, `PM_INVOKER_LOGIN`, and a filing with no person and
+# no `--assignee` refuses; a clone under such a credential claims nothing.
+
+FORBIDDEN = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+
+
+def _unresolved(works_for: str | None = None, cause: str = "refused"):
+    """The identity where the reading names no account: GitHub gave no answer
+    (`refused`, an unresolved identity), or refused an integration's token."""
+    from _lib.membership import Identity
+
+    return Identity(
+        github_login=None,
+        email=None,
+        unresolved_cause=FORBIDDEN,
+        cause=cause,
+        works_for=works_for,
+    )
+
+
+def _app(works_for: str | None = "filer-login"):
+    from _lib.membership import Identity
+
+    return Identity(github_login="robot[bot]", email=None, kind="bot", works_for=works_for)
+
+
+@pytest.mark.parametrize(
+    "invoker",
+    [_unresolved, lambda: _app(None), lambda: _unresolved(cause="integration-refused")],
+    ids=["none", "bot", "cannot-look-itself-up"],
+)
+def test_no_person_named_refuses_the_default_assignee_and_says_how_to_name_one(
+    ci, tmp_path, monkeypatch, capsys, invoker
+) -> None:
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, invoker=invoker())
+    assert rc == 2
+    assert not _issue_created(calls)
+    err = capsys.readouterr().err
+    assert "error: could not resolve the default assignee: " in err
+    assert "PM_INVOKER_LOGIN is not set, so no person is named" in err
+    assert err.rstrip().endswith("Or pass --assignee.")
+
+
+@pytest.mark.parametrize(
+    "invoker",
+    [_app, lambda: _unresolved("filer-login", cause="integration-refused")],
+    ids=["bot", "cannot-look-itself-up"],
+)
+def test_the_default_assignee_is_the_person_the_agent_works_for(
+    ci, tmp_path, monkeypatch, capsys, invoker
+) -> None:
+    asked = pm_assignee_lookup.answer(monkeypatch)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, invoker=invoker())
+    assert rc == 0
+    created = next(c for c in calls if "issue" in c and "create" in c)
+    assert created[created.index("--assignee") + 1] == "filer-login"
+    assert asked == ["filer-login"]  # no answer of GitHub's about the credential
+
+
+def test_an_assignee_named_files_where_no_person_is(ci, tmp_path, monkeypatch) -> None:
+    rc, calls = _file_task(
+        ci, tmp_path, monkeypatch, _CLEAN_TITLE, ("--assignee", "alice"), invoker=_unresolved()
+    )
+    assert rc == 0
+    assert _issue_created(calls)
+
+
+@pytest.mark.parametrize("instance", [None, 2])
+@pytest.mark.parametrize(
+    "invoker",
+    [_app, lambda: _unresolved("filer-login", cause="integration-refused")],
+    ids=["bot", "unnamed"],
+)
+def test_an_apps_credential_claims_nothing_it_files(
+    ci, tmp_path, monkeypatch, capsys, instance, invoker
+) -> None:
+    rc, calls, github = _file_with_instance(
+        ci, tmp_path, monkeypatch, instance=instance, invoker=invoker()
+    )
+    assert rc == 0
+    assert _issue_created(calls)
+    assert github.writes() == []
+    out = capsys.readouterr().out
+    if instance is None:
+        assert "ownership" not in out
+    else:
+        assert "  ownership:  not claimed: a clone under a credential that names no user's" in out
+
+
+def test_an_unresolved_identity_files_nothing_on_a_clone_with_an_instance_id(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    rc, calls, _github = _file_with_instance(
+        ci, tmp_path, monkeypatch, instance=2, invoker=_unresolved("filer-login")
+    )
+    assert rc != 0
+    assert not _issue_created(calls)
+    assert "this clone holds an instance id" in capsys.readouterr().err
 
 
 # --- parent-requiredness gate under hierarchy mode (DEC-036 D4, #272) -----
@@ -734,8 +885,8 @@ def test_add_to_board_returns_created_item_id(ci, monkeypatch) -> None:
 
     monkeypatch.setattr(ci.subprocess, "run", fake_run)
 
-    item_id = ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={})
-    assert item_id == "PVTI_newitem"
+    item_id, why = ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={})
+    assert item_id == "PVTI_newitem" and why == ""
     # The membership write asks for json so the item id is recoverable.
     assert "--format" in captured["cmd"]
     assert captured["cmd"][captured["cmd"].index("--format") + 1] == "json"
@@ -748,21 +899,39 @@ def test_add_to_board_none_on_gh_failure(ci, monkeypatch) -> None:
         stderr = "boom"
 
     monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
-    assert ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={}) is None
+    assert ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={}) == (
+        None,
+        "boom",
+    )
 
 
-def test_add_to_board_none_on_unparseable_json(ci, monkeypatch) -> None:
-    class _Proc:
-        returncode = 0
-        stdout = "not json"
-        stderr = ""
+@pytest.mark.parametrize(
+    ("stdout", "says"),
+    [
+        ("not json", "names no card"),
+        ('{"title": "x"}', "names no card"),
+        (
+            '{"id": "PVTI_other", "url": "https://github.com/acme/repo/issues/8"}',
+            "holding https://github.com/acme/repo/issues/8, not",
+        ),
+    ],
+    ids=["unparseable", "no-card", "another-issue"],
+)
+def test_an_add_is_made_only_where_the_board_answers_with_the_issues_card(
+    ci, monkeypatch, stdout, says
+) -> None:
+    """Whatever the tool's exit status, an add counts as made only where the
+    board answers with the issue's card ([pkit:ADR-096] point 3)."""
 
-    monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
-    assert ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={}) is None
+    proc = subprocess.CompletedProcess(["gh"], 0, stdout, "")
+    monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: proc)
+    item_id, why = ci._gh_add_to_board(7, "https://github.com/acme/repo/issues/9", config={})
+    assert item_id is None
+    assert says in why
 
 
 # --- #453: `gh project` calls thread GH_HOST + --owner via the sole-constructor ---
-# `_gh_add_to_board` / `_resolve_project_node_id` route through `gh_project_run`,
+# `_gh_add_to_board` routes through `gh_project_run`,
 # which threads `GH_HOST` from `config['gh']['host']` and splices `--owner`
 # (prefer `gh.default_owner`, else the URL-derived owner). A raw `subprocess.run`
 # would land on github.com and fail on a GHES/org-owned board. These pin the
@@ -828,200 +997,6 @@ def test_add_to_board_github_com_path_unchanged(ci, monkeypatch) -> None:
     # No gh.host in config → no forced GH_HOST override (ambient passes through).
     assert captured["env"].get("GH_HOST") in (None, "github.com")
     assert captured["cmd"][captured["cmd"].index("--owner") + 1] == "acme"
-
-
-def test_resolve_project_node_id_ghes_threads_host_and_owner(ci, monkeypatch) -> None:
-    """GHES fixture: `_resolve_project_node_id` (cache miss) runs under the
-    configured host and threads `--owner` from `gh.default_owner`."""
-    captured = _capture_gh_argv_and_env(ci, monkeypatch)
-    config = {"gh": {"host": "github.ibm.com", "default_owner": "ai-platform-incubation"}}
-
-    ci._resolve_project_node_id(2, "url-owner", config=config)
-
-    assert captured["env"].get("GH_HOST") == "github.ibm.com"
-    assert captured["cmd"][captured["cmd"].index("--owner") + 1] == "ai-platform-incubation"
-
-
-def test_resolve_project_node_id_reads_id_off_project_view(ci, monkeypatch) -> None:
-    """Board NUMBER → project node id via `gh project view --format json`
-    (`.id`) — the same read back-fill / pre-check use."""
-    captured: dict = {}
-
-    class _Proc:
-        returncode = 0
-        stdout = '{"id": "PVT_project", "number": 7}'
-        stderr = ""
-
-    def fake_run(cmd, *args, **kwargs):
-        captured["cmd"] = cmd
-        return _Proc()
-
-    monkeypatch.setattr(ci.subprocess, "run", fake_run)
-
-    node_id = ci._resolve_project_node_id(7, "acme", config={})
-    assert node_id == "PVT_project"
-    assert captured["cmd"][:3] == ["gh", "project", "view"]
-    assert "--owner" in captured["cmd"]
-
-
-def test_resolve_project_node_id_none_when_board_unresolvable(ci, monkeypatch) -> None:
-    class _Proc:
-        returncode = 1
-        stdout = ""
-        stderr = "no such project"
-
-    monkeypatch.setattr(ci.subprocess, "run", lambda *a, **k: _Proc())
-    assert ci._resolve_project_node_id(7, "acme", config={}) is None
-
-
-# --- cache-first node-id resolution (#310) ---------------------------------
-# The board→node-id mapping is invariant, so it's cached in config as
-# `projects_v2_node_id` at adoption. create-issue consults the cache first and
-# only live-resolves (a `gh project view` read) on a cache miss.
-
-
-def test_resolve_project_node_id_uses_cached_config_without_gh_view(ci, monkeypatch) -> None:
-    """Cache HIT (#310): a `projects_v2_node_id` in config is returned directly and
-    NO `gh project view` (subprocess) call is issued — the per-create read is skipped."""
-
-    def boom(*a, **k):  # pragma: no cover — must not be reached on a cache hit
-        raise AssertionError("no gh call may run when projects_v2_node_id is cached")
-
-    monkeypatch.setattr(ci.subprocess, "run", boom)
-    node_id = ci._resolve_project_node_id(7, "acme", config={"projects_v2_node_id": "PVT_cached"})
-    assert node_id == "PVT_cached"
-
-
-def test_resolve_project_node_id_live_resolves_on_cache_miss(ci, monkeypatch) -> None:
-    """Cache MISS (field absent): fall back to the live `gh project view` read,
-    preserving the pre-#310 behaviour exactly."""
-    captured: dict = {}
-
-    class _Proc:
-        returncode = 0
-        stdout = '{"id": "PVT_live", "number": 7}'
-        stderr = ""
-
-    def fake_run(cmd, *a, **k):
-        captured["cmd"] = cmd
-        return _Proc()
-
-    monkeypatch.setattr(ci.subprocess, "run", fake_run)
-    node_id = ci._resolve_project_node_id(7, "acme", config={})
-    assert node_id == "PVT_live"
-    assert captured["cmd"][:3] == ["gh", "project", "view"]
-
-
-def test_resolve_project_node_id_empty_cache_falls_back_to_live(ci, monkeypatch) -> None:
-    """An empty-string cache value is treated as absent → live-resolve (not a
-    spurious empty node id)."""
-    ran = {"n": 0}
-
-    class _Proc:
-        returncode = 0
-        stdout = '{"id": "PVT_live"}'
-        stderr = ""
-
-    def fake_run(cmd, *a, **k):
-        ran["n"] += 1
-        return _Proc()
-
-    monkeypatch.setattr(ci.subprocess, "run", fake_run)
-    assert ci._resolve_project_node_id(7, "acme", config={"projects_v2_node_id": ""}) == "PVT_live"
-    assert ran["n"] == 1
-
-
-def test_main_board_path_uses_cached_node_id_no_project_view(ci, tmp_path, monkeypatch) -> None:
-    """BOARD path end-to-end with `projects_v2_node_id` cached in config: main()
-    reaches the hook with the CACHED project_node_id and issues NO `gh project
-    view` call — the per-create read #310 eliminates on the common path."""
-    root = _stage_capability_tree(tmp_path, has_board=True)
-    # Cache the node id in the staged adopter config.
-    config_path = root / "project" / "config.yaml"
-    config_path.write_text(
-        config_path.read_text(encoding="utf-8") + "projects_v2_node_id: PVT_cached\n",
-        encoding="utf-8",
-    )
-    # The axes on the kit's own labels, and the state left out, so no board
-    # Status is written for it (DEC-062 point 5): the one board read left is the
-    # hook's, which the cache spares.
-    (root / "project" / "substrate-map.yaml").write_text(
-        "schema_version: 1\naxes:\n"
-        "  type:\n    kit-label: true\n"
-        "  priority:\n    kit-label: true\n"
-        "  workstream:\n    kit-label: true\n",
-        encoding="utf-8",
-    )
-
-    project_view_calls = {"n": 0}
-
-    def fake_run(cmd, *args, **kwargs):
-        class _Proc:
-            returncode = 0
-            stdout = ""
-            stderr = ""
-
-        proc = _Proc()
-        if "issue" in cmd and "create" in cmd:
-            proc.stdout = "https://github.com/acme/repo/issues/42\n"
-        elif "project" in cmd and "item-add" in cmd:
-            proc.stdout = '{"id": "PVTI_newitem", "title": "x"}'
-        elif "project" in cmd and "view" in cmd:
-            project_view_calls["n"] += 1
-            proc.stdout = '{"id": "PVT_live", "number": 7}'
-        elif "repo" in cmd and "view" in cmd:
-            proc.stdout = "acme/repo"
-        return proc
-
-    monkeypatch.setattr(ci.subprocess, "run", fake_run)
-    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
-    monkeypatch.setattr(
-        ci.sys,
-        "argv",
-        [
-            "create-issue.py",
-            "--type",
-            "task",
-            "--title",
-            "do a thing",
-            "--parent",
-            "1",
-            "--workstream",
-            "spyre",
-            "--capability-root",
-            str(root),
-            "--yes",
-        ],
-    )
-
-    hooks_module = _hooks_module(ci)
-
-    captured_context: dict = {}
-    real_fire_hooks = ci.fire_hooks
-
-    def capturing_fire_hooks(event, context, config, **kwargs):
-        captured_context.update(context)
-        return real_fire_hooks(event, context, config, **kwargs)
-
-    monkeypatch.setattr(ci, "fire_hooks", capturing_fire_hooks)
-
-    class _WriteResult:
-        ok = True
-        detail = "set field"
-        error = None
-
-    monkeypatch.setattr(
-        hooks_module.substrate_writes,
-        "write_field_value",
-        lambda config, **kwargs: _WriteResult(),
-    )
-
-    rc = ci.main()
-    assert rc == 0
-    # The cache hit means NO `gh project view` was ever issued...
-    assert project_view_calls["n"] == 0
-    # ...and the context carries the CACHED id, not a live-resolved one.
-    assert captured_context["project_node_id"] == "PVT_cached"
 
 
 # --- main() integration: the create-context ASSEMBLY (#295) ----------------
@@ -1125,13 +1100,16 @@ def _stage_capability_tree(tmp_path: Path, *, has_board: bool) -> Path:
     return root
 
 
-def _gh_command_dispatcher(create_url: str):
+def _gh_command_dispatcher(create_url: str, board: FieldsBoard | None = None):
     """Build a fake subprocess.run that answers the gh calls main() makes.
 
     Routes on the gh subcommand: `issue create` → the created URL; `project
-    item-add` → the new item node id; `project view` → the project node id;
-    `repo view` → owner/name. Any other gh call returns a benign empty success.
+    item-add` → the new item node id; a read of the board through the seam →
+    ``board``, board #7 of acme, node `PVT_project`, by default; `repo view` →
+    owner/name. Any other gh call returns a benign empty success.
     """
+    board = board or FieldsBoard([], node="PVT_project", number=7, owner="acme")
+    repository = "/".join(create_url.split("/")[3:5])
 
     def fake_run(cmd, *args, **kwargs):
         class _Proc:
@@ -1140,15 +1118,16 @@ def _gh_command_dispatcher(create_url: str):
             stderr = ""
 
         proc = _Proc()
-        joined = " ".join(str(c) for c in cmd)
+        argv = [str(c) for c in cmd]
+        joined = " ".join(argv)
+        if is_seam_read(argv):
+            return board.reply(argv)
         if "issue" in cmd and "create" in cmd:
             proc.stdout = create_url + "\n"
         elif "project" in cmd and "item-add" in cmd:
-            proc.stdout = '{"id": "PVTI_newitem", "title": "x"}'
-        elif "project" in cmd and "view" in cmd:
-            proc.stdout = '{"id": "PVT_project", "number": 7}'
+            proc.stdout = json.dumps({"id": "PVTI_newitem", "title": "x", "url": create_url})
         elif "repo" in cmd and "view" in cmd:
-            proc.stdout = "acme/repo"
+            proc.stdout = repository if "--jq" in cmd else json.dumps({"nameWithOwner": repository})
         elif "api" in cmd and "user" in joined:
             proc.stdout = "filer-login"
         return proc
@@ -1309,10 +1288,20 @@ BOARD_AXES: dict = {
 
 
 def _status_kept_filing(
-    ci, tmp_path: Path, monkeypatch, *, axes: dict | None, repository: str = "acme/repo"
+    ci,
+    tmp_path: Path,
+    monkeypatch,
+    *,
+    axes: dict | None,
+    repository: str = "acme/repo",
+    calls: list[list[str]] | None = None,
+    extra: tuple[str, ...] = (),
+    link_fails: bool = False,
 ):
-    """Stage a board filing in ``repository``, whose owner owns the board, and
-    route the board's calls to a `BoardTracker`."""
+    """Stage a board filing in ``repository``, whose owner owns the board, #7,
+    and route the board's calls to a `BoardTracker`. ``calls`` collects every
+    command run; ``extra`` adds to the filing's arguments; ``link_fails`` makes
+    `pkit report link` fail."""
     import shutil
 
     from tests.pm_board_world import BoardTracker
@@ -1321,12 +1310,17 @@ def _status_kept_filing(
     shutil.copy(SCRIPT_PATH.parent.parent / "schemas" / "workflow.yaml", root / "schemas")
     board = BoardTracker()
     board.repository, board.owner = repository, repository.split("/", 1)[0]
+    board.graph.number = 7
     benign = _gh_command_dispatcher(f"https://github.com/{repository}/issues/42")
 
     def run(cmd, *args, **kwargs):
         argv = [str(c) for c in cmd]
+        if calls is not None:
+            calls.append(argv)
         if argv[:2] == ["gh", "project"] or argv[1:3] == ["api", "graphql"]:
             return board.gh(argv)
+        if link_fails and argv[:3] == ["pkit", "report", "link"]:
+            return subprocess.CompletedProcess(argv, 1, "", "the report is not open")
         return benign(cmd, *args, **kwargs)
 
     monkeypatch.setattr(subprocess, "run", run)
@@ -1335,8 +1329,13 @@ def _status_kept_filing(
     monkeypatch.setattr(ci, "fire_hooks", lambda *a, **kw: None)
     monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
     argv = ["create-issue.py", "--type", "task", "--title", "do a thing", "--parent", "1"]
-    monkeypatch.setattr(ci.sys, "argv", [*argv, "--capability-root", str(root), "--yes"])
+    monkeypatch.setattr(ci.sys, "argv", [*argv, *extra, "--capability-root", str(root), "--yes"])
     return board
+
+
+def _filed(calls: list[list[str]]) -> bool:
+    """Whether the run filed an issue."""
+    return any(argv[1:3] == ["issue", "create"] for argv in calls)
 
 
 @pytest.mark.parametrize(
@@ -1361,8 +1360,10 @@ def test_a_filed_issues_card_gets_its_first_status(
     assert board.edits == [(42, "Todo")]
     assert "[board] #42: Status set to 'Todo'" in capsys.readouterr().out
     owner = repository.split("/", 1)[0]
-    reads = [argv for argv in board.calls if argv[1:2] == ["project"] and argv[2] != "item-edit"]
-    assert {argv[argv.index("--owner") + 1] for argv in reads} == {owner}
+    reads = [argv for argv in board.calls if "repositoryOwner(login:" in query_of(argv)]
+    adds = [argv for argv in board.calls if argv[1:3] == ["project", "item-add"]]
+    assert reads and {flag_value(argv, "owner") for argv in reads} == {owner}
+    assert {argv[argv.index("--owner") + 1] for argv in adds} == {owner}
 
 
 def test_a_first_status_not_written_is_one_line_and_the_issue_stands(
@@ -1378,7 +1379,7 @@ def test_a_first_status_not_written_is_one_line_and_the_issue_stands(
     assert board.adds == [42] and board.edits == []
     assert (
         "[warn] #42: the board's Status was not set to 'Todo': the board's Status field has "
-        "no 'Todo' option; the issue is filed, and `sync-board` sets it"
+        "no 'Todo' option; the issue is filed, and `pkit pm sync-board 42` sets it"
     ) in capsys.readouterr().err
 
 
@@ -1401,14 +1402,283 @@ def test_the_first_status_is_the_states_source_where_the_board_carries_it(
 def test_a_first_status_not_written_where_the_board_carries_the_state_says_so(
     ci, tmp_path, monkeypatch, capsys
 ) -> None:
+    """The first Status is a write the filing requires where the board carries
+    the state: not made, the issue stands, and the filing exits with its own
+    code for a later step failed, leading with the filed issue ([pkit:ADR-096]
+    point 4)."""
     board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=BOARD_AXES)
     board.fail_edits.add(42)
 
-    assert ci.main() == 0
+    assert ci.main() == 5
 
     err = capsys.readouterr().err
-    assert "the board carries its state, so its position cannot be read until its card" in err
+    assert "[failed] https://github.com/acme/repo/issues/42 is filed" in err
+    assert "the board carries the state, so its position cannot be read until its card" in err
     assert "sync-board" not in err
+
+
+# --- the board read before filing, and a write the filing requires ([pkit:ADR-096]) ---
+
+#: The state on the kit's own labels, so the board's Status mirrors it.
+MIRRORED: dict = LABEL_STATE
+
+
+@pytest.mark.parametrize(
+    "axes", [MIRRORED, BOARD_AXES], ids=["status-mirrors", "board-carries-state"]
+)
+def test_a_board_that_did_not_answer_refuses_the_filing_before_it_files(
+    ci, tmp_path, monkeypatch, capsys, axes
+) -> None:
+    """An issue owes its card from its filing, so the board is read first, and
+    a board that did not answer refuses the filing with the broken tool's code
+    before anything is written, in the seam's words ([pkit:ADR-096] point 4)."""
+    calls: list[list[str]] = []
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=axes, calls=calls)
+    board.fail_reads.add("fields")
+
+    assert ci.main() == 3
+
+    assert not _filed(calls) and board.adds == []
+    err = capsys.readouterr().err
+    assert "[refused] nothing was filed: board #7, which the issue would be added to" in err
+    assert "missing required scopes [read:project]" in err
+
+
+def test_a_board_whose_answer_names_another_board_refuses_the_filing(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """Under another owner, the board's own read answers no board: the board did
+    not answer, and nothing is filed ([pkit:ADR-096] point 1)."""
+    calls: list[list[str]] = []
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=MIRRORED, calls=calls)
+    board.owner = "someone-else"
+
+    assert ci.main() == 3
+    assert not _filed(calls)
+    assert "Could not resolve to a ProjectV2 with the number 7" in capsys.readouterr().err
+
+
+def test_a_dry_run_reads_the_board_and_refuses_where_it_did_not_answer(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    calls: list[list[str]] = []
+    board = _status_kept_filing(
+        ci, tmp_path, monkeypatch, axes=MIRRORED, calls=calls, extra=("--dry-run",)
+    )
+    board.fail_reads.add("fields")
+
+    assert ci.main() == 3
+    assert not _filed(calls)
+
+
+@pytest.mark.parametrize(
+    ("setup", "says"),
+    [
+        ("no-option", "its Status field has no 'Todo' option"),
+        ("no-field", "the board has no `Status` field"),
+        ("not-single-select", "is a ProjectV2Field, not a single-select"),
+    ],
+)
+def test_where_the_board_carries_the_state_its_lack_refuses_the_filing(
+    ci, tmp_path, monkeypatch, capsys, setup, says
+) -> None:
+    """The board answered, and lacks what the first Status needs: a single-select
+    Status field with the option of the state the issue is filed into. That
+    write is one the filing requires, so the filing is refused before it files."""
+    calls: list[list[str]] = []
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=BOARD_AXES, calls=calls)
+    if setup == "no-option":
+        del board.options["Todo"]
+    elif setup == "no-field":
+        board.field_name = "Stage"
+    else:
+        board.field_type = "ProjectV2Field"
+
+    assert ci.main() == 1
+
+    assert not _filed(calls) and board.adds == []
+    err = capsys.readouterr().err
+    assert "[refused] nothing was filed: the board carries the state" in err
+    assert says in err
+
+
+def test_where_the_status_mirrors_a_board_with_no_status_field_goes_on(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    from tests.pm_board_world import LABEL_STATE
+
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=LABEL_STATE)
+    board.field_name = "Stage"
+
+    assert ci.main() == 0
+
+    assert board.adds == [42] and board.edits == []
+    assert "the board has no `Status` field" in capsys.readouterr().err
+
+
+def test_the_first_status_rests_on_the_read_made_before_the_filing(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """Where filing writes a first Status, the read that answers is the one that
+    Status is written from: no read of the board is added ([pkit:ADR-096],
+    Implications)."""
+    from tests.pm_board_world import LABEL_STATE
+
+    calls: list[list[str]] = []
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=LABEL_STATE, calls=calls)
+
+    assert ci.main() == 0
+
+    assert board.edits == [(42, "Todo")]
+    reads = [argv for argv in calls if is_seam_read(argv)]
+    assert len(reads) == 1 and "fields(first:" in query_of(reads[0])
+    created = next(i for i, argv in enumerate(calls) if argv[1:3] == ["issue", "create"])
+    assert calls.index(reads[0]) < created
+
+
+@pytest.mark.parametrize(
+    "axes", [MIRRORED, BOARD_AXES], ids=["status-mirrors", "board-carries-state"]
+)
+def test_a_card_not_added_leaves_the_issue_filed_and_exits_for_a_later_step(
+    ci, tmp_path, monkeypatch, capsys, axes
+) -> None:
+    """The card is a write the filing requires (DEC-019): not added, the issue
+    stands, the message leads with it, and the code says a later step failed. It
+    names the sync, run for the issue, as what adds the card, and, where the board
+    holds the state, the Status the filing would have written (DEC-072 point 4)."""
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=axes)
+    board.fail_adds.add(42)
+
+    assert ci.main() == 5
+
+    err = capsys.readouterr().err
+    assert "[failed] https://github.com/acme/repo/issues/42 is filed" in err
+    assert (
+        "its card was not added to board #7: HTTP 502: Bad Gateway. "
+        "`pkit pm sync-board 42` adds its card"
+    ) in err
+    assert "do not file it again" in err
+    assert "gh project item-add" not in err
+    if axes is BOARD_AXES:
+        assert (
+            "only in a run at a terminal or with the project's switch "
+            "`sync_board.adds_with_no_terminal` on, and its Status is then set on the board, "
+            "since the card the sync adds carries none: set it to 'Todo', the state the issue "
+            "was filed into"
+        ) in err
+    else:
+        assert "sync_board.adds_with_no_terminal" not in err
+
+
+@pytest.mark.parametrize(
+    "axes", [MIRRORED, BOARD_AXES], ids=["status-mirrors", "board-carries-state"]
+)
+def test_a_card_not_added_with_no_number_names_the_sync_for_the_whole_board(
+    ci, tmp_path, monkeypatch, capsys, axes
+) -> None:
+    """Where the host's answer to the filing gave no number for the issue, the
+    message names the sync run for the whole board, which adds this card with
+    every other one missing, never the host's own add, which keeps none of the
+    sync's rules. Where the board holds the state, it still names the Status the
+    filing would have written (DEC-072 point 4)."""
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=axes)
+    board.fail_adds.add(42)
+    monkeypatch.setattr(ci, "_extract_issue_number_from_url", lambda url: None)
+
+    assert ci.main() == 5
+
+    err = capsys.readouterr().err
+    assert "[failed] https://github.com/acme/repo/issues/42 is filed" in err
+    assert (
+        "its card was not added to board #7: HTTP 502: Bad Gateway. The host's answer to the "
+        "filing gave no number for the issue. `pkit pm sync-board`, run for the whole board, "
+        "adds its card and the card of every other open issue that lacks one"
+    ) in err
+    assert "gh project item-add" not in err
+    if axes is BOARD_AXES:
+        assert (
+            "lacks one, only in a run at a terminal or with the project's switch "
+            "`sync_board.adds_with_no_terminal` on, and its Status is then set on the board, "
+            "since the card the sync adds carries none: set it to 'Todo', the state the issue "
+            "was filed into"
+        ) in err
+    else:
+        assert "sync_board.adds_with_no_terminal" not in err
+
+
+def test_a_card_not_added_beside_a_failed_link_names_both_and_takes_its_own_code(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """Where the add and the --from-report link both fail, filing names each and
+    takes the code for a later step failed, not the link's (DEC-048 point 4, as
+    [pkit:ADR-096] point 4 narrows it)."""
+    board = _status_kept_filing(
+        ci, tmp_path, monkeypatch, axes=MIRRORED, extra=("--from-report", "9"), link_fails=True
+    )
+    board.fail_adds.add(42)
+
+    assert ci.main() == 5
+
+    err = capsys.readouterr().err
+    assert "its card was not added" in err
+    assert "its link into report #9's Tracked by failed" in err
+
+
+def test_a_failed_link_alone_keeps_its_code_where_every_required_write_was_made(
+    ci, tmp_path, monkeypatch
+) -> None:
+    from tests.pm_board_world import LABEL_STATE
+
+    board = _status_kept_filing(
+        ci, tmp_path, monkeypatch, axes=LABEL_STATE, extra=("--from-report", "9"), link_fails=True
+    )
+    board.fail_edits.add(42)
+
+    # The mirrored Status not written is one line; the link's code stands.
+    assert ci.main() == 4
+    assert board.adds == [42]
+
+
+def test_a_stored_node_addresses_the_filings_read_and_must_agree(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """A stored board id is only a name: it addresses the board's own read, and
+    a stored node of another board is a board that did not answer, never an
+    answer ([pkit:ADR-096] point 6)."""
+    calls: list[list[str]] = []
+    _status_kept_filing(ci, tmp_path, monkeypatch, axes=MIRRORED, calls=calls)
+    root = Path(ci.sys.argv[ci.sys.argv.index("--capability-root") + 1])
+    config_path = root / "project" / "config.yaml"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8") + "projects_v2_node_id: PVT_stale\n",
+        encoding="utf-8",
+    )
+
+    assert ci.main() == 3
+    assert not _filed(calls)
+    assert "PVT_stale" in capsys.readouterr().err
+
+
+def test_a_project_with_no_board_reads_none(ci, tmp_path, monkeypatch) -> None:
+    """A project with no board makes no call for the board (ADR-053 point 3)."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    calls: list[list[str]] = []
+    benign = _gh_command_dispatcher("https://github.com/acme/repo/issues/42")
+
+    def run(cmd, *args, **kwargs):
+        calls.append([str(c) for c in cmd])
+        return benign(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", run)
+    monkeypatch.setattr(ci, "fire_hooks", lambda *a, **kw: None)
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    argv = ["create-issue.py", "--type", "task", "--title", "do a thing", "--parent", "1"]
+    argv += ["--workstream", "spyre", "--capability-root", str(root), "--yes"]
+    monkeypatch.setattr(ci.sys, "argv", argv)
+
+    assert ci.main() == 0
+    assert _filed(calls)
+    assert not [argv for argv in calls if argv[1:2] == ["project"] or is_seam_read(argv)]
 
 
 def test_no_first_status_is_written_where_the_state_degrades(ci, tmp_path, monkeypatch) -> None:
@@ -1420,6 +1690,427 @@ def test_no_first_status_is_written_where_the_state_degrades(ci, tmp_path, monke
 
     assert board.adds == [42] and board.edits == []
     assert not [argv for argv in board.calls if argv[2:3] == ["field-list"]]
+
+
+# --- a board option that does not name the configured board (DEC-070, DEC-071) ---
+# Every issue belongs on the configured board, board 7 here, and every command
+# but filing reads and writes that board alone, so a `--board` naming another is
+# refused in every project before anything is run or asked, the foreign-repo
+# question included, and so is any `--board` where no board is configured. A
+# number below 1 is refused first, with a message of its own.
+
+#: The configured board, as `_stage_capability_tree` writes it.
+CONFIGURED_BOARD = "has_projects_v2_board: true\nprojects_v2_board_id: 7\n"
+
+#: A board declared with no number.
+NO_BOARD_NUMBER = "has_projects_v2_board: true\n"
+
+#: What the refusal says wherever the configuration names a board.
+ANOTHER_BOARD = "names a board other than the configured one"
+
+#: What the refusal says where the board holds the state.
+HOLDS_THE_STATE = "the substrate map binds the state to the board"
+
+#: The map that leaves the state out, so it degrades.
+STATE_DEGRADES: dict = {axis: binding for axis, binding in BOARD_AXES.items() if axis != "state"}
+
+#: Each map under which the board does not hold the state.
+STATE_OFF_THE_BOARD = [
+    pytest.param(LABEL_STATE, id="state-on-labels"),
+    pytest.param(None, id="no-map"),
+    pytest.param(STATE_DEGRADES, id="state-degrades"),
+]
+
+#: Each map, the one under which the board holds the state among them.
+EVERY_MAP = [pytest.param(BOARD_AXES, id="board-holds-state"), *STATE_OFF_THE_BOARD]
+
+#: A filing at the terminal, and a dry run.
+FILING_OR_DRY_RUN = [pytest.param((), id="filing"), pytest.param(("--dry-run",), id="dry-run")]
+
+
+def _filing_onto_board(
+    ci,
+    tmp_path: Path,
+    monkeypatch,
+    *,
+    axes: dict | None,
+    board: int | None,
+    board_config: str = CONFIGURED_BOARD,
+    extra: tuple[str, ...] = (),
+):
+    """Stage a filing with `--board board`, or with no `--board` where ``board``
+    is None, at a terminal, without `--yes`, in a project whose config declares
+    ``board_config``. The board that answers is board 7, the configured one,
+    which a filing that goes on reads. Return the board, every command run and
+    every question asked, the foreign-repo guard's among them."""
+    board_world = _status_kept_filing(ci, tmp_path, monkeypatch, axes=axes)
+    root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    config = root / "project" / "config.yaml"
+    config.write_text(f"workstreams: [spyre]\n{board_config}", encoding="utf-8")
+    ran: list[list[str]] = []
+    asked: list[str] = []
+    run = subprocess.run
+
+    def recording(cmd, *args, **kwargs):
+        ran.append([str(c) for c in cmd])
+        return run(cmd, *args, **kwargs)
+
+    def guard(**kwargs) -> bool:
+        asked.append("the foreign-repo question")
+        return True
+
+    def answer(prompt: str = "") -> str:
+        asked.append(prompt)
+        return "y"
+
+    monkeypatch.setattr(subprocess, "run", recording)
+    monkeypatch.setattr(ci.session_guard, "enforce", guard)
+    monkeypatch.setattr("builtins.input", answer)
+    monkeypatch.setattr(ci.sys, "stdin", SimpleNamespace(isatty=lambda: True))
+    argv = ["create-issue.py", "--type", "task", "--title", "do a thing", "--parent", "1"]
+    argv += ["--workstream", "spyre", "--capability-root", str(root)]
+    if board is not None:
+        argv += ["--board", str(board)]
+    monkeypatch.setattr(ci.sys, "argv", [*argv, *extra])
+    return board_world, ran, asked
+
+
+def _gh_calls(ran: list[list[str]]) -> list[list[str]]:
+    """The `gh` calls among the commands run, but for the read of who is filing:
+    before the refusal only the reads of who is filing run, and the one of them
+    that is `gh`, `gh api user`, asks which account the credential acts as
+    (DEC-021), so nothing is written there and no board is read."""
+    return [argv for argv in ran if argv[:1] == ["gh"] and argv[1:3] != ["api", "user"]]
+
+
+def _refused_before_anything(ci, ran: list[list[str]], asked: list[str], capsys) -> str:
+    """Run the staged filing, hold that it is refused for its options before
+    anything is run or asked and before any board is read, and return what it
+    said on standard error."""
+    assert ci.main() == 2
+
+    assert _gh_calls(ran) == [] and asked == []
+    captured = capsys.readouterr()
+    assert "about to create issue" not in captured.out
+    return captured.err
+
+
+@pytest.mark.parametrize("extra", FILING_OR_DRY_RUN)
+def test_another_board_is_refused_where_the_board_holds_the_state(
+    ci, tmp_path, monkeypatch, capsys, extra
+) -> None:
+    _, ran, asked = _filing_onto_board(
+        ci, tmp_path, monkeypatch, axes=BOARD_AXES, board=9, extra=extra
+    )
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert f"--board 9 {ANOTHER_BOARD}, board 7, and is refused: {HOLDS_THE_STATE}" in err
+    assert "every command reads an open issue's position from its card on the configured" in err
+    assert "To file the issue onto board 7, leave --board out." in err
+    assert "`gh project item-add 9 --owner <owner> --url <the issue's url>`" in err
+    assert "That card carries no position." in err
+
+
+@pytest.mark.parametrize("extra", FILING_OR_DRY_RUN)
+@pytest.mark.parametrize("axes", STATE_OFF_THE_BOARD)
+def test_another_board_is_refused_where_the_board_does_not_hold_the_state(
+    ci, tmp_path, monkeypatch, capsys, axes, extra
+) -> None:
+    """Every issue belongs on the configured board, which every command reads
+    and writes, so the refusal reaches every project with a board (DEC-071
+    point 1), in that case's own words (point 3)."""
+    _, ran, asked = _filing_onto_board(ci, tmp_path, monkeypatch, axes=axes, board=9, extra=extra)
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert (
+        f"--board 9 {ANOTHER_BOARD}, board 7, and is refused: every issue belongs on the "
+        "configured board, which every command reads and writes, so an issue filed onto "
+        "board 9 would have no card where every command looks for one"
+    ) in err
+    assert "To file the issue onto board 7, leave --board out." in err
+    assert "`gh project item-add 9 --owner <owner> --url <the issue's url>`" in err
+    assert "That card is the project's own: no command reads or writes it." in err
+    assert HOLDS_THE_STATE not in err
+
+
+@pytest.mark.parametrize("extra", FILING_OR_DRY_RUN)
+@pytest.mark.parametrize("axes", EVERY_MAP)
+def test_where_no_board_is_configured_any_board_option_is_refused(
+    ci, tmp_path, monkeypatch, capsys, axes, extra
+) -> None:
+    """The project gives no board to compare the option with, and a filing
+    adds the issue to no board, so the option would do nothing (DEC-071 point
+    2). The message says so, and the board's holding the state is no part of
+    it, since no board is configured to hold it (point 3)."""
+    _, ran, asked = _filing_onto_board(
+        ci, tmp_path, monkeypatch, axes=axes, board=7, board_config="", extra=extra
+    )
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert (
+        "--board 7 is refused: project/config.yaml configures no board "
+        "(`has_projects_v2_board`), so a filing adds the issue to no board"
+    ) in err
+    assert "To file the issue, leave --board out." in err
+    assert "`gh project item-add 7 --owner <owner> --url <the issue's url>`" in err
+    assert HOLDS_THE_STATE not in err and ANOTHER_BOARD not in err
+
+
+@pytest.mark.parametrize("axes", EVERY_MAP)
+def test_with_no_board_number_the_refusal_names_that_fault(
+    ci, tmp_path, monkeypatch, capsys, axes
+) -> None:
+    """Every board a filing names is another where the configuration gives no
+    number. The message names the missing number as the fault, and says the
+    board holds the state where the map binds the state to the board, and
+    nowhere else (DEC-071 point 3)."""
+    _, ran, asked = _filing_onto_board(
+        ci, tmp_path, monkeypatch, axes=axes, board=7, board_config=NO_BOARD_NUMBER
+    )
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert "--board 7 is refused: " in err
+    assert (
+        "project/config.yaml declares a board (`has_projects_v2_board: true`) but gives no "
+        "number for it (`projects_v2_board_id`), so the filing has no board to file onto. "
+        "That is the fault to mend"
+    ) in err
+    assert "leave --board out" not in err
+    assert (HOLDS_THE_STATE in err) == (axes is BOARD_AXES)
+
+
+@pytest.mark.parametrize(
+    "board_id",
+    [pytest.param("7", id="a-number"), pytest.param("'7'", id="a-string")],
+)
+@pytest.mark.parametrize("axes", EVERY_MAP)
+def test_the_configured_boards_own_number_goes_on(
+    ci, tmp_path, monkeypatch, capsys, axes, board_id
+) -> None:
+    """The two are compared as numbers, so a number the configuration writes as a
+    string names the same board as the option."""
+    board_config = f"has_projects_v2_board: true\nprojects_v2_board_id: {board_id}\n"
+    board, ran, _ = _filing_onto_board(
+        ci, tmp_path, monkeypatch, axes=axes, board=7, board_config=board_config
+    )
+
+    assert ci.main() == 0
+
+    assert _issue_created(ran)
+    assert board.adds == [42]
+    assert "is refused" not in capsys.readouterr().err
+
+
+#: Each project's case, as its configuration and map make it. ``{board}`` stands
+#: for the option's own number, so the last case configures a board whose number
+#: is the option's: the option is refused there only if the check of a number
+#: below 1 comes before the comparison with the configured board.
+EVERY_CASE = [
+    pytest.param(BOARD_AXES, CONFIGURED_BOARD, id="board-holds-state"),
+    pytest.param(LABEL_STATE, CONFIGURED_BOARD, id="state-on-labels"),
+    pytest.param(STATE_DEGRADES, CONFIGURED_BOARD, id="state-degrades"),
+    pytest.param(BOARD_AXES, NO_BOARD_NUMBER, id="no-board-number"),
+    pytest.param(None, "", id="no-board"),
+    pytest.param(
+        BOARD_AXES,
+        "has_projects_v2_board: true\nprojects_v2_board_id: {board}\n",
+        id="configured-board-of-that-number",
+    ),
+]
+
+
+@pytest.mark.parametrize("extra", FILING_OR_DRY_RUN)
+@pytest.mark.parametrize(("axes", "board_config"), EVERY_CASE)
+def test_a_number_below_1_is_refused_first_in_every_project(
+    ci, tmp_path, monkeypatch, capsys, axes, board_config, extra
+) -> None:
+    """No board has such a number, so the option is refused with a message of its
+    own, which takes the place of the case's own, DEC-070's where the board holds
+    the state among them (DEC-071 point 3)."""
+    _, ran, asked = _filing_onto_board(
+        ci,
+        tmp_path,
+        monkeypatch,
+        axes=axes,
+        board=0,
+        board_config=board_config.format(board=0),
+        extra=extra,
+    )
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert (
+        "--board 0 is refused: no board has the number 0, since a board's number is 1 or more"
+    ) in err
+    assert "Leave --board out to file the issue as project/config.yaml has it." in err
+    for case_said in (ANOTHER_BOARD, HOLDS_THE_STATE, "configures no board", "gives no number"):
+        assert case_said not in err
+
+
+def test_a_negative_number_is_refused_as_below_1(ci, tmp_path, monkeypatch, capsys) -> None:
+    _, ran, asked = _filing_onto_board(ci, tmp_path, monkeypatch, axes=BOARD_AXES, board=-1)
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert "--board -1 is refused: no board has the number -1" in err
+    assert ANOTHER_BOARD not in err
+
+
+# --- a board declared with no number (#3244) -----------------------------------
+# DEC-019 rejects an issue with no card on the configured board at filing, so a
+# configuration that declares a board and gives no number of 1 or more for
+# the board, read as a number, leaves a filing no board to add the
+# issue to. It is refused before anything is run or asked, as a `--board` that
+# does not name the configured board is, rather than filed onto no board.
+
+#: Each such configuration, and what the refusal says it gives for the number.
+NO_USABLE_BOARD_NUMBER = [
+    pytest.param(NO_BOARD_NUMBER, "gives no number for it", id="missing"),
+    pytest.param(f"{NO_BOARD_NUMBER}projects_v2_board_id: null\n", "gives no number", id="null"),
+    pytest.param(
+        f"{NO_BOARD_NUMBER}projects_v2_board_id: 0\n",
+        "gives it `projects_v2_board_id: 0`, which is no board's number",
+        id="zero",
+    ),
+    pytest.param(
+        f"{NO_BOARD_NUMBER}projects_v2_board_id: ''\n",
+        'gives it `projects_v2_board_id: ""`, which is no board\'s number',
+        id="empty",
+    ),
+]
+
+
+@pytest.mark.parametrize("extra", FILING_OR_DRY_RUN)
+@pytest.mark.parametrize(("board_config", "gives"), NO_USABLE_BOARD_NUMBER)
+def test_a_board_with_no_number_refuses_the_filing_before_anything(
+    ci, tmp_path, monkeypatch, capsys, board_config, gives, extra
+) -> None:
+    _, ran, asked = _filing_onto_board(
+        ci,
+        tmp_path,
+        monkeypatch,
+        axes=LABEL_STATE,
+        board=None,
+        board_config=board_config,
+        extra=extra,
+    )
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert (
+        "error: project/config.yaml declares a board (`has_projects_v2_board: true`) but "
+    ) in err
+    assert gives in err
+    assert "so the filing has no board to add the issue to" in err
+    assert "Nothing was filed." in err
+    assert "Set `projects_v2_board_id: <N>` in project/config.yaml" in err
+
+
+def test_a_board_option_where_the_configured_number_is_0_names_the_number_as_the_fault(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """A configured `0` is no board's number, so a `--board` meets the refusal of
+    a board configured with no number, and never one naming a board 0."""
+    _, ran, asked = _filing_onto_board(
+        ci,
+        tmp_path,
+        monkeypatch,
+        axes=LABEL_STATE,
+        board=7,
+        board_config=f"{NO_BOARD_NUMBER}projects_v2_board_id: 0\n",
+    )
+
+    err = _refused_before_anything(ci, ran, asked, capsys)
+
+    assert "--board 7 is refused: with no number for the configured board" in err
+    assert "gives it `projects_v2_board_id: 0`, which is no board's number" in err
+    assert ANOTHER_BOARD not in err
+
+
+# --- the board a filing's hooks write to (#3240) --------------------------------
+# A filing that named another board once added its card there and handed the
+# `after_create_issue` hooks the configured board's node, cached in the
+# configuration, so the field a hook seeds was written against the wrong board.
+# Filing now refuses another board (DEC-071), so a filing's hooks only ever get
+# the configured board's card, beside that board's node from its own answer,
+# which the cached node addresses and must agree with.
+
+#: The cached node, which `_gh_command_dispatcher`'s board answers to.
+CACHED_NODE = "projects_v2_node_id: PVT_project\n"
+
+
+def _file_with_cached_node(ci, tmp_path, monkeypatch, board: tuple[str, ...]) -> SimpleNamespace:
+    """File a Task onto board 7, whose node the configuration caches, with
+    ``board`` as its board option; record every `gh` call, each context the
+    hooks are handed, and each field write the real `set-board-field` hook makes."""
+    root = _stage_capability_tree(tmp_path, has_board=True)
+    config = root / "project" / "config.yaml"
+    config.write_text(config.read_text(encoding="utf-8") + CACHED_NODE, encoding="utf-8")
+    calls: list[list[str]] = []
+    answer = _gh_command_dispatcher("https://github.com/acme/repo/issues/42")
+
+    def run(cmd, *args, **kwargs):
+        calls.append([str(c) for c in cmd])
+        return answer(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(ci.subprocess, "run", run)
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    argv = ["create-issue.py", "--type", "task", "--title", "do a thing", "--parent", "1"]
+    argv += ["--workstream", "spyre", "--capability-root", str(root), "--yes", *board]
+    monkeypatch.setattr(ci.sys, "argv", argv)
+
+    hooks_module = _hooks_module(ci)
+    contexts: list[dict] = []
+    writes: list[dict] = []
+    real_fire_hooks = ci.fire_hooks
+
+    def capturing_fire_hooks(event, context, config, **kwargs):
+        contexts.append(context)
+        return real_fire_hooks(event, context, config, **kwargs)
+
+    def fake_write(config, **kwargs):
+        writes.append(kwargs)
+        return SimpleNamespace(ok=True, detail="set field", error=None)
+
+    monkeypatch.setattr(ci, "fire_hooks", capturing_fire_hooks)
+    monkeypatch.setattr(hooks_module.substrate_writes, "write_field_value", fake_write)
+    rc = ci.main()
+    return SimpleNamespace(rc=rc, calls=calls, contexts=contexts, writes=writes)
+
+
+def test_a_filing_naming_another_board_writes_no_board_field_while_a_node_is_cached(
+    ci, tmp_path, monkeypatch
+) -> None:
+    run = _file_with_cached_node(ci, tmp_path, monkeypatch, ("--board", "9"))
+
+    assert run.rc == 2
+    assert not _filed(run.calls)
+    assert not [argv for argv in run.calls if argv[1:3] == ["project", "item-add"]]
+    assert run.contexts == [] and run.writes == []
+
+
+@pytest.mark.parametrize(
+    "board",
+    [pytest.param((), id="no-board-option"), pytest.param(("--board", "7"), id="its-own-number")],
+)
+def test_a_filings_hooks_write_to_the_board_its_card_was_added_to(
+    ci, tmp_path, monkeypatch, board
+) -> None:
+    run = _file_with_cached_node(ci, tmp_path, monkeypatch, board)
+
+    assert run.rc == 0
+    adds = [argv for argv in run.calls if argv[1:3] == ["project", "item-add"]]
+    assert [argv[3] for argv in adds] == ["7"]
+    (context,) = run.contexts
+    assert context["issue"]["board_item_id"] == "PVTI_newitem"
+    assert context["project_node_id"] == "PVT_project"
+    assert [(w["item_id"], w["project_id"]) for w in run.writes] == [
+        ("PVTI_newitem", "PVT_project")
+    ]
 
 
 def _hooks_module(ci):

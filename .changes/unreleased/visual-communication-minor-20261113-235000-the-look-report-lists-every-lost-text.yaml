@@ -1,0 +1,21 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  Through a browser, the look report's `dropped` names each span the page does
+  not show in full (DEC-037, #3088): one entry for each cause in `why`, `no
+  ink`, `off the page`, `cut` past its page's edge or `covered` by a part
+  drawn after it, a cut or covered entry with the `share` of the span's strong
+  ink it loses. A loss under 0.01 of the span's em squared, in device pixels,
+  names none. The command prints each cause in words of its own, with its
+  share. Each start's first read plants each loss, and stops the run where the
+  read misses one or names a plant it must leave unnamed. Through the SVG
+  renderer the report says, in `dropped-not-read`, that cover and cut were not
+  read. The HTML renderer, at 1.9.0, draws under forced colours a ground for
+  each line of a text, `data-ground`, beneath its run of texts, and keeps its
+  lines out of the browser's backplate; an opaque fill's edge lies inside the
+  fill, by an inset shape for a box or an ellipse and a clip for a path or a
+  sign (DEC-039). Outside forced colours its files draw as before. A look may
+  now name a text that a part covers, or the page's edge cuts, where it named
+  none before.

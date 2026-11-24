@@ -33,6 +33,15 @@
     "strong-accent": {
       "$value": "{palette.blue.100}"
     },
+    "order": {
+      "$description": "The two ends of an order's steps in the dark scheme: a grey lighter than the page, the furthest from it that the near-white text still holds 5 to 1 on, and a grey just above the page, 1.4 to 1 off it.",
+      "first": {
+        "$value": "{palette.grey.550}"
+      },
+      "last": {
+        "$value": "{palette.grey.750}"
+      }
+    },
     "blue": {
       "fill": {
         "$value": "{palette.blue.900}"

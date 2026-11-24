@@ -13,13 +13,11 @@ body: >
   of explanation with its structure, proposes one from the page's lead or
   takeaway where the brief gives none, and writes it into the brief as a
   relation once you confirm it. It places where the page's path starts with
-  the form, before it ranks what is seen first: at the part the explanation
-  starts with or, where what matters most on the page is another part, at
-  that part, to keep `RS-GRAPHIC-001`, with the path leading from it to where
-  the explanation starts (#3094). `graphic-design-reviewer` traces each drawn
-  page's path, and reports a path that does not follow the order its
-  relations and its lead or takeaway give, as a rule finding, a brief finding
-  or a note by what it rests on. Where what matters most is not where the
-  explanation starts, it reports a page that shows the explanation's start
-  first as a rule finding on `RS-GRAPHIC-001`. The skill `visual-author` says
-  too that whoever designs may propose that order.
+  the form, at the part the explanation starts with, since no rule asks the
+  path to start elsewhere, before it ranks the page's head, its focal point
+  and the action it asks above the rest, as `RS-GRAPHIC-001` asks (#3094,
+  #3396). `graphic-design-reviewer` traces each drawn page's path, and reports
+  a path that does not follow the order its relations and its lead or
+  takeaway give, as a rule finding, a brief finding or a note by what it rests
+  on. It judges a path by the order of explanation alone. The skill
+  `visual-author` says too that whoever designs may propose that order.

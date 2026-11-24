@@ -6,6 +6,15 @@ date: 2026-09-05
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [ADR-096](ADR-096-board-did-not-answer.md).**
+> The board-membership check comes under this contract, and reads an
+> issue's card through the board read seam as every card is read.
+> Overturned: the Boundaries' bullet on the membership check, but for its
+> rules that membership stays with the flag, never routes through carriage,
+> and is reported at DEC-019's drift severity where it cannot be determined.
+> ADR-096's "What this overturns in ADR-053, and what stands" lists each
+> passage. The rest of ADR-053 stands.
+
 ## Summary
 
 **In plain terms:** when an adopter's substrate map says an axis lives on their
@@ -16,19 +25,26 @@ value — and reporting it as a missing value would mean a check passing judgeme
 on something it never read. The raise is **narrowly scoped**: it can only happen
 for an axis the map actually places on the board (refinement per
 [ADR-074](ADR-074-board-carried-state-read.md)), so a project with no board never
-performs the read and never acquires the failure. Every command that reads a
-board-carried state holds to the same ruling, gate or not: it reports a board
-that will not answer as a broken tool, never as a finding about the issue
-(refinement per [ADR-074](ADR-074-board-carried-state-read.md)).
+performs the read and never acquires the failure. Every command that reads the
+board holds to the same ruling, gate or not: it reports a board that will not
+answer as a broken tool, never as a finding about the issue (refinement per
+[ADR-074](ADR-074-board-carried-state-read.md) and
+[ADR-096](ADR-096-board-did-not-answer.md)). A read that lists only what the
+credential may see, and shows no card of the issue on the configured board, is
+the board's answer only where the same request shows the board answered, and a
+read that is not whole is no answer (refinement per
+[ADR-096](ADR-096-board-did-not-answer.md)).
 
 The rest of the record is the layering that makes that ruling implementable.
 Three things stay separate: **where an axis lives** (a pure question, answered
 with no network access), **what the board currently holds** (a read that reports
 what happened and takes no view on it), and **what a failure means** (the
-caller's decision). Fusing the first two is the tempting shortcut and it is
-refused here, for three reasons — a board outage would become a filing outage on
-paths that never touch a board, the layering would run backwards, and the scoping
-rule above would become impossible to express.
+caller's decision, within limits every caller keeps) (refinement per
+[ADR-096](ADR-096-board-did-not-answer.md)). Fusing the first two is the
+tempting shortcut and it is refused here, for three reasons — a board outage
+would become a filing outage on paths that never touch a board, the layering
+would run backwards, and the scoping rule above would become impossible to
+express.
 
 **The contract, in one breath:** carriage is asked first and cannot fail; the
 board read seam answers neutrally; the gate composes them and raises when the
@@ -108,8 +124,10 @@ directions: **carriage calls the seams; no seam calls carriage.**
 
 **Layer 2 — the board read seam.** It owns every read of the board: identity, field definitions, item lookup, and — per point 5 — the field
 **value** read. It is posture-neutral: it returns a result object saying whether
-the board answered and what it said, with `gh`'s stderr verbatim on failure, and
-it decides nothing about what that means.
+the board answered, as ADR-096 points 1 and 2 tell it, and what it said or why
+it did not, with `gh`'s stderr verbatim when `gh` failed, and it decides nothing
+about what that means (refinement per
+[ADR-096](ADR-096-board-did-not-answer.md)).
 
 **Layer 3 — the gate composes them.** A consumer that needs a classification
 value asks carriage; if the answer is `board`, it asks the seam; if the read did
@@ -139,7 +157,11 @@ value" call is the obvious simplification and it is wrong on three counts:
 
 When a gate performs a board read because carriage said `board`, and that read
 does not succeed, the gate **raises an error**. It does not report a missing
-value, does not soften to a warning, and does not pass.
+value, does not soften to a warning, and does not pass. A read that is not whole,
+or that lists only what the credential may see and shows no card of the issue on
+the configured board without the witness ADR-096 point 1 requires, is a read
+that did not succeed (refinement per
+[ADR-096](ADR-096-board-did-not-answer.md)).
 
 **A board that will not answer is a broken tool, not a missing value.** The two
 are different facts about the world and the adopter's remedy differs: an
@@ -148,13 +170,21 @@ the `read:project` scope, whose remedy `gh` prints in the stderr the seam carrie
 verbatim); a missing value is repaired by classifying the issue. A gate that
 reports the first as the second sends the adopter to fix the wrong thing.
 
-**The ruling reaches every command that reads a board-carried state, gate or
-not** (refinement per [ADR-074](ADR-074-board-carried-state-read.md)). What an
-outcome means to such a command is its own to decide; a seat choosing work, for
-one, takes nothing. But it reports a board that will not answer as that, with
-what the board said, and never as a finding about the issue, nor a finding as a
-broken board. Where its exit codes tell a broken tool from a refusal, an
-unreadable board takes the broken tool's code.
+**That a board which will not answer is a broken tool, never a missing value,
+reaches every command that reads the board, gate or not** (refinement per
+[ADR-074](ADR-074-board-carried-state-read.md) and
+[ADR-096](ADR-096-board-did-not-answer.md)). The raise stays a gate's, within
+point 3's scope. What an outcome means to such a command is its own to decide,
+within the limits ADR-096 point 4 sets; a seat choosing work, for one, takes
+nothing. But it reports a board that will not answer as that, with what the
+board said, and never as a finding about the issue, nor a finding as a broken
+board. Where its exit codes tell a broken tool from a refusal, a board that will
+not answer takes the broken tool's code, but in two cases. Once the command's
+act (ADR-096's terms) is made, whole or in part, the command takes no code that,
+as ADR-096 point 4 has it, reads as the act not made, and keeps the other limits
+that point sets after the act. A check that reports it at a severity that lets
+through what the check gates, an issue or an operation, exits as that severity
+does.
 
 **This is explicitly distinct from a board that answers *unset*.** A board that
 responds and reports no value for the field is a genuine missing value — and what
@@ -216,10 +246,11 @@ home for board reads on COR-007's third-copy grounds. A gate that needs a board
 value asks the seam, exactly as it asks for the item id.
 
 **The promoted read is neutral. It must not carry back-fill's posture across.** It
-returns the seam's shape — whether the board answered, what it said, and `gh`'s
-stderr verbatim when it did not — and back-fill maps that onto its own posture at
-its own boundary, where the DRIFTED-skip decision belongs. This is the easiest
-thing in this record to get wrong, because the existing function's contract *is*
+returns the seam's shape — whether the board answered, what it said or why it
+did not, and `gh`'s stderr verbatim when `gh` failed — and back-fill maps that
+onto its own posture at its own boundary, where the DRIFTED-skip decision
+belongs (refinement per [ADR-096](ADR-096-board-did-not-answer.md)). This is
+the easiest thing in this record to get wrong, because the existing function's contract *is*
 the posture: its success flag conflates "the board answered" with "back-fill may proceed",
 and its empty value conflates *unset* with *unread*. The promoted
 read separates both. Collapsing them would be worse than untidy: point 2 rules on
@@ -372,7 +403,9 @@ implementation.
   rule is an inspection result, and inspection does not survive the next author.
 - **The field-value read lands in the board read seam** with the seam's neutral
   result shape, able to distinguish *the board answered and the field is unset*
-  from *the board did not answer*, carrying `gh`'s stderr verbatim on the latter.
+  from *the board did not answer*, carrying why the board did not answer on the
+  latter, with `gh`'s stderr verbatim when `gh` failed (refinement per
+  [ADR-096](ADR-096-board-did-not-answer.md)).
 - **Back-fill's observable behaviour is unchanged.** Its wrapper maps the neutral
   result onto its own fresh-state shape, and an unreadable field value still
   produces a DRIFTED skip. A regression test pins that, since the promotion's whole

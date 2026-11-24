@@ -303,8 +303,9 @@ def run_main(rw, monkeypatch):
     """Returns `run(issue, *, pr=None, body="filled", head=LISTED, derived=None,
     derives=None, sources=None, fork=False, move_rc=0, reviewer=None, engine=None,
     config=None, move=None, dry_run=False, instance=None, github=None, extra=(),
-    findings=(), comments=(), comment_rc=0)` →
-    `(rc, gh_calls, moves)`. `pr` is the open PR on the branch (None: none yet), `body`
+    findings=(), comments=(), comment_rc=0, members=(), invoker=None)` →
+    `(rc, gh_calls, moves)`. `members` is the roster, and `invoker` the identity
+    resolved, by default `me`'s. `pr` is the open PR on the branch (None: none yet), `body`
     its description, None for one gh cannot read, and `head` its head. The body
     validator finds `findings` in the description, by default nothing, and the author's
     sentences are read from it as they stand. `comments` are the PR's comments, and
@@ -343,6 +344,8 @@ def run_main(rw, monkeypatch):
         findings: tuple[object, ...] = (),
         comments: tuple[dict, ...] = (),
         comment_rc: int = 0,
+        members: tuple[dict, ...] = (),
+        invoker: object = None,
     ):
         gh_calls: list[list[str]] = []
         moves: list[str] = []
@@ -408,10 +411,13 @@ def run_main(rw, monkeypatch):
         monkeypatch.setattr(rw.session_guard, "enforce", lambda **k: True)
         monkeypatch.setattr(rw, "load_adopter_config", lambda _r: dict(config or {}))
         (engine or FakeEngine()).install(monkeypatch)
-        monkeypatch.setattr(rw, "_read_members", lambda *a: [])
-        monkeypatch.setattr(
-            rw, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+        monkeypatch.setattr(rw, "_read_members", lambda *a: list(members))
+        resolved = (
+            SimpleNamespace(github_login="me", unresolved_cause=None)
+            if invoker is None
+            else invoker
         )
+        monkeypatch.setattr(rw, "resolve_invoker_identity", lambda **k: resolved)
         monkeypatch.setattr(rw, "check_membership", lambda *a: SimpleNamespace(allowed=True))
         monkeypatch.setattr(rw.axis_labels, "load_substrate_map", lambda _r: None)
         monkeypatch.setattr(rw, "_gh_get_issue", lambda _n, _c: issue)
@@ -473,6 +479,89 @@ def test_opens_a_ready_pr_and_moves_from_in_progress(run_main, capsys) -> None:
     out, err = capsys.readouterr()
     assert "[ok] PR ready" in out
     assert "[failed]" not in err
+
+
+#: A project that asks its members of role PM for the review (DEC-027).
+_HUMAN_REVIEW = {"review": {"mode": "human", "human_review": {"reviewer_role": "PM"}}}
+_PMS = ({"github_login": "me", "role": "PM"}, {"github_login": "alice", "role": "PM"})
+
+
+def test_human_review_leaves_the_author_out_of_its_reviewers(run_main, capsys) -> None:
+    rc, _gh_calls, _moves = run_main(
+        _task(["state:in-progress"]), config=_HUMAN_REVIEW, members=_PMS
+    )
+    assert rc == 0
+    out, err = capsys.readouterr()
+    assert "  human-mode reviewers (role=PM): @alice\n" in out
+    assert "cannot tell" not in err
+
+
+def _unresolved(rw) -> object:
+    """The identity where `gh api user` refuses: GitHub gave no answer for the
+    credential, so the reading names no acting account."""
+    forbidden = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+    return sys.modules["_lib.membership"].Identity(
+        github_login=None, email=None, unresolved_cause=forbidden, cause="refused"
+    )
+
+
+def _issue_42() -> FakeGitHub:
+    """The in-memory GitHub the clash guard reads #42 from, which no instance owns."""
+    github = FakeGitHub()
+    github.add(42)
+    return github
+
+
+def test_human_review_asks_no_member_where_the_prs_author_is_not_known(
+    run_main, rw, capsys
+) -> None:
+    """A PR this run opened is the acting account's; where the reading named no
+    account and the PR cannot be found again, no member can be told from its
+    author, so none is asked, and each is named with why (DEC-079 point 3)."""
+    rc, gh_calls, _moves = run_main(
+        _task(["state:in-progress"]),
+        config=_HUMAN_REVIEW,
+        members=_PMS,
+        invoker=_unresolved(rw),
+        github=_issue_42(),
+    )
+    assert rc == 0
+    out, err = capsys.readouterr()
+    assert "human-mode reviewers" not in out
+    why = "the PR's author is not known, so the member cannot be told from it"
+    assert f"  [note] not asked for a review: @me: {why}.\n" in err
+    assert f"  [note] not asked for a review: @alice: {why}.\n" in err
+    assert [c for c in gh_calls if c[:3] == ["gh", "pr", "list"]] == [
+        [
+            "gh",
+            "pr",
+            "list",
+            "--head",
+            BRANCH,
+            "--state",
+            "all",
+            "--json",
+            "number,state,isDraft,headRefName,author",
+        ],
+    ] * 2
+
+
+def test_human_review_tells_members_from_the_author_github_records(run_main, rw, capsys) -> None:
+    """A PR found is told by the author GitHub records for it, whatever the
+    reading named: the author is left out, and the other member asked."""
+    pr = {**_open_pr(draft=True), "author": {"login": "me", "id": "U_1", "is_bot": False}}
+    rc, _gh_calls, _moves = run_main(
+        _task(["state:in-progress"]),
+        pr=pr,
+        config=_HUMAN_REVIEW,
+        members=_PMS,
+        invoker=_unresolved(rw),
+        github=_issue_42(),
+    )
+    assert rc == 0
+    out, err = capsys.readouterr()
+    assert "  human-mode reviewers (role=PM): @alice\n" in out
+    assert "  [note] not asked for a review: @me: it is the PR's author.\n" in err
 
 
 def test_rerun_in_review_leaves_a_ready_pr_alone(run_main) -> None:
@@ -673,7 +762,7 @@ def test_bypass_owner_posts_its_reason_first_and_once(run_main, rw, monkeypatch,
     github = _owned_by_instance_3(rw)
     move = MoveIssueInProcess(monkeypatch, _task(["state:review"]))
     # The child runs as the same person as review-work, as a real child does.
-    me = SimpleNamespace(github_login="me")
+    me = SimpleNamespace(github_login="me", unresolved_cause=None)
     monkeypatch.setattr(move.module, "resolve_invoker_identity", lambda config=None: me)
     rc, gh_calls, _moves = run_main(
         _task(["state:in-progress"]),
@@ -690,7 +779,7 @@ def test_bypass_owner_posts_its_reason_first_and_once(run_main, rw, monkeypatch,
     assert move.runs[0][-2:] == ["--bypass-owner", "instance 3's session is gone"]
     audits = [c["body"] for c in github.issues[42].comments if "pkit-audit-key" in c["body"]]
     assert len(audits) == 1
-    assert "Bypassed by me: instance 3's session is gone" in audits[0]
+    assert "Bypassed: instance 3's session is gone" in audits[0]
     captured = capsys.readouterr()
     assert "--bypass-owner let this clone, instance 2, act on it" in captured.err
     assert "audit comment already present; idempotent skip" in captured.out
@@ -1077,8 +1166,8 @@ def test_the_refusal_joins_the_body_validator_s_findings(rw, monkeypatch, capsys
 # record survives a failed flip or move (DEC-049 point 2). The PR a run opens has no
 # thread to comment on until then, so there it follows the opening.
 
-#: The headline, as the schema's audit template renders it for the test's invoker.
-HEADLINE = "Bypassed by me: `review-work --force` passed each refusal below"
+#: The headline, as the schema's audit template renders it.
+HEADLINE = "Bypassed: `review-work --force` passed each refusal below"
 #: A finding of the body validator, as a line of the audit comment names it.
 NO_DOC_IMPACT = "- `[hard-reject] body.doc-impact: no Doc impact`"
 #: A change check that could not be run at the head, as that comment names it.
@@ -1159,11 +1248,9 @@ def test_force_on_a_pr_it_opens_comments_once_the_pr_exists(run_main, rw) -> Non
 
 def test_the_comment_names_the_person_with_their_email(rw) -> None:
     """Who gave the override, in the template's form."""
-    invoker = SimpleNamespace(github_login="alice", email="alice@example.com")
-    body = rw._force_audit_body(["`a refusal`"], LISTED, "the-key", CAP_ROOT, invoker)
+    body = rw._force_audit_body(["`a refusal`"], LISTED, "the-key", CAP_ROOT)
     assert body.splitlines()[1] == (
-        "Bypassed by alice <alice@example.com>: `review-work --force` passed each refusal "
-        f"below at PR head {LISTED[:7]}."
+        f"Bypassed: `review-work --force` passed each refusal below at PR head {LISTED[:7]}."
     )
 
 

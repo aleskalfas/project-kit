@@ -1,0 +1,19 @@
+component: project-management
+kind: none
+body: >
+  DEC-077, accepted with this change (#3271), decides that at an issue's
+  filing the post-check workflow gives a missing card by running the board
+  sync for that issue alone, on a board of the repository's own owner that
+  does not hold the state, where the project turned its remediation on, set
+  a credential the board answers and set the variable PM_SYNC_AT_FILING to
+  on, which is its consent: under a person's token only for an issue the
+  repository's own people open, and under an App's token for every issue.
+  Elsewhere the workflow adds no card and its comment names the sync. The
+  sync keeps the membership gate, whose refusal in a run with no terminal
+  names ways through it; the project's switch where the board holds the
+  state consents for no run an event on an issue starts; and a run of the
+  sync named for some issues walks the board. It refines DEC-019, DEC-020,
+  DEC-021, DEC-072 and ADR-074 in place, and edits DEC-071, DEC-073 and
+  ADR-096 to keep their facts true. The template, the commands and the
+  README are unchanged until the Task that builds it, which declares its own
+  changeset, so no surface moves here.

@@ -30,7 +30,8 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  removed
-  1  membership refusal / validation refusal / non-zero issue count / off a
+  1  membership refusal / validation refusal / non-zero issue count / a card
+     on the board may hold the option whose value the walk did not count / off a
      terminal without --yes
   2  usage error (slug not found)
   3  gh failure (the issue count unreadable; the label not deleted)
@@ -210,6 +211,23 @@ def main() -> int:
         return 1
     elif n:
         print(f"[warn] --force: {n} issue(s) still carry {args.slug!r}.", file=sys.stderr)
+    # A card on the board may hold the option whose value the walk did not
+    # count ([pkit:ADR-096] point 2): the count above leaves that card out. The
+    # board's option stays, so no card's value is cleared.
+    uncounted = (
+        workstream_sync.uncounted_refusal(args.slug, read, removes_option=False)
+        if read.ok
+        else None
+    )
+    if uncounted is not None and not args.force:
+        print(
+            f"[refused] nothing was removed: {uncounted}\n"
+            "  → Pass --force to remove anyway (may leave orphan values).",
+            file=sys.stderr,
+        )
+        return 1
+    if uncounted is not None:
+        print(f"[warn] --force: {uncounted}", file=sys.stderr)
 
     print(f"remove-workstream: {args.slug}")
     print(f"  file:           {path}")

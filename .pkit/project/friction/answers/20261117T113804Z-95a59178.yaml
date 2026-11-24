@@ -1,0 +1,430 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-authorisation
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T225036Z-926c13c5.yaml
+    revalidated:
+      at: 2026-11-17T11:38:04Z
+      outcome: unchanged
+      unchanged-because: DEC-006's edits in this change narrow the forward cascade to the ancestors it can read, tell as the parent and write, add a refusal of a scheduling or a start where a read its cascade is planned on gets no answer, and restate as an aim the claim that no container stands behind the work under it. None of them changes who authorises a move, when, or for which issue, which is all the definition, the example and the distinctions say, so the term still holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-cascade
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+    revalidated:
+      at: 2026-11-17T11:41:05Z
+      outcome: unchanged
+      unchanged-because: "DEC-006's edits in this change narrow the forward cascade to the ancestors it can read, tell as the parent and write, and DEC-075, accepted with them, says what it does at the others. The definition names the cascade by its effect, which DEC-075's Implications leave standing, and VIEW-the-issue-lifecycle's section on the cascade, which this change updates, carries the limits. The example's start brings up an EPIC the cascade reads, and the distinctions on a move asked for directly, the downward cascade and the close of a parent stand in DEC-006 as they were. Read with the revalidations answered apart on the base, which hold together with this change: a move's own write resting on a read of the moved issue made after its prompt, and move-issue reading a position the engine did not determine as one it cannot tell, each leave the cascade's effect on the issues above as the entry states it."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-completed-close
+    read:
+      - 20261113T222453Z-06dececb.yaml
+    revalidated:
+      at: 2026-11-17T11:38:20Z
+      outcome: unchanged
+      unchanged-because: DEC-006's edits in this change narrow which ancestors the forward cascade brings level, and leave its sentence on a completed close standing, the ancestors it brings up left to the Cascade rule as narrowed (DEC-075's Implications). The distinction that a completed close brings each issue above that is behind up to In Progress tells the close from a won't-do close, as that sentence does, and the definition and the other distinctions speak of no cascade, so the term still holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-issue-lifecycle
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+    revalidated:
+      at: 2026-11-17T11:41:08Z
+      outcome: unchanged
+      unchanged-because: "DEC-006's edits in this change touch its Cascade rule, a move back's account of a container behind the work under it, one word of its Rationale and the cascade check in its Implications. They leave the five states, their order, the person's hold on the scheduling and the end, Review being a Task's alone and the board's Status column as they were, which is all the definition, the example and the distinctions say. Read with the revalidations answered apart on the base, which hold together with this change: the board sync giving missing cards changes who gives a card and not where the state is read, and a move's read after its prompt and move-issue's reading of a position the engine did not determine change no state or move, so the term still holds."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-task
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+    revalidated:
+      at: 2026-11-17T11:38:34Z
+      outcome: unchanged
+      unchanged-because: DEC-006's edits in this change touch only the forward cascade, a move back's account of a container behind the work under it and the cascade check's implication. The definition, the example and the distinctions of a Task speak of what delivers or ends its work, its sub-tasks, a Feature and its kind of work, none of which these edits reach, so the term still holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-wont-do-close
+    read:
+      - 20261113T222453Z-06dececb.yaml
+    revalidated:
+      at: 2026-11-17T11:38:37Z
+      outcome: unchanged
+      unchanged-because: DEC-006's edits in this change narrow which ancestors the forward cascade brings level, and leave its rule that a won't-do close from Todo or Backlog moves no ancestor forward as it was, which the distinction from a completed close states. The definition and the other distinctions speak of no cascade, so the term still holds.
+  - artefact: tech-docs/analysis/project-management/domain-model/010-issues-and-their-hierarchy.md
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T213812Z-344be429.yaml
+    revalidated:
+      at: 2026-11-17T11:38:41Z
+      outcome: unchanged
+      unchanged-because: DEC-006's edits in this change touch only the forward cascade, a move back's account of a container behind the work under it and the cascade check's implication. The view cites DEC-006 only for a Task being the unit that one pull request delivers or a completed close ends, which these edits leave as they were, so the view still holds.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+    revalidated:
+      at: 2026-11-17T11:38:55Z
+      outcome: unchanged
+      unchanged-because: DEC-006's edits in this change narrow the forward cascade, whose moves the requirement's applies-to leaves outside it since they ask for no authorisation. The refusal DEC-075 adds of a scheduling or a start, where a read its cascade is planned on gets no answer, makes no held move without its authorisation, and who holds each move stands in DEC-006 as it was, so the statement, the measure and the rationale still hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261116T071501Z-ef7c72db.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+    revalidated:
+      at: 2026-11-17T11:38:59Z
+      outcome: unchanged
+      unchanged-because: UC-063 cites DEC-006 only for the planner's approval serving as promote-issue's reason when the agent schedules the plan's issues, which DEC-006's edits in this change leave as they were. It describes no forward cascade, and the refusal DEC-075 adds of a scheduling whose cascade cannot be read is a variant of the move, which UC-061 carries as its variant 5b.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T234348Z-1f64d843.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+    revalidated:
+      at: 2026-11-17T11:39:02Z
+      outcome: unchanged
+      unchanged-because: DEC-006's edits in this change narrow the forward cascade and add a refusal of a scheduling or a start where a read its cascade is planned on gets no answer, which UC-061 takes in as its variants 5b to 5e. The journey's path through UC-061 and UC-062, its variants on a won't-do close, a completed close, a change requested and a later head merged, and its guarantee that no undeclared move is made rest on none of them, so the journey still holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+    revalidated:
+      at: 2026-11-17T11:39:15Z
+      outcome: unchanged
+      unchanged-because: UC-090 cites DEC-006 only for a Task carrying its own state where the board does not, which DEC-006's edits in this change leave as they were, and it describes no forward cascade. ADR-074's Boundaries in this change read that DEC-006 holds that no container is to stand behind the work under it, and cite DEC-075 as deciding the cascade at an ancestor the read cannot place; neither edit changes ADR-074 point 5, which the use case rests on, so it still holds.
+  - artefact: tech-docs/analysis/project-management/domain-model/030-the-issue-lifecycle.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+    revalidated:
+      at: 2026-11-17T11:39:18Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T113546Z-35debc4d.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T060759Z-75e99435.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+    revalidated:
+      at: 2026-11-17T11:39:22Z
+      outcome: updated
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T193339Z-5bd2a791.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T160032Z-7fd436db.yaml
+      - 20261112T163245Z-ea50e1b3.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261113T221227Z-8ea6b98a.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T113546Z-35debc4d.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T201738Z-88b7102c.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T091317Z-42b6403e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T213811Z-fcb1a04e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T060759Z-75e99435.yaml
+      - 20261116T071501Z-ef7c72db.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T073934Z-de939802.yaml
+      - 20261116T075435Z-97191300.yaml
+      - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261116T110629Z-7871f194.yaml
+      - 20261116T112419Z-c3215b11.yaml
+      - 20261116T223146Z-fdad67d7.yaml
+      - 20261116T223221Z-8a885d2a.yaml
+      - 20261116T223818Z-0ab49eeb.yaml
+      - 20261116T225010Z-97b5aecd.yaml
+      - 20261116T225513Z-0d37c985.yaml
+      - 20261116T225522Z-83980882.yaml
+      - 20261116T225640Z-9b864975.yaml
+      - 20261116T232343Z-e53423de.yaml
+      - 20261116T233535Z-b44a843f.yaml
+      - 20261117T005457Z-37ce25dd.yaml
+      - 20261117T010941Z-d7ea213a.yaml
+      - 20261117T011424Z-02e2722e.yaml
+      - 20261117T021240Z-547bb550.yaml
+    revalidated:
+      at: 2026-11-17T11:39:46Z
+      outcome: unchanged
+      unchanged-because: "This change accepts DEC-075 and makes the edits it names to DEC-006, which narrow the forward cascade to the ancestors it can read, tell as the parent and write, and refuse a move that schedules or starts work, Todo → Backlog or Backlog → In Progress, where a read its cascade is planned on gets no answer. It changes no code and no README text, and DEC-075's Implications have the README's account of the forward cascade, which ships beside the commands, change with the build, #2305. So the README still describes the cascade as built, where an ancestor its Status or the engine does not place is not written and stops the walk, until that build brings the account to the record. Read together, the revalidations answered apart on the base still hold: the merge queue's has 'Merging through a queue' and land-work's account say that a queue may merge a later head, and DEC-073's leaves 'Authority — membership lifecycle', 'Who runs a command' and 'The post-check workflow's credential' describing the shipped gate until its build, #3363; this change reaches neither. The deferrals for DEC-074's build, #3243, are kept: this change touches neither pre-check, the pm skill nor back-fill."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-074, accepted in this change, has pre-check's board check read the board on each run and warn where the board does not answer, fail a configuration that declares a board and gives no board number its schema admits, and give each check's outcome under a key that keeps its check for good, the report kept stable as ADR-097 and the CLI reference's statement of it keep every command's machine-readable output, and has the skill's first step show pre-check's warnings; DEC-017 and DEC-037 take the edits it names, and ADR-031 and ADR-096 the facts it corrects. The change builds none of it, so pre-check, the skill and back-fill still run as the README describes them, with main's statement of the documents the commands print among it, which already has no key come to mean anything else. The README's table of what pre-check covers, its account of Step 0 under 'Verify with pre-check', the pre-check row under 'When the board does not answer', which leaves to project-kit#3193 whether the check reads the board, and the fields 'The prerequisites: pre-check' lists for its report, which name no key for each check, change with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-031
+          reason: "ADR-031 point 5 now says the fourth member of back-fill's gate is back-fill's own, computed apart from pre-check, the fact DEC-074 corrects. The README's account of back-fill's gate and of what pre-check covers changes with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-096
+          reason: "ADR-096 now cites DEC-074 where it said project-kit#3193 proposes that the board check warn. The README's pre-check row under 'When the board does not answer', which still leaves that to project-kit#3193, changes with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-097
+          reason: "ADR-097 now cites DEC-074 point 4 where it spoke of project-kit#3193's draft: DEC-074 gives each of pre-check's checks a key in its report that keeps its check for good, and cites ADR-097 for how the report stays stable. None of ADR-097's points changes, so 'What the commands print for a program' keeps to the rule as it did. The fields 'The prerequisites: pre-check' lists for the report, which name no key for each check, change with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."

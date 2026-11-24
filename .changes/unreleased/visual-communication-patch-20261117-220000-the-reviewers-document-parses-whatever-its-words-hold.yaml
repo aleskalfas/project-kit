@@ -1,0 +1,12 @@
+component: visual-communication
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The graphic-design reviewer writes each value in words of its report's
+  document, every `what`, `evidence` and `names` and the model's `name` and
+  `effort`, as a folded block scalar, which parses words that hold `: ` or
+  open with a quoted phrase (#3391). Written plain, a value that held `: `,
+  or that opened with a quoted phrase and went on after it, did not parse.
+  The reference instance, `review.yaml`, shows that form for every such
+  value.

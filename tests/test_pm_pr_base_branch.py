@@ -24,6 +24,7 @@ from typing import Any
 
 import pytest
 
+from tests import pm_assignee_lookup
 from tests.adopter_repo import sign_nothing
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -60,6 +61,13 @@ def _load(script: str):
     return module
 
 
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login `start-work` assigns here as a user's
+    account (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
+
+
 @pytest.fixture(scope="module")
 def verbs():
     loaded = {s: _load(s) for s in ("start-work", "open-pr", "create-draft", "review-work")}
@@ -78,9 +86,9 @@ def _stub_gates(
     monkeypatch.setattr(mod, "load_adopter_config", _no_config)
     _backbone_answers(monkeypatch, mod.infer.default_branch)
     monkeypatch.setattr(mod, "_read_members", lambda *a: [])
-    monkeypatch.setattr(
-        mod, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
-    )
+    # GitHub answers that the credential acts as `me`, a user's account.
+    me = sys.modules["_lib.membership"].Identity(github_login="me", email=None, kind="user")
+    monkeypatch.setattr(mod, "resolve_invoker_identity", lambda **k: me)
     monkeypatch.setattr(mod, "check_membership", lambda *a: SimpleNamespace(allowed=True))
     monkeypatch.setattr(mod, "_gh_get_issue", lambda _n, _config: issue)
 

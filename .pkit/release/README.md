@@ -11,6 +11,8 @@ pkit:
         - src/project_kit/versioning.py
         - src/project_kit/stranded_migrations.py
         - src/project_kit/release_candidate.py
+        - src/project_kit/candidates.py
+        - src/project_kit/upgrade.py
         - src/project_kit/remote_refs.py
         - pyproject.toml
         - .changie.yaml
@@ -21,7 +23,7 @@ pkit:
         - scripts/release_pr.py
         - .pkit/capabilities/visual-communication/scripts/release.py
         - .pkit/capabilities/visual-communication/scripts/_lib/shipped.py
-      record: [COR-010, COR-030, COR-041, "COR-054#2", PRJ-002, PRJ-004, PRJ-016, ADR-040, "ADR-059#3", "ADR-061#5", "ADR-061#8", "ADR-089#1", "ADR-089#2", "ADR-089#3", "ADR-089#9", "ADR-092#2", "ADR-092#3", "ADR-092#5", "ADR-092#6", "ADR-092#8", "ADR-092#9", "ADR-092#10"]
+      record: [COR-010, COR-030, COR-041, "COR-054#2", PRJ-002, PRJ-004, PRJ-016, ADR-040, "ADR-059#3", "ADR-061#5", "ADR-061#8", "ADR-089#1", "ADR-089#2", "ADR-089#3", "ADR-089#9", "ADR-092#2", "ADR-092#3", "ADR-092#5", "ADR-092#6", "ADR-092#8", "ADR-092#9", "ADR-092#10", "ADR-092#4", "ADR-092#7", "ADR-089#8", "ADR-063#1"]
       artefact:
         - .pkit/lifecycle/manifest.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/upgrade-flow.md#the-replay-a-missing-completion
@@ -325,11 +327,11 @@ two entries for it.
 
 ### Authoring a changeset
 
-Contributors use **changie** — a dev-only tool provisioned through `mise`
-(`[tools]` in `mise.toml`) and wrapped by `mise run changeset`:
+A contributor writes a changeset by hand, or with **changie**, a dev-only tool
+installed however they choose:
 
 ```
-mise run changeset        # or: changie new
+changie new
 ```
 
 changie's native `component` / `kind` / `body` fields are exactly the schema
@@ -337,8 +339,8 @@ above, and its `fragmentFileFormat` (`.changie.yaml`) names files
 `<component>-<kind>-<timestamp>-<random>.yaml` — the random suffix makes
 **parallel PRs collision-free**. Its `custom:` prompts write the optional
 `category`, `pr` and `requires_backbone` fields (the last a free string —
-`release` or a shipped `X.Y.Z` — which the lint checks). A changeset is equally
-hand-writable: drop a YAML file with the three keys into `.changes/unreleased/`.
+`release` or a shipped `X.Y.Z` — which the lint checks). To write one by hand,
+drop a YAML file with the three keys into `.changes/unreleased/`.
 
 ### changie is adopter-invisible
 
@@ -589,10 +591,10 @@ a lower bound; that moves only on declaration (the floor raise, below):
   backbone (`.pkit/VERSION`) — the version the author is releasing under and
   tested against. Releasing a capability under backbone X asserts compatibility
   with X, so its declared range comes to include X. This is #494's author-side
-  auto-broaden, closing the gap [COR-041](../decisions/core/COR-041-external-source-distribution.md)
-  and [ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md)
-  flagged: the author owns an externally-sourced capability's compatibility
-  claim, and this keeps it current on release rather than by hand.
+  auto-broaden, the follow-up [COR-041](../decisions/core/COR-041-external-source-distribution.md)
+  names and [ADR-040](../../tech-docs/architecture/decisions/ADR-040-external-source-write-path.md)
+  point 5 relies on: the author owns an externally-sourced capability's
+  compatibility claim, and this keeps it current on release rather than by hand.
 
 The broaden is **keyed on "a component moved under backbone X"**, not on being
 project-kit — so it fires the same way in an adopter's own repo releasing its
@@ -860,6 +862,48 @@ are an interlock against a mistake, not a defence: a run on a branch runs
 that branch's `pkit` (ADR-092 point 10). Git refuses a push that would move a
 tag `origin` holds, whatever code runs, and nothing here forces a push.
 
+### Withdrawing a candidate
+
+A candidate found unfit is withdrawn by a tag of its own, never by deleting
+its tag (ADR-092 point 4). A dropped branch's candidate may otherwise stay the
+newest for good, and `pkit upgrade --pre` would keep finding it. A person
+pushes the tag `withdrawn/v<candidate>` on the candidate's commit, and says on
+its Release that it is withdrawn, and why:
+
+    git tag -a withdrawn/v<candidate> -m "<why>" 'v<candidate>^{commit}'
+    git push origin refs/tags/withdrawn/v<candidate>    # the tag alone, never forced
+
+Neither tag is moved or deleted afterwards (PRJ-016 point 5). `pkit version
+untag` refuses a candidate's tag, and its refusal names the withdrawal in its
+place. A deletion by hand lies outside, as any act write access allows. A
+later `pkit release publish-notes <candidate>` writes the notes from the
+changelog afresh, so say so on the Release again after one.
+
+What the withdrawal changes:
+
+- **`pkit upgrade --pre` passes it by,** and takes the newest release left,
+  an older candidate or a final release. A project already on the candidate
+  stays on it, since a project on a candidate moves to no other release, and
+  leaves it by leaving the testers' branch (ADR-092 point 7).
+- **`pkit pin <candidate>` warns of it,** and pins it all the same, since
+  whoever names a withdrawn candidate asked for that one.
+- **It names no install** (PRJ-004 as PRJ-016 refines it). Every reader of
+  release and candidate tags matches a tag by its full reference,
+  `refs/tags/v…`, so none takes a tag under `withdrawn/` for either: the tool
+  update's lookup of the latest release and `--pre`'s, the cut's counter, the
+  stranded-script guard's fixed version, `scripts/latest_tag.py`, which keeps
+  `latest` on the highest release, and the release workflow's search for notes
+  left unpublished. A `v*` pattern would match the tail of `withdrawn/v…` too.
+  `--pre` and `pkit pin` match a withdrawal tag the same way, by
+  `refs/tags/withdrawn/v…`, so a tag whose tail alone reads as one withdraws
+  nothing.
+
+The withdrawal is project-kit's, and the reading of it binds every project
+that tests a candidate.
+[The CLI reference's `upgrade`](../cli/README.md#upgrade) <!-- unanchored: points the reader on to a page that anchors this one, so an anchor back would make a cycle -->
+gives `--pre`'s reading, and its `pin` and `version untag` give their
+messages.
+
 ### Merging the release PR — `pkit release merge <pr>`
 
 A release PR closes **no issue** — it is a release, not issue work — so the
@@ -1065,8 +1109,19 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   - **dropped** by the queue — its checks failed on the merge it was about
     to make, or it no longer merged cleanly — exit 3, with what the queue
     reported; nothing is deleted. Fix it and run again;
-  - **head moved** after the checks were read — the PR is taken out of the
-    queue, so commits nobody checked do not merge; exit 3, nothing deleted.
+  - **head moved** after the checks were read, while the run waits — the PR
+    is taken out of the queue; exit 3, nothing deleted. Taking it out races
+    the queue, so commits nobody checked may merge, and which way it goes
+    turns on timing. Where taking it out finds the PR merged, the run says
+    at which head and exits 3, and a re-run deletes the head branch; where
+    it cannot tell whether the PR is out, it says how to take it out by
+    hand. Where the run's first reading at the new head already shows the
+    PR merged, that is a merge as above, exit 0, warned about as "Merges"
+    above says. Once a run has exited 4, nothing takes the PR out on a
+    push, and the queue may merge the later head. A release merged at a
+    later head is tagged as any other ("Does not tag" below), though the
+    run read only the earlier head's checks. Whether such a release is
+    tagged before a person has looked at it is open (#3357).
 
   Without a queue the merge is direct, pinned to the checked head; if GitHub
   then reports the PR queued rather than merged (a queue switched on
@@ -1090,9 +1145,7 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   its view answered with something that is not JSON among it — or how its
   base merges, before it asks anything says that this run asked nothing; so
   does one whose view names the head in another form than a full commit id,
-  which the landing refuses before it reads. When the head moved while the PR was queued and the queue merged
-  it before it could be taken out, the run says it merged, and at which head,
-  exit 3, nothing deleted; a re-run deletes the head branch.
+  which the landing refuses before it reads.
 - **Does not tag.** `release-tag.yml` cuts the backbone tag on the resulting
   push to `main` (VERSION-driven, PRJ-004); the merge and the tag stay split.
 - **Is idempotent**: on a closed PR it reports there is nothing to merge, and
@@ -1101,6 +1154,7 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   project-neutral.
 
 It stays **human-gated**: a human decides to run it; nothing auto-merges.
+One exception is the queue's merge of a later head ("head moved" above).
 
 ### The queue's check — `pkit release check-queue`
 
@@ -1169,6 +1223,14 @@ publishes it as the body of a GitHub Release for tag `v<version>`.
   Release is marked a pre-release (`--prerelease`). So GitHub never shows a
   candidate as its latest release (ADR-089 point 9). Where the clone lacks the
   tag, it says to fetch it.
+- **A candidate's notes end with how to try it,** after its section or its
+  short notes (ADR-092 point 4): on a branch of the project, left to go back;
+  by `pkit pin <candidate>`, which reaches the candidate the notes describe,
+  where `pkit upgrade --pre` takes the newest, which may be another branch's;
+  or, where `pkit pin` refuses a candidate, as a release from before
+  candidates does, by the first hop, the candidate's own upgrade through the
+  router's bypass. A move cut short goes on with the command that started it,
+  run again (ADR-089 point 8).
 - **`--dry-run`** prints the notes it would publish, and whether they are the
   whole section or the short notes, without calling `gh`.
 - **Project-neutral.** The repo is derived from the ambient `gh` context (the

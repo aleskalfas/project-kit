@@ -432,21 +432,48 @@ def test_a_push_without_the_guards_clearance_is_not_made(function: Any, pushable
     assert _remote_tags(bare_remote) == ""
 
 
-def test_untag_version_accepts_prerelease_tag(tmp_kit_in_git: Path) -> None:
-    """Pre-release versions (e.g., `v1.2.0rc1`) are valid tag forms per PRJ-004."""
-    (tmp_kit_in_git / "VERSION").write_text("1.2.0rc1\n", encoding="utf-8")
-    _subprocess.run(["git", "tag", "v1.2.0rc1"], cwd=tmp_kit_in_git, check=True)
-    versioning.untag_version(tmp_kit_in_git)
+def _tagged_with_git(source_kit: Path, version: str) -> str:
+    """`.pkit/VERSION` set to `version`, and its tag made with git alone, so the
+    test holds whatever `pkit version tag` takes."""
+    (source_kit / "VERSION").write_text(f"{version}\n", encoding="utf-8")
+    tag = f"v{version}"
+    _subprocess.run(["git", "tag", "-a", tag, "-m", tag], cwd=source_kit.parent, check=True)
+    return tag
 
-    repo = tmp_kit_in_git.parent
-    result = _subprocess.run(
-        ["git", "tag", "-l", "v1.2.0rc1"],
-        capture_output=True,
-        text=True,
-        cwd=repo,
-        check=True,
+
+def test_untag_version_takes_an_alpha_or_beta_tag(tmp_kit_in_git: Path) -> None:
+    """A pre-release tag that names no candidate, such as `v1.2.0a1`, goes as before."""
+    tag = _tagged_with_git(tmp_kit_in_git, "1.2.0a1")
+    versioning.untag_version(tmp_kit_in_git)
+    assert tag not in _local_tags(tmp_kit_in_git.parent)
+
+
+def test_untag_version_refuses_a_candidates_tag(tmp_kit_in_git: Path) -> None:
+    """A candidate's tag is never moved or deleted (ADR-092 point 4): the refusal
+    names the withdrawal tag in its place, and the tag stays."""
+    tag = _tagged_with_git(tmp_kit_in_git, "1.2.0rc1")
+    with pytest.raises(click.ClickException, match="release candidate's tag") as refused:
+        versioning.untag_version(tmp_kit_in_git)
+    assert "withdrawn/v1.2.0rc1" in refused.value.message
+    assert tag in _local_tags(tmp_kit_in_git.parent)
+
+
+def test_untag_push_refuses_a_candidates_tag_on_the_remote_too(
+    pushable: tuple[Path, Path],
+) -> None:
+    """`--push` deletes nothing either: the candidate's tag stays here and on `origin`."""
+    source_kit, bare_remote = pushable
+    tag = _tagged_with_git(source_kit, "1.2.0rc1")
+    _subprocess.run(
+        ["git", "push", "-q", "origin", tag], cwd=source_kit.parent, check=True, capture_output=True
     )
-    assert result.stdout.strip() == ""
+
+    refused = CliRunner().invoke(cli.main, ["version", "untag", "--push"])
+
+    assert refused.exit_code == 1
+    assert "never moved or deleted" in refused.output
+    assert tag in _local_tags(source_kit.parent)
+    assert f"refs/tags/{tag}" in _remote_tags(bare_remote)
 
 
 # --- unbump_version tests -----------------------------------------------

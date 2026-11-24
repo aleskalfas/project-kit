@@ -46,7 +46,7 @@ COR-068 already keeps a loaded set's front matter, its origins and its retired a
 
 ### 4. A budget is raised only in a change a person authorises
 
-- **A new rule** that needs room raises the budget in the change in which a person accepts the rule (COR-051 point 4, COR-066 point 1). The raise is before that person beside the rule that needs it.
+- **A new rule** that needs room raises the budget in the change in which a person accepts the rule (COR-051 point 4, COR-066 point 1). The raise is before that person beside the rule that needs it. Where the delegate would accept such a rule, the rule waits for the person, who accepts it with the raise (refinement per COR-072).
 - **Any other raise,** such as for an edit to an accepted rule or for a key, lands only in a change a person authorises to reach the default branch.
 - **An agent trims instead.** Raising a budget is a person's decision. An agent whose change would take a file past its budget shortens the file, or brings the raise to the person. The finding of a file past its budget says so, where an agent meets it.
 - **A raise is shown.** The backbone's reading of what a change alters, the one that gives the rule-set reviewer what it reads (COR-057), lists the change's raise of a budget. So whoever reviews the change sees a raise, never only by chance in its diff.

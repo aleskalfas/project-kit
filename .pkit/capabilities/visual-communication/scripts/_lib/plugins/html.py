@@ -1,7 +1,7 @@
 """The HTML renderer: a scene drawn as one page file for each language and each key over the
 size axes, holding the modes a reader's signal names, each page real HTML text over SVG
 shapes (visual-communication DEC-020 points 1 to 4, DEC-023, DEC-031 points 1 to 4, DEC-026
-points 1 to 6, DEC-005 points 4, 5, 9 and 10).
+points 1 to 6, DEC-039 points 1 to 4, DEC-005 points 4, 5, 9 and 10).
 
 - **What it draws** is its declaration (`html_declaration.py`): every primitive the SVG
   renderer draws. It draws only what it declares, so the losses the capability reads from
@@ -29,7 +29,27 @@ points 1 to 6, DEC-005 points 4, 5, 9 and 10).
   no ground lies on the browser's ground for that mode (DEC-023 point 7).
 - **Under forced colours** one rule gives each line, stroke and arrowhead the reader's text
   colour, and each fill opaque in every key the reader's background colour, with an edge
-  where it has no stroke of its own, as the declaration names (DEC-023 point 7).
+  where it has no stroke of its own, as the declaration names (DEC-023 point 7). That edge
+  lies inside the fill (DEC-039 point 4). A box or an ellipse takes the text colour, and
+  over it the same shape inset by the edge's width, marked `data-inset`, in the background
+  colour; one no thicker than twice the edge's width takes no inset shape, so it is drawn
+  solid. A path takes its edge twice as wide, clipped to its own shape, so only its inner
+  half shows: its geometry lies once in the file, as a definition that a `use` draws, and
+  the clip holds a second `use` of it, its `clip-rule` the shape's `fill-rule`. The `use`
+  is marked `data-clip` with the clip's number, which a rule under forced colours alone
+  clips by. A run's sign is clipped so too. Outside forced colours the inset shape is
+  hidden and no clip applies, so the layers draw as the SVG renderer draws them.
+- **A line's ground** under forced colours (DEC-039 points 1 to 3). Each line takes no
+  backplate, its spans the reader's colours, and lies on a ground the file draws in the
+  reader's background colour, an element of its own marked `data-ground` with its text's
+  trace id, which takes no pointer. The grounds of a run of texts, texts that follow one
+  another among the page's leaves with no layer between them, all lie before the run's
+  first text, so beneath all of its lines. A ground covers its line from its start to its
+  end, as the engine measured it, widened at each end by the declared margin, and from the
+  highest ascent to the lowest descent of its runs' faces, read from the committed font
+  files as the engine reads them, and each sign's square on the line. A run's ground lies
+  in its line's ground there, so its span draws none of its own. Outside forced colours a
+  ground draws nothing.
 - **A picture** draws as the first key shows it, embedded whole as the canvas embeds it, a
   PNG or a JPEG with the colour profile it carries. Each other key that shows another
   picture, such as another variant of a produced output, reports a loss (DEC-023 point 8).
@@ -53,8 +73,8 @@ points 1 to 6, DEC-005 points 4, 5, 9 and 10).
   descent. The sign is an inline `svg` before the span's text, as wide as the run's font
   size, raised as the engine placed it, with the gap as its margin, its outline in the
   run's paint. A reader's tools pass over it. The strut rises as high as a sign does.
-  Under forced colours a sign takes the rules a shape's fill takes, and the browser forces
-  the ground as it forces any background.
+  Under forced colours a sign takes the rules a shape's fill takes, and the run's ground
+  lies in its line's ground (DEC-039 point 3).
 - **Lengths** on a page are shares of its width (`cqw`), so a page scales with no script.
   A share is written to more places than a length of px is, since 1/100 of it is over
   1/10 px on a wide page.
@@ -103,6 +123,8 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
+from fontTools.ttLib import TTFont
+
 from _lib import colour_steps
 from _lib.canvas import (
     ANCHORED,
@@ -111,6 +133,7 @@ from _lib.canvas import (
     Canvas,
     Spans,
     attribute_text,
+    box_frame,
     colour_text,
     find,
     font_families,
@@ -118,6 +141,7 @@ from _lib.canvas import (
     shows,
     unshown,
 )
+from _lib.env import UnreadableFont
 from _lib.plugins import seam
 from _lib.plugins.css import name_of
 from _lib.plugins.html_declaration import DECLARATION, MARKS
@@ -150,7 +174,17 @@ STEP = "--_step-"
 TEXT_COLOUR = "CanvasText"
 GROUND_COLOUR = "Canvas"
 
-#: The rules every page file holds, after its faces. None sets a colour or clips anything.
+#: The attribute that marks the inset shape over an opaque fill, and the `use` a clip takes
+#: under forced colours, with the clip's number (DEC-039 point 4).
+INSET = "data-inset"
+CLIP = "data-clip"
+
+#: The ids of a clipped shape's geometry and of its clip, each ended by the clip's number.
+SHAPE_ID = "pkit-shape-"
+CLIP_ID = "pkit-clip-"
+
+#: The rules every page file holds, after its faces. None sets a colour or clips anything: a
+#: line's ground and the inset shape draw nothing outside forced colours (DEC-039).
 SHEET = "".join(
     (
         "body{margin:0}",
@@ -162,8 +196,48 @@ SHEET = "".join(
         f"[{MARKS['line']}]{{position:absolute;left:0;width:100%;font-size:0;line-height:0;"
         "white-space:pre}",
         f"[{MARKS['strut']}]{{display:inline-block;width:0}}",
+        f"[{MARKS['ground']}]{{position:absolute;display:none;pointer-events:none}}",
+        f"[{INSET}]{{display:none}}",
     )
 )
+
+
+#: What every page file holds under forced colours, whatever it draws, as the declaration's
+#: `forced-colours` names it (DEC-039 points 1, 3 and 4): each line's ground shown in its
+#: colour; each line kept out of the browser's backplate, and its spans left to forcing, each
+#: with no ground of its own; and each inset shape shown, in the reader's background colour.
+FORCED_SHEET = "".join(
+    (
+        f"[{MARKS['ground']}]{{display:block;"
+        f"background:{DECLARATION['forced-colours']['grounds']['colour']}}}",
+        f"[{MARKS['line']}]{{forced-color-adjust:none}}",
+        f"[{MARKS['span']}]{{forced-color-adjust:auto;background:none!important}}",
+        f"[{INSET}]{{display:inline;fill:{DECLARATION['forced-colours']['opaque-fills']}}}",
+    )
+)
+
+#: The shapes whose fill takes the text colour under an inset shape where it has an edge
+#: (DEC-039 point 4): a box, a rounded box among them, and an ellipse.
+INSET_SHAPES = ("rect", "ellipse")
+
+#: The ascent and the descent of each committed font file, in ems, by its path.
+_REACH: dict[str, tuple[float, float]] = {}
+
+
+def face_reach(path: Path) -> tuple[float, float]:
+    """How far the face of the font file `path` reaches above its baseline and below it, in
+    ems, as the engine reads it: its `hhea` table's ascent and descent over its units per em
+    (DEC-039 point 2). Raises `UnreadableFont` where it cannot be read as a font."""
+    key = str(path)
+    if key not in _REACH:
+        try:
+            with TTFont(key, lazy=True) as font:
+                upem = font["head"].unitsPerEm
+                _REACH[key] = (font["hhea"].ascent / upem, -font["hhea"].descent / upem)
+        except Exception as exc:  # the font library has no one error for a file it cannot read
+            raise UnreadableFont(path, exc) from exc
+    return _REACH[key]
+
 
 #: CSS's value of `print-color-adjust` that prints colours as they are, never adjusted for
 #: paper. The prefixed property is the one an older Chrome or Safari reads.
@@ -341,6 +415,9 @@ class PageFile(Canvas):
         # The custom property of each step of an order the file paints, by the step's name,
         # numbered in the order the file first paints it (DEC-023 point 3, DEC-032 point 5).
         self._steps: dict[str, str] = {}
+        # How many shapes the file clips under forced colours, each numbered in the order the
+        # file writes it (DEC-039 point 4).
+        self._clips = 0
         self._parted = {key: self._parting(key) for key in self.keys}
 
     def _parting(self, key: str) -> dict[str, str]:
@@ -506,26 +583,62 @@ class PageFile(Canvas):
         return list(found)
 
     def _forced(self) -> str:
-        """What the file gives its shapes under forced colours, as the declaration names it:
-        each line, stroke and arrowhead the reader's text colour, and each fill opaque in every
-        key the reader's background colour, with an edge where it has no stroke of its own.
-        A run's sign takes what a shape's fill takes (DEC-036 point 4)."""
+        """What the file gives its shapes and its texts under forced colours, as the declaration
+        names it: each line, stroke and arrowhead the reader's text colour, and each fill opaque
+        in every key the reader's background colour, with an edge inside it where it has no
+        stroke of its own (DEC-039 point 4). A box or an ellipse takes the text colour under its
+        inset shape; a clipped shape takes its edge twice as wide, clipped by its number. A
+        run's sign takes what a shape's fill takes (DEC-036 point 4). Each line lies on its
+        ground (`FORCED_SHEET`)."""
         forced = self.declaration["forced-colours"]
         layer, lines = f"[{MARKS['layer']}]", forced["lines"]
         rules = [f"{layer} [stroke]{{stroke:{lines}}}", f"marker path{{fill:{lines}}}"]
         filled = [(layer, role) for role in sorted(self._filled)]
         filled += [(f"[{MARKS['sign']}]", role) for role in sorted(self._signed)]
         opaque = [
-            f'{within} [fill="var({self._property(role)})"]'
+            (within, f'[fill="var({self._property(role)})"]')
             for within, role in filled
-            if all(_opaque(self.colours_of[key].get(role)) for key in self.keys)
+            if self._opaque_in_every_key(role)
         ]
+        edge = forced["edge"]
         if opaque:
-            edge = forced["edge"]
-            unstroked = ",".join(f"{each}:not([stroke])" for each in opaque)
-            rules.append(f"{','.join(opaque)}{{fill:{forced['opaque-fills']}}}")
-            rules.append(f"{unstroked}{{stroke:{edge['colour']};stroke-width:{edge['width']}px}}")
+            rules.append(
+                f"{','.join(f'{within} {held}' for within, held in opaque)}"
+                f"{{fill:{forced['opaque-fills']}}}"
+            )
+            # The selector names the shapes `_edged` gives an inset shape: such a shape, with
+            # no stroke, whose fill is opaque in every key.
+            inset = [
+                f"{within} {shape}{held}:not([stroke])"
+                for within, held in opaque
+                if within == layer
+                for shape in INSET_SHAPES
+            ]
+            if inset:
+                rules.append(f"{','.join(inset)}{{fill:{edge['colour']}}}")
+        rules.append(FORCED_SHEET)
+        if self._clips:
+            twice = number(2 * float(edge["width"]))
+            rules.append(f"[{CLIP}]{{stroke:{edge['colour']};stroke-width:{twice}px}}")
+            rules += [
+                f'[{CLIP}="{each}"]{{clip-path:url(#{CLIP_ID}{each})}}'
+                for each in range(1, self._clips + 1)
+            ]
         return f"@media (forced-colors:active){{{''.join(rules)}}}"
+
+    def _opaque_in_every_key(self, role: str | None) -> bool:
+        """Whether `role` is an opaque colour in every key the file holds."""
+        return role is not None and all(
+            _opaque(self.colours_of[key].get(role)) for key in self.keys
+        )
+
+    def _edged(self, element: Mapping[str, Any]) -> bool:
+        """Whether `element` takes an edge under forced colours (DEC-023 point 7): its fill
+        opaque in every key, and no stroke of its own, as no key gives its stroke a colour."""
+        stroke = element.get("stroke")
+        return self._opaque_in_every_key(element.get("fill")) and (
+            stroke is None or all(self.colours_of[key].get(stroke) is None for key in self.keys)
+        )
 
     def _arrowheads(self) -> str:
         """The arrowheads every layer of the file draws, in an `svg` of no size. A layer
@@ -539,19 +652,28 @@ class PageFile(Canvas):
 
     def page(self, element: Mapping[str, Any]) -> str:
         """A page: as wide as its frame, or as the window where that is narrower, and in the
-        frame's proportions, its texts and layers in the tree's order."""
+        frame's proportions, its texts and layers in the tree's order. The grounds of each run
+        of texts, texts with no layer between them, lie before the run's first text (DEC-039
+        point 1)."""
         self._page_width = float(element["width"])
         width, height = number(element["width"]), number(element["height"])
         size = f"width:min(100%,{width}px);aspect-ratio:{width}/{height}"
         written: list[str] = []
         shapes: list[str] = []
+        grounds: list[str] = []
+        texts: list[str] = []
         for leaf, x, y in _leaves(element, 0.0, 0.0):
             if leaf.get("type") == "text":
-                written += [self._layer(element, shapes), self._text(leaf, x, y)]
+                layer = self._layer(element, shapes)
+                if layer:
+                    written += [*grounds, *texts, layer]
+                    grounds, texts = [], []
                 shapes = []
+                grounds.append(self._grounds(leaf, x, y))
+                texts.append(self._text(leaf, x, y))
             else:
                 shapes.append(_moved(self._element(leaf), x, y))
-        written.append(self._layer(element, shapes))
+        written += [*grounds, *texts, self._layer(element, shapes)]
         head = attribute_text([(MARKS["page"], element["id"]), ("style", size)])
         return f"<div {head}>{''.join(written)}</div>"
 
@@ -582,6 +704,48 @@ class PageFile(Canvas):
         )
         head = attribute_text([(MARKS["text"], element["id"]), ("style", style)])
         return f"<div {head}>{lines}</div>"
+
+    def _grounds(self, element: Mapping[str, Any], x: float = 0.0, y: float = 0.0) -> str:
+        """The ground of each line of a text, which the groups around it move by (`x`, `y`),
+        drawn under forced colours alone (DEC-039 points 1 and 2). It covers the line from its
+        start to its end, as the engine measured it and its anchor places it, widened at each
+        end by the declared margin, and from the highest reach of its runs' faces above the
+        baseline, and of its signs' squares, to the lowest below it."""
+        margin = float(self.declaration["forced-colours"]["grounds"]["margin"])
+        left, width = x + float(element["x"]), float(element["width"])
+        before = ANCHORED.get(element.get("text-anchor", "start"), 0.0)
+        grounds = []
+        for baseline, line, spans in self._text_lines(element, y + float(element["y"])):
+            high, low = self._reach(baseline, line, spans)
+            start = left + before * (width - float(line["width"]))
+            style = _style(
+                [
+                    ("left", self._share(start - margin)),
+                    ("top", self._share(high)),
+                    ("width", self._share(float(line["width"]) + 2 * margin)),
+                    ("height", self._share(low - high)),
+                ]
+            )
+            head = attribute_text([(MARKS["ground"], element["id"]), ("style", style)])
+            grounds.append(f"<div {head}></div>")
+        return "".join(grounds)
+
+    def _reach(self, baseline: float, line: Mapping[str, Any], spans: Spans) -> tuple[float, float]:
+        """How high and how low a line whose baseline lies at `baseline` on the page reaches:
+        the highest ascent and the lowest descent of its runs' faces, read as the engine reads
+        them, and each sign's square. A run whose scene names no face reaches its font size
+        above the baseline."""
+        highs, lows = [], [baseline]
+        for span, run in spans:
+            size = float(run.get("font-size", 0))
+            reaches = [face_reach(self.font_file(face["family"])) for face in run.get("fonts", [])]
+            highs.append(baseline - size * max((up for up, _ in reaches), default=1.0))
+            lows.append(baseline + size * max((down for _, down in reaches), default=0.0))
+            if "sign" in span:
+                top = baseline - float(line["baseline"]) + float(span["sign"]["top"])
+                highs.append(top)
+                lows.append(top + float(span["sign"]["size"]))
+        return min(highs, default=baseline), max(lows)
 
     def _text_line(
         self,
@@ -667,7 +831,8 @@ class PageFile(Canvas):
         the run's font size, its foot raised above the baseline as the engine placed it, with
         the gap after it, and its outline filled by its rule in the run's paint. It is hidden
         from a reader's tools, since a sign takes no place in the reading order (DEC-036
-        points 3 and 5)."""
+        points 3 and 5). A paint opaque in every key takes an edge under forced colours, so
+        the sign is then a clipped shape (DEC-039 point 4)."""
         sign = span["sign"]
         size = float(sign["size"])
         rise = float(line["baseline"]) - float(sign["top"]) - size
@@ -675,13 +840,12 @@ class PageFile(Canvas):
         if role is not None:
             self._signed.add(role)
         rule = sign.get("fill-rule")
-        path = attribute_text(
-            [
-                ("d", sign["d"]),
-                ("fill-rule", rule if rule == "evenodd" else None),
-                ("fill", f"var({self._property(role)})" if role is not None else "none"),
-            ]
-        )
+        rule = rule if rule == "evenodd" else None
+        fill = [("fill", f"var({self._property(role)})" if role is not None else "none")]
+        if self._opaque_in_every_key(role):
+            drawn = self._clipped(None, sign["d"], rule, fill)
+        else:
+            drawn = f"<path {attribute_text([('d', sign['d']), ('fill-rule', rule), *fill])}/>"
         style = _style(
             [
                 ("width", self._share(size)),
@@ -698,13 +862,92 @@ class PageFile(Canvas):
                 ("style", style),
             ]
         )
-        return f"<svg {head}><path {path}/></svg>"
+        return f"<svg {head}>{drawn}</svg>"
 
     def _colour(self, element: Mapping[str, Any], run: Mapping[str, Any]) -> str:
         """The CSS colour of a run: its fill's custom property. A run with no paint is
         transparent, so it never takes the browser's own colour."""
         role = self._role(element["id"], "fill", run.get("fill"))
         return NOTHING if role is None else f"var({self._property(role)})"
+
+    # -- a fill's edge under forced colours (DEC-039 point 4)
+
+    def _box(self, element: Mapping[str, Any]) -> str:
+        """A box, and over it, where it takes an edge, the same box inset by the edge's width,
+        its corners' radius less that width. A box no thicker than twice the edge's width
+        takes none, so it is drawn solid."""
+        drawn = super()._box(element)
+        edge = self._edge_width()
+        x, y, width, height = box_frame(element)
+        if not self._edged(element) or min(width, height) <= 2 * edge:
+            return drawn
+        rx = float(element.get("rx") or 0)
+        inset = attribute_text(
+            [
+                (INSET, ""),
+                ("x", number(x + edge)),
+                ("y", number(y + edge)),
+                ("width", number(width - 2 * edge)),
+                ("height", number(height - 2 * edge)),
+                ("rx", number(rx - edge) if rx > edge else None),
+            ]
+        )
+        return f"{drawn}<rect {inset}/>"
+
+    def _ellipse(self, element: Mapping[str, Any]) -> str:
+        """An ellipse, and over it, where it takes an edge, the same ellipse inset by the
+        edge's width. One no thicker than twice the edge's width takes none."""
+        drawn = super()._ellipse(element)
+        edge = self._edge_width()
+        width, height = float(element["width"]), float(element["height"])
+        if not self._edged(element) or min(width, height) <= 2 * edge:
+            return drawn
+        inset = attribute_text(
+            [
+                (INSET, ""),
+                ("cx", number(float(element["x"]) + width / 2)),
+                ("cy", number(float(element["y"]) + height / 2)),
+                ("rx", number(width / 2 - edge)),
+                ("ry", number(height / 2 - edge)),
+            ]
+        )
+        return f"{drawn}<ellipse {inset}/>"
+
+    def _path(self, element: Mapping[str, Any]) -> str:
+        """A path, clipped to its own shape under forced colours where it takes an edge."""
+        outline = element.get("d")
+        if not self._edged(element) or not isinstance(outline, str) or not outline:
+            return super()._path(element)
+        rule = element.get("fill-rule")
+        fill = self._paint(element, "fill")
+        # No key gives the stroke a colour, so it draws nothing; asking for it still reports the
+        # stroke's role left out in each key, as the path drawn whole does.
+        self._stroke(element)
+        return self._clipped(element["id"], outline, rule if rule == "evenodd" else None, fill)
+
+    def _clipped(
+        self, trace: str | None, outline: str, rule: str | None, fill: list[tuple[str, Any]]
+    ) -> str:
+        """A shape of `outline` filled by `rule` as a clipped shape: its geometry defined once,
+        a clip that holds a `use` of it, its `clip-rule` the shape's fill rule, and the `use`
+        that draws it in `fill`, marked with the clip's number, which a rule under forced
+        colours alone clips by (`_forced`)."""
+        self._clips += 1
+        shape = f"{SHAPE_ID}{self._clips}"
+        geometry = attribute_text([("id", shape), ("d", outline), ("fill-rule", rule)])
+        clip = attribute_text([("href", f"#{shape}"), ("clip-rule", rule)])
+        drawn = attribute_text(
+            [("data-id", trace), (CLIP, self._clips), ("href", f"#{shape}"), *fill]
+        )
+        return (
+            f"<defs><path {geometry}/>"
+            f'<clipPath id="{CLIP_ID}{self._clips}"><use {clip}/></clipPath></defs>'
+            f"<use {drawn}/>"
+        )
+
+    def _edge_width(self) -> float:
+        """The width of the edge an opaque fill takes under forced colours, in px of the page."""
+        return float(self.declaration["forced-colours"]["edge"]["width"])
 
     # -- a picture
 

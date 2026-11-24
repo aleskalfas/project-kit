@@ -31,7 +31,7 @@ The pm capability ships a **review-mode configuration** in `project/config.yaml`
 | Mode | Approval path | Reviewer selection |
 |---|---|---|
 | **`agent`** (default) | Designated agent's verdict comment (per [project-management:DEC-028-agent-as-approver-paths]) | No human reviewers auto-assigned; the registered agent reviews. |
-| **`human`** | DEC-026's three-way OR (APPROVED review / `Approved`-prefix comment / `--bypass`) | Members of `members.yaml` whose `role:` matches the configured `reviewer_role:` are auto-assigned as PR reviewers (excluding the author). |
+| **`human`** | DEC-026's three-way OR (APPROVED review / `Approved`-prefix comment / `--bypass`), the first two counting only from an account read as a user's, not registered as a reviewer agent's, and another account than the author, and no approving review that carries the verdict marker counting, compared as the backbone compares accounts ([pkit:ADR-094] point 3; step 3 of the human path) | Members of `members.yaml` whose `role:` matches the configured `reviewer_role:` are auto-assigned as PR reviewers (excluding the author and any member the comparison cannot tell from the author, and passing over a member whose entry names a bot's account or a reviewer agent's; step 1) (refinement per [project-management:DEC-079-bots-are-no-person]). |
 
 Mode names are `agent` and `human` (not `solo` and `human-review`) because the choice is about which kind of reviewer satisfies the gate, not about team size. A multi-member team can use `agent` mode for efficiency; a solo developer can use `human` mode if they have an out-of-band reviewer.
 
@@ -81,13 +81,13 @@ One new label namespace, fitting the existing `<namespace>:<value>` pattern:
 
 When the resolved mode is `human`:
 
-1. `review-work` queries `members.yaml` for members whose `role:` matches `review.human_review.reviewer_role:`, excluding the PR author.
-2. The matched members are assigned as PR reviewers via `gh pr edit --add-reviewer`.
-3. The gate is satisfied via DEC-026's three-way OR (APPROVED review or `Approved`-prefix comment from any non-author identity, or `--bypass`).
+1. `review-work` queries `members.yaml` for members whose `role:` matches `review.human_review.reviewer_role:`, excluding the PR author. The query passes over a member whose entry names a bot's account or a reviewer agent's, and leaves out the author and any member the comparison cannot tell from the author, each read with its kind and compared as the backbone compares accounts, the case of ASCII letters and surrounding whitespace set aside ([pkit:ADR-094] point 3) (refinement per [project-management:DEC-079-bots-are-no-person]).
+2. The matched members are assigned as PR reviewers via `gh pr edit --add-reviewer`. An App that took its owner's name is another account than its owner, as the service records them, so on the App's pull request the owner is assigned (refinement per [project-management:DEC-079-bots-are-no-person]).
+3. The gate is satisfied via DEC-026's three-way OR (APPROVED review or `Approved`-prefix comment from any non-author identity, or `--bypass`). An approving review or an `Approved` comment counts only from an account read as a user's, that the project does not register as a reviewer agent's, and that is another account than the author, each read with its kind and compared as the backbone compares accounts ([pkit:ADR-094] point 3), and no approving review whose body carries the verdict marker counts, in any of its forms: bare, `<!-- pkit-verdict -->`; naming the head reviewed, `<!-- pkit-verdict sha=<oid> -->`; or naming that head and the base it was reviewed against, `<!-- pkit-verdict sha=<oid> base=<oid> -->`. An entry of the remote path's list with no spelling stops every approval and every request for a review until it is mended (refinement per [project-management:DEC-079-bots-are-no-person]).
 
 Per [project-management:DEC-021-team-membership-gate]'s v1 enum, `role:` is a single string (`PM | Implementer | (none)`). The query is a single-string equality match against the configured `reviewer_role:`. List-valued roles and free-text role taxonomies are out of v1 scope; if multi-role-per-member or project-defined role vocabularies recur, a future DEC refines DEC-021 per COR-007.
 
-If the role-based query returns zero eligible reviewers (no team member with the configured role, or the only matching member is the author), `review-work` warns but proceeds — assignment is best-effort. `done-work`'s gate may still be satisfied via `Approved`-prefix comment from any non-author identity (someone who isn't an auto-assigned reviewer but reads the PR and approves).
+If the role-based query returns zero eligible reviewers (no team member with the configured role, or the only matching member is the author, one the comparison cannot tell from the author, or one whose entry names a bot's account or a reviewer agent's), `review-work` warns but proceeds — assignment is best-effort. `done-work`'s gate may still be satisfied via `Approved`-prefix comment from a non-author identity that counts as step 3 has it (someone who isn't an auto-assigned reviewer but reads the PR and approves) (refinement per [project-management:DEC-079-bots-are-no-person]).
 
 ### Refusal when human-mode-required-but-no-signal
 
@@ -97,12 +97,15 @@ If the role-based query returns zero eligible reviewers (no team member with the
 [refused] Human review required but no approval signal present
             → resolved mode: human (source: <project default | label `review:human` | --require-human flag>)
             → no `APPROVED` review on the PR
-            → no `Approved`-prefix comment from a non-author identity
+            → no `Approved`-prefix comment from an account that counts (a user's, not a registered reviewer agent's, another than the author)
+           [→ remote entry `<entry>` names no account: <why>]
             → Remediation:
                 a) wait for a reviewer to approve
                 b) remove the human-required override (label / flag) if mistakenly set
                 c) merge with `done-work --bypass "<reason>"`
 ```
+
+The refusal names an entry of the remote path's list with no spelling, and why it names no account (refinement per [project-management:DEC-079-bots-are-no-person]).
 
 The symmetric refusal in `agent` mode is defined by DEC-028 (it's about whether the agent's verdict is present, which is DEC-028's territory).
 
@@ -111,7 +114,7 @@ The symmetric refusal in `agent` mode is defined by DEC-028 (it's about whether 
 When `members.yaml` is absent (DEC-021 open mode):
 
 - Project default `review.mode:` still applies. Open mode does not force review-mode to any particular value.
-- If resolved mode is `human`, `review-work` cannot auto-assign reviewers (no members.yaml). The gate is still satisfied via `Approved`-prefix comment from any non-author identity with repo access. This is acknowledged-permissive — open mode is "membership not configured", and the gate degrades gracefully rather than refusing operation.
+- If resolved mode is `human`, `review-work` cannot auto-assign reviewers (no members.yaml). The gate is still satisfied via `Approved`-prefix comment from a non-author identity with repo access, counted as step 3 of the human path has it: from an account read as a user's, not registered as a reviewer agent's, and another account than the author ([pkit:ADR-094] point 3) (refinement per [project-management:DEC-079-bots-are-no-person]). This is acknowledged-permissive — open mode is "membership not configured", and the gate degrades gracefully rather than refusing operation.
 - If resolved mode is `agent`, the agent path works as configured per DEC-028.
 
 ### Sub-decisions index
@@ -123,10 +126,10 @@ When `members.yaml` is absent (DEC-021 open mode):
 | Layer 2 vs Layer 3 conflict | Layer 3 wins. The flag represents the operator's most recent intent; the label persists for future PRs on the same issue. |
 | Label namespace | `review:<mode>` — fits the existing `<namespace>:<value>` label pattern (`type:`, `area:`, `priority:`). |
 | Mode names | `agent` and `human`, not `solo` and `human-review`. The choice is about which kind of reviewer satisfies the gate, not about team size. |
-| Role-based reviewer query | Single-string equality match: members where `role` == `reviewer_role`, excluding author. Per DEC-021's v1 enum (`PM | Implementer`). |
+| Role-based reviewer query | Single-string equality match: members where `role` == `reviewer_role`, excluding author and any member the comparison cannot tell from the author, and passing over a member whose entry names a bot's account or a reviewer agent's ([pkit:ADR-094] point 3) (refinement per [project-management:DEC-079-bots-are-no-person]). Per DEC-021's v1 enum (`PM | Implementer`). |
 | List-valued or free-text roles | Out of v1 scope. Future DEC refines DEC-021 if multi-role-per-member or project-defined role vocabularies recur per COR-007. |
 | Refusal when human-mode + no signal | `done-work` refuses with remediation pointer (wait, remove override, or `--bypass`). |
-| Open mode + human mode | Best-effort assignment (no members.yaml to query); gate satisfied by any non-author `Approved`-prefix comment. |
+| Open mode + human mode | Best-effort assignment (no members.yaml to query); gate satisfied by a non-author `Approved`-prefix comment that counts as step 3 of the human path has it (refinement per [project-management:DEC-079-bots-are-no-person]). |
 
 ## Rationale
 

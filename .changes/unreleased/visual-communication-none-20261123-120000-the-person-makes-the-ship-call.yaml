@@ -1,0 +1,12 @@
+component: visual-communication
+kind: none
+body: >
+  DEC-070 decides that the person makes the ship call on a piece, at every
+  level, and that the designer's loop is one round of mends: the review reads
+  every page, the designer mends once what the record names, the review reads
+  again, and the piece goes to the person (#3469). The review gives no grade,
+  no page mark and no verdict, and no bar, hold or calibration remains. It
+  supersedes DEC-042 and DEC-065. It is a design-ahead record: the code,
+  schemas, definitions and documents that still carry the grades and the bar
+  follow in slices under #3468, before the capability's next release. No
+  surface moves here.

@@ -92,12 +92,13 @@ _TICKED = "\n\n## Success criteria\n\n- [x] shipped\n"
 
 
 def _epic(*, state: str = "OPEN", milestone: _Issue | None = _MILESTONE_6) -> _Issue:
-    """An EPIC scheduled under Milestone 6 by both substrates, criteria ticked."""
+    """An EPIC scheduled under Milestone 6 by both substrates, criteria ticked,
+    and In Progress, where a container's close starts (DEC-006)."""
     return {
         "title": "[EPIC] Ship the widgets",
         "body": "Milestone: [#6](../milestone/6)" + _TICKED,
         "state": state,
-        "labels": [],
+        "labels": [{"name": "state:in-progress"}],
         "milestone": milestone,
     }
 
@@ -161,7 +162,9 @@ def close_issue(
     monkeypatch.setattr(ci, "load_adopter_config", _returns({}))
     monkeypatch.setattr(ci, "_read_members", _returns([]))
     monkeypatch.setattr(
-        ci, "resolve_invoker_identity", _returns(SimpleNamespace(github_login="me"))
+        ci,
+        "resolve_invoker_identity",
+        _returns(SimpleNamespace(github_login="me", unresolved_cause=None)),
     )
     monkeypatch.setattr(ci, "check_membership", _returns(SimpleNamespace(allowed=True)))
     monkeypatch.setattr(ci.axis_labels, "load_substrate_map", _returns(None))

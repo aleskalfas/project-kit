@@ -1,0 +1,545 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-scope
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261113T222453Z-06dececb.yaml
+    revalidated:
+      at: 2026-11-17T01:09:41Z
+      outcome: unchanged
+      unchanged-because: "DEC-018 takes DEC-073's edits in this change: its script discipline and its Authority leave the membership predicate off a workstream script that only reads and reports, and every other workstream script keeps it. The entry defines a scope as the part of a project's work that one agent of a topology takes issues from, and names workstreams as what a scope may name and never changes; neither rests on which workstream script takes the gate, so its definition, example and distinctions stand."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-workstream
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261109T194840Z-39b3598b.yaml
+    revalidated:
+      at: 2026-11-17T01:09:49Z
+      outcome: unchanged
+      unchanged-because: "DEC-018 takes DEC-073's edits in this change: its script discipline and its Authority leave the membership predicate off a workstream script that only reads and reports, and every other workstream script keeps it. The entry defines a workstream as a long-lived area declared in a file of the project's own and one value of a classification axis, and tells it from an EPIC and a Milestone; none of that rests on which workstream script takes the gate, so the entry stands."
+  - artefact: tech-docs/analysis/project-management/domain-model/020-classification-of-issues.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+    revalidated:
+      at: 2026-11-17T01:09:57Z
+      outcome: unchanged
+      unchanged-because: "DEC-018 takes DEC-073's edits in this change: its script discipline and its Authority leave the membership predicate off a workstream script that only reads and reports, and every other workstream script keeps it. The view's account of a workstream, its slug, name, description and status kept in one file, and of an EPIC as one outcome inside it, rests on DEC-018's taxonomy, which stands, and says nothing of the gate, so the view holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planner.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T215333Z-1b18b920.yaml
+    revalidated:
+      at: 2026-11-17T01:10:00Z
+      outcome: unchanged
+      unchanged-because: "DEC-018 takes DEC-073's edits in this change: its script discipline and its Authority leave the membership predicate off a workstream script that only reads and reports, and every other workstream script keeps it. The actor names the person who alone commits the project to an outcome, and the agent that plans and files on their direction; neither rests on which workstream script takes the gate, so the actor stands."
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-041-gates-before-writing.md
+    read:
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T233254Z-07e46ecd.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261116T223221Z-8a885d2a.yaml
+    revalidated:
+      at: 2026-11-17T01:10:14Z
+      outcome: unchanged
+      unchanged-because: "DEC-021 takes DEC-073's edits in this change: every run of a command that can write takes the membership gate at its startup, its dry runs included, and a command that only reads and reports takes none. The requirement asks only of a command that writes that it check the prerequisites and then whoever runs it before its first write, and refuse a non-member of a list, which DEC-021 keeps, so its statement, measure and what it applies to stand, a command that only reads lying outside it. The commands DEC-073 point 5 names as departures, which can write and take no gate, fell short of its second check before this change, and project-kit#3352 takes each up."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+    revalidated:
+      at: 2026-11-17T01:10:17Z
+      outcome: unchanged
+      unchanged-because: "DEC-021 takes DEC-073's edits in this change: every run of a command that can write takes the membership gate, its dry runs included, and a command that only reads and reports takes none. The use case rests on DEC-021 for whose account a command runs as, so that start-work refuses a Task assigned to another person's account; that identity resolution stands, and start-work writes, so it keeps the gate, and the use case holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T005305Z-e801f465.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T071501Z-ef7c72db.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T073934Z-de939802.yaml
+      - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+    revalidated:
+      at: 2026-11-17T01:10:25Z
+      outcome: unchanged
+      unchanged-because: "DEC-018 and DEC-021 take DEC-073's edits in this change: a command that only reads and reports takes no membership gate, a workstream script among them, and every run of a command that can write keeps it, its dry runs included. Filing a Task writes, so step 4's check that whoever runs the command is a member, the account GitHub names standing for whoever runs it, and variant 4a's refusal stand as DEC-021 decides them, and the workstream a Task is filed under keeps DEC-018's taxonomy, so the use case holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+    revalidated:
+      at: 2026-11-17T01:10:29Z
+      outcome: unchanged
+      unchanged-because: "DEC-018 takes DEC-073's edits in this change: its script discipline and its Authority leave the membership predicate off a workstream script that only reads and reports, and every other workstream script keeps it. The use case gives each Task one of the workstreams the project declares and files it, and filing writes, so it keeps the gate; it rests on DEC-018 only for the declared workstreams, which stand, so its path, variants and postconditions hold."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T125441Z-87b370f0.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T142151Z-09f16c62.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T060759Z-75e99435.yaml
+      - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+    revalidated:
+      at: 2026-11-17T01:10:32Z
+      outcome: unchanged
+      unchanged-because: "DEC-021 takes DEC-073's edits in this change: every run of a command that can write takes the membership gate, its dry runs included, and a command that only reads and reports takes none. Reviewing and landing a change write, so step 2's check that whoever runs the command is a member, the account GitHub names standing for whoever runs it, and variant 2a's refusal stand as DEC-021 decides them, and the use case holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+    revalidated:
+      at: 2026-11-17T01:10:35Z
+      outcome: unchanged
+      unchanged-because: "DEC-018 takes DEC-073's edits in this change: its script discipline and its Authority leave the membership predicate off a workstream script that only reads and reports, and every other workstream script keeps it. The use case rests on DEC-018 only for the workstreams its precondition has the project declare, which a seat's scope may name; that taxonomy stands, and the checks its steps name at a command's entry are untouched, so its steps and postconditions hold."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T113546Z-35debc4d.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T060759Z-75e99435.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+    revalidated:
+      at: 2026-11-17T01:10:38Z
+      outcome: unchanged
+      unchanged-because: "DEC-021 takes DEC-073's edits in this change: every run of a command that can write takes the membership gate, its dry runs included, and a command that only reads and reports takes none. Moving an issue writes, so step 2's membership check and variant 2a's refusal stand, and variant 6k's account, the user's account the command runs as, stays DEC-021's identity resolution, which this change leaves as it is, so the use case holds."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T135407Z-115865f2.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T112500Z-53d20551.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+    revalidated:
+      at: 2026-11-17T01:10:42Z
+      outcome: unchanged
+      unchanged-because: "DEC-021 takes DEC-073's edits in this change: every run of a command that can write takes the membership gate, its dry runs included, and a command that only reads and reports takes none. The use case starts the chosen Task through start-work, which writes and keeps the gate, and assigns the worker's account by DEC-021's identity resolution, which stands, so its path and variant 4a hold."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T010917Z-565aa9b8.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T221227Z-8ea6b98a.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T222227Z-a8c41e80.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T112808Z-198ad446.yaml
+      - 20261116T225513Z-0d37c985.yaml
+    revalidated:
+      at: 2026-11-17T01:10:45Z
+      outcome: unchanged
+      unchanged-because: "DEC-018 and DEC-021 take DEC-073's edits in this change: a command that only reads and reports takes no membership gate, a workstream script among them, and every run of a command that can write keeps it, its dry runs included. Creating a Milestone writes, so step 3's check that whoever runs the command is a member and variant 3a's refusal stand as DEC-021 decides them, the workstreams the planner declares keep DEC-018's lifecycle, and no step has a command that only reads take the gate, so the use case holds."
+  - artefact: .pkit/capabilities/project-management/rule-sets/pm.md#RS-PM-003
+    read:
+      - 20261115T224856Z-cb4ecf23.yaml
+    revalidated:
+      at: 2026-11-17T01:10:48Z
+      outcome: unchanged
+      unchanged-because: "DEC-018 takes DEC-073's edits in this change: its script discipline and its Authority leave the membership predicate off a workstream script that only reads and reports, and every other workstream script keeps it. The rule has each issue carry one value on each required axis the substrate map carries, the workstream among them; DEC-018's taxonomy of workstreams stands, and the rule says nothing of the gate, so it holds."
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T193339Z-5bd2a791.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T210254Z-faa0ccce.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T214057Z-5a0ecd5b.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220309Z-d2431027.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T134817Z-fbfbe8a0.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261107T195325Z-6b9f96fa.yaml
+      - 20261108T000436Z-9e30da30.yaml
+      - 20261108T015222Z-bdacd3c0.yaml
+      - 20261108T213649Z-c363a042.yaml
+      - 20261108T215423Z-1b5d70b9.yaml
+      - 20261108T223622Z-2a5e1da3.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261108T225221Z-5bcef4af.yaml
+      - 20261108T231141Z-f080096e.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T074625Z-5e6cbb22.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T175333Z-b0d8bc0a.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T160032Z-7fd436db.yaml
+      - 20261112T163245Z-ea50e1b3.yaml
+      - 20261112T221110Z-a675de74.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261113T221227Z-8ea6b98a.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T113546Z-35debc4d.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T201738Z-88b7102c.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T090812Z-225d76fb.yaml
+      - 20261115T091317Z-42b6403e.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T162304Z-326cf373.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T213811Z-fcb1a04e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T060759Z-75e99435.yaml
+      - 20261116T071501Z-ef7c72db.yaml
+      - 20261116T072033Z-1fa3401d.yaml
+      - 20261116T073934Z-de939802.yaml
+      - 20261116T075435Z-97191300.yaml
+      - 20261116T094702Z-8f6ea845.yaml
+      - 20261116T095840Z-547638af.yaml
+      - 20261116T103723Z-5450c4f7.yaml
+      - 20261116T110629Z-7871f194.yaml
+      - 20261116T112419Z-c3215b11.yaml
+      - 20261116T223221Z-8a885d2a.yaml
+      - 20261116T223818Z-0ab49eeb.yaml
+      - 20261116T225513Z-0d37c985.yaml
+      - 20261116T225522Z-83980882.yaml
+      - 20261116T225640Z-9b864975.yaml
+      - 20261116T233535Z-b44a843f.yaml
+    revalidated:
+      at: 2026-11-17T01:11:08Z
+      outcome: unchanged
+      unchanged-because: "DEC-073, accepted in this change, takes the membership gate off each command that only reads and reports and keeps it on every run of every other command, its dry runs included, and DEC-018, DEC-020, DEC-021 and DEC-022 take the edits it names; the change builds none of it. So the README still describes the commands and the post-check workflow as they ship: 'Authority — membership lifecycle' has every mutating verb-subject script check the member list, which the refined DEC-021 keeps, 'Who runs a command' counts the gate among what each caller of the identity reads it for, as each still does, and 'The post-check workflow's credential' names the credentials the shipped template takes. DEC-073's Implications put the rewrite of those three sections with its build, project-kit#3363. Read together, the revalidations made apart before this one leave the README as the board sync's missing cards and its switch updated it and as the contract of the documents its commands print for a program extended it, in sections this change does not reach, and DEC-074's deferrals, kept here, still wait on its build, #3243."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-074, accepted in this change, has pre-check's board check read the board on each run and warn where the board does not answer, fail a configuration that declares a board and gives no board number its schema admits, and give each check's outcome under a key that keeps its check for good, the report kept stable as ADR-097 and the CLI reference's statement of it keep every command's machine-readable output, and has the skill's first step show pre-check's warnings; DEC-017 and DEC-037 take the edits it names, and ADR-031 and ADR-096 the facts it corrects. The change builds none of it, so pre-check, the skill and back-fill still run as the README describes them, with main's statement of the documents the commands print among it, which already has no key come to mean anything else. The README's table of what pre-check covers, its account of Step 0 under 'Verify with pre-check', the pre-check row under 'When the board does not answer', which leaves to project-kit#3193 whether the check reads the board, and the fields 'The prerequisites: pre-check' lists for its report, which name no key for each check, change with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-031
+          reason: "ADR-031 point 5 now says the fourth member of back-fill's gate is back-fill's own, computed apart from pre-check, the fact DEC-074 corrects. The README's account of back-fill's gate and of what pre-check covers changes with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-096
+          reason: "ADR-096 now cites DEC-074 where it said project-kit#3193 proposes that the board check warn. The README's pre-check row under 'When the board does not answer', which still leaves that to project-kit#3193, changes with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."
+        - anchor:
+            kind: record
+            value: ADR-097
+          reason: "ADR-097 now cites DEC-074 point 4 where it spoke of project-kit#3193's draft: DEC-074 gives each of pre-check's checks a key in its report that keeps its check for good, and cites ADR-097 for how the report stays stable. None of ADR-097's points changes, so 'What the commands print for a program' keeps to the rule as it did. The fields 'The prerequisites: pre-check' lists for the report, which name no key for each check, change with DEC-074's build, #3243, which brings pre-check, the skill and the README to the record together."

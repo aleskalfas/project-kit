@@ -221,6 +221,19 @@ def test_main_adds_the_option_to_the_boards_field(aw, tmp_path, monkeypatch) -> 
     assert "docs" in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
 
 
+def test_main_adds_the_option_while_a_withheld_card_is_on_the_board(
+    aw, tmp_path, monkeypatch
+) -> None:
+    """Adding an option alters no card's value, so a card the board withheld
+    does not stop it ([pkit:ADR-096] point 2)."""
+    stage_project(tmp_path, WORKSTREAMS, board=True)
+    board = FakeBoard(["cli"], {"I9": (9, "cli")}, withheld={"I9"})
+    board.install(monkeypatch, *_lib())
+    monkeypatch.setattr(aw, "gh_run", FakeRepo())
+    assert _run(aw, monkeypatch, tmp_path, "docs") == 0
+    assert board.option_names() == ["cli", "docs"]
+
+
 def test_main_writes_no_option_the_board_already_offers(aw, tmp_path, monkeypatch) -> None:
     stage_project(tmp_path, WORKSTREAMS, board=True)
     board = FakeBoard(["cli", "docs"])

@@ -19,6 +19,7 @@ from types import ModuleType
 
 import pytest
 
+from tests.pm_board_graphql import flag_value, query_of
 from tests.pm_board_world import BOARD_CONFIG, LABEL_STATE, BoardTracker
 from tests.pm_lifecycle_world import (
     AUTHORED_BODY,
@@ -168,7 +169,7 @@ def test_a_failed_write_is_one_line_and_the_move_stands(
     assert warning == [
         f"[warn] #{task}: the board's Status was not set to 'In Progress': "
         "gh project item-edit failed: HTTP 502: Bad Gateway; the move stands, "
-        "and `sync-board` sets it"
+        f"and `pkit pm sync-board {task}` sets it"
     ]
 
 
@@ -182,7 +183,9 @@ def test_an_issue_with_no_card_is_said_and_the_move_stands(
     assert world.move(task, "in-progress") == 0
 
     assert world.labels(task)[-1] == "state:in-progress"
-    said = f"#{task} has no card on board #4; the move stands, and `sync-board` sets it"
+    said = (
+        f"#{task} has no card on board #4; the move stands, and `pkit pm sync-board {task}` sets it"
+    )
     assert said in capsys.readouterr().err
 
 
@@ -216,8 +219,10 @@ def test_a_move_finds_the_board_under_its_owner(
     assert world.move(task, "in-progress") == 0
 
     assert board.status(task) == "In Progress"
-    reads = [argv for argv in board.calls if argv[1:2] == ["project"] and argv[2] != "item-edit"]
-    assert reads and {argv[argv.index("--owner") + 1] for argv in reads} == {owner}
+    # The board's own read names it by its number under its owner; later
+    # reads in the run address it by the node that read gave.
+    reads = [argv for argv in board.board_calls() if "repositoryOwner(login:" in query_of(argv)]
+    assert reads and {flag_value(argv, "owner") for argv in reads} == {owner}
 
 
 @pytest.mark.usefixtures("kept")

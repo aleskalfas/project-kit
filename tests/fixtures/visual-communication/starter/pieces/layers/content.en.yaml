@@ -4,7 +4,7 @@ schema_version: 1
 slides:
   - id: stack
     layout: slide
-    title: Levels stacked one on another, the top first
+    title: Levels stacked one on another, the top first, each a step of the order
     visual:
       use: starter/layers
       levels:
@@ -23,10 +23,10 @@ slides:
 
   - id: tinted
     layout: slide
-    title: Each level tinted by the concept it names
+    title: Each level tinted by the concept it names, with no shade by its place
     visual:
       use: starter/layers
-      level: {use: starter/card, fill: tint}
+      shade: plain
       levels:
         - id: people
           concept: test-notation/person
@@ -43,7 +43,7 @@ slides:
 
   - id: notes
     layout: slide
-    title: Notes beside the stack hold across its levels
+    title: A note on each side of the stack holds across all its levels
     visual:
       use: starter/layers
       level: {use: starter/card, fill: tint, concept: test-notation/service}
@@ -58,10 +58,11 @@ slides:
         - id: work
           head: Your code
           text: The work itself.
-      notes:
+      left-notes:
         - id: carried-out
           head: Carried out
           text: Each level carries out the ones above it.
+      notes:
         - id: checked
           head: Checked
           text: A level that disagrees is checked first.
@@ -91,3 +92,38 @@ slides:
         - id: start-decisions
           from: {item: "notes[start]"}
           to: {item: "levels[decisions]"}
+
+  - id: leaders
+    layout: slide
+    title: Notes on both sides of the steps, each tied by a thin leader to what it explains
+    visual:
+      use: starter/layers
+      shape: steps
+      tie: {use: starter/connector, weight: thin, arrow: none}
+      levels:
+        - id: decisions
+          head: Decisions
+        - id: rules
+          head: Working rules
+        - id: commands
+          head: Commands and checks
+        - id: work
+          head: Your code and documents
+      left-notes:
+        - id: consulted
+          head: Consulted on every change
+          text: The decisions it rests on, and the checks it must pass.
+      notes:
+        - id: loaded
+          head: Loaded into every session
+          text: The rules each agent follows.
+      ties:
+        - id: consulted-decisions
+          from: {item: "left-notes[consulted]"}
+          to: {item: "levels[decisions]"}
+        - id: consulted-commands
+          from: {item: "left-notes[consulted]"}
+          to: {item: "levels[commands]"}
+        - id: loaded-rules
+          from: {item: "notes[loaded]"}
+          to: {item: "levels[rules]"}

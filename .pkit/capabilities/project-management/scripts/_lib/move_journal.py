@@ -83,7 +83,9 @@ def journal_move(
     `actor` is the invoker's resolved GitHub login. The engine compares it
     against an authorisation artifact's `produced_by` login for the
     cross-authority gate (COR-033 P4). When it is None (login unresolved), we
-    omit `--actor` and let the engine apply its own resolved-identity default.
+    omit `--actor`, and the engine takes none (ADR-098): a cross-authority gate
+    whose authorisation names its producer refuses the move, which is then
+    reported unrecorded like any refusal.
 
     `reason`, when given, is recorded on the journal entry (`--reason`): the
     forward cascade names the child move that caused a parent's, a close names
@@ -176,18 +178,19 @@ class Journal:
     def of(cls, status: Any) -> Journal | None:
         """The journal a status payload carries, or None for no payload. Only an
         explicit `journal_logging.enabled: false` says no journal is kept: a
-        payload without the field comes from an engine that always kept one."""
+        payload without the field comes from an engine that always kept one. A
+        payload without its journal as a list of entries, each an object, is none
+        pm can read, never an empty journal (ADR-097 point 3)."""
         if not isinstance(status, dict):
             return None
-        logging = status.get("journal_logging")
-        kept = not (isinstance(logging, dict) and logging.get("enabled", True) is False)
+        logging = status.get("journal_logging", {})
+        enabled = logging.get("enabled", True) if isinstance(logging, dict) else None
         journal = status.get("journal")
-        entries = (
-            tuple(entry for entry in journal if isinstance(entry, dict))
-            if isinstance(journal, list)
-            else ()
-        )
-        return cls(kept, entries)
+        if not isinstance(enabled, bool) or not isinstance(journal, list):
+            return None
+        if not all(isinstance(entry, dict) for entry in journal):
+            return None
+        return cls(enabled, tuple(journal))
 
     def last_move_to(self, state: str) -> bool:
         """Whether the last move the journal records ends at ``state``."""

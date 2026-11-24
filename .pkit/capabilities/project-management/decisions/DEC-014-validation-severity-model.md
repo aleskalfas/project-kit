@@ -11,6 +11,8 @@ source:
   captured_at: 2026-05-21
 ---
 
+> **Partially superseded by [project-management:DEC-078-one-actor-per-act].** Under every credential, a bypass's audit comment names no authoriser beside the account that posts it, by name or by email, and the template's line reads `Bypassed: <reason>`. Overturned: the audit-comment template's `by <name> <<email>>`, in "`bypassable-with-audit`" and in the Implications' bullet that names the template the canonical form. The rest stands.
+
 ## Context
 
 The other DECs in this capability name *what* the project-manager checks at filing, editing, opening PRs, merging, and closing. They don't fix *how strictly* the agent enforces each rule. A uniform "reject anything wrong" policy is too coarse — it gets in the way of legitimate exceptions. A uniform "warn but proceed" policy is too soft — convention-only rules drift in practice.
