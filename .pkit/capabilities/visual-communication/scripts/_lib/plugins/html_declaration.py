@@ -98,7 +98,7 @@ HOLDS_MODES = {
 DECLARATION = {
     "name": "html",
     "kind": "renderer",
-    "version": "1.9.0",
+    "version": "1.10.0",
     "seam": 9,
     "module": "html",
     "about": (
