@@ -1168,6 +1168,44 @@ def test_a_text_over_a_picture_or_over_nothing_is_not_measured() -> None:
     assert checks.drawn_contrast(page(text("figure/t", "pale")), COLOURS, KEYS) == []
 
 
+@pytest.mark.parametrize("pictured", [0, 1])
+def test_a_span_over_a_picture_leaves_the_other_spans_of_its_text_measured(pictured: int) -> None:
+    """Whichever span of a text lies over a picture, a reviewer judges that span, and the
+    check measures each other against the fill under it (DEC-004 point 8)."""
+    given = [run("ink"), run("ink")]
+    given[1 - pictured] = run("pale")
+    picture = {"type": "image", "id": "figure/pic", "x": 40 * pictured, "y": 0}
+    under = [box("figure/back", "paper"), {**picture, "width": 40, "height": 100}]
+    found = checks.drawn_contrast(page(*under, runs("figure/t", given)), COLOURS, ["default"])
+    assert [(f.where, f.message.split(" has ")[0]) for f in found] == [
+        ("figure/t", "`pale` on `paper`")
+    ]
+
+
+def shape(trace: str, fill: str, d: str, *, side: float = 100) -> dict[str, Any]:
+    """A path at the page's corner, its frame `side` square, filled `fill` within its
+    outline `d`, unstroked."""
+    frame = {"x": 0, "y": 0, "width": side, "height": side}
+    return {"type": "path", "id": trace, **frame, "d": d, "fill": fill, "stroke-width": 0}
+
+
+def test_a_span_and_a_sign_over_a_path_s_fill_are_measured_against_that_fill() -> None:
+    """A path's fill lies under each span and sign drawn after it whose middle its outline
+    fills, and the paper path under them hides the ink box (DEC-004 point 8, DEC-036 point
+    8). Another path's frame holds their middles, and its outline does not."""
+    corner = shape("figure/corner", "paper", "M100 0V100H0Z")
+    sign = shape("figure/sign", "pale", "M0 0H20V20H0Z", side=20)
+    under = [box("figure/back", "ink"), corner]
+    assert checks.drawn_contrast(page(*under, text("figure/t", "pale"), sign), COLOURS, KEYS) == []
+    paper = shape("figure/paper", "paper", "M0 0H40V40H0Z", side=40)
+    scene = page(*under, paper, text("figure/t", "pale"), sign)
+    found = checks.drawn_contrast(scene, COLOURS, ["default"])
+    assert [(f.where, f.message.split(" in ")[0]) for f in found] == [
+        ("figure/t", "`pale` on `paper` has the contrast 1.25"),
+        ("figure/sign", "the sign paints `pale` (1.25) on `paper`"),
+    ]
+
+
 # --- a piece on a size axis ---------------------------------------------------------------------
 
 HEAD = "figure/body/steps[plan]/head"

@@ -1,0 +1,292 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T095840Z-547638af.yaml
+    revalidated:
+      at: 2026-11-16T11:28:08Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three changes answered apart, which still hold: done-work's docstring and comments, and a comment in its tests, now say which exit codes can follow a merge, and no code or assertion changed; move-issue reads the issue again after its prompt and before its first write, its audit comment included, and writes and journals nothing where the issue moved since the preview, so an authorisation is never spent on a move from another state; and move-issue reads where the issue stands, and its journal's length, by their keys. Its tests still find that a bypass with no reason is refused and that a retried bypass posts its audit comment once. This change leaves move-issue and close-issue as they are, and adds to done-work and its tests a hold on a change that turns on sync_board.adds_with_no_terminal: with --yes, or with no terminal, done-work refuses that merge before it posts or merges anything, and merges it only on the person's yes at a terminal. None of the four makes a held move or merge without the person's authorisation, so the statement, its measure and what verifies it stand."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T021311Z-6bc15d0b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T201720Z-021bd185.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T095840Z-547638af.yaml
+    revalidated:
+      at: 2026-11-16T11:28:17Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three changes answered apart, which still hold: done-work's docstring and comments on its exit codes changed, and no code; move-issue now reads the issue again after its prompt and before it writes, after its clash guard, which still refuses a move of a Task another instance owns before the preview, the prompt and any write; and move-issue reads where the issue stands, and its journal's length, by their keys, which no refusal of an owned Task turns on. This change adds to done-work only a hold on merging a change that turns on sync_board.adds_with_no_terminal, which comes after its clash guard. So done-work, edit-issue and move-issue still refuse a worker acting on another's Task as at step 3 (variant 1a), start-work's refusal is untouched, and each step and guarantee stands."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T173413Z-2852fd21.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T131440Z-90d45a35.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T225036Z-926c13c5.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261116T095840Z-547638af.yaml
+    revalidated:
+      at: 2026-11-16T11:28:30Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two changes answered apart, which still hold: ADR-097 refines how the hosting-service command's documents keep their versions, for which this use case states no rule, and the backbone still merges a pull request pinned to its head, through the merge queue where the default branch has one; and land-work's comments on its exit codes, with the pm skill's list of what they mean, now agree with the README's table, and no code changed. This change has land-work stop a run authorised up front at ready where the change turns on sync_board.adds_with_no_terminal, or where it cannot read whether it does, merging only on the merge authoriser's yes at a terminal, still pinned to the head that person authorises. Step 5 lands as UC-062 step 12 describes, whose variant 12c now says so, so none of this use case's own steps, variants or guarantees changes."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261031T010527Z-8e577440.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125430Z-3b2db871.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T132338Z-3c4c3246.yaml
+      - 20261107T150914Z-b8b0a9c1.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T220619Z-6d103fc1.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T113546Z-35debc4d.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T033725Z-695e2785.yaml
+      - 20261116T060759Z-75e99435.yaml
+      - 20261116T095840Z-547638af.yaml
+    revalidated:
+      at: 2026-11-16T11:28:41Z
+      outcome: unchanged
+      unchanged-because: "Judged with the four changes answered apart, which still hold: the pm skill's list of what land-work's exit codes mean changed, not how the agent moves an issue or which moves it makes on its own; DEC-072 and the wider ADR-074 let a command that acts on the whole board, such as the sync, read where its repository's open issues stand from its walk, while a move still reads its one issue's card; move-issue reads the issue again after its prompt and before it writes, and writes and journals nothing where the issue moved since the preview or that read cannot place it, as variants 4d and 4e say; and the change check's document is read by its keys, which leaves variant 7b as it was. This change leaves move-issue.py as it is. sync-board now gives every missing card wherever a board is configured, and writes no Status where the board holds the state or the state degrades; where the Status is the projection it still sets each card from the issues' states, as 4a says. A projection Status a move cannot write is still one line, with the move standing, the line now naming the sync for the issue, and a move refused for no card, at its first read (4c) or at the later one (4e), still says which of the four it is, its words now naming the sync for the issue. So each step, variant and guarantee stands."
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-012-take-up-and-land-task.md
+    read:
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261104T212906Z-76af4d6b.yaml
+      - 20261105T111306Z-d2872d86.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T180856Z-0a8bab69.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T214054Z-3ec700bc.yaml
+      - 20261105T215849Z-25d2581b.yaml
+      - 20261105T220122Z-9823200c.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261105T234348Z-1f64d843.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T001934Z-0af931c1.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T004348Z-b609ed1e.yaml
+      - 20261109T083359Z-579a84ef.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T030556Z-b31ada15.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T215333Z-1b18b920.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224755Z-89ab25f5.yaml
+      - 20261115T225419Z-956603ce.yaml
+      - 20261116T095840Z-547638af.yaml
+    revalidated:
+      at: 2026-11-16T11:28:49Z
+      outcome: unchanged
+      unchanged-because: "Judged with the three changes answered apart, which still hold: land-work's comments on its exit codes 0, 2 and 8 changed, and no code; UC-063 changed only variants 3c and 8b, on how a partly checked point reads and when a cited entry draws a warning, and still files the Task this journey needs from it; and UC-061 gained variants 4d and 4e, where a move that finds the issue moved or unplaced at its read just before writing writes nothing, which leaves the Task in a state of its lifecycle, as the journey's first guarantee says. This change's hold in land-work, on a change that turns on sync_board.adds_with_no_terminal, is UC-062's variant 12c, and the journey takes UC-062 whole at its step 2, so its steps, what each needs from the last, and its guarantees stand."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261029T002130Z-82af462f.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261103T031815Z-f06744e6.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T213023Z-24c81172.yaml
+      - 20261105T213757Z-6263a527.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261105T221030Z-aedda51f.yaml
+      - 20261106T000405Z-f16023ec.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T040039Z-a5583e69.yaml
+      - 20261107T123620Z-3d057b1b.yaml
+      - 20261107T125436Z-9442a4b6.yaml
+      - 20261107T130246Z-a00da651.yaml
+      - 20261107T163133Z-be7e7e83.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T235648Z-31cd7a21.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T223351Z-f0ef2d62.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+    revalidated:
+      at: 2026-11-16T11:28:58Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two changes answered apart, which still hold: land-work's comments on its exit codes 0, 2 and 8 changed, and no code, so the count of a clone's fixers' proposals that land-work prints, on which the open question of proposals across clones rests, is as before; and DEC-072 with the wider ADR-074 lets a command that acts on the whole board read where its repository's open issues stand from its walk, while this use case lists owned Tasks by the state their cards carry where the board holds it, names no state where the board cannot be read (3e), and acts only on the Tasks it lists. This change adds to land-work only a hold on a change that turns on sync_board.adds_with_no_terminal, which changes neither what the planner reads of who works on what nor that count, so each step and guarantee stands."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261029T010917Z-565aa9b8.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T131450Z-cd4d7951.yaml
+      - 20261102T222657Z-8f1fae4a.yaml
+      - 20261105T213812Z-344be429.yaml
+      - 20261107T144714Z-e8754301.yaml
+      - 20261109T124057Z-59586467.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T025546Z-69a44f1e.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T104927Z-f6afe126.yaml
+      - 20261113T221227Z-8ea6b98a.yaml
+      - 20261113T222453Z-06dececb.yaml
+      - 20261114T123314Z-f9bc9653.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T212806Z-aa41ed9e.yaml
+      - 20261115T010054Z-99f01df7.yaml
+      - 20261115T101625Z-39c9fced.yaml
+      - 20261115T103656Z-b7cfd657.yaml
+      - 20261115T180458Z-4e13664f.yaml
+      - 20261115T202513Z-2d70bae9.yaml
+      - 20261115T222227Z-a8c41e80.yaml
+      - 20261115T224856Z-cb4ecf23.yaml
+      - 20261116T095840Z-547638af.yaml
+    revalidated:
+      at: 2026-11-16T11:29:08Z
+      outcome: unchanged
+      unchanged-because: "Judged with the two changes answered apart, which still hold: variant 7f now cites DEC-058 point 3 for a card that holds a state issue, one of the cards the system cannot count, and no code changed; and ADR-074, widened to a command that acts on the whole board, keeps a listing read for a command that needs only the issues it lists, such as 11e's read of the cards of the Tasks the close leaves in no pool, while DEC-071 dropped only ADR-096's room for a filing that names another board, which 7f's refusal does not touch. This change gives the board read seam a read of one card by its id, which only the sync uses, and marks each card of its walk archived or not, a mark no workstream command reads; the walk still reads archived cards, withheld ones and those of state issues as before. A failed projection write now names the sync run for the issue, a Status this use case says nothing of. So what the workstream commands count and refuse in 7c to 7f, and 11e's read, stand."

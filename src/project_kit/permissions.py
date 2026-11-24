@@ -1142,10 +1142,10 @@ def _settings_local_path(target_root: Path) -> Path:
     return target_root / ".claude" / "settings.local.json"
 
 
-def _core_settings_denies(target_root: Path) -> list[str]:
-    """The harness baseline's fail-closed native denies — the double-lock half
-    that holds even if the hook faults. Sourced from the adapter's canonical
-    core settings so there is no second hand-maintained deny list here."""
+def _core_settings_rules(target_root: Path, side: str) -> list[str]:
+    """The harness baseline's native rules on one side, `deny` or `ask`, from
+    the adapter's canonical core settings, so there is no second
+    hand-maintained list here."""
     core = (
         target_root / ".pkit" / "adapters" / "claude-code" / "settings" / "core" / "settings.json"
     )
@@ -1155,7 +1155,30 @@ def _core_settings_denies(target_root: Path) -> list[str]:
         data = json.loads(core.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return []
-    return list(data.get("permissions", {}).get("deny", []))
+    return list(data.get("permissions", {}).get(side, []))
+
+
+def _core_settings_denies(target_root: Path) -> list[str]:
+    """The harness baseline's fail-closed native denies — the double-lock half
+    that holds even if the hook faults: the guardrails' and the naming deny's
+    (ADR-099 point 1)."""
+    return _core_settings_rules(target_root, "deny")
+
+
+def _core_settings_asks(target_root: Path) -> list[str]:
+    """The harness baseline's native asks on the commands the interlock locks,
+    which hold even if the hook faults (ADR-095 point 4)."""
+    return _core_settings_rules(target_root, "ask")
+
+
+def _ensure_core_asks(perms: dict[str, Any], target_root: Path) -> list[str]:
+    """Add to a settings file's `permissions` each of the baseline's native asks
+    it lacks, after its own; return the asks added."""
+    present: list[str] = list(perms.get("ask") or [])
+    added = [a for a in _core_settings_asks(target_root) if a not in present]
+    if added:
+        perms["ask"] = present + added
+    return added
 
 
 def _adapter_installed(target_root: Path, name: str) -> bool:
@@ -1363,7 +1386,8 @@ def _confinement_write_probe() -> str:
 
 def enable(target_root: Path) -> str:
     """Register the PreToolUse enforcement hook, ensure the fail-closed native
-    guardrail denies are present (the double-lock), and run the startup
+    guardrail denies and the interlock's native asks are present (the
+    double-lock, ADR-095 point 4), and run the startup
     self-check to detect dead-hook enforcement-runtime faults loudly (per
     ADR-002 point 4). Idempotent."""
     if not _adapter_installed(target_root, "claude-code"):
@@ -1392,6 +1416,9 @@ def enable(target_root: Path) -> str:
         changes.append(f"ensured {len(added)} native guardrail deny(ies)")
     else:
         changes.append("native guardrail denies already present")
+    added_ask = _ensure_core_asks(perms, target_root)
+    if added_ask:
+        changes.append(f"ensured {len(added_ask)} native interlock ask(s)")
 
     _write_settings(target_root, settings)
     result = "live enforcement enabled: " + "; ".join(changes) + "."
@@ -2294,7 +2321,8 @@ def apply(target_root: Path) -> str:
     `_profile`-annotated grant layer. The profile-less projection
     (`committed_expected`) unions additively into the committed
     `.claude/settings.json` exactly as before — never removes or replaces
-    there — alongside the fail-closed guardrail denies (the double-lock).
+    there — alongside the fail-closed guardrail denies and the interlock's
+    native asks (the double-lock, ADR-095 point 4).
     Because `project()` is a per-grant monotone union, a rule derivable from
     BOTH the profile and a committed source lands in `committed_expected` and
     is never ledgered (ADR-046 condition 2) — a future refactor must preserve
@@ -2357,8 +2385,9 @@ def apply(target_root: Path) -> str:
     allow.extend(added_allow)
     added_deny = [d for d in _core_settings_denies(target_root) if d not in deny]
     deny.extend(added_deny)
+    added_ask = _ensure_core_asks(perms, target_root)
 
-    committed_changed = bool(added_allow or added_deny)
+    committed_changed = bool(added_allow or added_deny or added_ask)
     if committed_changed:
         _write_settings(target_root, settings)
 
@@ -2403,11 +2432,13 @@ def apply(target_root: Path) -> str:
 
     lines: list[str] = []
     if committed_changed:
-        parts = []
+        parts: list[str] = []
         if added_allow:
             parts.append(f"{len(added_allow)} allow rule(s)")
         if added_deny:
             parts.append(f"{len(added_deny)} guardrail deny(ies)")
+        if added_ask:
+            parts.append(f"{len(added_ask)} interlock ask(s)")
         lines.append(
             cli_render.style(
                 "strong",

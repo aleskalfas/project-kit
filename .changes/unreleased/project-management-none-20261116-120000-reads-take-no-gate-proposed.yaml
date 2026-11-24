@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  DEC-073, accepted with this change (#3290), takes the membership gate off
+  each command that only reads and reports, and keeps it on every run of
+  every other command, its dry runs included. DEC-018, DEC-020, DEC-021 and
+  DEC-022 take the edits it names. No command changes until the change that
+  builds it (#3363), so no surface moves.

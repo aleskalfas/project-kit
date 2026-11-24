@@ -268,7 +268,13 @@ def test_a_document_of_another_version_is_not_read() -> None:
 def test_reading_the_point_takes_the_document_whatever_the_exit_code() -> None:
     def unresolved(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
         assert argv == ["pkit", "connections", "resolve", POINT, "--json"]
-        body = {"schema_version": 1, "defined": True, "outcome": "collision", "why": "two claim"}
+        body = {
+            "schema_version": 1,
+            "defined": True,
+            "outcome": "collision",
+            "why": "two claim",
+            "fillers": [],
+        }
         return subprocess.CompletedProcess(argv, 1, json.dumps(body), "")
 
     assert fixers.read_point(unresolved).why == "two claim"

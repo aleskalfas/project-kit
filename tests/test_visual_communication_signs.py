@@ -5,6 +5,7 @@ sign part a component places, the path the scene holds, and how each renderer dr
 - **An outline** is read from SVG's path data whole, every command absolute or relative,
   and held as moves, lines, cubic curves and closes, which the engine maps into a frame by
   its square, whole, centred and as large as the frame allows. What is no outline is said.
+  Path data fills a point as SVG fills it, by its rule.
 - **The foundations** declare each shape by its name; another library declares none.
 - **A notation** holds each concept's icon, or maps it to a shape. Its sign is its icon,
   else its shape. A sign that cannot be read is a finding in the notation, and the concept
@@ -119,6 +120,37 @@ def test_what_is_no_outline_is_said(raw: Any, said: str) -> None:
     problem = outlines.read_outline(raw)
     assert isinstance(problem, str)
     assert said in problem
+
+
+SQUARE = "M0 0H10V10H0Z"
+CIRCLE = "M0 5A5 5 0 0 1 10 5A5 5 0 0 1 0 5Z"
+
+
+@pytest.mark.parametrize(
+    ("d", "fill_rule", "point", "filled"),
+    [
+        (SQUARE, "nonzero", (5, 5), True),
+        (SQUARE, "nonzero", (15, 5), False),
+        ("M0 0H10V10H0", "nonzero", (5, 5), True),  # a part with no close fills as closed
+        (f"{SQUARE} M2 2H8V8H2Z", "nonzero", (5, 5), True),  # wound twice the same way
+        (f"{SQUARE} M2 2H8V8H2Z", "evenodd", (5, 5), False),
+        (f"{SQUARE} M2 2V8H8V2Z", "nonzero", (5, 5), False),  # wound back the other way
+        (f"{SQUARE} M2 2V8H8V2Z", "nonzero", (1, 5), True),
+        (CIRCLE, "nonzero", (5, 5), True),
+        (CIRCLE, "nonzero", (8.5, 8.5), True),
+        (CIRCLE, "nonzero", (9, 9), False),  # inside its frame, outside the circle
+        ("M0 0", "nonzero", (0, 0), False),  # a move alone draws nothing
+    ],
+)
+def test_path_data_fills_a_point_as_svg_fills_it_by_its_rule(
+    d: str, fill_rule: str, point: tuple[float, float], filled: bool
+) -> None:
+    assert outlines.fills(d, fill_rule, point) is filled
+
+
+def test_path_data_svg_does_not_read_is_refused_rather_than_filled() -> None:
+    with pytest.raises(ValueError, match="no path data SVG reads"):
+        outlines.fills("M 0 0 X 1 1", "nonzero", (0, 0))
 
 
 def test_an_outline_is_fitted_by_its_square_whole_centred_and_as_large_as_its_frame_allows() -> (

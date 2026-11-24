@@ -1,0 +1,9 @@
+component: project-management
+kind: none
+body: >
+  The README states the contract of each document the capability's commands
+  print for a program, under "What the commands print for a program": each
+  key with what it means, each set with its values, and how a caller reads a
+  missing key, a null and a value it does not know (ADR-097 point 6). Each set
+  that named no reading of a value a caller does not know is marked so.
+  Nothing a command prints changes.

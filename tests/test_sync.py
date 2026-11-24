@@ -1471,7 +1471,7 @@ def test_sync_refuses_content_newer_than_this_pkit_and_writes_nothing(
         message
     )
     assert "Nothing was written" in message
-    assert f"{router.DISTRIBUTION_GIT_URL}@v{_NEWER} project-kit sync" in message
+    assert f"{router.DISTRIBUTION_GIT_URL}@v{_NEWER} pkit sync" in message
     if pinned:
         assert f"pin ({_NEWER}, in .pkit/version-pin)" in message
         assert "reconnect" in message
@@ -1792,7 +1792,7 @@ def test_sync_under_the_routers_fallback_names_reconnecting_not_a_bare_upgrade(
 
     assert f"This project pins pkit {_OLDER}, which the router could not fetch" in message
     assert "Reconnect and run `pkit sync` again" in message
-    assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{_OLDER} project-kit sync`" in message
+    assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{_OLDER} pkit sync`" in message
     assert "uv tool install" not in message
     assert "SSH" not in message
     assert "`pkit unpin`, then `pkit upgrade`" in message
@@ -1846,7 +1846,7 @@ def test_sync_under_a_deliberate_bypass_of_a_pin_names_running_the_pin(
 
     assert f"and the project pins {_OLDER}" in message
     assert "could not fetch" not in message
-    assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{_OLDER} project-kit sync`" in message
+    assert f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{_OLDER} pkit sync`" in message
     assert "To move the project on: run `pkit upgrade`." in message
 
 

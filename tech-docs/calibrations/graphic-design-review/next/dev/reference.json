@@ -1,0 +1,96 @@
+{
+  "about": "The development set's reference, in the form plan.md section 1 fixes for the next calibration: the first ladder's reference as the first run fixed it (2026-11-17/run/reference.json), with TXF moved from `out` to `no-reading`; and what the new form adds: each covered set's major, as the default branch holds it, the places each covered rule is graded on, the order's method as plan.md section 3 fixes it, the model's name and the reads each document may list. It changes no reading, line or pair of the first run's. Codes are the judges' blind codes; decks are the ladder's version folders.",
+  "piece": "ladder-scratch",
+  "bar": {
+    "covers": ["RS-COMM-003", "RS-GRAPHIC-001", "RS-GRAPHIC-002", "RS-GRAPHIC-003", "RS-GRAPHIC-006", "RS-GRAPHIC-007"],
+    "at-least": "professional",
+    "majors": {"COMM": 2, "GRAPHIC": 4}
+  },
+  "places": {
+    "RS-COMM-003": ["piece"],
+    "RS-GRAPHIC-001": ["page"],
+    "RS-GRAPHIC-002": ["page"],
+    "RS-GRAPHIC-003": ["page"],
+    "RS-GRAPHIC-006": ["page"],
+    "RS-GRAPHIC-007": ["page"]
+  },
+  "runs": 3,
+  "judges": ["judge-1", "judge-2"],
+  "model": "claude-fable-5-2",
+  "order": "counting",
+  "page-ids": ["made-of", "kinds", "reaches", "read"],
+  "orders": {"variants/RS-COMM-003": [1, 4, 2, 3]},
+  "pages": {
+    "1": {
+      "order": ["LTV", "GPM", "VNH", "PBV", "TXV", "RWC", "GZD", "MPS", "KST", "XGX"],
+      "pass": ["LTV", "GPM"],
+      "fail": ["VNH", "PBV", "RWC", "GZD", "MPS", "KST", "XGX"],
+      "no-reading": ["TXV"]
+    },
+    "2": {
+      "order": ["ZKD", "MNH", "BRS", "BBR", "PVD", "HLW", "LMZ", "TDF", "TNZ", "MLV"],
+      "pass": ["ZKD", "MNH", "BRS"],
+      "fail": ["PVD", "HLW", "LMZ", "TDF", "TNZ", "MLV"],
+      "no-reading": ["BBR"]
+    },
+    "3": {
+      "order": ["ZCG", "RTJ", "TXF", "FXK", "CKM", "HMC", "WBW", "MZK", "VFF", "XPD"],
+      "pass": ["ZCG", "RTJ"],
+      "fail": ["FXK", "CKM", "HMC", "WBW", "VFF", "XPD"],
+      "no-reading": ["TXF", "MZK"]
+    },
+    "4": {
+      "order": ["TLG", "WMG", "MCM", "WDH", "WDB", "FTW", "NKR", "ZWT", "HGS", "VVL"],
+      "pass": ["TLG", "WMG"],
+      "fail": ["MCM", "WDH", "FTW", "NKR", "ZWT", "VVL"],
+      "no-reading": ["WDB", "HGS"]
+    }
+  },
+  "decks": {
+    "pass": ["rounds/round-5", "variants/RS-GRAPHIC-004"],
+    "fail": ["rounds/round-1", "rounds/round-2", "rounds/round-3", "rounds/round-4",
+             "sets/capability-main", "sets/form-contradicts", "sets/grey-boxes",
+             "variants/RS-COMM-003", "variants/RS-GRAPHIC-001", "variants/RS-GRAPHIC-002",
+             "variants/RS-GRAPHIC-003", "variants/RS-GRAPHIC-006", "variants/RS-GRAPHIC-007"],
+    "no-reading": ["variants/RS-COMM-001", "variants/RS-COMM-002", "variants/RS-COMM-004",
+                   "variants/RS-COMM-005", "variants/RS-GRAPHIC-005"]
+  },
+  "counterparts": {
+    "1": {"first-draft": "XGX", "last-failed": "VNH", "first-passed": "GPM", "last-polished": "LTV"},
+    "2": {"first-draft": "LMZ", "last-failed": "LMZ", "first-passed": "BRS", "last-polished": "ZKD"},
+    "3": {"first-draft": "HMC", "last-failed": "FXK", "first-passed": "ZCG", "last-polished": "ZCG"},
+    "4": {"first-draft": "NKR", "last-failed": "MCM", "first-passed": "WMG", "last-polished": "TLG"},
+    "deck": {"first-draft": "rounds/round-1", "last-failed": "rounds/round-4",
+             "first-passed": "rounds/round-5", "last-polished": "rounds/round-5"}
+  },
+  "weak-deck": {"deck": "sets/capability-main", "pages": {"1": "MPS", "2": "HLW", "3": "WBW", "4": "FTW"}},
+  "pairs": {
+    "RS-COMM-003": [{"on": "piece", "base": "rounds/round-5", "variant": "variants/RS-COMM-003"}],
+    "RS-GRAPHIC-001": [{"on": "4", "base": "TLG", "variant": "WDH"}],
+    "RS-GRAPHIC-002": [{"on": "2", "base": "ZKD", "variant": "MLV"}],
+    "RS-GRAPHIC-003": [{"on": "1", "base": "LTV", "variant": "KST"}],
+    "RS-GRAPHIC-006": [{"on": "2", "base": "ZKD", "variant": "PVD"}],
+    "RS-GRAPHIC-007": [{"on": "1", "base": "LTV", "variant": "PBV"}]
+  },
+  "reads": {
+    "review": [
+      ".pkit/capabilities/visual-communication/rule-sets/",
+      ".pkit/capabilities/visual-communication/design-knowledge/",
+      ".pkit/capabilities/visual-communication/decisions/",
+      ".pkit/capabilities/visual-communication/schemas/review.schema.json",
+      ".pkit/capabilities/visual-communication/schemas/review.yaml",
+      ".pkit/capabilities/visual-communication/schemas/defs.schema.json",
+      ".pkit/capabilities/visual-communication/outputs.md",
+      ".pkit/capabilities/visual-communication/checks.md",
+      ".pkit/capabilities/visual-communication/components.md",
+      ".pkit/capabilities/visual-communication/files.md",
+      ".pkit/decisions/core/",
+      "tech-docs/rule-sets/"
+    ],
+    "judge": [
+      ".pkit/capabilities/visual-communication/rule-sets/comm.md",
+      ".pkit/capabilities/visual-communication/rule-sets/graphic.md",
+      "tech-docs/calibrations/graphic-design-review/next/run/judge.schema.json"
+    ]
+  }
+}

@@ -6,6 +6,8 @@ date: 2026-08-21
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [project-management:DEC-078-one-actor-per-act].** Under every credential, the audit comment of an override of a reviewer names nobody beside the account that posts it. Overturned: point 4's "(name + email)", by which the comment records who overrode. The rest stands.
+
 > Let an operator satisfy **one** required reviewer's slot on the merge gate with an audited **`done-work --bypass-reviewer <name> --bypass-reviewer-reason "<r>"`** (repeatable), instead of today's only escape — discarding the *entire* gate with `--bypass`. The named reviewer's slot counts as **satisfied-by-override** (a first-class state, *distinct* from a real `APPROVED`); every other required reviewer still gates. This is the false-block safety valve [software-engineering:DEC-002]'s panel requires: without it, one over-eager reviewer trains the blanket-bypass reflex (#715 from the other side). Ephemeral (a merge-time flag, like `--bypass`), audited (a prose comment recording who/which/why, kept off the verdict stream), and extends [project-management:DEC-046]'s `--bypass` family. It **widens [project-management:DEC-032] D3's satisfaction predicate** — a foundational, maintainer-authorised change.
 
 ## Context

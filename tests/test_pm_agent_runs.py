@@ -88,6 +88,12 @@ def _document(**fields: object) -> str:
         "output": "the review\n",
         "diagnostics": "",
         "reason": "",
+        "refused_calls": [],
+        "confined": False,
+        "commit": None,
+        "check": None,
+        "files": None,
+        "excluded": [],
     }
     document.update(fields)
     return json.dumps(document) + "\n"
@@ -247,6 +253,8 @@ def test_the_document_is_the_run(
     ("fields", "says"),
     [
         ({"schema_version": 2}, "schema_version 2"),
+        ({"schema_version": True}, "schema_version True"),
+        ({"schema_version": 1.0}, "schema_version 1.0"),
         ({"ending": "approved"}, "an ending pm does not know"),
         ({"exit_code": None}, "no exit_code"),
         ({"exit_code": "0"}, "not an integer"),

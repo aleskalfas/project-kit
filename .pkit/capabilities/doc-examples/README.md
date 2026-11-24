@@ -9,8 +9,8 @@ pkit:
         - .pkit/capabilities/doc-examples/schemas/**
         - .pkit/capabilities/doc-examples/permissions/**
         - .pkit/capabilities/doc-examples/package.yaml
-      record: ["doc-examples:DEC-001", COR-001, COR-010, COR-017, COR-028, COR-030, COR-050, COR-055, COR-056, "living-docs:DEC-001", "living-docs:DEC-002"]
-      artefact: [".pkit/permissions/README.md#grants-and-verdicts", ".pkit/cli/README.md#sync", ".pkit/cli/README.md#validate"]
+      record: ["doc-examples:DEC-001", COR-001, COR-010, COR-017, COR-028, COR-030, COR-050, COR-055, COR-056, "living-docs:DEC-001", "living-docs:DEC-002", ADR-097]
+      artefact: [".pkit/permissions/README.md#grants-and-verdicts", ".pkit/cli/README.md#sync", ".pkit/cli/README.md#validate", ".pkit/cli/README.md#machine-readable-output"]
 ---
 
 # doc-examples capability
@@ -33,6 +33,7 @@ The rule is in [doc-examples:DEC-001-console-examples-as-tests]. This page state
 - [In CI](#in-ci)
 - [The permission model](#the-permission-model)
 - [Validation](#validation)
+- [The pages document](#the-pages-document)
 - [Changes to the contract](#changes-to-the-contract)
 - [Not yet](#not-yet)
 - [Citing this capability's decisions](#citing-this-capabilitys-decisions)
@@ -248,6 +249,21 @@ Add the step once your pages pass, after an update has written their output and 
 - **A warning,** which fails nothing: a fence under another name for a shell session.
 
 `pkit doc-examples pages` lists the pages the run reads. It refuses, naming the fix, where your configuration holds an error.
+
+## The pages document
+
+`pkit doc-examples pages --json` prints the pages document, which the run reads ("The run" above). It keeps to the rule the CLI reference states for a document a command prints for a program ([Machine-readable output](../../cli/README.md#machine-readable-output)): a key may be added, one goes only as a breaking change that raises `schema_version`, and no key comes to mean anything else.
+
+- **Its form:** one JSON document. Where the command refuses, it prints none and exits 1.
+- **`schema_version`:** `1`. A reader refuses a version it does not know.
+- **`root`:** the project's root, as an absolute path.
+- **`types`:** the types whose documents are the pages: those your configuration names under `types`, or `living-docs:page` where it names none.
+- **`pages`:** each page, by its path from the root, in the order of the paths.
+- **`setup`:** the setup step's commands, in your configuration's order.
+- **`path`:** the folders put before your `PATH`, in order, as your configuration writes them, the run's placeholders unreplaced.
+- **`environment`:** each variable your configuration names, with its value. A variable you give no value is `null`: it takes your value of that name, and is left out where you have none.
+- **`placeholders`:** each placeholder of yours, by its name, with its command.
+- **The names under `environment` and `placeholders`** are your configuration's, so they come and go with it.
 
 ## Changes to the contract
 

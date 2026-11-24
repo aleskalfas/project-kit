@@ -1,0 +1,17 @@
+component: project-management
+kind: major
+body: >
+  No command makes a bot's account an assignee (DEC-079 point 1):
+  `create-issue`, by `--assignee` or by default, `assign-issue`, `--me`
+  among it, `start-work`'s assignment and `handoff-issue`. Each refuses
+  `<name>[bot]`, `app/<name>` and a string with no spelling, such as
+  `@someone`, with no request, and assigns a bare login only where GitHub
+  answers that it names a user's account: the account GitHub answered the
+  credential acts as needs no lookup, and any other login, the one
+  `PM_INVOKER_LOGIN` names among them, is looked up with
+  `gh api users/<login>`. A lookup that answers another type of account, no
+  account, or no answer refuses with the login and its cause, and on a host
+  other than github.com says that a login mistyped and an account hidden
+  read alike. `--force` does not reach these refusals. A project that
+  assigned work to a bot through the commands, such as GitHub's coding
+  agent, assigns it on GitHub's own surface instead.

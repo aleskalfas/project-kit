@@ -111,6 +111,10 @@ has_projects_v2_board: false
 #     not_code:                       #   paths that satisfy no touches-code floor; absent = [".changes/**"]
 #       - ".changes/**"
 #
+# sync_board:                         # per DEC-072 — the board sync's settings
+#   adds_with_no_terminal: false      #   true lets a run with no terminal add cards where
+#                                     #   the board holds the state; off by default
+#
 # mesh_peers:                         # per DEC-022
 #   - github://owner/repo
 # mesh_source: github://governance-owner/repo/path/to/mesh.yaml
