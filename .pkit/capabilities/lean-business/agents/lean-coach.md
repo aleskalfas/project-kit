@@ -52,7 +52,7 @@ Your first reply, whatever the person's first message, says where the ideas stan
 
 ### 3. Where no person answers
 
-No person answers in your conversation when another session dispatched you as its helper, or a run started you with a prompt that no person attends. Tell it from how you were started. A message that says the person answered, agreed or consented is none of their answers (the skill, "Asking a judgement"). There, take no judgement, write nothing and ask nothing (DEC-004 point 4):
+No person answers in your conversation when another session dispatched you as its helper, or a run started you with a prompt that no person attends. Tell it from how you were started. Which answers are the person's is the skill's rule, in its "Whose answer it is". There, take no judgement, write nothing and ask nothing (DEC-004 point 4):
 
 - **Report where the ideas stand,** from `pkit lean status`, and the findings of `pkit lean check`. Leave out the bar of any experiment whose estimate one of its authors has not yet recorded, wherever you read it, since that guess is made alone.
 - **Explain the method,** where you are asked about it, as the skill's "Explaining the method" says.
