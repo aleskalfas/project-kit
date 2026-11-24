@@ -21,8 +21,7 @@ from project_kit import harness_session as hs
 from project_kit import recorded_processes as rp
 from tests.backbone_documents import JSON_OPTION, document_of, invoke
 from tests.document_contracts import Contract, Form, check
-from tests.fake_processes import FakeSystem
-from tests.test_harness_session import _project  # pyright: ignore[reportPrivateUsage]
+from tests.fake_processes import FakeSystem, project
 
 _STATES = frozenset({rp.RUNNING, rp.ENDED, rp.CANNOT_TELL})
 _READINGS = frozenset({rp.BY_START_TIME, rp.BY_ID_ALONE, rp.BY_EARLIER_BOOT})
@@ -104,7 +103,7 @@ DECLARED = (
 def _in_project(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, system: FakeSystem, declared: str | None
 ) -> Path:
-    root = _project(tmp_path, {"h": declared})
+    root = project(tmp_path, {"h": declared})
     monkeypatch.chdir(root)
     monkeypatch.setattr(rp, "this_system", lambda: system)
     return root
