@@ -1,8 +1,8 @@
 ---
 id: DEC-055
 title: A piece names the media it is shown in, and a check fails a text smaller than its medium allows
-status: proposed
-date: 2026-11-15
+status: accepted
+date: 2026-11-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
