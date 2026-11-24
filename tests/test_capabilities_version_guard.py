@@ -141,7 +141,7 @@ _STATES = {
         [
             f"this pkit is {_PROJECTS_VERSION}, older than this project's content ({_NEWER}",
             "pkit never moves a project to an older version",
-            f"{router.DISTRIBUTION_GIT_URL}@v{_NEWER} project-kit capabilities",
+            f"{router.DISTRIBUTION_GIT_URL}@v{_NEWER} pkit capabilities",
         ],
     ),
     "no-completion": (
@@ -229,7 +229,7 @@ def test_a_pin_ahead_of_this_pkit_stops_both_and_names_the_pin(project: Path, so
 
         assert f"older than this project's pin ({_NEWER}, in .pkit/version-pin)" in said
         assert (
-            f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{_NEWER} project-kit capabilities "
+            f"`uvx --from {router.DISTRIBUTION_GIT_URL}@v{_NEWER} pkit capabilities "
             f"{command} {_NAME}`"
         ) in said
         assert _tree_bytes(project) == before

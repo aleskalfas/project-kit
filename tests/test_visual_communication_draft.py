@@ -1,4 +1,4 @@
-"""The makers' record of drafts and `pkit visual draft` (visual-communication DEC-042 point 7,
+"""The makers' record of drafts and `pkit visual draft` (visual-communication DEC-070 point 4,
 DEC-029 points 3 and 4, #3224).
 
 Held here:
@@ -10,15 +10,20 @@ Held here:
   that differs from it, or that the record lists nothing for, is the asker's;
 - **the command writes nothing**: no command changes what a brief says (DEC-029 point 4);
 - **a page before the first render**: a piece with no lock yet finds its page under the
-  versions its first render would lock, so a draft is digested as it is written (DEC-042
-  point 7), and what that render's search refuses refuses the draft;
+  versions its first render would lock, so a draft is digested as it is written (DEC-070
+  point 4), and what that render's search refuses refuses the draft;
 - **a brief that cannot be read is refused**, with `--check` or without, and never read as
   no brief, so a refused read is never told as whose a text is;
 - **the part an entry lies in**: each draft of a piece whose top holds pages, such as a
   deck, even of one page, a lead, a title or a takeaway, lies in its page's part, so one
   named by no page is refused, never taken as the whole piece's, and so is one whose
   piece's top cannot be read; on a piece whose top is a page alone, such as a figure, it is
-  the whole piece's (DEC-029 point 3).
+  the whole piece's (DEC-029 point 3);
+- **a page's lead or title that the piece's top holds**, such as a hero's in a one-page
+  site's shared header, which is that page's (DEC-068 point 4): named with `--from-top` by
+  its key path from the content's top, its entry given for its page's part and checked
+  there as an entry of the page's own content is, and a key path from the top that leads
+  into the pages refused (#3418).
 
 The commands run in the test's own process (`tests/in_process.py`).
 """
@@ -35,7 +40,8 @@ from tests import visual_communication_producer as producer
 from tests.in_process import load, run_main
 from tests.test_visual_communication_checks import deck_project, slides
 from tests.test_visual_communication_pipeline import PIECE, PIECE_FOLDER, drawing_project
-from tests.visual_communication_project import bound, importable, write, yaml_text
+from tests.test_visual_communication_site import site_location
+from tests.visual_communication_project import bound, importable, project, write, yaml_text
 
 drafts, files, reading, seam, svg, draft = load(
     "visual-communication",
@@ -76,8 +82,8 @@ def with_piece_fields(root: Path, **fields: Any) -> None:
     write(path, yaml_text(data))
 
 
-def run(root: Path, *args: str) -> Any:
-    return run_main(draft, PIECE, *args, cwd=root)
+def run(root: Path, *args: str, piece: str = PIECE) -> Any:
+    return run_main(draft, piece, *args, cwd=root)
 
 
 def recorded(text: str, kind: str = "title") -> dict[str, str]:
@@ -334,3 +340,122 @@ def test_a_top_holds_pages_where_its_layouts_are_their_forms_or_a_slot_of_one_ho
     assert drafts.holds_pages(slot)
     assert not drafts.holds_pages(alone)
     assert not drafts.holds_pages({})
+
+
+# --- a page's lead or title that the piece's top holds ------------------------------------------
+
+#: The site of one page whose shared header holds its hero, so the hero's heading is the
+#: page's title and its text the page's lead (DEC-068 point 4).
+SITE = "page"
+SITE_FOLDER = f"visual/pieces/{SITE}"
+HERO = ["--language", "en", "--page", "home", "--from-top"]
+HERO_TITLE = ["--kind", "title", *HERO, "--at", "header.head"]
+HERO_LEAD = ["--kind", "lead", *HERO, "--at", "header.text"]
+
+
+def one_page_site(tmp_path: Path) -> Path:
+    return site_location(project(tmp_path))
+
+
+def hero(root: Path, field: str = "head") -> str:
+    """The English text of the field `field` of the site's shared header."""
+    return str(drafts.pl.read_piece(root, "visual", SITE).contents["en"]["header"][field])
+
+
+def site_brief(root: Path, **parts: Any) -> Path:
+    return write(root / SITE_FOLDER / "brief.yaml", yaml_text(bound("brief", **parts)))
+
+
+def test_a_title_the_pieces_top_holds_is_read_from_the_contents_top_for_its_pages_part(
+    tmp_path: Path,
+) -> None:
+    root = one_page_site(tmp_path)
+
+    done = run(root, *HERO_TITLE, piece=SITE)
+
+    assert done.returncode == 0, done.stderr
+    assert recorded(hero(root))["digest"] in done.stdout
+    assert "add to `pages.home.drafts`" in done.stdout
+    assert not (root / SITE_FOLDER / "brief.yaml").exists()
+
+
+def test_a_lead_or_a_title_the_pieces_top_holds_is_checked_in_its_pages_part(
+    tmp_path: Path,
+) -> None:
+    """Its entry lies in the page's part, as an entry of the page's own content does, so one
+    in the part for the whole piece is no entry of it."""
+    root = one_page_site(tmp_path)
+    entries = [recorded(hero(root)), recorded(hero(root, "text"), "lead")]
+    site_brief(root, pages={"home": {"drafts": entries}})
+    for args in (HERO_TITLE, HERO_LEAD):
+        done = run(root, *args, "--check", piece=SITE)
+        assert done.returncode == 0, (args, done.stderr)
+        assert done.stdout.startswith("matches"), args
+
+    site_brief(root, pages={"home": {"drafts": [recorded("An earlier name.")]}})
+    done = run(root, *HERO_TITLE, "--check", piece=SITE)
+    assert done.returncode == 3
+    assert done.stdout.startswith("differs")
+    assert "asker's" in done.stdout
+
+    site_brief(root, piece={"drafts": entries})
+    for args in (HERO_TITLE, HERO_LEAD):
+        done = run(root, *args, "--check", piece=SITE)
+        assert done.returncode == 3, args
+        assert done.stdout.startswith("no-entry"), args
+
+
+def test_without_from_top_the_key_path_of_a_text_the_pieces_top_holds_is_read_from_the_page(
+    tmp_path: Path,
+) -> None:
+    root = one_page_site(tmp_path)
+    from_page = [arg for arg in HERO_TITLE if arg != "--from-top"]
+
+    done = run(root, *from_page, piece=SITE)
+
+    assert done.returncode == 1
+    assert "`header.head` names `header`, which the content does not give there" in done.stderr
+
+
+def test_a_key_path_from_the_contents_top_that_leads_into_the_pages_is_refused(
+    tmp_path: Path,
+) -> None:
+    """It names a page's own content, which is named from its page, so its entry never lies
+    in another page's part."""
+    site = one_page_site(tmp_path)
+    deck = deck_project(tmp_path / "deck")
+    from_deck = ["--kind", "title", "--language", "en", "--page", "rules", "--from-top"]
+    for root, piece, args in (
+        (site, SITE, ["--kind", "title", *HERO, "--at", "pages[home].main.head"]),
+        (deck, PIECE, [*from_deck, "--at", "slides[cover].title"]),
+    ):
+        for given in (args, [*args, "--check"]):
+            done = run(root, *given, piece=piece)
+            assert done.returncode == 1, given
+            assert "leads into the pages, so it names a page's own content" in done.stderr
+            assert done.stdout == "", given
+
+
+def test_a_text_the_pieces_top_holds_is_refused_for_a_page_the_content_does_not_hold(
+    tmp_path: Path,
+) -> None:
+    root = one_page_site(tmp_path)
+    args = ["--kind", "title", "--language", "en", "--page", "nope", "--from-top"]
+
+    done = run(root, *args, "--at", "header.head", piece=SITE)
+
+    assert done.returncode == 1
+    assert "holds no page `nope`" in done.stderr
+
+
+def test_on_a_piece_whose_top_is_a_page_alone_from_top_reads_the_key_path_as_before(
+    tmp_path: Path,
+) -> None:
+    """Named by no page, the key path starts at the content's top already."""
+    root = drawing_project(tmp_path)
+    caption = ["--kind", "lead", "--language", "en", "--at", "caption"]
+
+    done = run(root, *caption, "--from-top")
+
+    assert done.returncode == 0, done.stderr
+    assert done.stdout == run(root, *caption).stdout

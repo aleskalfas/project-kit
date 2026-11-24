@@ -1,0 +1,14 @@
+component: project-management
+kind: none
+body: >
+  DEC-083, which a person accepts in this change (#3465), has a pace
+  setting or clear count as a person's only where a user's account posts
+  it, so one a bot's account posts counts for nothing. Under a credential
+  that names no user's account, the command that sets a pace writes no
+  person's setting or clear, and names the ways left: the worker's
+  directing seat, the ceiling in the committed configuration, or the
+  command run under the person's own account. It overturns DEC-082 point 6
+  and DEC-076 point 5 in part, and refines DEC-082's fold and DEC-076
+  point 7 in place. The pace, its fold and its setting command are unbuilt
+  until DEC-082's build (#3462), which declares its own changeset, so no
+  surface moves here.

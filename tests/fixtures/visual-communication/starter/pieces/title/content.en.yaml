@@ -1,0 +1,37 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: plain
+    layout: standard
+    main:
+      use: starter/title
+      title: Every rule in one place
+      lead: >-
+        A project writes each of its rules down once, so every person and every agent
+        works to the same words.
+
+  - id: tint
+    layout: standard
+    main:
+      use: starter/title
+      fill: tint
+      title: Ask for a review
+      lead: Name what to review, and a reviewer reads it on the next working day.
+
+  - id: alone
+    layout: standard
+    main:
+      use: starter/title
+      title: The rules a project keeps, and the tools that apply them on every change
+
+  - id: sign
+    layout: standard
+    main:
+      use: starter/title
+      fill: tint
+      concept: test-notation/person
+      title: A person's notes
+      lead: >-
+        A title whose concept has a sign stands it before its words, in the family's text,
+        so its colour is never the only thing that says what it is.

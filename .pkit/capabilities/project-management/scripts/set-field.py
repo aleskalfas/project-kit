@@ -84,11 +84,12 @@ the hook uses, so there is exactly one field-value write path in the capability.
 
 Four board cases are REFUSED rather than guessed at, each naming what was looked
 for and what the board actually offers (the diagnosis an adopter could not get
-before):
+before). Each is what the board answered; a board that did not answer is apart
+from them (below):
 
   * **no card** — board membership is a post-creation step (DEC-019), so a
-    just-filed issue may have no card yet. set-field refuses with the exact
-    `gh project item-add` remediation instead of adding the card itself: adding an
+    just-filed issue may have no card yet. set-field refuses, naming the sync run
+    for the issue as the remediation, instead of adding the card itself: adding an
     issue to a board is a membership decision, explicitly NOT part of the
     field-value substrate (ADR-031 point 3), and a verb asked to set a field must
     not silently enlarge the board's contents. Never a silent no-op either way.
@@ -98,9 +99,14 @@ before):
   * **not a single-select** — a text / number / date / iteration field has no
     option vocabulary to match a classification value against; out of scope
     (#724) and refused by type name rather than mangled into a text value.
-  * **read failure** — a missing `read:project` scope or any other `gh` failure
-    surfaces gh's stderr VERBATIM (the remedy, `gh auth refresh -s project`, is
-    in that text).
+
+A board that did not answer — its read failed, its answer named no board or
+another, the read was not whole, or the issue's card could not be told absent
+for want of a witness ([pkit:ADR-096] point 1) — leaves the axis unset and is no
+refusal: nothing is known of the board, so it takes the broken tool's code (3),
+whatever else the call wrote. The seam's words come through VERBATIM, a missing
+`read:project` scope among them (its remedy, `gh auth refresh -s project`, is in
+that text), and name the way out the cause gives.
 
 When `config.yaml` claims the board for an axis while `substrate-map.yaml` binds
 that same axis to a label, the two declarations disagree (the #708 root cause) and
@@ -130,20 +136,22 @@ Exit codes:
   1  refusal — membership; up-front validation (nothing mutated), including a
      `--parent` whose issue's native parent could not be read, or whose body's
      first line attempts a DEC-013 integration marker but is malformed; or a
-     requested axis could not be set on its substrate: the board case cannot be resolved
-     (no card, no such field, no such option, unsupported field type, or the board
-     read failed), or the board and substrate-map disagree about who owns the axis
-     (#709 / #724). Every such refusal happens BEFORE any write for that axis, so
-     nothing is half-written. In the mixed case (some axes applied, some refused)
-     the applicable writes ARE applied and the exit is still non-zero, with the
+     requested axis could not be set on its substrate: the board answered with
+     no card, no such field, no such option or an unsupported field type, or the
+     board and substrate-map disagree about who owns the axis (#709 / #724).
+     Every such refusal happens BEFORE any write for that axis, so nothing is
+     half-written. In the mixed case (some axes applied, some refused) the
+     applicable writes ARE applied and the exit is still non-zero, with the
      summary naming what was and was not done — a partial application must never
      read as a clean success. `--dry-run` reports the same refusals with the same
      non-zero exit, since all of them are knowable without writing.
   2  usage error (issue not found; no field given; unknown value)
-  3  gh write failure (a label/title/body edit, or a board field-value write,
-     failed at the point of writing), or the native parent link could not be
-     added or moved (nothing else is written then). Re-running is safe:
-     application is idempotent.
+  3  gh failure: a label/title/body edit, or a board field-value write, failed
+     at the point of writing; the native parent link could not be added or
+     moved (nothing else is written then); or the board did not answer for an
+     axis it carries, which is left unset, with or without other axes written
+     ([pkit:ADR-096] point 4), and under `--dry-run` alike. Re-running is safe:
+     application is idempotent, and sets nothing a second time.
 """
 
 from __future__ import annotations
@@ -166,10 +174,12 @@ from _lib import (
     axis_carriage,
     axis_labels,
     board_fields,
+    board_status,
     body_parent_ref,
     bootstrap_gate,
     classification_rules,
     containment,
+    missing_card,
     provenance,
     session_guard,
     substrate_writes,
@@ -188,10 +198,15 @@ from _lib.structural_type import infer_structural_type
 
 @dataclass(frozen=True)
 class FieldResult:
+    """One field's outcome. ``unanswered`` marks a field left unset because the
+    board did not answer for it, which takes the broken tool's code rather than
+    a refusal's ([pkit:ADR-096] point 4)."""
+
     field: str
     ok: bool
     changed: bool
     message: str
+    unanswered: bool = False
 
 
 @dataclass(frozen=True)
@@ -200,9 +215,10 @@ class BoardState:
 
     Gathered once per call (not per axis) by :func:`_read_board_state`; every
     board-carried axis in the same call plans against this one snapshot.
-    `error` is the verbatim reason a read failed (gh's stderr where there is one);
-    when it is set the other fields are unknown and every board axis refuses.
-    `item_id` None with no `error` is the membership case — the issue has no card.
+    `error` is why the board did not answer, in the seam's words (gh's stderr
+    verbatim where there is one); when it is set the other fields are unknown and
+    every board axis is left unset. `item_id` None with no `error` is the
+    membership case — the board answered that the issue has no card.
     """
 
     project_id: str | None = None
@@ -276,9 +292,9 @@ def main() -> int:
     substrate_map = axis_labels.load_substrate_map(capability_root)
 
     # `id` + `url` are for the board path: `id` is the issue's GraphQL node id (the
-    # key the card lookup asks `projectItems` on) and `url` renders the exact
-    # `gh project item-add` remediation when the card is missing. Both ride the one
-    # `gh issue view` round-trip this call already makes.
+    # key the card lookup asks `projectItems` on) and `url` names the owner the
+    # board is read under. Both ride the one `gh issue view` round-trip this call
+    # already makes.
     issue = gh_get_issue(args.issue_number, config, fields="title,body,labels,id,url")
     if issue is None:
         return 2
@@ -450,7 +466,9 @@ def main() -> int:
 
     board_writes: list[BoardWrite] = []
     if board_axes:
-        board_state = _read_board_state(config, issue=issue, issue_number=args.issue_number)
+        board_state = _read_board_state(
+            config, issue=issue, issue_number=args.issue_number, substrate_map=substrate_map
+        )
         board_results, board_writes = _plan_board_fields(
             board_axes=board_axes,
             state=board_state,
@@ -476,7 +494,7 @@ def main() -> int:
         results.append(native_parent)
 
     for r in results:
-        marker = "ok" if r.ok else "refused"
+        marker = "ok" if r.ok else "error" if r.unanswered else "refused"
         print(f"  [{marker}] {r.message}")
     if parent_ref_warning is not None:
         print(f"  [warn] parent: {parent_ref_warning}.")
@@ -498,15 +516,20 @@ def main() -> int:
     # a non-zero exit even when the other fields in the same call apply cleanly; the
     # summary says which is which so a partial application is legible.
     refused = [r for r in results if not r.ok]
+    # A field left unset because the board did not answer for it is no refusal:
+    # nothing is known of the board, so the call takes the broken tool's code,
+    # whatever else it wrote, and a dry-run alike ([pkit:ADR-096] point 4).
+    unanswered = [r for r in refused if r.unanswered]
+    not_set = 3 if unanswered else 1
 
     if not any_change:
         if refused:
             print(
-                f"\n[refused] #{args.issue_number}: nothing written — "
-                f"{_field_list(refused)} could not be set here (see above). "
-                "This is NOT 'already set': the field(s) remain unset."
+                f"\n[{'error' if unanswered else 'refused'}] #{args.issue_number}: "
+                f"nothing written — {_field_list(refused)} could not be set here "
+                "(see above). This is NOT 'already set': the field(s) remain unset."
             )
-            return 1
+            return not_set
         print(f"\n[ok] #{args.issue_number}: no change (all fields already set).")
         return 0
 
@@ -523,10 +546,10 @@ def main() -> int:
         print("\n[dry-run] gh would be invoked; nothing written.")
         if refused:
             print(
-                f"[refused] {_field_list(refused)} could not be set here even "
-                "outside dry-run (see above)."
+                f"[{'error' if unanswered else 'refused'}] {_field_list(refused)} "
+                "could not be set here even outside dry-run (see above)."
             )
-            return 1
+            return not_set
         return 0
     if not args.yes and sys.stdin.isatty():
         reply = input("Write the change(s)? [y/N] ").strip().lower()
@@ -572,12 +595,19 @@ def main() -> int:
 
     if refused:
         applied = [r for r in results if r.ok and r.changed]
+        held = [r for r in refused if not r.unanswered]
+        parts = [f"applied {_field_list(applied) or 'nothing'}"]
+        if held:
+            parts.append(f"REFUSED {_field_list(held)}")
+        if unanswered:
+            parts.append(f"the board did not answer for {_field_list(unanswered)}")
         print(
-            f"\n[partial] #{args.issue_number}: applied "
-            f"{_field_list(applied) or 'nothing'}; REFUSED "
-            f"{_field_list(refused)} (see above — not written on any substrate)."
+            f"\n[partial] #{args.issue_number}: {'; '.join(parts)} "
+            "(see above — not written on any substrate)."
         )
-        return 1
+        if unanswered:
+            print("  Re-running sets what is still unset, and nothing a second time.")
+        return not_set
 
     print(f"\n[ok] #{args.issue_number}: updated.")
     return 0
@@ -785,53 +815,46 @@ def _read_board_state(
     *,
     issue: dict,
     issue_number: int,
+    substrate_map: axis_labels.SubstrateMap | None = None,
 ) -> BoardState:
-    """One board READ round-trip: project node id, the live field list, the card id.
+    """The board's reads a field write needs: the board's node and live field
+    list, from its own read, and the issue's card.
 
-    Everything a board write needs that config does not declare. All three reads go
+    Everything a board write needs that config does not declare. Both reads go
     through the board READ seam (`_lib/board_fields`) and mutate nothing — so this
     runs unchanged under `--dry-run`, which is what lets a dry-run report the
     concrete write (and refuse a knowably-impossible one) without touching the
     board. The board is read under its owner (`board_fields.board_owner`):
     `gh.default_owner`, else the repository's, which the issue's url names.
 
-    Any failure is captured in `BoardState.error` with gh's stderr VERBATIM: the
-    likely cause is a token without the `project` scope, and the remedy is in that
-    text. A successful read with no card yields `item_id=None` — the membership
-    case, which the planner refuses with the `gh project item-add` remediation
-    composed here (it has the owner and the issue URL).
+    A board that did not answer is captured in `BoardState.error` in the seam's
+    words, gh's stderr VERBATIM where there is one: the likely cause is a token
+    without the `project` scope, and the remedy is in that text. A board that
+    answered with no card for the issue yields `item_id=None` — the membership
+    case, which the planner refuses with the remediation composed here: the
+    sync, run for the issue, which gives an open issue its missing card
+    ([project-management:DEC-072-sync-gives-missing-cards] point 4).
     """
     number = board_fields.board_number(config)
     board_ref = f"Projects-v2 board #{number}" if number else "the Projects-v2 board"
     issue_url = issue.get("url") if isinstance(issue.get("url"), str) else None
     owner = board_fields.board_owner(config, repository_owner=board_fields.url_owner(issue_url))
-    remediation = (
-        f"gh project item-add {number or '<board-number>'} "
-        f"--owner {owner or '<board-owner>'} "
-        f"--url {issue_url or f'<url of issue #{issue_number}>'}"
-    )
-
-    project = board_fields.read_project_node_id(config, owner=owner)
-    if not project.ok or not project.node_id:
-        return BoardState(
-            error=project.error or f"{board_ref} did not resolve to a project id.",
-            board_ref=board_ref,
-            membership_remediation=remediation,
-        )
+    holds = board_status.role(config, substrate_map) == "source"
+    remediation = missing_card.remedy(issue_number, board_holds_state=holds)
 
     fields_read = board_fields.read_fields(config, owner=owner)
-    if not fields_read.ok:
+    if not fields_read.ok or not fields_read.project_id:
         return BoardState(
-            project_id=project.node_id,
-            error=fields_read.error,
+            error=fields_read.error or f"{board_ref}'s answer carries no id.",
             board_ref=board_ref,
             membership_remediation=remediation,
         )
+    project_id = fields_read.project_id
 
     issue_node_id = issue.get("id") if isinstance(issue.get("id"), str) else None
     if not issue_node_id:
         return BoardState(
-            project_id=project.node_id,
+            project_id=project_id,
             fields=fields_read.fields,
             error=(
                 f"`gh issue view {issue_number}` returned no node id, so the "
@@ -842,11 +865,11 @@ def _read_board_state(
         )
 
     item = board_fields.resolve_item_id(
-        config, issue_node_id=issue_node_id, project_node_id=project.node_id
+        config, issue_node_id=issue_node_id, project_node_id=project_id, owner=owner
     )
     if not item.ok:
         return BoardState(
-            project_id=project.node_id,
+            project_id=project_id,
             fields=fields_read.fields,
             error=item.error,
             board_ref=board_ref,
@@ -854,7 +877,7 @@ def _read_board_state(
         )
 
     return BoardState(
-        project_id=project.node_id,
+        project_id=project_id,
         item_id=item.item_id,
         fields=fields_read.fields,
         board_ref=board_ref,
@@ -878,9 +901,11 @@ def _plan_board_fields(
     AND what the board actually offers, because "no `Priority` field" without the
     field list leaves the adopter exactly where report #708 left them — guessing:
 
-      1. **read failed** — nothing is known; surface gh's stderr verbatim.
-      2. **no card** — the read succeeded and the issue has no item on the board.
-         Refused with the exact `gh project item-add` command rather than adding
+      1. **the board did not answer** — nothing is known; surface the seam's
+         words verbatim. No refusal: the axis is left unset, and the call takes
+         the broken tool's code (``unanswered``).
+      2. **no card** — the board answered, and the issue has no item on it.
+         Refused, naming the sync run for the issue, rather than adding
          the card: membership is a distinct operation (DEC-019; named out of the
          field-value substrate by ADR-031 point 3) and a decision about what
          belongs on the board, which a field write must not make silently.
@@ -912,10 +937,11 @@ def _plan_board_fields(
                     ok=False,
                     changed=False,
                     message=(
-                        f"{axis}: could not read {state.board_ref} to resolve "
-                        f"`{field_name}` = {value!r} to ids. {unset}\n"
-                        f"      reason: {state.error}"
+                        f"{axis}: {state.board_ref} did not answer, so "
+                        f"`{field_name}` = {value!r} could not be resolved to ids. "
+                        f"{unset}\n      reason: {state.error}"
                     ),
+                    unanswered=True,
                 )
             )
             continue
@@ -930,8 +956,7 @@ def _plan_board_fields(
                         f"{axis}: issue #{issue_number} has NO CARD on "
                         f"{state.board_ref}, so there is no item whose "
                         f"`{field_name}` field could be set. {unset} Add the card, "
-                        f"then re-run:\n"
-                        f"      {state.membership_remediation}\n"
+                        f"then re-run: {state.membership_remediation}.\n"
                         f"      (set-field writes field VALUES; putting an issue on "
                         f"a board is a separate membership operation — DEC-019 — "
                         f"and not a side effect this verb takes on your behalf.)"

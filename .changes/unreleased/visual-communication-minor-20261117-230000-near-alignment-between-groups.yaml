@@ -1,0 +1,23 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  The check of edges that nearly line up, `edges-nearly-in-line`, names places it
+  did not name before, under a label it did not carry (DEC-067, #3343). It compares
+  every two leaves of different groups on one page, neither of them a tie's part,
+  and the spacings of every two lists there whose items one component draws, at
+  one level. Each finding of its own between groups, labelled
+  `near-alignment-between-groups`, names the two sides and each pair of leaves that
+  shows one offset between them, and a finding of two lists names the lists, their
+  spacings and the pairs of leaves their gaps set off their match. A
+  `near-alignment` finding of two siblings, one of them a group, names the pairs
+  of leaves that show it, or says that none does. Among siblings too, the check
+  passes over a text's room: a text given a width, or of more lines than one, is
+  compared across only on the line it stands its lines on, its insets across only
+  where it stands them in the middle, and no gap that starts or ends in its room
+  is taken. So a piece may take findings between groups where it took none, and
+  lose findings among siblings at a text's room. `near-alignment-unmeasured`
+  covers every place the check measures at its key. The check's reach names what
+  it now measures and leaves out, and the graphic-design reviewer reads the new
+  findings.

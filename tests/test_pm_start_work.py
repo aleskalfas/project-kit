@@ -10,11 +10,19 @@ from typing import Any
 
 import pytest
 
+from tests import pm_assignee_lookup
 from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
 from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "start-work.py"
+
+
+@pytest.fixture(autouse=True)
+def _assignees_are_users(monkeypatch):
+    """GitHub answers every bare login these tests assign as a user's account;
+    a test of the lookup gives its own answers (DEC-079 point 1)."""
+    return pm_assignee_lookup.answer(monkeypatch)
 
 
 @pytest.fixture(scope="module")
@@ -449,9 +457,7 @@ def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
         (engine or FakeEngine()).install(monkeypatch)
         monkeypatch.setattr(sw, "_read_members", lambda *a: [])
         resolved = (
-            SimpleNamespace(github_login="me", unresolved_cause=None)
-            if invoker is None
-            else invoker
+            sw.Identity(github_login="me", email=None, kind="user") if invoker is None else invoker
         )
         monkeypatch.setattr(sw, "resolve_invoker_identity", lambda **k: resolved)
         monkeypatch.setattr(sw, "check_membership", lambda *a: SimpleNamespace(allowed=True))
@@ -514,6 +520,35 @@ def test_proceeds_from_backlog(run_main) -> None:
     ]
 
 
+def test_the_account_start_work_would_assign_github_answers_as_a_bot_is_refused(
+    run_main, sw, monkeypatch, capsys
+) -> None:
+    """No command makes a bot's account an assignee, and nothing is written
+    before the refusal (DEC-079 point 1). The person the agent works for is no
+    answer of GitHub's about the credential, so its login is looked up."""
+    pm_assignee_lookup.answer(
+        monkeypatch,
+        {"me": pm_assignee_lookup.membership.LookedUp(login="me", account_type="Bot")},
+    )
+    rc, mutations = run_main(
+        _task(["type:bug", "state:backlog"]), invoker=_app(sw), github=_unassigned_42()
+    )
+    assert rc == 2
+    assert mutations == []
+    assert "`me` names an account of type Bot, not a user's" in capsys.readouterr().err
+
+
+def test_the_account_github_answered_the_credential_acts_as_is_assigned_with_no_lookup(
+    sw, run_main, monkeypatch
+) -> None:
+    asked = pm_assignee_lookup.answer(monkeypatch)
+    me = sw.Identity(github_login="me", email=None, kind="user")
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), invoker=me)
+    assert rc == 0
+    assert ("assignee", "me") in mutations
+    assert asked == []
+
+
 def test_proceeds_when_already_in_progress(run_main) -> None:
     # move-issue treats in-progress → in-progress as an idempotent no-op.
     rc, mutations = run_main(_task(["type:bug", "state:in-progress"]))
@@ -549,20 +584,54 @@ def test_late_move_failure_omits_an_assignee_it_did_not_write(run_main, capsys) 
     assert "@me" not in err
 
 
-# ---- an account pkit cannot tell (#3162) ---------------------------------------
+# ---- a credential that names no user's account (DEC-076) ------------------------
 #
-# Under an account that cannot look itself up, such as a GitHub App
-# installation's token, `gh api user` refuses (#3004). start-work says it cannot
-# tell which account is acting, and why. What it writes, and its exit codes, are
-# as they were.
+# Under a credential that cannot look itself up, such as a GitHub App
+# installation's token, the backbone's reading names no account, or names a
+# bot's (#3004, ADR-094). start-work then works for the person the agent works
+# for, `PM_INVOKER_LOGIN`, and refuses where none is named (DEC-076 points 3
+# and 4). It claims nothing, whatever id the clone holds, and in a project with
+# a topology it starts no Task (point 6).
 
 FORBIDDEN = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
 CANNOT_TELL = f"pkit cannot tell which account is acting, since {FORBIDDEN}"
 
 
-def _unresolved(sw: Any) -> Any:
-    """The identity `resolve_invoker_identity` gives when `gh api user` refuses."""
-    return sw.Identity(github_login=None, email=None, unresolved_cause=FORBIDDEN)
+def _unresolved(sw: Any, works_for: str | None = None) -> Any:
+    """The identity resolved where GitHub gave no answer about the credential,
+    with `works_for` the person `PM_INVOKER_LOGIN` names."""
+    return sw.Identity(
+        github_login=None,
+        email=None,
+        unresolved_cause=FORBIDDEN,
+        cause="refused",
+        works_for=works_for,
+    )
+
+
+#: Why the reading names no account for an App installation's token that cannot look
+#: itself up: GitHub refuses `gh api user` to an integration (ADR-094 point 2).
+INTEGRATION_REFUSED = "`gh api user` failed: gh: Resource not accessible by integration (HTTP 403)"
+
+
+def _app(sw: Any, works_for: str | None = "me", *, named: bool = True) -> Any:
+    """The identity resolved under an App installation's token, with `works_for` the
+    person the agent works for. `named`: GitHub answers it as the bot's account
+    `robot[bot]`; otherwise the token cannot look itself up, and the reading names no
+    account."""
+    if named:
+        return sw.Identity(github_login="robot[bot]", email=None, kind="bot", works_for=works_for)
+    return sw.Identity(
+        github_login=None,
+        email=None,
+        unresolved_cause=INTEGRATION_REFUSED,
+        cause="integration-refused",
+        works_for=works_for,
+    )
+
+
+#: An App's credential that names its bot's account, and one that cannot look itself up.
+APPS = pytest.mark.parametrize("named", [True, False], ids=["named-bot", "cannot-look-itself-up"])
 
 
 def test_an_issue_assigned_to_another_account_points_at_handoff(run_main, capsys) -> None:
@@ -575,50 +644,142 @@ def test_an_issue_assigned_to_another_account_points_at_handoff(run_main, capsys
     ) in capsys.readouterr().err
 
 
-def test_an_assignee_is_not_named_another_account_where_pkit_cannot_tell(
-    run_main, sw, capsys
-) -> None:
-    issue = _task(["type:bug", "state:backlog"], assignees=[{"login": "alice"}])
-    rc, mutations = run_main(issue, invoker=_unresolved(sw))
+def test_an_assignee_of_other_letters_is_the_same_person(run_main) -> None:
+    """The backbone's comparison sets the case of ASCII letters aside (ADR-094 point 3)."""
+    issue = _task(["type:bug", "state:backlog"], assignees=[{"login": "Me"}])
+    rc, mutations = run_main(issue)
+    assert rc == 0
+    assert [m[0] for m in mutations] == ["branch", "move"]
+
+
+@pytest.mark.parametrize("kind", ["unresolved", "app", "cannot-look-itself-up"])
+def test_no_person_named_refuses_and_says_how_to_name_one(run_main, sw, capsys, kind) -> None:
+    invoker = {
+        "unresolved": lambda: _unresolved(sw),
+        "app": lambda: _app(sw, works_for=None),
+        "cannot-look-itself-up": lambda: _app(sw, works_for=None, named=False),
+    }[kind]()
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), invoker=invoker)
     assert rc == 2
     assert mutations == []
     err = capsys.readouterr().err
-    assert (
-        f"error: issue #42 is assigned to @alice, and {CANNOT_TELL}, so whether that is "
-        "another account cannot be told. Nothing was written."
-    ) in err
-    assert "handoff-issue" not in err
+    assert err.startswith("[refused] start-work #42: ")
+    assert "PM_INVOKER_LOGIN is not set, so no person is named" in err
+    assert "Set PM_INVOKER_LOGIN to the login of the person the agent works for" in err
+    if kind == "unresolved":
+        assert CANNOT_TELL in err
+    elif kind == "app":
+        assert "acts as robot[bot], a bot's account" in err
+    else:
+        assert (
+            f"GitHub answers that the credential names no user's account ({INTEGRATION_REFUSED}), "
+            "and nothing names who runs it"
+        ) in err
 
 
-def test_a_task_left_with_no_assignee_says_so_and_why(run_main, sw, capsys) -> None:
-    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), invoker=_unresolved(sw))
+def _unassigned_42() -> FakeGitHub:
+    """GitHub holding #42 with no assignee, which the clash guard of a clone that only
+    reads reads (DEC-076 point 4)."""
+    github = FakeGitHub()
+    github.add(42, assignees=())
+    return github
+
+
+@APPS
+def test_an_apps_credential_assigns_the_person_the_agent_works_for(
+    run_main, sw, monkeypatch, capsys, named: bool
+) -> None:
+    asked = pm_assignee_lookup.answer(monkeypatch)
+    rc, mutations = run_main(
+        _task(["type:bug", "state:backlog"]), invoker=_app(sw, named=named), github=_unassigned_42()
+    )
     assert rc == 0
-    assert mutations == [("branch", "fix/42-do-the-thing"), ("move", "in-progress")]
-    captured = capsys.readouterr()
-    assert f"  assignee:  none: {CANNOT_TELL}\n" in captured.out
-    assert f"[warn] start-work #42 is left with no assignee: {CANNOT_TELL}.\n" in captured.err
+    assert mutations == [
+        ("branch", "fix/42-do-the-thing"),
+        ("assignee", "me"),
+        ("move", "in-progress"),
+    ]
+    assert "  assignee:  me\n" in capsys.readouterr().out
+    assert asked == ["me"]
 
 
-def test_a_dry_run_where_pkit_cannot_tell_plans_no_assignee(run_main, sw, capsys) -> None:
-    issue = _task(["type:bug", "state:backlog"])
-    rc, mutations = run_main(issue, invoker=_unresolved(sw), dry_run=True)
-    assert rc == 0
+@APPS
+def test_an_apps_credential_refuses_a_task_assigned_to_another_person(
+    run_main, sw, capsys, named: bool
+) -> None:
+    issue = _task(["type:bug", "state:backlog"], assignees=[{"login": "alice"}])
+    rc, mutations = run_main(issue, invoker=_app(sw, named=named))
+    assert rc == 2
     assert mutations == []
-    out = capsys.readouterr().out
-    assert f"  assignee:  none: {CANNOT_TELL}\n" in out
-    assert "(dry-run: would create branch off main, and call move-issue --to in-progress.)" in out
+    assert (
+        "error: issue #42 is assigned to @alice, not to @me, the person the agent works for "
+        "(DEC-076 point 4). Use `handoff-issue 42` to take ownership."
+    ) in capsys.readouterr().err
 
 
-def test_a_clone_with_an_instance_id_says_why_it_claims_nothing(run_main, sw, capsys) -> None:
+@APPS
+def test_an_apps_credential_claims_nothing_whatever_id_the_clone_holds(
+    run_main, sw, capsys, named: bool
+) -> None:
     github = FakeGitHub()
     github.add(42)
-    issue = _task(["type:bug", "state:backlog"])
-    rc, mutations = run_main(issue, invoker=_unresolved(sw), instance=2, github=github)
+    rc, mutations = run_main(
+        _task(["type:bug", "state:backlog"]),
+        invoker=_app(sw, named=named),
+        instance=2,
+        github=github,
+    )
     assert rc == 0
-    assert mutations == [("branch", "fix/42-do-the-thing"), ("move", "in-progress")]
+    assert not any(m[0] == "ownership" for m in mutations)
     out = capsys.readouterr().out
-    assert f"  ownership: not claimed: {CANNOT_TELL}\n" in out
-    assert f"[note] ownership: #42 is not claimed: {CANNOT_TELL}.\n" in out
+    assert "  ownership: not claimed: a clone under a credential that names no user's" in out
+    assert "[note] ownership: #42 is not claimed: a clone under a credential" in out
+
+
+@APPS
+def test_an_apps_credential_refuses_a_task_an_instance_owns(
+    run_main, sw, capsys, named: bool
+) -> None:
+    """The clash guard reads the owner for a clone that claims nothing (DEC-076 point 4)."""
+    github = FakeGitHub()
+    github.add(42, assignees=("me",))
+    github.post(42, _stamp(sw, "claim", 1))
+    issue = _task(["type:bug", "state:backlog"], assignees=[{"login": "me"}])
+    rc, mutations = run_main(issue, invoker=_app(sw, named=named), instance=2, github=github)
+    assert rc != 0
+    assert not any(m[0] in ("assignee", "move") for m in mutations)
+    assert "instance 1" in capsys.readouterr().err
+
+
+def test_an_unresolved_identity_refuses_on_a_clone_that_holds_an_instance_id(
+    run_main, sw, capsys
+) -> None:
+    github = FakeGitHub()
+    github.add(42)
+    rc, mutations = run_main(
+        _task(["type:bug", "state:backlog"]),
+        invoker=_unresolved(sw, works_for="me"),
+        instance=2,
+        github=github,
+    )
+    assert rc != 0
+    assert mutations == []
+    err = capsys.readouterr().err
+    assert CANNOT_TELL in err
+    assert "this clone holds an instance id" in err
+
+
+def test_an_unresolved_identity_works_for_the_person_on_a_clone_with_no_id(
+    run_main, sw, monkeypatch
+) -> None:
+    pm_assignee_lookup.answer(monkeypatch)
+    rc, mutations = run_main(
+        _task(["type:bug", "state:backlog"]),
+        invoker=_unresolved(sw, works_for="me"),
+        github=_unassigned_42(),
+    )
+    assert rc == 0
+    assert ("assignee", "me") in mutations
 
 
 # ---- the early check reads the issue's own fields (#1242) --------------
@@ -785,7 +946,7 @@ def test_a_bypass_posts_its_reason_and_starts_the_work_unclaimed(run_main, sw, c
     ]
     audit = github.issues[42].comments[-1]["body"]
     assert audit.startswith("<!-- pkit-audit -->")
-    assert "Bypassed by me: instance 3's session is gone" in audit
+    assert "Bypassed: instance 3's session is gone" in audit
     assert "<!-- pkit-audit-key: ownership-guard:" in audit
     captured = capsys.readouterr()
     assert "--bypass let this clone, instance 2, act on it" in captured.err

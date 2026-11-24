@@ -1,4 +1,4 @@
-"""What a piece's brief hands the review first (visual-communication DEC-042 point 4): the
+"""What a piece's brief hands the review first (visual-communication DEC-070 point 5): the
 goals, relations and takeaways of the piece and of each page it speaks of, without their
 reasons.
 

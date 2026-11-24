@@ -78,7 +78,7 @@ def test_a_component_takes_the_keys_the_engine_reads() -> None:
 def test_each_kind_of_part_takes_the_keys_the_engine_reads(kind: str) -> None:
     part = DEFS[f"{kind}-part"]
     assert part["additionalProperties"] is False
-    assert set(part["properties"]) == {kind, "when", *engine.PART_KEYS[kind]}
+    assert set(part["properties"]) == {kind, "when", engine.LIES_OVER, *engine.PART_KEYS[kind]}
     required = set(part["required"])
     if kind == "line":
         # A line gives its ends, or connects its component's (DEC-011 point 1).

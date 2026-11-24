@@ -11,8 +11,11 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
+
+from tests.pm_board_graphql import GraphBoard, flag_value, is_seam_read, query_of
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -2017,7 +2020,7 @@ def test_gate_agreement_across_all_type_bindings(
     assert vi.axis_labels.axis_is_label_bound("type", brownfield_type_label_map) is True
 
 
-# --- board membership: unverified is not missing, and not satisfied (#740) ---
+# --- board membership: read through the seam, three outcomes (#740, ADR-096) ---
 
 
 _MANDATORY_STATE_BOARD = {
@@ -2026,131 +2029,135 @@ _MANDATORY_STATE_BOARD = {
     }
 }
 
+_UNANSWERED = (
+    "board #42 of acme did not answer: missing required scopes [read:project] "
+    "(a credential the board answers, or a later try)"
+)
 
-def _membership_labels(
-    vi, issue_types, titles, body_format, board_config, project_items, *, present=True
-):
-    """Validator output for a board-configured adopter with a given
-    `projectItems` payload; returns the finding labels.
 
-    `present=False` omits the key entirely — the shape returned when the field
-    could not be resolved at all, distinct from an explicit null. Both are
-    undeterminable and neither may be silent.
-    """
+def _membership_issue(state: str | None = "OPEN") -> dict:
+    """Issue 7 as its read gives it, in ``state``; None leaves the state out."""
     issue = _make_issue(
         title="[Task] Wire the sandbox allowlist",
         body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature"],
     )
-    if present:
-        issue["projectItems"] = project_items
-    return _labels(
-        vi._validate_issue(
-            issue=issue,
-            issue_types=issue_types,
-            titles=titles,
-            body_format=body_format,
-            config=board_config,
-            mandatory_state=_MANDATORY_STATE_BOARD,
-        )
-    )
+    issue.update(id="I_7", number=7, url="https://github.com/acme/repo/issues/7")
+    if state is not None:
+        issue["state"] = state
+    return issue
 
 
-def test_board_membership_null_is_unverified_not_silent(
-    vi, issue_types, titles, body_format, board_config
-) -> None:
-    """A null `projectItems` means membership could not be DETERMINED. The old
-    condition (`is not None and isinstance(list) and len==0`) skipped the branch,
-    so an unreadable board was indistinguishable from a satisfied check — a gate
-    that passes on a value it could not read is indistinguishable from a gate
-    that does not exist."""
-    labels = _membership_labels(vi, issue_types, titles, body_format, board_config, None)
-    assert "board_membership.unverified" in labels
-    # ...and it must NOT accuse the adopter of an off-board issue.
-    assert "board_membership.missing" not in labels
-
-
-def test_board_membership_absent_key_is_unverified(
-    vi, issue_types, titles, body_format, board_config
-) -> None:
-    """The key omitted entirely (field unresolvable) is the same undeterminable
-    state as an explicit null — not satisfied, not missing."""
-    labels = _membership_labels(
-        vi, issue_types, titles, body_format, board_config, None, present=False
-    )
-    assert "board_membership.unverified" in labels
-    assert "board_membership.missing" not in labels
-
-
-def test_board_membership_non_list_is_unverified(
-    vi, issue_types, titles, body_format, board_config
-) -> None:
-    """A malformed (non-list) payload is undeterminable, never a definite empty."""
-    labels = _membership_labels(
-        vi, issue_types, titles, body_format, board_config, {"unexpected": "shape"}
-    )
-    assert "board_membership.unverified" in labels
-    assert "board_membership.missing" not in labels
-
-
-def test_board_membership_definite_empty_still_reports_missing(
-    vi, issue_types, titles, body_format, board_config
-) -> None:
-    """The determinate case is UNCHANGED: an empty list is a definite answer —
-    the issue is not on the board — and keeps reporting `.missing`."""
-    labels = _membership_labels(vi, issue_types, titles, body_format, board_config, [])
-    assert "board_membership.missing" in labels
-    assert "board_membership.unverified" not in labels
-
-
-def test_board_membership_populated_is_clean(
-    vi, issue_types, titles, body_format, board_config
-) -> None:
-    """A populated list satisfies the check — no membership finding either way."""
-    labels = _membership_labels(
-        vi, issue_types, titles, body_format, board_config, [{"title": "Board 42"}]
-    )
-    assert "board_membership.missing" not in labels
-    assert "board_membership.unverified" not in labels
-
-
-def test_board_membership_unverified_is_dec019_severity(
-    vi, issue_types, titles, body_format, board_config
-) -> None:
-    """Reported at DEC-019's OWN drift_severity (warning) — this fix adds no
-    severity, no verdict token, no exit-code change. A hard-reject here would
-    contradict DEC-019's explicit rationale for warning (historical issues
-    predate adoption; blocking them mid-flight is the wrong trade)."""
-    issue = _make_issue(
-        title="[Task] Wire the sandbox allowlist",
-        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
-        labels=["type:feature"],
-    )
-    issue["projectItems"] = None
-    findings = vi._validate_issue(
-        issue=issue,
+def _membership_findings(vi, issue_types, titles, body_format, config, lookup, *, issue=None):
+    """Validator output for an adopter whose membership reader answers ``lookup``,
+    on ``issue``, else on open issue 7."""
+    return vi._validate_issue(
+        issue=issue if issue is not None else _membership_issue(),
         issue_types=issue_types,
         titles=titles,
         body_format=body_format,
-        config=board_config,
+        config=config,
         mandatory_state=_MANDATORY_STATE_BOARD,
+        membership=lambda config, issue: lookup,
     )
+
+
+def test_board_membership_unanswered_is_unverified_not_missing(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    """A board that did not answer is reported as that, in the seam's words, and
+    never as an issue off the board ([pkit:ADR-096] point 5). A check that passed
+    on a value it could not read would be indistinguishable from no check."""
+    lookup = vi.board_fields.ItemLookup(ok=False, error=_UNANSWERED)
+    findings = _membership_findings(vi, issue_types, titles, body_format, board_config, lookup)
     unverified = [f for f in findings if f.label == "board_membership.unverified"]
     assert len(unverified) == 1
-    assert unverified[0].severity == vi.SEVERITY_WARNING
+    assert _UNANSWERED in unverified[0].detail
+    assert "NOT a report that the issue is off the board" in unverified[0].detail
+    assert "board_membership.missing" not in _labels(findings)
 
 
-def test_label_only_adopter_gets_no_membership_finding(
+def test_board_membership_unanswered_is_dec019_drift_severity(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    """Reported at DEC-019's OWN drift_severity (warning), which lets the issue
+    through, so the check exits as it does: a fault of the check's credential is
+    none of the issue's ([pkit:ADR-096] point 5)."""
+    lookup = vi.board_fields.ItemLookup(ok=False, error=_UNANSWERED)
+    findings = _membership_findings(vi, issue_types, titles, body_format, board_config, lookup)
+    unverified = [f for f in findings if f.label == "board_membership.unverified"]
+    assert [f.severity for f in unverified] == [vi.SEVERITY_WARNING]
+
+
+def test_board_membership_answered_with_no_card_is_missing(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    """The board answered, a witness showing it, and the issue has no card: the
+    drift DEC-019 names, with the sync run for the issue as what adds its card
+    (DEC-072 point 4)."""
+    lookup = vi.board_fields.ItemLookup(ok=True, item_id=None)
+    findings = _membership_findings(vi, issue_types, titles, body_format, board_config, lookup)
+    labels = _labels(findings)
+    assert "board_membership.missing" in labels
+    assert "board_membership.unverified" not in labels
+    missing = next(f for f in findings if f.label == "board_membership.missing")
+    assert missing.detail.endswith(" `pkit pm sync-board 7` adds its card.")
+
+
+@pytest.mark.parametrize(
+    "state", [pytest.param("CLOSED", id="closed"), pytest.param(None, id="state-not-read")]
+)
+def test_board_membership_missing_names_no_sync_unless_the_issue_is_open(
+    vi, issue_types, titles, body_format, board_config, state
+) -> None:
+    """The sync gives a closed issue no card, so a closed issue's missing card
+    names no sync; nor does a read that does not show the issue open (DEC-072
+    point 4)."""
+    lookup = vi.board_fields.ItemLookup(ok=True, item_id=None)
+    findings = _membership_findings(
+        vi, issue_types, titles, body_format, board_config, lookup, issue=_membership_issue(state)
+    )
+    missing = next(f for f in findings if f.label == "board_membership.missing")
+    assert missing.detail == (
+        "issue is not on the configured Projects v2 board. Mandatory per DEC-019."
+    )
+
+
+def test_the_issues_read_asks_its_number_and_state(vi, monkeypatch) -> None:
+    """The issue's read asks its number and state, by which a missing card's
+    finding names the sync, run for the issue, and only for an open one (DEC-072
+    point 4)."""
+    asked: list[str] = []
+    monkeypatch.setattr(vi, "gh_get_issue", lambda n, config, *, fields: asked.append(fields))
+    vi._gh_get_issue(7, {})
+    assert asked and {"number", "state"} <= set(asked[0].split(","))
+
+
+def test_board_membership_with_a_card_is_clean(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    lookup = vi.board_fields.ItemLookup(ok=True, item_id="PVTI_7")
+    labels = _labels(
+        _membership_findings(vi, issue_types, titles, body_format, board_config, lookup)
+    )
+    assert "board_membership.missing" not in labels
+    assert "board_membership.unverified" not in labels
+
+
+def test_label_only_adopter_makes_no_membership_call(
     vi, issue_types, titles, body_format, label_fallback_config
 ) -> None:
     """No board configured ⇒ the branch never runs: label-only adopters see no
-    new finding, no new call, no new scope requirement."""
+    new finding and no call ([pkit:ADR-096] point 5; ADR-053 point 3)."""
+
+    def no_call(config, issue):
+        raise AssertionError("a project with no board makes no membership call")
+
     issue = _make_issue(
         title="[Task] Wire the sandbox allowlist",
         body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
         labels=["type:feature", "priority:Medium", "workstream:cli"],
     )
-    issue["projectItems"] = None
     labels = _labels(
         vi._validate_issue(
             issue=issue,
@@ -2159,10 +2166,158 @@ def test_label_only_adopter_gets_no_membership_finding(
             body_format=body_format,
             config=label_fallback_config,
             mandatory_state=_MANDATORY_STATE_BOARD,
+            membership=no_call,
         )
     )
     assert "board_membership.unverified" not in labels
     assert "board_membership.missing" not in labels
+
+
+def test_a_state_issue_with_no_card_is_left_out_of_the_membership_check(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    """A state issue holds no work and takes no card, so the check reports no
+    card missing on one, and reads none ([project-management:DEC-058-state-issues]
+    point 3)."""
+
+    def no_call(config, issue):
+        raise AssertionError("a state issue's card is not read")
+
+    issue = _membership_issue()
+    issue["body"] = "<!-- pkit:state-issue v=1 kind=seat key=builder-1 -->\n\nThe seat's holder."
+    labels = _labels(
+        vi._validate_issue(
+            issue=issue,
+            issue_types=issue_types,
+            titles=titles,
+            body_format=body_format,
+            config=board_config,
+            mandatory_state=_MANDATORY_STATE_BOARD,
+            membership=no_call,
+        )
+    )
+    assert "board_membership.missing" not in labels
+    assert "board_membership.unverified" not in labels
+
+
+def test_the_issues_read_asks_no_list_of_its_cards(vi, monkeypatch) -> None:
+    """The issue's own list of cards names no board, so the membership check
+    never reads it ([pkit:ADR-096] point 5): the issue's read asks its node id
+    and url instead, by which the seam reads its card."""
+    asked: list[str] = []
+    monkeypatch.setattr(vi, "gh_get_issue", lambda n, config, *, fields: asked.append(fields))
+    vi._gh_get_issue(7, {})
+    assert asked and "projectItems" not in asked[0]
+    assert {"id", "url"} <= set(asked[0].split(","))
+
+
+class _MembershipBoard(GraphBoard):
+    """Board #42 of acme, holding the cards a test gives it; issue `I_<n>` lies
+    in repository `R_repo`, and the page lists every issue given, newest first."""
+
+    def __init__(self, cards: dict[str, bool], *, archived: tuple[str, ...] = ()) -> None:
+        super().__init__(node="PVT_42", number=42, owner="acme")
+        self.cards = cards
+        self.archived = set(archived)
+
+    def own_cards(self, issue_id, value_field):
+        if issue_id not in self.cards:
+            return None
+        return (
+            [{"id": f"PVTI_{issue_id}", "project": {"id": self.node}}]
+            if self.cards[issue_id]
+            else []
+        )
+
+    def repository_of(self, issue_id):
+        return "R_repo" if issue_id in self.cards else None
+
+    def recent_issues(self, repository_id, order):
+        return sorted(self.cards, reverse=True) if repository_id == "R_repo" else []
+
+
+def _read_membership(vi, monkeypatch, board: GraphBoard, config: dict, issue_id: str = "I_7"):
+    calls: list[list[str]] = []
+
+    def gh(argv, config, **kwargs):
+        calls.append(list(argv))
+        assert is_seam_read(argv), argv
+        return board.reply(argv)
+
+    monkeypatch.setattr(vi.board_fields, "gh_run", gh)
+    issue = {"id": issue_id, "url": "https://github.com/acme/repo/issues/7"}
+    return vi._read_membership(config, issue), calls
+
+
+def test_membership_reads_an_archived_card_as_on_the_board(vi, monkeypatch, board_config) -> None:
+    board = _MembershipBoard({"I_7": True}, archived=("I_7",))
+    lookup, calls = _read_membership(vi, monkeypatch, board, board_config)
+    assert lookup.ok and lookup.item_id == "PVTI_I_7"
+    assert len(calls) == 1 and "includeArchived: true" in query_of(calls[0])
+
+
+def test_membership_tells_no_card_only_with_a_witness(vi, monkeypatch, board_config) -> None:
+    """The issue has no card, and another issue of its repository on the page
+    shows one: the board answered, and the issue is off it."""
+    board = _MembershipBoard({"I_7": False, "I_9": True})
+    lookup, _calls = _read_membership(vi, monkeypatch, board, board_config)
+    assert lookup.ok and lookup.item_id is None
+
+
+def test_membership_with_no_witness_is_a_board_that_did_not_answer(
+    vi, monkeypatch, board_config
+) -> None:
+    """No issue the read saw shows a card: an issue with no card cannot be told
+    from one this credential cannot see, so the board did not answer, and the
+    message names both causes ([pkit:ADR-096] point 1)."""
+    board = _MembershipBoard({"I_7": False, "I_8": False})
+    lookup, _calls = _read_membership(vi, monkeypatch, board, board_config)
+    assert not lookup.ok
+    assert "add it to the board" in (lookup.error or "")
+    assert "a credential whose reads see the board's cards" in (lookup.error or "")
+
+
+@pytest.mark.parametrize(
+    ("setup", "says"),
+    [
+        ("fails", "missing required scopes [read:project]"),
+        ("another-board", "Could not resolve to a node with the global id of 'PVT_stale'"),
+        ("another-number", "the answer names board #42, not #43"),
+        ("cards-error", "Resource not accessible by integration"),
+    ],
+)
+def test_membership_where_the_board_did_not_answer_reports_why(
+    vi, monkeypatch, board_config, setup, says
+) -> None:
+    """The board's own read failed, a stored node names no board the credential
+    reads, or an error lies on the issue's cards: each is a board that did not
+    answer, never an issue off the board."""
+    board = _MembershipBoard({"I_7": True})
+    config: dict[str, Any] = dict(board_config, gh={"default_owner": "acme"})
+    if setup == "fails":
+        board.failing["cards"] = "missing required scopes [read:project]"
+    elif setup == "another-board":
+        config["projects_v2_node_id"] = "PVT_stale"
+    elif setup == "another-number":
+        # A stored node of a board other than the configured number: the
+        # answer names that board, so it is not the configured board's.
+        config.update(projects_v2_board_id=43, projects_v2_node_id="PVT_42")
+    else:
+        board.placed["cards"] = "Resource not accessible by integration"
+    lookup, _calls = _read_membership(vi, monkeypatch, board, config)
+    assert not lookup.ok
+    assert says in (lookup.error or "")
+
+
+def test_membership_reads_the_board_under_the_repositorys_owner(
+    vi, monkeypatch, board_config
+) -> None:
+    """With no `gh.default_owner`, the board is the repository's owner's, which
+    the issue's url names, never the board of whoever runs `gh`."""
+    board = _MembershipBoard({"I_7": True})
+    lookup, calls = _read_membership(vi, monkeypatch, board, board_config)
+    assert lookup.ok
+    assert flag_value(calls[0], "owner") == "acme"
 
 
 # --- no-board adopter with label-bound priority/workstream (#742) -----------

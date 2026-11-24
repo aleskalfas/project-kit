@@ -1,4 +1,4 @@
-"""The makers' record of drafts, in a piece's brief (visual-communication DEC-042 point 7,
+"""The makers' record of drafts, in a piece's brief (visual-communication DEC-070 point 4,
 DEC-029 points 2 to 4): for each lead, title or takeaway the designer drafted and the asker
 has not seen, an entry naming its page, its kind and the language of its text, with a digest
 of that text, never the text.
@@ -9,6 +9,12 @@ of that text, never the text.
   changed word, case or mark changes it. Where the text is a takeaway it is the brief's own;
   where a lead or a title, it is the content's field of the language, named by its key path
   from the page, or, on a piece whose top is a page alone, from the content's top.
+- **A page's lead or title that the piece's top holds,** such as the heading of a hero in
+  a one-page site's shared header, which is that page's title (DEC-068 point 4), is named
+  by its key path from the content's top, and its entry lies in that page's part, as an
+  entry of the page's own content does. A key path from the content's top that leads into
+  the pages names a page's own content, so it is refused, and that text is named from its
+  page.
 - **Which part an entry lies in.** An entry lies in its page's part, or in the part for the
   whole piece on a piece whose top is a page alone, such as a figure (DEC-029 point 3). So
   a lead, a title or a takeaway named by no page is the whole piece's only on such a piece.
@@ -19,7 +25,7 @@ of that text, never the text.
   (`briefs.pages_of`), and is read as the check reads it, under the piece's lock
   (`checks.top_of`). Where the piece has no lock yet, it is read under the versions the
   piece's first render would lock (`libraries.move_lock`, DEC-003 point 8). So a draft is
-  digested as the designer writes it, before that render (DEC-042 point 7), and what that
+  digested as the designer writes it, before that render (DEC-070 point 4), and what that
   render's search refuses, such as a pinned draft with no lock, refuses the draft.
 - **What the record tells.** A text *matches* the digest recorded for its page, kind and
   language, *differs* from it, or has *no entry*. Only a match leaves the text the
@@ -95,8 +101,8 @@ def state(part: Mapping[str, Any], kind: str, language: str, text: str) -> str:
 
 
 def asker_owns(found: str) -> bool:
-    """Whether a text in this state is the asker's: every state but a match (DEC-042
-    point 7)."""
+    """Whether a text in this state is the asker's: every state but a match (DEC-070
+    point 4)."""
     return found != MATCHES
 
 
@@ -117,19 +123,39 @@ def top_of(piece: pl.Piece) -> Mapping[str, Any] | None:
     return checks.top_of(piece, first.lock)
 
 
+def page_fields(top: Mapping[str, Any]) -> frozenset[str]:
+    """The fields of the content's top that hold the pages of the top `top`: those it marks
+    as holding them, where its layouts are its pages' forms, or each slot of one of its
+    layouts that holds pages (DEC-010 point 5). Empty where it marks none, or is a page
+    alone."""
+    forms = layout.page_forms(top)
+    if forms is not None:
+        return frozenset(forms.fields)
+    layouts = top.get("layouts")
+    if not isinstance(layouts, Mapping):
+        return frozenset()
+    return frozenset(
+        name
+        for decl in layouts.values()
+        if isinstance(decl, Mapping) and isinstance(decl.get("slots"), Mapping)
+        for name, slot in decl["slots"].items()
+        if isinstance(slot, Mapping) and slot.get("pages") is True
+    )
+
+
 def holds_pages(top: Mapping[str, Any]) -> bool:
     """Whether the top `top` holds pages, as a deck's or a site's does, even of one page: its
     layouts are its pages' forms, or a slot of one of its layouts holds pages (DEC-010 point
     5). A top that holds none, such as a figure, is a page alone (DEC-005 point 5)."""
-    if layout.page_forms(top) is not None:
-        return True
-    layouts = top.get("layouts")
-    return isinstance(layouts, Mapping) and any(
-        isinstance(slot, Mapping) and slot.get("pages") is True
-        for decl in layouts.values()
-        if isinstance(decl, Mapping) and isinstance(decl.get("slots"), Mapping)
-        for slot in decl["slots"].values()
-    )
+    return layout.page_forms(top) is not None or bool(page_fields(top))
+
+
+def leads_into_pages(at: str, top: Mapping[str, Any]) -> bool:
+    """Whether the key path `at`, read from the content's top, leads into the pages of the
+    top `top`, and so names a page's own content: its first key is a field that holds them
+    (`page_fields`)."""
+    steps = layout.key_path(at)
+    return steps is not None and steps[0][0] in page_fields(top)
 
 
 def whole_piece(piece: pl.Piece, kind: str) -> None:
@@ -157,12 +183,15 @@ def text_of(
     kind: str,
     language: str,
     at: str | None,
+    from_top: bool = False,
 ) -> str:
     """The text of the draft: the takeaway the brief's part holds, or the field of the
     content in `language` that the key path `at` names from the page, the page found through
-    the top (`top_of`), or from the content's top where `page` is None. Raises DraftRefused
-    where it names no text, and where `page` is None on a piece whose top is not a page
-    alone (`whole_piece`)."""
+    the top (`top_of`), or from the content's top where `page` is None or `from_top` is
+    true, for a page's lead or title that the piece's top holds. Raises DraftRefused where it
+    names no text, where `page` is None on a piece whose top is not a page alone
+    (`whole_piece`), and where `from_top` names a page's own content, its key path leading
+    into the pages."""
     if page is None:
         whole_piece(piece, kind)
     if kind == TAKEAWAY:
@@ -179,9 +208,15 @@ def text_of(
     if page is not None:
         top = top_of(piece)
         pages = briefs.pages_of(top, content) if top is not None else None
-        if pages is None or page not in pages:
+        if top is None or pages is None or page not in pages:
             raise DraftRefused(f"the content in `{language}` holds no page `{page}`")
-        start = pages[page]
+        if not from_top:
+            start = pages[page]
+        elif leads_into_pages(at, top):
+            raise DraftRefused(
+                f"`{at}` leads into the pages, so it names a page's own content: give its "
+                "key path from its page, without `--from-top`"
+            )
     why = briefs.named(at, start)
     if why is not None:
         raise DraftRefused(f"`{at}` {why}")

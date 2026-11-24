@@ -47,6 +47,9 @@ CHECK_DIFF = ("decisions", "check-diff")
 #: The version of `pkit decisions check-diff --json` this module reads; a document of
 #: another is no list, never misread.
 SCHEMA_VERSION = 1
+#: How the change alters a point, as the backbone names it: a change of another name is
+#: one pm cannot say to the person, so the list is none (ADR-097 point 3).
+CHANGES = ("added", "altered", "retired", "removed")
 #: How a line of the list begins, as a reviewer's finding begins with its reviewer.
 SOURCE = "accepted record"
 #: What the person is asked of each record, after what the change does to it.
@@ -146,8 +149,10 @@ def derive(head: str, base: str) -> Derivation:
 
 def read(document: Any, command: str) -> Derivation:
     """The backbone's document read, every field the list rests on checked: a document
-    missing one is no list."""
-    if not isinstance(document, Mapping) or document.get("schema_version") != SCHEMA_VERSION:
+    missing one is no list. A version that is no whole number, such as `true` or `1.0`,
+    is no version 1."""
+    version = document.get("schema_version") if isinstance(document, Mapping) else None
+    if type(version) is not int or version != SCHEMA_VERSION:
         return Derivation(problem=f"{command}: its answer is not a document of version 1")
     found = document.get("accepted_changes")
     if not isinstance(found, list):
@@ -187,7 +192,7 @@ def _altered(entry: Any) -> Altered | None:
         if not isinstance(point, Mapping):
             return None
         point_id, how, title = point.get("id"), point.get("change"), point.get("title")
-        if not (isinstance(point_id, str) and isinstance(how, str) and isinstance(title, str)):
+        if not (isinstance(point_id, str) and how in CHANGES and isinstance(title, str)):
             return None
         read_points.append(Point(point_id, how, title))
     shared, other, list_form, removed = (bool(flag) for flag in flags)

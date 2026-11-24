@@ -1,0 +1,26 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Changed
+body: >
+  The rule set `GRAPHIC` gains the rule `RS-GRAPHIC-008`, "Running text is set
+  to be read" (#3325, DEC-046 point 4): a paragraph's lines are neither too
+  long nor too short for its typeface, its size and its columns, the space
+  between them suits their length, and where they share one straight edge
+  their other ends look pleasantly uneven. It judges no heading, label, cell
+  or list item, nor a page with no running text. The graphic-design reviewer
+  reads it on each page. With it the set rises to 3.0.0, a new major, which
+  also holds the rules this release rewords (#3396). A fault whose kind a
+  rule's words name now cites that rule, as a break the rule's text settles.
+  The fault of overlaps takes in a join that misses, and the reviewer says how
+  it reads alignment, what is readable where a piece is shown
+  (`RS-GRAPHIC-005`) and the hues a page draws (`RS-GRAPHIC-007`). The design
+  knowledge's topic on type teaches line length, line spacing and the uneven
+  ends of lines, citing Ellen Lupton and Matthew Butterick, and its topic on
+  colour asks about strong colour over large areas. A project's set that
+  inherits `visual-communication:GRAPHIC@1` fails validation, and no rule of
+  `GRAPHIC` binds through it, until the project moves its pin: read
+  `RS-GRAPHIC-008` in `rule-sets/graphic.md`, with the reworded rules the note
+  on them names, then write `GRAPHIC@3` in the set's `inherits`. No migration
+  moves a pin, since the project's own reading of the new rule is what it
+  waits for.

@@ -270,6 +270,39 @@ def test_enable_idempotent(tmp_path, monkeypatch):
     assert cmds.count(HOOK_COMMAND) == 1
 
 
+def _core_rules(side: str) -> list[str]:
+    core = REPO / ".pkit" / "adapters" / "claude-code" / "settings" / "core" / "settings.json"
+    return json.loads(core.read_text(encoding="utf-8"))["permissions"][side]
+
+
+@pytest.mark.parametrize("command", ["enable", "apply"])
+def test_the_realizer_ensures_the_native_locks_once(tmp_path, monkeypatch, command):
+    """`enable` and `apply` put the core's native locks in the committed
+    settings, the interlock's asks and the naming deny, beside the guardrail
+    denies, so they stand where the hook cannot start (ADR-095 point 4,
+    ADR-099 point 1); run again, they add none twice."""
+    proj = _with_adapter(_setup(tmp_path, grants=_ALL_VCS))
+    out = _run(proj, monkeypatch, command)
+    assert "interlock ask" in out
+    perms = _settings(proj)["permissions"]
+    assert "Bash(pkit permissions apply *)" in perms["ask"]
+    assert "Bash(pkit permissions folders name *)" in perms["deny"]
+    assert set(_core_rules("ask")) <= set(perms["ask"])
+    assert set(_core_rules("deny")) <= set(perms["deny"])
+    _run(proj, monkeypatch, command)
+    again = _settings(proj)["permissions"]
+    assert again["ask"] == perms["ask"] and again["deny"] == perms["deny"]
+
+
+def test_the_realizer_keeps_an_adopter_ask(tmp_path, monkeypatch):
+    proj = _with_adapter(
+        _setup(tmp_path, settings=json.dumps({"permissions": {"ask": ["Bash(make deploy)"]}}))
+    )
+    _run(proj, monkeypatch, "enable")
+    ask = _settings(proj)["permissions"]["ask"]
+    assert ask[0] == "Bash(make deploy)" and "Bash(pkit permissions apply *)" in ask
+
+
 def test_disable_strips_only_pkit_hook(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     # Pre-existing adopter hook that must survive disable.

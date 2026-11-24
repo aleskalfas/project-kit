@@ -67,13 +67,19 @@ DISTRIBUTION_GIT_URL = "git+https://github.com/aleskalfas/project-kit.git"
 # git's spelling of the same URL, as `git ls-remote` takes it.
 DISTRIBUTION_REMOTE_URL = DISTRIBUTION_GIT_URL.removeprefix("git+")
 
+# The console script the package declares (`pyproject.toml`, `[project.scripts]`).
+# uv runs from a package only an executable it provides, so a release is run as
+# `uvx --from <source> pkit`. The package's name, `project-kit`, names no
+# executable, and uv refuses it as the command (#3408).
+EXECUTABLE = "pkit"
+
 # git's switch for its terminal prompt. Off, a fetch the server asks a credential
 # of fails at once rather than wait at a terminal for an answer (ADR-090 point 2).
 _TERMINAL_PROMPT_ENV = "GIT_TERMINAL_PROMPT"
 
 # The project-owned pin directive (ADR-049). Its *presence* opts a project into
 # per-project version pinning: the router reads it as the pin source and re-execs
-# `uvx project-kit@<pin>` (route 2) so the pinned version serves every command. A
+# `uvx --from …@v<pin> pkit` (route 2) so the pinned version serves every command. A
 # plain one-line text file — a version, or a PRJ-004 tag/branch/sha token —
 # project-owned and never kit-synced. Deliberately NOT `.pkit/VERSION`: that file
 # records the *source tree's* own identity (route 1's CLI-version stamp), a
@@ -454,7 +460,7 @@ def _run_pinned(pin: str, running: str, argv: list[str], environ: MutableMapping
     """Route 2: run the command under the pinned wheel, or degrade loudly to self.
 
     Two phases keep degradation clean (ADR-039 D2). First a resolution *probe*
-    (`… project-kit --version`) proves the pin can be fetched/built at all; only
+    (`… pkit --version`) proves the pin can be fetched/built at all; only
     if it can do we run the real command. So an unresolvable pin (offline,
     untagged, missing auth, no `uvx`) is caught *before* the command runs — we
     warn and return so the caller runs self, never double-executing a partially
@@ -492,7 +498,7 @@ def _notice_pin_unresolved(pin: str, running: str, environ: MutableMapping[str, 
         f"this project pins project-kit {pin}, which could not be resolved (offline, "
         "missing tag, auth, or uvx unavailable)"
     )
-    rerun = f"re-run where `uvx --from {DISTRIBUTION_GIT_URL}@v{pin} project-kit` resolves"
+    rerun = f"re-run where `{pinned_command(pin)}` resolves"
     if _is_older_release(running, pin):
         _warn(
             f"{unresolved}, so this command runs pkit {running} instead, an OLDER pkit than "
@@ -545,8 +551,16 @@ def _is_number(part: str) -> bool:
 
 
 def _pinned_base(pin: str) -> list[str]:
-    """The `uvx` prefix that runs project-kit at `pin`'s git tag (`v<pin>`)."""
-    return ["uvx", "--from", f"{DISTRIBUTION_GIT_URL}@v{pin}", "project-kit"]
+    """The `uvx` prefix that runs pkit at `pin`'s git tag (`v<pin>`): the release
+    as the source, then the console script it provides as the command."""
+    return ["uvx", "--from", f"{DISTRIBUTION_GIT_URL}@v{pin}", EXECUTABLE]
+
+
+def pinned_command(pin: str) -> str:
+    """`_pinned_base` as a person types it, for a message that names how to run
+    pkit at `pin`. The package's messages build on it, so the command they name
+    is the one the router runs."""
+    return " ".join(_pinned_base(pin))
 
 
 def run_bypassed(pin: str, argv: list[str], environ=None) -> int:

@@ -15,18 +15,22 @@ instance or a run names, and whether only its colour tells it apart there:
 
 A concept with no sign is its notation's to mend (`notations`), so neither reads it.
 
-`findings` reads them over every scene of a piece, in each of its languages and at each key
-over the size axes:
+What the checks of signs find, each in the scenes it reads (`LEFT_TO_COLOUR`, `ONE_SIGN`,
+DEC-063 point 1):
 
-- **A concept left to its colour** asks for attention once for each version of the component,
-  or of the brand's drawing, that draws it so, naming its owner: `sign-missing` for an
-  instance, `run-sign-missing` for a run. It lies in the component's file, and names the
-  first instance or run found so.
+- **A concept left to its colour** asks for attention, naming the owner of the component, or
+  of the brand's drawing, that draws it so: `sign-missing` for an instance, `run-sign-missing`
+  for a run. It lies in the component's file. `left_to_colour` gives one in each scene for
+  each instance or run found so, naming it, and compares no scenes. The render gives it once
+  for each version of what draws it, naming the first found so (`once_for_each_version`).
 - **Two concepts of one sign**, two whose signs are one outline (`Outline.form`), ask the
   piece's author for attention once in each language whose content names both:
   `sign-shared`, naming each concept and its notation. It lies in that language's content
-  file, where the second of them is first named. No finding judges two concepts that share a
-  family.
+  file, where the second of them is first named. `one_sign` reads every scene of a language
+  at once, so it compares sizes, and gives its finding for every key of that language. No
+  finding judges two concepts that share a family.
+
+`findings` gives both as the render keeps them, over every scene of a piece.
 
 Knows nothing of files, the lock or the check's run.
 """
@@ -39,6 +43,7 @@ from dataclasses import dataclass
 from _lib.findings import ATTENTION, AUTHOR, Finding
 from _lib.layout import CONTENT, PAINTS, Instance, TextRun
 from _lib.outlines import Outline
+from _lib.scene_checks import SIZES, SceneCheck
 
 #: The calls for attention on a concept left to its colour: by an instance, and by a run.
 SIGN_MISSING = "sign-missing"
@@ -46,6 +51,12 @@ RUN_SIGN_MISSING = "run-sign-missing"
 
 #: The call for attention on two concepts of one piece whose signs are one outline.
 SIGN_SHARED = "sign-shared"
+
+#: The check of a concept left to its colour, which gives each place it found in each scene,
+#: and the check of two concepts of one sign, which reads every scene of a language at once
+#: (DEC-036 point 8, DEC-063 point 1).
+LEFT_TO_COLOUR = SceneCheck("a concept told apart by its colour alone")
+ONE_SIGN = SceneCheck("concepts of one language whose signs are one outline", frozenset({SIZES}))
 
 
 @dataclass(frozen=True)
@@ -145,26 +156,49 @@ def _run(instance: Instance, name: str, run: TextRun, outline: Outline, alone: b
 
 
 def findings(scenes: Sequence[tuple[str, Sequence[Shown]]]) -> list[Finding]:
-    """What the checks of signs find in a piece's scenes, each given as its language's
-    content file with what it shows: each concept left to its colour, once for each version
-    of what draws it, and each set of concepts of one sign, once in each language."""
-    alone: dict[tuple[str, str, str], Finding] = {}
+    """What the checks of signs find in a piece's scenes, as the render keeps them, each
+    scene given as its language's content file with what it shows: each concept left to its
+    colour, once for each version of what draws it, and each set of concepts of one sign,
+    once in each language."""
+    alone = once_for_each_version(
+        [finding for _, shown in scenes for finding in left_to_colour(shown)]
+    )
+    return [*alone, *(finding for _, finding in one_sign(scenes))]
+
+
+def left_to_colour(shown: Sequence[Shown]) -> list[Finding]:
+    """Each concept that one scene, `shown`, leaves to its colour, one finding for each
+    instance or run found so, naming it, and holding its trace id as its place."""
+    return [_alone(one) for one in shown if one.alone]
+
+
+def once_for_each_version(found: Sequence[Finding]) -> list[Finding]:
+    """The render's merge of `left_to_colour`'s findings, over every scene: once for each
+    version of the component, or of the brand's drawing, that leaves a concept to its colour,
+    the first found so."""
+    kept: dict[tuple[str, str, str], Finding] = {}
+    for finding in found:
+        component = str(finding.extra["component"])
+        kept.setdefault((finding.code, finding.library, component), finding)
+    return list(kept.values())
+
+
+def one_sign(scenes: Sequence[tuple[str, Sequence[Shown]]]) -> list[tuple[str, Finding]]:
+    """Each set of concepts of one sign that a language's content names, read over every
+    scene of that language, each scene given as its language's content file with what it
+    shows: the content file, with its finding."""
     forms: dict[str, dict[str, dict[str, Shown]]] = {}
     for content, each in scenes:
         by_form = forms.setdefault(content, {})
         for one in each:
-            if one.alone:
-                found = _alone(one)
-                alone.setdefault((found.code, one.library, one.component), found)
             if one.named:
                 by_form.setdefault(one.outline.form(), {}).setdefault(one.concept, one)
-    shared = [
-        _shared(content, list(concepts.values()))
+    return [
+        (content, _shared(content, list(concepts.values())))
         for content, by_form in forms.items()
         for concepts in by_form.values()
         if len(concepts) > 1
     ]
-    return [*alone.values(), *shared]
 
 
 def _alone(one: Shown) -> Finding:
@@ -199,7 +233,7 @@ def _alone(one: Shown) -> Finding:
         fix=fix,
         library=one.library,
         who=who,
-        extra={"component": use},
+        extra={"component": use, "place": one.trace},
     )
 
 

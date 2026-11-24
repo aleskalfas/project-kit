@@ -1,0 +1,23 @@
+component: visual-communication
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit visual look` runs the checks a render runs on a scene, by the same
+  code, on the scenes it computes: each size of each language it draws,
+  whichever keys it draws. Its `report.json` gives each image the findings
+  that hold on it, under `findings`, and lists apart those on no image drawn,
+  under `on-no-image`. It names for each image the checks that measured it, by
+  their ids, under `measured-by`, and each that did not, with why, under
+  `not-measured`, and carries each check's reach, `reaches`, and the
+  capability's version that ran them, `capability`; the command prints them
+  too (DEC-062). The checks the graphic-design reviewer leans on state their
+  reach in the list of checks and in their code: content a size hides,
+  contrast as drawn, and the two checks of boxes (DEC-063). The check of edges
+  that nearly line up states a new fact, `near-alignment-unmeasured`, at a key
+  whose brand gives no step of space or one no longer than a pixel, which the
+  findings record keeps like any other. The reviewer reads every check from
+  the look's report, never from `findings.yaml`, and reads a check's silence
+  by its reach. Its report gains a line, `Read without a check`, naming each
+  part missing where no check told it whether a size hides the part, and how
+  it read that part. The findings record is otherwise as before.

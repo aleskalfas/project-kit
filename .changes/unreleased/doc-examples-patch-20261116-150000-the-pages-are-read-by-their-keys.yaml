@@ -1,0 +1,14 @@
+component: doc-examples
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The pages and the run's configuration are read by their keys, as ADR-097
+  point 3 says. A key read from `pkit friction artefacts --json` that is
+  missing, null where the CLI reference does not print it null, or of another
+  type, and an artefact's `kind` or a place's `source` the capability does not
+  know, are an answer it cannot tell the pages from, so `pkit doc-examples
+  pages` and validation report it rather than select pages. Before, an
+  artefact without `path` was the page `None`, and one without `kind` was no
+  page. The run reads `setup`, `path`, `environment` and `placeholders` from
+  the pages document it is given, and no longer reads a missing one as none.

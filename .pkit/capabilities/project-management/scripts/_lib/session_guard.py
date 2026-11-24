@@ -535,14 +535,14 @@ def _is_autonomous(interactive: bool | None) -> bool:
     """Whether the gate should refuse (autonomy) rather than prompt (interactive).
 
     ``interactive`` lets the caller force the mode (and lets tests pin it).
-    When None, autonomy is inferred: a non-tty stdin (CI / agent / piped) is
-    autonomous; a tty is interactive. ``PM_INVOKER_LOGIN`` (the CI/agent
-    identity signal used by membership resolution) also marks autonomy.
+    When None, autonomy is inferred from the session's process alone: a
+    non-tty stdin (CI / agent / piped) is autonomous; a tty is interactive.
+    Whether anyone is at the terminal is a property of the process, never of
+    ``PM_INVOKER_LOGIN``, which names only the person the agent works for
+    (DEC-076 point 3).
     """
     if interactive is not None:
         return not interactive
-    if os.environ.get("PM_INVOKER_LOGIN"):
-        return True
     try:
         return not sys.stdin.isatty()
     except (ValueError, OSError):

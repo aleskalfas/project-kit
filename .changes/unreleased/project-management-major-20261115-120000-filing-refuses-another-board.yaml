@@ -14,5 +14,4 @@ body: >
   filing with `gh project item-add`. Where the configuration gives no board
   number, it says so instead. A `--board` naming the configured board's
   number goes on, the two read as numbers. This breaks such a project's use
-  of `--board` to file onto another board. Elsewhere `--board` files onto
-  the board it names, as before.
+  of `--board` to file onto another board.

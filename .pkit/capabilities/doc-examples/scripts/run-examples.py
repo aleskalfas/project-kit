@@ -460,16 +460,19 @@ def read_selection(cwd: Path, argv: Sequence[str] = PAGES_COMMAND) -> Selection:
 
 
 def selection_of(document: object, shown: str = " ".join(PAGES_COMMAND)) -> Selection:
-    """The selection a pages document holds. Raises CannotRun on another shape."""
-    if not isinstance(document, dict) or document.get("schema_version") != SCHEMA_VERSION:
+    """The selection a pages document holds. Raises CannotRun on another shape: a key the
+    run reads that is missing, null or of another type is one it cannot tell the run
+    from, never a default such as no setup step (ADR-097 point 3)."""
+    version = document.get("schema_version") if isinstance(document, dict) else None
+    if not isinstance(document, dict) or type(version) is not int or version != SCHEMA_VERSION:
         raise CannotRun(f"`{shown}` answered no document of schema_version {SCHEMA_VERSION}")
     try:
         root = document["root"]
         pages = document["pages"]
-        setup = document.get("setup", [])
-        path = document.get("path", [])
-        environment = document.get("environment", {})
-        placeholders = document.get("placeholders", {})
+        setup = document["setup"]
+        path = document["path"]
+        environment = document["environment"]
+        placeholders = document["placeholders"]
         if not (
             isinstance(root, str)
             and _strings(pages)
