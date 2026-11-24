@@ -1,0 +1,19 @@
+pkit_schema: visual-communication:piece
+schema_version: 1
+top: foundations/deck
+brand: neutral
+notations: [pkit]
+languages: [en, cs]
+audience: "Developers who work with an AI coding tool, know pkit's core, and choose which capabilities to install."
+shown: "As a PDF or a web page that a reader opens alone, with no speaker; in project-kit's talks, projected."
+explains: true
+exports: [pdf, html]
+state: draft
+modes:
+  colour-scheme: [light, dark]
+  device: [projector]
+lock:
+  foundations: 1.2.0
+  neutral: 1.1.0
+  pkit: 1.0.0
+  starter: 1.1.0
