@@ -1,8 +1,8 @@
 component: visual-communication
 kind: none
 body: >
-  DEC-055, proposed, decides the check of a text smaller than its medium
-  allows: the media a piece names, the smallest size its top declares for
-  each, and how the check measures and reports a text drawn smaller (#3185).
-  It is a design-ahead record: the work of #3185 that builds the check, once
-  the record is accepted, ships the surface. No surface moves here.
+  DEC-055 decides the check of a text smaller than its medium allows: the
+  media a piece names, the smallest size its top declares for each, and how
+  the check measures and reports a text drawn smaller (#3185). It is a
+  design-ahead record: the work of #3185 that builds the check ships the
+  surface. No surface moves here.

@@ -1,6 +1,6 @@
 ---
 id: DEC-055
-title: A piece names the media it is shown in, its top declares the smallest text each allows, and the check fails a text drawn smaller
+title: A piece names the media it is shown in, and a check fails a text smaller than its medium allows
 status: proposed
 date: 2026-11-15
 author: Aleš Kalfas <kalfas.ales@gmail.com>
@@ -21,7 +21,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 The record of the principles of visual communication leaves "a text smaller than its medium allows" to a check, run on every render whether a rule binds or not, beside a text that spills out of its box and too little contrast ([visual-communication:DEC-028-principles-of-visual-communication] point 1). Its point on who can read a page leaves the smallest text size for a medium to that check (DEC-028 point 10). Its rule on legibility, `RS-GRAPHIC-005`, keeps for the review that "everything on a page can be read where the piece is shown", and that "a page is taken in at a glance". The record of the ship call keeps the smallest size the checks' too ([visual-communication:DEC-070-ship-call-and-one-round] point 7).
 
-No such check is built, so a projected slide can carry 12 px notes and pass every check ([project-kit#3185](https://github.com/aleskalfas/project-kit/issues/3185)). The engine's only smallest size sizes the viewing step's images, so that a reader of them can read a page's smallest text, and fails nothing ([visual-communication:DEC-015-viewing-step-and-reviewer] point 5). And the first test of the review found it judging legibility at the medium's size weakly (DEC-070, Context, "The four gaps").
+No such check is built, so a projected slide can carry 12 px notes and pass every check ([project-kit#3185](https://github.com/aleskalfas/project-kit/issues/3185)). The engine's only smallest size sizes the viewing step's images, so that a reader of them can read a page's smallest text, and fails nothing ([visual-communication:DEC-015-viewing-step-and-reviewer] point 5). And the first calibration found the review judging legibility at the medium's size weakly (DEC-070, Context, "The four gaps").
 
 Four records bind the check before it is built:
 - **How the check and the review divide the rule.** Comparing a text's size with its medium's minimum is the check's ([visual-communication:DEC-046-faults-lower-grades] point 5). Whether a text can be read as drawn stays the review's. A text under the minimum is the check's finding alone, and the review's report names it in one line.
@@ -55,7 +55,7 @@ Terms:
 
 ## Decision
 
-**A piece names the media it is shown in, from three the capability names, and may name for every medium the sizes it shows. Its top declares the smallest size of each medium its pages are made for, as a fixed length or as a share of the page. The check measures each run of text against the smallest size of each medium that shows the run's key, taking each page as its medium shows it, and fails a run drawn smaller, at the text's trace in the piece's file. It states its reach, and states as a fact where it could measure no text's size. A text it fails is the check's finding alone, and whether a text can be read as drawn stays the review's.**
+**A piece names the media it is shown in, its top declares the smallest text size of each, and a check fails a text drawn smaller, stating as a fact where it could measure none.**
 
 ### 1. The piece names the media it is shown in, and may name for every medium the sizes it shows
 
@@ -71,7 +71,7 @@ Terms:
 - **The capability's words.** The piece's format names them, as it names the formats of its exports. So a medium means the same under every top, and a command reads it with no top.
 - **The size never chooses it.** A size mode chooses the values a brand gives for what a piece is drawn for (DEC-021 point 1). The medium says where the piece is shown, and the two may differ: a deck projected in a room may be drawn at `desktop` alone. A mapping is the piece saying which of its files each medium shows, never a size choosing its medium.
 - **`shown` stays words,** and says the place as well as the medium. The review judges a page by it under `RS-GRAPHIC-005`, and the check measures by `media` alone. No command compares them, since none reads a medium from words, and the review reads both (point 12).
-- **Both say where the piece is shown,** and whoever writes them keeps them in agreement. This record makes neither of them the asker's words, so who may change either stays as DEC-070 point 4 places it. A change to `media` changes what the check measures (point 6).
+- **Both say where the piece is shown,** and whoever writes them keeps them in agreement. This record makes neither of them the asker's words, so who may change either stays as DEC-070 point 4 places it, both being among that point's "every other word" in the piece's own file, which the designer writes (DEC-030 point 5). A change to `media` changes what the check measures (point 6).
 - **No scene reads it,** so an export's reading leaves it out, as it leaves out the losses a piece accepts ([visual-communication:DEC-016-what-an-export-reads] point 1). A medium named or changed changes no exported file. The key of the findings record reads the piece's file whole (DEC-016 point 2), so the next check measures by it.
 
 ### 2. The top declares each medium's smallest size
@@ -360,7 +360,7 @@ A scene check whose silence a reader leans on states its reach (DEC-063 point 1)
     - After "which no component holds (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 5).", it comes to add: "A fixed smallest text size that a top declares is no formula's length, and no raw value, as that point says (refinement per [visual-communication:DEC-055-smallest-text-size] points 2 and 3)."
   - **DEC-005 point 14, the list "Fails validation".** After its item "a text that overflows its box, or a component that gets less than it asks for, measured from a font file", it gains an item: "a text drawn smaller than the smallest size the piece's top declares for a medium that, as the piece names it, shows the key the text is drawn at (refinement per [visual-communication:DEC-055-smallest-text-size] points 4 and 6)".
   - **DEC-046 point 5,** the bullet "'As it was drawn' takes in where the piece is shown". After "The review takes the place from that declaration.", it comes to add: "Where the piece names for each medium the sizes it shows, the review reads an image as shown in the media that show its size, and takes the place there from that declaration. The rule's place is where a page is shown, so a page is judged only in the places that show it. Where that declaration and the piece's media disagree, the review leaves the media out for every image. It then reads each image in every place the declaration names, and says so in one line (refinement per [visual-communication:DEC-055-smallest-text-size] point 12)."
-  - **DEC-063 point 3, the bullet "Measured, with a finding".** After "so a pair of siblings with a near miss across is measured and clean down.", it comes to add: "Where a statement of the check also covers that place, the finding stands for what it names, and what else the check measures there counts as not measured (refinement per [visual-communication:DEC-055-smallest-text-size] point 12)." In the bullet "Not measured", "a place a statement covers," comes to read "a place a statement covers, but for what a finding there names,". It completes the point, for the first check that gives both on one place.
+  - **DEC-063 point 3, the bullet "Measured, with a finding".** After "so a pair of siblings with a near miss across is measured and clean down.", it comes to add: "Where a statement of the check also covers that place, the finding stands for what it names, and what else the check measures there counts as not measured (refinement per [visual-communication:DEC-055-smallest-text-size] point 12)." In the bullet "Not measured", "a place a statement covers," comes to read "a place a statement covers, but for what a finding there names (refinement per [visual-communication:DEC-055-smallest-text-size] point 12),". It completes the point, for the first check that gives both on one place.
 - **Read against this record, and left as they stand:**
   - DEC-001 point 2, since a renderer still adds no size, and what a viewer does is no renderer's.
   - DEC-001 point 3, since `media` is a field a check selects a piece by, which that point lets a piece declare, and `shown` stays words.
@@ -383,7 +383,7 @@ A scene check whose silence a reader leans on states its reach (DEC-063 point 1)
     - **"What the rule's first sentence judges":** whatever that sentence judges on a page, each text and each other part the page draws, it judges where the piece is shown. The edit above says which of the piece's pages a place shows, and changes nothing of what is judged there (point 12).
     - **"Who says where no text's size was measured":** this check states words inside a picture in its entry. It states in the piece each text whose minimum it cannot work out (points 4 and 10).
     - **"No small text fails twice"** holds through a finding that stands for its medium (point 12).
-    - **"While the capability ships no such check"** holds, image by image, wherever the viewing step's report names no such check, as DEC-062 reads it. On a piece that names no medium, the check is named and its statement covers the scene, so the review names that statement.
+    - **"Anywhere the check judged no text's size"** holds wherever a statement covers a run (point 12), and, image by image, wherever the viewing step's report names no such check, as DEC-062 reads it. On a piece that names no medium, the check is named and its statement covers the scene, so the review names that statement.
   - DEC-062 points 1 to 3, each for its own reason:
     - **Point 1:** the check is a scene check, so the report gives its findings and statements with no special case.
     - **Point 2:** the report names it for an image, and carries its reach, as for any check with a reach. The report's form gains no medium, since silence is read per run (point 12).
@@ -393,11 +393,10 @@ A scene check whose silence a reader leans on states its reach (DEC-063 point 1)
     - **Point 2:** a failure of this check is mended before any review, as every check's is.
     - **Point 4:** this record makes neither `shown` nor `media` the asker's words, so what the designer changes alone stays as that point gives it.
     - **Point 7:** this is the check of a text smaller than its medium allows, which that point keeps the checks'.
-  - `RS-GRAPHIC-005`, which judges a page where the piece is shown "as its `shown` field names". It holds as it stands, by this reading of its words:
+  - `RS-GRAPHIC-005`, which judges a page where the piece is shown "as its `shown` field names". It binds by this reading of its words, which this record decides, and its text takes no edit:
     - **The place stays `shown`'s.** The review takes every place it judges in from `shown`, and judges by `shown` alone where `media` disagrees.
     - **A page is judged where it is shown.** `media` says only which of the piece's sizes reach each place, and the rule's "where the piece is shown" reaches a page only there. DEC-046 point 5 holds the rule's reading, and takes the edit above.
     - **What the rule asks stays the review's.** It asks that "everything on a page can be read where the piece is shown", and that a page is taken in at a glance.
-    - **Whoever judges the change by the rule sets** may read the rule's words more narrowly. The edit to the rule's text is then the way out (Alternatives considered).
 - **The order.** [project-kit#3185](https://github.com/aleskalfas/project-kit/issues/3185) builds on the code [project-kit#3335](https://github.com/aleskalfas/project-kit/issues/3335) split, which gives each finding with its check's id, scene by scene. The reviewer's reading of what the check reports is [project-kit#3375](https://github.com/aleskalfas/project-kit/issues/3375)'s. That work also words the reading of `media`, its disagreement with `shown`, and a run with a finding and a statement (point 12).
 - **#3185 builds this record** in the engine, the schemas of a piece and of a component, and the check. It sets which media each of the foundations' tops declares:
   - Each value takes its source, the measure that source states and its conversion, and a room's value the viewing ratio it assumes (point 8).
