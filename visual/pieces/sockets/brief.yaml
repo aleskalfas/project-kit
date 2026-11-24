@@ -1,0 +1,30 @@
+pkit_schema: visual-communication:brief
+schema_version: 1
+
+# A figure has no list of pages, so its relations and goals stand in the part for the whole
+# piece. Its caption is its lead, so it holds no takeaway.
+piece:
+  relations:
+    - text: >-
+        A whole and its parts: `project-management` plays `pkit::work-tracking`, and the
+        role opens three slots, `doc-check`, `fixers` and `use-cases`.
+      relates:
+        - body.right[slots].groups[project-management]
+    - text: >-
+        A many-to-many flow from filler to slot: two capabilities on the left, three
+        slots on the right, four ties. `fixers` is the slot with two fillers.
+      relates:
+        - body.left
+        - body.right[slots].groups[project-management].items
+        - body.ties
+    - text: >-
+        A contrast: the fillers are named by their role in plain words ("role: keeping
+        the docs", "role: analysing the software"), and a role's code, such as
+        `pkit::documentation`, stays at most a secondary tag.
+      relates:
+        - body.left[living-docs]
+        - body.left[software-analysis]
+  goals:
+    - Say which capabilities fill which slots of `project-management`.
+    - Say that the slots belong to a role and that any capability can fill one.
+    - Read the fillers' roles in plain words with no need to know pkit's role codes.

@@ -7,8 +7,8 @@ top: foundations/deck
 brand: neutral
 notations: [pkit]
 languages: [en, cs]
-audience: Developers who have not used pkit.
-shown: In project-kit's talks, projected, handed out as a PDF, and opened as a web page.
+audience: A developer who already works with an AI coding tool and its agents, and is new to pkit. The pages may assume the AI tool and explain only pkit's terms.
+shown: In project-kit's talks, projected. Handed out as a PDF, one for each language, and opened as a web page, where it is read with no speaker.
 explains: true
 exports: [pdf, html]
 state: draft
