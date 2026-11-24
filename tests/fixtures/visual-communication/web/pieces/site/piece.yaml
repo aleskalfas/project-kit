@@ -2,9 +2,9 @@ pkit_schema: visual-communication:piece
 schema_version: 1
 
 # A site that draws every web part of the starter (DEC-022 point 4): a header with its
-# navigation, a page of sections, a form and a table, and a section as its footer. Drawn
-# at each size the test brand gives, in English and in German, and under the neutral brand
-# with no content file changed.
+# navigation, a page of sections, a form and a table, each page opened by its title, and a
+# section as its footer. Drawn at each size the test brand gives, in English and in German,
+# and under the neutral brand with no content file changed.
 top: foundations/site
 brand: test-brand
 languages: [en, de]
@@ -18,6 +18,6 @@ modes:
   contrast: [standard, high]
   device: [desktop, tablet, phone]
 lock:
-  foundations: 1.1.0
+  foundations: 1.2.0
   starter: 1.1.0
   test-brand: 1.1.0

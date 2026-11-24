@@ -37,7 +37,11 @@ from _lib import bootstrap_gate
 from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
+    INVOKER_VARIABLE,
+    KIND_BOT,
+    KIND_USER,
     MEMBERS_RELATIVE,
+    Identity,
     check_membership,
     format_unresolved,
     members_path,
@@ -89,9 +93,12 @@ def main() -> int:
     print(f"mode:         {result.mode}")
     print(f"invoker:      {invoker.label()}")
     if invoker.github_login:
-        print(f"  github_login: {invoker.github_login}")
+        print(f"  github_login: {invoker.github_login}{_whence(invoker)}")
     else:
         print(f"  github_login: none: {format_unresolved(invoker.unresolved_cause)}")
+    if not invoker.names_user:
+        works_for = invoker.works_for or f"none: {INVOKER_VARIABLE} is not set"
+        print(f"  works for:    {works_for} (the person the agent works for, DEC-076 point 3)")
     if invoker.email:
         print(f"  email:        {invoker.email}")
     print(f"allowed:      {'yes' if result.allowed else 'no'}")
@@ -119,6 +126,16 @@ def main() -> int:
             print(line)
 
     return 0
+
+
+def _whence(invoker: Identity) -> str:
+    """What kind of account GitHub answered the credential acts as, in brackets
+    (DEC-076 point 1): a user's account, or a bot's."""
+    if invoker.kind == KIND_USER:
+        return " (GitHub's answer for the credential: a user's account)"
+    if invoker.kind == KIND_BOT:
+        return " (GitHub's answer for the credential: a bot's account)"
+    return ""
 
 
 def _read_members(file_path: Path) -> list[dict]:

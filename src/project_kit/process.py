@@ -227,6 +227,13 @@ INFERRED = "inferred"
 CLASSIFIED = "classified"
 DETECTION_MODES = (INFERRED, CLASSIFIED)
 
+# What a move refused for want of an actor says (ADR-098 point 3), before the
+# gate's own reason, which names the producer.
+NO_ACTOR_REFUSAL = (
+    "refused: no actor was named. Name the authority the move is made by, in its "
+    "binding's terms, with --actor, never a placeholder:"
+)
+
 # What a refused move says while the position is indeterminate — `can_move`'s
 # refusal, and the reason `status` gives each move it lists from there.
 _INDETERMINATE_REFUSAL = (
@@ -270,15 +277,22 @@ class PredicateOutcome:
 
     `result` is the boolean the engine acts on. For a deterministic check that
     is the predicate's own `result`; for an authorisation-artifact gate the
-    engine computes it as `exists`, a named producer and `produced_by != actor`,
-    and ignores any `result` the predicate supplied (cross-authority is
+    engine computes it as `exists`, a named producer, a named actor and a
+    producer that is another authority than the actor (`same_authority`), and
+    ignores any `result` the predicate supplied (cross-authority is
     non-overridable).
 
-    `indeterminate` is the fail-closed flag: the predicate errored, timed out,
-    returned unparseable JSON, or could not be resolved. When set, `result` is
-    False and `reason` explains why it could not be evaluated — naming how the
-    run ended — and `stderr_tail` carries what the predicate itself said on
-    standard error, bounded and made safe to show (`PredicateFailure`).
+    `indeterminate` is the fail-closed flag: the engine can give the gate no
+    verdict — the predicate errored, timed out, returned unparseable JSON, or
+    could not be resolved, among other causes. When set, `result` is False and
+    `reason` explains why — naming how the run ended — and `stderr_tail`
+    carries what the predicate itself said on standard error, bounded and made
+    safe to show (`PredicateFailure`).
+
+    `needs_actor` marks the one indeterminate gate the engine does not judge
+    for want of an actor: a cross-authority gate whose authorisation names its
+    producer, checked with no actor named (ADR-098 point 3). It refuses a move,
+    and for a wait it reads as a gate that may be open.
     """
 
     result: bool
@@ -286,6 +300,24 @@ class PredicateOutcome:
     indeterminate: bool = False
     detail: dict[str, Any] = field(default_factory=dict)
     stderr_tail: str = ""
+    needs_actor: bool = False
+
+
+def named_actor(actor: str | None) -> str | None:
+    """The actor a caller named, or None where it named none: no actor, or a
+    blank one (ADR-098 point 1). The engine takes no default and no
+    placeholder."""
+    if actor is None or not actor.strip():
+        return None
+    return actor
+
+
+def same_authority(producer: str, actor: str) -> bool:
+    """Whether an authorisation's producer and the actor are one authority to
+    the engine: equal once case, as Unicode folds it, and surrounding
+    whitespace are set aside (ADR-098 point 2). A binding names both in the
+    same terms; the engine confirms neither."""
+    return producer.strip().casefold() == actor.strip().casefold()
 
 
 @dataclass(frozen=True)
@@ -354,16 +386,23 @@ class PredicateRunner:
         reason = str(payload.get("reason", ""))
         return PredicateOutcome(result=result, reason=reason, detail=dict(payload))
 
-    def evaluate_gate(self, gate: dict[str, Any], actor: str) -> PredicateOutcome:
+    def evaluate_gate(self, gate: dict[str, Any], actor: str | None) -> PredicateOutcome:
         """Run a transition gate and interpret it per its `kind`.
 
         deterministic       -> uses the predicate's `result`.
         authorisation-artifact -> reads {exists, produced_by} and computes
                                  result = exists and produced_by names a
                                  producer (a string, not empty or blank) and
-                                 produced_by != actor; any predicate-supplied
-                                 `result` is ignored (cross-authority is
-                                 non-overridable, COR-033 P4).
+                                 the producer is another authority than the
+                                 actor (`same_authority`); any
+                                 predicate-supplied `result` is ignored
+                                 (cross-authority is non-overridable, COR-033
+                                 P4). With no actor named, a gate whose
+                                 authorisation exists and names its producer
+                                 is not judged (`needs_actor`, ADR-098 point
+                                 3); one whose authorisation does not exist,
+                                 or names no producer, is shut, as for any
+                                 actor.
 
         An unrecognised gate kind fails closed (ADR-020 gate-honesty): never a
         silent pass.
@@ -394,23 +433,41 @@ class PredicateRunner:
             # A producer is named only by a string with something in it: a
             # missing, null, empty, blank or non-string `produced_by` names no
             # authority, so no different authority can be confirmed (COR-033 P4).
-            named = isinstance(produced_by, str) and produced_by.strip() != ""
-            result = exists and named and produced_by != actor
+            producer = produced_by if isinstance(produced_by, str) and produced_by.strip() else None
+            gated = named_actor(actor)
             if not exists:
                 reason = "no authorisation artifact recorded"
-            elif not named:
+            elif producer is None:
                 reason = (
                     "authorisation artifact names no producer, so no authority other "
                     "than the actor being gated can be confirmed"
                 )
-            elif produced_by == actor:
+            elif gated is None:
+                # ADR-098 point 3: the comparison with the actor is all that is
+                # left, and nothing can confirm it. Not judged, fail-closed.
+                return PredicateOutcome(
+                    result=False,
+                    reason=(
+                        f"not judged: the authorisation artifact was produced by "
+                        f"{producer!r}, and no actor was named, so whether another "
+                        "authority gave it cannot be told"
+                    ),
+                    indeterminate=True,
+                    detail=dict(payload),
+                    needs_actor=True,
+                )
+            elif same_authority(producer, gated):
                 reason = (
                     f"authorisation artifact was produced by the actor being gated "
-                    f"({actor!r}); cross-authority requires a different authority"
+                    f"({gated!r}); cross-authority requires a different authority"
                 )
             else:
-                reason = f"authorised by {produced_by!r} (cross-authority)"
-            return PredicateOutcome(result=result, reason=reason, detail=dict(payload))
+                return PredicateOutcome(
+                    result=True,
+                    reason=f"authorised by {producer!r} (cross-authority)",
+                    detail=dict(payload),
+                )
+            return PredicateOutcome(result=False, reason=reason, detail=dict(payload))
 
         # Unrecognised / schema-future gate kind: fail closed (ADR-020).
         return PredicateOutcome(
@@ -826,6 +883,19 @@ class TransitionCheck:
     @property
     def indeterminate(self) -> bool:
         return self.outcome.indeterminate
+
+    @property
+    def needs_actor(self) -> bool:
+        """Whether the move's gate was not judged for want of an actor
+        (ADR-098 point 3)."""
+        return self.outcome.needs_actor
+
+    @property
+    def may_be_open(self) -> bool:
+        """Whether the move counts as open for a wait: allowed, or not judged
+        for want of an actor, which only the missing actor shuts (ADR-098
+        point 3, "It makes no wait"). No move is made on it."""
+        return self.allowed or self.needs_actor
 
 
 @dataclass(frozen=True)
@@ -1754,7 +1824,7 @@ class ProcessEngine:
                 out.append(t)
         return out
 
-    def legal_move_checks(self, position: Position, actor: str) -> list[TransitionCheck]:
+    def legal_move_checks(self, position: Position, actor: str | None) -> list[TransitionCheck]:
         """The moves out of `position` as `can_move` judges them — what `status`
         lists under its legal moves.
 
@@ -1771,7 +1841,9 @@ class ProcessEngine:
             for t in self.transitions_from(position.state_id)
         ]
 
-    def precheck_transitions(self, state_id: str | None, actor: str) -> list[TransitionCheck]:
+    def precheck_transitions(
+        self, state_id: str | None, actor: str | None
+    ) -> list[TransitionCheck]:
         """Live-precheck every transition out of the current state (COR-033
         performance note: only transitions *out of* the current state).
 
@@ -1892,14 +1964,16 @@ class ProcessEngine:
         True when the subject is parked: it has an inferred, non-terminal,
         determinate position out of which no transition is currently allowed.
         A terminal position is *done*, not stuck; an indeterminate or absent
-        position is not a wait the engine can name (fail-closed elsewhere).
+        position is not a wait the engine can name (fail-closed elsewhere). A
+        move not judged for want of an actor counts as one that may be open,
+        so the missing actor makes no wait (ADR-098 point 3).
         """
         if position.indeterminate or position.state_id is None:
             return False
         state = self.definition.state(position.state_id) or {}
         if state.get("terminal"):
             return False
-        return not any(check.allowed for check in checks)
+        return not any(check.may_be_open for check in checks)
 
     def has_pending_human_move(self, position: Position, checks: list[TransitionCheck]) -> bool:
         """Whether the subject's *sole forward progress* is an untaken human
@@ -1942,9 +2016,10 @@ class ProcessEngine:
                 # Presence + untaken-ness only; gate-state is irrelevant here
                 # (an untaken parked state still has the user move outgoing).
                 has_user_move = True
-            elif authorisation in ("agent-autonomous", "script") and check.allowed:
+            elif authorisation in ("agent-autonomous", "script") and check.may_be_open:
                 # A gate-passing (or gateless) autonomous move the engine could
-                # take on its own — the subject is not waiting on a person.
+                # take on its own — the subject is not waiting on a person. One
+                # not judged for want of an actor reads so too (ADR-098 point 3).
                 has_autonomous_escape = True
         return has_user_move and not has_autonomous_escape
 
@@ -1952,7 +2027,7 @@ class ProcessEngine:
         self,
         position: Position,
         checks: list[TransitionCheck],
-        actor: str,
+        actor: str | None,
     ) -> BlockedState | None:
         """Derive the subject's CURRENT blocked overlay LIVE (COR-034), or None.
 
@@ -2214,7 +2289,7 @@ class ProcessEngine:
         return outcomes
 
     def can_move(
-        self, to_state: str, actor: str, *, from_state: str | None = None
+        self, to_state: str, actor: str | None, *, from_state: str | None = None
     ) -> tuple[bool, str, Position]:
         """Validate a candidate move to `to_state`. Returns (allowed, reason,
         position). Refuses (fail-closed) on an indeterminate position, an
@@ -2265,6 +2340,8 @@ class ProcessEngine:
                 return True, f"move to {to_state!r} permitted: {check.outcome.reason}", position
         # All matching transitions refused; surface the first reason.
         first = candidates[0]
+        if first.needs_actor:
+            return False, f"{NO_ACTOR_REFUSAL} {first.outcome.reason}", position
         refusal = _explained(
             f"gate refused: {first.outcome.reason}", first.outcome.stderr_tail, "    "
         )
@@ -2273,7 +2350,7 @@ class ProcessEngine:
     def move(
         self,
         to_state: str,
-        actor: str,
+        actor: str | None,
         *,
         from_state: str | None = None,
         reason: str | None = None,
@@ -2324,7 +2401,7 @@ class ProcessEngine:
         return MoveResult(ok=True, reason=verdict, journal_entry=entry)
 
     def reconcile_blocked(
-        self, actor: str, assume_state: str | None = None
+        self, actor: str | None, assume_state: str | None = None
     ) -> dict[str, Any] | None:
         """Bring the journal's wait audit in line with the live blocked overlay
         (COR-034), appending a `blocked-enter` or `blocked-resume` entry when
@@ -2476,7 +2553,7 @@ class ProcessEngine:
         from_state: str | None,
         to_state: str,
         check: TransitionCheck,
-        actor: str,
+        actor: str | None,
         reason: str | None = None,
     ) -> dict[str, Any]:
         transition = check.transition
@@ -2485,7 +2562,8 @@ class ProcessEngine:
             "subject": self.subject,
             "to": to_state,
             "trigger": str(transition.get("trigger", "")),
-            "actor": actor,
+            # Empty where the caller named none (ADR-098 point 4): no placeholder.
+            "actor": named_actor(actor) or "",
         }
         # Provenance (DEC-049): stamp the pkit version that governed this move, so
         # the journal is the canonical, provenance-carrying audit trail.
@@ -2508,6 +2586,13 @@ class ProcessEngine:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(entry, sort_keys=True) + "\n")
+
+
+def _journal_actor(entry: dict[str, Any]) -> str:
+    """Who a journal entry says made the move, for the status view: the actor
+    named, or "no named actor" where the entry records none (ADR-098 point 4)."""
+    actor = entry.get("actor")
+    return actor if isinstance(actor, str) and actor.strip() else "no named actor"
 
 
 def _move_origin(position: Position, from_state: str | None) -> str | None:
@@ -2845,7 +2930,7 @@ def _prompt_lines(prompt: str, base_indent: str) -> list[str]:
     return [cli_render.style("strong", line) for line in plain]
 
 
-def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
+def render_status_narrative(engine: ProcessEngine, actor: str | None) -> str:
     """Human narrative: where · why · how it got here · legal moves with live
     prechecks · next hint."""
     definition = engine.definition
@@ -2938,7 +3023,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
             reason = entry.get("reason")
             lines.append(
                 f"    {entry.get('ts', '')}  {frm} -> {entry.get('to')}  "
-                f"[{entry.get('trigger')}] by {entry.get('actor')}"
+                f"[{entry.get('trigger')}] by {_journal_actor(entry)}"
                 + (f" — {reason}" if reason else "")
             )
 
@@ -3044,7 +3129,7 @@ def render_status_narrative(engine: ProcessEngine, actor: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_status_json(engine: ProcessEngine, actor: str) -> str:
+def render_status_json(engine: ProcessEngine, actor: str | None) -> str:
     """Structured status for an agent / machine consumer."""
     definition = engine.definition
     position = engine.resolve_position()
@@ -3150,6 +3235,9 @@ def render_status_json(engine: ProcessEngine, actor: str) -> str:
                 "trigger": c.trigger,
                 "allowed": c.allowed,
                 "indeterminate": c.indeterminate,
+                # ADR-098 point 3: true only on a gate not judged for want of
+                # an actor, whose `indeterminate` is true.
+                "needs_actor": c.needs_actor,
                 "reason": c.outcome.reason,
                 "stderr_tail": json_tail(c.outcome.stderr_tail),
                 "why": c.transition.get("why"),

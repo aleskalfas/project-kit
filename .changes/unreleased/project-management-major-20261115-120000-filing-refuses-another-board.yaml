@@ -1,0 +1,17 @@
+component: project-management
+kind: major
+custom:
+  category: Changed
+body: >
+  Where the substrate map binds the state to the board, `create-issue
+  --board <N>` is refused, with exit 2, unless N is the configured board's
+  number (#3254, DEC-070). Every command reads an open issue's position from
+  its card on the configured board, so an issue filed onto another board
+  would have a position no command reads. The refusal comes before anything
+  is written or asked, the confirmation before a change to another
+  repository and `--dry-run` included. It says to leave `--board` out, or,
+  where the issue belongs on the other board too, to add a card there after
+  filing with `gh project item-add`. Where the configuration gives no board
+  number, it says so instead. A `--board` naming the configured board's
+  number goes on, the two read as numbers. This breaks such a project's use
+  of `--board` to file onto another board.

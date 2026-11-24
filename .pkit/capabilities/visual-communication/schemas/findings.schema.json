@@ -64,6 +64,11 @@
           },
           "who": {
             "type": "string"
+          },
+          "lies-over-in": {
+            "description": "On an overlap of two parts whose part on top names the other under `lies-over`, the library version that holds that part (DEC-066 point 2). It settles the overlap's label in validation, `box-overlap-meant` where that version is released and still as it was released, else `box-overlap`, worked out each time the finding is read: the record holds no mark of release.",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*@[1-9][0-9]*\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
           }
         }
       }

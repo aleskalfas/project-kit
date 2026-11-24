@@ -1,0 +1,37 @@
+pkit_schema: visual-communication:content
+schema_version: 1
+
+pages:
+  - id: plain
+    layout: standard
+    main:
+      use: starter/title
+      title: Jede Regel an einem Ort
+      lead: >-
+        Ein Projekt schreibt jede seiner Regeln einmal auf, sodass jede Mitarbeiterin und
+        jeder Agent nach denselben Worten arbeitet.
+
+  - id: tint
+    layout: standard
+    main:
+      use: starter/title
+      fill: tint
+      title: Um eine Prüfung bitten
+      lead: Nennen Sie, was geprüft werden soll, und am nächsten Arbeitstag liest es jemand.
+
+  - id: alone
+    layout: standard
+    main:
+      use: starter/title
+      title: Die Regeln eines Projekts und die Werkzeuge, die sie bei jeder Änderung durchsetzen
+
+  - id: sign
+    layout: standard
+    main:
+      use: starter/title
+      fill: tint
+      concept: test-notation/person
+      title: Notizen einer Benutzerin
+      lead: >-
+        Ein Titel, dessen Begriff ein Zeichen hat, stellt es vor seine Worte, in der
+        Textfarbe der Familie, sodass nie die Farbe allein sagt, was er ist.

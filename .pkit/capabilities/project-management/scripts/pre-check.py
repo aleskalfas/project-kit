@@ -49,6 +49,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _lib import (
     axis_carriage,
     axis_labels,
+    board_fields,
     board_status,
     bootstrap_gate,
     default_branch,
@@ -56,7 +57,6 @@ from _lib import (
 )
 from _lib.agents import agent_deploy_path, agent_is_deployed
 from _lib.classification_rules import title_prefix_by_value
-from _lib.gh import gh_project_run
 from _lib.label_contributions import collect_label_contributions
 from _lib.lifecycle_inference import STATE_ORDER
 from _lib.review_contributions import (
@@ -661,25 +661,20 @@ def _check_board(
     # Resolving an ORG-OWNED board (#444). The prior check ran a bare
     # `gh project view <n>` with no `--owner`, which false-negatives on an
     # org-owned board: an ownerless `gh project view 2` fails, while
-    # `gh project view 2 --owner <org>` (or the cached node id) resolves it.
-    # The runtime create path already gets this right —
-    # `create-issue._resolve_project_node_id` is cache-first on
-    # `projects_v2_node_id`, and `_gh_add_to_board` threads `--owner`. This
-    # health check mirrors that ordering so it accepts exactly the boards the
-    # runtime accepts.
+    # `gh project view 2 --owner <org>` resolves it.
     #
     # CHOICE (cache-first, then owner-threaded fallback): trust a cached
     # `projects_v2_node_id` as sufficient evidence the board resolves before
     # making any API call. The tradeoff is CACHE STALENESS vs. an extra
     # owner-threaded round-trip — a cached id could in principle be stale (the
-    # board deleted/recreated since adoption). We accept that here deliberately:
-    # (a) the runtime create path trusts the SAME cache to seed board fields, so
-    # a health check that distrusted it would false-alarm on a config the
-    # runtime happily uses — the check must not be stricter than the thing it
-    # gates; and (b) pre-check is read-only, so a stale-cache pass surfaces at
-    # the first real board write (which re-resolves), not as silent corruption.
-    # On a cache MISS we live-resolve with `--owner` threaded from the repo's
-    # `owner/name`, which is what fixes the org-owned false-negative.
+    # board deleted/recreated since adoption). pre-check is read-only, so a
+    # stale-cache pass surfaces at the first real board read, which counts the
+    # board only where its own answer names it ([pkit:ADR-096] point 1). Whether
+    # this check reads the board live whatever the cache holds is
+    # project-kit#3193's to decide, with the record it proposes.
+    # On a cache MISS we live-resolve through the board read seam, with the
+    # owner threaded from the repo's `owner/name`, which is what fixes the
+    # org-owned false-negative.
     cached_node_id = config.get("projects_v2_node_id") if isinstance(config, dict) else None
     if isinstance(cached_node_id, str) and cached_node_id:
         return CheckResult(
@@ -688,24 +683,24 @@ def _check_board(
             f"board #{board_id} resolves (cached node id in config)",
         )
 
-    # Route through the `gh project` sole-constructor (#453): it threads the
-    # configured `GH_HOST` (a raw `subprocess.run` would land on github.com and
-    # false-negative on a GHES host) and splices `--owner` — preferring
-    # `gh.default_owner`, else the repo-derived `owner` passed here.
-    view_args = ["gh", "project", "view", str(board_id), "--format", "json"]
-    proc = gh_project_run(view_args, config or {}, fallback_owner=owner, check=False)
-    if proc.returncode != 0:
-        owner_hint = f" --owner {owner}" if owner else ""
+    # Through the board read seam, which owns every read of the board
+    # ([pkit:ADR-096] point 6): its `gh project` constructor threads the
+    # configured `GH_HOST` and splices `--owner` — preferring `gh.default_owner`,
+    # else the repo-derived `owner` passed here — and the answer counts only
+    # where it names the configured board.
+    board_config = dict(config or {}, has_projects_v2_board=True, projects_v2_board_id=board_id)
+    read = board_fields.read_project_node_id(board_config, owner=owner)
+    if not read.ok:
         return CheckResult(
             "Projects v2 board",
             "fail",
-            f"`gh project view {board_id}{owner_hint}` failed",
+            f"board #{board_id} did not answer: {read.error}",
             remediation=(
-                "Verify the board id with `gh project list --owner <org>`. "
+                "Verify the board id with `gh project list --owner <owner>`. "
                 "Update `projects_v2_board_id` in the config if it has moved. "
-                "For an org-owned board, ensure the repo's owner owns the board "
-                "(the check threads `--owner` from the repo), or cache the "
-                "board's node id as `projects_v2_node_id` at adoption."
+                "For a board under an owner other than the repository's, set "
+                "`gh.default_owner` to that owner in the config (DEC-023), so every "
+                "read of the board names it."
             ),
         )
     return CheckResult("Projects v2 board", "ok", f"board #{board_id} resolves")

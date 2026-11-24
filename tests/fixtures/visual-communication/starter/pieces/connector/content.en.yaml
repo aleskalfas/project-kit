@@ -4,7 +4,7 @@ schema_version: 1
 slides:
   - id: straight
     layout: slide
-    title: A straight connector, its arrowhead at its end or at its start
+    title: A straight connector, its arrowhead at its end or at its start, and a thin one with none
     visual:
       use: piece/rows
       upper:
@@ -36,6 +36,11 @@ slides:
           from: {item: "lower[work]"}
           to: {item: "upper[decisions]"}
           arrow: start
+        - id: review-work
+          from: {item: "upper[review]"}
+          to: {item: "lower[work]"}
+          weight: thin
+          arrow: none
 
   - id: corners
     layout: slide

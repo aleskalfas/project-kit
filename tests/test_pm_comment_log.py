@@ -87,6 +87,19 @@ def test_an_author_github_no_longer_has_reads_as_none(repo) -> None:
     assert comment_log.read_log(7, repo).comments[0].author is None
 
 
+def test_the_log_keeps_the_type_github_records_for_each_author(repo) -> None:
+    """A guard reads an author's kind from the log (DEC-079; ADR-094 point 3)."""
+    repo.post(7, "by an app")["user"] = {"login": "robot[bot]", "type": "Bot"}
+    repo.post(7, "by a person", author="alice")["user"]["type"] = "User"
+    repo.post(7, "no type", author="carol")
+    log = comment_log.read_log(7, repo)
+    assert [(c.author, c.author_type) for c in log.comments] == [
+        ("robot[bot]", "Bot"),
+        ("alice", "User"),
+        ("carol", None),
+    ]
+
+
 def test_the_ownership_seam_reads_its_log_through_the_same_reader(repo) -> None:
     body = instance_ownership.format_event_comment(event="claim", instance=2)
     repo.post(7, body, author="alice")

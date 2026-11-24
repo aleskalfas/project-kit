@@ -112,7 +112,7 @@ The cardinality + close-time hard-reject mirrors DEC-012's existing `[validation
 
 ### Lifecycle operations — eight verb-subject scripts
 
-Per [project-management:DEC-020-methodology-as-executable-commands], every lifecycle operation ships as a verb-subject script under `scripts/`. All eight inherit the script discipline from DEC-017 + DEC-020 (PEP 723, schema-driven, deterministic, exit codes are the contract, context header at startup, membership predicate at startup).
+Per [project-management:DEC-020-methodology-as-executable-commands], every lifecycle operation ships as a verb-subject script under `scripts/`. All eight inherit the script discipline from DEC-017 + DEC-020 (PEP 723, schema-driven, deterministic, exit codes are the contract, context header at startup, membership predicate at startup save in a script that only reads and reports (refinement per [project-management:DEC-073-reads-take-no-gate])).
 
 | Op | Script | Migration manifest? | Hard gates |
 |---|---|---|---|
@@ -140,7 +140,7 @@ Two new migration primitives ship in the same surface-change PR that lands the l
 
 ### Authority
 
-Per [project-management:DEC-021-team-membership-gate], every workstream script invokes the membership predicate at startup. Open mode (no `members.yaml`) bypasses; closed mode refuses non-members with DEC-021's closed-mode refusal template.
+Per [project-management:DEC-021-team-membership-gate], every workstream script, save one that only reads and reports, invokes the membership predicate at startup (refinement per [project-management:DEC-073-reads-take-no-gate]). Open mode (no `members.yaml`) bypasses; closed mode refuses non-members with DEC-021's closed-mode refusal template.
 
 Within the membership, all workstream ops are **PM-authority** per the DEC-008 role distinction — workstream taxonomy changes are coarse-grained, durable, and project-shaping decisions. The script trusts the invoker: no enforcement of "you must be PM" at the script layer (the role distinction is informational at v1 per DEC-021). The team's review process is the actual gate.
 

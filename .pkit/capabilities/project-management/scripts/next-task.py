@@ -63,7 +63,8 @@ Exit codes:
   2  usage error / a clone that holds no seat, or a planner's seat / this
      clone's seat could not be confirmed / the listing reached its limit, so
      an open dependency could be missed / this code cannot read the topology
-     in full (DEC-061 point 9)
+     in full (DEC-061 point 9) / no person is named whose Tasks these are
+     (DEC-076 point 3)
   3  the open issues, or where pools are declared the open milestones, could
      not be read, or where the board carries the state the board's Status, or
      a ready Task's owner could not be read and no other Task was free
@@ -99,7 +100,6 @@ from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
     check_membership,
-    format_unresolved,
     resolve_capability_root,
     resolve_invoker_identity,
 )
@@ -165,6 +165,14 @@ def main() -> int:
     if not passage:
         return 1
 
+    # Whose Tasks these are: the user's account GitHub answered, or, under a
+    # credential that names no user's account, the person the agent works for
+    # (DEC-076 point 3). Without one, start-work refuses, so nothing is taken.
+    person = invoker.person
+    if person is None:
+        print(f"[refused] next-task: {invoker.no_person()}.", file=sys.stderr)
+        return 2
+
     # The seat is confirmed on its state issue before the pool is read.
     try:
         taker = task_pool.taker(
@@ -173,6 +181,7 @@ def main() -> int:
             config,
             dry_run=args.dry_run,
             login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         instance_claims.say_unconfirmed("next-task", None, exc)
@@ -235,16 +244,10 @@ def main() -> int:
         substrate_map=substrate_map,
         statuses=statuses,
     )
-    if not invoker.github_login:
-        print(
-            f"[note] next-task: {format_unresolved(invoker.unresolved_cause)}, so every "
-            "Task with an assignee is left out.",
-            file=sys.stderr,
-        )
     ready = task_pool.candidates(
         listing.rows or (),
         open_numbers=_numbers(listing),
-        login=invoker.github_login,
+        login=person,
         scope=taker.scope,
         takes_over=taker.takes_over,
         readers=readers,
@@ -252,7 +255,7 @@ def main() -> int:
     )
     for number, why in task_pool.unplaced(
         listing.rows or (),
-        login=invoker.github_login,
+        login=person,
         scope=taker.scope,
         readers=readers,
         milestones=milestones,

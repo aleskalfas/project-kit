@@ -1,0 +1,279 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-component-author.md
+    read:
+      - 20261102T130728Z-1bf556b1.yaml
+      - 20261102T131449Z-ba7364e3.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261114T191856Z-f281d9f3.yaml
+    revalidated:
+      at: 2026-11-23T01:01:35Z
+      outcome: unchanged
+      unchanged-because: Against this change, ADR-040's only edit is the command its Summary's last sentence says ADR-039's resolver runs, which names the console script `pkit` after `uvx --from` and the distribution URL at the pin, rather than the package `project-kit`. Point 5, that the author owns the compatibility claim and the consumer checks it at fetch, reads as it did. The actor's needs and context name no command a runner runs, so it holds as written.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-operator.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261104T170342Z-a3aeb099.yaml
+      - 20261104T204935Z-0fa72585.yaml
+      - 20261105T100241Z-2ce909e8.yaml
+      - 20261105T115925Z-6c703c63.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T215309Z-ce6c0935.yaml
+      - 20261105T220508Z-1d737509.yaml
+      - 20261105T222708Z-59c67901.yaml
+      - 20261105T224638Z-004832b8.yaml
+      - 20261106T003428Z-6de85d99.yaml
+      - 20261106T013642Z-7e813ee3.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T180128Z-acda80dc.yaml
+      - 20261108T105552Z-8366cf9c.yaml
+      - 20261111T084307Z-31fa735e.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+    revalidated:
+      at: 2026-11-23T01:01:45Z
+      outcome: unchanged
+      unchanged-because: Against this change, ADR-039's edits only name the command its route 2 re-execs as the console script `pkit` after `uvx --from` and the distribution URL at the pin, rather than the package `project-kit`, in its Summary, point 2 and its heading, D1, D3, the Rationale and the Implications. D2, that an unresolvable pin runs the installed CLI with a loud warning, reads as it did. The actor's need to run each project at its pin, and to be told plainly when the system falls back to the installed CLI, names no command, so it holds as written.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/070-work-within-limits/UC-030-work-unprompted.md
+    read:
+      - 20261027T183906Z-1bc33a6b.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T200540Z-3b1c87fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261107T131741Z-60cab3fb.yaml
+      - 20261107T145338Z-3834e35f.yaml
+      - 20261107T153702Z-907fa2fc.yaml
+      - 20261108T224001Z-9d4b108d.yaml
+      - 20261109T095816Z-9e478090.yaml
+      - 20261109T103219Z-76953beb.yaml
+      - 20261109T112020Z-9faec713.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T205239Z-c97bba2e.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215558Z-fb9e6aef.yaml
+      - 20261112T103254Z-8c80b62f.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T134741Z-2c56fd6c.yaml
+      - 20261112T142932Z-280780ce.yaml
+      - 20261112T153532Z-b0471fdf.yaml
+      - 20261113T134717Z-36e0821f.yaml
+      - 20261113T165441Z-8c1e1c1b.yaml
+      - 20261113T221406Z-017933f3.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T203936Z-9af83f52.yaml
+      - 20261118T222632Z-102f314e.yaml
+      - 20261122T001341Z-1f604dc7.yaml
+    revalidated:
+      at: 2026-11-23T01:01:54Z
+      outcome: unchanged
+      unchanged-because: Against this change, ADR-095 point 3's only edit drops its claim that ADR-049 gives the entry point's pinned route as `uvx project-kit`, since ADR-049 names the console script `pkit` after `uvx --from` and the distribution URL at the pin. How the hook reads a runner's call, and its ask before a command that changes what judges later calls, read as they did. The use case names no call that takes the package as its command, so it holds as written.
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-002#4
+          reason: "ADR-002 now has sessions run a copy of the hook made from the installed release, bounds what it allows by the model last realized, has it ask where it cannot judge by that model and keep its own verdicts through a decision fault, and the use case still has a fault defer the call to the harness (10b); #3412 builds it and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-007
+          reason: "ADR-007 now serves setup autonomy from the installed release, and under a session anchor or the harness's mark has it and its down form stop at a step that widens, makes the hook's copy or turns the hook on or off, naming the person's terminal, and the use case's setup runs every step wherever it is started; #3412 builds it and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-014#2
+          reason: "ADR-014 now has the hook run outside the sandbox, from the copy, under an interpreter the copy names by its fixed path, since a hook started through uv would read configuration a sandboxed command can write, and has uv run confined on Linux with a cache for each checkout, and the use case has the hook run the code under the operating system's python3 and adds a package cache as narrowing; #3412 builds it and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-014#3
+          reason: "ADR-014 now has the hook run outside the sandbox, from the copy, under an interpreter the copy names by its fixed path, since a hook started through uv would read configuration a sandboxed command can write, and has uv run confined on Linux with a cache for each checkout, and the use case has the hook run the code under the operating system's python3 and adds a package cache as narrowing; #3412 builds it and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-014#4
+          reason: "ADR-014 now has the hook run outside the sandbox, from the copy, under an interpreter the copy names by its fixed path, since a hook started through uv would read configuration a sandboxed command can write, and has uv run confined on Linux with a cache for each checkout, and the use case has the hook run the code under the operating system's python3 and adds a package cache as narrowing; #3412 builds it and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-025#2
+          reason: "ADR-025 now has the core ask where the bound that binds cannot be used and give a revoked grant's ask, name the interlocked commands beside the guardrails where it cannot read what a runner runs, and corrects that the hook runs outside the sandbox, from a copy of the installed release; the use case gives the interlock's ask and the naming deny (10f, 10g) and none of the rest; #3412 builds what is not built and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-025#5
+          reason: "ADR-025 now has the core ask where the bound that binds cannot be used and give a revoked grant's ask, name the interlocked commands beside the guardrails where it cannot read what a runner runs, and corrects that the hook runs outside the sandbox, from a copy of the installed release; the use case gives the interlock's ask and the naming deny (10f, 10g) and none of the rest; #3412 builds what is not built and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-025#7
+          reason: "ADR-025 now has the core ask where the bound that binds cannot be used and give a revoked grant's ask, name the interlocked commands beside the guardrails where it cannot read what a runner runs, and corrects that the hook runs outside the sandbox, from a copy of the installed release; the use case gives the interlock's ask and the naming deny (10f, 10g) and none of the rest; #3412 builds what is not built and rewrites the use case."
+        - anchor:
+            kind: record
+            value: ADR-028
+          reason: "ADR-028 now says the unsandboxed escape is a hole outside the autonomy posture too, wherever a call can reach the folders ADR-095 guards, closed there by a native ask that holds whatever the hook does, and the use case gives the hook's ask before such a call (10h) and no native ask, which no settings carry yet; #3412 builds it and rewrites the use case."
+  - artefact: tech-docs/analysis/core/domain-model/050-a-projects-own-files.md
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031723Z-22d553b2.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261109T194840Z-39b3598b.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T162107Z-5e55cd43.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261114T191856Z-f281d9f3.yaml
+      - 20261114T202352Z-04d477ec.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T191220Z-3b107524.yaml
+    revalidated:
+      at: 2026-11-23T01:03:07Z
+      outcome: unchanged
+      unchanged-because: Against this change, ADR-039 and ADR-049 only name the pinned route's command as the console script `pkit` after `uvx --from` and the distribution URL at the pin, rather than the package `project-kit`. The view says only that a pinned project runs each command under `uvx` at the pinned release, which holds, and its link to ADR-039 point 2 follows that point's new heading, a moved address that changes no claim, so what it says holds.
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-039
+          reason: "ADR-039 now serves the permission commands that report the hook's verdict or its model, realize, make the hook's copy, turn the hook on or off or name a folder from the installed release wherever the machine holds one, whatever the checkout or its pin say, and the view routes every command alike; #3412 builds it and rewrites the view."
+        - anchor:
+            kind: record
+            value: ADR-049
+          reason: "ADR-049 now leaves the permission commands the installed release serves (ADR-095 point 2) outside point 4's routing of every command alike, and the view routes every command alike; #3412 builds it and rewrites the view."
+        - anchor:
+            kind: record
+            value: ADR-064
+          reason: "ADR-064 now has a pinned project keep its version for every command but the permission commands the installed release serves, and its hook run the copy made from that release, and the view routes every command alike; #3412 builds it and rewrites the view."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T081026Z-b375f362.yaml
+      - 20261101T152616Z-c96602dc.yaml
+      - 20261102T132144Z-aeefe1fc.yaml
+      - 20261102T232455Z-c8529620.yaml
+      - 20261105T132805Z-5c89a281.yaml
+      - 20261105T214520Z-1bee3213.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261106T004440Z-668c5e91.yaml
+      - 20261106T025518Z-7a1d1b0a.yaml
+      - 20261107T133905Z-5a681b61.yaml
+      - 20261108T220025Z-7386e4d9.yaml
+      - 20261109T002237Z-a02a7160.yaml
+      - 20261109T004544Z-a16af972.yaml
+      - 20261109T004555Z-08c0f8b6.yaml
+      - 20261109T014028Z-33dd8c89.yaml
+      - 20261109T180207Z-2ee4d62d.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T213910Z-c5b6d5a4.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261112T131241Z-2fe9141e.yaml
+      - 20261112T162755Z-424e83da.yaml
+      - 20261112T170257Z-9f91acd4.yaml
+      - 20261112T171918Z-7f8cd174.yaml
+      - 20261112T181419Z-045fe687.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T074852Z-8d5346ed.yaml
+      - 20261113T081544Z-f47f0ca0.yaml
+      - 20261113T101850Z-ab407b6c.yaml
+      - 20261113T134717Z-36e0821f.yaml
+      - 20261113T140535Z-dad8bdc7.yaml
+      - 20261113T155900Z-499e23c9.yaml
+      - 20261113T162107Z-5e55cd43.yaml
+      - 20261113T164650Z-0b1377a1.yaml
+      - 20261113T181005Z-1533807d.yaml
+      - 20261113T194116Z-20533165.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T204916Z-dab01a07.yaml
+      - 20261113T221124Z-bd48f436.yaml
+      - 20261114T135441Z-fd5c2dc0.yaml
+      - 20261114T140804Z-6f794478.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261115T225309Z-fb593e04.yaml
+      - 20261116T234025Z-ff90f250.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261118T203809Z-2a808b7c.yaml
+      - 20261123T001151Z-75d67d5f.yaml
+    revalidated:
+      at: 2026-11-23T01:03:15Z
+      outcome: unchanged
+      unchanged-because: "Against this change, only the command a `uvx` run of another release names moved, from the package `project-kit` to its console script `pkit`: in the router's run of another release and its notice, the `pin` command's help, the raise's docstring and its two failure messages, sync's remedies, whose narrowing of the pin's type changes no outcome, the first hop onto a release candidate, and ADR-039 and ADR-049, whose pinned route names `uvx --from` and the distribution URL at the pin. The use case's link to ADR-039 point 2 follows that point's new heading, a moved address that changes no claim. No `uvx` run it names takes the package as its command, so what it says holds."
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-039
+          reason: "ADR-039 now serves the permission commands that report the hook's verdict or its model, realize, make the hook's copy, turn the hook on or off or name a folder from the installed release wherever the machine holds one, whatever the checkout or its pin say, and the use case's postcondition has each command in the project run at its pin; #3412 builds it and rewrites the postcondition."
+        - anchor:
+            kind: record
+            value: ADR-049
+          reason: "ADR-049 now leaves the permission commands the installed release serves (ADR-095 point 2) outside point 4's routing of every command alike, and the use case's postcondition has each command in the project run at its pin; #3412 builds it and rewrites the postcondition."
+        - anchor:
+            kind: record
+            value: ADR-064
+          reason: "ADR-064 now has a pinned project keep its version for every command but the permission commands the installed release serves, and its hook run the copy made from that release, and the use case's postcondition has each command in the project run at its pin; #3412 builds it and rewrites the postcondition."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-006-start-on-new-machine.md
+    read:
+      - 20261102T232455Z-c8529620.yaml
+      - 20261103T031634Z-9bd82490.yaml
+      - 20261103T065853Z-f03fd970.yaml
+      - 20261105T221812Z-ca40c14b.yaml
+      - 20261107T214551Z-3cd33a49.yaml
+      - 20261108T232517Z-0faf9d00.yaml
+      - 20261109T195651Z-606019d5.yaml
+      - 20261110T212240Z-c6177e80.yaml
+      - 20261111T082938Z-b6b1d9a3.yaml
+      - 20261111T085757Z-ec4f3511.yaml
+      - 20261111T143433Z-c966325a.yaml
+      - 20261111T205252Z-4cfa1660.yaml
+      - 20261111T211406Z-59d1a8df.yaml
+      - 20261111T215248Z-91725510.yaml
+      - 20261112T091032Z-823069cd.yaml
+      - 20261112T094911Z-6ef4bac4.yaml
+      - 20261113T015341Z-df578670.yaml
+      - 20261113T074852Z-8d5346ed.yaml
+      - 20261113T081544Z-f47f0ca0.yaml
+      - 20261113T101850Z-ab407b6c.yaml
+      - 20261113T134717Z-36e0821f.yaml
+      - 20261113T140535Z-dad8bdc7.yaml
+      - 20261113T155900Z-499e23c9.yaml
+      - 20261113T162107Z-5e55cd43.yaml
+      - 20261113T164650Z-0b1377a1.yaml
+      - 20261113T165441Z-8c1e1c1b.yaml
+      - 20261113T181005Z-1533807d.yaml
+      - 20261113T194116Z-20533165.yaml
+      - 20261113T194652Z-522f1d81.yaml
+      - 20261113T204916Z-dab01a07.yaml
+      - 20261113T221124Z-bd48f436.yaml
+      - 20261114T165854Z-0aa5ab74.yaml
+      - 20261114T191856Z-f281d9f3.yaml
+      - 20261115T225309Z-fb593e04.yaml
+      - 20261116T135757Z-270a2f07.yaml
+      - 20261118T110156Z-9a08eba0.yaml
+      - 20261123T001151Z-75d67d5f.yaml
+    revalidated:
+      at: 2026-11-23T01:03:23Z
+      outcome: unchanged
+      unchanged-because: "Against this change, only the command a `uvx` run of another release names moved, from the package `project-kit` to its console script `pkit`: in the router's run of another release and its notice, sync's remedies, whose narrowing of the pin's type changes no outcome, the raise's docstring and its two failure messages, the install script's failure line, and ADR-039, whose route 2 names `uvx --from` and the distribution URL at the pin while D2's fall back to the installed CLI reads as it did. The journey's link to ADR-039 point 2 follows that point's new heading, a moved address that changes no claim. No `uvx` run it names takes the package as its command, so what it says holds."

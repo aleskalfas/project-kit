@@ -6,7 +6,7 @@ date: 2026-05-24
 author: Ales Kalfas
 ---
 
-> **Partially superseded by [project-management:DEC-070-filing-another-board].** Where the substrate map binds the state to the board, filing refuses a board other than the configured one. Overturned there: the per-invocation override at filing in "Multi-board adopters at v1". It stands for every other project.
+> **Partially superseded by [project-management:DEC-070-filing-another-board] and [project-management:DEC-071-filing-only-configured-board].** Wherever a board is configured, filing refuses a board other than the configured one: where the substrate map binds the state to the board (DEC-070), and in every other project with a board (DEC-071). Overturned: the per-invocation override at filing in "Multi-board adopters at v1".
 
 ## Context
 
@@ -68,18 +68,18 @@ The three layers do not overlap. Per-pm-operation scanning of every issue's boar
 
 ### Mandatory assignment
 
-**Required at filing**, default-but-overridable. `create-issue.py` defaults the assignee to the filer (resolved per DEC-021's identity resolution); `--assignee=<github-login>` overrides; `--assignee=<login>,<login2>` allows multiple per GitHub's native multiplicity.
+**Required at filing**, default-but-overridable. `create-issue.py` defaults the assignee to the filer: the acting account, resolved per DEC-021's identity resolution, and under a credential that names no user's account, the person the agent works for (DEC-076 point 3), held to `values_constrained_to: members` as any assignee is, so a member where the gate is closed. Without one, `create-issue.py` takes the assignee named in the call, as any assignee is taken (DEC-079 point 1), and refuses a filing that names none (refinement per [project-management:DEC-076-app-credentials]). `--assignee=<github-login>` overrides; `--assignee=<login>,<login2>` allows multiple per GitHub's native multiplicity.
 
 **Reassignment authority**: any current team member per the DEC-021 membership gate. In open mode (no `members.yaml`), anyone with repo access. No additional role check at v1.
 
 **`validate-issue.py` checks**:
 
-- Hard-reject at filing if assignee is missing (shouldn't happen given default-to-filer; the rule is the safety net).
+- Hard-reject at filing if assignee is missing (shouldn't happen given default-to-filer; where the credential names no user's account and the session names no person, no filer is defaulted, and `create-issue.py`'s refusal of a filing that names no assignee keeps the check from meeting one; the rule is the safety net).
 - Warning on existing issues with no assignee (rare drift; legitimate when an issue predates the methodology).
 
-**Methodologically NOT a classification axis.** Assignment names a person, not a category from a constrained set. The schema entry above captures this — `substrate: native-assignee-field`, `values_constrained_to: members`.
+**Methodologically NOT a classification axis.** Assignment names a person, not a category from a constrained set. So the assignee is never a bot's account, as the backbone's one spelling of accounts reads an account's kind ([pkit:ADR-094] point 3), whether or not a member's entry names it, and a bare login is made an assignee only where the hosting service answers that it names a user's account, a lookup that fails refusing with its cause (DEC-079 point 1). The schema entry above captures this — `substrate: native-assignee-field`, `values_constrained_to: members`, open in open mode to any account but a bot's (refinement per [project-management:DEC-079-bots-are-no-person]).
 
-**Self-assignment shorthand.** `assign-issue.py 42 --me` is sugar for `--assignee=<my-resolved-github-login>`. `create-issue.py` defaults to filer = "me" implicitly when `--assignee` is omitted.
+**Self-assignment shorthand.** `assign-issue.py 42 --me` is sugar for `--assignee=<my-resolved-github-login>`. `create-issue.py` defaults to filer = "me" implicitly when `--assignee` is omitted. "Me" is the filer the default at filing names: the acting account resolved per DEC-021, and under a credential that names no user's account, the person the agent works for, held to `values_constrained_to: members` as any assignee is. Without one, `assign-issue.py --me` refuses (refinement per [project-management:DEC-076-app-credentials]).
 
 **Cascade interaction.** Assignment is stable across state transitions. A PR-merge close (per [project-management:DEC-006-state-machine-and-cascade]) does not auto-update the assignee to the PR author. The original filer stays on the hook unless explicitly reassigned.
 
@@ -89,7 +89,8 @@ A kit-shipped GitHub Action template at `templates/.github/workflows/pm-issue-ch
 
 - Reads `mandatory-issue-state.yaml` to know what to check.
 - For each `required_field` entry, validates the issue against the rule.
-- On `hard-reject` severity at filing, posts a comment + a status check failure; in `auto-remediate` mode (adopter-configured), invokes the analogous mutation (`gh project item-add`, etc.) to fix the issue.
+- On `hard-reject` severity at filing, posts a comment + a status check failure; in `auto-remediate` mode (adopter-configured), invokes the host's analogous mutation to fix the issue, save what the next bullet says of a missing card.
+- For an issue that opens with no card on the configured board, in `auto-remediate` mode, the template runs the board sync for that issue alone, on the membership check's finding at filing, whatever its severity, where the board's Status is the state's projection or the state degrades, within the further conditions DEC-077 sets, and makes no add of its own. Where those conditions do not hold, it adds no card, and its comment names the sync (refinement per [project-management:DEC-077-workflow-gives-missing-card]).
 - On `warning` severity for drift, posts a comment but lets the issue through.
 
 The template is **adopter-installed**, not auto-deployed — adopters who want the post-check enforcement copy it from `templates/.github/workflows/` into their own `.github/workflows/`. The kit-shipped path is canonical; the adopter's copy is operational.
@@ -146,7 +147,7 @@ The v0.6.0 PR introduces:
 - **The capability `version:`** bumps to v0.6.0 on the implementing PR.
 - **`pre-check.py`** keeps its environment-scope focus — it adds checks for board-id resolution (already present per DEC-017) and for `mandatory-issue-state.yaml` parsing. It does not scan per-issue state.
 - **The project-manager** invokes `create-issue.py` for filing and `assign-issue.py` for reassignment; the agent does not need to know the rules' details — the scripts enforce.
-- **Adopters opt into auto-remediation by toggle** in the post-check workflow template. Default: comment-and-status-check. With `AUTO_REMEDIATE: true`, the template also invokes the relevant `gh` mutation.
+- **Adopters opt into auto-remediation by toggle** in the post-check workflow template. Default: comment-and-status-check. With `AUTO_REMEDIATE: true`, the template also invokes the relevant mutation, which for an issue that opens with no card on the configured board is the board sync, run for that issue at filing where the board does not hold the state, and only where the project also sets the variable `PM_SYNC_AT_FILING` to `on`, in the repository's settings or its organisation's, which is its consent to that write, the toggle being a condition of it, within the further conditions DEC-077 sets (refinement per [project-management:DEC-077-workflow-gives-missing-card]).
 - **The schema's `required_fields:` map is open over time.** Future mandatory state (due dates, milestone-on-EPIC, …) lands as new entries via the same-PR-as-surface-change discipline.
 - **Cross-repo coordination of `mandatory-issue-state.yaml`** lives in the methodology-mesh's scope (per [project-management:DEC-022-methodology-mesh]); nothing repo-coupling-specific ships here.
 - **Membership gate (DEC-021)** applies to `create-issue.py` and `assign-issue.py` like every other mutating script.

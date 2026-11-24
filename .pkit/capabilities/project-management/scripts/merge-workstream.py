@@ -47,8 +47,9 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  merged
-  1  membership refusal / validation refusal / no usable board field / off a
-     terminal without --yes
+  1  membership refusal / validation refusal / no usable board field / a card
+     on the board may hold a loser's option whose value the walk did not count /
+     off a terminal without --yes
   2  usage error
   3  gh failure (an issue count unreadable; a move, a delete or a rewrite failed)
 """  # noqa: E501 — a usage line is a command, kept whole
@@ -259,6 +260,10 @@ def main() -> int:
                     file=sys.stderr,
                 )
                 return 3
+            uncounted = workstream_sync.uncounted_refusal(loser, read, removes_option=True)
+            if uncounted is not None:
+                print(f"[refused] nothing was changed: {uncounted}", file=sys.stderr)
+                return 1
             carded[loser] = read.carriers
 
     print(f"merge-workstream: survivor={args.survivor}")

@@ -4,12 +4,12 @@ version policy (PRJ-002 D1/D2).
 A *changeset* is a small YAML file a surface-changing PR drops under
 `.changes/unreleased/`. It names one component, the semver *segment* that
 component's surface moved (`patch` / `minor` / `major` / `none`), and a
-human-readable note. Contributors author them with `changie` — a dev-only
-tool provisioned through `mise`, never bundled in the wheel and never a
-runtime dependency (see `.pkit/release/README.md`). The file is equally
-hand-writable, and this module — not changie — is what *reads* them at
-release time. The release step (`project_kit.release`) consumes them; the
-CI guard checks for the *file*, not the tool.
+human-readable note. Contributors write them by hand, or with `changie`
+installed however they choose. changie is a dev-only tool, never bundled in
+the wheel and never a runtime dependency (see `.pkit/release/README.md`), and
+this module — not changie — is what *reads* them at release time. The release
+step (`project_kit.release`) consumes them; the CI guard checks for the
+*file*, not the tool.
 
 On-disk schema (changie-native `component` + `kind` + `body` fields, so a
 plain `changie new` writes exactly what this parser reads):

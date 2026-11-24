@@ -1,5 +1,5 @@
 {
-  "$description": "The neutral's values on a projector, where they differ from a desktop's: a slide read from across a room. The slide keeps a desktop's width, and its text grows half again: a body of 24 px, a head that differs from it by its weight alone, code a step under the body, since a monospace face sets wider, and the deck's lead at 30 and its title at 48, a 1.25 scale on the body.",
+  "$description": "The neutral's values on a projector, where they differ from a desktop's: a slide read from across a room. The slide keeps a desktop's width, and its text grows half again: a body of 24 px, a head that differs from it by its weight alone, code a step under the body, since a monospace face sets wider, and the lead at 30 and the deck's title at 48, a 1.25 scale on the body. A page's title takes the deck's title's 48.",
   "type": {
     "$description": "The types on a projector: half again a desktop's, a body of 24 px, read from the back of a room.",
     "$type": "typography",
@@ -62,10 +62,42 @@
         },
         "lineHeight": 1.2727
       }
+    },
+    "title": {
+      "$description": "A page's title at 48 px, as the deck's, so a page's head stands apart from the heads of its parts.",
+      "$value": {
+        "fontFamily": "{font.heading}",
+        "fontSize": {
+          "value": 48,
+          "unit": "px"
+        },
+        "fontWeight": 600,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.1667
+      }
+    },
+    "lead": {
+      "$description": "The lead at 30 px, a 1.25 step over the body, which the deck's lead and the cover's subtitle take, so a slide's three levels of text stay clearly apart.",
+      "$value": {
+        "fontFamily": "{font.body}",
+        "fontSize": {
+          "value": 30,
+          "unit": "px"
+        },
+        "fontWeight": 400,
+        "letterSpacing": {
+          "value": 0,
+          "unit": "px"
+        },
+        "lineHeight": 1.2667
+      }
     }
   },
   "component": {
-    "$description": "The deck's title at 48 px and its lead at 30, a 1.25 scale on the body, so a slide's three levels of text stay clearly apart.",
+    "$description": "The deck's title at 48 px, over the lead at 30, a 1.25 scale on the body, so a slide's three levels of text stay clearly apart.",
     "foundations": {
       "deck": {
         "$type": "typography",
@@ -82,21 +114,6 @@
               "unit": "px"
             },
             "lineHeight": 1.1667
-          }
-        },
-        "lead": {
-          "$value": {
-            "fontFamily": "{font.body}",
-            "fontSize": {
-              "value": 30,
-              "unit": "px"
-            },
-            "fontWeight": 400,
-            "letterSpacing": {
-              "value": 0,
-              "unit": "px"
-            },
-            "lineHeight": 1.2667
           }
         }
       }

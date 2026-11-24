@@ -61,6 +61,17 @@ nothing: the board that cannot be read with exit 3, each other with exit 1,
 each with its own message (DEC-051 point 6). Its position is never guessed
 from the labels or the milestone.
 
+A move writes only from a read made just before its first write (#3261). After
+the preview and any prompt, and before anything is written, the audit comment
+included, the issue and its position are read again. Where that read places the
+issue where the preview did, the move is made as previewed, with no second
+prompt: its gates are checked, its label edit worked out and its journal entry
+made from that read. Where it places the issue elsewhere, nothing is written or
+journaled, and the refusal names where the issue now stands (exit 1). The move
+run again is previewed from there. Where it cannot place the issue, the move is
+refused as one whose first read could not place it. The forward cascade's own
+reads of each ancestor are its own, below.
+
 The forward cascade per DEC-006 fires upward on a forward move: the
 script walks from the issue to the top of its hierarchy, one parent at a
 time as the containment seam resolves each (`containment.resolve_parent`:
@@ -132,7 +143,8 @@ Exit codes:
      in review, or whose children cannot all be told, or of an issue with an
      owner this clone cannot release, or where the board carries the state /
      where the board carries the state, an open issue with no card, no Status,
-     or a Status naming no open state
+     or a Status naming no open state / an issue that moved between its preview
+     and the read made before the first write
   2  usage error (unknown state, illegal transition, issue not found, a move
      back to the state it does not land in, --reason on any other move)
   3  gh failure, the board's Status unreadable where it carries the state, or
@@ -236,9 +248,7 @@ def _pkit_version() -> str:
     return parts[-1] if parts else ""
 
 
-def _render_provenance_comment(
-    invoker, from_state, *to_states: str, cause: str | None = None
-) -> str:
+def _render_provenance_comment(from_state, *to_states: str, cause: str | None = None) -> str:
     """DEC-049 `full` projection: a provenance-stamped record of a governed move,
     carrying the pkit version — the governed-vs-ungoverned boundary made visible on
     the issue. Absence of such a comment beside a timeline label change flags an
@@ -246,12 +256,13 @@ def _render_provenance_comment(
 
     A move through several states names each (`todo → backlog → in-progress`), and
     a move another move caused — a forward-cascaded one — names that ``cause`` on a
-    line of its own, as its journal entry's reason does."""
-    actor = getattr(invoker, "github_login", None) or getattr(invoker, "email", None) or "unknown"
+    line of its own, as its journal entry's reason does. It names no actor: the
+    account that posts it is the move's actor, which GitHub shows beside it
+    (DEC-078 point 2)."""
     version = _pkit_version()
     stamp = f" — pkit {version}" if version else ""
     move = " → ".join(state for state in (from_state, *to_states) if state)
-    comment = f"{_AUDIT_MARKER}\n{actor} moved {move} (governed by pkit){stamp}"
+    comment = f"{_AUDIT_MARKER}\nMoved {move} (governed by pkit){stamp}"
     return f"{comment}\n{cause}" if cause else comment
 
 
@@ -416,19 +427,13 @@ def main() -> int:
         )
         return 2
 
-    # Fetch current issue + state inference.
-    issue = _gh_get_issue(args.issue_number, config)
-    if issue is None:
-        return 2
-
-    title = str(issue.get("title", ""))
-    body = str(issue.get("body") or "")
-    labels = [
-        lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
-        for lbl in (issue.get("labels") or [])
-    ]
-    state = str(issue.get("state", "")).lower()
-    milestone = issue.get("milestone") or {}
+    # The first read of the issue: the preview, the prompt and the checks made
+    # before it rest on it. The writes rest on a later one (#3261, below).
+    first = _read_issue(args.issue_number, config, issue_types, classification)
+    if isinstance(first, int):
+        return first
+    issue, title, body, labels = first.record, first.title, first.body, first.labels
+    state, milestone, structural_type = first.state, first.milestone, first.structural_type
     closed_as = _close_reason(issue)
     # The reason the move to done is journaled with when a merged PR made it
     # (`--merged-pr`): an issue already closed is one the merge closed.
@@ -437,26 +442,6 @@ def main() -> int:
         if args.merged_pr is not None
         else None
     )
-
-    structural_type = infer_structural_type(
-        title, issue_types, classification=classification, labels=labels
-    )
-    if structural_type is None:
-        # Unrecoverable: no [Type] title prefix AND no `type:*` kind label to
-        # fall back on. A Task always carries a `type:*` label (so it recovers
-        # even with the prefix edited away); a container (EPIC/Feature/Umbrella)
-        # has no distinguishing `type:*` label, so an edited-away container
-        # prefix lands here — surfaced as malformed, never silently guessed.
-        print(
-            f"error: cannot determine structural type for issue "
-            f"#{args.issue_number}: title {title!r} matches no known [Type] "
-            "prefix and no `type:*` kind label is present to recover a Task "
-            "from.\n"
-            "  → Restore the issue's title prefix (e.g. [EPIC]/[Feature]/"
-            "[Umbrella]/[Task]) so the structural type can be determined.",
-            file=sys.stderr,
-        )
-        return 2
 
     # The adopter's optional substrate-map (ADR-026): None ⇒ greenfield (state
     # is a `state:*` label); a present map may bind state to a `derive`
@@ -495,33 +480,17 @@ def main() -> int:
     )
     status = board if status_role == "projection" else None
 
-    # Position: read from the engine (DEC-033 D5 — read, don't re-infer). The
-    # engine's detection — the lifecycle's classifier — reproduces this script's
-    # inference precedence (and is map-aware, ADR-026 §5), so the result is
-    # identical; fall back to the local inference when the engine is unreachable
-    # (e.g. `pkit` not on PATH) or cannot tell where the issue is (an
-    # indeterminate position). The fallback is threaded the same map so it agrees
-    # with the engine under a present derive binding. Where the board carries the
-    # state, the fallback reads the open issue's card's Status, as the classifier
-    # does, and a Status that does not place it refuses the move: nothing is
-    # guessed (DEC-051 point 6).
-    engine_status = _engine_status(args.issue_number)
-    current_state = _position_from_status(engine_status)
-    if current_state is None:
-        reading = (
-            board.read(args.issue_number, issue_node_id=node_id)
-            if state_on_board and board is not None and state != "closed"
-            else None
-        )
-        current_state = _infer_current_state(
-            state=state,
-            milestone=milestone,
-            labels=labels,
-            substrate_map=substrate_map,
-            status=reading,
-        )
-        if current_state == infer.UNDETERMINED:
-            return _refuse_unplaced(args.issue_number, args.to, reading)
+    position = _read_position(
+        first,
+        args.issue_number,
+        args.to,
+        substrate_map=substrate_map,
+        board=board,
+        state_on_board=state_on_board,
+    )
+    if isinstance(position, int):
+        return position
+    engine_status, current_state = position.engine_status, position.state
 
     # Audit-comment projection (DEC-049): where the project keeps a journal it
     # records every move regardless; `audit.projection` controls the GitHub
@@ -569,9 +538,25 @@ def main() -> int:
             config,
             dry_run=args.dry_run,
             login_cause=invoker.unresolved_cause,
+            credential=instance_claims.credential_of(invoker),
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("move-issue", args.issue_number, exc)
+
+    def refused_move_back(read: _IssueRead) -> int | None:
+        """The move back's checks (DEC-006) against ``read``: the exit code of a
+        refusal, or None where the move back may be made."""
+        return _check_move_back(
+            args.issue_number,
+            args.to,
+            args.reason,
+            milestone=read.milestone,
+            structural_type=read.structural_type,
+            context=cascade_context,
+            state_on_board=state_on_board,
+            clone=clone,
+            capability_root=capability_root,
+        )
 
     # The move back (DEC-006) is settled before the guard, whose bypass posts its
     # reason: whether the board carries the state, the move's reason, where it
@@ -581,17 +566,7 @@ def main() -> int:
     transition = _find_transition(workflow, current_state, args.to, structural_type)
     move_back = transition is not None and _is_move_back(current_state, args.to)
     if move_back:
-        refused = _check_move_back(
-            args.issue_number,
-            args.to,
-            args.reason,
-            milestone=milestone,
-            structural_type=structural_type,
-            context=cascade_context,
-            state_on_board=state_on_board,
-            clone=clone,
-            capability_root=capability_root,
-        )
+        refused = refused_move_back(first)
         if refused is not None:
             return refused
 
@@ -603,7 +578,6 @@ def main() -> int:
             verb="move-issue",
             flag="--bypass-owner",
             bypass=args.bypass_owner,
-            invoker=invoker,
             dry_run=args.dry_run,
         )
         instance_claims.say_guard(decision)
@@ -724,96 +698,22 @@ def main() -> int:
                 _run_forward_cascade(cascade, cascade_context)
         return 0
 
-    # The transition, looked up above.
-    if transition is None:
-        legal_targets = _legal_targets(workflow, current_state, structural_type)
-        print(
-            f"error: no transition {current_state!r} → {args.to!r} "
-            f"declared in workflow.yaml for {structural_type!r}.\n"
-            f"  legal targets from {current_state!r}: "
-            f"{', '.join(legal_targets) if legal_targets else '<none>'}",
-            file=sys.stderr,
-        )
-        return 2
-
-    # `--reason` is the move back's alone (DEC-006); any other move gives its
-    # reason another way, such as `--bypass-reason`.
-    if args.reason is not None and not move_back:
-        print(
-            "error: --reason applies to a move back from in-progress only "
-            f"(got {current_state} → {args.to}).",
-            file=sys.stderr,
-        )
-        return 2
-
-    # Authorisation gate.
-    if transition.authorisation == "user":
-        if transition.severity == SEVERITY_HARD_REJECT:
-            # User-gated hard-reject: requires --yes from the caller as the
-            # explicit authorisation signal (no bypass possible).
-            if not args.yes and sys.stdin.isatty():
-                pass  # fall through to confirm prompt below
-            elif not args.yes:
-                print(
-                    f"[refused] transition {current_state!r} → {args.to!r} is "
-                    f"user-authorised (hard-reject on violation).\n"
-                    "          → Pass --yes to confirm the authorisation, "
-                    "or re-run from an interactive shell.",
-                    file=sys.stderr,
-                )
-                return 1
-        elif transition.severity == SEVERITY_BYPASSABLE:
-            # Bypassable: caller must pass --bypass + --bypass-reason or
-            # provide TTY confirmation.
-            if not args.bypass and not (args.yes or sys.stdin.isatty()):
-                print(
-                    f"[refused] transition {current_state!r} → {args.to!r} is "
-                    "bypassable-with-audit; pass --bypass --bypass-reason '...' "
-                    "to record the audit comment, or run from a TTY.",
-                    file=sys.stderr,
-                )
-                return 1
-            # A --bypass override must carry a non-empty reason. The
-            # bypassable-with-audit gate (DEC-014) records the reason in the
-            # audit comment, and the override-flag convention (DEC-046)
-            # requires it — a bare --bypass must refuse, not substitute a
-            # placeholder. Refuse before any mutation or audit comment.
-            if _bypass_reason_missing(args.bypass, args.bypass_reason):
-                print(
-                    f"[refused] transition {current_state!r} → {args.to!r}: "
-                    "--bypass requires a non-empty --bypass-reason "
-                    "(the audit comment records the reason per DEC-014 / "
-                    "DEC-046).",
-                    file=sys.stderr,
-                )
-                return 1
+    checked = _check_move(
+        args,
+        transition,
+        current_state,
+        first,
+        move_back=move_back,
+        workflow=workflow,
+        body_format=body_format,
+        capability_root=capability_root,
+    )
+    if isinstance(checked, int):
+        return checked
+    transition = checked
 
     # Why the work stopped, on a move back, which its checks above required.
     move_back_reason = (args.reason or "").strip() if move_back else ""
-
-    # Residual-placeholder check per DEC-031 — hard-reject at transition.
-    # Run before any mutation so an unauthored body blocks the transition.
-    placeholder_findings = detect_placeholder_residuals(
-        body=body,
-        structural_type=structural_type,
-        body_format=body_format,
-        capability_root=capability_root,
-        phase=PHASE_TRANSITION,
-    )
-    hard_reject_findings = [f for f in placeholder_findings if f[0] == "hard-reject"]
-    if hard_reject_findings:
-        print(
-            f"[hard-reject] transition {current_state!r} → {args.to!r} blocked: "
-            f"issue #{args.issue_number} body has not been authored.",
-            file=sys.stderr,
-        )
-        for sev, label, detail in hard_reject_findings:
-            print(f"  [{sev}] {label}: {detail}", file=sys.stderr)
-        print(
-            "  → Fill in the required sections of the issue body before advancing.",
-            file=sys.stderr,
-        )
-        return 1
 
     print(f"move-issue: #{args.issue_number}")
     print(f"  title:        {title}")
@@ -824,7 +724,7 @@ def main() -> int:
     print(f"  severity:      {transition.severity}")
     if move_back:
         print(f"  reason:        {move_back_reason}")
-        if clone is not None:
+        if clone is not None and not clone.quiet:
             plan_line = instance_claims.release_plan(clone, when="on the move back")
             print(f"  ownership:     {plan_line}")
 
@@ -854,6 +754,67 @@ def main() -> int:
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
             return 0
+
+    # The read the writes rest on (#3261): made after any prompt, which may stand
+    # for minutes, and before anything is written, the audit comment included.
+    # Where it places the issue where the preview did, the move is made as
+    # previewed, with no second prompt, its gates checked, its labels worked out
+    # and its journal entry made from this read. Where it places the issue
+    # elsewhere, or nowhere, nothing is written: a move from the preview's
+    # position would rest on one the issue no longer holds, and could leave it
+    # two state labels (RS-PM-003), or make a move the lifecycle does not declare
+    # from where it stands (DEC-006).
+    later = _read_issue(args.issue_number, config, issue_types, classification)
+    if isinstance(later, int):
+        print(
+            f"  → #{args.issue_number} was not read again before the write, so nothing "
+            "was written.",
+            file=sys.stderr,
+        )
+        return later
+    later_position = _read_position(
+        later,
+        args.issue_number,
+        args.to,
+        substrate_map=substrate_map,
+        board=board,
+        state_on_board=state_on_board,
+    )
+    if isinstance(later_position, int):
+        return later_position
+    # A value that is no state of the lifecycle, such as a stray state label,
+    # places the issue nowhere: no transition leaves it, so the gates below
+    # refuse the move as they would on a first read that found it.
+    now = later_position.state
+    if now != current_state and now in state_ids:
+        return _refuse_moved(args.issue_number, args.to, current_state, now)
+    transition = _find_transition(workflow, now, args.to, later.structural_type)
+    if move_back and transition is not None:
+        refused = refused_move_back(later)
+        if refused is not None:
+            return refused
+    checked = _check_move(
+        args,
+        transition,
+        now,
+        later,
+        move_back=move_back,
+        workflow=workflow,
+        body_format=body_format,
+        capability_root=capability_root,
+    )
+    if isinstance(checked, int):
+        return checked
+    transition = checked
+    issue, engine_status = later.record, later_position.engine_status
+    plan = _compute_plan(
+        issue_number=args.issue_number,
+        current_state=current_state,
+        target_state=args.to,
+        state_on_board=state_on_board,
+        labels=later.labels,
+        substrate_map=substrate_map,
+    )
 
     is_bypass_audit = (
         transition.authorisation == "user"
@@ -885,11 +846,9 @@ def main() -> int:
             _landed_moves(args.issue_number, engine_status, config, substrate_map),
         )
         rendered = (
-            _render_move_back_comment(
-                capability_root, invoker, current_state, args.to, move_back_reason
-            )
+            _render_move_back_comment(capability_root, current_state, args.to, move_back_reason)
             if move_back
-            else _render_audit_comment(capability_root, invoker, bypass_reason)
+            else _render_audit_comment(capability_root, bypass_reason)
         )
         audit_comment = rendered + "\n\n" + key
         if not _post_transition_audit_once(args.issue_number, audit_comment, key, config):
@@ -959,7 +918,7 @@ def main() -> int:
     if projection == "full" and not audit_reason:
         _gh_comment(
             args.issue_number,
-            _render_provenance_comment(invoker, current_state, args.to),
+            _render_provenance_comment(current_state, args.to),
             config,
         )
 
@@ -978,12 +937,13 @@ def main() -> int:
     print(f"\n[ok] transitioned #{args.issue_number}: {current_state} → {args.to}")
 
     # Fire after_move_issue hooks per DEC-024. The occurrence is the issue's
-    # count of landed moves, the one the transition audit key counts by: the
-    # journal's length as read before this move or, where no journal is kept,
-    # the timeline's state-label events, read after it and only if a
-    # `post-comment` hook is about to post. Either has grown by the time the
-    # issue can make the same transition again, so its hook comment posts again
-    # (#1243).
+    # count of landed moves, the one the transition audit key counts by: where
+    # labels carry the state, the timeline's state-label events, journaled or
+    # not, read after this move and only if a `post-comment` hook is about to
+    # post (DEC-078 point 4); where a board or a derivation carries it, the
+    # journal's length as read before this move. Either has grown by the time
+    # the issue can make the same transition again, so its hook comment posts
+    # again (#1243), the first only whether or not the journal recorded a move.
     fire_hooks(
         "after_move_issue",
         context={
@@ -999,6 +959,119 @@ def main() -> int:
     )
 
     return 0
+
+
+# ---- the move's gates ------------------------------------------------
+
+
+def _check_move(
+    args: argparse.Namespace,
+    transition: Transition | None,
+    current_state: str,
+    read: _IssueRead,
+    *,
+    move_back: bool,
+    workflow: dict,
+    body_format: dict,
+    capability_root: Path,
+) -> Transition | int:
+    """Check the move of ``read``'s issue from ``current_state`` to ``args.to``
+    against its gates: the transition the workflow declares for its type, the
+    move back's alone taking `--reason`, the authorisation the transition asks
+    for, and an authored body (DEC-031). The transition where every gate passes,
+    else the exit code of the refusal, which is said on standard error.
+
+    The checks are made on the first read, before the preview, and again on the
+    read made before the first write (#3261). Neither asks anything: the prompt
+    is the caller's, so a passing check made after it asks no second time."""
+    number, target = args.issue_number, args.to
+    if transition is None:
+        legal_targets = _legal_targets(workflow, current_state, read.structural_type)
+        print(
+            f"error: no transition {current_state!r} → {target!r} "
+            f"declared in workflow.yaml for {read.structural_type!r}.\n"
+            f"  legal targets from {current_state!r}: "
+            f"{', '.join(legal_targets) if legal_targets else '<none>'}",
+            file=sys.stderr,
+        )
+        return 2
+
+    # `--reason` is the move back's alone (DEC-006); any other move gives its
+    # reason another way, such as `--bypass-reason`.
+    if args.reason is not None and not move_back:
+        print(
+            "error: --reason applies to a move back from in-progress only "
+            f"(got {current_state} → {target}).",
+            file=sys.stderr,
+        )
+        return 2
+
+    # Authorisation gate.
+    if transition.authorisation == "user":
+        if transition.severity == SEVERITY_HARD_REJECT:
+            # User-gated hard-reject: requires --yes from the caller as the
+            # explicit authorisation signal (no bypass possible).
+            if not args.yes and sys.stdin.isatty():
+                pass  # the caller's prompt asks for it
+            elif not args.yes:
+                print(
+                    f"[refused] transition {current_state!r} → {target!r} is "
+                    f"user-authorised (hard-reject on violation).\n"
+                    "          → Pass --yes to confirm the authorisation, "
+                    "or re-run from an interactive shell.",
+                    file=sys.stderr,
+                )
+                return 1
+        elif transition.severity == SEVERITY_BYPASSABLE:
+            # Bypassable: caller must pass --bypass + --bypass-reason or
+            # provide TTY confirmation.
+            if not args.bypass and not (args.yes or sys.stdin.isatty()):
+                print(
+                    f"[refused] transition {current_state!r} → {target!r} is "
+                    "bypassable-with-audit; pass --bypass --bypass-reason '...' "
+                    "to record the audit comment, or run from a TTY.",
+                    file=sys.stderr,
+                )
+                return 1
+            # A --bypass override must carry a non-empty reason. The
+            # bypassable-with-audit gate (DEC-014) records the reason in the
+            # audit comment, and the override-flag convention (DEC-046)
+            # requires it — a bare --bypass must refuse, not substitute a
+            # placeholder. Refuse before any mutation or audit comment.
+            if _bypass_reason_missing(args.bypass, args.bypass_reason):
+                print(
+                    f"[refused] transition {current_state!r} → {target!r}: "
+                    "--bypass requires a non-empty --bypass-reason "
+                    "(the audit comment records the reason per DEC-014 / "
+                    "DEC-046).",
+                    file=sys.stderr,
+                )
+                return 1
+
+    # Residual-placeholder check per DEC-031 — hard-reject at transition.
+    # Run before any mutation so an unauthored body blocks the transition.
+    placeholder_findings = detect_placeholder_residuals(
+        body=read.body,
+        structural_type=read.structural_type,
+        body_format=body_format,
+        capability_root=capability_root,
+        phase=PHASE_TRANSITION,
+    )
+    hard_reject_findings = [f for f in placeholder_findings if f[0] == "hard-reject"]
+    if hard_reject_findings:
+        print(
+            f"[hard-reject] transition {current_state!r} → {target!r} blocked: "
+            f"issue #{number} body has not been authored.",
+            file=sys.stderr,
+        )
+        for sev, label, detail in hard_reject_findings:
+            print(f"  [{sev}] {label}: {detail}", file=sys.stderr)
+        print(
+            "  → Fill in the required sections of the issue body before advancing.",
+            file=sys.stderr,
+        )
+        return 1
+    return transition
 
 
 # ---- planning helpers ------------------------------------------------
@@ -1093,6 +1166,21 @@ def _refuse_unplaced(number: int, target: str, reading: infer.StatusRead | None)
         file=sys.stderr,
     )
     return 3 if reading.outcome == "unreadable" else 1
+
+
+def _refuse_moved(number: int, target: str, previewed: str, now: str) -> int:
+    """Refuse a move whose issue the read made before its first write places
+    elsewhere than its preview did (#3261), saying where it stands now, and
+    return 1, the code of a move refused on the issue's position. Nothing was
+    written or journaled, and the move run again is previewed from there."""
+    print(
+        f"[refused] #{number} moved since the preview: it stood in {previewed}, and now "
+        f"stands in {now}. The move to {target} was previewed from {previewed}, so it "
+        "is not made from where the issue stands now. Nothing was written or journaled.\n"
+        f"  → run the move again: it previews the move to {target} from {now}.",
+        file=sys.stderr,
+    )
+    return 1
 
 
 def _write_closed_card(
@@ -1257,13 +1345,13 @@ def _move_back_journal_reason(reason: str) -> str | None:
 
 
 def _render_move_back_comment(
-    capability_root: Path, invoker: object, from_state: str, to_state: str, reason: str
+    capability_root: Path, from_state: str, to_state: str, reason: str
 ) -> str:
     """The move back's audit comment (DEC-006, DEC-049 point 2): the canonical
     audit line carrying the reason the work stopped, and the move below it, as a
     writer that says more than the template appends its prose (`_lib/audit`)."""
     return (
-        f"{_render_audit_comment(capability_root, invoker, reason)}\n\n"
+        f"{_render_audit_comment(capability_root, reason)}\n\n"
         f"Moved back from {from_state} to {to_state}, since the work stopped "
         "(project-management DEC-006)."
     )
@@ -1561,10 +1649,63 @@ def _position_from_status(status: dict | None) -> str | None:
     precedence), so a missing `pkit` on PATH never blocks a move.
     """
     position = status.get("position") if isinstance(status, dict) else None
-    if not isinstance(position, dict) or position.get("indeterminate"):
+    # A position that does not say it was determined is one pm cannot tell from
+    # (ADR-097 point 3), never a determined one.
+    if not isinstance(position, dict) or position.get("indeterminate") is not False:
         return None
     state = position.get("state")
     return state if isinstance(state, str) else None
+
+
+@dataclass(frozen=True)
+class _Position:
+    """Where one read places the issue: ``state``, and the engine's status
+    payload the read came from, None where the engine gave none."""
+
+    state: str
+    engine_status: dict | None
+
+
+def _read_position(
+    read: _IssueRead,
+    number: int,
+    target: str,
+    *,
+    substrate_map: axis_labels.SubstrateMap | None,
+    board: board_status.StatusBoard | None,
+    state_on_board: bool,
+) -> _Position | int:
+    """Where ``read``'s issue stands, or the exit code of a move to ``target``
+    refused because the read places it nowhere (`_refuse_unplaced`).
+
+    The position is read from the engine (DEC-033 D5 — read, don't re-infer).
+    The engine's detection — the lifecycle's classifier — reproduces this
+    script's inference precedence (and is map-aware, ADR-026 §5), so the result
+    is identical; it falls back to the local inference when the engine is
+    unreachable (e.g. `pkit` not on PATH) or cannot tell where the issue is (an
+    indeterminate position). The fallback is threaded the same map so it agrees
+    with the engine under a present derive binding. Where the board carries the
+    state, the fallback reads the open issue's card's Status, as the classifier
+    does, and a Status that does not place it refuses the move: nothing is
+    guessed (DEC-051 point 6)."""
+    engine_status = _engine_status(number)
+    state = _position_from_status(engine_status)
+    if state is None:
+        reading = (
+            board.read(number, issue_node_id=str(read.record.get("id") or ""))
+            if state_on_board and board is not None and read.state != "closed"
+            else None
+        )
+        state = _infer_current_state(
+            state=read.state,
+            milestone=read.milestone,
+            labels=read.labels,
+            substrate_map=substrate_map,
+            status=reading,
+        )
+        if state == infer.UNDETERMINED:
+            return _refuse_unplaced(number, target, reading)
+    return _Position(state=state, engine_status=engine_status)
 
 
 def _journal_length_from_status(status: dict | None) -> int | None:
@@ -1574,8 +1715,8 @@ def _journal_length_from_status(status: dict | None) -> int | None:
     count is unchanged across a failed attempt and its retry, and has grown by
     the time the issue could make the same transition again.
     """
-    journal = status.get("journal") if isinstance(status, dict) else None
-    return len(journal) if isinstance(journal, list) else None
+    journal = move_journal.Journal.of(status)
+    return None if journal is None else len(journal.entries)
 
 
 def _journal_logging_off(status: dict | None) -> bool:
@@ -1598,37 +1739,42 @@ def _landed_moves(
     """The transition audit key's "has a move landed since?" component.
 
     It must stay put across a failed attempt and its retry, and have grown by the
-    time the issue could make the same transition again. What counts the moves
-    follows where the project's audit trail is (DEC-049):
+    time the issue could make the same transition again, whether or not the
+    journal recorded the first (DEC-078 point 4). What counts the moves follows
+    where the state is carried:
 
-    * Where the project keeps a journal: the journal's length, as a bare number.
-      A move is journaled only after its label write succeeds (#901).
-    * Where it keeps none: the issue's count of state-label events on the GitHub
-      timeline, labels put on and taken off (#954). A landed move changes the
-      state label, and a failed label write changes nothing. The count is
-      tagged, so it can never equal a journal length read on another attempt,
-      after the project turned logging on or off.
-    * Empty when it cannot be known: the engine is unreachable, the timeline
-      cannot be read, or no label carries state (a board or a derivation does,
-      and `move-issue` writes no label there). Two attempts that both land here
-      look alike.
+    * Where labels carry it: the issue's count of state-label events on the
+      GitHub timeline, labels put on and taken off (#954), whether or not the
+      project keeps a journal. A landed move changes the state label, and a
+      failed label write changes nothing. So a move made again after one the
+      engine did not journal, as where a gate of its transition refused the
+      entry or the engine could not be reached, posts its own comment. The count
+      is tagged, so it can never equal a journal length read on another attempt.
+    * Where a board or a derivation carries it, `move-issue` writes no label, and
+      the tracker gives no count of the moves made: the journal's length, as a
+      bare number, where the project keeps one (a move is journaled only after
+      its write succeeds, #901), and empty where it keeps none. There the same
+      move made again posts its own comment only where the journal recorded a
+      move between the two, a limit DEC-078 point 4 states.
+    * Empty, too, when it cannot be known: the timeline cannot be read, or the
+      engine is unreachable. Two attempts that both land here look alike.
 
-    The timeline is read only in the second case, and only on the bypass path
-    that keys an audit comment and for a `post-comment` hook about to post on
-    `after_move_issue`, which names its occurrence by the same count.
+    The timeline is read only where labels carry the state, and only on the
+    bypass path that keys an audit comment and for a `post-comment` hook about to
+    post on `after_move_issue`, which names its occurrence by the same count.
     """
-    if not _journal_logging_off(status):
-        length = _journal_length_from_status(status)
-        return "" if length is None else str(length)
-    if not state_timeline.label_carries_state(config, substrate_map):
+    if state_timeline.label_carries_state(config, substrate_map):
+        events = state_timeline.state_label_events(
+            issue_number,
+            config,
+            substrate_map,
+            run=gh_run,
+        )
+        return "" if events is None else f"state-label-events:{len(events)}"
+    if _journal_logging_off(status):
         return ""
-    events = state_timeline.state_label_events(
-        issue_number,
-        config,
-        substrate_map,
-        run=gh_run,
-    )
-    return "" if events is None else f"state-label-events:{len(events)}"
+    length = _journal_length_from_status(status)
+    return "" if length is None else str(length)
 
 
 # Hand a completed move to the engine (`pkit process move --from`, best-effort):
@@ -1709,6 +1855,64 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
         issue_number,
         config,
         fields="title,body,labels,assignees,state,stateReason,milestone,url,id",
+    )
+
+
+@dataclass(frozen=True)
+class _IssueRead:
+    """The issue as one read of it gives it: its ``record``, the fields a move
+    reads from it, its ``state`` lowercased (`open`, `closed`), and its
+    structural type."""
+
+    record: dict
+    title: str
+    body: str
+    labels: list[str]
+    state: str
+    milestone: dict
+    structural_type: str
+
+
+def _read_issue(
+    issue_number: int, config: dict, issue_types: dict, classification: dict
+) -> _IssueRead | int:
+    """Read the issue, or return 2 where it cannot be read, or where neither its
+    title nor its labels tell its structural type, each said on standard error."""
+    issue = _gh_get_issue(issue_number, config)
+    if issue is None:
+        return 2
+    title = str(issue.get("title", ""))
+    labels = [
+        lbl.get("name", "") if isinstance(lbl, dict) else str(lbl)
+        for lbl in (issue.get("labels") or [])
+    ]
+    structural_type = infer_structural_type(
+        title, issue_types, classification=classification, labels=labels
+    )
+    if structural_type is None:
+        # Unrecoverable: no [Type] title prefix AND no `type:*` kind label to
+        # fall back on. A Task always carries a `type:*` label (so it recovers
+        # even with the prefix edited away); a container (EPIC/Feature/Umbrella)
+        # has no distinguishing `type:*` label, so an edited-away container
+        # prefix lands here — surfaced as malformed, never silently guessed.
+        print(
+            f"error: cannot determine structural type for issue "
+            f"#{issue_number}: title {title!r} matches no known [Type] "
+            "prefix and no `type:*` kind label is present to recover a Task "
+            "from.\n"
+            "  → Restore the issue's title prefix (e.g. [EPIC]/[Feature]/"
+            "[Umbrella]/[Task]) so the structural type can be determined.",
+            file=sys.stderr,
+        )
+        return 2
+    return _IssueRead(
+        record=issue,
+        title=title,
+        body=str(issue.get("body") or ""),
+        labels=labels,
+        state=str(issue.get("state", "")).lower(),
+        milestone=issue.get("milestone") or {},
+        structural_type=structural_type,
     )
 
 
@@ -2548,7 +2752,7 @@ def _project_cascaded_move(
     line, and the move stands."""
     if context.projection != _audit.PROJECTION_FULL or len(reached) < 2:
         return
-    body = _render_provenance_comment(context.invoker, *reached, cause=reason)
+    body = _render_provenance_comment(*reached, cause=reason)
     failure = _comment_failure(number, body, context.config)
     if failure is not None:
         print(
