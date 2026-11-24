@@ -17,6 +17,7 @@ each tied to one slot on the right, so their `to` ends meet the slot's left side
 - the two measures of a line's own stretch, which read the frame's centre on a line that
   shares nothing, and a part placed by them, kept off the stretch its tie shares;
 - a part placed otherwise that stands on a shared stretch, found in its component;
+- a cell computed aside while a group is judged, forgotten even above the instance;
 - a `trunk` on a list of no ties, naming no end field, or as a switch, refused, and an own
   measure of what is no line.
 """
@@ -41,7 +42,7 @@ from tests.test_visual_communication_ties import (
     link,
     rendered,
 )
-from tests.visual_engine import block, codes, draw, top
+from tests.visual_engine import FakeEnv, block, codes, draw, layout, top
 
 trunks, pdf = load("visual-communication", "trunks", "plugins.pdf")
 
@@ -538,6 +539,30 @@ def test_a_part_placed_otherwise_on_a_shared_stretch_is_found_in_its_component()
     )
     # The ties still share their trunk: the fault is the component's.
     assert points(result, "top/links[bs]/l") == [(32, 80), (272, 80)]
+
+
+# --- what a round computes aside --------------------------------------------------------------
+
+
+def test_a_cell_computed_aside_above_the_instance_is_forgotten_and_found_again() -> None:
+    """A cell above the instance whose groups are judged, first computed while a round is
+    computed aside, and failing, is forgotten after: where it is next read, it fails again
+    and its finding is recorded (`Instance._aside`)."""
+    outer = top({"in": {"use": "lab/card"}}, preferred={"width": "=@size.figure"})
+    ctx = layout.Context(FakeEnv(components=lab(outer=outer, card=card())), "en")
+    root = layout.place_top(ctx, "lab/outer", {})
+    assert root is not None
+    inner = root.nodes["in"].child
+    assert inner is not None
+
+    def height() -> float | None:
+        return ctx.attempt(lambda: root.get("preferred", "height"), None)
+
+    with inner._aside():
+        assert height() is None
+    assert ctx.findings == []
+    assert height() is None
+    assert [each.code for each in ctx.findings] == ["no-size"]
 
 
 # --- what is refused ---------------------------------------------------------------------------

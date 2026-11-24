@@ -3032,6 +3032,9 @@ class Context:
         self.findings: list[Finding] = []
         self.stack: list[tuple[Instance, tuple[str, ...]]] = []
         self.active: set[tuple[int, tuple[str, ...]]] = set()
+        # The cells begun while cells are computed aside, in any instance, each forgotten
+        # after (`Instance._aside`); None outside.
+        self.aside: list[tuple[Instance, tuple[str, ...]]] | None = None
         self._seen: set[tuple[str, str, str, str, str]] = set()
         self._components: dict[str, Component | None] = {}
         self._unreadable: set[str] = set()
@@ -4603,6 +4606,8 @@ class Instance:
             raise self._fail("loop", f"a loop of references: {' → '.join(loop)}")
         self.ctx.stack.append((self, cell))
         self.ctx.active.add(key)
+        if self.ctx.aside is not None:
+            self.ctx.aside.append((self, cell))
         try:
             value = self._compute(cell)
         except Fault:
@@ -5609,19 +5614,22 @@ class Instance:
 
     @contextlib.contextmanager
     def _aside(self) -> Iterator[None]:
-        """Computes cells aside, while a group is judged: every cell computed meanwhile in
-        this instance or below it is forgotten after, with every finding and loop it met,
-        so a round moves nothing (DEC-043 point 6). A request for this instance's ties'
+        """Computes cells aside, while a group is judged: every cell computed meanwhile, in
+        this instance, below it or above it, is forgotten after, with every finding and loop
+        it met, so a round moves nothing (DEC-043 point 6). A cell is computed again where it
+        is next read, and records its finding then. A request for this instance's ties'
         meetings meanwhile fails (`_judging`)."""
-        ctx, kept = self.ctx, [(each, dict(each.cells)) for each in (self, *self.below())]
-        state = ctx.active, ctx.stack, ctx.findings, ctx._seen
+        ctx = self.ctx
+        begun: list[tuple[Instance, tuple[str, ...]]] = []
+        state = ctx.active, ctx.stack, ctx.findings, ctx._seen, ctx.aside
         ctx.active, ctx.stack, ctx.findings, ctx._seen = set(), [], [], set(ctx._seen)
+        ctx.aside = begun
         try:
             yield
         finally:
-            for each, cells in kept:
-                each.cells = cells
-            ctx.active, ctx.stack, ctx.findings, ctx._seen = state
+            for each, cell in begun:
+                each.cells.pop(cell, None)
+            ctx.active, ctx.stack, ctx.findings, ctx._seen, ctx.aside = state
 
     def _state(
         self, code: str, ties: Sequence[Instance], which: str, side: str, why: _Unclear
