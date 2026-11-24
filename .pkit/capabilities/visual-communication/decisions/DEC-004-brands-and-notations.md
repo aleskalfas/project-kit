@@ -21,7 +21,7 @@ The capability's design work ([project-kit#2424](https://github.com/aleskalfas/p
 
 ## Decision
 
-**A brand keeps its values as design tokens and its modes as one Resolver document, in the DTCG format. Its modes lie on axes that vary apart. An axis that changes only colours and pictures moves nothing on the page, and one that changes sizes needs scenes of its own. A brand may build on one other brand, and gives values only to the roles that base declares open. The names a brand exports are public, and one naming rule turns them into names in code. A notation maps each concept, read with the notation's name, to roles, never to values.**
+**A brand keeps its values as design tokens and its modes as one Resolver document, in the DTCG format. Its modes lie on axes that vary apart. An axis that changes only colours and pictures moves nothing on the page, and one that changes sizes needs scenes of its own. A brand may build on one other brand, and gives values only to the roles that base declares open and to the roles it adds (refinement per [visual-communication:DEC-044-brand-own-component-tokens] point 1). The names a brand exports are public, and one naming rule turns them into names in code. A notation maps each concept, read with the notation's name, to roles, never to values.**
 
 ### 1. A brand's values are design tokens in the DTCG format
 
@@ -72,10 +72,10 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
   - for the foundations, a new top group of the shared roles, whose name may meet a library's (point 7), even where each of its roles carries a default (refinement per [visual-communication:DEC-025-picture-files] point 10)
 - **Not breaking:** a new role with a default, a new mode, a newly opened role, or a brand's own new axis with a default. Nor is a new shared axis with a default while no brand can hold an axis of its own, or a brand that comes to give a size (refinement per [visual-communication:DEC-021-size-and-shape]). Nor is a new picture role, or a brand that comes to give one a value (refinement per [visual-communication:DEC-025-picture-files] point 4). Nor is a changed value, an alias pointed elsewhere included. A piece meets a changed value only when a person moves its lock. A base's new mode gives a brand built on it combinations its values were not tuned for, which that brand's checks then cover.
 
-### 6. A brand may build on one other brand, within the roles its base declares open
+### 6. A brand may build on one other brand, within the roles its base declares open and those it adds (refinement per [visual-communication:DEC-044-brand-own-component-tokens] point 1)
 
 - **One base, by major version.** A brand marks one of the libraries it builds on as its base, named by the major version it fits (the founding record, [visual-communication:DEC-001-visual-communication-discipline] point 5). It has at most one base. Its base may build on a brand in turn, so brands form chains.
-- **The base declares its open roles:** the list of its roles that a brand built on it may give values. The list names roles, component tokens (point 7) or groups of them, a group matched by whole segments of its path. A value given to any other role fails validation.
+- **The base declares its open roles:** the list of its roles that a brand built on it may give values. The list names roles, component tokens (point 7) or groups of them, a group matched by whole segments of its path. A value given to any other role fails validation, but for a role the brand adds, one of its own roles or a token of its own components, which no base holds, so that the brand gives it a value without its base opening it (refinement per [visual-communication:DEC-044-brand-own-component-tokens] point 1).
 - **Merged before aliases are resolved.** A value the brand gives an open role, for every mode or for some, wins over its base's in the combinations it covers. Its base's value holds elsewhere. Every token that aliases the role follows it.
 - **Its aliases reach only what its base exports,** so its base may reshape its private tokens freely.
 - **In a chain, each link narrows.** A brand's own open roles name only roles open to it, and its own.
@@ -121,7 +121,7 @@ A brand exports its roles, the component tokens it gives values, and its axes, m
 
 Each finding below fails validation where it lies in a file the project can correct, as the record of files and validation decides ([visual-communication:DEC-002-files-and-validation] point 7). Elsewhere, as in a released library version, it asks for attention and names who can correct it (COR-055 points 1 and 4). A final piece's drawing is not judged, as that record decides.
 - **Fails validation:**
-  - a value given to a role its base does not open, an open role its base does not have, or an alias to a token its base keeps private
+  - a value given to a role its base does not open, other than a role the brand adds (point 6); an open role that names no role, or, for a brand built on a base, a role its base does not open to it, other than one the brand adds; or an alias to a token its base keeps private (refinement per [visual-communication:DEC-044-brand-own-component-tokens] points 1, 2 and 4)
   - a brand built on another that adds an axis or a mode, or changes a default
   - a role other than a picture role with no value in some combination, an alias that leads nowhere, or a loop of aliases (refinement per [visual-communication:DEC-025-picture-files] point 4)
   - a picture role given in some value combinations of a key and not in others, or given files of two proportions there (refinement per [visual-communication:DEC-025-picture-files] point 4)

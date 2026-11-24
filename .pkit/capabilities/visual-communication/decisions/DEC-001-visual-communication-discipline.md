@@ -68,7 +68,7 @@ A *component* is anything from a small block, such as a card or a connector, to 
 
 ### 5. Libraries hold values, structure or meaning
 
-A *library* is a named, versioned set that pieces share, released by one owner. It names the libraries it builds on, those whose names it uses or whose values it takes, each by the major version it fits.
+A *library* is a named, versioned set that pieces share, released by one owner. It names the libraries it builds on, those whose names it uses or whose values it takes, each by the major version it fits, but a brand need not name a brand of its chain of bases beyond its base (DEC-004 point 6), whose names it reaches through its base (refinement per [visual-communication:DEC-044-brand-own-component-tokens] point 2).
 - **The foundations,** a component library the capability ships, declare the role names that every library shares, and the layouts and slots of the top components the capability ships. A library that adds a top component declares its layouts.
 
 Each library holds one of three kinds of content:

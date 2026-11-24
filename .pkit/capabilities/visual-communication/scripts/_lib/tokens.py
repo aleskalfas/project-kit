@@ -2797,7 +2797,8 @@ class _BrandReader:
         another type, is a finding; where it does not, the token stays private and asks for
         attention. The foundations are judged under `component.foundations` alone, since
         they have no own roles. A token under `component.<the brand's own name>` is private,
-        and judged here no further (#2573)."""
+        and judged here no further, though DEC-044 points 1 and 4 have it give one of the
+        brand's own components' tokens a value, or be a finding."""
         for file, tokens in sorted(self.flat.items()):
             for path, token in tokens.items():
                 library, group = self._library_of(path)
