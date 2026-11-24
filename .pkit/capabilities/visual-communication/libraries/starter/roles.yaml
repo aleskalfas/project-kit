@@ -39,6 +39,11 @@ roles:
   # parts, a section's among them. A brand that names the starter may set it apart from
   # the shared type, as it may set a head apart from the shared heading.
   starter.type.title: {type: typography, default: '{type.title}'}
+  # The typography of the lead under a page's title: the shared type of running text read
+  # before the body, so a brand that sizes it sets the lead apart from a section's text. A
+  # brand that names the starter may set it apart from the shared type, as it may set the
+  # title apart from the shared type of a page's title.
+  starter.type.lead: {type: typography, default: '{type.lead}'}
   # The typography of a strong run in a card's text: the shared strong type, the body's
   # size and line height in a heavier weight, so a strong run keeps the line it lies in.
   starter.type.strong: {type: typography, default: '{type.strong}'}

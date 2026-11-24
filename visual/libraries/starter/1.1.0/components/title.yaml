@@ -10,7 +10,8 @@ about: >-
   under it that states the page's point, where the content gives one. The title takes a
   type of its own, the type of a page's title, so a brand that sizes that type draws the
   page's head apart from every head of the page's parts, a section's among them. The lead
-  stands a small space under the title, so the two read as one head. A line of its text
+  takes a type of its own too, the type of running text read before the body, and stands
+  a small space under the title, so the two read as one head. A line of its text
   runs no longer than the brand's length of a line. It fills the width it is given, and
   sets its own inset, so a tinted title's fill reaches the page's edge.
 
@@ -75,7 +76,7 @@ parts:
     when: lead
     text:
       content: lead
-      style: type.body
+      style: starter.type.lead
       fill: {by: fill, plain: text-primary, tint: ":colour.text"}
     x: "=margin"
     y: "=margin + heading + min(heading, lead.height, @space.2)"

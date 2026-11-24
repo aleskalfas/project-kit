@@ -58,6 +58,8 @@ pkit:
         - visual-communication:DEC-069#3
         - visual-communication:DEC-069#5
         - visual-communication:DEC-069#6
+        - visual-communication:DEC-072#1
+        - visual-communication:DEC-072#3
       artefact:
         - .pkit/capabilities/visual-communication/files.md#the-foundations
         - .pkit/capabilities/visual-communication/files.md#content-files
@@ -267,6 +269,7 @@ Each web part fits every size the brand gives: a desktop, a tablet, a phone and 
 - **Options:** `fill`: `plain`, the default, or `tint`, as a header's.
 - **Where it stands:** where the page's content places its title (visual-communication DEC-068 point 3). On a page of sections it is the first of the `sections`, named by `use`, and a page whose main part is a form or a table lays the title and the form, or the table, down in a `sections`.
 - **Apart from every other head.** Its title takes the starter's type of a page's title, `starter.type.title`, which no other component reads. Its default is the shared type of a page's title, `type.title`, so a brand that gives that type a size above its heading's and draws the starter at its defaults, as the neutral brand does (the capability's `files.md`, under *The neutral brand*), draws the page's head larger than any head of the page's parts, a section's, a form's, a table's or a card's, on every size it gives and in every mode. The rule on one focal point asks this of a page of sections: the page's head is drawn apart from each section's, never by its place alone (visual-communication DEC-068 point 3). A brand that gives `type.title` no value sets the title in its heading, as a section's head, so the page's head is drawn as its sections' are. That brand gives `type.title` a value to set it apart.
+- **Its lead, apart from the body.** Its lead takes the starter's type of the lead under a page's title, `starter.type.lead`, which no other component reads. Its default is the shared type of running text read before the body, `type.lead`, which any component may name, a piece's own among them, and the deck's lead takes by default (visual-communication DEC-072 points 1 and 3). So a brand that gives that type a size above its body's and draws the starter at its defaults, as the neutral brand does (the capability's `files.md`, under *The neutral brand*), draws the lead larger than a section's text, set in the body, on every size it gives. A brand that gives `type.lead` no value sets the lead in its body, as a section's text.
 
 ### `section`
 
@@ -398,7 +401,7 @@ A component reads a shared role where the starter means just that role, such as 
 
 - **Colours** are always shared: `surface`, `line`, `text-primary`, `text-secondary`, `accent`, and each family's `fill`, `line` and `text`. The starter declares no colour role, and so no contrast pair.
 - **Shared sizes and types:** `type.body` sets a card's and a level's plain text, a tag's label and an aside's text. `space.1` and `space.2` lie around a tag's label. `space.2` lies between a block's head, tag, command and text, and before the sign at the end of its first row. It is also the least a card keeps between a top bar and what it holds. So a brand's thick bar lowers every card's head alike.
-- **For the web parts:** `type.strong` sets a button's and a field's label. They also read `size.line` and `picture.logo`, which [*The length of a line*](#the-web-parts-by-their-job-on-a-page) and [`header`](#header) describe. A title's lead is in `type.body`, and its title reads `type.title` through the starter's own `starter.type.title`, as [`title`](#title) says. `type.title` defaults to `type.heading`, so a brand released before it owes it no value (the capability's `files.md`, under *The foundations*).
+- **For the web parts:** `type.strong` sets a button's and a field's label. They also read `size.line` and `picture.logo`, which [*The length of a line*](#the-web-parts-by-their-job-on-a-page) and [`header`](#header) describe. A `title` reads `type.title` for its title, through the starter's own `starter.type.title`, and `type.lead` for its lead, through `starter.type.lead`, as [`title`](#title) says. `type.title` defaults to `type.heading`, and `type.lead` to `type.body`, so a brand released before them owes neither a value (the capability's `files.md`, under *The foundations*).
 - **Three more shared roles:** `stroke.thick`, `type.strong` and `type.code`, roles of the foundations (the capability's `files.md`, under *The foundations*). None has a default, so every brand gives each a value (visual-communication DEC-008 point 2).
 - **The starter's own roles,** each with a default whose chain ends at a shared role:
 
@@ -417,6 +420,7 @@ A component reads a shared role where the starter means just that role, such as 
 | `starter.turn` | the radius a connector's turns are drawn round at | `space.2` |
 | `starter.type.head` | the type of a block's head and a list's head | `type.heading` |
 | `starter.type.title` | the type of a page's title, as [`title`](#title) says | `type.title` |
+| `starter.type.lead` | the type of the lead under a page's title, as [`title`](#title) says | `type.lead` |
 | `starter.type.strong` | the type of a strong run in a card's or a level's text | `type.strong` |
 | `starter.type.code` | the type of a code block's text | `type.code` |
 | `starter.sign` | the side of the square a component draws its concept's sign in, as [*Signs*](#signs) says | `space.3` |
