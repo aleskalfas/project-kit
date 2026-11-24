@@ -1,8 +1,8 @@
 ---
 id: DEC-043
 title: Ties that meet one side of an item may share a trunk, where the part that draws them declares it
-status: proposed
-date: 2026-11-14
+status: accepted
+date: 2026-11-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
